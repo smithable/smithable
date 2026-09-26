@@ -432,7 +432,19 @@ Missing custom implementations (a manifest says `custom: true` but the file or e
 
 Migrations are written in **drizzle-kit's own format, including its snapshot metadata**, so `drizzle-kit generate` continues seamlessly after a detach. The adapter computes them from the difference between the old and new IR, and uses the operation log to tell a rename from a drop followed by an add. Without Smithable, drizzle-kit's own interactive rename prompts take over. Destructive migrations (removing a column or table) require explicit confirmation.
 
-### 6.7 Leaving Smithable: `smithable detach`
+### 6.7 Conventions of the TanStack adapter
+
+Concrete choices the v1 adapter makes; they are ordinary, documented practice for the stack.
+
+- **SQLite through `better-sqlite3`** on stable Drizzle, which installs from prebuilt binaries. Switching to Node's built-in `node:sqlite` is planned once Drizzle 1.0 (which supports it) is stable.
+- **Money is stored as whole cents** in integer columns, so amounts never suffer floating-point rounding; the kit converts for display and input. Datetimes are millisecond timestamps, dates are `YYYY-MM-DD` text, choices are text columns with an enum.
+- **Migrations are created by the app's own `drizzle-kit generate`** after the schema file is written, and **applied at startup**, which suits a single SQLite instance. Data lives under `DATA_DIR` (`data/` in development, `/data` in the container).
+- **Production** serves the plain Vite build with `srvx` (`pnpm start`); no extra server framework is needed.
+- **Per-model code is explicit:** each model gets a module with its UI description, Zod schema (`drizzle-zod` plus format refinements) and `createServerFn` functions containing plain Drizzle queries. The kit components are generic; the generated routes connect them.
+- **The file record.** `.smithable/files.json` lists every Smithable-owned file with the hash of what was last written. Regeneration deletes files the spec no longer produces and refuses to overwrite files edited by hand (§6.5).
+- **Sample data** is generated deterministically from model and field names and loaded with `pnpm db:seed` (done by `smithable new`).
+
+### 6.8 Leaving Smithable: `smithable detach`
 
 Because the app is already normal, detaching is a cleanup, not a rescue:
 

@@ -1,10 +1,23 @@
-import { readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { formatDiagnostic, hasErrors, type SpecIR, validateSpec } from "@smithable/core";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import {
+  type ContentIR,
+  formatDiagnostic,
+  hasErrors,
+  type SpecIR,
+  validateContent,
+  validateSpec,
+} from "@smithable/core";
 import type { Io } from "./io.js";
 
-/** Reads and validates the spec. Prints diagnostics; returns the IR only when it is valid. */
-export function loadSpec(target: string, io: Io): { ir?: SpecIR; path: string } {
+/**
+ * Reads and validates the spec and, when present, smithable.content.yml next to it.
+ * Prints diagnostics; returns the IR only when everything is valid.
+ */
+export function loadSpec(
+  target: string,
+  io: Io,
+): { ir?: SpecIR; content?: ContentIR; path: string } {
   const path = isDirectory(target) ? join(target, "smithable.yml") : target;
   let text: string;
   try {
@@ -20,7 +33,18 @@ export function loadSpec(target: string, io: Io): { ir?: SpecIR; path: string } 
     io.err(`\n${errors} ${errors === 1 ? "error" : "errors"} in ${path}.\n`);
     return { path };
   }
-  return { ir, path };
+  const contentPath = join(dirname(path), "smithable.content.yml");
+  if (!existsSync(contentPath)) return { ir, path };
+  const result = validateContent(
+    { path: contentPath, text: readFileSync(contentPath, "utf8") },
+    ir,
+  );
+  for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
+  if (!result.content) {
+    io.err(`\nErrors in ${contentPath}.\n`);
+    return { path };
+  }
+  return { ir, content: result.content, path };
 }
 
 /** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */

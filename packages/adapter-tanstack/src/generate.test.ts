@@ -44,3 +44,47 @@ describe.each(Object.entries(examples))("%s", (path, text) => {
     }
   });
 });
+
+test("visible text comes from smithable.content.yml when given, never from semantic text", () => {
+  const spec = ir(
+    "smithable.yml",
+    `smithable: 0.1
+app: { name: CRM }
+models:
+  Customer:
+    fields:
+      name: { type: string!, description: Semantic text for AI; not shown. }
+      segment: smb | enterprise
+pages:
+  customers: { crud: Customer }
+`,
+  );
+  const withoutContent = generateApp(spec, options);
+  const customer = (files: typeof withoutContent) =>
+    files.find((f) => f.path === "src/generated/customer.ts")?.content ?? "";
+  expect(customer(withoutContent)).not.toContain("Semantic text");
+  expect(customer(withoutContent)).toContain('label: "Smb"');
+
+  const withContent = generateApp(spec, {
+    ...options,
+    content: {
+      models: {
+        Customer: {
+          label: "Client",
+          fields: {
+            name: { help: "As on the invoice." },
+            segment: { values: { smb: "Small business" } },
+          },
+        },
+      },
+      pages: { customers: { title: "Our clients" } },
+      menus: {},
+    },
+  });
+  expect(customer(withContent)).toContain('help: "As on the invoice."');
+  expect(customer(withContent)).toContain('label: "Small business"');
+  expect(customer(withContent)).toContain('pluralLabel: "Clients"');
+  const list = withContent.find((f) => f.path === "src/routes/customers/index.tsx")?.content ?? "";
+  expect(list).toContain('title="Our clients"');
+  expect(list).toContain("New client");
+});

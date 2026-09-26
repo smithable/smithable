@@ -1,4 +1,11 @@
-import type { FieldIR, ModelIR, PageIR, SpecIR } from "@smithable/core";
+import {
+  type ContentIR,
+  emptyContent,
+  type FieldIR,
+  type ModelIR,
+  type PageIR,
+  type SpecIR,
+} from "@smithable/core";
 import { camel, humanize, kebab, pascal, plural, snake } from "./naming.js";
 import { sampleRows } from "./sample-data.js";
 import { STACK_PROFILE } from "./stack.js";
@@ -21,6 +28,8 @@ export interface GeneratedFile {
 export interface GenerateOptions {
   /** The Smithable version recorded in smithable.lock. */
   smithableVersion: string;
+  /** Visible text from smithable.content.yml; anything missing is derived from names. */
+  content?: ContentIR;
 }
 
 const HEADER =
@@ -28,6 +37,7 @@ const HEADER =
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  const t = texts(options.content ?? emptyContent());
   const files: GeneratedFile[] = Object.entries(TEMPLATES).map(([path, content]) => ({
     path,
     content,
@@ -41,26 +51,49 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   add("src/generated/app.ts", appModule(ir));
   add("src/db/schema.ts", schemaModule(ir));
   add("src/db/seed.ts", seedModule(ir));
-  add("src/routes/__root.tsx", rootRoute(ir));
+  add("src/routes/__root.tsx", rootRoute(ir, t));
   if (!ir.pages.some((p) => p.route === "/")) add("src/routes/index.tsx", indexRoute(ir));
-  for (const model of ir.models) add(`src/generated/${kebab(model.name)}.ts`, modelModule(model));
+  for (const model of ir.models)
+    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t));
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === page.pattern.model);
     if (!model) continue;
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
-    add(`${dir}/index.tsx`, listRoute(page, model));
-    add(`${dir}/new.tsx`, newRoute(page, model));
-    add(`${dir}/$id.tsx`, detailRoute(page, model));
+    add(`${dir}/index.tsx`, listRoute(page, model, t));
+    add(`${dir}/new.tsx`, newRoute(page, model, t));
+    add(`${dir}/$id.tsx`, detailRoute(page, model, t));
   }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
+/** Visible text: from smithable.content.yml when given there, otherwise derived from names. */
+function texts(content: ContentIR) {
+  return {
+    modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
+    modelPluralLabel: (model: ModelIR) => {
+      const own = content.models[model.name];
+      return own?.pluralLabel ?? (own?.label ? plural(own.label) : humanize(plural(model.name)));
+    },
+    field: (model: ModelIR, field: FieldIR) => content.models[model.name]?.fields[field.name] ?? {},
+    pageTitle: (id: string) => content.pages[id]?.title ?? humanize(id),
+    menuLabel: (name: string) =>
+      content.menus[name]?.label ?? (name === "main" ? undefined : humanize(name)),
+  };
+}
+
+type Texts = ReturnType<typeof texts>;
+
+/** The model's Drizzle table variable and SQL table name. */
+function tableNames(model: ModelIR) {
+  const pluralName = plural(model.name);
+  return { table: camel(pluralName), sqlTable: snake(pluralName) };
+}
+
 // Names derived from a model, used consistently across files.
-function names(model: ModelIR) {
+function names(model: ModelIR, t: Texts) {
   const pluralName = plural(model.name);
   return {
-    table: camel(pluralName),
-    sqlTable: snake(pluralName),
+    ...tableNames(model),
     ui: `${camel(model.name)}Ui`,
     schema: `${camel(model.name)}Schema`,
     list: `list${pascal(pluralName)}`,
@@ -69,8 +102,8 @@ function names(model: ModelIR) {
     update: `update${model.name}`,
     remove: `delete${model.name}`,
     module: `#/generated/${kebab(model.name)}`,
-    label: humanize(model.name),
-    pluralLabel: humanize(pluralName),
+    label: t.modelLabel(model),
+    pluralLabel: t.modelPluralLabel(model),
   };
 }
 
@@ -124,7 +157,7 @@ export const app: AppUi = ${literal(app)};
 function schemaModule(ir: SpecIR): string {
   const imports = new Set(["integer", "sqliteTable"]);
   const tables = ir.models.map((model) => {
-    const n = names(model);
+    const n = tableNames(model);
     const columns = model.fields.map((field) => {
       const { expr, uses } = column(field);
       imports.add(uses);
@@ -189,9 +222,9 @@ function column(field: FieldIR): { expr: string; uses: string } {
 }
 
 function seedModule(ir: SpecIR): string {
-  const tables = ir.models.map((m) => names(m).table);
+  const tables = ir.models.map((m) => tableNames(m).table);
   const blocks = ir.models.map((model) => {
-    const n = names(model);
+    const n = tableNames(model);
     const rows = sampleRows(model).map((row) => {
       const entries = model.fields.map(
         (field) => `${field.name}: ${sampleLiteral(field, row[field.name])}`,
@@ -222,8 +255,8 @@ function sampleLiteral(field: FieldIR, value: unknown): string {
 
 // ── Models: UI description, validation and server functions ─────────────────
 
-function modelModule(model: ModelIR): string {
-  const n = names(model);
+function modelModule(model: ModelIR, t: Texts): string {
+  const n = names(model, t);
   const ui = {
     label: n.label,
     pluralLabel: n.pluralLabel,
@@ -232,7 +265,7 @@ function modelModule(model: ModelIR): string {
       .filter((f) => !(f.type.kind === "scalar" && f.type.name === "text"))
       .slice(0, 5)
       .map((f) => f.name),
-    fields: model.fields.map(fieldUi),
+    fields: model.fields.map((field) => fieldUi(model, field, t)),
   };
   const refinements = model.fields.flatMap((f) => {
     const r = refinement(f);
@@ -279,16 +312,22 @@ export const ${n.remove} = createServerFn({ method: "POST" })
 `;
 }
 
-function fieldUi(field: FieldIR) {
+function fieldUi(model: ModelIR, field: FieldIR, t: Texts) {
   const kind = field.type.kind === "choice" ? "choice" : field.type.name;
+  const own = t.field(model, field);
   return {
     name: field.name,
-    label: humanize(field.name),
+    label: own.label ?? humanize(field.name),
     kind,
     required: field.required,
-    ...(field.description ? { help: field.description } : {}),
+    ...(own.help ? { help: own.help } : {}),
     ...(field.type.kind === "choice"
-      ? { choices: field.type.values.map((value) => ({ value, label: humanize(value) })) }
+      ? {
+          choices: field.type.values.map((value) => ({
+            value,
+            label: own.values?.[value] ?? humanize(value),
+          })),
+        }
       : {}),
     ...(field.default !== undefined
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
@@ -331,14 +370,15 @@ function refinement(field: FieldIR): string | undefined {
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
-function rootRoute(ir: SpecIR): string {
+function rootRoute(ir: SpecIR, t: Texts): string {
   const pageRoute = new Map(ir.pages.map((p) => [p.id, p.route]));
   const menus = ir.navigation.map((menu) => {
     const items = menu.pages.map(
       (id) =>
-        `      { to: ${JSON.stringify(pageRoute.get(id) ?? "/")}, label: ${JSON.stringify(humanize(id))} },`,
+        `      { to: ${JSON.stringify(pageRoute.get(id) ?? "/")}, label: ${JSON.stringify(t.pageTitle(id))} },`,
     );
-    const label = menu.name === "main" ? "" : ` label: ${JSON.stringify(humanize(menu.name))},`;
+    const menuLabel = t.menuLabel(menu.name);
+    const label = menuLabel === undefined ? "" : ` label: ${JSON.stringify(menuLabel)},`;
     return `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`;
   });
   return `${HEADER}import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
@@ -404,8 +444,8 @@ export const Route = createFileRoute("/")({
 `;
 }
 
-function listRoute(page: PageIR, model: ModelIR): string {
-  const n = names(model);
+function listRoute(page: PageIR, model: ModelIR, t: Texts): string {
+  const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
   return `${HEADER}import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { buttonVariants } from "#/components/ui/button";
@@ -429,7 +469,7 @@ function ${component}() {
   );
   return (
     <>
-      <PageHeader title=${JSON.stringify(humanize(page.id))} actions={newButton} />
+      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))} actions={newButton} />
       <ModelTable
         ui={${n.ui}}
         app={app}
@@ -443,8 +483,8 @@ function ${component}() {
 `;
 }
 
-function newRoute(page: PageIR, model: ModelIR): string {
-  const n = names(model);
+function newRoute(page: PageIR, model: ModelIR, t: Texts): string {
+  const n = names(model, t);
   const component = `New${model.name}Page`;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
@@ -475,8 +515,8 @@ function ${component}() {
 `;
 }
 
-function detailRoute(page: PageIR, model: ModelIR): string {
-  const n = names(model);
+function detailRoute(page: PageIR, model: ModelIR, t: Texts): string {
+  const n = names(model, t);
   const component = `${model.name}Page`;
   const title = titleField(model);
   const heading =

@@ -6,8 +6,8 @@ import { STARTERS } from "./starters.gen.js";
 
 /** `smithable new <dir>`: a new project from a starter spec, with sample data. */
 export function create(dir: string, io: Io, starter: string): number {
-  const spec = STARTERS[starter];
-  if (spec === undefined) {
+  const files = STARTERS[starter];
+  if (files === undefined) {
     io.err(`Unknown starter "${starter}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
     return 2;
   }
@@ -16,7 +16,7 @@ export function create(dir: string, io: Io, starter: string): number {
     return 1;
   }
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "smithable.yml"), spec);
+  for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
   const code = generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
   if (exec("pnpm", ["db:seed"], dir) !== 0)
