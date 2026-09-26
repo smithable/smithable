@@ -61,7 +61,16 @@ export function detach(dir: string, io: Io): number {
   const specs = readdirSync(dir).filter((f) => /^smithable(\.[a-z]+)?\.yml$/.test(f));
   mkdirSync(docs, { recursive: true });
   for (const spec of specs) renameSync(join(dir, spec), join(docs, spec));
-  for (const path of ["smithable.lock", ".smithable", join("data", ".smithable")]) {
+  // Agent guidance about Smithable goes too; CLAUDE.md only if it is still just the pointer.
+  const claude = join(dir, "CLAUDE.md");
+  if (existsSync(claude) && readFileSync(claude, "utf8").trim() === "@AGENTS.md") rmSync(claude);
+  for (const path of [
+    "smithable.lock",
+    ".smithable",
+    join("data", ".smithable"),
+    "AGENTS.md",
+    ".mcp.json",
+  ]) {
     rmSync(join(dir, path), { recursive: true, force: true });
   }
   io.out(

@@ -7,6 +7,7 @@ import {
   findOperation,
   formatDiagnostic,
   OPERATIONS,
+  type OperationArgs,
   parseOperationArgs,
   type SpecIR,
   storageOf,
@@ -26,6 +27,8 @@ const OPLOG = ".smithable/oplog.jsonl";
 export interface OpFlags {
   /** Confirms a destructive operation. */
   yes: boolean;
+  /** Called through MCP: messages name the tools instead of CLI commands. */
+  mcp?: boolean;
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -41,6 +44,25 @@ export function op(
     io.err(`${name ? `Unknown operation "${name}". ` : ""}Available operations:\n`);
     for (const o of OPERATIONS)
       io.err(`  ${o.name} ${o.positional.map((p) => `<${p}>`).join(" ")}  ${o.summary}\n`);
+    return 2;
+  }
+  return runOperation(dir, io, operation.name, parseOperationArgs(operation, values), flags);
+}
+
+/**
+ * Applies an operation given its arguments, for the CLI and the MCP server alike: checks,
+ * edits the spec, regenerates, migrates, and commits a checkpoint that `undo` reverts.
+ */
+export function runOperation(
+  dir: string,
+  io: Io,
+  name: string,
+  args: OperationArgs,
+  flags: OpFlags,
+): number {
+  const operation = findOperation(name);
+  if (!operation) {
+    io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
   ensureRepository(dir);
@@ -59,7 +81,6 @@ export function op(
     ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
     ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
   };
-  const args = parseOperationArgs(operation, values);
   const result = applyOperation(files, operation.name, args);
   if (!result.ok) {
     io.err(`${result.message}\n`);
@@ -76,7 +97,7 @@ export function op(
   }
   if (result.destructive && !flags.yes) {
     io.err(
-      `${result.description}: ${dataImpact(dir, result.effects, args)}\nRun again with --yes to apply it.\n`,
+      `${result.description}: ${dataImpact(dir, result.effects, args)}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
     );
     return 1;
   }
@@ -118,7 +139,7 @@ export function op(
   const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\n`;
   const commit = git(dir, ["commit", "-q", "-m", message]);
   if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
-  io.out(`${result.description}. Undo with: smithable undo\n`);
+  io.out(`${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`);
   return 0;
 }
 
