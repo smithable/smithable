@@ -73,7 +73,10 @@ const tokens =
 
 const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
 const viaOperation = calls.some((c) => c.name === "mcp__smithable__smithable_add_field");
-const openedFiles = calls.filter((c) => !c.name.startsWith("mcp__smithable__"));
+// ToolSearch only loads the MCP tools' definitions in Claude Code; it touches no files.
+const openedFiles = calls.filter(
+  (c) => !c.name.startsWith("mcp__smithable__") && c.name !== "ToolSearch",
+);
 const typechecks = sh("pnpm", ["typecheck"], dir).status === 0;
 const added = /\n {6}website: url\b/.test(spec);
 const ok = viaOperation && added && openedFiles.length === 0 && typechecks;
@@ -99,7 +102,7 @@ Prompt: "${PROMPT}" on a new CRM, with only the Smithable MCP server registered 
 |---|---|
 | Result | ${ok ? "**Passed**" : "**Failed**"} |
 | Field added to smithable.yml through \`smithable_add_field\` | ${added && viaOperation ? "yes" : "no"} |
-| Other tools used (file reads, edits, shell) | ${openedFiles.length ? openedFiles.map((c) => c.name).join(", ") : "none"} |
+| Other tools used (file reads, edits, shell) | ${openedFiles.length ? openedFiles.map((c) => `${c.name} \`${JSON.stringify(c.input).slice(0, 120)}\``).join("; ") : "none"} |
 | App type-checks afterwards | ${typechecks ? "yes" : "no"} |
 | Tool calls | ${calls.map((c) => `\`${c.name.replace("mcp__smithable__", "")}\``).join(" → ")} |
 | Turns | ${result.num_turns ?? "?"} |
