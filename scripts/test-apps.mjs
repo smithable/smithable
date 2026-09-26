@@ -1,10 +1,12 @@
 // End-to-end test: every example becomes a real app that installs, type-checks, builds,
-// serves its pages with sample data, and regenerates without changes.
+// serves its pages with sample data, and regenerates without changes. The CRM (the
+// running example) is also used in a real browser: validation, create, edit, delete.
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { chromium } from "playwright";
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -44,6 +46,56 @@ async function waitFor(url) {
   throw new Error(`${url} did not respond`);
 }
 
+/** Creates, edits and deletes a customer through the UI, checking messages on the way. */
+async function browserFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const expectText = async (name, text) => {
+    await page.getByText(text).first().waitFor({ timeout: 5000 });
+    console.log(`  ✓ browser: ${name}`);
+  };
+  try {
+    await page.goto(`${base}/customers/new`);
+    await page.getByRole("button", { name: "Create customer" }).click();
+    await expectText("empty required field says Required", "Required");
+
+    await page.getByRole("textbox", { name: "Name *" }).fill("Mariehamn Marine AB");
+    await page.getByRole("textbox", { name: "Email" }).fill("nordic.timber.oy@example.com");
+    await page.getByRole("textbox", { name: "Credit limit" }).fill("lots");
+    await page.getByRole("button", { name: "Create customer" }).click();
+    await expectText("a non-number amount says Enter a number", "Enter a number");
+
+    await page.getByRole("textbox", { name: "Credit limit" }).fill("1500");
+    await page.getByRole("button", { name: "Create customer" }).click();
+    await expectText("a taken email is explained", "Another customer already has this email.");
+
+    await page.getByRole("textbox", { name: "Email" }).fill("hello@mariehamn-marine.example.com");
+    await page.getByRole("button", { name: "Create customer" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await expectText("create: the new customer is listed with its amount", "€1,500.00");
+
+    await page.getByRole("cell", { name: "Mariehamn Marine AB" }).click();
+    await page.getByRole("textbox", { name: "Credit limit" }).fill("2750.50");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await expectText("edit: the change is saved", "€2,750.50");
+
+    await page.getByRole("cell", { name: "Mariehamn Marine AB" }).click();
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "Delete" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
+    if (await page.getByText("Mariehamn Marine AB").count())
+      throw new Error("The customer was not deleted");
+    console.log("  ✓ browser: delete removes the customer");
+  } catch (error) {
+    console.log(`  ✗ browser: ${error.message.split("\n")[0]}`);
+    failures.push("crm browser flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 for (const [index, example] of examples.entries()) {
   console.log(`\n${example}`);
   const dir = join(mkdtempSync(join(tmpdir(), `smithable-${example}-`)), "app");
@@ -74,6 +126,7 @@ for (const [index, example] of examples.entries()) {
         console.log(`  ${ok ? "✓" : "✗"} ${path} lists sample data`);
         if (!ok) failures.push(`${example} ${path}`);
       }
+      if (example === "crm") await browserFlow(`http://localhost:${port}`);
     } finally {
       process.kill(-server.pid);
     }
