@@ -138,3 +138,9 @@ describe("YamlEditor changes only what it targets", () => {
     expect(diff(text, e.text)).toEqual({ added: ["      email: email"], removed: [] });
   });
 });
+
+test("setItem replaces one list item on its line", () => {
+  const e = new YamlEditor("rules:\n  - First rule.   # note\n  - Second rule.\n");
+  e.setItem(["rules"], 0, { id: "first", rule: "First rule." });
+  expect(e.text).toBe("rules:\n  - { id: first, rule: First rule. }   # note\n  - Second rule.\n");
+});
