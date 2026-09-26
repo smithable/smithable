@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4. **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6. **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
