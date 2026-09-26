@@ -1,0 +1,20 @@
+smithable: 0.1
+app:
+  name: Broken relations
+models:
+  Customer:
+    fields:
+      name: string!
+      orders: Order[]              # expect: missing-inverse
+      invoices: Invoice[]          # expect: ambiguous-inverse
+      manager: Employe             # expect: unknown-model
+      contacts: Contact[]!         # expect: invalid-field
+      account: Customer            # expect: invalid-field
+      accountId: int
+  Order:
+    fields:
+      number: string!
+  Invoice:
+    fields:
+      billedTo: Customer!
+      shippedTo: Customer

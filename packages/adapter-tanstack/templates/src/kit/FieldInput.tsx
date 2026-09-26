@@ -1,12 +1,14 @@
 // Smithable app kit: the input control for one field, chosen by its kind.
 import { Checkbox, Input, NativeSelect, Textarea } from "#/components/ui/input";
-import type { FieldUi } from "./model";
+import type { FieldUi, Options } from "./model";
 
 interface FieldInputProps {
   field: FieldUi;
   id: string;
   value: string | boolean;
   invalid: boolean;
+  /** Choices for reference fields. */
+  options?: Options;
   onChange: (value: string | boolean) => void;
 }
 
@@ -18,7 +20,7 @@ const inputTypes: Partial<Record<FieldUi["kind"], string>> = {
   datetime: "datetime-local",
 };
 
-export function FieldInput({ field, id, value, invalid, onChange }: FieldInputProps) {
+export function FieldInput({ field, id, value, invalid, options, onChange }: FieldInputProps) {
   const common = { id, name: field.name, "aria-invalid": invalid || undefined };
   if (field.kind === "bool") {
     return (
@@ -28,6 +30,18 @@ export function FieldInput({ field, id, value, invalid, onChange }: FieldInputPr
   const text = typeof value === "string" ? value : "";
   if (field.kind === "text") {
     return <Textarea {...common} value={text} onChange={(e) => onChange(e.target.value)} />;
+  }
+  if (field.kind === "relation") {
+    return (
+      <NativeSelect {...common} value={text} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{field.required ? "Choose…" : "—"}</option>
+        {options?.[field.name]?.map((choice) => (
+          <option key={choice.value} value={String(choice.value)}>
+            {choice.label}
+          </option>
+        ))}
+      </NativeSelect>
+    );
   }
   if (field.kind === "choice") {
     return (

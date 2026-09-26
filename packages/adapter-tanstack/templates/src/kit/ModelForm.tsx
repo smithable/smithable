@@ -7,13 +7,15 @@ import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { FieldInput } from "./FieldInput";
 import { fromInput, toInput } from "./format";
-import type { FieldUi, ModelUi } from "./model";
+import type { FieldUi, ModelUi, Options } from "./model";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
   schema: S;
   /** The stored record when editing; omit to create a new one. */
   initial?: Record<string, unknown>;
+  /** Choices for reference fields, e.g. { customerId: [...] }. */
+  options?: Options;
   submitLabel: string;
   onSubmit: (values: z.output<S>) => Promise<unknown>;
   onCancel?: () => void;
@@ -21,7 +23,7 @@ interface ModelFormProps<S extends z.ZodType> {
 }
 
 export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
-  const { ui, schema, initial, submitLabel, onSubmit, onCancel, onDelete } = props;
+  const { ui, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete } = props;
   const [inputs, setInputs] = useState(() =>
     Object.fromEntries(
       ui.fields.map((f) => [f.name, toInput(f, initial ? initial[f.name] : f.default)]),
@@ -83,6 +85,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                 id={id}
                 value={inputs[field.name] ?? ""}
                 invalid={error !== undefined}
+                options={options}
                 onChange={(value) => setInputs((current) => ({ ...current, [field.name]: value }))}
               />
               {inline && <Label htmlFor={id}>{field.label}</Label>}
@@ -150,5 +153,8 @@ function failureMessage(ui: ModelUi, error: unknown): string {
   );
   if (field)
     return `Another ${ui.label.toLowerCase()} already has this ${field.label.toLowerCase()}.`;
+  if (message.includes("FOREIGN KEY constraint failed")) {
+    return `This ${ui.label.toLowerCase()} is still used by other records. Change or delete those first.`;
+  }
   return message || "Something went wrong. Please try again.";
 }

@@ -1,0 +1,21 @@
+smithable: 0.1
+app:
+  name: Relations
+models:
+  Customer:
+    fields:
+      name: string!
+      orders: Order[]
+      manager: Employee
+  Employee:
+    fields:
+      name: string!
+      reportsTo: Employee          # a reference to the same model
+  Order:
+    fields:
+      number: string! unique
+      customer: Customer!
+      handledBy: Employee
+pages:
+  customers: { crud: Customer }
+  orders: { crud: Order }

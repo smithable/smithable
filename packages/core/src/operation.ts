@@ -1,5 +1,5 @@
 import type { YamlEditor } from "./edit.js";
-import type { SpecIR } from "./ir.js";
+import type { SpecIR, Storage } from "./ir.js";
 import type { JsonSchema } from "./section.js";
 
 /** The files an operation may edit. */
@@ -11,8 +11,8 @@ export interface Editors {
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */
 export type Effect =
-  | { kind: "rename-field"; model: string; from: string; to: string }
-  | { kind: "remove-field"; model: string; field: string };
+  | { kind: "rename-field"; model: string; from: string; to: string; storage: Storage }
+  | { kind: "remove-field"; model: string; field: string; storage: Storage };
 
 export type OperationArgs = { [key: string]: unknown };
 

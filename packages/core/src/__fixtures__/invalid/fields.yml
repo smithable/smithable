@@ -8,7 +8,6 @@ models:
       email: email uniqe           # expect: invalid-field
       status: draft | sent = sent  # expect: invalid-choice
       age: int = old               # expect: invalid-default
-      customer: Customer!          # expect: not-yet-supported
       id: string                   # expect: reserved-name
       Phone: phone                 # expect: invalid-name
       level:

@@ -13,7 +13,8 @@ export type FieldKind =
   | "email"
   | "phone"
   | "url"
-  | "choice";
+  | "choice"
+  | "relation";
 
 export interface FieldUi {
   name: string;
@@ -22,6 +23,8 @@ export interface FieldUi {
   required: boolean;
   help?: string;
   choices?: { value: string; label: string }[];
+  /** For a reference: the related record's key in a row, and the field that names it. */
+  relation?: { key: string; titleField: string };
   default?: string | number | boolean;
 }
 
@@ -42,3 +45,6 @@ export interface AppUi {
 }
 
 export type Row = { id: number } & Record<string, unknown>;
+
+/** Choices for a reference field, keyed by the field's name, e.g. { customerId: [...] }. */
+export type Options = Record<string, { value: number; label: string }[]>;

@@ -106,7 +106,7 @@
               "oneOf": [
                 {
                   "type": "string",
-                  "pattern": "^\\s*(?:(?:string|text|int|decimal|money|bool|date|datetime|email|phone|url)!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$",
+                  "pattern": "^\\s*(?:(?:string|text|int|decimal|money|bool|date|datetime|email|phone|url)!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|[A-Z][A-Za-z0-9]*!?(?:\\s+unique)?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$",
                   "description": "A type with optional \"!\" (required), \"unique\" and \"= default\", e.g. \"string!\" or \"int! = 60\". Or choices: \"draft | sent | paid\" (the first is the default)."
                 },
                 {
@@ -118,7 +118,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "pattern": "^\\s*(?:(?:string|text|int|decimal|money|bool|date|datetime|email|phone|url)!?|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$"
+                      "pattern": "^\\s*(?:(?:string|text|int|decimal|money|bool|date|datetime|email|phone|url)!?|[A-Z][A-Za-z0-9]*!?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$"
                     },
                     "required": {
                       "type": "boolean"

@@ -84,6 +84,26 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "description": "One scheduled occurrence of a class.",
       "fields": [
         {
+          "name": "classType",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "ClassType",
+          },
+          "unique": false,
+        },
+        {
+          "name": "instructor",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Instructor",
+          },
+          "unique": false,
+        },
+        {
           "name": "startsAt",
           "required": true,
           "type": {
@@ -224,6 +244,16 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "orders",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Order",
+          },
+          "unique": false,
+        },
       ],
       "name": "Customer",
     },
@@ -237,6 +267,16 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
             "name": "string",
           },
           "unique": true,
+        },
+        {
+          "name": "customer",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
         },
         {
           "default": "draft",
@@ -353,6 +393,16 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "invoices",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Invoice",
+          },
+          "unique": false,
+        },
       ],
       "name": "Client",
     },
@@ -366,6 +416,16 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
             "name": "string",
           },
           "unique": true,
+        },
+        {
+          "name": "client",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Client",
+          },
+          "unique": false,
         },
         {
           "name": "issuedOn",
@@ -731,6 +791,136 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
     },
   ],
   "pages": [],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
+{
+  "app": {
+    "name": "Relations",
+  },
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "orders",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Order",
+          },
+          "unique": false,
+        },
+        {
+          "name": "manager",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Employee",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Customer",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "reportsTo",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Employee",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Employee",
+    },
+    {
+      "fields": [
+        {
+          "name": "number",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": true,
+        },
+        {
+          "name": "customer",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
+        },
+        {
+          "name": "handledBy",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Employee",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Order",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "customers",
+        "orders",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "customers",
+      "pattern": {
+        "kind": "crud",
+        "model": "Customer",
+      },
+      "route": "/customers",
+    },
+    {
+      "id": "orders",
+      "pattern": {
+        "kind": "crud",
+        "model": "Order",
+      },
+      "route": "/orders",
+    },
+  ],
   "specVersion": "0.1",
 }
 `;
