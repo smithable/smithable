@@ -10,14 +10,16 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   - `pnpm test`: Vitest, tests live next to the code as `src/**/*.test.ts`.
   - `pnpm lint`: Biome lint and format check. `pnpm fix` applies fixes.
   - `pnpm test:apps`: generates every example in `examples/` into a temporary directory, then type-checks, builds, serves and regenerates it.
+  - `pnpm test:studio`: runs `smithable studio` on a new CRM and makes the M3–M5 changes in both modes in a real browser.
   - `pnpm test:container` (needs Docker): builds the CRM image and checks that data survives replacing the container. Not part of `check`.
   - `node scripts/bench-m3.mjs`: the M3 mini-benchmark (Smithable operations vs Claude Code headless on the same tasks). Uses the user's Claude usage; ask before running. Writes `docs/benchmarks/m3-mini.md`.
   - `node scripts/bench-m7.mjs [S] [A] [B]`: the M7 benchmark (seven tasks by Smithable operations, plain Claude Code, and Claude Code with MCP). S is free; A and B use the user's Claude usage, so ask before running them. Writes `docs/benchmarks/m7.md`.
   - `node scripts/bench-m6.mjs`: the M6 exit check (Claude Code headless with only the Smithable MCP server). Uses the user's Claude usage; ask before running. Writes `docs/benchmarks/m6-mcp.md`.
-  - `pnpm check`: lint + build + test + test:apps. This is the CI gate and must pass before every commit.
+  - `pnpm check`: lint + build + test + test:apps + test:studio. This is the CI gate and must pass before every commit.
   - `pnpm schema`: regenerate `packages/core/schema/smithable.schema.json` after changing a section's schema. A test fails if it is stale.
 - App templates live in `packages/adapter-tanstack/templates/` as real files; `pnpm build` embeds them (and the example specs used as starters) via `scripts/embed.mjs`. Generated `*.gen.ts` files are never edited by hand.
 - The spec reference is `docs/spec/v0.1.md`. Update it together with any change to the spec grammar.
+- The Studio web app (Builder and Studio modes) is `apps/studio` (React + Vite); `pnpm build` builds it, and `smithable studio` serves it. `spikes/` holds experiments that are not part of the product or `check`.
 - New packages go in `packages/<name>` with a `tsconfig.json` extending `tsconfig.base.json`. Add them to the root `tsconfig.json` references.
 
 ## Rules when working on Smithable

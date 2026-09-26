@@ -60,6 +60,7 @@ export function runOperation(
   args: OperationArgs,
   flags: OpFlags,
 ): number {
+  const started = Date.now();
   const operation = findOperation(name);
   if (!operation) {
     io.err(`Unknown operation "${name}".\n`);
@@ -117,7 +118,7 @@ export function runOperation(
   mkdirSync(join(dir, ".smithable"), { recursive: true });
   appendFileSync(
     join(dir, OPLOG),
-    `${JSON.stringify({ id, op: operation.name, args, description: result.description })}\n`,
+    `${JSON.stringify({ id, op: operation.name, args: operation.name === "editSpec" ? {} : args, description: result.description })}\n`,
   );
   // Only stored fields have a column to rename; a list of related records stores nothing.
   const renames = result.effects.flatMap((e) =>
@@ -136,7 +137,9 @@ export function runOperation(
     if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
   }
   git(dir, ["add", "-A"]);
-  const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\n`;
+  // A whole edited spec is in the diff; the trailer stays short.
+  const recorded = operation.name === "editSpec" ? {} : args;
+  const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n`;
   const commit = git(dir, ["commit", "-q", "-m", message]);
   if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
   io.out(`${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`);

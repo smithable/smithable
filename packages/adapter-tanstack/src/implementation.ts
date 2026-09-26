@@ -1,4 +1,4 @@
-import { type AuthIR, emptyContent, type SpecIR } from "@smithable/core";
+import { type AuthIR, emptyContent, kebab, type SpecIR } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
 import { defaultsName, formulasName, hasFormulas } from "./formulas.js";
 import {
@@ -11,7 +11,6 @@ import {
   tableNames,
   texts,
 } from "./generate.js";
-import { kebab } from "./naming.js";
 
 /** Where a concept's code lives in the generated app. */
 export interface GeneratedEntry {

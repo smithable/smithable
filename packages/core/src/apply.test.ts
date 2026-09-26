@@ -287,3 +287,25 @@ test("setSearch adds, changes and removes a page's search", () => {
   });
   expect(apply("setSearch", ["customers", "creditLimit"])).toMatchObject({ ok: false });
 });
+
+test("editSpec replaces the spec; removing a stored field is destructive; broken YAML is refused", () => {
+  const added = applyOperation(files, "editSpec", {
+    text: files.spec.replace("      notes: text\n", "      notes: text\n      website: url\n"),
+  });
+  expect(added).toMatchObject({ ok: true, destructive: false, effects: [] });
+  const removed = applyOperation(files, "editSpec", {
+    text: files.spec.replace("      phone: phone\n", ""),
+  });
+  expect(removed).toMatchObject({
+    ok: true,
+    destructive: true,
+    effects: [{ kind: "remove-field", model: "Customer", field: "phone", storage: "value" }],
+  });
+  expect(applyOperation(files, "editSpec", { text: "models: [" })).toMatchObject({ ok: false });
+  expect(
+    applyOperation(files, "editSpec", { text: files.spec.replace("string!", "strng!") }),
+  ).toMatchObject({
+    ok: false,
+    message: "editSpec would make smithable.yml invalid.",
+  });
+});
