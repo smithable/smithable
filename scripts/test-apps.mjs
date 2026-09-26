@@ -325,7 +325,12 @@ async function mcpFlow(dir) {
           request: "Customers should have a LinkedIn page",
         });
         if (!context.includes("- model:Customer:")) throw new Error(context);
-        await call("smithable_add_field", { model: "Customer", field: "linkedin", type: "url" });
+        const added = await call("smithable_add_field", {
+          model: "Customer",
+          field: "linkedin",
+          type: "url",
+        });
+        if (!added.includes("No custom code is affected.")) throw new Error(added);
         if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("      linkedin: url\n"))
           throw new Error("not in the spec");
         run("pnpm", ["typecheck"], dir);
