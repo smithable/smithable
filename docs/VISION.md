@@ -2,39 +2,74 @@
 
 ## What Smithable is
 
-Smithable is an open-source, local-first application builder for developers. You describe an application in a compact, technology-neutral manifest (`smithable.yml`). Smithable generates an ordinary full-stack web application from that manifest, keeps the two in sync, and lets you change the application through a CLI, a visual Studio, or natural language.
+Smithable is an app builder for everyone who wants to create web applications: people who have never written code and developers who want to move faster. You describe what you want in plain language or through a visual editor. Smithable turns it into a compact, technology-neutral specification (`smithable.yml`) and generates an ordinary, good-looking full-stack web application from it.
+
+It competes with prompt-to-app builders such as Lovable, with one fundamental difference:
+
+> **Smithable understands the application.** Routine changes are made by deterministic generators, not by an AI rewriting code. So changes don't break your app, most of them cost nothing, and the result stays clean enough for a developer to take over.
 
 It combines:
 
+- **Lovable**: describe an app in words, see it instantly, edit visually, publish in one click.
 - **Rails**: convention over configuration, one obvious way to do common things, concise code.
-- **Lovable**: visual editing, prompt-driven changes, instant preview.
 - **Model-driven development**: the application's structure is declared, not rediscovered.
-- **Coding agents**: optional AI for interpretation and for genuinely custom logic.
+- **Coding agents**: AI for interpretation and for genuinely custom logic, used only where needed.
+
+## Who it is for
+
+One product with two ways in, working on the same project:
+
+| | **Builder** | **Studio** |
+|---|---|---|
+| For | Non-developers: founders, small businesses, domain experts | Developers, agencies |
+| Works through | Chat, preview, click-to-edit, guided setup | Spec editor, diffs, code, CLI, MCP, Git |
+| Sees the spec as | A plain-language summary | YAML |
+| Publishes by | One click | One click, or their own infrastructure |
+
+The switch is a toggle, not a migration. That enables the **handoff**: a non-developer builds the app, and a developer takes over the same project and finds clean code, a spec and tests.
+
+## Why Smithable instead of prompt-to-code builders
+
+These are the problems users of prompt-to-code builders commonly hit, and each one is a design goal for Smithable:
+
+| Problem | Smithable's answer |
+|---|---|
+| Credits burned on the AI fixing its own bugs, sometimes in loops | Standard features are generated, not AI-written, so there is nothing to fix. Those changes cost 0 tokens |
+| One change breaks something else | Generated tests run on every change. A failing change rolls back automatically |
+| The AI loses track as the project grows | The spec is the memory. AI only ever sees a small, relevant slice |
+| Security holes, such as data exposed through misconfigured access rules | Access rules are declared in the spec, enforced server-side by generated code, and covered by generated tests |
+| Unpredictable costs | Most changes are free or nearly free. Every change shows what handled it and what it cost |
+| All generated apps look alike | Designed themes, brand input and a library of page patterns |
+| Hard to hand over to developers or to leave the platform | Normal, idiomatic code, a detach command, standard hosting |
+| US-hosted, GDPR uncertainty | EU hosting and EU AI by default, and fully self-hostable |
+
+The headline: **changes don't break your app, and you don't pay for the AI's mistakes.**
 
 ## The core bet
 
-> Smithable understands the application, so AI does not have to rediscover it on every request, and most routine changes need no AI at all.
+A prompt-to-code builder asked to "add a phone number to customers" has the AI read the code, find the schema, form, API and tests, and edit many files. Smithable runs `addField(Customer, phone, phone)` deterministically, in milliseconds, for 0 tokens.
 
-A conventional coding agent asked to "add a phone number to Customer" reads the repository, finds the schema, form, API and tests, and edits many files. Smithable runs `addField(Customer, phone, phone)` deterministically and spends 0 AI tokens.
+When a request needs interpretation, the cheapest capable tier handles it, and it gets a narrow slice of the spec rather than the whole codebase:
 
-If the request is phrased loosely ("customers need somewhere to enter their mobile number"), a small local model translates it into the same operation. Larger models are used only when real reasoning or custom code is required, and even then they get a narrow, structured slice of context rather than the repository.
+```text
+generators (0 tokens) → local model (if available) → Smithable model (hosted, EU) → frontier model
+```
 
-The bet can be measured, and we will measure it (see the roadmap's benchmark milestone).
+**Transparency is part of the product.** Every change shows what handled it (generator, local model, Smithable model or frontier model), the tokens and cost, and, where measured, an honest estimate of what a conventional AI builder would have used.
 
-## Primary user (v1)
+The bet can be measured, and we will measure it (roadmap M7).
 
-**Developers.** They are comfortable reading code, use the CLI and Studio, and want to move faster without losing control. The visual editor accelerates their work; it does not replace understanding the code. Non-developer users come later, once the semantic core is proven.
+## Principles
 
-## Non-negotiable principles
-
-1. **`smithable.yml` is the source of truth for functionality.** It is a neat, compact DSL. Where the DSL cannot express something precisely, scoped natural language inside the manifest (`description`, `intent`, `rules`, `examples`) fills the gap. Code is used only where actual programming is required.
-2. **Deterministic before AI.** If Smithable can perform a change with a rule or generator, it never calls a model.
-3. **Local before remote, EU before elsewhere.** Execution priority: deterministic → local model → EU-hosted managed model → user-selected external model. A company must be able to guarantee that no source code leaves its network.
-4. **Generated applications are ordinary and independent.** The output is a regular, idiomatic web application and backend that a developer who knows the stack would find unsurprising. It has **no runtime or build dependency on Smithable** and keeps working if Smithable disappears.
-5. **Open source stands alone.** The local product is fully useful without an account, subscription, Smithable Cloud or Smithable-managed inference. Smithable Cloud depends on the open-source product, never the reverse.
-6. **Concise code.** No routine boilerplate (Controller/Service/Repository/DTO/Mapper per model). Each domain definition is written once and derived everywhere else.
-7. **Everything is undoable.** Every change is a reviewable diff and can be reverted.
-8. **Scanner and test output are authoritative.** AI may explain findings; it never silences them.
+1. **`smithable.yml` is the source of truth for functionality.** It is a neat, compact DSL. Where the DSL cannot express something precisely, scoped natural language inside the spec (`description`, `intent`, `rules`, `examples`) fills the gap. Code is used only where actual programming is required.
+2. **Deterministic before AI, and the cheapest capable model first.** If a generator can make the change, no model is called.
+3. **EU by default, local when you want it.** Hosted services and AI run in the EU. Everything can also run self-hosted or with local models, so an organization can guarantee that nothing leaves its network.
+4. **Generated applications are ordinary and independent.** The output is a regular, idiomatic web application that a developer who knows the stack would find unsurprising. It has **no runtime or build dependency on Smithable** and keeps working if Smithable disappears.
+5. **Beautiful by default.** Design quality comes from carefully crafted themes and page patterns, not from AI improvisation.
+6. **Open source stands alone.** The engine, CLI, Studio and MCP server are fully useful without an account or subscription. The hosted service builds on the open-source product, never the reverse.
+7. **Concise code.** No routine boilerplate. Each domain definition is written once and derived everywhere else.
+8. **Everything is undoable.** Every change can be reviewed and reverted.
+9. **Tests and scanners are authoritative.** AI may explain findings; it never silences them.
 
 ## Non-goals
 
@@ -42,30 +77,34 @@ The bet can be measured, and we will measure it (see the roadmap's benchmark mil
 - A general-purpose programming language in YAML.
 - Supporting many stacks early. One stack, done well.
 - Importing and understanding arbitrary existing projects (deferred indefinitely).
-- Cloud hosting, billing, teams, or SSO before the local product is compelling.
+- Teams, enterprise SSO and complex account systems before the single-user product is compelling.
 
-## Business shape (later, not now)
+## Business shape
 
-Principle: **open source can do everything yourself; the subscription does it for you.** Nothing needed to run an app safely in production (including backups) is withheld from open source. The subscription sells convenience, operations and peace of mind.
+Principle: **you can do everything yourself; the subscription does it for you.** Nothing needed to run an app safely in production (including backups) is withheld from open source.
 
-| | Open source (free) | Subscription |
+| | Open source (free) | Hosted (free tier and subscription) |
 |---|---|---|
-| Building | Everything: deterministic tooling, Studio, MCP server | Same |
-| AI | Local models, or your own API keys and providers | Included allowance of EU-hosted AI (Mistral), no setup |
-| Deploy | Build the container yourself; deploy to your own Docker host (SSH + Compose) or any container platform | One-click deploy to Smithable-hosted EU infrastructure, with domains, TLS, logs and rollback |
-| Backups | `smithable backup` to local disk or your own S3-compatible bucket; manual restore | Automatic backups with point-in-time restore, automatic restore verification, and alerts |
+| Building | Engine, CLI, Studio, MCP server, run locally | Builder and Studio in the browser, nothing to install |
+| AI | Local models, or your own API keys | Smithable model and frontier models via EU providers, with included allowances |
+| Publish | Build the container; deploy to your own Docker host (SSH + Compose) or any container platform | One click to EU hosting, with domains, TLS, logs and rollback |
+| Backups | `smithable backup` to your own S3-compatible bucket; manual restore | Automatic, point-in-time restore, verified restores, alerts |
+| Agents | Local MCP server | Remote MCP endpoint, so Claude.ai, ChatGPT and other agents can work on hosted projects |
 | Support | Community | Direct support |
 
 Pricing rules:
 
-- **Included allowances, not opaque credits.** Each plan states concretely what it includes: number of apps, hosting size, backup retention and monthly AI tokens. Extra usage is visible and fairly priced. Hosting and AI costs scale with usage, and a pure flat fee would let heavy users erase the margin.
-- **Efficiency is the margin.** Smithable's low token usage directly lowers the cost of the included AI allowance. Benchmark results are a sales argument and a cost model at the same time.
-- **A possible first paid product:** managed backups for self-deployed apps. It is far less work than full hosting, easy to explain, and useful from day one.
+- **Included allowances, not opaque credits.** Each plan states what it includes: apps, hosting size, backup retention, AI usage. Extra usage is visible and fairly priced.
+- **Efficiency is the margin.** Low token usage makes a generous free tier and a no-signup demo affordable, and it lowers the cost of every paid plan.
 
-All paid services plug into open-source extension points (AI provider, deploy target, backup target). Paid code lives in the private `smithable-cloud` repository, which depends on open source and never the reverse.
+Paid services plug into open-source extension points (AI provider, preview runtime, deploy target, backup target). Paid code lives in the private `smithable-cloud` repository, which depends on open source and never the reverse.
 
-Licensing is undecided. The direction: a permissive license for the specification and schemas, so they can be implemented independently; an OSI-approved license for the tooling (possibly AGPL); and no license obligations on generated applications. Get legal advice before publishing. The repository stays private until the architecture is stable.
+**Licensing** (leaning, pending legal review):
+
+- Apache-2.0 for the engine, tools and specification.
+- 0BSD for the app kit and templates, so generated apps carry no license obligations.
+- A registered EU trademark for the name "Smithable".
 
 ## What success looks like
 
-A developer can go from `smithable new crm` to a running, containerised CRM, then evolve it over dozens of changes (most applied with zero cloud tokens) and still end up with a codebase they would be happy to maintain by hand.
+A non-developer describes a booking site in one sentence, has a good-looking working app within minutes, and publishes it the same day. Months and dozens of changes later, most of which cost nothing, the app still works, and a developer can take it over without rewriting it.
