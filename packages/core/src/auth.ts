@@ -1,0 +1,353 @@
+import { isMap, isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import {
+  type At,
+  checkKeys,
+  mapEntries,
+  ParseContext,
+  readNameList,
+  readString,
+} from "./context.js";
+import { type Diagnostic, hasErrors } from "./diagnostics.js";
+import { type SpecIR, USER_MODEL } from "./ir.js";
+import { FIELD_NAME_PATTERN } from "./sections/names.js";
+import { didYouMean } from "./suggest.js";
+
+/**
+ * Who signs in, the roles, the default access and everything public, from
+ * smithable.auth.yml (ARCHITECTURE §3.1).
+ */
+export interface AuthIR {
+  signIn: "none" | SignInIR;
+  /** Meaningful only with sign-in. */
+  defaultAccess: "shared" | "private";
+  /** Always starts with "admin". */
+  roles: RoleIR[];
+  /** The role new users get. */
+  defaultRole: string;
+  /** Email addresses that become admins when they first sign in. */
+  admins: string[];
+  public: { pages: string[]; read: string[]; create: string[] };
+}
+
+export interface SignInIR {
+  /** In button order. */
+  providers: Provider[];
+  /** Only email addresses in these domains may sign in. */
+  allowedDomains?: string[];
+}
+
+export interface RoleIR {
+  name: string;
+  description?: string;
+}
+
+export const AUTH_VERSION = "0.1";
+export const PROVIDERS = ["google", "facebook"] as const;
+export type Provider = (typeof PROVIDERS)[number];
+const LATER_PROVIDERS = ["microsoft", "github", "apple", "email", "magicLink"];
+
+/** Personal data that should never be readable by anyone on the internet. */
+const PERSONAL_TYPES = ["email", "phone"];
+
+/**
+ * Parses smithable.auth.yml. With the IR of smithable.yml, also checks what the public
+ * section names and how the spec uses users and access.
+ */
+export function validateAuth(
+  file: { path: string; text: string },
+  ir?: SpecIR,
+): { auth?: AuthIR; diagnostics: Diagnostic[] } {
+  const lines = new LineCounter();
+  const doc = parseDocument(file.text, {
+    lineCounter: lines,
+    uniqueKeys: true,
+    prettyErrors: false,
+  });
+  const ctx = new ParseContext(file.path, lines);
+  const auth: AuthIR = {
+    signIn: { providers: ["google"] },
+    defaultAccess: "private",
+    roles: [{ name: "admin" }],
+    defaultRole: "admin",
+    admins: [],
+    public: { pages: [], read: [], create: [] },
+  };
+  const done = () => ({
+    ...(hasErrors(ctx.diagnostics) ? {} : { auth }),
+    diagnostics: [...ctx.diagnostics].sort((a, b) => a.line - b.line || a.column - b.column),
+  });
+
+  for (const error of doc.errors) {
+    ctx.errorAtOffset(
+      error.pos[0],
+      error.code === "DUPLICATE_KEY" ? "duplicate-key" : "yaml-syntax",
+      error.message.split("\n")[0] ?? "",
+    );
+  }
+  if (hasErrors(ctx.diagnostics)) return done();
+
+  const root = doc.contents as ParsedNode | null;
+  const entries = mapEntries(ctx, root, "smithable.auth.yml") ?? [];
+  const byKey = new Map(
+    checkKeys(ctx, entries, "smithable.auth.yml", {
+      allowed: [
+        "smithableAuth",
+        "signIn",
+        "defaultAccess",
+        "roles",
+        "defaultRole",
+        "admins",
+        "public",
+      ],
+      later: ["user", "teams"],
+    }).map((e) => [e.key, e]),
+  );
+  const version = byKey.get("smithableAuth");
+  const versionText = isScalar(version?.value)
+    ? (version.value.source ?? String(version.value.value))
+    : undefined;
+  if (versionText !== AUTH_VERSION) {
+    ctx.error(
+      version?.value ?? root,
+      "invalid-version",
+      `The auth file must start with "smithableAuth: ${AUTH_VERSION}".`,
+    );
+    return done();
+  }
+
+  const signIn = byKey.get("signIn");
+  if (!signIn) {
+    ctx.error(
+      root,
+      "missing-key",
+      `smithable.auth.yml needs "signIn": the sign-in methods, or "none" for an app without sign-in.`,
+    );
+  } else if (isScalar(signIn.value) && signIn.value.value === "none") {
+    auth.signIn = "none";
+  } else {
+    auth.signIn = readSignIn(ctx, signIn.value);
+  }
+
+  const defaultAccess = byKey.get("defaultAccess");
+  if (defaultAccess) {
+    const value = readString(ctx, defaultAccess.value, `"defaultAccess"`);
+    if (value === "shared" || value === "private") auth.defaultAccess = value;
+    else if (value !== undefined)
+      ctx.error(
+        defaultAccess.value,
+        "invalid-value",
+        `"defaultAccess" must be "shared" (signed-in users see all records) or "private" (users see their own records).`,
+      );
+  } else if (auth.signIn !== "none") {
+    ctx.error(
+      root,
+      "missing-key",
+      `smithable.auth.yml needs "defaultAccess": shared (signed-in users see all records) or private (users see only their own).`,
+    );
+  }
+
+  const roles = byKey.get("roles");
+  if (roles) {
+    for (const { key, keyNode, value } of mapEntries(ctx, roles.value, `"roles"`) ?? []) {
+      if (!FIELD_NAME_PATTERN.test(key) || key === "owner") {
+        ctx.error(
+          keyNode,
+          "invalid-name",
+          key === "owner"
+            ? `"owner" is not a role: it means the owner of a record.`
+            : `Role name "${key}" must start with a lowercase letter and use only letters and digits.`,
+        );
+        continue;
+      }
+      const role: RoleIR = { name: key };
+      if (value !== null && !(isScalar(value) && value.value === null)) {
+        const where = `role "${key}"`;
+        for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
+          allowed: ["description"],
+        })) {
+          const description = readString(ctx, entry.value, `The description of ${where}`);
+          if (description !== undefined) role.description = description;
+        }
+      }
+      if (key === "admin") auth.roles[0] = role;
+      else auth.roles.push(role);
+    }
+  } else {
+    auth.roles.push({ name: "member" });
+  }
+  const roleNames = auth.roles.map((r) => r.name);
+
+  const defaultRole = byKey.get("defaultRole");
+  const others = roleNames.filter((r) => r !== "admin");
+  if (defaultRole) {
+    const name = readString(ctx, defaultRole.value, `"defaultRole"`);
+    if (name !== undefined && !roleNames.includes(name)) {
+      ctx.error(
+        defaultRole.value,
+        "unknown-role",
+        `There is no role named "${name}".`,
+        didYouMean(name, roleNames),
+      );
+    } else if (name !== undefined) {
+      auth.defaultRole = name;
+    }
+  } else if (others.length === 1) {
+    auth.defaultRole = others[0] as string;
+  } else if (others.length > 1 && auth.signIn !== "none") {
+    ctx.error(
+      roles?.keyNode ?? root,
+      "missing-key",
+      `With several roles, "defaultRole" says which one new users get.`,
+    );
+  }
+
+  const admins = byKey.get("admins");
+  if (admins) {
+    auth.admins = readNameList(ctx, admins.value, `"admins"`).flatMap(({ name, at }) => {
+      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(name)) return [name.toLowerCase()];
+      ctx.error(at, "invalid-email", `"${name}" in "admins" is not an email address.`);
+      return [];
+    });
+  }
+
+  const pub = byKey.get("public");
+  const publicNodes: Partial<Record<keyof AuthIR["public"], { name: string; at: At }[]>> = {};
+  if (pub) {
+    const entries =
+      isScalar(pub.value) && pub.value.value === null
+        ? []
+        : (mapEntries(ctx, pub.value, `"public"`) ?? []);
+    for (const { key, value } of checkKeys(ctx, entries, `"public"`, {
+      allowed: ["pages", "read", "create"],
+      later: ["actions", "write", "delete"],
+    })) {
+      const k = key as keyof AuthIR["public"];
+      publicNodes[k] = readNameList(ctx, value, `"${key}" in "public"`);
+      auth.public[k] = publicNodes[k].map((n) => n.name);
+    }
+  }
+
+  if (auth.signIn !== "none" && auth.defaultAccess === "shared" && !auth.signIn.allowedDomains) {
+    ctx.warning(
+      defaultAccess?.value,
+      "open-shared-access",
+      "With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.",
+      `Restrict sign-in with "allowedDomains" under "signIn", or use "defaultAccess: private".`,
+    );
+  }
+  if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes);
+  return done();
+}
+
+function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
+  const signIn: SignInIR = { providers: ["google"] };
+  if (!isMap(node)) {
+    ctx.error(
+      node,
+      "expected-mapping",
+      `"signIn" must be "none" or a mapping like { providers: [google] }.`,
+    );
+    return signIn;
+  }
+  const where = `"signIn"`;
+  for (const { key, value } of checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
+    allowed: ["providers", "allowedDomains"],
+    later: ["selfSignUp"],
+  })) {
+    if (key === "providers") {
+      const providers = readNameList(ctx, value, `"providers"`).flatMap(({ name, at }) => {
+        if ((PROVIDERS as readonly string[]).includes(name)) return [name as Provider];
+        if (LATER_PROVIDERS.includes(name))
+          ctx.error(
+            at,
+            "not-yet-supported",
+            `Sign-in with "${name}" is not available in version 0.1 yet.`,
+          );
+        else
+          ctx.error(
+            at,
+            "unknown-provider",
+            `Unknown sign-in provider "${name}".`,
+            didYouMean(name, PROVIDERS) ?? `Available: ${PROVIDERS.join(", ")}.`,
+          );
+        return [];
+      });
+      if (providers.length === 0 && isMap(node))
+        ctx.error(
+          value,
+          "missing-key",
+          `"providers" needs at least one sign-in method, like [google].`,
+        );
+      else signIn.providers = [...new Set(providers)];
+    } else {
+      signIn.allowedDomains = readNameList(ctx, value, `"allowedDomains"`).flatMap(
+        ({ name, at }) => {
+          if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(name)) return [name];
+          ctx.error(at, "invalid-domain", `"${name}" is not a domain like "acme.com".`);
+          return [];
+        },
+      );
+    }
+  }
+  return signIn;
+}
+
+/** What the public section names must exist, and the spec must fit the sign-in setting. */
+function checkAgainstSpec(
+  ctx: ParseContext,
+  auth: AuthIR,
+  ir: SpecIR,
+  publicNodes: Partial<Record<keyof AuthIR["public"], { name: string; at: At }[]>>,
+): void {
+  const known = { pages: ir.pages.map((p) => p.id), read: ir.models.map((m) => m.name) };
+  for (const key of ["pages", "read", "create"] as const) {
+    const names = key === "pages" ? known.pages : known.read;
+    for (const { name, at } of publicNodes[key] ?? []) {
+      if (!names.includes(name)) {
+        const kind = key === "pages" ? "page" : "model";
+        ctx.error(
+          at,
+          `unknown-${kind}`,
+          `There is no ${kind} named "${name}" in smithable.yml.`,
+          didYouMean(name, names),
+        );
+        continue;
+      }
+      const model = key === "read" ? ir.models.find((m) => m.name === name) : undefined;
+      const personal = model?.fields.filter(
+        (f) =>
+          (f.type.kind === "scalar" && PERSONAL_TYPES.includes(f.type.name)) ||
+          (f.type.kind === "relation" && f.type.model === USER_MODEL),
+      );
+      if (personal?.length) {
+        ctx.warning(
+          at,
+          "public-personal-data",
+          `Anyone on the internet can read ${name}, including personal data in ${personal.map((f) => f.name).join(", ")}.`,
+        );
+      }
+    }
+  }
+  if (auth.signIn !== "none") return;
+  const usesUsers = ir.models.flatMap((m) =>
+    m.fields
+      .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL)
+      .map((f) => `${m.name}.${f.name}`),
+  );
+  if (usesUsers.length) {
+    ctx.error(
+      null,
+      "no-sign-in",
+      `smithable.yml refers to users (${usesUsers.join(", ")}), but "signIn" is "none".`,
+    );
+  }
+  const unreachable = ir.pages.filter((p) => !auth.public.pages.includes(p.id)).map((p) => p.id);
+  if (unreachable.length) {
+    ctx.warning(
+      null,
+      "unreachable-page",
+      `Without sign-in only public pages can be opened, so nobody can open ${unreachable.join(", ")}.`,
+      `List them under "public: pages", or enable sign-in.`,
+    );
+  }
+}

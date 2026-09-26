@@ -5,6 +5,7 @@ import {
   mapEntries,
   type ParseContext,
   readBoolean,
+  readRoleList,
   readString,
 } from "../context.js";
 import type { ActionIR, FieldIR } from "../ir.js";
@@ -43,6 +44,11 @@ export const actionsSection: SpecSection<"actions"> = {
         custom: { const: true, description: "Implemented in src/custom/actions/." },
         input: { ...fieldsSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
+        allow: {
+          type: "array",
+          items: { type: "string" },
+          description: "Only these roles may run the action (admins always can).",
+        },
         ...textSchema,
       },
     },
@@ -77,8 +83,8 @@ function readAction(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["custom", "input", "output", ...TEXT_KEYS],
-    later: ["on", "when", "set", "allow", "confirm", "examples"],
+    allowed: ["custom", "input", "output", "allow", ...TEXT_KEYS],
+    later: ["on", "when", "set", "confirm", "examples"],
     content: ["label", "title"],
   });
   const byKey = new Map(known.map((e) => [e.key, e]));
@@ -93,11 +99,13 @@ function readAction(
   }
   const input = byKey.get("input");
   const output = byKey.get("output");
+  const allow = byKey.get("allow");
   return {
     name,
     custom: true,
     input: input ? readFields(ctx, input, `the input of ${where}`) : [],
     ...(output ? { output: readFields(ctx, output, `the output of ${where}`) } : {}),
+    ...(allow ? { allow: readRoleList(ctx, allow.value, `"allow" of ${where}`, false) } : {}),
     ...readSemanticText(ctx, known),
   };
 }

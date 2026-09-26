@@ -201,6 +201,41 @@
               ]
             }
           },
+          "ownedBy": {
+            "type": "string",
+            "description": "A User field whose user owns the record, instead of its creator."
+          },
+          "access": {
+            "type": "object",
+            "description": "Exceptions to the default access in smithable.auth.yml, e.g. { delete: [admin] }. \"owner\" is the record's owner.",
+            "additionalProperties": false,
+            "properties": {
+              "read": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "create": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "write": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "delete": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "description": {
             "type": "string",
             "description": "What this is. Meaning for AI and developers; not shown to visitors."
@@ -277,6 +312,13 @@
             },
             "description": "The values the action returns, if any."
           },
+          "allow": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these roles may run the action (admins always can)."
+          },
           "description": {
             "type": "string",
             "description": "What this is. Meaning for AI and developers; not shown to visitors."
@@ -342,6 +384,13 @@
               "type": "string"
             },
             "description": "Actions offered on the page, as buttons."
+          },
+          "access": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these roles may open the page (admins always can)."
           },
           "description": {
             "type": "string",

@@ -11,6 +11,11 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   },
   "models": [
     {
+      "access": {
+        "create": [
+          "admin",
+        ],
+      },
       "description": "A kind of class the studio offers, such as Vinyasa or Yin.",
       "fields": [
         {
@@ -59,6 +64,11 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "ClassType",
     },
     {
+      "access": {
+        "create": [
+          "admin",
+        ],
+      },
       "fields": [
         {
           "name": "name",
@@ -82,6 +92,11 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "Instructor",
     },
     {
+      "access": {
+        "create": [
+          "admin",
+        ],
+      },
       "description": "One scheduled occurrence of a class.",
       "fields": [
         {
@@ -152,6 +167,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/sessions",
     },
     {
+      "access": [
+        "admin",
+      ],
       "id": "class-types",
       "pattern": {
         "kind": "crud",
@@ -160,6 +178,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/class-types",
     },
     {
+      "access": [
+        "admin",
+      ],
       "id": "instructors",
       "pattern": {
         "kind": "crud",
@@ -176,6 +197,9 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 {
   "actions": [
     {
+      "allow": [
+        "admin",
+      ],
       "custom": true,
       "input": [
         {
@@ -222,6 +246,14 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
   },
   "models": [
     {
+      "access": {
+        "delete": [
+          "admin",
+        ],
+        "write": [
+          "sales",
+        ],
+      },
       "description": "A company we have a commercial relationship with.",
       "fields": [
         {
@@ -286,6 +318,16 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "name": "accountManager",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+        {
           "name": "orders",
           "required": false,
           "type": {
@@ -297,8 +339,17 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         },
       ],
       "name": "Customer",
+      "ownedBy": "accountManager",
     },
     {
+      "access": {
+        "delete": [
+          "admin",
+        ],
+        "write": [
+          "sales",
+        ],
+      },
       "fields": [
         {
           "name": "number",
@@ -791,6 +842,103 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "InvoiceLine",
       },
       "route": "/invoice-lines",
+    },
+  ],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
+{
+  "actions": [
+    {
+      "allow": [
+        "admin",
+      ],
+      "custom": true,
+      "input": [
+        {
+          "name": "customer",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
+        },
+        {
+          "name": "reviewer",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "archive",
+    },
+  ],
+  "app": {
+    "name": "Access",
+  },
+  "models": [
+    {
+      "access": {
+        "delete": [
+          "admin",
+        ],
+        "write": [
+          "owner",
+          "sales",
+        ],
+      },
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "accountManager",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Customer",
+      "ownedBy": "accountManager",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "customers",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "access": [
+        "sales",
+      ],
+      "id": "customers",
+      "pattern": {
+        "kind": "crud",
+        "model": "Customer",
+      },
+      "route": "/customers",
     },
   ],
   "specVersion": "0.1",
