@@ -5,6 +5,8 @@ import { runDev } from "./dev.js";
 import { generate } from "./generate.js";
 import { type Io, processIo } from "./io.js";
 import { create } from "./new.js";
+import { op } from "./op.js";
+import { undo } from "./undo.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -18,10 +20,14 @@ Commands:
   generate [dir]   Regenerate the app from smithable.yml (--force overwrites hand-edited files)
   validate [path]  Check smithable.yml in a directory (default: current) or a given file
   build [dir]      Build the app's container image with Docker
+  op <name> …      Change the app with an operation, e.g. op addField Customer phone phone
+                   (run "smithable op" for the list; --yes confirms changes that lose data)
+  undo             Undo the last operation, including the dev database
 
 Options:
   -h, --help       Show this help
   -v, --version    Show the Smithable version
+  --dir <path>     Project directory for op and undo (default: current)
 `;
 
 export async function run(argv: string[], io: Io = processIo): Promise<number> {
@@ -42,6 +48,9 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     io.out(HELP);
     return 0;
   }
+  if (command === "op")
+    return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
+  if (command === "undo") return undo(values.dir ?? ".", io);
   if (args.length > 1) {
     io.err(`${command} takes at most one path.\n\n${HELP}`);
     return 2;
@@ -79,6 +88,8 @@ function parse(argv: string[]) {
       force: { type: "boolean" },
       open: { type: "boolean" },
       starter: { type: "string" },
+      yes: { type: "boolean" },
+      dir: { type: "string" },
     },
   });
 }

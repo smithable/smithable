@@ -1,0 +1,53 @@
+import { restoreDatabase } from "./database.js";
+import { git, uncommitted } from "./git.js";
+import type { Io } from "./io.js";
+
+/**
+ * `smithable undo`: reverts the most recent operation that is not undone yet. The revert is
+ * a new commit, so an undo can itself be undone with Git. The dev database goes back to
+ * its snapshot from before the operation.
+ */
+export function undo(dir: string, io: Io): number {
+  if (!git(dir, ["rev-parse", "--is-inside-work-tree"]).ok) {
+    io.err("There is nothing to undo: this project has no history yet.\n");
+    return 1;
+  }
+  const dirty = uncommitted(dir);
+  if (dirty.length > 0) {
+    io.err(`Commit or discard these changes first:\n${dirty.map((l) => `  ${l}\n`).join("")}`);
+    return 1;
+  }
+  const log = git(dir, ["log", "--format=%H%x1f%s%x1f%b%x1e"])
+    .out.split("\x1e")
+    .filter((e) => e.trim());
+  const reverted = new Set<string>();
+  let target: { sha: string; subject: string; snapshot?: string } | undefined;
+  for (const entry of log) {
+    const [sha = "", subject = "", body = ""] = entry.trim().split("\x1f");
+    for (const match of body.matchAll(/This reverts commit ([0-9a-f]{40})/g))
+      reverted.add(match[1] ?? "");
+    if (!subject.startsWith("smithable: ") || subject === "smithable: start of history") continue;
+    if (reverted.has(sha)) continue;
+    const snapshot = /^Smithable-Snapshot: (\S+)$/m.exec(body)?.[1];
+    target = { sha, subject, ...(snapshot && snapshot !== "none" ? { snapshot } : {}) };
+    break;
+  }
+  if (!target) {
+    io.err("There is no operation to undo.\n");
+    return 1;
+  }
+  const revert = git(dir, ["revert", "--no-edit", target.sha]);
+  if (!revert.ok) {
+    git(dir, ["revert", "--abort"]);
+    io.err(
+      `Could not undo "${target.subject.slice(11)}": later changes touch the same files.\n${revert.out}\n`,
+    );
+    return 1;
+  }
+  const restored = target.snapshot ? restoreDatabase(dir, target.snapshot) : false;
+  io.out(
+    `Undid: ${target.subject.slice(11)}.${restored ? " The dev database is back as it was before." : ""}\n` +
+      (restored ? "Restart the dev server if it is running.\n" : ""),
+  );
+  return 0;
+}

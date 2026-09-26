@@ -20,7 +20,7 @@ This document records architectural decisions. When a decision changes, update i
         ▼  adapter (v1: TanStack)
  Application code         ordinary web app + backend, no dependency on Smithable
         │
- .smithable/              generated, disposable: implementation index, op log, caches
+ .smithable/              Smithable's records: file hashes, operation log (committed); caches (disposable)
 ```
 
 Every change, whether it comes from the CLI, Studio, AI or a plugin, goes through one **semantic operation layer** that mutates the manifest files (`smithable.yml` and its companions). Code is then regenerated from them. Nothing writes application code directly except (a) the compiler, into files it owns, and (b) humans or AI, into custom files (see §6).
@@ -319,7 +319,9 @@ The **only** way to change application semantics programmatically.
 
 - Each operation (`addModel`, `addField`, `changeField`, `renameField`, `removeField`, `addRelation`, `addPage`, `setAccess`, `addAction`, `addExample`, …) has a JSON Schema for its arguments. The same schema is used for CLI parsing, Studio forms and constrained AI output.
 - An operation is a pure function `manifest → manifest` plus validation. Side effects (regeneration, migration) follow from the changed manifest, not from the operation itself.
-- Applied operations are appended to an **operation log** (`.smithable/oplog`). Its main use is disambiguating migrations: a rename is not a drop followed by an add.
+- Applied operations are appended to an **operation log** (`.smithable/oplog.jsonl`, committed). Operations also report **effects**, such as a rename, so the migration step can rename a column instead of dropping and re-adding it.
+- **Edits preserve formatting.** Operations never re-serialize a file: a source editor splices text at the positions the YAML parser reports, so comments, alignment, flow style and blank lines outside the edited entry stay byte-for-byte identical. After every edit the result is re-parsed, and the operation is refused if the spec or content file would become invalid.
+- Each operation is registered by the spec section it belongs to (models, pages, navigation), as part of the internal plugin interface (§5.1).
 - Batches of operations are atomic: they all apply, or none do.
 
 Clients:
@@ -472,8 +474,10 @@ operation(s) → validate → write manifest → compile → migrate (dev DB)
 ```
 
 - A failure at any step rolls back to the previous checkpoint automatically and reports the error.
-- **Checkpoints use Git.** Each applied change becomes a commit, which Studio labels with the operation(s) that produced it. Undo is a revert. The diff is always viewable.
-- The dev database is snapshotted before migrations so undo also restores data.
+- **Checkpoints use Git.** An operation requires a clean working tree, so it can be undone on its own. Each applied operation becomes one commit (`smithable: <description>`) containing the spec change, regenerated code and migration. Undo reverts the most recent operation that is not undone yet, as a new commit, so an undo can itself be undone. The diff is always viewable.
+- **Data comes back too.** Before migrating, the dev database is copied with SQLite's `VACUUM INTO` to `data/.smithable/snapshots/` (ignored by Git, like the rest of `data/`), and the commit records which snapshot belongs to it. Undo restores it.
+- **Migrations never ask.** Renames become a custom migration with `RENAME COLUMN` (and the schema snapshot is updated to match), so drizzle-kit never has to ask whether a dropped and an added column were a rename. Other changes use drizzle-kit's normal generation. The migration is applied to the dev database immediately.
+- **Destructive changes need confirmation** (`--yes` on the CLI) and say what they affect, e.g. "this deletes the phone column; 8 of 8 customers have a value for it". Making a field required is refused while rows have no value for it.
 
 ## 9. AI layer
 
