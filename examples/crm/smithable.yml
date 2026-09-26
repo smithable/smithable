@@ -20,10 +20,12 @@ models:
         min: 0
         description: Maximum outstanding balance before new orders are held.
       notes: text
+      orders: Order[]                # every order that refers to this customer
 
   Order:
     fields:
       number: string! unique
+      customer: Customer!
       status: draft | placed | shipped | cancelled
       total: money!
       placedAt: datetime

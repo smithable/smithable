@@ -1,4 +1,4 @@
-import type { FieldIR, ModelIR, SpecIR } from "../ir.js";
+import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
 import { type AnyOperation, type Editors, type Operation, OperationError } from "../operation.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
@@ -33,8 +33,7 @@ function checkType(type: string): void {
 /** The base type of a field, ignoring "!", "unique" and defaults: changing it can lose data. */
 function baseType(type: string): string {
   const parsed = parseFieldShorthand(type);
-  if (!parsed.ok) return type;
-  return parsed.value.type.kind === "choice" ? "choice" : parsed.value.type.name;
+  return parsed.ok ? typeKey(parsed.value.type) : type;
 }
 
 /** Where a field lives; smithable.content.yml uses the same path for its texts. */
@@ -116,9 +115,7 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
   positional: ["model", "field", "...type"],
   describe: ({ model, field, type }) => `Change ${model}.${field} to ${type}`,
   destructive: ({ model: m, field: f, type }, ir) => {
-    const current = field(ir, m, f);
-    const was = current.type.kind === "choice" ? "choice" : current.type.name;
-    return was !== baseType(type);
+    return typeKey(field(ir, m, f).type) !== baseType(type);
   },
   apply({ spec }, { model: m, field: f, type }, ir) {
     checkType(type);
@@ -160,7 +157,9 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
       throw new OperationError(`${m} already has a field named "${to}".`);
     spec.renameKey(fieldPath(m, from), to);
     if (content?.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
-    return [{ kind: "rename-field", model: m, from, to }];
+    return [
+      { kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from).type) },
+    ];
   },
 };
 
@@ -175,14 +174,14 @@ const removeField: Operation<{ model: string; field: string }> = {
   },
   positional: ["model", "field"],
   describe: ({ model, field }) => `Remove field ${field} from ${model}`,
-  destructive: () => true,
+  destructive: ({ model: m, field: f }, ir) => storageOf(field(ir, m, f).type) !== "none",
   apply(editors: Editors, { model: m, field: f }, ir) {
     field(ir, m, f);
     if (model(ir, m).fields.length === 1)
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
     editors.spec.remove(fieldPath(m, f));
     if (editors.content?.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
-    return [{ kind: "remove-field", model: m, field: f }];
+    return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f).type) }];
   },
 };
 

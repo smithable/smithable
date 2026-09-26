@@ -3,11 +3,13 @@ import { join } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   applyOperation,
+  type Effect,
   findOperation,
   formatDiagnostic,
   OPERATIONS,
   parseOperationArgs,
   type SpecIR,
+  storageOf,
   validateSpec,
 } from "@smithable/core";
 import { countValues, restoreDatabase, snapshotDatabase } from "./database.js";
@@ -63,7 +65,7 @@ export function op(
   const before = validateSpec({ path: SPEC, text: files.spec }).ir as SpecIR;
   const after = validateSpec({ path: SPEC, text: result.files.spec }).ir as SpecIR;
 
-  const blocker = requiredButEmpty(dir, before, after);
+  const blocker = requiredButEmpty(dir, before, after, result.effects);
   if (blocker) {
     io.err(`${blocker}\n`);
     return 1;
@@ -91,7 +93,12 @@ export function op(
     join(dir, OPLOG),
     `${JSON.stringify({ id, op: operation.name, args, description: result.description })}\n`,
   );
-  const renames = result.effects.flatMap((e) => (e.kind === "rename-field" ? [e] : []));
+  // Only stored fields have a column to rename; a list of related records stores nothing.
+  const renames = result.effects.flatMap((e) =>
+    e.kind === "rename-field" && e.storage !== "none"
+      ? [{ model: e.model, from: e.from, to: e.to, reference: e.storage === "reference" }]
+      : [],
+  );
   const code = generate(dir, io, {
     tools: true,
     force: false,
@@ -116,20 +123,47 @@ function migrationName(description: string): string {
     .slice(0, 60);
 }
 
-/** A field that becomes required while some rows have no value would break the migration. */
-function requiredButEmpty(dir: string, before: SpecIR, after: SpecIR): string | undefined {
+/**
+ * Stops changes the migration could not apply to existing rows: a field becoming required
+ * while some rows have no value, or a new required field without a default on a table that
+ * already has rows.
+ */
+function requiredButEmpty(
+  dir: string,
+  before: SpecIR,
+  after: SpecIR,
+  effects: Effect[],
+): string | undefined {
+  // A renamed field is not new: look it up under its old name.
+  const oldName = new Map(
+    effects.flatMap((e) =>
+      e.kind === "rename-field" ? [[`${e.model}.${e.to}`, e.from] as const] : [],
+    ),
+  );
   for (const model of after.models) {
     for (const field of model.fields) {
+      if (!field.required || field.default !== undefined || storageOf(field.type) === "none")
+        continue;
+      const name = oldName.get(`${model.name}.${field.name}`) ?? field.name;
       const old = before.models
         .find((m) => m.name === model.name)
-        ?.fields.find((f) => f.name === field.name);
-      if (!old || old.required || !field.required || field.default !== undefined) continue;
-      const { table, column } = columnOf(model.name, field.name);
+        ?.fields.find((f) => f.name === name);
+      if (old?.required) continue;
+      const reference = storageOf(field.type) === "reference";
+      const noun = (n: number) =>
+        n === 1 ? model.name.toLowerCase() : plural(model.name).toLowerCase();
+      if (!old) {
+        const rows = countValues(dir, columnOf(model.name, "id").table, "id")?.total ?? 0;
+        if (rows > 0) {
+          return `There ${rows === 1 ? "is" : "are"} already ${rows} ${noun(rows)}, and a new required field needs a value for each. Add ${field.name} as optional first (without "!"), fill it in, then make it required${reference ? "" : ", or give it a default"}.`;
+        }
+        continue;
+      }
+      const { table, column } = columnOf(model.name, name, reference);
       const counts = countValues(dir, table, column);
       const empty = counts ? counts.total - counts.filled : 0;
       if (empty > 0) {
-        const noun = plural(model.name).toLowerCase();
-        return `${empty} ${empty === 1 ? model.name.toLowerCase() : noun} ${empty === 1 ? "has" : "have"} no ${field.name}. Fill ${empty === 1 ? "it" : "them"} in, or give the field a default, before making it required.`;
+        return `${empty} ${noun(empty)} ${empty === 1 ? "has" : "have"} no ${field.name}. Fill ${empty === 1 ? "it" : "them"} in${reference ? "" : ", or give the field a default,"} before making it required.`;
       }
     }
   }
@@ -137,15 +171,11 @@ function requiredButEmpty(dir: string, before: SpecIR, after: SpecIR): string | 
 }
 
 /** What a destructive change does to existing data, in plain words. */
-function dataImpact(
-  dir: string,
-  effects: { kind: string; model?: string; field?: string }[],
-  args: Record<string, unknown>,
-): string {
+function dataImpact(dir: string, effects: Effect[], args: Record<string, unknown>): string {
   const removed = effects.find((e) => e.kind === "remove-field");
   const model = String(removed?.model ?? args.model);
   const field = String(removed?.field ?? args.field);
-  const { table, column } = columnOf(model, field);
+  const { table, column } = columnOf(model, field, removed?.storage === "reference");
   const counts = countValues(dir, table, column);
   const values = counts
     ? `${counts.filled} of ${counts.total} ${plural(model).toLowerCase()} have a value for it`

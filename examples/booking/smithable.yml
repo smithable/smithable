@@ -26,6 +26,8 @@ models:
   Session:
     description: One scheduled occurrence of a class.
     fields:
+      classType: ClassType!
+      instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
     rules:

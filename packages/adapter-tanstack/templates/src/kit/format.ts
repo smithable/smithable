@@ -1,6 +1,16 @@
 // Smithable app kit: converts stored values to display text and to form input text, and back.
 import type { AppUi, FieldUi } from "./model";
 
+/** The value to show for a field of a row: for a reference, the related record's title. */
+export function displayValue(field: FieldUi, row: Record<string, unknown>): unknown {
+  if (!field.relation) return row[field.name];
+  const related = row[field.relation.key] as Record<string, unknown> | null | undefined;
+  if (!related) return null;
+  return field.relation.titleField === "id"
+    ? `#${String(related.id)}`
+    : related[field.relation.titleField];
+}
+
 /** Text for showing a stored value in tables and headings. */
 export function formatValue(field: FieldUi, value: unknown, app: AppUi): string {
   if (value === null || value === undefined || value === "") return "—";
@@ -26,6 +36,8 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
       }).format(value instanceof Date ? value : new Date(String(value)));
     case "choice":
       return field.choices?.find((c) => c.value === value)?.label ?? String(value);
+    case "relation":
+      return String(value);
     default:
       return String(value);
   }
@@ -57,6 +69,8 @@ export function fromInput(field: FieldUi, input: string | boolean): unknown {
       return Math.round(Number(text.replace(",", ".")) * 100);
     case "datetime":
       return new Date(text);
+    case "relation":
+      return Number(text);
     default:
       return text;
   }

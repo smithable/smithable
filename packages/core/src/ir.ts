@@ -52,9 +52,34 @@ export const SCALAR_TYPES = [
 
 export type ScalarType = (typeof SCALAR_TYPES)[number];
 
-export type FieldType = { kind: "scalar"; name: ScalarType } | { kind: "choice"; values: string[] };
+export type FieldType =
+  | { kind: "scalar"; name: ScalarType }
+  | { kind: "choice"; values: string[] }
+  /**
+   * A relation to another model. `many: false` stores a reference (a foreign key column);
+   * `many: true` lists the records of `model` that refer back to this one, and stores nothing.
+   */
+  | { kind: "relation"; model: string; many: boolean };
 
 export type FieldValue = string | number | boolean;
+
+/**
+ * How a field is stored: a plain column, a reference column (`customer` → `customerId`),
+ * or not at all (a list of records that refer back).
+ */
+export type Storage = "value" | "reference" | "none";
+
+export function storageOf(type: FieldType): Storage {
+  if (type.kind !== "relation") return "value";
+  return type.many ? "none" : "reference";
+}
+
+/** A comparable name for a field's type, ignoring "!", "unique" and defaults. */
+export function typeKey(type: FieldType): string {
+  if (type.kind === "scalar") return type.name;
+  if (type.kind === "choice") return "choice";
+  return `${type.model}${type.many ? "[]" : ""}`;
+}
 
 export interface FieldIR extends SemanticText {
   name: string;
