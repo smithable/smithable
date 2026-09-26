@@ -25,7 +25,7 @@ This document records architectural decisions. When a decision changes, update i
 
 Every change, whether it comes from the CLI, Studio, AI or a plugin, goes through one **semantic operation layer** that mutates the manifest files (`smithable.yml` and its companions). Code is then regenerated from them. Nothing writes application code directly except (a) the compiler, into files it owns, and (b) humans or AI, into custom files (see §6).
 
-**The engine runs anywhere.** The parser, validator, IR, operations, generator and index work on an in-memory set of files and never touch the disk, network or processes directly. Hosts supply that I/O: the CLI and daemon in Node (disk, Git, processes), and the browser in the hosted product (WebContainer file system, browser storage). The same engine therefore powers the CLI, the local Studio and the hosted Builder. Engine packages must not import Node built-ins, and lint enforces this.
+**The engine runs anywhere.** The parser, validator, IR, operations, generator and index work on an in-memory set of files and never touch the disk, network or processes directly. Hosts supply that I/O: the CLI and daemon in Node (disk, Git, processes), and the browser in the hosted product (the project's files in the tab, synced with its Git repository and the preview VM). The same engine therefore powers the CLI, the local Studio and the hosted Builder. Engine packages must not import Node built-ins, and lint enforces this.
 
 ## 2. The manifest: `smithable.yml`
 
@@ -589,10 +589,12 @@ The app preview runs behind a small **preview runtime** interface. The UI does n
 | Runtime | Where | Used by |
 |---|---|---|
 | **Local** | The daemon runs the app's Vite dev server in Node | CLI and self-hosted users |
-| **WebContainer** | The engine *and* the app's dev server run inside the user's browser tab (StackBlitz WebContainers) | Hosted Builder/Studio. Server cost for previews is near zero |
-| **Remote VM** (fallback) | A lightweight VM per project (for example Fly.io Machines or Firecracker on EU servers) | Browsers without WebContainer support, or heavier projects |
+| **Remote VM** | A small VM or container per active project on EU servers; it runs the app's dev server | Hosted Builder/Studio |
+| **WebContainer** (not now) | The app's dev server inside the user's browser tab (StackBlitz WebContainers) | Deferred: see below |
 
-In WebContainers, native Node modules are unavailable, so the preview uses a WebAssembly SQLite driver through Drizzle. Published apps keep normal SQLite. The generated code isolates the driver choice in one file, so the difference cannot leak into application code.
+In every runtime **the engine runs where the user is**: in the hosted Builder, operations, validation and generation run in the browser tab (15 ms in the M8 spike), and only the changed files go to the preview. **Hosted projects are Git repositories on EU servers**; the browser engine commits each operation as the CLI does, and the preview VM works on a checkout, so undo, history and hand-over are identical to the local product.
+
+The M8 spike ([research/webcontainers.md](research/webcontainers.md)) ran the generated CRM in a WebContainer: installs, the Vite dev server and WebAssembly SQLite work, and an operation reaches the preview in about 3 s. But WebContainers lose `AsyncLocalStorage` across `await` (an open upstream issue), which TanStack Start and Better Auth depend on, so sign-in cannot work there. WebContainers are revisited when that is fixed; they would move preview cost to near zero.
 
 ### 10.3 Visual selection
 
@@ -717,6 +719,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 | Question | Current leaning |
 |---|---|
 | **Auth library** | Decided in M5: Better Auth (§3.1). Still to confirm with real Google and Facebook accounts before the hosted beta |
+| **Preview in the browser** | Decided in M8: Remote VM for now (§10.2). WebContainers once `AsyncLocalStorage` works across `await` there (stackblitz/webcontainer-core#1169); then ask StackBlitz about production licensing |
 | **Database escape hatch.** Where do indexes, constraints or column types the spec cannot express go? | A user-owned `src/custom/db/schema.ts` whose tables and indexes are merged with the generated schema |
 | **Translations** | `smithable.content.<locale>.yml` per language, with the default language in `smithable.content.yml`. Later |
 | **Teams and workspaces** | Later. Records get a group next to their owner, enforced in the same access layer (§3.1) |
@@ -725,7 +728,6 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 | **Manifest size.** One file or many for large apps? | One file until it hurts, then allow `models/*.yml` includes |
 | **Existing project import / compatibility levels** | Deferred. Revisit after the public release |
 | **License** | Apache-2.0 for engine, tools and spec; 0BSD for app kit and templates |
-| **WebContainer license and limits** | Commercial license needed for production use. Contact StackBlitz early (M8); Remote VM runtime is the fallback |
 | **Preview vs production SQLite** | WebAssembly driver in the preview, native SQLite in production. Verify that behaviour matches (M8) |
 | **Hosted project storage** | Projects saved server-side as Git repositories, synced from the browser. Decide in M8 |
 | **In-browser local model (WebGPU)** | Possible later for small intent tasks. Model download size is the obstacle |

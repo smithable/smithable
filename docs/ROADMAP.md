@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5. **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8. **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -140,15 +140,17 @@ Removes the biggest technical risk of the browser-first product before building 
 - In Chrome, the CRM preview runs in a WebContainer, and an operation applied in the browser updates the preview within about 2 seconds.
 - The licensing path is known. If it isn't viable, the Remote VM runtime is chosen instead.
 
+**Done (2026-09-27), with the fallback:** the CRM ran in a WebContainer in Chromium, and an operation applied by the engine in the page reached the preview in 2.9–3.5 s, but sign-in cannot work there (WebContainers lose `AsyncLocalStorage` across `await`, an open upstream issue). Licensing needs a sales conversation. Decision: a Remote VM runs the hosted preview, the engine stays in the browser, and hosted projects are Git repositories on EU servers ([research/webcontainers.md](research/webcontainers.md)).
+
 ## M9 — Builder and Studio app (no AI)
 
 - `apps/studio`: one web app with Builder and Studio modes ([ARCHITECTURE.md §10](ARCHITECTURE.md#10-product-surfaces)).
-- Preview runtime interface with the Local (daemon) and WebContainer runtimes.
+- Preview runtime interface with the Local (daemon) and Remote VM runtimes; the engine runs in the browser tab (M8).
 - Concept tree, plain-language spec summary, spec editor, diff, undo, logs, and forms for the most common operations.
 - Change trace, with generator entries only for now.
 - Usability tests with 5–8 people from the beachhead groups, each building their own small app idea in the Builder (they replace M7's interviews; guide in [research/interviews.md](research/interviews.md)).
 
-**Exit:** the M3–M5 flows work in both modes, both locally (daemon) and browser-only (WebContainer).
+**Exit:** the M3–M5 flows work in both modes, both locally (daemon) and in the browser with a Remote VM preview.
 
 ## M10 — Design system
 
