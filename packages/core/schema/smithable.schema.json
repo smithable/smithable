@@ -140,6 +140,28 @@
                     "max": {
                       "type": "number"
                     },
+                    "formula": {
+                      "type": "string",
+                      "description": "Computes the value, spreadsheet-style, e.g. \"quantity * unitPrice\" or \"SUM(lines.amount)\"."
+                    },
+                    "examples": {
+                      "type": "array",
+                      "description": "Inputs and the expected result of the formula; each becomes a test.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "input",
+                          "expected"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "input": {
+                            "type": "object"
+                          },
+                          "expected": {}
+                        }
+                      }
+                    },
                     "description": {
                       "type": "string",
                       "description": "What this is. Meaning for AI and developers; not shown to visitors."

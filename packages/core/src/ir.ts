@@ -1,3 +1,5 @@
+import type { Expr } from "./formula.js";
+
 /**
  * The Smithable IR: a normalized, technology-independent model of an application.
  * Defaults are applied and references resolved; declaration order is preserved.
@@ -63,15 +65,22 @@ export type FieldType =
 
 export type FieldValue = string | number | boolean;
 
+/** An example of a computed field: stored-field values in, the expected value out. */
+export interface FieldExample {
+  input: Record<string, FieldValue | null>;
+  expected: FieldValue | null;
+}
+
 /**
  * How a field is stored: a plain column, a reference column (`customer` → `customerId`),
  * or not at all (a list of records that refer back).
  */
 export type Storage = "value" | "reference" | "none";
 
-export function storageOf(type: FieldType): Storage {
-  if (type.kind !== "relation") return "value";
-  return type.many ? "none" : "reference";
+export function storageOf(field: Pick<FieldIR, "type" | "formula">): Storage {
+  if (field.formula) return "none";
+  if (field.type.kind !== "relation") return "value";
+  return field.type.many ? "none" : "reference";
 }
 
 /** A comparable name for a field's type, ignoring "!", "unique" and defaults. */
@@ -90,6 +99,11 @@ export interface FieldIR extends SemanticText {
   default?: FieldValue;
   min?: number;
   max?: number;
+  /** A computed field: its value comes from this formula and is not stored. */
+  formula?: Expr;
+  /** A default computed when a record is created, e.g. TODAY(). */
+  defaultFormula?: Expr;
+  examples?: FieldExample[];
 }
 
 export interface PageIR extends SemanticText {
