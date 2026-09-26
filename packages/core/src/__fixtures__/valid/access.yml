@@ -18,3 +18,4 @@ pages:
   customers:
     crud: Customer
     access: [sales]
+    search: [name]

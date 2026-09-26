@@ -269,3 +269,21 @@ describe("setAccess", () => {
       ]);
   });
 });
+
+test("setSearch adds, changes and removes a page's search", () => {
+  const added = ok("setSearch", ["orders", "number"]);
+  expect(changed(files.spec, added.files.spec)).toEqual({
+    added: ["    search: [number]"],
+    removed: [],
+  });
+  const set = ok("setSearch", ["customers", "name"]);
+  expect(changed(files.spec, set.files.spec)).toEqual({
+    added: ["    search: [name]"],
+    removed: ["    search: [name, email]"],
+  });
+  expect(changed(files.spec, ok("setSearch", ["customers"]).files.spec)).toEqual({
+    added: [],
+    removed: ["    search: [name, email]"],
+  });
+  expect(apply("setSearch", ["customers", "creditLimit"])).toMatchObject({ ok: false });
+});
