@@ -107,7 +107,7 @@ Measure: tokens or credits, wall time, files touched, test success, regressions,
 
 Before this milestone, interview 10–15 target users (non-developers who have used prompt-to-code builders, and developers or agencies), so the benchmark measures what they care about.
 
-**Done (2026-09-27)** with desk research instead of interviews ([brief](research/web-research-brief.md)); the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
+**Done (2026-09-27)** with desk research instead of interviews ([report](research/app-builders/report.md)); the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
 
 **Exit:**
 - A written report, and product decisions updated from the results.
@@ -207,7 +207,8 @@ Removes the biggest technical risk of the browser-first product before building 
 ## M15 — Hosted beta (`smithable-cloud`)
 
 - Accounts with Google sign-in, project storage, and an AI gateway with plan allowances.
-- One-click publish to EU hosting with domains and TLS. Managed backups.
+- One-click publish to EU hosting with domains and TLS, on every plan, with spending caps on by default. Managed backups.
+- For agencies: a staging environment per app, and transferring a project to the client's own account.
 - Automatic rebuild and redeploy for security patches, gated by tests.
 - Remote MCP endpoint.
 - A public demo that needs no sign-up, showing the change trace, with a limited number of sandboxes.

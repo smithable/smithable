@@ -1,6 +1,6 @@
 # Web research brief (M7, instead of interviews for now)
 
-A brief for a deep-research AI (e.g. ChatGPT deep research). Paste everything below the line. Save the answer as `docs/research/prompt-to-code-pains.md`.
+A brief for a deep-research AI, used on 2026-09-26 with ChatGPT. The answer is [report.md](report.md), with its sources coded in [evidence-register.md](evidence-register.md).
 
 ---
 
