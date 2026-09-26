@@ -37,7 +37,7 @@ v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions,
 
 ### 2.2 Style: neat by default, explicit when needed
 
-Each construct has a **short form** for the common case and a **long form** when more detail is needed. Operations write the shortest form that preserves meaning. Illustrative syntax only; the exact grammar is designed in milestone M1:
+Each construct has a **short form** for the common case and a **long form** when more detail is needed. Operations write the shortest form that preserves meaning. The example below shows where the format is heading. The exact grammar of the current version is in [spec/v0.1.md](spec/v0.1.md):
 
 ```yaml
 smithable: 0.1
@@ -696,7 +696,6 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 | **Re-adopting a detached app** | Not supported initially. It would need the deferred project import |
 | **`smithable.ux.yml` vocabulary** | Start minimal (density, column order/visibility, field order, groups) and grow only via §2.4 |
 | **Manifest size.** One file or many for large apps? | One file until it hurts, then allow `models/*.yml` includes |
-| **Exact DSL grammar** | Designed in M1 against the CRM example and 2–3 other sample apps |
 | **Existing project import / compatibility levels** | Deferred. Revisit after the public release |
 | **License** | Apache-2.0 for engine, tools and spec; 0BSD for app kit and templates; EU trademark for the name. Legal review before publication |
 | **WebContainer license and limits** | Commercial license needed for production use. Contact StackBlitz early (M8); Remote VM runtime is the fallback |

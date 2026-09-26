@@ -1,0 +1,21 @@
+smithable: 0.1
+app:
+  name: Menus
+models:
+  Customer:
+    fields:
+      name: string!
+  InvoiceLine:
+    fields:
+      amount: money!
+pages:
+  customers:
+    crud: Customer
+  invoiceLines:
+    crud: InvoiceLine
+  line-admin:
+    route: /admin/lines
+    crud: InvoiceLine
+navigation:
+  main: [customers, invoiceLines]
+  admin: [line-admin]

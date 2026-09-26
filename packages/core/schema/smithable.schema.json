@@ -1,0 +1,304 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://smithable.ax/schema/smithable-0.1.json",
+  "title": "smithable.yml",
+  "description": "Describes what a Smithable application does. See docs/spec.",
+  "type": "object",
+  "required": [
+    "smithable",
+    "app"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "smithable": {
+      "description": "The spec format version.",
+      "enum": [
+        0.1,
+        "0.1"
+      ]
+    },
+    "app": {
+      "type": "object",
+      "description": "The application as a whole.",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The application's name."
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "ISO 4217 currency code, e.g. EUR."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA time zone, e.g. Europe/Mariehamn."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this is. Meaning for AI and developers; not shown to visitors."
+        },
+        "intent": {
+          "type": "string",
+          "description": "The outcome or experience this should achieve."
+        },
+        "rules": {
+          "type": "array",
+          "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "rule"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "rule": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "description": "The data the application stores. Model names are PascalCase.",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$",
+              "not": {
+                "enum": [
+                  "id",
+                  "owner",
+                  "createdAt",
+                  "updatedAt"
+                ]
+              }
+            },
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\s*(?:(?:string|text|int|decimal|money|bool|date|datetime|email|phone|url)!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$",
+                  "description": "A type with optional \"!\" (required), \"unique\" and \"= default\", e.g. \"string!\" or \"int! = 60\". Or choices: \"draft | sent | paid\" (the first is the default)."
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "pattern": "^\\s*(?:(?:string|text|int|decimal|money|bool|date|datetime|email|phone|url)!?|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "unique": {
+                      "type": "boolean"
+                    },
+                    "default": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                      ],
+                      "description": "For choices, \"none\" means no default."
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What this is. Meaning for AI and developers; not shown to visitors."
+                    },
+                    "intent": {
+                      "type": "string",
+                      "description": "The outcome or experience this should achieve."
+                    },
+                    "rules": {
+                      "type": "array",
+                      "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "rule"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "rule": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+          },
+          "intent": {
+            "type": "string",
+            "description": "The outcome or experience this should achieve."
+          },
+          "rules": {
+            "type": "array",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "rule"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "pages": {
+      "type": "object",
+      "description": "The application's pages. Each page uses one pattern; in spec version 0.1 that is crud.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "crud"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "route": {
+            "type": "string",
+            "pattern": "^\\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$",
+            "description": "Defaults to / plus the page name."
+          },
+          "crud": {
+            "type": "string",
+            "description": "A model to list, view, create, edit and delete."
+          },
+          "description": {
+            "type": "string",
+            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+          },
+          "intent": {
+            "type": "string",
+            "description": "The outcome or experience this should achieve."
+          },
+          "rules": {
+            "type": "array",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "rule"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "navigation": {
+      "description": "Menus: a list of pages (the main menu), or named menus. Defaults to all pages in order.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        }
+      ]
+    }
+  }
+}

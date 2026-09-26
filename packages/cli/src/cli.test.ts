@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
 
-test("--version prints the Smithable and manifest versions", () => {
+test("--version prints the Smithable and spec versions", () => {
   expect(run(["--version"])).toEqual({
     code: 0,
-    stdout: "smithable 0.0.0 (manifest 0.1)\n",
+    stdout: "smithable 0.0.0 (spec 0.1)\n",
     stderr: "",
   });
 });

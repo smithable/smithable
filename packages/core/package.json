@@ -8,13 +8,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./schema.json": "./schema/smithable.schema.json"
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "schema"
   ],
   "dependencies": {
     "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
   }
 }

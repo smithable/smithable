@@ -1,0 +1,7 @@
+smithable: 0.1
+app:
+  name: &appName Anchored          # expect: yaml-anchor
+models:
+  Customer:
+    fields:
+      name: !!str string           # expect: yaml-tag

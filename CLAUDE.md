@@ -10,6 +10,8 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   - `pnpm test`: Vitest, tests live next to the code as `src/**/*.test.ts`.
   - `pnpm lint`: Biome lint and format check. `pnpm fix` applies fixes.
   - `pnpm check`: lint + build + test. This is the CI gate and must pass before every commit.
+  - `pnpm schema`: regenerate `packages/core/schema/smithable.schema.json` after changing a section's schema. A test fails if it is stale.
+- The spec reference is `docs/spec/v0.1.md`. Update it together with any change to the spec grammar.
 - New packages go in `packages/<name>` with a `tsconfig.json` extending `tsconfig.base.json`. Add them to the root `tsconfig.json` references.
 
 ## Rules when working on Smithable

@@ -1,0 +1,736 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
+{
+  "app": {
+    "currency": "EUR",
+    "description": "Class schedule and online booking for a small yoga studio.",
+    "name": "Stillwater Yoga",
+    "timezone": "Europe/Mariehamn",
+  },
+  "models": [
+    {
+      "description": "A kind of class the studio offers, such as Vinyasa or Yin.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "summary",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": "allLevels",
+          "name": "level",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "beginner",
+              "allLevels",
+              "advanced",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": 60,
+          "name": "durationMinutes",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "ClassType",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "bio",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Instructor",
+    },
+    {
+      "description": "One scheduled occurrence of a class.",
+      "fields": [
+        {
+          "name": "startsAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "default": 12,
+          "name": "capacity",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Session",
+      "rules": [
+        {
+          "text": "A session never has more confirmed bookings than its capacity.",
+        },
+      ],
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "sessions",
+        "class-types",
+        "instructors",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "sessions",
+      "pattern": {
+        "kind": "crud",
+        "model": "Session",
+      },
+      "route": "/sessions",
+    },
+    {
+      "id": "class-types",
+      "pattern": {
+        "kind": "crud",
+        "model": "ClassType",
+      },
+      "route": "/class-types",
+    },
+    {
+      "id": "instructors",
+      "pattern": {
+        "kind": "crud",
+        "model": "Instructor",
+      },
+      "route": "/instructors",
+    },
+  ],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
+{
+  "app": {
+    "currency": "EUR",
+    "description": "Lightweight CRM for a small B2B sales team.",
+    "name": "Acme CRM",
+    "timezone": "Europe/Mariehamn",
+  },
+  "models": [
+    {
+      "description": "A company we have a commercial relationship with.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": true,
+        },
+        {
+          "name": "phone",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "phone",
+          },
+          "unique": false,
+        },
+        {
+          "default": "smb",
+          "name": "segment",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "smb",
+              "enterprise",
+              "government",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "description": "Maximum outstanding balance before new orders are held.",
+          "min": 0,
+          "name": "creditLimit",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "name": "notes",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Customer",
+    },
+    {
+      "fields": [
+        {
+          "name": "number",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": true,
+        },
+        {
+          "default": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "draft",
+              "placed",
+              "shipped",
+              "cancelled",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "total",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "name": "placedAt",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Order",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "customers",
+        "orders",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "customers",
+      "intent": "Find a customer quickly and keep their details current.",
+      "pattern": {
+        "kind": "crud",
+        "model": "Customer",
+      },
+      "route": "/customers",
+    },
+    {
+      "id": "orders",
+      "pattern": {
+        "kind": "crud",
+        "model": "Order",
+      },
+      "route": "/orders",
+    },
+  ],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
+{
+  "app": {
+    "currency": "EUR",
+    "description": "Simple invoicing for freelancers. Each user manages their own clients and invoices.",
+    "name": "Invoicely",
+  },
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "address",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "vatNumber",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Client",
+    },
+    {
+      "fields": [
+        {
+          "name": "number",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": true,
+        },
+        {
+          "name": "issuedOn",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "name": "dueOn",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "default": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "draft",
+              "sent",
+              "paid",
+              "overdue",
+            ],
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Invoice",
+      "rules": [
+        {
+          "text": "Invoice numbers are sequential per user, like 2026-001, 2026-002.",
+        },
+        {
+          "text": "A sent or paid invoice can no longer be edited, only credited.",
+        },
+      ],
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "invoices",
+        "clients",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "invoices",
+      "pattern": {
+        "kind": "crud",
+        "model": "Invoice",
+      },
+      "route": "/invoices",
+    },
+    {
+      "id": "clients",
+      "pattern": {
+        "kind": "crud",
+        "model": "Client",
+      },
+      "route": "/clients",
+    },
+  ],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
+{
+  "app": {
+    "currency": "EUR",
+    "description": "Covers each field type, the shorthand and the long form.",
+    "name": "Field showcase",
+    "timezone": "Europe/Mariehamn",
+  },
+  "models": [
+    {
+      "description": "One field of each kind.",
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "body",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": 60,
+          "name": "count",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "default": 0.5,
+          "name": "ratio",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "decimal",
+          },
+          "unique": false,
+        },
+        {
+          "name": "price",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": true,
+        },
+        {
+          "default": true,
+          "name": "active",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "bool",
+          },
+          "unique": false,
+        },
+        {
+          "default": "2026-09-01",
+          "name": "startsOn",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "default": "2026-09-01T09:30",
+          "name": "startsAt",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": true,
+        },
+        {
+          "name": "phone",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "phone",
+          },
+          "unique": false,
+        },
+        {
+          "default": "https://smithable.ax",
+          "name": "website",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "url",
+          },
+          "unique": false,
+        },
+        {
+          "default": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "draft",
+              "sent",
+              "paid",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": "allLevels",
+          "name": "level",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "beginner",
+              "allLevels",
+              "advanced",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "priority",
+          "required": false,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "low",
+              "high",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": 3,
+          "description": "Stars from one to five.",
+          "max": 5,
+          "min": 1,
+          "name": "rating",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+      ],
+      "intent": "Prove that the parser handles every field form.",
+      "name": "Everything",
+      "rules": [
+        {
+          "text": "Plain rules are sentences.",
+        },
+        {
+          "id": "with-id",
+          "text": "Implemented rules get a stable id.",
+        },
+      ],
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [],
+    },
+  ],
+  "pages": [],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
+{
+  "app": {
+    "name": "Menus",
+  },
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Customer",
+    },
+    {
+      "fields": [
+        {
+          "name": "amount",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "InvoiceLine",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "customers",
+        "invoiceLines",
+      ],
+    },
+    {
+      "name": "admin",
+      "pages": [
+        "line-admin",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "customers",
+      "pattern": {
+        "kind": "crud",
+        "model": "Customer",
+      },
+      "route": "/customers",
+    },
+    {
+      "id": "invoiceLines",
+      "pattern": {
+        "kind": "crud",
+        "model": "InvoiceLine",
+      },
+      "route": "/invoice-lines",
+    },
+    {
+      "id": "line-admin",
+      "pattern": {
+        "kind": "crud",
+        "model": "InvoiceLine",
+      },
+      "route": "/admin/lines",
+    },
+  ],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
+{
+  "app": {
+    "name": "Minimal",
+  },
+  "models": [],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [],
+    },
+  ],
+  "pages": [],
+  "specVersion": "0.1",
+}
+`;

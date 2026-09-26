@@ -1,2 +1,10 @@
-/** Manifest format version this build of Smithable reads and writes. */
-export const MANIFEST_VERSION = "0.1";
+export type { Diagnostic, Severity } from "./diagnostics.js";
+export { formatDiagnostic, hasErrors } from "./diagnostics.js";
+export type * from "./ir.js";
+export { SCALAR_TYPES } from "./ir.js";
+export type { MigrateResult, SpecMigration } from "./migrate.js";
+export { MIGRATIONS, migrateSpec } from "./migrate.js";
+export { buildJsonSchema } from "./schema.js";
+export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
+export type { SpecFile, ValidateResult } from "./spec.js";
+export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
