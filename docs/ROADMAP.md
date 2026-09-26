@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8. **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8. **In progress:** M9 (usability tests). **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -152,6 +152,8 @@ Removes the biggest technical risk of the browser-first product before building 
 
 **Exit:** the M3–M5 flows work in both modes, both locally (daemon) and in the browser with a Remote VM preview.
 
+**Status (2026-09-27):** `smithable studio` and `apps/studio` are built, and `pnpm test:studio` makes the M3–M5 changes in both modes against the local daemon, in a real browser. The browser-with-Remote-VM variant needs the hosted backend (EU preview VMs, project repositories), so it moves to M15 (M8 replaced WebContainers, which needed no backend). Still to do: the usability tests, which need people from the beachhead groups.
+
 ## M10 — Design system
 
 - A professional designer creates four theme presets, brand-input rules and the page patterns: landing sections, dashboard, list/detail, settings, sign-in and onboarding.
@@ -211,6 +213,7 @@ Removes the biggest technical risk of the browser-first product before building 
 ## M15 — Hosted beta (`smithable-cloud`)
 
 - Accounts with Google sign-in, project storage, and an AI gateway with plan allowances.
+- The hosted Builder: Studio in the browser with the engine in the tab, projects in Git repositories on EU servers, and previews in Remote VMs (M8, moved here from M9's exit).
 - One-click publish to EU hosting with domains and TLS, on every plan, with spending caps on by default. Managed backups.
 - For agencies: a staging environment per app, and transferring a project to the client's own account.
 - Automatic rebuild and redeploy for security patches, gated by tests.

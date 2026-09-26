@@ -1,5 +1,5 @@
 import type { FieldIR, ModelIR, SpecIR } from "@smithable/core";
-import { camel, kebab } from "./naming.js";
+import { camel, kebab } from "@smithable/core";
 
 // The formula tree comes from @smithable/core's parser; only its shape is needed here.
 type Expr = NonNullable<FieldIR["formula"]>;

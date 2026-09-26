@@ -34,6 +34,11 @@ export class YamlEditor {
     return this.source;
   }
 
+  /** Replaces the whole text, e.g. with what someone wrote in an editor. */
+  replaceAll(text: string): void {
+    this.splice(0, this.source.length, text);
+  }
+
   has(path: Path): boolean {
     return this.doc.hasIn(path);
   }

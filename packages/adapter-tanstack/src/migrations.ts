@@ -1,4 +1,4 @@
-import { plural, snake } from "./naming.js";
+import { plural, snake } from "@smithable/core";
 
 /**
  * The SQL table and column of a model's field, as the generated Drizzle schema names them.
