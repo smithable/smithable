@@ -21,6 +21,18 @@
       "preset": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["packages/core/**", "packages/adapter-tanstack/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
