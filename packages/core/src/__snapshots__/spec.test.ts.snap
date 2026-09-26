@@ -303,6 +303,118 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "default": "standard",
+          "name": "shippingMethod",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "standard",
+              "express",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "description": "Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.",
+          "examples": [
+            {
+              "expected": 0,
+              "input": {
+                "shippingMethod": "standard",
+                "total": 150,
+              },
+            },
+            {
+              "expected": 5,
+              "input": {
+                "shippingMethod": "standard",
+                "total": 80,
+              },
+            },
+            {
+              "expected": 15,
+              "input": {
+                "shippingMethod": "express",
+                "total": 150,
+              },
+            },
+          ],
+          "formula": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "kind": "binary",
+                    "left": {
+                      "kind": "field",
+                      "name": "shippingMethod",
+                    },
+                    "op": "=",
+                    "right": {
+                      "kind": "text",
+                      "value": "standard",
+                    },
+                  },
+                  {
+                    "kind": "binary",
+                    "left": {
+                      "kind": "field",
+                      "name": "total",
+                    },
+                    "op": ">",
+                    "right": {
+                      "kind": "number",
+                      "value": 100,
+                    },
+                  },
+                ],
+                "kind": "call",
+                "name": "AND",
+              },
+              {
+                "kind": "number",
+                "value": 0,
+              },
+              {
+                "args": [
+                  {
+                    "kind": "binary",
+                    "left": {
+                      "kind": "field",
+                      "name": "shippingMethod",
+                    },
+                    "op": "=",
+                    "right": {
+                      "kind": "text",
+                      "value": "express",
+                    },
+                  },
+                  {
+                    "kind": "number",
+                    "value": 15,
+                  },
+                  {
+                    "kind": "number",
+                    "value": 5,
+                  },
+                ],
+                "kind": "call",
+                "name": "IF",
+              },
+            ],
+            "kind": "call",
+            "name": "IF",
+          },
+          "name": "shippingCost",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
           "name": "placedAt",
           "required": false,
           "type": {
@@ -428,6 +540,11 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "defaultFormula": {
+            "args": [],
+            "kind": "call",
+            "name": "TODAY",
+          },
           "name": "issuedOn",
           "required": true,
           "type": {
@@ -437,6 +554,24 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "defaultFormula": {
+            "args": [
+              {
+                "kind": "field",
+                "name": "issuedOn",
+              },
+              {
+                "kind": "number",
+                "value": 30,
+              },
+              {
+                "kind": "text",
+                "value": "day",
+              },
+            ],
+            "kind": "call",
+            "name": "DATEADD",
+          },
           "name": "dueOn",
           "required": true,
           "type": {
@@ -460,6 +595,31 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "lines",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "InvoiceLine",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
+            "field": "amount",
+            "kind": "aggregate",
+            "list": "lines",
+            "name": "SUM",
+          },
+          "name": "total",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
       ],
       "name": "Invoice",
       "rules": [
@@ -471,6 +631,86 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         },
       ],
     },
+    {
+      "fields": [
+        {
+          "name": "invoice",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Invoice",
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": 1,
+          "name": "quantity",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "decimal",
+          },
+          "unique": false,
+        },
+        {
+          "name": "unitPrice",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "examples": [
+            {
+              "expected": 120,
+              "input": {
+                "quantity": 3,
+                "unitPrice": 40,
+              },
+            },
+            {
+              "expected": 10,
+              "input": {
+                "quantity": 0.5,
+                "unitPrice": 19.99,
+              },
+            },
+          ],
+          "formula": {
+            "kind": "binary",
+            "left": {
+              "kind": "field",
+              "name": "quantity",
+            },
+            "op": "*",
+            "right": {
+              "kind": "field",
+              "name": "unitPrice",
+            },
+          },
+          "name": "amount",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "InvoiceLine",
+    },
   ],
   "navigation": [
     {
@@ -478,6 +718,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       "pages": [
         "invoices",
         "clients",
+        "invoice-lines",
       ],
     },
   ],
@@ -497,6 +738,14 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "Client",
       },
       "route": "/clients",
+    },
+    {
+      "id": "invoice-lines",
+      "pattern": {
+        "kind": "crud",
+        "model": "InvoiceLine",
+      },
+      "route": "/invoice-lines",
     },
   ],
   "specVersion": "0.1",

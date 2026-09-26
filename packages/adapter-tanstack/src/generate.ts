@@ -6,6 +6,13 @@ import {
   type PageIR,
   type SpecIR,
 } from "@smithable/core";
+import {
+  defaultsName,
+  formulasModuleSource,
+  formulasTestSource,
+  hasFormulas,
+  withFormulasName,
+} from "./formulas.js";
 import { camel, humanize, kebab, pascal, plural, snake } from "./naming.js";
 import { sampleRows } from "./sample-data.js";
 import { STACK_PROFILE } from "./stack.js";
@@ -54,8 +61,14 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   add("src/db/seed.ts", seedModule(ir));
   add("src/routes/__root.tsx", rootRoute(ir, t));
   if (!ir.pages.some((p) => p.route === "/")) add("src/routes/index.tsx", indexRoute(ir));
-  for (const model of ir.models)
+  for (const model of ir.models) {
     add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t, ir));
+    if (hasFormulas(model)) {
+      add(`src/generated/${kebab(model.name)}.formulas.ts`, formulasModuleSource(model, ir));
+      const test = formulasTestSource(model);
+      if (test) add(`src/generated/${kebab(model.name)}.formulas.test.ts`, test);
+    }
+  }
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === page.pattern.model);
     if (!model) continue;
@@ -121,6 +134,7 @@ function packageJson(ir: SpecIR): string {
       build: "vite build",
       start: "srvx --prod -s ../client dist/server/server.js",
       typecheck: "tsc",
+      test: "vitest run",
       routes: "tsr generate",
       "db:generate": "drizzle-kit generate",
       "db:seed": "tsx src/db/seed.ts",
@@ -214,9 +228,27 @@ function modelNamed(ir: SpecIR, name: string): ModelIR {
   return model;
 }
 
-/** Fields stored on the model itself: everything except lists of related records. */
+/** Fields stored on the model itself: not lists of related records, not computed fields. */
 function storedFields(model: ModelIR): FieldIR[] {
+  return model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many) && !f.formula);
+}
+
+/** Fields a person sees for a record: stored and computed ones. */
+function shownFields(model: ModelIR): FieldIR[] {
   return model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many));
+}
+
+/** Lists that aggregates in the model's formulas read, e.g. "lines" for SUM(lines.amount). */
+function aggregatedLists(model: ModelIR): string[] {
+  const found = new Set<string>();
+  const visit = (e: unknown): void => {
+    if (!e || typeof e !== "object") return;
+    const node = e as { kind?: string; list?: string };
+    if (node.kind === "aggregate" && node.list) found.add(node.list);
+    for (const value of Object.values(e)) visit(value);
+  };
+  for (const field of model.fields) visit(field.formula);
+  return [...found];
 }
 
 /** The references a model holds, e.g. Order.customer. */
@@ -337,16 +369,25 @@ function sampleLiteral(field: FieldIR, value: unknown): string {
 function modelModule(model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
   const stored = storedFields(model);
+  const shown = shownFields(model);
+  const formulas = hasFormulas(model);
   const ui = {
     label: n.label,
     pluralLabel: n.pluralLabel,
     titleField: titleField(model),
-    columns: stored
+    columns: shown
       .filter((f) => !(f.type.kind === "scalar" && f.type.name === "text"))
       .slice(0, 5)
       .map(dataKey),
-    fields: stored.map((field) => fieldUi(model, field, t, ir)),
+    fields: shown.map((field) => fieldUi(model, field, t, ir)),
   };
+  // Functions cannot be written as a data literal: add them after it.
+  const uiSource = formulas
+    ? literal(ui).replace(
+        /\n}$/,
+        `\n  compute: ${withFormulasName(model)},\n  defaults: ${defaultsName(model)},\n}`,
+      )
+    : literal(ui);
   const refinements = stored.flatMap((f) => {
     const r = refinement(f);
     return r ? [`  ${f.name}: ${r},`] : [];
@@ -364,9 +405,12 @@ function modelModule(model: ModelIR, t: Texts, ir: SpecIR): string {
     references(m)
       .filter((f) => f.type.model !== except)
       .map((f) => `${f.name}: { columns: ${title(modelNamed(ir, f.type.model))} }`);
-  const listWith = withReferences(model);
+  const listWith = [
+    ...withReferences(model),
+    ...aggregatedLists(model).map((list) => `${list}: true`),
+  ];
   const getWith = [
-    ...listWith,
+    ...withReferences(model),
     ...lists(model).map((f) => {
       const nested = withReferences(modelNamed(ir, f.type.model), model.name);
       return nested.length ? `${f.name}: { with: { ${nested.join(", ")} } }` : `${f.name}: true`;
@@ -396,25 +440,25 @@ import { z } from "zod";
 import { db } from "#/db";
 import { ${n.table} } from "#/db/schema";
 import type { ModelUi } from "#/kit/model";
-
-export const ${n.ui}: ModelUi = ${literal(ui)};
+${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}
+export const ${n.ui}: ModelUi = ${uiSource};
 
 export const ${n.schema} = ${schema}.omit({ id: true, createdAt: true, updatedAt: true });
 
-export const ${n.list} = createServerFn().handler(() =>
-  db.query.${n.table}.findMany({${withClause(listWith, "    ")}
+export const ${n.list} = createServerFn().handler(${formulas ? "async " : ""}() =>
+  ${formulas ? "(await " : ""}db.query.${n.table}.findMany({${withClause(listWith, "    ")}
     orderBy: (t, { desc }) => [desc(t.id)],
-  }),
+  })${formulas ? `).map(${withFormulasName(model)})` : ""},
 );
 
 export const ${n.get} = createServerFn()
   .validator(z.number().int())
-  .handler(
-    async ({ data: id }) =>
-      (await db.query.${n.table}.findFirst({${withClause(getWith, "        ")}
-        where: (t, { eq }) => eq(t.id, id),
-      })) ?? null,
-  );
+  .handler(async ({ data: id }) => {
+    const row = await db.query.${n.table}.findFirst({${withClause(getWith, "      ")}
+      where: (t, { eq }) => eq(t.id, id),
+    });
+    return row ? ${formulas ? `${withFormulasName(model)}(row)` : "row"} : null;
+  });
 ${options}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
@@ -442,6 +486,7 @@ function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR) {
     label: own.label ?? humanize(field.name),
     kind,
     required: field.required,
+    ...(field.formula ? { computed: true } : {}),
     ...(own.help ? { help: own.help } : {}),
     ...(field.type.kind === "choice"
       ? {
@@ -635,6 +680,7 @@ function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
   const component = `New${model.name}Page`;
   const options = references(model).length ? optionsFor(model, t, ir) : undefined;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { app } from "#/generated/app";
 import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
 ${options ? `${options.imports.join("\n")}\n` : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
@@ -651,6 +697,7 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
       <PageHeader title=${JSON.stringify(`New ${n.label.toLowerCase()}`)} />
       <ModelForm
         ui={${n.ui}}
+        app={app}
         schema={${n.schema}}
 ${options ? "        options={options}\n" : ""}        submitLabel=${JSON.stringify(`Create ${n.label.toLowerCase()}`)}
         onSubmit={async (values) => {
@@ -698,7 +745,8 @@ function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string
       </section>`;
   });
   return `${HEADER}import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
-${sections.length ? 'import { app } from "#/generated/app";\n' : ""}${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
+import { app } from "#/generated/app";
+${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
 ${options ? `${options.imports.join("\n")}\n` : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${sections.length ? 'import { ModelTable } from "#/kit/ModelTable";\n' : ""}
@@ -720,6 +768,7 @@ function ${component}() {
       <PageHeader title={${heading}} />
       <ModelForm
         ui={${n.ui}}
+        app={app}
         schema={${n.schema}}
         initial={row}
 ${options ? "        options={options}\n" : ""}        submitLabel="Save changes"

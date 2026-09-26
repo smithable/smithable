@@ -62,7 +62,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 - `hasMany` / `belongsTo`, `Order` model, relation-aware kit components (select a customer on an order, list orders on a customer).
 - Custom actions, queries, pages and jobs: generated typed contracts plus one-time stubs in `src/custom/`. Missing-implementation drift.
-- Spreadsheet-style formulas for computed fields and defaults, compiled to both SQL and TypeScript.
+- Spreadsheet-style formulas for computed fields and defaults, compiled to TypeScript (SQL follows with queries and filters, which need it).
 - `examples` compiled into Vitest tests.
 - Rule IDs, implementation and test markers, and rule status in `smithable inspect`.
 - `smithable detach`.

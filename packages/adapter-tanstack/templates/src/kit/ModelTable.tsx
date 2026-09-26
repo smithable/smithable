@@ -34,6 +34,7 @@ export function ModelTable<R extends Row>({
   hide = [],
   emptyAction,
 }: ModelTableProps<R>) {
+  const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = ui.columns
     .filter((name) => !hide.includes(name))
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
@@ -62,7 +63,7 @@ export function ModelTable<R extends Row>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {shown.map((row) => (
             <TableRow
               key={row.id}
               className={onOpen ? "cursor-pointer" : undefined}

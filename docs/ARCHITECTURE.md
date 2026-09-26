@@ -174,6 +174,7 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 
   Formulas use a fixed function library modelled on spreadsheets, so non-developers and LLMs already know it. There are no user-defined functions, loops or free queries: anything beyond what a spreadsheet cell can do is custom code. The grammar is precisely specified, validated with helpful errors, and always has a long form. Formulas containing commas are written in block style (long form), because commas split values inside `{ … }`.
 - **A rule simple enough to be a formula should become one.** It is then enforced, costs no tokens, and its `examples` become tests.
+- **Formulas compile to TypeScript** (the TanStack adapter's `<model>.formulas.ts`), working on records as stored (money in cents) with spreadsheet rounding. Server functions add computed values to the records they return, forms recompute them live, and examples become Vitest tests of the same functions. Compiling formulas to SQL as well arrives with filtering and sorting in queries, where the database needs them.
 - **Choice fields default to their first value.** `status: draft | sent | paid` defaults to `draft`. Exceptions use the long form: `{ type: beginner | allLevels | advanced, default: allLevels }`, or `default: none` to stay empty until chosen. Operations that reorder values warn when this changes the default, and the plain-language view always states the default explicitly.
 
 ## 3. Companion files
