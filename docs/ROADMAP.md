@@ -62,7 +62,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 - Rule IDs, implementation and test markers, and rule status in `smithable inspect`.
 - `smithable detach`.
 
-**Exit:** the CRM has Orders and a custom `calculateShipping` action whose manifest examples run as passing tests. Changing the action's manifest signature makes the custom file fail typecheck. The capacity rule on bookings moves from **Not implemented** to **Implemented and tested** once custom code and a named test exist, and editing the rule text marks it **Changed**.
+**Exit:** the CRM has Orders and a custom `calculateShipping` action whose manifest examples run as passing tests. Changing the action's manifest signature makes the custom file fail typecheck. The rule "Orders above 100 EUR have free standard shipping" moves from **Not implemented** to **Implemented and tested** once custom code and a named test exist, and editing the rule text marks it **Changed**.
 **Detach test:** after `smithable detach`, a field and a page are added using only the Drizzle and TanStack docs (no Smithable knowledge), and the build and tests pass. `drizzle-kit generate` continues from the existing migrations.
 
 ## M5 — Auth and access
