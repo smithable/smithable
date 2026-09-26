@@ -1,5 +1,7 @@
 export type { OperationResult, ProjectFiles } from "./apply.js";
 export { applyOperation, findOperation, OPERATIONS, parseOperationArgs } from "./apply.js";
+export type { ConceptRules } from "./concepts.js";
+export { conceptsWithRules, ruleId } from "./concepts.js";
 export type { ContentIR, FieldContent, ModelContent } from "./content.js";
 export { CONTENT_VERSION, emptyContent, validateContent } from "./content.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";

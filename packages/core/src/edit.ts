@@ -64,6 +64,15 @@ export class YamlEditor {
     this.splice(colon + 1, end, text);
   }
 
+  /** Replaces item `index` of the list at `path`, written on one line (e.g. { id: a, rule: … }). */
+  setItem(path: Path, index: number, value: YamlValue): void {
+    const list = this.doc.getIn(path, true) as ParsedNode | undefined;
+    if (!isSeq(list)) throw new Error(`${path.join(".")} is not a list.`);
+    const item = list.items[index] as ParsedNode | undefined;
+    if (!item) throw new Error(`${path.join(".")} has no item ${index + 1}.`);
+    this.splice(item.range[0], item.range[1], flow(value));
+  }
+
   /** Renames the key at `path`, keeping its value, position and comments. */
   renameKey(path: Path, name: string): void {
     const key = this.pair(path).key as ParsedNode;

@@ -60,6 +60,23 @@ export async function mergeCustomers(input: MergeCustomersInput): Promise<MergeC
 }
 `;
 
+/** A test that names the rule it covers, as a developer (or AI) writes it. */
+const MERGE_CUSTOMERS_TEST = `import { eq } from "drizzle-orm";
+import { expect, test } from "vitest";
+import { db } from "#/db";
+import { customers, orders } from "#/db/schema";
+import { mergeCustomers } from "./merge-customers";
+
+test("rule mergeCustomers.move-orders: the duplicate's orders move to the kept customer", async () => {
+  const keep = db.insert(customers).values({ name: "Keep Ltd" }).returning().get();
+  const duplicate = db.insert(customers).values({ name: "Duplicate Ltd" }).returning().get();
+  db.insert(orders).values({ number: \`T-\${Date.now()}\`, customerId: duplicate.id, total: 100 }).run();
+  await mergeCustomers({ keep: keep.id, duplicate: duplicate.id });
+  expect(db.select().from(orders).where(eq(orders.customerId, keep.id)).all()).toHaveLength(1);
+  expect(db.select().from(customers).where(eq(customers.id, duplicate.id)).all()).toHaveLength(0);
+});
+`;
+
 /** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
@@ -178,6 +195,41 @@ function operationsFlow(dir) {
       run("pnpm", ["typecheck"], dir);
     },
   );
+  step("rule status: not implemented → implemented and tested → changed", () => {
+    const rule = "mergeCustomers.move-orders";
+    const status = () => {
+      const out = smithable(dir, "inspect").out;
+      const line = out.split("\n").find((l) => l.trim().startsWith(rule));
+      if (!line) throw new Error(`no ${rule} in:\n${out}`);
+      return line.trim().slice(rule.length).trim();
+    };
+    expectOk(smithable(dir, "op", "setRuleId", "action:mergeCustomers", "1", "move-orders"));
+    if (status() !== "Not implemented") throw new Error(status());
+
+    const custom = join(dir, "src/custom/actions/merge-customers.ts");
+    writeFileSync(
+      custom,
+      readFileSync(custom, "utf8").replace(
+        "export async",
+        `// implements rule ${rule}\nexport async`,
+      ),
+    );
+    writeFileSync(join(dir, "src/custom/actions/merge-customers.test.ts"), MERGE_CUSTOMERS_TEST);
+    if (!status().startsWith("Implemented and tested, but the tests have not run"))
+      throw new Error(status());
+    expectOk(smithable(dir, "test"));
+    if (status() !== "Implemented and tested") throw new Error(status());
+
+    const specFile = join(dir, "smithable.yml");
+    writeFileSync(
+      specFile,
+      readFileSync(specFile, "utf8").replace(
+        "move to the kept customer",
+        "move to the customer we keep",
+      ),
+    );
+    if (!status().startsWith("Changed")) throw new Error(status());
+  });
   step("a hand-edited generated file is reported, not overwritten", () => {
     const file = join(dir, "src/generated/customer.ts");
     const edited = `${readFileSync(file, "utf8")}// my change\n`;
