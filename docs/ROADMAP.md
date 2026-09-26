@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6. **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7. **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -107,10 +107,23 @@ Measure: tokens or credits, wall time, files touched, test success, regressions,
 
 Before this milestone, interview 10–15 target users (non-developers who have used prompt-to-code builders, and developers or agencies), so the benchmark measures what they care about.
 
+**Done (2026-09-27)** with desk research instead of interviews ([brief](research/web-research-brief.md)); the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
+
 **Exit:**
 - A written report, and product decisions updated from the results.
 - The measurements become the documented baseline for the change trace's comparison estimate ([ARCHITECTURE.md §9.7](ARCHITECTURE.md#97-change-trace)).
 - The local-model and Smithable-model columns are added in M12.
+
+## M7.5 — Escape hatches and search
+
+From the M7 benchmark: where no operation fits, agents edit generated files, and that drift blocks every later operation. Fix that before building new surfaces.
+
+- `customizePage`: `src/custom/pages/<page>.tsx` replaces a page's generated component, with a generated, typed contract (loader data, data functions) and the generated route keeping loading and access checks. Never overwritten.
+- Drift that can be moved: `smithable generate` offers to move a hand edit of a generated page into its custom page (ARCHITECTURE §6.5).
+- The MCP server's instructions and tool results point agents to `customizePage` and custom actions when no operation fits.
+- Search on list pages in the spec (`search: [name, email]`), after the five questions of ARCHITECTURE §2.4.
+
+**Exit:** in the M7 benchmark, Claude Code + MCP completes all seven tasks with no drift, including search (through the spec) and the menu reorder after it; a custom page survives regeneration and fails type-checking when its contract changes.
 
 ## M8 — Browser engine spike
 
@@ -131,6 +144,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - Preview runtime interface with the Local (daemon) and WebContainer runtimes.
 - Concept tree, plain-language spec summary, spec editor, diff, undo, logs, and forms for the most common operations.
 - Change trace, with generator entries only for now.
+- Usability tests with 5–8 people from the beachhead groups, each building their own small app idea in the Builder (they replace M7's interviews; guide in [research/interviews.md](research/interviews.md)).
 
 **Exit:** the M3–M5 flows work in both modes, both locally (daemon) and browser-only (WebContainer).
 
