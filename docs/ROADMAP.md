@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4.
+**Done:** M0, M1, M2, M3, M4. **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -72,7 +72,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 ## M5 — Auth and access
 
-- `smithable.auth.yml` v0.1: sign-in methods, `defaultAccess` (shared or private), roles, user fields, and the `public` section. Decide the implementation approach ([ARCHITECTURE.md §15](ARCHITECTURE.md#15-open-questions)).
+- `smithable.auth.yml` v0.1: sign-in methods, `defaultAccess` (shared or private), roles, and the `public` section. Implemented with Better Auth ([ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-smithableauthyml-users-roles-and-exposure)). Extra user fields and `selfSignUp: false` (which needs invitations) move to a later milestone; `allowedDomains` covers internal tools until then.
 - Google sign-in by default, Facebook as a secondary provider, via the chosen auth library. Includes admin bootstrap, domain restriction, a dev-only sign-in-as-role, and a provider setup checklist.
 - Automatic owner field on every model, `ownedBy`, and `access` exceptions on models, actions and pages, validated against the defined roles.
 - One generated access layer in the kit that filters every query and write, including row-level filtering by owner. Generated tests prove the effective access per model and role.
