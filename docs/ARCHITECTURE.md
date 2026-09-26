@@ -424,13 +424,13 @@ function CustomersPage() {
 | **Migrations** | `drizzle/**` | Compiler writes them, then history owns them | Never rewritten after creation |
 | **Scaffold** | `pnpm-workspace.yaml`, `.gitignore`, `.dockerignore`, `CLAUDE.md`, `.mcp.json` | Created once, then the project and its tools | Never rewritten; tools like pnpm legitimately edit them |
 
-Custom code is linked to the manifest by convention: `actions.calculateShipping` with `custom: true` corresponds to `src/custom/actions/calculateShipping.ts`. The compiler generates the typed input/output contract into `src/generated/`, so if the manifest's signature changes, the custom file fails typechecking. That turns drift into a compile error instead of a silent bug.
+Custom code is linked to the manifest by convention: `actions.calculateShipping` with `custom: true` corresponds to `src/custom/actions/calculateShipping.ts`, and a page with its own component (`smithable customize page:customers`) to `src/custom/pages/customers.tsx`. A custom page replaces only the page's component: the generated route keeps loading data, search and access checks, and the component reads the route's data through TanStack's `getRouteApi`, so the loader's types are its contract. The compiler generates the typed input/output contract into `src/generated/`, so if the manifest's signature changes, the custom file fails typechecking. That turns drift into a compile error instead of a silent bug.
 
 Custom files may import anything from `generated/` and `kit/`. Generated code imports custom code only at the declared hook points.
 
 ### 6.5 Drift detection
 
-The compiler records a hash of every file it owns in `.smithable/`. If someone edits a compiler-owned file by hand, Smithable reports drift and offers two choices: **revert**, or **move the change into a custom file or the manifest**. It never silently overwrites a manual edit. (So far it only reports and refuses; moving the change is planned for M7.5. In the M7 benchmark, one hand-edited route blocked every later operation.)
+The compiler records a hash of every file it owns in `.smithable/`. If someone edits a compiler-owned file by hand, Smithable reports drift and offers two choices: **revert**, or **move the change into a custom file or the manifest**. It never silently overwrites a manual edit. For a page's list route, `smithable customize page:<page>` moves the edit: when the edit only touched the component, the edited component becomes the custom page and the route is generated again; when it changed loading or access, it explains why the edit cannot move. `generate` suggests this when it finds such an edit. (In the M7 benchmark, one hand-edited route blocked every later operation.)
 
 Missing custom implementations (a manifest says `custom: true` but the file or export is missing) are also reported as drift.
 
@@ -615,7 +615,7 @@ Design quality comes from crafted templates, not AI improvisation. AI (even a sm
 
 - Locally, a Node **daemon** hosts a project session: file watching, compile, the app process, Git, AI calls, and container builds. It exposes HTTP + WebSocket. In the hosted product, the browser tab is the host (§10.2), and the hosted service provides project storage, AI and publishing.
 - The **CLI**, **Studio** and **MCP server** (§9.6) are all clients, and all use the same core packages. The CLI can also run core commands in-process without a daemon.
-- CLI surface: `smithable new | validate | generate | run | op <operation> | undo | inspect <concept> | context "<request>" | test | security | build | deploy | backup | restore | upgrade | update | detach | mcp | studio`.
+- CLI surface: `smithable new | validate | generate | run | op <operation> | undo | customize page:<page> | inspect <concept> | context "<request>" | test | security | build | deploy | backup | restore | upgrade | update | detach | mcp | studio`.
 
 ## 12. Verification, security, deployment
 
