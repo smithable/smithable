@@ -18,6 +18,7 @@
     "!dist/**/*.test.*"
   ],
   "dependencies": {
-    "@smithable/core": "workspace:*"
+    "@smithable/core": "workspace:*",
+    "@smithable/adapter-tanstack": "workspace:*"
   }
 }

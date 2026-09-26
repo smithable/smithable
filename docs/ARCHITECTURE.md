@@ -416,6 +416,7 @@ function CustomersPage() {
 | **Kit** | `src/kit/**` | Compiler | Updated when the Smithable version changes |
 | **Custom** | `src/custom/**` (actions, queries, pages, jobs, components, auth) | User / AI | **Never overwritten.** The compiler creates a typed stub once, then leaves the file alone |
 | **Migrations** | `drizzle/**` | Compiler writes them, then history owns them | Never rewritten after creation |
+| **Scaffold** | `pnpm-workspace.yaml`, `.gitignore`, `.dockerignore` | Created once, then the project and its tools | Never rewritten; tools like pnpm legitimately edit them |
 
 Custom code is linked to the manifest by convention: `actions.calculateShipping` with `custom: true` corresponds to `src/custom/actions/calculateShipping.ts`. The compiler generates the typed input/output contract into `src/generated/`, so if the manifest's signature changes, the custom file fails typechecking. That turns drift into a compile error instead of a silent bug.
 
