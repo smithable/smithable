@@ -1,0 +1,25 @@
+smithable: 0.1
+app:
+  name: Broken actions
+models:
+  Customer:
+    fields:
+      name: string!
+actions:
+  merge:                           # expect: missing-key
+    input: { keep: Customer! }
+  archive:
+    custom: true
+    on: Customer                   # expect: not-yet-supported
+  notify:
+    custom: true
+    input:
+      who: Custmer!                # expect: unknown-model
+      all: Customer[]              # expect: invalid-field
+      when: date = 2026-01-01      # expect: invalid-field
+  Export:                          # expect: invalid-name
+    custom: true
+pages:
+  customers:
+    crud: Customer
+    actions: [notfy]               # expect: unknown-action

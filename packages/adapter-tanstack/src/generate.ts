@@ -1,4 +1,5 @@
 import {
+  type ActionIR,
   type ContentIR,
   emptyContent,
   type FieldIR,
@@ -22,7 +23,7 @@ import { TEMPLATES } from "./templates.gen.js";
  * Who owns a file (ARCHITECTURE §6.4). "scaffold" files are created once and then belong
  * to the project and its tools, e.g. pnpm adds supply-chain exceptions to pnpm-workspace.yaml.
  */
-export type Zone = "generated" | "kit" | "scaffold";
+export type Zone = "generated" | "kit" | "scaffold" | "custom";
 
 const SCAFFOLD = new Set(["pnpm-workspace.yaml", ".gitignore", ".dockerignore"]);
 
@@ -69,7 +70,24 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
       if (test) add(`src/generated/${kebab(model.name)}.formulas.test.ts`, test);
     }
   }
+  for (const action of ir.actions) {
+    add(`src/generated/actions/${kebab(action.name)}.ts`, actionModule(action, ir));
+    // Created once; the implementation belongs to the project from then on.
+    files.push({
+      path: `src/custom/actions/${kebab(action.name)}.ts`,
+      content: actionStub(action),
+      zone: "custom",
+    });
+  }
   for (const page of ir.pages) {
+    for (const name of page.actions ?? []) {
+      const action = ir.actions.find((a) => a.name === name);
+      if (action)
+        add(
+          `src/routes${page.route === "/" ? "" : page.route}/actions/${kebab(name)}.tsx`,
+          actionRoute(page, action, ir, t),
+        );
+    }
     const model = ir.models.find((m) => m.name === page.pattern.model);
     if (!model) continue;
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
@@ -639,10 +657,22 @@ function ${component}() {
     <Link to=${JSON.stringify(join(page.route, "new"))} className={buttonVariants()}>
       New ${n.label.toLowerCase()}
     </Link>
-  );
+  );${(page.actions ?? [])
+    .map(
+      (a) => `
+  const ${a}Button = (
+    <Link to=${JSON.stringify(join(page.route, `actions/${kebab(a)}`))} className={buttonVariants({ variant: "outline" })}>
+      ${humanize(a)}
+    </Link>
+  );`,
+    )
+    .join("")}
   return (
     <>
-      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))} actions={newButton} />
+      <PageHeader
+        title=${JSON.stringify(t.pageTitle(page.id))}
+        actions={${(page.actions ?? []).length ? `<>${(page.actions ?? []).map((a) => `{${a}Button}`).join("")}{newButton}</>` : "newButton"}}
+      />
       <ModelTable
         ui={${n.ui}}
         app={app}
@@ -804,6 +834,190 @@ function favicon(ir: SpecIR): string {
   <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
   <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">${initial}</text>
 </svg>
+`;
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+
+/** The Zod schema of one input field of an action. */
+function zodFor(field: FieldIR): string {
+  let schema: string;
+  if (field.type.kind === "choice") schema = `z.enum(${literal(field.type.values)})`;
+  else if (field.type.kind === "relation") schema = "z.number().int()";
+  else {
+    switch (field.type.name) {
+      case "int":
+      case "money":
+        schema = "z.number().int()";
+        break;
+      case "decimal":
+        schema = "z.number()";
+        break;
+      case "bool":
+        schema = "z.boolean()";
+        break;
+      case "datetime":
+        schema = "z.date()";
+        break;
+      case "email":
+        schema = 'z.email("Enter a valid email address")';
+        break;
+      case "url":
+        schema = 'z.url("Enter a valid web address")';
+        break;
+      case "date":
+        schema = 'z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")';
+        break;
+      default:
+        schema = field.required ? 'z.string().trim().min(1, "Required")' : "z.string()";
+    }
+  }
+  return field.required ? schema : `${schema}.nullish()`;
+}
+
+/** The TypeScript type of one output field of an action. */
+function outputType(field: FieldIR): string {
+  const base =
+    field.type.kind === "choice"
+      ? field.type.values.map((v) => JSON.stringify(v)).join(" | ")
+      : field.type.kind === "relation"
+        ? "number"
+        : ["int", "decimal", "money"].includes(field.type.name)
+          ? "number"
+          : field.type.name === "bool"
+            ? "boolean"
+            : field.type.name === "datetime"
+              ? "Date"
+              : "string";
+  return field.required ? base : `${base} | null`;
+}
+
+function actionNames(action: ActionIR) {
+  const type = pascal(action.name);
+  return {
+    input: `${action.name}Input`,
+    inputType: `${type}Input`,
+    outputType: `${type}Output`,
+    ui: `${action.name}Ui`,
+    module: `#/generated/actions/${kebab(action.name)}`,
+    custom: `#/custom/actions/${kebab(action.name)}`,
+  };
+}
+
+function actionModule(action: ActionIR, ir: SpecIR): string {
+  const a = actionNames(action);
+  const input = action.input.map((f) => `  ${f.name}: ${zodFor(f)},`);
+  const output = action.output?.length
+    ? `{ ${action.output.map((f) => `${f.name}: ${outputType(f)}`).join("; ")} }`
+    : "void";
+  const ui = {
+    label: humanize(action.name),
+    pluralLabel: humanize(action.name),
+    titleField: "id",
+    columns: [],
+    fields: action.input.map((field) => ({
+      name: field.name,
+      label: humanize(field.name),
+      kind: field.type.kind === "scalar" ? field.type.name : field.type.kind,
+      required: field.required,
+      ...(field.type.kind === "choice"
+        ? { choices: field.type.values.map((value) => ({ value, label: humanize(value) })) }
+        : {}),
+      ...(field.type.kind === "relation"
+        ? {
+            relation: { key: field.name, titleField: titleField(modelNamed(ir, field.type.model)) },
+          }
+        : {}),
+    })),
+  };
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { ${action.name} as implementation } from "${a.custom}";
+import type { ModelUi } from "#/kit/model";
+
+/** What the "${action.name}" action needs, from smithable.yml. */
+export const ${a.input} = z.object({
+${input.join("\n")}
+});
+
+export type ${a.inputType} = z.infer<typeof ${a.input}>;
+
+/** What the "${action.name}" action returns, from smithable.yml. */
+export type ${a.outputType} = ${output};
+
+export const ${a.ui}: ModelUi = ${literal(ui)};
+
+export const ${action.name} = createServerFn({ method: "POST" })
+  .validator(${a.input})
+  .handler(({ data }) => implementation(data));
+`;
+}
+
+/** The one-time stub of an action's implementation, with its intent and rules as a guide. */
+function actionStub(action: ActionIR): string {
+  const a = actionNames(action);
+  const doc = [
+    ...(action.intent ? [action.intent] : action.description ? [action.description] : []),
+    ...(action.rules?.length
+      ? ["", "Rules (from smithable.yml):", ...action.rules.map((rule) => `- ${rule.text}`)]
+      : []),
+  ];
+  return `// Your implementation of the "${action.name}" action in smithable.yml. Smithable created this file
+// once and never changes it. The input and output types are generated from the spec, so a change
+// to the action's input or output shows up here as a type error.
+import type { ${a.inputType}, ${a.outputType} } from "${a.module}";
+
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}): Promise<${a.outputType}> {
+  throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
+}
+`;
+}
+
+/** A page with a form for an action's input. */
+function actionRoute(page: PageIR, action: ActionIR, ir: SpecIR, t: Texts): string {
+  const a = actionNames(action);
+  const component = `${pascal(action.name)}Page`;
+  const relations = action.input.filter((f) => f.type.kind === "relation");
+  const optionFns = new Map<string, string>();
+  for (const f of relations) {
+    const target = names(modelNamed(ir, (f.type as { model: string }).model), t);
+    optionFns.set(target.options, target.module);
+  }
+  const options = relations.map(
+    (f) =>
+      `${f.name}: await ${names(modelNamed(ir, (f.type as { model: string }).model), t).options}()`,
+  );
+  const route = join(page.route, `actions/${kebab(action.name)}`);
+  return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { ${action.name}, ${a.input}, ${a.ui} } from "${a.module}";
+${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { PageHeader } from "#/kit/AppShell";
+import { ModelForm } from "#/kit/ModelForm";
+
+export const Route = createFileRoute(${JSON.stringify(route)})({
+${options.length ? `  loader: async () => ({ options: { ${options.join(", ")} } }),\n` : ""}  component: ${component},
+});
+
+function ${component}() {
+${options.length ? "  const { options } = Route.useLoaderData();\n" : ""}  const navigate = useNavigate();
+  const back = () => navigate({ to: ${JSON.stringify(page.route)} });
+  return (
+    <>
+      <PageHeader title=${JSON.stringify(humanize(action.name))} />
+      <ModelForm
+        ui={${a.ui}}
+        app={app}
+        schema={${a.input}}
+${options.length ? "        options={options}\n" : ""}        submitLabel=${JSON.stringify(humanize(action.name))}
+        onSubmit={async (values) => {
+          await ${action.name}({ data: values });
+          await back();
+        }}
+        onCancel={back}
+      />
+    </>
+  );
+}
 `;
 }
 

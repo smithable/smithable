@@ -2,6 +2,7 @@
 
 exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "currency": "EUR",
     "description": "Class schedule and online booking for a small yoga studio.",
@@ -173,6 +174,46 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
 
 exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 {
+  "actions": [
+    {
+      "custom": true,
+      "input": [
+        {
+          "name": "keep",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
+        },
+        {
+          "name": "duplicate",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
+        },
+      ],
+      "intent": "Merge a duplicate customer record into the one we keep.",
+      "name": "mergeCustomers",
+      "rules": [
+        {
+          "text": "All orders of the duplicate move to the kept customer.",
+        },
+        {
+          "text": "Empty fields on the kept customer are filled from the duplicate.",
+        },
+        {
+          "text": "The duplicate is deleted afterwards.",
+        },
+      ],
+    },
+  ],
   "app": {
     "currency": "EUR",
     "description": "Lightweight CRM for a small B2B sales team.",
@@ -438,6 +479,9 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
   ],
   "pages": [
     {
+      "actions": [
+        "mergeCustomers",
+      ],
       "id": "customers",
       "intent": "Find a customer quickly and keep their details current.",
       "pattern": {
@@ -461,6 +505,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 
 exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "currency": "EUR",
     "description": "Simple invoicing for freelancers. Each user manages their own clients and invoices.",
@@ -752,8 +797,128 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": true,
+      "input": [
+        {
+          "name": "keep",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
+        },
+        {
+          "name": "duplicate",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Customer",
+          },
+          "unique": false,
+        },
+      ],
+      "intent": "Merge a duplicate customer record into the one we keep.",
+      "name": "mergeCustomers",
+      "rules": [
+        {
+          "text": "All orders of the duplicate move to the kept customer.",
+        },
+      ],
+    },
+    {
+      "custom": true,
+      "input": [
+        {
+          "name": "subject",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "segment",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "all",
+              "active",
+            ],
+          },
+          "unique": false,
+        },
+      ],
+      "name": "sendNewsletter",
+      "output": [
+        {
+          "name": "sent",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+      ],
+    },
+  ],
+  "app": {
+    "name": "Actions",
+  },
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Customer",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "customers",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "actions": [
+        "mergeCustomers",
+        "sendNewsletter",
+      ],
+      "id": "customers",
+      "pattern": {
+        "kind": "crud",
+        "model": "Customer",
+      },
+      "route": "/customers",
+    },
+  ],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "currency": "EUR",
     "description": "Covers each field type, the shorthand and the long form.",
@@ -949,6 +1114,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
 
 exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "name": "Formulas",
   },
@@ -1229,6 +1395,7 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
 
 exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "name": "Menus",
   },
@@ -1309,6 +1476,7 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
 
 exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "name": "Minimal",
   },
@@ -1326,6 +1494,7 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
 
 exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
 {
+  "actions": [],
   "app": {
     "name": "Relations",
   },

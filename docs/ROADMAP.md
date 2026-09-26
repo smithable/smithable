@@ -61,7 +61,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 ## M4 — Relations, custom code, examples
 
 - `hasMany` / `belongsTo`, `Order` model, relation-aware kit components (select a customer on an order, list orders on a customer).
-- Custom actions, queries, pages and jobs: generated typed contracts plus one-time stubs in `src/custom/`. Missing-implementation drift.
+- Custom actions: generated typed contracts plus one-time stubs in `src/custom/`, offered on pages. (Custom queries, pages and jobs move to later milestones: none is needed for this milestone's exit, and jobs need a scheduler in the generated app.)
 - Spreadsheet-style formulas for computed fields and defaults, compiled to TypeScript (SQL follows with queries and filters, which need it).
 - `examples` compiled into Vitest tests.
 - Rule IDs, implementation and test markers, and rule status in `smithable inspect`.
