@@ -640,7 +640,7 @@ function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string 
     throw new AccessDenied(viewer !== null);`,
   );
   const selectOwner = signedIn ? `{ ${owner}: ${n.table}.${owner} }` : `{ id: ${n.table}.id }`;
-  return `${HEADER}import { ${drizzle.sort().join(", ")} } from "drizzle-orm";
+  return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${n.table} } from "#/db/schema";
 import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
@@ -677,10 +677,11 @@ export const ${self} = {
     return found !== undefined;
   },
 
-  async list(viewer: Viewer | null) {
+  /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search. */
+  async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const rows = await db.query.${n.table}.findMany({
-      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [desc(t.id)],
     });
     return ${formulas ? `rows.map(${withFormulasName(model)})` : "rows"};
@@ -922,26 +923,62 @@ export const Route = createFileRoute("/")({
 `;
 }
 
+/** A searchable list's server function and route options: the search text is in the URL. */
+function searchCode(page: PageIR, model: ModelIR, t: Texts) {
+  const n = names(model, t);
+  const fields = (page.search ?? []).map(
+    (name) => model.fields.find((f) => f.name === name) as FieldIR,
+  );
+  const fn = `search${pascal(plural(model.name))}`;
+  const labels = fields.map((f) => (t.field(model, f).label ?? humanize(f.name)).toLowerCase());
+  const placeholder = `Search by ${labels.length > 1 ? `${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}` : labels[0]}`;
+  return {
+    imports: `import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { ${n.table} } from "#/db/schema";
+import { ${n.access}, ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { contains } from "#/kit/search";
+import { SearchBox } from "#/kit/SearchBox";
+import { currentViewer } from "#/lib/viewer.server";
+`,
+    fn: `
+/** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
+const ${fn} = createServerFn()
+  .validator(z.object({ q: z.string().max(200).optional() }))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    const where = data.q ? contains([${fields.map((f) => `${n.table}.${f.name}`).join(", ")}], data.q) : undefined;
+    return { rows: await ${n.data}.list(viewer, where), canCreate: allows(${n.access}.create, viewer) };
+  });
+`,
+    options: `  validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
+  loaderDeps: ({ search }) => ({ q: search.q }),
+  loader: ({ deps }) => ${fn}({ data: { q: deps.q } }),
+`,
+    placeholder,
+  };
+}
+
 function listRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
+  const search = page.search?.length ? searchCode(page, model, t) : undefined;
   return `${HEADER}import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { buttonVariants } from "#/components/ui/button";
+${search ? search.imports : ""}import { buttonVariants } from "#/components/ui/button";
 ${actions.map((a) => `import { ${actionNames(a).access} } from "${actionNames(a).module}";\n`).join("")}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { ${n.list}, ${n.ui} } from "${n.module}";
-import { ${actions.length ? "allows, " : ""}guardPage } from "#/kit/access";
+import { ${search ? "" : `${n.list}, `}${n.ui} } from "${n.module}";
+import { ${actions.length || search ? "allows, " : ""}guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
-
+${search ? search.fn : ""}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${n.list}(),
-  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${n.list}(),\n`}  component: ${component},
 });
 
 function ${component}() {
-  const { rows, canCreate } = Route.useLoaderData();
+  const { rows, canCreate } = Route.useLoaderData();${search ? "\n  const { q } = Route.useSearch();" : ""}
 ${actions.length ? "  const { viewer } = Route.useRouteContext();\n" : ""}  const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to=${JSON.stringify(join(page.route, "new"))} className={buttonVariants()}>
@@ -963,10 +1000,19 @@ ${actions.length ? "  const { viewer } = Route.useRouteContext();\n" : ""}  cons
         title=${JSON.stringify(t.pageTitle(page.id))}
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
-      <ModelTable
+${
+  search
+    ? `      <SearchBox
+        value={q ?? ""}
+        placeholder=${JSON.stringify(search.placeholder)}
+        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: { q: text || undefined }, replace: true })}
+      />
+`
+    : ""
+}      <ModelTable
         ui={${n.ui}}
         app={app}
-        rows={rows}
+        rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
       />

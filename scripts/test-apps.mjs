@@ -513,6 +513,16 @@ async function browserFlow(base) {
   try {
     await signInAs(page, base, "admin");
     console.log("  ✓ browser: the development sign-in signs in as a role");
+    await open(page, `${base}/customers`);
+    await page.getByRole("searchbox", { name: "Search by name or email" }).fill("NORDIC");
+    await page.waitForURL(/q=NORDIC/);
+    await page
+      .getByRole("cell", { name: "Baltic Freight AB" })
+      .waitFor({ state: "detached", timeout: 5000 });
+    await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
+    console.log(
+      "  ✓ browser: searching customers by name ignores case and keeps the search in the URL",
+    );
     await open(page, `${base}/customers/new`);
     await page.getByRole("button", { name: "Create customer" }).click();
     await expectText("empty required field says Required", "Required");

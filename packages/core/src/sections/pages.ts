@@ -1,5 +1,6 @@
 import type { ParsedNode } from "yaml";
 import {
+  type At,
   checkKeys,
   mapEntries,
   type ParseContext,
@@ -7,8 +8,9 @@ import {
   readRoleList,
   readString,
 } from "../context.js";
-import type { PageIR } from "../ir.js";
+import type { PageIR, SpecIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
+import { didYouMean } from "../suggest.js";
 import { NAME_PATTERN } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -49,11 +51,16 @@ export const pagesSection: SpecSection<"pages"> = {
           items: { type: "string" },
           description: "Only these roles may open the page (admins always can).",
         },
+        search: {
+          type: "array",
+          items: { type: "string" },
+          description: "Fields the list can be searched by, e.g. [name, email].",
+        },
         ...textSchema,
       },
     },
   },
-  parse(ctx, node) {
+  parse(ctx, node, parsed) {
     if (node === undefined) return [];
     const pages: PageIR[] = [];
     const routes = new Map<string, string>();
@@ -67,7 +74,7 @@ export const pagesSection: SpecSection<"pages"> = {
         continue;
       }
       ctx.define("page", id);
-      const page = readPage(ctx, id, keyNode, value);
+      const page = readPage(ctx, id, keyNode, value, parsed);
       if (!page) continue;
       const other = routes.get(page.route);
       if (other !== undefined) {
@@ -89,19 +96,21 @@ function readPage(
   id: string,
   keyNode: ParsedNode,
   node: ParsedNode | null,
+  parsed: Partial<SpecIR>,
 ): PageIR | undefined {
   const where = `page "${id}"`;
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["route", "crud", "actions", "access", ...TEXT_KEYS],
-    later: ["landing", "dashboard", "list", "calendar", "custom", "search", "filters"],
+    allowed: ["route", "crud", "actions", "access", "search", ...TEXT_KEYS],
+    later: ["landing", "dashboard", "list", "calendar", "custom", "filters"],
     content: ["title", "label", "heading"],
   });
   let route = `/${kebab(id)}`;
   let model: string | undefined;
   let actions: string[] | undefined;
   let access: string[] | undefined;
+  let search: { name: string; at: At }[] | undefined;
   for (const { key, value } of known) {
     if (key === "route") {
       const r = readString(ctx, value, `The route of ${where}`);
@@ -122,6 +131,8 @@ function readPage(
         ctx.reference("action", name, at);
         return name;
       });
+    } else if (key === "search") {
+      search = readNameList(ctx, value, `the search of ${where}`);
     } else if (key === "access") {
       access = readRoleList(ctx, value, `the access of ${where}`, false);
     } else if (key === "crud") {
@@ -153,8 +164,50 @@ function readPage(
     pattern: { kind: "crud", model },
     ...(actions?.length ? { actions } : {}),
     ...(access ? { access } : {}),
+    ...(search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
     ...readSemanticText(ctx, known),
   };
+}
+
+/** Text you can type into a search box: strings, text, emails, phone numbers, web addresses, choices. */
+const SEARCHABLE = ["string", "text", "email", "phone", "url"];
+
+function checkSearch(
+  ctx: ParseContext,
+  fields: { name: string; at: At }[],
+  model: string,
+  parsed: Partial<SpecIR>,
+  where: string,
+): string[] {
+  const target = parsed.models?.find((m) => m.name === model);
+  if (!target) return fields.map((f) => f.name); // reported as an unknown model
+  for (const { name, at } of fields) {
+    const field = target.fields.find((f) => f.name === name);
+    if (!field) {
+      ctx.error(
+        at,
+        "unknown-field",
+        `${model} has no field named "${name}" to search ${where} by.`,
+        didYouMean(
+          name,
+          target.fields.map((f) => f.name),
+        ),
+      );
+    } else if (
+      field.formula ||
+      !(
+        field.type.kind === "choice" ||
+        (field.type.kind === "scalar" && SEARCHABLE.includes(field.type.name))
+      )
+    ) {
+      ctx.error(
+        at,
+        "invalid-search",
+        `"${name}" cannot be searched: only stored text, email, phone, web address and choice fields can.`,
+      );
+    }
+  }
+  return fields.map((f) => f.name);
 }
 
 function kebab(name: string): string {
