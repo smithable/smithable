@@ -142,14 +142,13 @@ function requiredButEmpty(
   );
   for (const model of after.models) {
     for (const field of model.fields) {
-      if (!field.required || field.default !== undefined || storageOf(field.type) === "none")
-        continue;
+      if (!field.required || field.default !== undefined || storageOf(field) === "none") continue;
       const name = oldName.get(`${model.name}.${field.name}`) ?? field.name;
       const old = before.models
         .find((m) => m.name === model.name)
         ?.fields.find((f) => f.name === name);
       if (old?.required) continue;
-      const reference = storageOf(field.type) === "reference";
+      const reference = storageOf(field) === "reference";
       const noun = (n: number) =>
         n === 1 ? model.name.toLowerCase() : plural(model.name).toLowerCase();
       if (!old) {

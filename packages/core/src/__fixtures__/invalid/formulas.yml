@@ -1,0 +1,35 @@
+smithable: 0.1
+app:
+  name: Broken formulas
+models:
+  Order:
+    fields:
+      total: money!
+      method: standard | express
+      discount:
+        type: money
+        formula: total * rate                     # expect: invalid-formula
+      label:
+        type: money
+        formula: '"Order " & total'               # expect: invalid-formula
+      a:
+        type: int
+        formula: b + 1                            # expect: formula-cycle
+      b:
+        type: int
+        formula: a + 1                            # expect: formula-cycle
+      due:
+        type: date
+        default: DATEAD(TODAY(), 1, "day")        # expect: invalid-formula
+      fee:
+        type: money!                              # expect: invalid-field
+        formula: total / 10
+      shipping:
+        type: money
+        formula: IF(method = "express", 15, 5)
+        examples:
+          - input: { totl: 1 }                    # expect: invalid-example
+            expected: 5
+      notes:
+        type: text
+        examples: []                              # expect: invalid-field

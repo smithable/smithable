@@ -1,0 +1,38 @@
+smithable: 0.1
+app:
+  name: Formulas
+models:
+  Invoice:
+    fields:
+      number: string! unique
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date!
+        default: DATEADD(issuedOn, 30, "day")
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+        examples:
+          - input: { quantity: 3, unitPrice: 40 }
+            expected: 120
+  Order:
+    fields:
+      total: money!
+      shippingMethod: standard | express
+      shippingCost:
+        type: money
+        formula: IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))
+        examples:
+          - input: { total: 150, shippingMethod: standard }
+            expected: 0
+          - input: { total: 150, shippingMethod: express }
+            expected: 15

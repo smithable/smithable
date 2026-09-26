@@ -25,6 +25,7 @@ export class ParseContext {
   readonly diagnostics: Diagnostic[] = [];
   private readonly symbols = new Map<SymbolKind, Set<string>>();
   private readonly references: Reference[] = [];
+  private readonly marks = new Map<string, At>();
 
   constructor(
     readonly file: string,
@@ -65,6 +66,15 @@ export class ParseContext {
   /** Records a reference, checked by `checkReferences` once every section is parsed. */
   reference(kind: SymbolKind, name: string, at: At): void {
     this.references.push({ kind, name, at });
+  }
+
+  /** Remembers where something was written, for checks that run after parsing. */
+  mark(key: string, at: At): void {
+    this.marks.set(key, at);
+  }
+
+  at(key: string): At {
+    return this.marks.get(key);
   }
 
   checkReferences(): void {
