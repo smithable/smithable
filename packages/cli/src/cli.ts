@@ -1,9 +1,13 @@
 import { parseArgs } from "node:util";
-import { MANIFEST_VERSION } from "@smithable/core";
+import { SPEC_VERSION } from "@smithable/core";
+import { validate } from "./validate.js";
 
 export const VERSION = "0.0.0";
 
 const HELP = `Usage: smithable <command> [options]
+
+Commands:
+  validate [path]  Check smithable.yml in a directory (default: current) or a given file
 
 Options:
   -h, --help     Show this help
@@ -26,12 +30,18 @@ export function run(argv: string[]): CliResult {
   const { values, positionals } = parsed;
 
   if (values.version) {
-    return { code: 0, stdout: `smithable ${VERSION} (manifest ${MANIFEST_VERSION})\n`, stderr: "" };
+    return { code: 0, stdout: `smithable ${VERSION} (spec ${SPEC_VERSION})\n`, stderr: "" };
   }
   if (values.help || positionals.length === 0) {
     return { code: 0, stdout: HELP, stderr: "" };
   }
-  return { code: 2, stdout: "", stderr: `Unknown command: ${positionals[0]}\n\n${HELP}` };
+  const [command, ...args] = positionals;
+  if (command === "validate") {
+    if (args.length > 1)
+      return { code: 2, stdout: "", stderr: `validate takes at most one path.\n\n${HELP}` };
+    return validate(args[0] ?? ".");
+  }
+  return { code: 2, stdout: "", stderr: `Unknown command: ${command}\n\n${HELP}` };
 }
 
 function parse(argv: string[]) {

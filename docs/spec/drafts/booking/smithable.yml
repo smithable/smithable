@@ -1,0 +1,117 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+smithable: 0.1
+
+app:
+  name: Stillwater Yoga
+  description: Class schedule and online booking for a small yoga studio.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  ClassType:
+    description: A kind of class the studio offers, such as Vinyasa or Yin.
+    fields:
+      name: string!
+      summary: text
+      level:                            # long form: default is not the first value
+        type: beginner | allLevels | advanced
+        default: allLevels
+      durationMinutes: int! = 60
+      image: image
+    access: { create: [admin] }         # members don't add classes
+
+  Instructor:
+    fields:
+      name: string!
+      bio: text
+      photo: image
+    access: { create: [admin] }
+
+  Session:
+    description: One scheduled occurrence of a class.
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      spotsLeft:
+        type: int
+        formula: capacity - COUNTIF(bookings.status, "confirmed")
+    access: { create: [admin] }
+
+  Booking:
+    fields:
+      session: Session!
+      user: User!
+      status: confirmed | cancelled
+    unique: [session, user]           # a user books a session only once
+    ownedBy: user
+    access:
+      write: [admin]                  # members cancel through the action, not by editing
+      delete: [admin]
+    rules:
+      - A session never has more confirmed bookings than its capacity.
+
+actions:
+  bookSession:
+    custom: true
+    input: { session: Session }
+    intent: Book the current user into a session, if there is room.
+    rules:
+      - Fail with "This class is full" when the session has no spots left.
+      - Sessions that have already started cannot be booked.
+
+  cancelBooking:
+    on: Booking
+    when: { status: confirmed }
+    set: { status: cancelled }
+    allow: [owner, admin]
+    confirm: true                     # ask before cancelling; wording in smithable.content.yml
+    rules:
+      - Owners can cancel until 2 hours before the session starts; admins at any time.
+
+queries:
+  upcomingSessions:
+    from: Session
+    where: { startsAt: { after: now } }
+    orderBy: startsAt
+
+  myBookings:
+    from: Booking
+    where: { user: currentUser, status: confirmed }
+    orderBy: session.startsAt
+
+pages:
+  home:
+    route: /
+    intent: Make a first-time visitor feel welcome and get them to book a class.
+    landing:                          # sections in display order; texts in smithable.content.yml
+      hero: { image: hero.jpg, to: schedule }
+      classes: { cards: ClassType }
+      teachers: { cards: Instructor }
+      faq: {}
+
+  schedule:
+    calendar:
+      query: upcomingSessions
+      action: bookSession
+
+  my-bookings:
+    list:
+      query: myBookings
+      actions: [cancelBooking]
+
+  sessions: { crud: Session, access: [admin] }
+  class-types: { crud: ClassType, access: [admin] }
+  instructors: { crud: Instructor, access: [admin] }
+
+navigation:
+  main: [home, schedule, my-bookings]
+  admin: [sessions, class-types, instructors]
+
+jobs:
+  sendReminders:
+    schedule: hourly
+    custom: true
+    intent: Email each booked user a reminder 24 hours before their session.

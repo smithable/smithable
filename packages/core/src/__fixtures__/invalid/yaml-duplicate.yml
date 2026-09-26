@@ -1,0 +1,4 @@
+smithable: 0.1
+app:
+  name: Duplicate
+  name: Again                      # expect: duplicate-key

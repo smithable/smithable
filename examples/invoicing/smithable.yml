@@ -1,5 +1,4 @@
-# DRAFT: spec design proposal, not yet parsed by Smithable.
-# Access: "private" in smithable.auth.yml, so each freelancer sees only their own data.
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
 smithable: 0.1
 
 app:
@@ -14,81 +13,19 @@ models:
       email: email!
       address: text
       vatNumber: string
-      invoices: Invoice[]
 
   Invoice:
     fields:
       number: string! unique
-      client: Client!
-      issuedOn: date! = TODAY()
-      dueOn:
-        type: date!
-        default: DATEADD(issuedOn, 30, "day")
+      issuedOn: date!
+      dueOn: date!
       status: draft | sent | paid | overdue
-      lines: InvoiceLine[]
-      total:
-        type: money
-        formula: SUM(lines.amount)
     rules:
       - Invoice numbers are sequential per user, like 2026-001, 2026-002.
       - A sent or paid invoice can no longer be edited, only credited.
 
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
-        examples:
-          - input: { quantity: 3, unitPrice: 40 }
-            expected: 120
-
-actions:
-  sendInvoice:
-    custom: true
-    input: { invoice: Invoice }
-    intent: Email the invoice as a PDF to the client and mark it as sent.
-
-  markPaid:
-    on: Invoice
-    when: { status: [sent, overdue] }
-    set: { status: paid }
-
-queries:
-  unpaidInvoices:
-    from: Invoice
-    where: { status: [sent, overdue] }
-    orderBy: dueOn
-
 pages:
-  home:
-    route: /
-    intent: Convince freelancers to sign up. Emphasise simplicity and getting paid faster.
-    landing:                          # sections in display order; texts in smithable.content.yml
-      hero: { to: signUp }
-      features: {}
-      pricing: {}
-      testimonials: {}
-      closing: { type: cta, to: signUp }
-
-  dashboard:
-    dashboard:                        # widget names become their labels ("Paid this month")
-      outstanding: { sum: Invoice.total, where: { status: [sent, overdue] } }
-      paidThisMonth: { sum: Invoice.total, where: { status: paid, issuedOn: thisMonth } }
-      unpaidInvoices: { list: unpaidInvoices, actions: [markPaid] }
-
   invoices:
     crud: Invoice
-    filters: [status, client]
-    actions: [sendInvoice, markPaid]
-
   clients:
     crud: Client
-    search: [name, email]
-
-navigation:
-  public: [home]
-  main: [dashboard, invoices, clients]
