@@ -117,6 +117,27 @@ Rules:
 - **Text is not implementation state.** An `intent` does not imply that code exists; the index tracks that.
 - **Examples are executable.** Wherever an example has `input`/`expected`, the compiler generates a test.
 
+#### Rule status
+
+A rule does nothing by itself: writing "a session never has more bookings than its capacity" does not make it true. Because non-developers would reasonably assume it does, Smithable tracks and shows the status of every rule:
+
+| Status | Meaning |
+|---|---|
+| **Enforced** | A structured feature or generated code guarantees it. Typically the rule was promoted into the DSL and removed as text |
+| **Implemented and tested** | Custom code implements it, and a passing test covers it |
+| **Implemented, untested** | Custom code claims to implement it, but no test covers it |
+| **Not implemented** | Nothing implements it yet |
+| **Changed** | The rule text was edited after it was implemented. The implementation needs review |
+
+How the status is computed deterministically, without AI:
+
+- A rule starts as a plain string. When something implements it, the operation gives it a stable ID, converting it to the long form: `- { id: capacity, rule: A session never has more confirmed bookings than its capacity. }`. The full ID is qualified by its owner, for example `Booking.capacity`.
+- Custom code marks what it implements with a comment (`// implements rule Booking.capacity`), and tests name the rule they cover (`test("rule Booking.capacity: rejects booking a full session", …)`).
+- The index (§7) links rule IDs to implementing code and covering tests, and stores a hash of the rule text at implementation time. That hash is what detects **Changed**.
+- Passing or failing is taken from the last test run.
+
+In the Builder, unimplemented rules show as "2 rules aren't enforced yet — implement them?". One click hands them to AI, which writes scoped custom code plus tests (§9.1). In Studio, `smithable inspect` and the concept tree show the same status.
+
 ### 2.4 Growing the DSL
 
 Add a structured construct only if all of the following are true:
@@ -345,7 +366,7 @@ operation(s) → validate → write manifest → compile → migrate (dev DB)
 
 1. **Operations.** Structured output constrained to the operation JSON Schemas (grammar or JSON-schema constrained decoding). This is the common case.
 2. **Manifest free text.** Proposed `description`, `intent`, `rules` or `examples`.
-3. **Custom code.** Edits restricted to the custom files of specific concepts, with the generated contract as the interface.
+3. **Custom code.** Edits restricted to the custom files of specific concepts, with the generated contract as the interface. When AI implements a rule, it must also write a test that names the rule, so the rule can reach **Implemented and tested** (§2.3).
 
 AI never edits generated or kit files.
 
@@ -424,7 +445,7 @@ Builder and Studio are two modes of **one web app** (`apps/studio`), working on 
 | Change descriptions | "Added a phone number to customers" | Operations plus diff |
 | Setup tasks (sign-in providers, domains, backups) | Guided wizards | Config files and environment variables |
 
-Both modes show the **change trace** (§9.7) and support undo. The **handoff** from a non-developer to a developer is just switching mode, or cloning the repository.
+Both modes show the **change trace** (§9.7) and **rule status** (§2.3), and support undo. The **handoff** from a non-developer to a developer is just switching mode, or cloning the repository.
 
 ### 10.2 Preview runtimes
 
