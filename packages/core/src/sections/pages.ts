@@ -1,5 +1,12 @@
 import type { ParsedNode } from "yaml";
-import { checkKeys, mapEntries, type ParseContext, readNameList, readString } from "../context.js";
+import {
+  checkKeys,
+  mapEntries,
+  type ParseContext,
+  readNameList,
+  readRoleList,
+  readString,
+} from "../context.js";
 import type { PageIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { NAME_PATTERN } from "./names.js";
@@ -10,7 +17,7 @@ import { textSchema } from "./text-schema.js";
 const ROUTE_PATTERN = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/;
 
 /** Routes the generated app uses itself (see the deployment contract). */
-const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/];
+const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/];
 
 export const pagesSection: SpecSection<"pages"> = {
   key: "pages",
@@ -36,6 +43,11 @@ export const pagesSection: SpecSection<"pages"> = {
           type: "array",
           items: { type: "string" },
           description: "Actions offered on the page, as buttons.",
+        },
+        access: {
+          type: "array",
+          items: { type: "string" },
+          description: "Only these roles may open the page (admins always can).",
         },
         ...textSchema,
       },
@@ -82,13 +94,14 @@ function readPage(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["route", "crud", "actions", ...TEXT_KEYS],
-    later: ["landing", "dashboard", "list", "calendar", "custom", "access", "search", "filters"],
+    allowed: ["route", "crud", "actions", "access", ...TEXT_KEYS],
+    later: ["landing", "dashboard", "list", "calendar", "custom", "search", "filters"],
     content: ["title", "label", "heading"],
   });
   let route = `/${kebab(id)}`;
   let model: string | undefined;
   let actions: string[] | undefined;
+  let access: string[] | undefined;
   for (const { key, value } of known) {
     if (key === "route") {
       const r = readString(ctx, value, `The route of ${where}`);
@@ -109,10 +122,20 @@ function readPage(
         ctx.reference("action", name, at);
         return name;
       });
+    } else if (key === "access") {
+      access = readRoleList(ctx, value, `the access of ${where}`, false);
     } else if (key === "crud") {
       model = readString(ctx, value, `"crud" in ${where}`);
       if (model !== undefined) ctx.reference("model", model, value);
     }
+  }
+  if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
+    ctx.error(
+      keyNode,
+      "reserved-route",
+      `Page "${id}" would use the route ${route}, which is reserved for the application itself.`,
+      `Give it another name, or a "route".`,
+    );
   }
   if (model === undefined) {
     if (!known.some((e) => e.key === "crud")) {
@@ -129,6 +152,7 @@ function readPage(
     route,
     pattern: { kind: "crud", model },
     ...(actions?.length ? { actions } : {}),
+    ...(access ? { access } : {}),
     ...readSemanticText(ctx, known),
   };
 }

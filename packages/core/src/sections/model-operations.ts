@@ -157,6 +157,7 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
       throw new OperationError(`${m} already has a field named "${to}".`);
     spec.renameKey(fieldPath(m, from), to);
     if (content?.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
+    if (model(ir, m).ownedBy === from) spec.set(["models", m, "ownedBy"], to);
     return [{ kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from)) }];
   },
 };

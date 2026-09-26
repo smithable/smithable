@@ -20,6 +20,10 @@ test("validate reports errors with file, line and column, and exits with 1", asy
     file,
     "smithable: 0.1\napp:\n  name: X\nmodels:\n  Customer:\n    fields:\n      name: strng\n",
   );
+  writeFileSync(
+    file.replace("smithable.yml", "smithable.auth.yml"),
+    "smithableAuth: 0.1\nsignIn: none\n",
+  );
   const io = captureIo();
   expect(await run(["validate", file], io)).toBe(1);
   expect(io.stderr).toBe(
@@ -33,4 +37,23 @@ test("validate explains a missing spec", async () => {
   const io = captureIo();
   expect(await run(["validate", dir], io)).toBe(1);
   expect(io.stderr).toBe(`No spec found at ${join(dir, "smithable.yml")}.\n`);
+});
+
+test("validate requires smithable.auth.yml and checks it against the spec", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-"));
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: X }\nmodels:\n  Note: { fields: { text: string } }\n",
+  );
+  const missing = captureIo();
+  expect(await run(["validate", dir], missing)).toBe(1);
+  expect(missing.stderr).toContain("smithable.auth.yml is missing");
+
+  writeFileSync(
+    join(dir, "smithable.auth.yml"),
+    "smithableAuth: 0.1\nsignIn: none\npublic: { read: [Nte] }\n",
+  );
+  const io = captureIo();
+  expect(await run(["validate", dir], io)).toBe(1);
+  expect(io.stderr).toContain('There is no model named "Nte" in smithable.yml.');
 });

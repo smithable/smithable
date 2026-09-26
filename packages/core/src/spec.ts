@@ -32,8 +32,13 @@ export interface ValidateResult {
   diagnostics: Diagnostic[];
 }
 
+export interface ValidateOptions {
+  /** The roles defined in smithable.auth.yml. Without them, role names are not checked. */
+  roles?: string[];
+}
+
 /** Parses and validates smithable.yml. Pure: no file system or network access. */
-export function validateSpec(file: SpecFile): ValidateResult {
+export function validateSpec(file: SpecFile, options: ValidateOptions = {}): ValidateResult {
   const lines = new LineCounter();
   const doc = parseDocument(file.text, {
     lineCounter: lines,
@@ -86,7 +91,8 @@ export function validateSpec(file: SpecFile): ValidateResult {
     // Each section returns the IR value for its own key.
     (parsed as Record<string, unknown>)[section.key] = section.parse(ctx, entry?.value, parsed);
   }
-  ctx.checkReferences();
+  for (const role of options.roles ?? []) ctx.define("role", role);
+  ctx.checkReferences(options.roles ? [] : ["role"]);
 
   if (hasErrors(ctx.diagnostics)) return done();
   return {

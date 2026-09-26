@@ -12,7 +12,7 @@ export interface Entry {
 /** Something a diagnostic can point at: a YAML node, or nothing (start of file). */
 export type At = ParsedNode | Scalar.Parsed | null | undefined;
 
-export type SymbolKind = "model" | "page" | "action";
+export type SymbolKind = "model" | "page" | "action" | "role";
 
 interface Reference {
   kind: SymbolKind;
@@ -77,8 +77,10 @@ export class ParseContext {
     return this.marks.get(key);
   }
 
-  checkReferences(): void {
+  /** Reports references to undefined symbols, except those of the `unchecked` kinds. */
+  checkReferences(unchecked: SymbolKind[] = []): void {
     for (const { kind, name, at } of this.references) {
+      if (unchecked.includes(kind)) continue;
       const names = this.symbols.get(kind) ?? new Set<string>();
       if (!names.has(name)) {
         this.error(
@@ -197,4 +199,28 @@ export function readNameList(
     if (name !== undefined) names.push({ name, at: item });
   }
   return names;
+}
+
+/**
+ * A list of roles from smithable.auth.yml, checked once every section is parsed. "owner"
+ * (the record's owner) is accepted only where a record is involved.
+ */
+export function readRoleList(
+  ctx: ParseContext,
+  node: At,
+  what: string,
+  allowOwner: boolean,
+): string[] {
+  return readNameList(ctx, node, what).flatMap(({ name, at }) => {
+    if (name === "owner" && !allowOwner) {
+      ctx.error(
+        at,
+        "invalid-role",
+        `"owner" does not apply to ${what}: no single record is involved.`,
+      );
+      return [];
+    }
+    if (name !== "owner") ctx.reference("role", name, at);
+    return [name];
+  });
 }

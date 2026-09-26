@@ -7,6 +7,8 @@ export interface Editors {
   spec: YamlEditor;
   /** smithable.content.yml, when the project has one. */
   content?: YamlEditor;
+  /** smithable.auth.yml, when given. */
+  auth?: YamlEditor;
 }
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */

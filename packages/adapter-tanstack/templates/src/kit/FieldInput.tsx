@@ -31,7 +31,7 @@ export function FieldInput({ field, id, value, invalid, options, onChange }: Fie
   if (field.kind === "text") {
     return <Textarea {...common} value={text} onChange={(e) => onChange(e.target.value)} />;
   }
-  if (field.kind === "relation") {
+  if (field.kind === "relation" || field.kind === "user") {
     return (
       <NativeSelect {...common} value={text} onChange={(e) => onChange(e.target.value)}>
         <option value="">{field.required ? "Choose…" : "—"}</option>

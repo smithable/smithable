@@ -6,6 +6,7 @@ import {
   type ParseContext,
   readBoolean,
   readNumber,
+  readRoleList,
   readString,
 } from "../context.js";
 import {
@@ -17,11 +18,14 @@ import {
   valueTypeOf,
 } from "../formula.js";
 import {
+  ACCESS_OPERATIONS,
   type FieldExample,
   type FieldIR,
   type FieldValue,
+  type ModelAccessIR,
   type ModelIR,
   SCALAR_TYPES,
+  USER_MODEL,
 } from "../ir.js";
 import type { JsonSchema, SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
@@ -103,6 +107,19 @@ export const modelsSection: SpecSection<"models"> = {
           propertyNames: { pattern: FIELD_NAME_PATTERN.source, not: { enum: RESERVED_FIELDS } },
           additionalProperties: fieldSchema,
         },
+        ownedBy: {
+          type: "string",
+          description: "A User field whose user owns the record, instead of its creator.",
+        },
+        access: {
+          type: "object",
+          description:
+            'Exceptions to the default access in smithable.auth.yml, e.g. { delete: [admin] }. "owner" is the record\'s owner.',
+          additionalProperties: false,
+          properties: Object.fromEntries(
+            ACCESS_OPERATIONS.map((op) => [op, { type: "array", items: { type: "string" } }]),
+          ),
+        },
         ...textSchema,
       },
     },
@@ -111,7 +128,16 @@ export const modelsSection: SpecSection<"models"> = {
     if (node === undefined) return [];
     const models: ModelIR[] = [];
     const relationNodes: RelationNodes = new Map();
+    ctx.define("model", USER_MODEL);
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"models"`) ?? []) {
+      if (key === USER_MODEL) {
+        ctx.error(
+          keyNode,
+          "reserved-name",
+          `"${USER_MODEL}" is built in: it is the people who sign in, described in smithable.auth.yml.`,
+        );
+        continue;
+      }
       if (!MODEL_NAME_PATTERN.test(key)) {
         ctx.error(
           keyNode,
@@ -140,11 +166,21 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", ...TEXT_KEYS],
-    later: ["access", "ownedBy", "unique", "examples"],
+    allowed: ["fields", "ownedBy", "access", ...TEXT_KEYS],
+    later: ["unique", "examples"],
     content: ["label", "title"],
   });
   Object.assign(model, readSemanticText(ctx, known));
+  const access = known.find((e) => e.key === "access");
+  if (access) model.access = readModelAccess(ctx, access.value, `the access of "${name}"`);
+  const ownedBy = known.find((e) => e.key === "ownedBy");
+  if (ownedBy) {
+    const field = readString(ctx, ownedBy.value, `"ownedBy" of "${name}"`);
+    if (field !== undefined) {
+      model.ownedBy = field;
+      ctx.mark(`ownedBy:${name}`, ownedBy.value);
+    }
+  }
   const fields = known.find((e) => e.key === "fields");
   if (!fields) {
     ctx.error(keyNode, "missing-key", `Model "${name}" needs "fields".`);
@@ -164,6 +200,16 @@ function readModel(
     }
   }
   return model;
+}
+
+function readModelAccess(ctx: ParseContext, node: ParsedNode | null, where: string): ModelAccessIR {
+  const access: ModelAccessIR = {};
+  const entries = mapEntries(ctx, node, where) ?? [];
+  for (const { key, value } of checkKeys(ctx, entries, where, { allowed: ACCESS_OPERATIONS })) {
+    const op = key as (typeof ACCESS_OPERATIONS)[number];
+    access[op] = readRoleList(ctx, value, `"${op}" in ${where}`, op !== "create");
+  }
+  return access;
 }
 
 function readField(
@@ -471,9 +517,36 @@ type RelationNodes = Map<string, ParsedNode>;
  */
 function checkRelations(ctx: ParseContext, models: ModelIR[], relationNodes: RelationNodes): void {
   for (const model of models) {
+    if (model.ownedBy !== undefined) {
+      const owner = model.fields.find((f) => f.name === model.ownedBy);
+      if (owner?.type.kind !== "relation" || owner.type.model !== USER_MODEL || owner.type.many) {
+        ctx.error(
+          ctx.at(`ownedBy:${model.name}`),
+          "invalid-owner",
+          `"ownedBy" of "${model.name}" must name one of its ${USER_MODEL} fields.`,
+          didYouMean(
+            model.ownedBy,
+            model.fields
+              .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL)
+              .map((f) => f.name),
+          ),
+        );
+      }
+    }
     for (const field of model.fields) {
       if (field.type.kind !== "relation") continue;
       const at = relationNodes.get(`${model.name}.${field.name}`);
+      if (field.type.model === USER_MODEL) {
+        if (field.type.many) {
+          ctx.error(
+            at,
+            "invalid-field",
+            `"${model.name}.${field.name}": a list of users is not available in spec version 0.1.`,
+            `Refer to one user with "${field.name}: ${USER_MODEL}".`,
+          );
+        }
+        continue;
+      }
       const target = models.find((m) => m.name === (field.type as { model: string }).model);
       if (!target) continue; // reported as an unknown model
       if (!field.type.many) {

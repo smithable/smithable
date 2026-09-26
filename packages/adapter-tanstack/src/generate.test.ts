@@ -1,4 +1,4 @@
-import { type SpecIR, validateSpec } from "@smithable/core";
+import { type AuthIR, type SpecIR, validateAuth, validateSpec } from "@smithable/core";
 import { describe, expect, test } from "vitest";
 import { generateApp } from "./generate.js";
 
@@ -7,6 +7,11 @@ const examples = import.meta.glob("../../../examples/*/smithable.yml", {
   import: "default",
   eager: true,
 });
+const authFiles = import.meta.glob("../../../examples/*/smithable.auth.yml", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 function ir(path: string, text: string): SpecIR {
   const result = validateSpec({ path, text });
@@ -14,13 +19,23 @@ function ir(path: string, text: string): SpecIR {
   return result.ir;
 }
 
-const options = { smithableVersion: "0.0.0" };
+function authOf(text: string): AuthIR {
+  const result = validateAuth({ path: "smithable.auth.yml", text });
+  if (!result.auth) throw new Error("invalid auth file");
+  return result.auth;
+}
+
+const noSignIn = authOf(
+  "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [customers], read: [Customer] }\n",
+);
+const options = { smithableVersion: "0.0.0", auth: noSignIn };
 
 describe.each(Object.entries(examples))("%s", (path, text) => {
-  const files = generateApp(ir(path, text), options);
+  const auth = authOf(authFiles[path.replace("smithable.yml", "smithable.auth.yml")] as string);
+  const files = generateApp(ir(path, text), { ...options, auth });
 
   test("generation is deterministic: the same spec gives byte-identical files", () => {
-    expect(generateApp(ir(path, text), options)).toEqual(files);
+    expect(generateApp(ir(path, text), { ...options, auth })).toEqual(files);
   });
 
   test("the app does not depend on Smithable", () => {
@@ -87,4 +102,17 @@ pages:
   const list = withContent.find((f) => f.path === "src/routes/customers/index.tsx")?.content ?? "";
   expect(list).toContain('title="Our clients"');
   expect(list).toContain("New client");
+});
+
+test("an app without sign-in has no auth library, sign-in page or owners", () => {
+  const spec = ir(
+    "smithable.yml",
+    "smithable: 0.1\napp: { name: Board }\nmodels:\n  Customer: { fields: { name: string! } }\npages:\n  customers: { crud: Customer }\n",
+  );
+  const files = generateApp(spec, options);
+  const paths = files.map((f) => f.path);
+  expect(files.find((f) => f.path === "package.json")?.content).not.toContain("better-auth");
+  expect(paths).not.toContain("src/routes/sign-in.tsx");
+  expect(paths).not.toContain("src/lib/auth-client.ts");
+  expect(files.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("ownerId");
 });

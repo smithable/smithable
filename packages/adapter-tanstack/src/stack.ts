@@ -9,6 +9,7 @@ export const STACK_PROFILE = {
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.39",
     "@tanstack/react-start": "1.168.58",
+    "better-auth": "1.7.6",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",

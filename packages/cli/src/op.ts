@@ -20,6 +20,7 @@ import { recordRule } from "./rules.js";
 
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
+const AUTH = "smithable.auth.yml";
 const OPLOG = ".smithable/oplog.jsonl";
 
 export interface OpFlags {
@@ -52,9 +53,11 @@ export function op(
   }
 
   const contentPath = join(dir, CONTENT);
+  const authPath = join(dir, AUTH);
   const files = {
     spec: readFileSync(join(dir, SPEC), "utf8"),
     ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
+    ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
   };
   const args = parseOperationArgs(operation, values);
   const result = applyOperation(files, operation.name, args);
@@ -89,6 +92,7 @@ export function op(
 
   writeFileSync(join(dir, SPEC), result.files.spec);
   if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
+  if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
   mkdirSync(join(dir, ".smithable"), { recursive: true });
   appendFileSync(
     join(dir, OPLOG),
