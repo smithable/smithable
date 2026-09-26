@@ -3,13 +3,19 @@ import {
   type AuthIR,
   actionAccess,
   type ContentIR,
+  camel,
   emptyContent,
   type FieldIR,
+  humanize,
+  kebab,
   type ModelIR,
   modelAccess,
   type PageIR,
   pageAccess,
+  pascal,
+  plural,
   type SpecIR,
+  snake,
   USER_MODEL,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
@@ -30,7 +36,6 @@ import {
   hasFormulas,
   withFormulasName,
 } from "./formulas.js";
-import { camel, humanize, kebab, pascal, plural, snake } from "./naming.js";
 import { sampleRows } from "./sample-data.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";

@@ -11,6 +11,7 @@ import { type Io, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
 import { create } from "./new.js";
 import { op } from "./op.js";
+import { studio } from "./studio.js";
 import { undo } from "./undo.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -35,6 +36,8 @@ Commands:
                    one (or moving a hand edit of its route there); the route stays generated
   context "<req>"  The smallest context an AI model needs for a request, with its size in tokens
                    (--implementation adds the custom code involved; --json)
+  studio [dir]     Open Smithable Studio for the project: Builder and Studio modes, with the
+                   app's preview (--port, default 4321)
   mcp [dir]        Serve the project to AI agents (Claude Code, Cursor, …) over MCP on stdin/stdout
   detach [dir]     Turn the project into an ordinary one that no longer uses Smithable
 
@@ -98,6 +101,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return detach(values.dir ?? dir, io);
     case "mcp":
       return mcp(values.dir ?? dir);
+    case "studio":
+      return studio(values.dir ?? dir, io, Number(values.port ?? 4321));
     default:
       io.err(`Unknown command: ${command}\n\n${HELP}`);
       return 2;
@@ -119,6 +124,7 @@ function parse(argv: string[]) {
       dir: { type: "string" },
       json: { type: "boolean" },
       implementation: { type: "boolean" },
+      port: { type: "string" },
     },
   });
 }
