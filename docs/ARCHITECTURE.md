@@ -24,6 +24,8 @@ This document records architectural decisions. When a decision changes, update i
 
 Every change, whether it comes from the CLI, Studio, AI or a plugin, goes through one **semantic operation layer** that mutates the manifest files (`smithable.yml` and its companions). Code is then regenerated from them. Nothing writes application code directly except (a) the compiler, into files it owns, and (b) humans or AI, into custom files (see §6).
 
+**The engine runs anywhere.** The parser, validator, IR, operations, generator and index work on an in-memory set of files and never touch the disk, network or processes directly. Hosts supply that I/O: the CLI and daemon in Node (disk, Git, processes), and the browser in the hosted product (WebContainer file system, browser storage). The same engine therefore powers the CLI, the local Studio and the hosted Builder. Engine packages must not import Node built-ins, and lint enforces this.
+
 ## 2. The manifest: `smithable.yml`
 
 ### 2.1 Content
@@ -173,8 +175,9 @@ This file describes how the app looks and feels, without changing what it does. 
 ```yaml
 smithableUx: 0.1
 theme:
+  preset: modern                         # modern | minimal | playful | corporate
+  brand: { primary: "#2563eb", font: Inter }
   density: compact
-  accent: blue
 pages:
   customers:
     table:
@@ -185,7 +188,7 @@ pages:
         - { label: Billing, fields: [creditLimit] }
 ```
 
-- Visual edits in Studio (reorder columns, hide a field, change density) write to this file through operations.
+- Visual edits in Builder or Studio (pick a theme, reorder columns, hide a field, change density) write to this file through operations. Themes and page patterns are described in §10.4.
 - Anything beyond its vocabulary is handled by a custom component in `src/custom/`.
 - The same growth rule applies as for the DSL (§2.4): add structure only when it is common and deterministic.
 
@@ -262,11 +265,11 @@ The only extra file is `src/generated/ui.ts`. It is a small typed map of what th
 
 ### 6.3 The app kit
 
-The **app kit** is a small set of generic, reusable source files that the adapter writes into every generated app, in `src/kit/`: `ModelTable`, `ModelForm`, `ModelDetail`, generic CRUD server functions and access checks. The pattern is the same as shadcn/ui, where components are copied into your repo instead of installed. The kit lets pages stay short without a Smithable package.
+The **app kit** is a set of generic, reusable source files that the adapter writes into generated apps, in `src/kit/`. It contains data components (`ModelTable`, `ModelForm`, `ModelDetail`), generic CRUD server functions, access checks, page-pattern sections and the theme (§10.4). The pattern is the same as shadcn/ui, where components are copied into your repo instead of installed. The kit lets pages stay short without a Smithable package.
 
 Rules that keep the kit "normal":
 
-- **Small.** A size budget of roughly 1,500 lines in total. Any growth needs a justification.
+- **Only what is used.** The adapter copies in only the kit parts the spec actually uses, so a simple app gets a small kit. Each part has a size budget, and growth needs a justification.
 - **No magic.** Typed props only. No string-based lookups, no global registries, no runtime code generation.
 - **Readable.** Each file opens with a short comment explaining what it does and how to customise it.
 - **Copyable.** When a generic component is not enough, copy it into `src/custom/components/` and edit the copy.
@@ -347,12 +350,14 @@ AI never edits generated or kit files.
 
 | Tier | Handler | Example |
 |---|---|---|
-| 0 | Explicit operations (CLI, Studio controls), simple pattern rules | Studio "required" toggle |
-| 1 | Small local model → operations | "Customers need a mobile number" |
-| 2 | Managed EU model | Ambiguous, multi-step intent |
-| 3 | User-configured stronger model (API or Claude Code headless) | Custom action logic |
+| 0 | Generators: explicit operations (UI controls, CLI) and simple pattern rules | The "required" toggle |
+| 1 | Local model, where available (CLI, self-hosted; possibly in-browser later) → operations | "Customers need a mobile number" |
+| 2 | **Smithable model**: a small open model hosted in the EU → operations, pattern and theme choices | The same, for hosted users; "make it feel friendlier" |
+| 3 | Frontier model (via EU providers where possible, or the user's own API or Claude Code) | Custom action logic, new custom components |
 
-The system escalates only when the lower tier fails validation, returns no valid operation, or the task needs custom code.
+For hosted users, who have no local model, tier 2 is the main AI tier. It starts as an off-the-shelf open model on an EU provider's hosted endpoint (for example Mistral, Scaleway or OVH), and is fine-tuned later once curated and consented data exists. Because every tier speaks the same operation schemas, swapping the model behind a tier never changes the product.
+
+The system escalates only when the lower tier is unavailable, fails validation, returns no valid operation, or the task needs custom code.
 
 ### 9.3 Context construction
 
@@ -372,7 +377,7 @@ Models are poor judges of their own confidence, so Smithable does not rely on se
 
 - Provider interface with implementations for: **OpenAI-compatible** (covers Ollama, llama.cpp, vLLM, Mistral and most EU hosts), **Anthropic API**, and **Claude Code CLI** (spawned headless, confined to the project directory; Smithable never reads or copies its credentials).
 - **Policy** (`local-only`, `eu-only`, `best-available`, `custom` allowlist) is enforced centrally in the provider layer, not by each caller. An organization can pin the policy.
-- Local models: use an existing small open model with optional download; never bundle weights in the installer. A dedicated Smithable model comes later, trained on (request, semantic context, accepted operation) triples from curated, synthetic or consented data.
+- Local models: use an existing small open model with optional download; never bundle weights. The Smithable model (tier 2) is later fine-tuned on (request, semantic context, accepted operation) triples from curated, synthetic or consented data, and may be published as open weights for local use.
 
 ### 9.6 External agents via MCP
 
@@ -383,20 +388,73 @@ Smithable ships a local **MCP server** (`smithable mcp`). MCP (Model Context Pro
 - **Why.** Any agent can change the app through operations instead of reading and editing the repository. This delivers the low-token benefit before Studio exists, and it works with whatever model the user already pays for.
 - **Agent guidance.** Every generated app includes an `AGENTS.md` (plus a `CLAUDE.md` pointer) explaining the ownership zones, where custom code goes, and to prefer Smithable tools over file edits.
 - The operation pipeline (§8) applies unchanged: validation, checkpoints, tests and undo.
-- A remote (HTTP) MCP endpoint could later be offered by Smithable Cloud. The local server never depends on it.
+- The hosted service offers a **remote MCP endpoint** with the same tools, so Claude.ai, ChatGPT and other agents can work on hosted projects. The local server never depends on it.
 
-## 10. Visual editing
+### 9.7 Change trace
 
-- **Studio** is a React SPA served by the daemon and opened in a browser. The Electron wrapper comes later and adds nothing architecturally.
+Every change records and shows how it was handled:
+
+```text
+Added "phone" to Customers      generator        · 0 tokens   · 40 ms
+Made the dashboard friendlier   Smithable model  · 820 tokens · €0.0004
+Added churn scoring             frontier model   · 6.1k tokens · €0.03
+```
+
+- Each entry shows the tier, model, tokens, cost and duration. A running total shows usage against the plan's allowance.
+- **Comparison with conventional AI builders is shown only as a labeled estimate** derived from the benchmark measurements (roadmap M7), never invented per change.
+- The trace is part of the product, not only the demo. It explains bills and builds trust. It is stored with the project's history and contains no project content in analytics unless explicitly permitted.
+
+### 9.8 Starting from a sentence
+
+`smithable new "a booking site for a yoga studio"` (or the Builder's first prompt) uses a model **once** to draft the initial project: models, pages, page patterns, theme and sample data, expressed as a batch of operations. The user confirms the plain-language summary, the operations are applied, and everything after that follows the normal routing. Without a model, `smithable new` offers templates instead.
+
+## 10. Product surfaces
+
+### 10.1 One app, two modes
+
+Builder and Studio are two modes of **one web app** (`apps/studio`), working on the same project. A toggle switches between them.
+
+| | Builder (default for new users) | Studio |
+|---|---|---|
+| Main surface | Chat, preview, click-to-edit | Spec editor, diff, code, logs |
+| Spec shown as | A **plain-language summary** ("Customers have a name (required), an email and a phone number…"), rendered deterministically from the spec at no token cost | YAML with schema validation |
+| Change descriptions | "Added a phone number to customers" | Operations plus diff |
+| Setup tasks (sign-in providers, domains, backups) | Guided wizards | Config files and environment variables |
+
+Both modes show the **change trace** (§9.7) and support undo. The **handoff** from a non-developer to a developer is just switching mode, or cloning the repository.
+
+### 10.2 Preview runtimes
+
+The app preview runs behind a small **preview runtime** interface. The UI does not know which one is active:
+
+| Runtime | Where | Used by |
+|---|---|---|
+| **Local** | The daemon runs the app's Vite dev server in Node | CLI and self-hosted users |
+| **WebContainer** | The engine *and* the app's dev server run inside the user's browser tab (StackBlitz WebContainers) | Hosted Builder/Studio. Server cost for previews is near zero |
+| **Remote VM** (fallback) | A lightweight VM per project (for example Fly.io Machines or Firecracker on EU servers) | Browsers without WebContainer support, or heavier projects |
+
+In WebContainers, native Node modules are unavailable, so the preview uses a WebAssembly SQLite driver through Drizzle. Published apps keep normal SQLite. The generated code isolates the driver choice in one file, so the difference cannot leak into application code.
+
+### 10.3 Visual selection
+
 - The app runs in an **iframe** preview.
-- **Instrumentation is dev-only, and the app does not depend on it.** The daemon starts the app's Vite dev server with a wrapper config that extends the app's own `vite.config` and adds the Smithable plugin. The plugin tags rendered elements with concept IDs and injects a small editor runtime that talks to Studio via `postMessage`. Production builds use the app's plain config, so they contain nothing from Smithable.
+- **Instrumentation is dev-only, and the app does not depend on it.** Every preview runtime starts the app's Vite dev server with a wrapper config that extends the app's own `vite.config` and adds the Smithable plugin. The plugin tags rendered elements with concept IDs and injects a small editor runtime that talks to the UI via `postMessage`. Production builds use the app's plain config, so they contain nothing from Smithable.
 - Selecting an element resolves to a concept (`field:Customer.phone`) and shows the operations that apply to it ("required", "rename", "move", "hide from table"), plus a prompt box scoped to that concept.
-- **Semantic edits** (fields, pages, access) go through operations on `smithable.yml`. **Presentation edits** (ordering, visibility, density, grouping) go through operations on `smithable.ux.yml`. Anything finer is a custom component.
-- Panels are dockable, resizable and hideable. The prompt/agent panel sits at the bottom by default. Detachable windows come with Electron.
+- **Semantic edits** (fields, pages, access) go through operations on `smithable.yml`. **Presentation edits** (theme, ordering, visibility, density, grouping, sections) go through operations on `smithable.ux.yml`. Anything finer is a custom component.
+
+### 10.4 Design system
+
+Design quality comes from crafted templates, not AI improvisation. AI (even a small model) only *chooses* among them.
+
+- **Themes.** A few carefully tuned presets (for example `modern`, `minimal`, `playful`, `corporate`): palette, typography, spacing, radius, dark mode. **Brand input** (a primary colour, a font, a mood) deterministically derives a custom theme from a preset.
+- **Page patterns** beyond data screens: landing pages built from sections (hero, features, pricing, testimonials, FAQ, call to action), dashboards (stat cards, charts), list/detail, kanban, calendar, settings, onboarding, and sign-in pages. They are common across almost all apps, so they pass the DSL growth test (§2.4). Pages declare *which* pattern and content in `smithable.yml`; `smithable.ux.yml` controls presentation.
+- **Sample data** is generated with every new project, so no screen ever looks empty or broken.
+- **Visual checks.** Playwright screenshots every page and checks contrast, overflow and mobile layout. Optionally, a vision model reviews the screenshots once per session.
+- A professional designer creates the themes and patterns. This is a deliberate investment, not polish.
 
 ## 11. Daemon, CLI and MCP server
 
-- A Node **daemon** owns a project session: file watching, compile, the app process, Git, AI calls, and container builds. It exposes HTTP + WebSocket.
+- Locally, a Node **daemon** hosts a project session: file watching, compile, the app process, Git, AI calls, and container builds. It exposes HTTP + WebSocket. In the hosted product, the browser tab is the host (§10.2), and the hosted service provides project storage, AI and publishing.
 - The **CLI**, **Studio** and **MCP server** (§9.6) are all clients, and all use the same core packages. The CLI can also run core commands in-process without a daemon.
 - CLI surface: `smithable new | validate | generate | run | op <operation> | undo | inspect <concept> | test | security | build | deploy | backup | restore | detach | mcp | studio`.
 
@@ -431,7 +489,7 @@ The initial targets are local Docker and a Docker Compose export. A future scala
 
 ## 13. Smithable's own codebase
 
-Everything is written in TypeScript on Node, with a pnpm workspace. Start with few packages and split only when a boundary proves itself:
+Everything is written in TypeScript with a pnpm workspace. Engine packages (`core`, `adapter-tanstack`, `index`) are browser-compatible (§1); host packages (`daemon`, `cli`) use Node. Start with few packages and split only when a boundary proves itself:
 
 ```text
 smithable/
@@ -445,7 +503,7 @@ smithable/
     cli/
     vite-plugin/       dev-only instrumentation + editor runtime
   apps/
-    studio/            React + Vite + Tailwind + shadcn/ui
+    studio/            Builder + Studio web app: React + Vite + Tailwind + shadcn/ui
   examples/
     crm/
   docs/
@@ -453,7 +511,7 @@ smithable/
 
 Security scanners, Claude Code, Ollama and Docker are all optional external tools. Smithable detects them and never requires them.
 
-The OSS repo contains only code eligible for publication. Billing, cloud control plane and operations code go in a separate private repo (`smithable-cloud`), which depends on OSS and never the other way round.
+The OSS repo contains only code eligible for publication. The hosted service goes in a separate private repo (`smithable-cloud`), which depends on OSS and never the other way round. That covers accounts, project storage, the AI gateway with allowances, publishing and hosting, managed backups, the remote MCP endpoint and billing.
 
 ## 14. Open questions
 
@@ -465,4 +523,8 @@ The OSS repo contains only code eligible for publication. Billing, cloud control
 | **Manifest size.** One file or many for large apps? | One file until it hurts, then allow `models/*.yml` includes |
 | **Exact DSL grammar** | Designed in M1 against the CRM example and 2–3 other sample apps |
 | **Existing project import / compatibility levels** | Deferred. Revisit after the public release |
-| **License** | Permissive for the spec, OSI-approved for the tools, legal review before publication |
+| **License** | Apache-2.0 for engine, tools and spec; 0BSD for app kit and templates |
+| **WebContainer license and limits** | Commercial license needed for production use. Contact StackBlitz early (M8); Remote VM runtime is the fallback |
+| **Preview vs production SQLite** | WebAssembly driver in the preview, native SQLite in production. Verify that behaviour matches (M8) |
+| **Hosted project storage** | Projects saved server-side as Git repositories, synced from the browser. Decide in M8 |
+| **In-browser local model (WebGPU)** | Possible later for small intent tasks. Model download size is the obstacle |

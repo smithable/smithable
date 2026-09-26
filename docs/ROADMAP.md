@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-Strategy: prove the core loop (**manifest → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it. After that come Studio and Smithable's own AI. Building AI on top of an unproven deterministic core would hide its weaknesses.
+Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
 ---
 
@@ -17,22 +17,26 @@ Strategy: prove the core loop (**manifest → operation → regenerated app → 
 
 - DSL v0.1 grammar for `app`, `models` (scalar fields only), `pages` (`crud`), `navigation`, and the free-text fields. Short and long forms.
 - JSON Schema, parser with line/column errors, validator, IR.
-- Draft the DSL against the CRM plus two other sample apps (for example a todo app and a booking app) before freezing v0.1.
+- Study Wasp's spec design first (including why they moved from their own DSL to a TypeScript config), and write down what to adopt and avoid.
+- Draft the DSL against the CRM plus two other sample apps (a booking site and a SaaS with a landing page) before freezing v0.1.
+- Lint rule: engine packages (`core`, `adapter-tanstack`) must not import Node built-ins ([ARCHITECTURE.md §1](ARCHITECTURE.md#1-layers)).
 - `smithable validate`.
 
-**Exit:** all sample manifests validate. Every invalid-manifest fixture gives an error that points at the correct line. The IR snapshot tests pass.
+**Exit:** all sample manifests validate, and the engine packages pass the no-Node-built-ins lint rule. Every invalid-manifest fixture gives an error that points at the correct line. The IR snapshot tests pass.
 
 ## M2 — Walking skeleton
 
 - TanStack adapter: idiomatic Drizzle schema (`src/db/schema.ts`), drizzle-kit-format migrations, `src/generated/ui.ts`, app kit (`ModelTable`, `ModelForm`, generic CRUD), pages and routes, navigation, `/health`, Dockerfile, generated README.
 - Ownership zones and generated-file headers.
 - `smithable new`, `smithable generate`, `smithable run`, `smithable build` (OCI image).
+- **First five minutes:** `smithable new` produces a running app with sample data and one polished default theme, and opens the preview automatically.
 
 **Exit:**
 - `Customer(name, email)` CRM runs, and customers can be created and edited.
 - The generated `package.json` has no Smithable dependency, and the app runs with Smithable uninstalled.
 - Regenerating produces byte-identical output.
 - The container runs with a `/data` volume and data survives a restart.
+- From `smithable new` to a good-looking running app in the browser takes under a minute, excluding the dependency install.
 
 ## M3 — Operations, migrations, undo
 
@@ -46,7 +50,7 @@ Strategy: prove the core loop (**manifest → operation → regenerated app → 
 - Adding `phone` from the CLI updates the manifest, migration, form and table, and existing rows survive.
 - Undo restores both code and data.
 - A hand edit to a generated file is reported as drift, not overwritten.
-- **Mini-benchmark:** run the first three benchmark tasks (see M10) via CLI operations against Claude Code to sanity-check the core bet early.
+- **Mini-benchmark:** run the first three benchmark tasks (see M7) via CLI operations against Claude Code to sanity-check the core bet early.
 
 ## M4 — Relations, custom code, examples
 
@@ -80,80 +84,120 @@ Strategy: prove the core loop (**manifest → operation → regenerated app → 
 - In Claude Code with the Smithable MCP server registered, "Customers should have a phone number" is completed through `smithable_add_field`, without Claude opening source files.
 - Token use is recorded.
 
-## M7 — Benchmark
+## M7 — Benchmark and user interviews
 
-Run the same tasks with (A) plain Claude Code against the generated repo and (B) Claude Code plus the Smithable MCP server:
+Run the same tasks with:
+- **(A)** plain Claude Code against the generated repo,
+- **(B)** Claude Code plus the Smithable MCP server,
+- **(C)** a prompt-to-code builder such as Lovable, rebuilding the same app, where feasible.
 
-add phone to Customer · make email required · add Order relationship · add Orders page · restrict delete to admins · add Customer search · reorder navigation
+The tasks: add phone to Customer · make email required · add Order relationship · add Orders page · restrict delete to admins · add Customer search · reorder navigation
 
-Measure: cloud tokens, wall time, files touched, test success, regressions, human intervention.
+Measure: tokens or credits, wall time, files touched, test success, regressions, human intervention.
 
-**Exit:** a written report, and product decisions updated from the results. The results decide how much to invest in Studio versus agent integration. The local-model column is added in M10.
-
-## M8 — Daemon and lean Studio (no AI)
-
-- Daemon with HTTP/WS API; the CLI and MCP server can use it.
-- Studio, kept deliberately lean: concept tree (models, pages, actions), preview iframe, logs, diff view, undo, manifest editor with schema validation, and forms for the most common operations.
-
-**Exit:** the core flow from M3–M5 can be done in Studio, with the preview reloading after each change.
-
-## M9 — Visual selection and deterministic WYSIWYG
-
-- Vite plugin injected via a wrapper config (dev only), element → concept mapping, hover and select.
-- Context panel showing the operations applicable to the selected concept.
-- `smithable.ux.yml` v0.1 and first presentation controls (column visibility/order, field order, groups, density).
-
-**Exit:** click the email field in the preview → toggle "required" → the manifest, validation and form all update. Dragging a table column updates `smithable.ux.yml` and leaves `smithable.yml` untouched. The production build contains no instrumentation.
-
-## M10 — Local AI
-
-- Provider interface and an OpenAI-compatible provider, tested with Ollama.
-- Concept shortlisting (fuzzy and embedding matching over the manifest) before the model runs.
-- Tier 0/1 routing, constrained output against the operation schemas, confirmation UI, scoped prompts from a selected element.
-- AI policy setting and local token metrics.
+Before this milestone, interview 10–15 target users (non-developers who have used prompt-to-code builders, and developers or agencies), so the benchmark measures what they care about.
 
 **Exit:**
-- Offline, "Customers should have a phone number" → a proposed `addField` → the user confirms → it is applied.
+- A written report, and product decisions updated from the results.
+- The measurements become the documented baseline for the change trace's comparison estimate ([ARCHITECTURE.md §9.7](ARCHITECTURE.md#97-change-trace)).
+- The local-model and Smithable-model columns are added in M12.
+
+## M8 — Browser engine spike
+
+Removes the biggest technical risk of the browser-first product before building on it.
+
+- Run the engine and the generated CRM's dev server inside a WebContainer, with a WebAssembly SQLite driver in the preview.
+- Verify that the preview and native SQLite behave the same for the generated queries and migrations.
+
+- Decide how hosted projects are stored (server-side Git repositories synced from the browser is the leaning).
+
+**Exit:**
+- In Chrome, the CRM preview runs in a WebContainer, and an operation applied in the browser updates the preview within about 2 seconds.
+- The licensing path is known. If it isn't viable, the Remote VM runtime is chosen instead.
+
+## M9 — Builder and Studio app (no AI)
+
+- `apps/studio`: one web app with Builder and Studio modes ([ARCHITECTURE.md §10](ARCHITECTURE.md#10-product-surfaces)).
+- Preview runtime interface with the Local (daemon) and WebContainer runtimes.
+- Concept tree, plain-language spec summary, spec editor, diff, undo, logs, and forms for the most common operations.
+- Change trace, with generator entries only for now.
+
+**Exit:** the M3–M5 flows work in both modes, both locally (daemon) and browser-only (WebContainer).
+
+## M10 — Design system
+
+- A professional designer creates four theme presets, brand-input rules and the page patterns: landing sections, dashboard, list/detail, settings, sign-in and onboarding.
+- `smithable.ux.yml` theme and section support. Generated sample data for every pattern.
+- Playwright visual checks: contrast, overflow and mobile layout.
+
+**Exit:** three sample apps (the CRM, a booking site, and a SaaS landing page with a dashboard) are approved by the designer, and the visual checks pass on desktop and mobile.
+
+## M11 — Visual selection and WYSIWYG
+
+- Vite plugin injected via a wrapper config in every preview runtime (dev only), element → concept mapping, hover and select.
+- Context panel showing the operations applicable to the selected concept.
+- Presentation controls: theme, column visibility/order, field order, groups, density, section order.
+
+**Exit:**
+- Click the email field in the preview → toggle "required" → the spec, validation and form all update.
+- Dragging a table column updates `smithable.ux.yml` and leaves `smithable.yml` untouched.
+- The production build contains no instrumentation.
+
+## M12 — AI: Smithable model and local model
+
+- Provider interface and an OpenAI-compatible provider. It covers both the Smithable model (an off-the-shelf open model on an EU-hosted endpoint) and local models (Ollama).
+- Concept shortlisting, constrained output against the operation schemas, and a confirmation UI with plain-language descriptions.
+- Starting from a sentence ([ARCHITECTURE.md §9.8](ARCHITECTURE.md#98-starting-from-a-sentence)), theme and pattern choice, and scoped prompts from a selected element.
+- AI policy setting. The change trace gains tokens, cost, and the benchmark-based comparison estimate.
+
+**Exit:**
+- "A booking site for a yoga studio" → the user confirms the summary → a good-looking app with sample data.
+- "Customers should have a phone number" works with the Smithable model, and offline with a local model.
 - Ambiguous requests ask a question instead of guessing.
-- The M7 benchmark tasks are re-run with the local model and added to the report.
+- The M7 benchmark is re-run with both models and added to the report.
 
-## M11 — Escalation and AI-written custom code
+## M13 — Escalation and AI-written custom code
 
-- Managed/EU and Anthropic providers, and a Claude Code headless provider confined to the project.
-- Escalation from tier 1 to tiers 2 and 3 using the same semantic slice.
+- Frontier providers (EU-hosted where possible, Anthropic API, Claude Code headless confined to the project).
+- Escalation between tiers using the same semantic slice.
 - AI writes custom code only in `src/custom/` for a named concept, then typecheck and tests run.
 
-**Exit:** "prioritise customers most likely to churn on the dashboard" produces a manifest change plus a custom query, with tests passing, and no generated files touched.
+**Exit:** "prioritise customers most likely to churn on the dashboard" produces a spec change plus a custom query, with tests passing, and no generated files touched.
 
-## M12 — Verification, security, one-click deploy
+## M14 — Verification, security, deploy and backup targets
 
 - Playwright smoke tests generated from pages.
 - Security levels (Fast / Normal / Release) with detected external scanners. Findings are shown and never auto-suppressed.
-- Docker Compose export. One-click "build & run container" in Studio, gated by Release checks.
-- Deploy-target and backup-target interfaces, with built-in targets: local Docker, remote Docker host over SSH, local-directory and S3-compatible backups. `smithable backup` / `smithable restore`.
+- Deploy-target and backup-target interfaces, with built-in targets: local Docker, Compose export, remote Docker host over SSH, local-directory and S3-compatible backups. `smithable backup` / `smithable restore`.
 
-**Exit:** all 21 steps of the original vertical slice work end to end in Studio. A backup to an S3-compatible bucket can be restored into a fresh container, with no data lost.
+**Exit:**
+- A self-hosted deploy passes Release checks.
+- A backup to an S3-compatible bucket can be restored into a fresh container with no data lost.
 
-## M13 — Desktop packaging
+## M15 — Hosted beta (`smithable-cloud`)
 
-- Electron wrapper around Studio and the daemon, with a bundled Node runtime.
-- Windows and macOS installers, detection of optional tools (Git, Docker, Ollama, Claude Code), and optional model download.
-- Detachable panels.
+- Accounts with Google sign-in, project storage, and an AI gateway with plan allowances.
+- One-click publish to EU hosting with domains and TLS. Managed backups.
+- Remote MCP endpoint.
+- A public demo that needs no sign-up, showing the change trace, with a limited number of sandboxes.
 
-**Exit:** a clean machine goes from installer to a running CRM without installing Node manually.
+**Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
-## M14 — Open-source preparation
+## M16 — Public launch
 
-Documentation, published manifest spec and JSON Schema, license decision with legal review, contributor guide, security policy, public CI, release process.
+- Open-source preparation: license decision with legal review, trademark registration, documentation, published spec and JSON Schema, contributor guide (DCO), security policy, public CI, release process.
+- Pricing and plans with included allowances.
+- The open-source repository goes public together with the hosted beta.
 
 ---
 
-## Later (explicitly not before M14)
+## Later (not before M16)
 
-- Subscription: managed EU AI allowance (Mistral), support, managed backups (possibly first, as a stand-alone add-on), then Smithable Cloud hosting (one-click deploy, TLS/domains, rollback, logs, teams).
+- A desktop app (Electron) for local-first non-developers with one-click local model download.
+- Teams and collaboration.
+- In-browser local model (WebGPU) for small intent tasks.
+- A fine-tuned Smithable model, possibly with open weights.
 - A second adapter, and a public adapter API based on two real implementations.
 - Scalable deployment mode (PostgreSQL, S3, multiple instances).
 - Integrations, external endpoints (OpenAPI), events (AsyncAPI).
-- A fine-tuned Smithable Mini model.
 - Importing existing projects.
-- Non-developer-oriented UX.

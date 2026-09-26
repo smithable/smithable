@@ -16,15 +16,16 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
 
 1. `smithable.yml` is authoritative for functionality. Companions: `smithable.auth.yml` (sign-in, roles), `smithable.ux.yml` (presentation), `smithable.context.yml` (implementation policy; the only one that may name technologies). Never mix their concerns.
 2. All semantic changes go through the operation layer. No client writes the manifest files or app code any other way.
-3. Deterministic before AI; local AI before remote; EU-hosted before other remote.
+3. Deterministic before AI, then the cheapest capable model: local (if available) → Smithable model (EU-hosted) → frontier. EU-hosted by default.
 4. **Generated apps must never depend on Smithable packages**, either at runtime or at build time. Generated code follows each library's documented idioms (Drizzle schema, TanStack routes, shadcn/ui). Shared behavior goes in the small, no-magic in-repo app kit.
 5. Respect the ownership zones: the compiler never overwrites `src/custom/**` or existing migrations, and neither AI nor humans are expected to edit generated or kit files.
 6. Generation must be deterministic and idempotent: identical input produces byte-identical output.
 7. Framework knowledge lives in the adapter; the manifest, IR and operations stay framework-neutral.
-8. Do not add DSL constructs without passing the five questions in ARCHITECTURE §2.4.
-9. Keep code (Smithable's and generated) concise. No abstraction before a concrete second use.
-10. Every change must be undoable. Never suppress test or security findings.
-11. Build incrementally; each roadmap milestone's exit criteria must be verified by tests.
+8. Engine packages (`core`, `adapter-tanstack`, `index`) must run in the browser as well as Node: no Node built-in imports, I/O only through the host interface. Only host packages (`cli`, `daemon`) touch disk, Git or processes.
+9. Do not add DSL constructs without passing the five questions in ARCHITECTURE §2.4.
+10. Keep code (Smithable's and generated) concise. No abstraction before a concrete second use.
+11. Every change must be undoable. Never suppress test or security findings.
+12. Build incrementally; each roadmap milestone's exit criteria must be verified by tests.
 
 ## Git
 
