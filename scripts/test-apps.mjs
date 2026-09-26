@@ -7,6 +7,8 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { chromium } from "playwright";
 
 const repo = new URL("..", import.meta.url).pathname;
@@ -24,6 +26,17 @@ const dirs = [];
 function step(name, fn) {
   try {
     fn();
+    console.log(`  ✓ ${name}`);
+  } catch (error) {
+    console.log(`  ✗ ${name}\n    ${String(error.message).split("\n").join("\n    ")}`);
+    failures.push(name);
+    throw error;
+  }
+}
+
+async function asyncStep(name, fn) {
+  try {
+    await fn();
     console.log(`  ✓ ${name}`);
   } catch (error) {
     console.log(`  ✗ ${name}\n    ${String(error.message).split("\n").join("\n    ")}`);
@@ -135,7 +148,14 @@ async function detachFlow(dir, port) {
       .stdout.split("\n")
       .filter((f) => f && !f.startsWith("src/custom/"));
     if (mentions.length) throw new Error(`still mentions Smithable: ${mentions.join(", ")}`);
-    for (const gone of [".smithable", "smithable.yml", "smithable.lock"]) {
+    for (const gone of [
+      ".smithable",
+      "smithable.yml",
+      "smithable.lock",
+      "AGENTS.md",
+      ".mcp.json",
+      "CLAUDE.md",
+    ]) {
       if (spawnSync("test", ["-e", join(dir, gone)]).status === 0)
         throw new Error(`${gone} is still there`);
     }
@@ -277,6 +297,48 @@ function query(dir, sql) {
 function smithable(dir, ...args) {
   const result = spawnSync("node", [cli, ...args, "--dir", dir], { cwd: repo, encoding: "utf8" });
   return { code: result.status, out: `${result.stdout}${result.stderr}` };
+}
+
+/** An agent's view: the MCP server finds the concept and changes the app through an operation. */
+async function mcpFlow(dir) {
+  await asyncStep(
+    "MCP: context finds Customer, add_field adds the field, the app type-checks, undo reverts it",
+    async () => {
+      const client = new Client({ name: "test-apps", version: "0" });
+      await client.connect(
+        new StdioClientTransport({
+          command: "node",
+          args: [cli, "mcp", "--dir", dir],
+          stderr: "ignore",
+        }),
+      );
+      try {
+        const call = async (name, args) => {
+          const result = await client.callTool({ name, arguments: args });
+          if (result.isError) throw new Error(`${name}: ${result.content[0].text}`);
+          return result.content[0].text;
+        };
+        const { tools } = await client.listTools();
+        if (!tools.some((t) => t.name === "smithable_add_field"))
+          throw new Error("no smithable_add_field");
+        const context = await call("smithable_context", {
+          request: "Customers should have a LinkedIn page",
+        });
+        if (!context.includes("- model:Customer:")) throw new Error(context);
+        await call("smithable_add_field", { model: "Customer", field: "linkedin", type: "url" });
+        if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("      linkedin: url\n"))
+          throw new Error("not in the spec");
+        run("pnpm", ["typecheck"], dir);
+        await call("smithable_undo", {});
+        if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("linkedin"))
+          throw new Error("undo kept the field");
+      } finally {
+        await client.close();
+      }
+      const log = readFileSync(join(dir, "data/.smithable/token-log.jsonl"), "utf8");
+      if (!log.includes('"tool":"smithable_add_field"')) throw new Error("token use not recorded");
+    },
+  );
 }
 
 /** M3: operations change spec, code, migrations and data; undo restores both; drift is refused. */
@@ -614,6 +676,7 @@ for (const [index, example] of examples.entries()) {
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
     });
     if (example === "crm") {
+      await mcpFlow(dir);
       operationsFlow(dir);
       await detachFlow(dir, port);
     }
