@@ -21,10 +21,13 @@ interface ModelFormProps<S extends z.ZodType> {
   onSubmit: (values: z.output<S>) => Promise<unknown>;
   onCancel?: () => void;
   onDelete?: () => Promise<unknown>;
+  /** Shows the record without letting it be changed. */
+  readOnly?: boolean;
 }
 
 export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
-  const { ui, app, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete } = props;
+  const { ui, app, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete, readOnly } =
+    props;
   const [inputs, setInputs] = useState(() => initialInputs(ui, initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Computed fields follow what has been entered so far.
@@ -66,50 +69,54 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   return (
     <Card className="max-w-2xl">
       <form onSubmit={submit} noValidate className="space-y-5 p-6">
-        {ui.fields.map((field) => {
-          const id = `field-${field.name}`;
-          const error = errors[field.name];
-          const inline = field.kind === "bool";
-          return (
-            <div key={field.name} className={inline ? "flex items-center gap-3" : "space-y-2"}>
-              {!inline && (
-                <Label htmlFor={id}>
-                  {field.label}
-                  {field.required && <span className="text-destructive"> *</span>}
-                </Label>
-              )}
-              {field.computed ? (
-                <p id={id} className="rounded-md bg-muted px-3 py-2 text-sm tabular-nums">
-                  {formatValue(field, computed[field.name], app)}
-                </p>
-              ) : (
-                <FieldInput
-                  field={field}
-                  id={id}
-                  value={inputs[field.name] ?? ""}
-                  invalid={error !== undefined}
-                  options={options}
-                  onChange={(value) =>
-                    setInputs((current) => ({ ...current, [field.name]: value }))
-                  }
-                />
-              )}
-              {inline && <Label htmlFor={id}>{field.label}</Label>}
-              {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
-              {error && <p className="text-xs text-destructive">{error}</p>}
-            </div>
-          );
-        })}
+        <fieldset disabled={readOnly} className="space-y-5">
+          {ui.fields.map((field) => {
+            const id = `field-${field.name}`;
+            const error = errors[field.name];
+            const inline = field.kind === "bool";
+            return (
+              <div key={field.name} className={inline ? "flex items-center gap-3" : "space-y-2"}>
+                {!inline && (
+                  <Label htmlFor={id}>
+                    {field.label}
+                    {field.required && <span className="text-destructive"> *</span>}
+                  </Label>
+                )}
+                {field.computed ? (
+                  <p id={id} className="rounded-md bg-muted px-3 py-2 text-sm tabular-nums">
+                    {formatValue(field, computed[field.name], app)}
+                  </p>
+                ) : (
+                  <FieldInput
+                    field={field}
+                    id={id}
+                    value={inputs[field.name] ?? ""}
+                    invalid={error !== undefined}
+                    options={options}
+                    onChange={(value) =>
+                      setInputs((current) => ({ ...current, [field.name]: value }))
+                    }
+                  />
+                )}
+                {inline && <Label htmlFor={id}>{field.label}</Label>}
+                {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
+                {error && <p className="text-xs text-destructive">{error}</p>}
+              </div>
+            );
+          })}
+        </fieldset>
         {failure && (
           <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{failure}</p>
         )}
         <div className="flex items-center gap-2 border-t pt-5">
-          <Button type="submit" disabled={busy}>
-            {submitLabel}
-          </Button>
+          {!readOnly && (
+            <Button type="submit" disabled={busy}>
+              {submitLabel}
+            </Button>
+          )}
           {onCancel && (
             <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
-              Cancel
+              {readOnly ? "Back" : "Cancel"}
             </Button>
           )}
           {onDelete && (
@@ -153,7 +160,8 @@ function friendly(field: FieldUi, issue: z.core.$ZodIssue, value: unknown): stri
 /** Explains server errors; a unique column shows which field is taken. */
 function failureMessage(ui: ModelUi, error: unknown): string {
   const message = error instanceof Error ? error.message : "";
-  const column = /UNIQUE constraint failed: \w+\.(\w+)/.exec(message)?.[1];
+  // With several columns (unique per owner), the last one is the field.
+  const column = /UNIQUE constraint failed: (?:\w+\.\w+, )*\w+\.(\w+)/.exec(message)?.[1];
   const field = ui.fields.find(
     (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
   );

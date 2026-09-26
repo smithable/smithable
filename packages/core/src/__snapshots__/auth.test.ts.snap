@@ -1,0 +1,101 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the examples > booking is valid with its auth file 1`] = `
+{
+  "admins": [
+    "owner@stillwater.ax",
+  ],
+  "defaultAccess": "private",
+  "defaultRole": "member",
+  "public": {
+    "create": [],
+    "pages": [
+      "sessions",
+    ],
+    "read": [
+      "ClassType",
+      "Instructor",
+      "Session",
+    ],
+  },
+  "roles": [
+    {
+      "description": "Studio staff. Manage the schedule, classes and teachers.",
+      "name": "admin",
+    },
+    {
+      "description": "A student who books classes.",
+      "name": "member",
+    },
+  ],
+  "signIn": {
+    "providers": [
+      "google",
+      "facebook",
+    ],
+  },
+}
+`;
+
+exports[`the examples > crm is valid with its auth file 1`] = `
+{
+  "admins": [
+    "owner@acme.com",
+  ],
+  "defaultAccess": "shared",
+  "defaultRole": "sales",
+  "public": {
+    "create": [],
+    "pages": [],
+    "read": [],
+  },
+  "roles": [
+    {
+      "description": "Sales management. Full access.",
+      "name": "admin",
+    },
+    {
+      "description": "Works with customers and orders.",
+      "name": "sales",
+    },
+  ],
+  "signIn": {
+    "allowedDomains": [
+      "acme.com",
+    ],
+    "providers": [
+      "google",
+    ],
+  },
+}
+`;
+
+exports[`the examples > invoicing is valid with its auth file 1`] = `
+{
+  "admins": [
+    "owner@invoicely.example",
+  ],
+  "defaultAccess": "private",
+  "defaultRole": "member",
+  "public": {
+    "create": [],
+    "pages": [],
+    "read": [],
+  },
+  "roles": [
+    {
+      "description": "Invoicely staff.",
+      "name": "admin",
+    },
+    {
+      "description": "A freelancer using Invoicely.",
+      "name": "member",
+    },
+  ],
+  "signIn": {
+    "providers": [
+      "google",
+    ],
+  },
+}
+`;

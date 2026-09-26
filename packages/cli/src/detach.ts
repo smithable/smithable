@@ -33,7 +33,7 @@ export function detach(dir: string, io: Io): number {
     );
     return 1;
   }
-  const { ir } = loadSpec(dir, io);
+  const { ir, auth } = loadSpec(dir, io);
   if (!ir) return 1;
 
   const { files } = JSON.parse(readFileSync(recordPath, "utf8")) as {
@@ -55,7 +55,7 @@ export function detach(dir: string, io: Io): number {
       cleaned++;
     }
   }
-  writeFileSync(join(dir, "README.md"), readme(ir, true));
+  writeFileSync(join(dir, "README.md"), readme(ir, true, auth));
 
   const docs = join(dir, "docs", "smithable");
   const specs = readdirSync(dir).filter((f) => /^smithable(\.[a-z]+)?\.yml$/.test(f));

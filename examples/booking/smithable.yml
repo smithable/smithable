@@ -17,11 +17,13 @@ models:
         type: beginner | allLevels | advanced
         default: allLevels
       durationMinutes: int! = 60
+    access: { create: [admin] }         # members don't add classes
 
   Instructor:
     fields:
       name: string!
       bio: text
+    access: { create: [admin] }
 
   Session:
     description: One scheduled occurrence of a class.
@@ -30,6 +32,7 @@ models:
       instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
+    access: { create: [admin] }
     rules:
       - A session never has more confirmed bookings than its capacity.
 
@@ -38,5 +41,7 @@ pages:
     crud: Session
   class-types:
     crud: ClassType
+    access: [admin]
   instructors:
     crud: Instructor
+    access: [admin]
