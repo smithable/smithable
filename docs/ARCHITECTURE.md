@@ -436,7 +436,7 @@ Migrations are written in **drizzle-kit's own format, including its snapshot met
 
 Concrete choices the v1 adapter makes; they are ordinary, documented practice for the stack.
 
-- **SQLite through `better-sqlite3`** on stable Drizzle, which installs from prebuilt binaries. Switching to Node's built-in `node:sqlite` is planned once Drizzle 1.0 (which supports it) is stable.
+- **SQLite through `better-sqlite3` 12.x** on stable Drizzle. It ships prebuilt binaries, so neither developers nor the container build need a compiler; 13.x dropped them and always compiles from source. Switching to Node's built-in `node:sqlite` is planned once Drizzle 1.0 (which supports it) is stable.
 - **Money is stored as whole cents** in integer columns, so amounts never suffer floating-point rounding; the kit converts for display and input. Datetimes are millisecond timestamps, dates are `YYYY-MM-DD` text, choices are text columns with an enum.
 - **Migrations are created by the app's own `drizzle-kit generate`** after the schema file is written, and **applied at startup**, which suits a single SQLite instance. Data lives under `DATA_DIR` (`data/` in development, `/data` in the container).
 - **Production** serves the plain Vite build with `srvx` (`pnpm start`); no extra server framework is needed.
