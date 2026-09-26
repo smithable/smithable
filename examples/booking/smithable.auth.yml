@@ -1,0 +1,18 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+smithableAuth: 0.1
+
+signIn:
+  providers: [google, facebook]
+  selfSignUp: true
+
+roles:
+  admin: { description: Studio staff. Manage the schedule, classes and teachers. }
+  member: { description: A student who books classes. }
+
+defaultRole: member
+admins: [owner@stillwater.ax]
+
+user:
+  fields:
+    displayName: string!
+    phone: phone

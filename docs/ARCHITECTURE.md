@@ -52,7 +52,7 @@ models:
       name: string!                  # short form: "!" = required
       email: email unique
       phone: phone
-      segment: enum(smb, enterprise, government)
+      segment: smb | enterprise | government = smb
       creditLimit:                   # long form
         type: money
         min: 0
@@ -73,7 +73,7 @@ models:
 actions:
   calculateShipping:
     custom: true                     # implemented in a user-owned file
-    input:  { total: money, method: enum(standard, express) }
+    input:  { total: money, method: standard | express }
     output: { cost: money }
     intent: Calculate the shipping cost for an order.
     rules:
@@ -136,6 +136,8 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 - Hand edits are first-class: users may edit `smithable.yml` directly, and Smithable validates and recompiles on save.
 - Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
 - Splitting the manifest across several files for large apps is an open question (§15).
+- **Why YAML, not a TypeScript config?** The spec must be edited by deterministic operations, read by non-developers and small models, and stay technology-neutral. See [research/wasp.md](research/wasp.md) for the lessons from a predecessor that went the other way.
+- **The in-string grammar stays tiny.** It covers field shorthand (`string!`, `email unique`, `draft | sent = draft`, `Customer!`, `Order[]`), field-path templates (`"{classType.name}"`) and simple computed values (arithmetic on the same record, `sum`/`count`/`min`/`max`/`avg` over a relation). It is precisely specified, validated with helpful errors, and always has a long form. No conditionals, functions or loops; that is what custom code is for.
 
 ## 3. Companion files
 
@@ -236,6 +238,7 @@ Plugins ──────────────┘
 - v1 has exactly one adapter: **TanStack Start + React + TypeScript + Tailwind + shadcn/ui + Drizzle + SQLite + Zod + Vite**.
 - The adapter boundary is kept clean inside the codebase, but the **adapter API is not published** until a second adapter exists. Designing a public API from one example produces the wrong API.
 - Generation is **deterministic and idempotent**: the same manifest and the same Smithable version produce byte-identical output. This is tested.
+- **Templates are real, checked code.** The app kit and generator templates are real TypeScript that is linted and type-checked, and the sample apps in `examples/` are generated, type-checked and tested on every `pnpm check`.
 
 ## 6. The generated application and code ownership
 
@@ -556,6 +559,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 | Question | Current leaning |
 |---|---|
 | **Auth library** | Better Auth (Drizzle adapter, social providers, self-hosted). Confirm in M5 against Google/Facebook flows and dev sign-in |
+| **Database escape hatch.** Where do indexes, constraints or column types the spec cannot express go? | A user-owned `src/custom/db/schema.ts` whose tables and indexes are merged with the generated schema |
 | **Re-adopting a detached app** | Not supported initially. It would need the deferred project import |
 | **`smithable.ux.yml` vocabulary** | Start minimal (density, column order/visibility, field order, groups) and grow only via §2.4 |
 | **Manifest size.** One file or many for large apps? | One file until it hurts, then allow `models/*.yml` includes |
