@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { generateApp } from "@smithable/adapter-tanstack";
+import { generateApp, renameColumnSql, renameInSnapshot } from "@smithable/adapter-tanstack";
 import { exec, type Io } from "./io.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -18,6 +18,16 @@ export interface GenerateFlags {
   tools: boolean;
   /** Overwrite hand-edited Smithable-owned files. */
   force: boolean;
+  /** How to create the migration; operations know about renames and apply it right away. */
+  migration?: MigrationPlan;
+}
+
+export interface MigrationPlan {
+  /** Name for the migration file, e.g. add_field_phone_to_customer. */
+  name: string;
+  renames: { model: string; from: string; to: string }[];
+  /** Apply the migration to the dev database now. */
+  apply: boolean;
 }
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
@@ -65,24 +75,52 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   io.out(`Generated ${files.length} files (${written} changed, ${removed.length} removed).\n`);
 
   if (!flags.tools) return 0;
-  return runTools(dir, io);
+  return runTools(dir, io, flags.migration);
 }
 
 /** Installs dependencies, then lets the app's own tools create migrations and the route tree. */
-export function runTools(dir: string, io: Io): number {
-  const steps: [string, string[]][] = [
-    ["pnpm", ["install", "--silent"]],
-    ["pnpm", ["exec", "drizzle-kit", "generate"]],
-    ["pnpm", ["exec", "tsr", "generate"]],
-  ];
-  for (const [command, args] of steps) {
-    const code = exec(command, args, dir);
-    if (code !== 0) {
-      io.err(`\`${command} ${args.join(" ")}\` failed.\n`);
-      return code;
-    }
+export function runTools(dir: string, io: Io, migration?: MigrationPlan): number {
+  const run = (args: string[]) => {
+    const code = exec("pnpm", args, dir);
+    if (code !== 0) io.err(`\`pnpm ${args.join(" ")}\` failed.\n`);
+    return code === 0;
+  };
+  if (!run(["install", "--silent"])) return 1;
+  // A rename becomes a custom migration with RENAME COLUMN, so drizzle-kit never sees a
+  // drop plus an add (which it would ask about) and the data is kept.
+  for (const rename of migration?.renames ?? []) {
+    if (
+      !run(["exec", "drizzle-kit", "generate", "--custom", "--name", migration?.name ?? "rename"])
+    )
+      return 1;
+    const tag = latestMigration(dir);
+    writeFileSync(
+      join(dir, "drizzle", `${tag}.sql`),
+      renameColumnSql(rename.model, rename.from, rename.to),
+    );
+    const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
+    writeFileSync(
+      snapshot,
+      renameInSnapshot(readFileSync(snapshot, "utf8"), rename.model, rename.from, rename.to),
+    );
   }
+  const name = migration ? ["--name", migration.name] : [];
+  if (!run(["exec", "drizzle-kit", "generate", ...name])) return 1;
+  if (!run(["exec", "tsr", "generate"])) return 1;
+  if (migration?.apply && !run(["exec", "drizzle-kit", "migrate"])) return 1;
   return 0;
+}
+
+/** The tag of the newest migration, e.g. "0003_rename_notes". */
+function latestMigration(dir: string): string {
+  const journal = JSON.parse(
+    readFileSync(join(dir, "drizzle", "meta", "_journal.json"), "utf8"),
+  ) as {
+    entries: { tag: string }[];
+  };
+  const last = journal.entries[journal.entries.length - 1];
+  if (!last) throw new Error("No migrations found.");
+  return last.tag;
 }
 
 function readRecord(dir: string): FileRecord {
