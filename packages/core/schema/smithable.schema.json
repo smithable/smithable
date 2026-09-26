@@ -392,6 +392,13 @@
             },
             "description": "Only these roles may open the page (admins always can)."
           },
+          "search": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Fields the list can be searched by, e.g. [name, email]."
+          },
           "description": {
             "type": "string",
             "description": "What this is. Meaning for AI and developers; not shown to visitors."

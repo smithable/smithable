@@ -79,5 +79,37 @@ const setNavigation: Operation<{ menu: string; pages: string[] }> = {
   },
 };
 
-export const pageOperations: AnyOperation[] = [addPage];
+const setSearch: Operation<{ page: string; fields?: string[] }> = {
+  name: "setSearch",
+  summary: "Let a page's list be searched by these fields, or remove the search (no fields).",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string" },
+      fields: {
+        type: "array",
+        items: { type: "string" },
+        description: "Text, email, phone, web address or choice fields of the page's model.",
+      },
+    },
+  },
+  positional: ["page", "...fields"],
+  describe: ({ page, fields }) =>
+    fields?.length ? `Search ${page} by ${fields.join(", ")}` : `Remove the search from ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, fields = [] }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    const path = ["pages", page, "search"];
+    if (fields.length === 0) {
+      if (spec.has(path)) spec.remove(path);
+    } else if (spec.has(path)) spec.set(path, fields);
+    else spec.add(["pages", page], "search", fields);
+    return [];
+  },
+};
+
+export const pageOperations: AnyOperation[] = [addPage, setSearch];
 export const navigationOperations: AnyOperation[] = [setNavigation];

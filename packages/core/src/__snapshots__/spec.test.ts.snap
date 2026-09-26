@@ -540,6 +540,10 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         "model": "Customer",
       },
       "route": "/customers",
+      "search": [
+        "name",
+        "email",
+      ],
     },
     {
       "id": "orders",
@@ -939,6 +943,9 @@ exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
         "model": "Customer",
       },
       "route": "/customers",
+      "search": [
+        "name",
+      ],
     },
   ],
   "specVersion": "0.1",
