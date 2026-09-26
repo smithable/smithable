@@ -12,7 +12,7 @@ export interface Entry {
 /** Something a diagnostic can point at: a YAML node, or nothing (start of file). */
 export type At = ParsedNode | Scalar.Parsed | null | undefined;
 
-export type SymbolKind = "model" | "page";
+export type SymbolKind = "model" | "page" | "action";
 
 interface Reference {
   kind: SymbolKind;

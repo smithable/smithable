@@ -238,6 +238,82 @@
         }
       }
     },
+    "actions": {
+      "type": "object",
+      "description": "Operations of the application beyond create, edit and delete.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "custom"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "custom": {
+            "const": true,
+            "description": "Implemented in src/custom/actions/."
+          },
+          "input": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "description": "Field shorthand, e.g. \"Customer!\" or \"int\"."
+            },
+            "description": "The values the action needs."
+          },
+          "output": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "description": "Field shorthand, e.g. \"Customer!\" or \"int\"."
+            },
+            "description": "The values the action returns, if any."
+          },
+          "description": {
+            "type": "string",
+            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+          },
+          "intent": {
+            "type": "string",
+            "description": "The outcome or experience this should achieve."
+          },
+          "rules": {
+            "type": "array",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "rule"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
     "pages": {
       "type": "object",
       "description": "The application's pages. Each page uses one pattern; in spec version 0.1 that is crud.",
@@ -259,6 +335,13 @@
           "crud": {
             "type": "string",
             "description": "A model to list, view, create, edit and delete."
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Actions offered on the page, as buttons."
           },
           "description": {
             "type": "string",

@@ -54,7 +54,8 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   let written = 0;
   for (const file of files) {
     const path = join(dir, file.path);
-    if (file.zone === "scaffold") {
+    // Scaffold and custom files are created once and then belong to the project.
+    if (file.zone === "scaffold" || file.zone === "custom") {
       if (existsSync(path)) continue;
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, file.content);

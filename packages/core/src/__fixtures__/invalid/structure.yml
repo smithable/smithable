@@ -21,4 +21,4 @@ pages:
     route: /orders
     crud: Order
 navigation: [orders, custmers]     # expect: unknown-page
-actions: {}                        # expect: not-yet-supported
+actions: {}
