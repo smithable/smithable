@@ -135,7 +135,7 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 - Validation errors carry file, line and column positions.
 - Hand edits are first-class: users may edit `smithable.yml` directly, and Smithable validates and recompiles on save.
 - Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
-- Splitting the manifest across several files for large apps is an open question (§14).
+- Splitting the manifest across several files for large apps is an open question (§15).
 
 ## 3. Companion files
 
@@ -314,7 +314,7 @@ Because the app is already normal, detaching is a cleanup, not a rescue:
 - rewrites the README's project-structure section without any mention of Smithable,
 - leaves the app kit behind as ordinary project code.
 
-Re-adopting a project after detaching is not supported initially (see §14). The guarantee is verified by a roadmap test (M4): after detaching, a developer adds a field and a page using only the Drizzle and TanStack docs, and the build and tests still pass.
+Re-adopting a project after detaching is not supported initially (see §15). The guarantee is verified by a roadmap test (M4): after detaching, a developer adds a field and a page using only the Drizzle and TanStack docs, and the build and tests still pass.
 
 ## 7. Implementation index
 
@@ -456,7 +456,7 @@ Design quality comes from crafted templates, not AI improvisation. AI (even a sm
 
 - Locally, a Node **daemon** hosts a project session: file watching, compile, the app process, Git, AI calls, and container builds. It exposes HTTP + WebSocket. In the hosted product, the browser tab is the host (§10.2), and the hosted service provides project storage, AI and publishing.
 - The **CLI**, **Studio** and **MCP server** (§9.6) are all clients, and all use the same core packages. The CLI can also run core commands in-process without a daemon.
-- CLI surface: `smithable new | validate | generate | run | op <operation> | undo | inspect <concept> | test | security | build | deploy | backup | restore | detach | mcp | studio`.
+- CLI surface: `smithable new | validate | generate | run | op <operation> | undo | inspect <concept> | test | security | build | deploy | backup | restore | upgrade | update | detach | mcp | studio`.
 
 ## 12. Verification, security, deployment
 
@@ -513,7 +513,45 @@ Security scanners, Claude Code, Ollama and Docker are all optional external tool
 
 The OSS repo contains only code eligible for publication. The hosted service goes in a separate private repo (`smithable-cloud`), which depends on OSS and never the other way round. That covers accounts, project storage, the AI gateway with allowances, publishing and hosting, managed backups, the remote MCP endpoint and billing.
 
-## 14. Open questions
+## 14. Versions and upgrades
+
+Four things change over time, each on its own track:
+
+| What | Example | How it is upgraded |
+|---|---|---|
+| **Spec format** | `smithable: 0.1` → `0.2` | Automatic, deterministic spec migrations |
+| **Smithable** (engine, generator, kit) | 0.4 → 0.5 | Regenerate the generated and kit zones |
+| **Stack profile** (the tested set of framework and library versions) | TanStack Start, React, Drizzle, Better Auth versions | Security patches: update freely. Minor and major upgrades: arrive with a Smithable release |
+| **Custom code** | `src/custom/**` | Never rewritten automatically. Typecheck, tests and upgrade notes show what needs attention; AI may propose fixes, confined to custom files |
+
+### 14.1 Everything is recorded
+
+- Every spec file carries its format version (`smithable: 0.1`).
+- A committed, tool-managed **`smithable.lock`** records the Smithable version, adapter version and stack profile that generated the code. Regeneration with a different version is therefore always explicit, never accidental, and generation stays byte-identical for a given lock.
+- Generated apps pin exact dependency versions and commit their package lockfile.
+
+### 14.2 Upgrades are ordinary changes
+
+`smithable upgrade` goes through the normal change pipeline (§8), so it is checkpointed, tested and undoable:
+
+```text
+migrate spec format → update smithable.lock → regenerate generated + kit zones
+  → update dependencies to the new stack profile → migrate DB if needed
+  → typecheck → tests → checkpoint (or roll back and report)
+```
+
+- **Spec migrations** are small, versioned, deterministic transforms (like codemods). Before 1.0 the format may change, but every change ships with a migration. After 1.0, breaking changes require a major version.
+- **Custom code is protected by contracts.** If a regenerated contract changes, affected custom files fail typecheck and the upgrade report lists them. Nothing in `src/custom/` is edited without the user confirming.
+- **Security patches of dependencies** (within the stack profile) need no regeneration. `smithable update --security` applies them, and the usual tests run. Each stack profile's allowed patch ranges come from the Smithable release that defined it.
+- **Stack profiles** are released on a steady cadence (for example quarterly). Each is tested against all sample apps before release.
+
+### 14.3 Hosted and detached apps
+
+- **Hosted apps** are rebuilt and redeployed automatically when a security patch or base-image update is available, but only if the tests pass. Otherwise the owner is notified. Smithable upgrades are offered to the owner, never forced.
+- **Self-hosted apps** run `smithable upgrade` or `smithable update --security`, then rebuild the container.
+- **Detached apps** are ordinary projects and use normal dependency management (for example Renovate or Dependabot).
+
+## 15. Open questions
 
 | Question | Current leaning |
 |---|---|
