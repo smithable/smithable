@@ -1,0 +1,13 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+smithableUx: 0.1
+
+theme:
+  preset: playful
+  brand: { primary: "#4f7c6b", font: Nunito }
+
+pages:
+  schedule:
+    calendar: { defaultView: week }
+  sessions:
+    table:
+      columns: [startsAt, classType, instructor, capacity]

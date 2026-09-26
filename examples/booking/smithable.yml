@@ -1,0 +1,127 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+smithable: 0.1
+
+app:
+  name: Stillwater Yoga
+  description: Class schedule and online booking for a small yoga studio.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  ClassType:
+    description: A kind of class the studio offers, such as Vinyasa or Yin.
+    fields:
+      name: string!
+      summary: text
+      level: beginner | all | advanced = all
+      durationMinutes: int! = 60
+      image: image
+    access: { read: public, write: [admin] }
+
+  Instructor:
+    fields:
+      name: string!
+      bio: text
+      photo: image
+    access: { read: public, write: [admin] }
+
+  Session:
+    description: One scheduled occurrence of a class.
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+    access: { read: public, write: [admin] }
+
+  Booking:
+    fields:
+      session: Session!
+      user: User!
+      status: confirmed | cancelled = confirmed
+    unique: [session, user]           # a user books a session only once
+    ownedBy: user                     # enables the "owner" role below
+    access:
+      read: [owner, admin]
+      create: [signedIn]
+      write: [admin]
+    rules:
+      - A session never has more confirmed bookings than its capacity.
+
+actions:
+  bookSession:
+    custom: true
+    input: { session: Session }
+    allow: [signedIn]
+    intent: Book the current user into a session, if there is room.
+    rules:
+      - Fail with "This class is full" when the session is at capacity.
+      - Sessions that have already started cannot be booked.
+
+  cancelBooking:
+    on: Booking
+    when: { status: confirmed }
+    set: { status: cancelled }
+    allow: [owner, admin]
+    confirm: Cancel this booking?
+    rules:
+      - Owners can cancel until 2 hours before the session starts; admins at any time.
+
+queries:
+  upcomingSessions:
+    from: Session
+    where: { startsAt: { after: now } }
+    orderBy: startsAt
+
+  myBookings:
+    from: Booking
+    where: { user: currentUser, status: confirmed }
+    orderBy: session.startsAt
+
+pages:
+  home:
+    route: /
+    access: public
+    intent: Make a first-time visitor feel welcome and get them to book a class.
+    landing:
+      - hero:
+          title: Find your calm
+          subtitle: Small classes for every level, in the heart of Mariehamn.
+          image: hero.jpg
+          cta: { label: See the schedule, to: schedule }
+      - cards: { title: Our classes, query: ClassType }
+      - cards: { title: Meet the teachers, query: Instructor }
+      - faq:
+          - q: Do I need to bring a mat?
+            a: No, mats and props are provided.
+          - q: I have never done yoga. Where do I start?
+            a: Any class marked "beginner" is a great first step.
+
+  schedule:
+    access: public
+    calendar:
+      query: upcomingSessions
+      title: "{classType.name} with {instructor.name}"
+      action: bookSession
+
+  my-bookings:
+    title: My bookings
+    access: signedIn
+    list:
+      query: myBookings
+      actions: [cancelBooking]
+
+  sessions: { crud: Session, access: [admin] }
+  class-types: { crud: ClassType, access: [admin] }
+  instructors: { crud: Instructor, access: [admin] }
+
+navigation:
+  main: [home, schedule, my-bookings]
+  admin: [sessions, class-types, instructors]
+
+jobs:
+  sendReminders:
+    schedule: hourly
+    custom: true
+    intent: Email each booked user a reminder 24 hours before their session.
