@@ -1,0 +1,13 @@
+# Visible text. Only what differs from the texts Smithable derives from names.
+smithableContent: 0.1
+
+models:
+  Customer:
+    fields:
+      segment:
+        values: { smb: Small business }
+      creditLimit:
+        help: Orders are held when the outstanding balance goes above this amount.
+  Order:
+    fields:
+      placedAt: { label: Placed on }

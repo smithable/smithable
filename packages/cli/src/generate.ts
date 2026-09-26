@@ -22,9 +22,9 @@ export interface GenerateFlags {
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
 export function generate(dir: string, io: Io, flags: GenerateFlags): number {
-  const { ir } = loadSpec(dir, io);
+  const { ir, content } = loadSpec(dir, io);
   if (!ir) return 1;
-  const files = generateApp(ir, { smithableVersion: VERSION });
+  const files = generateApp(ir, { smithableVersion: VERSION, ...(content ? { content } : {}) });
   const previous = readRecord(dir);
 
   // Never overwrite or delete a Smithable-owned file that was edited by hand.

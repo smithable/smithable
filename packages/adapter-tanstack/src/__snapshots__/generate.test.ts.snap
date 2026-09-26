@@ -1030,13 +1030,7 @@ export const customerUi: ModelUi = {
       ],
       default: "smb",
     },
-    {
-      name: "creditLimit",
-      label: "Credit limit",
-      kind: "money",
-      required: false,
-      help: "Maximum outstanding balance before new orders are held.",
-    },
+    { name: "creditLimit", label: "Credit limit", kind: "money", required: false },
     { name: "notes", label: "Notes", kind: "text", required: false },
   ],
 };
