@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7. **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5. **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -124,6 +124,8 @@ From the M7 benchmark: where no operation fits, agents edit generated files, and
 - Search on list pages in the spec (`search: [name, email]`), after the five questions of ARCHITECTURE §2.4.
 
 **Exit:** in the M7 benchmark, Claude Code + MCP completes all seven tasks with no drift, including search (through the spec) and the menu reorder after it; a custom page survives regeneration and fails type-checking when its contract changes.
+
+**Done (2026-09-27):** 7 of 7 tasks, $0.92, no drift ([m7-SB.md](benchmarks/m7-SB.md)); the custom page checks are in `pnpm test:apps`. Only list pages can be customized so far; detail and form pages follow when needed.
 
 ## M8 — Browser engine spike
 
