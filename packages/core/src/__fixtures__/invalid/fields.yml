@@ -1,0 +1,28 @@
+smithable: 0.1
+app:
+  name: Broken fields
+models:
+  Customer:
+    fields:
+      name: strng!                 # expect: unknown-type
+      email: email uniqe           # expect: invalid-field
+      status: draft | sent = sent  # expect: invalid-choice
+      age: int = old               # expect: invalid-default
+      customer: Customer!          # expect: not-yet-supported
+      id: string                   # expect: reserved-name
+      Phone: phone                 # expect: invalid-name
+      level:
+        type: beginner | allLevels
+        default: expert            # expect: invalid-default
+      score:
+        type: string
+        min: 1                     # expect: invalid-field
+      nickname:
+        type: string
+        label: Nickname            # expect: text-in-spec
+      due:
+        type: date
+        default: TODAY()           # expect: not-yet-supported
+      stars:
+        type: int!
+        required: false            # expect: conflict

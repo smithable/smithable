@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!.mcp.json"]
+    "includes": ["**", "!.mcp.json", "!packages/core/schema"]
   },
   "formatter": {
     "enabled": true,

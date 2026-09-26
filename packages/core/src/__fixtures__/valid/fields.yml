@@ -1,0 +1,42 @@
+# Every field form spec version 0.1 supports.
+smithable: 0.1
+
+app:
+  name: Field showcase
+  description: Covers each field type, the shorthand and the long form.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Everything:
+    description: One field of each kind.
+    intent: Prove that the parser handles every field form.
+    rules:
+      - Plain rules are sentences.
+      - { id: with-id, rule: Implemented rules get a stable id. }
+    fields:
+      title: string!
+      body: text
+      count: int! = 60
+      ratio: decimal = 0.5
+      price: money unique
+      active: bool = true
+      startsOn: date = 2026-09-01
+      startsAt: datetime = 2026-09-01T09:30
+      email: email! unique
+      phone: phone
+      website: url = "https://smithable.ai"
+      status: draft | sent | paid
+      level:
+        type: beginner | allLevels | advanced
+        default: allLevels
+      priority:
+        type: low | high
+        default: none
+      rating:
+        type: int
+        required: true
+        min: 1
+        max: 5
+        default: 3
+        description: Stars from one to five.

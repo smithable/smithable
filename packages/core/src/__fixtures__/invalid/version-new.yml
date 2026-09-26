@@ -1,0 +1,3 @@
+smithable: 2.5                     # expect: new-version
+app:
+  name: Future

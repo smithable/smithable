@@ -1,0 +1,24 @@
+smithable: 0.1
+app:
+  nam: Broken structure            # expect: unknown-key, missing-key
+models:
+  customer:                        # expect: invalid-name
+    fields:
+      name: string
+  Order:
+    access: {}                     # expect: not-yet-supported
+    fields:
+      number: string
+pages:
+  orders:
+    crud: Ordr                     # expect: unknown-model
+  customers:                       # expect: missing-pattern
+    title: Customers               # expect: text-in-spec
+  status:
+    route: /health                 # expect: reserved-route
+    crud: Order
+  more-orders:                     # expect: duplicate-route
+    route: /orders
+    crud: Order
+navigation: [orders, custmers]     # expect: unknown-page
+actions: {}                        # expect: not-yet-supported
