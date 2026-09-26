@@ -433,6 +433,14 @@ Added churn scoring             frontier model   · 6.1k tokens · €0.03
 
 `smithable new "a booking site for a yoga studio"` (or the Builder's first prompt) uses a model **once** to draft the initial project: models, pages, page patterns, theme and sample data, expressed as a batch of operations. The user confirms the plain-language summary, the operations are applied, and everything after that follows the normal routing. Without a model, `smithable new` offers templates instead.
 
+This is the one step that needs a **capable model**: it requires world knowledge (a yoga studio needs classes, teachers and bookings), design judgement and good copy. Small models only classify the request into a template. Three things keep it cheap:
+
+- **A spec is far smaller than code.** The output is a compact spec (roughly 2,000–4,000 tokens) constrained by the spec's JSON Schema. The generators then produce the code.
+- **It runs once per project.**
+- **It starts from the closest template** (picked by a small model), so the capable model customises instead of designing from nothing.
+
+It uses the strongest model the AI policy allows, typically a mid-size Smithable model or a frontier model. Which one gives the best first builds per euro is measured in M12, not assumed. Everyday changes afterwards use the normal routing (§9.2).
+
 ## 10. Product surfaces
 
 ### 10.1 One app, two modes

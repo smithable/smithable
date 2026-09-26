@@ -158,6 +158,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - "Customers should have a phone number" works with the Smithable model, and offline with a local model.
 - Ambiguous requests ask a question instead of guessing.
 - The M7 benchmark is re-run with both models and added to the report.
+- First builds from the same 10 app descriptions are compared across a mid-size Smithable model and a frontier model, for quality (designer and user review) and cost. The default model for first builds is chosen from the result.
 
 ## M13 — Escalation and AI-written custom code
 
