@@ -1,0 +1,17 @@
+{
+  "name": "@smithable/spike-webcontainer",
+  "private": true,
+  "type": "module",
+  "description": "M8 spike: the engine and a generated app's dev server in a WebContainer.",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@webcontainer/api": "1.6.4",
+    "@smithable/core": "workspace:*",
+    "@smithable/adapter-tanstack": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "8.3.1"
+  }
+}
