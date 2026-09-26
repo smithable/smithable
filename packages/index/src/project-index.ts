@@ -141,6 +141,8 @@ export function buildIndex(input: IndexInput): ProjectIndex {
       if (!target || target.files.some((f) => f.path === file.path)) return;
       target.files.push({ path: file.path, role, symbols: file.exports });
     };
+    const page = /^src\/custom\/pages\/([\w-]+)\.tsx$/.exec(file.path)?.[1];
+    if (page && ir.pages.some((p) => p.id === page)) add(`page:${page}`, "implements");
     const action = /^src\/custom\/actions\/([\w-]+)\.ts$/.exec(file.path)?.[1];
     if (action) {
       const match = ir.actions.find((a) => kebab(a.name) === action);

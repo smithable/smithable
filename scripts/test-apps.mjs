@@ -491,6 +491,31 @@ function operationsFlow(dir) {
       if (!ok) throw new Error(out);
     },
   );
+  step(
+    "customize page:customers gives the page its own component; regeneration leaves it alone; undo reverts it",
+    () => {
+      run("git", ["add", "-A"], dir);
+      run("git", ["commit", "-q", "-m", "custom action and its test"], dir);
+      expectOk(smithable(dir, "customize", "page:customers"));
+      const custom = join(dir, "src/custom/pages/customers.tsx");
+      writeFileSync(
+        custom,
+        readFileSync(custom, "utf8").replace(
+          "<PageHeader",
+          "<p>Our customers</p>\n      <PageHeader",
+        ),
+      );
+      run("pnpm", ["typecheck"], dir);
+      const regenerated = run("node", [cli, "generate", dir], repo);
+      if (!regenerated.includes("(0 changed, 0 removed)")) throw new Error(regenerated);
+      if (!readFileSync(custom, "utf8").includes("Our customers"))
+        throw new Error("the custom page was changed");
+      run("git", ["checkout", "--", "src/custom/pages/customers.tsx"], dir);
+      expectOk(smithable(dir, "undo"));
+      if (spawnSync("test", ["-e", custom]).status === 0)
+        throw new Error("undo kept the custom page");
+    },
+  );
   step("a hand-edited generated file is reported, not overwritten", () => {
     const file = join(dir, "src/generated/customer.ts");
     const edited = `${readFileSync(file, "utf8")}// my change\n`;

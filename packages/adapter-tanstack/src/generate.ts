@@ -61,6 +61,8 @@ export interface GenerateOptions {
   /** Visible text from smithable.content.yml; anything missing is derived from names. */
   content?: ContentIR;
   auth: AuthIR;
+  /** Pages with a custom component in src/custom/pages/ (found by the host). */
+  customPages?: string[];
 }
 
 const HEADER =
@@ -130,7 +132,10 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     const model = ir.models.find((m) => m.name === page.pattern.model);
     if (!model) continue;
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
-    add(`${dir}/index.tsx`, listRoute(page, model, t, ir));
+    add(
+      `${dir}/index.tsx`,
+      listRoute(page, model, t, ir, options.customPages?.includes(page.id) ?? false),
+    );
     add(`${dir}/new.tsx`, newRoute(page, model, t, ir));
     add(`${dir}/$id.tsx`, detailRoute(page, model, t, ir));
   }
@@ -933,14 +938,6 @@ function searchCode(page: PageIR, model: ModelIR, t: Texts) {
   const labels = fields.map((f) => (t.field(model, f).label ?? humanize(f.name)).toLowerCase());
   const placeholder = `Search by ${labels.length > 1 ? `${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}` : labels[0]}`;
   return {
-    imports: `import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { ${n.table} } from "#/db/schema";
-import { ${n.access}, ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { contains } from "#/kit/search";
-import { SearchBox } from "#/kit/SearchBox";
-import { currentViewer } from "#/lib/viewer.server";
-`,
     fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
 const ${fn} = createServerFn()
@@ -959,27 +956,77 @@ const ${fn} = createServerFn()
   };
 }
 
-function listRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
+/** Import lines collected per module, merged and in first-use order. */
+function importList() {
+  const modules = new Map<string, Set<string>>();
+  return {
+    add(module: string, ...names: string[]) {
+      const set = modules.get(module) ?? new Set<string>();
+      for (const name of names) set.add(name);
+      modules.set(module, set);
+      return this;
+    },
+    render(): string {
+      return [...modules]
+        .map(([m, names]) => `import { ${[...names].join(", ")} } from "${m}";\n`)
+        .join("");
+    },
+    names(): Set<string> {
+      return new Set([...modules.values()].flatMap((names) => [...names]));
+    },
+    /** Adds another list's imports, e.g. to put a route and its component in one file. */
+    merge(other: { entries(): [string, Set<string>][] }) {
+      for (const [module, names] of other.entries()) this.add(module, ...names);
+      return this;
+    },
+    entries(): [string, Set<string>][] {
+      return [...modules];
+    },
+  };
+}
+
+/**
+ * A list page in two parts: the route (loading, search, access) and the component. Generated,
+ * both go in one route file; customized (ARCHITECTURE §6.4), the component moves to
+ * src/custom/pages/ and reads the route's data with getRouteApi.
+ */
+function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
   const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
+  const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
   const search = page.search?.length ? searchCode(page, model, t) : undefined;
-  return `${HEADER}import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-${search ? search.imports : ""}import { buttonVariants } from "#/components/ui/button";
-${actions.map((a) => `import { ${actionNames(a).access} } from "${actionNames(a).module}";\n`).join("")}import { app } from "#/generated/app";
-import { pageAccess } from "#/generated/pages";
-import { ${search ? "" : `${n.list}, `}${n.ui} } from "${n.module}";
-import { ${actions.length || search ? "allows, " : ""}guardPage } from "#/kit/access";
-import { PageHeader } from "#/kit/AppShell";
-import { ModelTable } from "#/kit/ModelTable";
-${search ? search.fn : ""}
-export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${n.list}(),\n`}  component: ${component},
-});
 
-function ${component}() {
-  const { rows, canCreate } = Route.useLoaderData();${search ? "\n  const { q } = Route.useSearch();" : ""}
-${actions.length ? "  const { viewer } = Route.useRouteContext();\n" : ""}  const navigate = useNavigate();
+  const route = importList()
+    .add("@tanstack/react-router", "createFileRoute")
+    .add("#/generated/pages", "pageAccess")
+    .add("#/kit/access", "guardPage");
+  if (search) {
+    route
+      .add("@tanstack/react-start", "createServerFn")
+      .add("zod", "z")
+      .add("#/db/schema", n.table)
+      .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
+      .add("#/kit/access", "allows")
+      .add("#/kit/search", "contains")
+      .add("#/lib/viewer.server", "currentViewer");
+  } else {
+    route.add(n.module, n.list);
+  }
+  const view = importList()
+    .add("@tanstack/react-router", "Link", "useNavigate")
+    .add("#/components/ui/button", "buttonVariants");
+  for (const a of actions) view.add(actionNames(a).module, actionNames(a).access);
+  view.add("#/generated/app", "app").add(n.module, n.ui);
+  if (actions.length) view.add("#/kit/access", "allows");
+  view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
+  if (search) view.add("#/kit/SearchBox", "SearchBox");
+
+  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${n.list}(),\n`}`;
+  /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
+  const body = (api: string) => `function ${component}() {
+  const { rows, canCreate } = ${api}.useLoaderData();${search ? `\n  const { q } = ${api}.useSearch();` : ""}
+${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to=${JSON.stringify(join(page.route, "new"))} className={buttonVariants()}>
       New ${n.label.toLowerCase()}
@@ -1020,6 +1067,100 @@ ${
   );
 }
 `;
+  return { component, path, route, view, serverFn: search?.fn ?? "", options, body };
+}
+
+/** The route file of a list page; with a custom page, it renders that instead. */
+function listRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, custom: boolean): string {
+  const p = listParts(page, model, t, ir);
+  const head = `export const Route = createFileRoute(${JSON.stringify(p.path)})({
+${p.options}  component: ${p.component},
+});
+`;
+  if (custom) {
+    p.route.add(`#/custom/pages/${page.id}`, p.component);
+    return `${HEADER}// The page itself is src/custom/pages/${page.id}.tsx, which is yours.
+${p.route.render()}${p.serverFn}
+${head}`;
+  }
+  return `${HEADER}${p.route.merge(p.view).render()}${p.serverFn}
+${head}
+${p.body("Route")}`;
+}
+
+/**
+ * A hand-edited list route turned into a custom page (ARCHITECTURE §6.5): the edited
+ * component moves to src/custom/pages/, and the route is generated again. Only when the
+ * edit left the route itself (loading, search, access) as generated; otherwise the reason.
+ */
+export function customPageFromEdit(
+  ir: SpecIR,
+  pageId: string,
+  options: GenerateOptions,
+  edited: string,
+): { ok: true; source: string } | { ok: false; reason: string } {
+  const t = texts(options.content ?? emptyContent());
+  const page = ir.pages.find((p) => p.id === pageId);
+  if (!page) throw new Error(`Unknown page ${pageId}`);
+  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir);
+  const routeBlock = /export const Route = createFileRoute\([\s\S]*?\n\}\);\n/;
+  const generatedRoute = routeBlock.exec(
+    listRoute(page, modelNamed(ir, page.pattern.model), t, ir, false),
+  )?.[0];
+  const editedRoute = routeBlock.exec(edited)?.[0];
+  if (
+    !editedRoute ||
+    editedRoute !== generatedRoute ||
+    (p.serverFn && !edited.includes(p.serverFn))
+  ) {
+    return {
+      ok: false,
+      reason:
+        "The edit changes how the page loads its data or checks access, not only how it looks. Move data changes into the spec (e.g. search) or a custom action, then customize the page.",
+    };
+  }
+  let code = edited
+    .replace(HEADER, "")
+    .replace(p.serverFn, "")
+    .replace(editedRoute, `const route = getRouteApi(${JSON.stringify(p.path)});\n`)
+    .replace(/\bRoute\.use/g, "route.use")
+    .replace(new RegExp(`^function ${p.component}\\(`, "m"), `export function ${p.component}(`);
+  // Drop what only the route needs (the component never does), and add getRouteApi.
+  const view = p.view.names();
+  const routeOnly = new Set([...p.route.names()].filter((n) => !view.has(n)));
+  code = code.replace(
+    /^import \{([^}]*)\} from "([^"]+)";\n/gm,
+    (_, list: string, module: string) => {
+      const used = list
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n && !routeOnly.has(n));
+      if (module === "@tanstack/react-router") used.push("getRouteApi");
+      return used.length ? `import { ${used.join(", ")} } from "${module}";\n` : "";
+    },
+  );
+  return {
+    ok: true,
+    source: `// Your version of the "${page.id}" page, moved here from a hand edit of its generated route.
+// Smithable never changes it. Read the route's data with \`route\`.
+${code.replace(/\n{3,}/g, "\n\n")}`,
+  };
+}
+
+/** The starting point of a custom page: exactly what was generated, now yours to change. */
+export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOptions): string {
+  const t = texts(options.content ?? emptyContent());
+  const page = ir.pages.find((p) => p.id === pageId);
+  if (!page) throw new Error(`Unknown page ${pageId}`);
+  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir);
+  p.view.add("@tanstack/react-router", "getRouteApi");
+  return `// Your version of the "${page.id}" page. Smithable created it from the generated page and never
+// changes it. The route (loading, search, access) stays generated: read its data with \`route\`.
+// If the spec changes the data, TypeScript reports what no longer fits.
+${p.view.render()}
+const route = getRouteApi(${JSON.stringify(p.path)});
+
+export ${p.body("route")}`;
 }
 
 /** Whether a form needs choices loaded: for references to records or users. */

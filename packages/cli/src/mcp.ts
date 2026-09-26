@@ -7,6 +7,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { type JsonSchema, OPERATIONS, type OperationArgs } from "@smithable/core";
 import { buildContext, estimateTokens } from "@smithable/index";
 import { logTokens } from "./context.js";
+import { customize } from "./customize.js";
 import { describe, TEST_ARGS } from "./inspect.js";
 import { type Io, keepStdoutForProtocol } from "./io.js";
 import { runOperation } from "./op.js";
@@ -20,7 +21,7 @@ const INSTRUCTIONS = `This is a Smithable app. What it does is described in smit
 - Change the app with the smithable_* operation tools, not by editing files. Each one checks the change, regenerates the code, migrates the database and makes a checkpoint that smithable_undo reverts.
 - An operation's result says whether it worked: a successful one has already validated the spec, regenerated the code and migrated the database. It also says whether custom code is affected. Do not read files or run commands to verify it.
 - Find what to change with smithable_context (give it the request) or smithable_inspect; you rarely need to open source files.
-- Code that the operations cannot express goes in src/custom/. Never edit src/generated/, src/kit/ or the generated routes: they are overwritten.`;
+- When no operation fits how a page should look or behave, call smithable_customize_page and edit the file it creates in src/custom/pages/. Custom actions already in the spec are implemented in src/custom/actions/. Never edit src/generated/, src/kit/ or the generated routes: they are overwritten, and a hand edit blocks every later operation.`;
 
 const OPERATION_NOTE =
   "Changes smithable.yml, regenerates the app, migrates the database and makes a checkpoint (undo with smithable_undo).";
@@ -69,6 +70,20 @@ function tools(dir: string): Tool[] {
   }));
   return [
     ...operations,
+    {
+      name: "smithable_customize_page",
+      description:
+        "When no operation can make a page look or behave as asked (a different layout, extra buttons, charts): gives the page its own component in src/custom/pages/<page>.tsx, starting as a copy of the generated one. Then edit that file; never edit generated routes. The route keeps loading data and checking access.",
+      inputSchema: {
+        type: "object",
+        required: ["page"],
+        additionalProperties: false,
+        properties: {
+          page: { type: "string", description: 'The page\'s name, e.g. "customers".' },
+        },
+      },
+      run: ({ page }, io) => customize(dir, io, `page:${page}`, "mcp"),
+    },
     {
       name: "smithable_context",
       description:
