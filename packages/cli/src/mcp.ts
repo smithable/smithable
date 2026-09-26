@@ -18,7 +18,7 @@ import { VERSION } from "./version.js";
 const INSTRUCTIONS = `This is a Smithable app. What it does is described in smithable.yml, sign-in and access in smithable.auth.yml, and visible text in smithable.content.yml; the code is generated from them.
 
 - Change the app with the smithable_* operation tools, not by editing files. Each one checks the change, regenerates the code, migrates the database and makes a checkpoint that smithable_undo reverts.
-- An operation's result says whether it worked: a successful one has already validated the spec, regenerated the code and migrated the database. Do not read files or run commands to verify it. Only if src/custom/ code uses what changed, run smithable_test.
+- An operation's result says whether it worked: a successful one has already validated the spec, regenerated the code and migrated the database. It also says whether custom code is affected. Do not read files or run commands to verify it.
 - Find what to change with smithable_context (give it the request) or smithable_inspect; you rarely need to open source files.
 - Code that the operations cannot express goes in src/custom/. Never edit src/generated/, src/kit/ or the generated routes: they are overwritten.`;
 
@@ -53,8 +53,19 @@ function tools(dir: string): Tool[] {
         },
       },
     },
-    run: ({ confirm, ...args }, io) =>
-      runOperation(dir, io, op.name, args, { yes: confirm === true, mcp: true }),
+    run: ({ confirm, ...args }, io) => {
+      // Looked up before the change: after a rename, custom code still uses the old name.
+      const users = customUsers(dir, op.name, args);
+      const code = runOperation(dir, io, op.name, args, { yes: confirm === true, mcp: true });
+      if (code === 0) {
+        io.out(
+          users.length
+            ? `Custom code that uses the changed field may need updating: ${users.join(", ")}. Run smithable_test.\n`
+            : "No custom code is affected.\n",
+        );
+      }
+      return code;
+    },
   }));
   return [
     ...operations,
@@ -149,6 +160,25 @@ function tools(dir: string): Tool[] {
       run: (_, io) => undo(dir, io),
     },
   ];
+}
+
+/** Operations that can break custom code, and the field each one changes. */
+const BREAKING: Record<string, (args: OperationArgs) => string> = {
+  renameField: (a) => `field:${a.model}.${a.from}`,
+  removeField: (a) => `field:${a.model}.${a.field}`,
+  changeField: (a) => `field:${a.model}.${a.field}`,
+};
+
+/** Custom files that use what a breaking operation changes; none for other operations. */
+function customUsers(dir: string, operation: string, args: OperationArgs): string[] {
+  const concept = BREAKING[operation]?.(args);
+  if (!concept) return [];
+  const { ir, auth } = loadSpec(dir, { out: () => {}, err: () => {} });
+  if (!ir || !auth) return [];
+  const info = projectIndex(dir, ir, auth).concepts.find((c) => c.concept === concept);
+  return (info?.files ?? [])
+    .filter((f) => f.role === "uses" || f.role === "implements")
+    .map((f) => f.path);
 }
 
 /** `smithable mcp`: an MCP server on stdin/stdout for the project in `dir` (ARCHITECTURE §9.6). */
