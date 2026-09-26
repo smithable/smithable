@@ -58,21 +58,24 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 - `hasMany` / `belongsTo`, `Order` model, relation-aware kit components (select a customer on an order, list orders on a customer).
 - Custom actions, queries, pages and jobs: generated typed contracts plus one-time stubs in `src/custom/`. Missing-implementation drift.
+- Spreadsheet-style formulas for computed fields and defaults, compiled to both SQL and TypeScript.
 - `examples` compiled into Vitest tests.
 - Rule IDs, implementation and test markers, and rule status in `smithable inspect`.
 - `smithable detach`.
 
-**Exit:** the CRM has Orders and a custom `calculateShipping` action whose manifest examples run as passing tests. Changing the action's manifest signature makes the custom file fail typecheck. The rule "Orders above 100 EUR have free standard shipping" moves from **Not implemented** to **Implemented and tested** once custom code and a named test exist, and editing the rule text marks it **Changed**.
+**Exit:** the CRM has Orders with a `shippingCost` formula whose manifest examples run as passing tests, and a custom `mergeCustomers` action. Changing the action's manifest signature makes the custom file fail typecheck. The rule "All orders of the duplicate move to the kept customer" moves from **Not implemented** to **Implemented and tested** once custom code and a named test exist, and editing the rule text marks it **Changed**.
 **Detach test:** after `smithable detach`, a field and a page are added using only the Drizzle and TanStack docs (no Smithable knowledge), and the build and tests pass. `drizzle-kit generate` continues from the existing migrations.
 
 ## M5 — Auth and access
 
-- `smithable.auth.yml` v0.1 (sign-in methods, roles, user fields). Decide the implementation approach ([ARCHITECTURE.md §15](ARCHITECTURE.md#15-open-questions)).
+- `smithable.auth.yml` v0.1: sign-in methods, `defaultAccess` (shared or private), roles, user fields, and the `public` section. Decide the implementation approach ([ARCHITECTURE.md §15](ARCHITECTURE.md#15-open-questions)).
 - Google sign-in by default, Facebook as a secondary provider, via the chosen auth library. Includes admin bootstrap, domain restriction, a dev-only sign-in-as-role, and a provider setup checklist.
-- `access` rules on models, actions and pages, validated against the defined roles, enforced server-side by the kit, with generated tests.
+- Automatic owner field on every model, `ownedBy`, and `access` exceptions on models, actions and pages, validated against the defined roles.
+- One generated access layer in the kit that filters every query and write, including row-level filtering by owner. Generated tests prove the effective access per model and role.
+- Validator warnings for risky combinations (shared access with open sign-up; public read of personal-data fields).
 - `setAccess` operation.
 
-**Exit:** sign in with a real Google account works locally. Dev sign-in works offline and is absent from production builds. A `sales` user cannot delete customers and an `admin` can. Generated tests prove all of this.
+**Exit:** sign in with a real Google account works locally. Dev sign-in works offline and is absent from production builds. A `sales` user cannot delete customers and an `admin` can. In the invoicing app, one user cannot see another user's invoices, even by guessing URLs or IDs. In the booking app, the public schedule works without signing in. Generated tests prove all of this.
 
 ## M6 — Index, context builder and MCP server
 

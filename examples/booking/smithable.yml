@@ -18,14 +18,14 @@ models:
         default: allLevels
       durationMinutes: int! = 60
       image: image
-    access: { read: public, write: [admin] }
+    access: { create: [admin] }         # members don't add classes
 
   Instructor:
     fields:
       name: string!
       bio: text
       photo: image
-    access: { read: public, write: [admin] }
+    access: { create: [admin] }
 
   Session:
     description: One scheduled occurrence of a class.
@@ -35,7 +35,10 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
-    access: { read: public, write: [admin] }
+      spotsLeft:
+        type: int
+        formula: capacity - COUNTIF(bookings.status, "confirmed")
+    access: { create: [admin] }
 
   Booking:
     fields:
@@ -43,11 +46,10 @@ models:
       user: User!
       status: confirmed | cancelled
     unique: [session, user]           # a user books a session only once
-    ownedBy: user                     # enables the "owner" role below
+    ownedBy: user
     access:
-      read: [owner, admin]
-      create: [signedIn]
-      write: [admin]
+      write: [admin]                  # members cancel through the action, not by editing
+      delete: [admin]
     rules:
       - A session never has more confirmed bookings than its capacity.
 
@@ -55,10 +57,9 @@ actions:
   bookSession:
     custom: true
     input: { session: Session }
-    allow: [signedIn]
     intent: Book the current user into a session, if there is room.
     rules:
-      - Fail with "This class is full" when the session is at capacity.
+      - Fail with "This class is full" when the session has no spots left.
       - Sessions that have already started cannot be booked.
 
   cancelBooking:
@@ -84,7 +85,6 @@ queries:
 pages:
   home:
     route: /
-    access: public
     intent: Make a first-time visitor feel welcome and get them to book a class.
     landing:
       - hero:
@@ -101,7 +101,6 @@ pages:
             a: Any class marked "beginner" is a great first step.
 
   schedule:
-    access: public
     calendar:
       query: upcomingSessions
       title: "{classType.name} with {instructor.name}"
@@ -109,7 +108,6 @@ pages:
 
   my-bookings:
     title: My bookings
-    access: signedIn
     list:
       query: myBookings
       actions: [cancelBooking]

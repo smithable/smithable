@@ -20,11 +20,11 @@ models:
         min: 0
         description: Maximum outstanding balance before new orders are held.
       notes: text
-      accountManager: User          # relation to the built-in User model
-      orders: Order[]               # inverse of Order.customer
-    access:
-      read: [sales, admin]
-      write: [sales, admin]
+      accountManager: User
+      orders: Order[]                # inverse of Order.customer
+    ownedBy: accountManager          # the account manager owns the customer
+    access:                          # exceptions to "shared" (see smithable.auth.yml)
+      write: [sales]                 # any salesperson may edit any customer
       delete: [admin]
 
   Order:
@@ -32,11 +32,22 @@ models:
       number: string! unique
       customer: Customer!
       status: draft | placed | shipped | cancelled
+      shippingMethod: standard | express
       total: money!
+      shippingCost:
+        type: money
+        formula: IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))
+        description: Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.
+        examples:
+          - input: { total: 150, shippingMethod: standard }
+            expected: 0
+          - input: { total: 80, shippingMethod: standard }
+            expected: 5
+          - input: { total: 150, shippingMethod: express }
+            expected: 15
       placedAt: datetime
     access:
-      read: [sales, admin]
-      write: [sales, admin]
+      write: [sales]
       delete: [admin]
 
 actions:
@@ -44,21 +55,16 @@ actions:
     on: Order
     when: { status: draft }
     set: { status: placed, placedAt: now }
-    allow: [sales, admin]
 
-  calculateShipping:
+  mergeCustomers:
     custom: true
-    input: { total: money, method: standard | express }
-    output: { cost: money }
-    intent: Calculate the shipping cost for an order.
+    input: { keep: Customer, duplicate: Customer }
+    allow: [admin]
+    intent: Merge a duplicate customer record into the one we keep.
     rules:
-      - Orders above 100 EUR have free standard shipping.
-      - Express shipping always costs 15 EUR.
-    examples:
-      - input: { total: 150, method: standard }
-        expected: { cost: 0 }
-      - input: { total: 150, method: express }
-        expected: { cost: 15 }
+      - All orders of the duplicate move to the kept customer.
+      - Empty fields on the kept customer are filled from the duplicate.
+      - The duplicate is deleted afterwards.
 
 queries:
   myCustomers:
@@ -78,6 +84,7 @@ pages:
     intent: Find a customer quickly and keep their details current.
     crud: Customer
     search: [name, email]
+    actions: [mergeCustomers]
 
   orders:
     crud: Order

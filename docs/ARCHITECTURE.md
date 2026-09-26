@@ -32,7 +32,7 @@ Every change, whether it comes from the CLI, Studio, AI or a plugin, goes throug
 
 The manifest describes application functionality in technology-neutral terms. It never contains React, Drizzle, Tailwind, file paths or CSS.
 
-v0.1 covers: `app`, `models` (fields, relations), `access` rules, `actions`, `queries`, `pages`, `navigation`, `jobs`. Integrations and external endpoints come later. Roles are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` (§3).
+v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions, `actions`, `queries`, `pages`, `navigation`, `jobs`. Integrations and external endpoints come later. Roles, access defaults and everything public are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` (§3).
 
 ### 2.2 Style: neat by default, explicit when needed
 
@@ -44,48 +44,56 @@ smithable: 0.1
 app:
   name: CRM
   description: Lightweight CRM for a small B2B sales team.
+  currency: EUR
 
 models:
   Customer:
     description: A company we have a commercial relationship with.
     fields:
-      name: string!                  # short form: "!" = required
+      name: string!                        # "!" = required
       email: email unique
       phone: phone
       segment: smb | enterprise | government   # one of; the first value is the default
-      creditLimit:                   # long form
+      creditLimit:                         # long form
         type: money
         min: 0
         description: Maximum outstanding balance before orders are held.
-    hasMany: orders
-    access:                          # roles come from smithable.auth.yml
-      read: [sales, admin]
-      write: [sales, admin]
+      orders: Order[]                      # has many (inverse of Order.customer)
+    access:                                # only exceptions to the defaults (§3.1)
+      write: [sales]
       delete: [admin]
 
   Order:
     fields:
       number: string! unique
+      customer: Customer!                  # belongs to
+      shippingMethod: standard | express
       total: money!
-      placedAt: datetime!
-    belongsTo: customer
+      shippingCost:
+        type: money
+        formula: IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))
+        examples:
+          - input: { total: 150, shippingMethod: standard }
+            expected: 0
+          - input: { total: 150, shippingMethod: express }
+            expected: 15
+      placedAt: datetime
 
 actions:
-  calculateShipping:
-    custom: true                     # implemented in a user-owned file
-    input:  { total: money, method: standard | express }
-    output: { cost: money }
-    intent: Calculate the shipping cost for an order.
+  mergeCustomers:
+    custom: true                           # implemented in a user-owned file
+    input: { keep: Customer, duplicate: Customer }
+    allow: [admin]
+    intent: Merge a duplicate customer record into the one we keep.
     rules:
-      - Orders above 100 EUR have free standard shipping.
-    examples:
-      - input:    { total: 150, method: standard }
-        expected: { cost: 0 }
+      - All orders of the duplicate move to the kept customer.
+      - Empty fields on the kept customer are filled from the duplicate.
+      - The duplicate is deleted afterwards.
 
 pages:
   customers:
     intent: Find a customer quickly and keep their details current.
-    crud: Customer                   # standard list + detail + form
+    crud: Customer                         # standard list + detail + form
     search: [name, email]
   dashboard:
     intent: Give salespeople a rapid overview of customers requiring attention today.
@@ -158,39 +166,80 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 - Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
 - Splitting the manifest across several files for large apps is an open question (§15).
 - **Why YAML, not a TypeScript config?** The spec must be edited by deterministic operations, read by non-developers and small models, and stay technology-neutral. 
-- **The in-string grammar stays tiny.** It covers field shorthand (`string!`, `email unique`, `draft | sent | paid`, `Customer!`, `Order[]`), field-path templates (`"{classType.name}"`) and simple computed values (arithmetic on the same record, `sum`/`count`/`min`/`max`/`avg` over a relation). It is precisely specified, validated with helpful errors, and always has a long form. No conditionals, functions or loops; that is what custom code is for.
+- **The in-string grammar stays small and familiar.** It covers:
+  - field shorthand: `string!`, `email unique`, `draft | sent | paid`, `Customer!`, `Order[]`,
+  - field-path templates: `"{classType.name}"`,
+  - **spreadsheet-style formulas** for computed fields and defaults: arithmetic and comparisons, `IF`, `AND`, `OR`, `NOT`, `ROUND`, `MIN`, `MAX`, date and text functions (`TODAY`, `DATEADD`, `CONCAT`, …), and `SUM`/`COUNT`/`SUMIF`/`COUNTIF`/`AVG`/`MIN`/`MAX` over related records.
+
+  Formulas use a fixed function library modelled on spreadsheets, so non-developers and LLMs already know it. There are no user-defined functions, loops or free queries: anything beyond what a spreadsheet cell can do is custom code. The grammar is precisely specified, validated with helpful errors, and always has a long form. Formulas containing commas are written in block style (long form), because commas split values inside `{ … }`.
+- **A rule simple enough to be a formula should become one.** It is then enforced, costs no tokens, and its `examples` become tests.
 - **Choice fields default to their first value.** `status: draft | sent | paid` defaults to `draft`. Exceptions use the long form: `{ type: beginner | allLevels | advanced, default: allLevels }`, or `default: none` to stay empty until chosen. Operations that reorder values warn when this changes the default, and the plain-language view always states the default explicitly.
 
 ## 3. Companion files
 
 `smithable.yml` stays focused on functionality. Three companion files hold concerns that would otherwise clutter it. All of them are validated by JSON Schema, modified through operations, and edited with comment-preserving writes. Only `smithable.context.yml` may mention technology.
 
-### 3.1 `smithable.auth.yml`: users and roles
+### 3.1 `smithable.auth.yml`: users, roles and exposure
 
-This file describes who can sign in and which roles exist. It is technology-neutral.
+This file describes who can sign in, which roles exist, the default access model, and **everything that is exposed publicly**. It always exists: `smithable new` creates it, with `signIn: none` for apps without login. It is technology-neutral.
 
 ```yaml
 smithableAuth: 0.1
 signIn:
-  providers: [google, facebook]    # default: [google]; order = button order
+  providers: [google, facebook]    # default: [google]; order = button order; "none" = no sign-in
   allowedDomains: [acme.com]       # optional: only this Google Workspace domain
   selfSignUp: true                 # false = only invited email addresses
+defaultAccess: private             # shared | private; required when sign-in is enabled
 roles:
   admin: { description: Full access, manages users. }
-  sales: { description: Day-to-day customer and order work. }
-defaultRole: sales
+  member: { description: A regular user. }
+defaultRole: member
 admins: [owner@acme.com]           # bootstrap: these get admin on first sign-in
 user:
   fields:                          # extra profile fields, same syntax as models
     displayName: string!
+
+# ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
+# signing in. Never add models that contain personal or business data.
+public:
+  pages: [home]                    # sign-in pages are always public
+  read: [Product]
+  create: [ContactMessage]         # for example a public contact form
 ```
+
+#### Access defaults
+
+Every model gets an automatic **owner** field, set to the user who created the record. Like a file owner in Linux, the owner is what "own records" refers to. `ownedBy: accountManager` makes another `User` field the owner instead.
+
+`defaultAccess` is an explicit choice, made by the user in `smithable new` or proposed by the Builder's AI from what is being built:
+
+| | `shared` (internal tools, teams) | `private` (SaaS, consumer apps) |
+|---|---|---|
+| Read | All signed-in users | Only the owner |
+| Create | Signed-in users | Signed-in users |
+| Edit and delete | The owner | The owner |
+| Everything | Admins | Admins |
+
+- **Only exceptions are written down.** An `access:` entry in `smithable.yml` on a model, page or action replaces the default for the operations it lists, for example `access: { write: [sales], delete: [admin] }`. Admins can always do everything.
+- **Pages** require sign-in by default. Public pages are listed in the `public` section; admin-only pages say `access: [admin]`.
+- **Standard actions** follow the model's write access. Custom actions default to signed-in users, and `allow:` narrows that.
+- **Without sign-in** (`signIn: none`), only what the `public` section lists is reachable at all.
+- **Warnings, not hidden behaviour.** The validator warns about risky combinations but never changes the meaning. Examples: `shared` together with `selfSignUp: true` ("anyone who creates an account can read all data"), and public read access to a model with personal-data fields such as `email` or `phone`.
+- The Builder's plain-language view shows the **effective** access of every model and page, so nobody has to combine the two files in their head.
+
+#### Enforcement
+
+All access checks go through **one generated access layer** in the app kit. Every generated query and write is filtered by it, including row-level filtering by owner. Custom code receives the same access-checked data functions by default, and bypassing them requires an explicit, reviewable call. Generated tests prove the effective access for every model and role.
+
+Teams are not in v0.1, but the design leaves room for them. Records will later get a **group** (team or workspace) next to their owner, and existing apps migrate by putting each user's records into a personal default group. Because access is enforced in one layer, adding groups changes one place.
+
+#### Sign-in
 
 - **Google is the default sign-in method.** Facebook, Microsoft, GitHub and Apple are secondary options in the same `providers` list. Email/password and magic links exist but are never the default.
 - **It is implemented with a mainstream auth library as an ordinary dependency.** The leaning is Better Auth: self-hosted, with a Drizzle adapter, SQLite support and social providers. Confirm this in M5. Sign-in is the one place where a well-maintained library beats generated code.
 - **OAuth client IDs and secrets live in environment variables**, never in YAML. Smithable provides a setup checklist per provider, including the exact redirect URLs.
 - **Dev sign-in.** In development and in the Studio preview, a dev-only sign-in lets you act as any role without contacting Google. This keeps offline development and role testing possible. It is disabled in production builds, and a generated test verifies that.
 - **Build your own.** `signIn: custom` generates a typed session contract plus a stub in `src/custom/auth.ts`. This is never the default.
-- **Access rules stay in `smithable.yml`,** attached to the model, action or page they protect. They reference roles defined here, and the validator checks those references.
 
 ### 3.2 `smithable.ux.yml`: presentation
 
@@ -590,6 +639,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 |---|---|
 | **Auth library** | Better Auth (Drizzle adapter, social providers, self-hosted). Confirm in M5 against Google/Facebook flows and dev sign-in |
 | **Database escape hatch.** Where do indexes, constraints or column types the spec cannot express go? | A user-owned `src/custom/db/schema.ts` whose tables and indexes are merged with the generated schema |
+| **Teams and workspaces** | Later. Records get a group next to their owner, enforced in the same access layer (§3.1) |
 | **Re-adopting a detached app** | Not supported initially. It would need the deferred project import |
 | **`smithable.ux.yml` vocabulary** | Start minimal (density, column order/visibility, field order, groups) and grow only via §2.4 |
 | **Manifest size.** One file or many for large apps? | One file until it hurts, then allow `models/*.yml` includes |

@@ -1,4 +1,5 @@
 # DRAFT: spec design proposal, not yet parsed by Smithable.
+# Access: "private" in smithable.auth.yml, so each freelancer sees only their own data.
 smithable: 0.1
 
 app:
@@ -14,26 +15,23 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
-    ownedBy: user                   # implicit "user: User!" set to the creator
-    access: { all: [owner] }        # every user sees only their own clients
 
   Invoice:
     fields:
       number: string! unique
       client: Client!
-      issuedOn: date! = today
-      dueOn: date!
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date!
+        default: DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       lines: InvoiceLine[]
       total:
         type: money
-        computed: sum(lines.amount)
-    ownedBy: user
-    access: { all: [owner] }
+        formula: SUM(lines.amount)
     rules:
       - Invoice numbers are sequential per user, like 2026-001, 2026-002.
       - A sent or paid invoice can no longer be edited, only credited.
-      - The due date defaults to 30 days after the issue date.
 
   InvoiceLine:
     fields:
@@ -43,21 +41,21 @@ models:
       unitPrice: money!
       amount:
         type: money
-        computed: quantity * unitPrice
-    access: { all: [owner] }         # owner derived through invoice.user
+        formula: quantity * unitPrice
+        examples:
+          - input: { quantity: 3, unitPrice: 40 }
+            expected: 120
 
 actions:
   sendInvoice:
     custom: true
     input: { invoice: Invoice }
-    allow: [owner]
     intent: Email the invoice as a PDF to the client and mark it as sent.
 
   markPaid:
     on: Invoice
     when: { status: [sent, overdue] }
     set: { status: paid }
-    allow: [owner]
 
 queries:
   unpaidInvoices:
@@ -68,7 +66,6 @@ queries:
 pages:
   home:
     route: /
-    access: public
     intent: Convince freelancers to sign up. Emphasise simplicity and getting paid faster.
     landing:
       - hero:
@@ -87,20 +84,17 @@ pages:
       - cta: { title: Ready to get paid?, label: Start free, to: signUp }
 
   dashboard:
-    access: signedIn
     dashboard:
       - stat: { label: Outstanding, sum: Invoice.total, where: { status: [sent, overdue] } }
       - stat: { label: Paid this month, sum: Invoice.total, where: { status: paid, issuedOn: thisMonth } }
       - list: { title: Unpaid invoices, query: unpaidInvoices, actions: [markPaid] }
 
   invoices:
-    access: signedIn
     crud: Invoice
     filters: [status, client]
     actions: [sendInvoice, markPaid]
 
   clients:
-    access: signedIn
     crud: Client
     search: [name, email]
 
