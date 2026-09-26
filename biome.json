@@ -23,7 +23,7 @@
   },
   "overrides": [
     {
-      "includes": ["packages/core/**", "packages/adapter-tanstack/src/**"],
+      "includes": ["packages/core/**", "packages/adapter-tanstack/src/**", "packages/index/**"],
       "linter": {
         "rules": {
           "correctness": {

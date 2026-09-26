@@ -404,6 +404,26 @@ function operationsFlow(dir) {
     );
     if (!status().startsWith("Changed")) throw new Error(status());
   });
+  step(
+    "inspect action:mergeCustomers gives its meaning, rules, files, symbols, routes and tests",
+    () => {
+      const { code, out } = smithable(dir, "inspect", "action:mergeCustomers", "--json");
+      if (code !== 0) throw new Error(out);
+      const info = JSON.parse(out);
+      const has = (role, path, symbol) =>
+        info.files.some(
+          (f) => f.role === role && f.path === path && (!symbol || f.symbols.includes(symbol)),
+        );
+      const ok =
+        info.intent.startsWith("Merge a duplicate customer") &&
+        info.rules.some((r) => r.id === "mergeCustomers.move-orders") &&
+        has("generated", "src/generated/actions/merge-customers.ts", "MergeCustomersInput") &&
+        has("implements", "src/custom/actions/merge-customers.ts", "mergeCustomers") &&
+        info.routes.includes("/customers/actions/merge-customers") &&
+        info.tests.some((t) => t.file === "src/custom/actions/merge-customers.test.ts");
+      if (!ok) throw new Error(out);
+    },
+  );
   step("a hand-edited generated file is reported, not overwritten", () => {
     const file = join(dir, "src/generated/customer.ts");
     const edited = `${readFileSync(file, "utf8")}// my change\n`;

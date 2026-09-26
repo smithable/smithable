@@ -12,6 +12,8 @@ export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
 export { YamlEditor } from "./edit.js";
+export type { Expr } from "./formula.js";
+export { formatFormula } from "./formula.js";
 export type * from "./ir.js";
 export { ACCESS_OPERATIONS, SCALAR_TYPES, storageOf, typeKey, USER_MODEL } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
