@@ -6,5 +6,11 @@ rmSync("data/test", { recursive: true, force: true });
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  test: { include: ["src/**/*.test.ts"], passWithNoTests: true, env: { DATA_DIR: "data/test" } },
+  test: {
+    include: ["src/**/*.test.ts"],
+    passWithNoTests: true,
+    env: { DATA_DIR: "data/test" },
+    // The test files share one database, so they run one after another.
+    fileParallelism: false,
+  },
 });

@@ -341,6 +341,15 @@ function operationsFlow(dir) {
       throw new Error("website still in the spec");
     run("pnpm", ["typecheck"], dir);
   });
+  step("op setAccess changes who may do what; the access tests follow; undo reverts it", () => {
+    const data = join(dir, "src/generated/customer.server.ts");
+    const salesDelete = 'delete: { public: false, roles: ["admin", "sales"], owner: false }';
+    expectOk(smithable(dir, "op", "setAccess", "model:Customer.delete", "admin", "sales"));
+    if (!readFileSync(data, "utf8").includes(salesDelete)) throw new Error("rule not regenerated");
+    run("pnpm", ["test"], dir);
+    expectOk(smithable(dir, "undo"));
+    if (readFileSync(data, "utf8").includes(salesDelete)) throw new Error("undo kept the rule");
+  });
   step(
     "changing an action's input breaks its custom code at type-check; regeneration leaves the code alone",
     () => {

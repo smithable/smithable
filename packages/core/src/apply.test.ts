@@ -16,6 +16,13 @@ const files = {
       eager: true,
     }),
   )[0] as string,
+  auth: Object.values(
+    import.meta.glob("../../../examples/crm/smithable.auth.yml", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }),
+  )[0] as string,
 };
 
 function apply(name: string, positional: string[]) {
@@ -205,5 +212,60 @@ describe("operations", () => {
       for (const p of op.positional)
         expect(properties, op.name).toContain(p.replace(/^\.\.\./, ""));
     }
+  });
+});
+
+describe("setAccess", () => {
+  test("changes, adds and removes access exceptions, one line at a time", () => {
+    expect(
+      changed(files.spec, ok("setAccess", ["model:Customer.delete", "admin", "sales"]).files.spec),
+    ).toEqual({
+      added: ["      delete: [admin, sales]"],
+      removed: ["      delete: [admin]"],
+    });
+    expect(
+      changed(files.spec, ok("setAccess", ["model:Customer.read", "admin"]).files.spec),
+    ).toEqual({
+      added: ["      read: [admin]"],
+      removed: [],
+    });
+    expect(changed(files.spec, ok("setAccess", ["page:orders", "admin"]).files.spec)).toEqual({
+      added: ["    access: [admin]"],
+      removed: [],
+    });
+    expect(changed(files.spec, ok("setAccess", ["action:mergeCustomers"]).files.spec)).toEqual({
+      added: [],
+      removed: ["    allow: [admin]"],
+    });
+  });
+
+  test("returning every operation to the default removes the model's access", () => {
+    const once = ok("setAccess", ["model:Order.write"]).files;
+    const twice = applyOperation({ ...files, spec: once.spec }, "setAccess", {
+      target: "model:Order.delete",
+    });
+    if (!twice.ok) throw new Error(twice.message);
+    expect(changed(files.spec, twice.files.spec).removed.sort()).toEqual([
+      "      delete: [admin]",
+      "      write: [sales]",
+      "    access:",
+    ]);
+  });
+
+  test("unknown targets and roles are refused", () => {
+    expect(apply("setAccess", ["model:Customer.remove", "admin"])).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("model:Customer.delete"),
+    });
+    expect(apply("setAccess", ["page:custmers", "admin"])).toMatchObject({
+      ok: false,
+      message: 'There is no page named "custmers". Did you mean "customers"?',
+    });
+    const unknownRole = apply("setAccess", ["model:Customer.delete", "sale"]);
+    expect(unknownRole.ok).toBe(false);
+    if (!unknownRole.ok)
+      expect(unknownRole.diagnostics.map((d) => [d.code, d.hint])).toEqual([
+        ["unknown-role", 'Did you mean "sales"?'],
+      ]);
   });
 });
