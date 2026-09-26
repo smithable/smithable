@@ -202,7 +202,7 @@ export function formulasTestSource(model: ModelIR): string | undefined {
     (name) =>
       `describe(${JSON.stringify(`${model.name}.${name}`)}, () => {\n${tests.filter((_, i) => cases[i]?.field.name === name).join("\n\n")}\n});`,
   );
-  return `${HEADER}// The examples of ${model.name}'s formulas in smithable.yml.
+  return `${HEADER}// The examples given for ${model.name}'s formulas: each must give the expected value.
 import { describe, expect, test } from "vitest";
 import { ${formulasName(model)} } from "${formulasModule(model)}";
 

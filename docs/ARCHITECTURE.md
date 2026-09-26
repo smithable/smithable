@@ -390,7 +390,7 @@ A developer who knows the stack but has never heard of Smithable should find the
 
 The compiler writes `src/db/schema.ts` as ordinary Drizzle tables, built from models, relations and auth user fields. Everything else derives from it the standard way: Zod validators through drizzle-zod, and TypeScript types through Drizzle inference.
 
-The only extra file is `src/generated/ui.ts`. It is a small typed map of what the database does not know: labels, semantic kinds (`email`, `phone`, `money`) and default columns. If a column is later added to the Drizzle schema by hand, the kit still renders it with sensible defaults.
+Next to it, each model's module in `src/generated/` describes what the database does not know: labels, semantic kinds (`email`, `phone`, `money`), the fields shown in tables and forms, and computed fields. These field lists are explicit code, so a column added to the Drizzle schema by hand is stored and validated but appears in the UI only once it is added to the model's list, like any other hand-written change.
 
 ### 6.3 The app kit
 
@@ -451,12 +451,14 @@ Concrete choices the v1 adapter makes; they are ordinary, documented practice fo
 
 Because the app is already normal, detaching is a cleanup, not a rescue:
 
-- removes the generated-file headers and `.smithable/`,
-- keeps or removes the `smithable*.yml` files (keeping them as documentation is an option),
-- rewrites the README's project-structure section without any mention of Smithable,
-- leaves the app kit behind as ordinary project code.
+- requires a clean Git tree, so the detach is one reviewable (and revertable) change,
+- removes the generated-file headers and the kit's "Smithable app kit" prefix,
+- moves the `smithable*.yml` files to `docs/smithable/` as documentation,
+- removes `smithable.lock`, `.smithable/` and the dev-database snapshots,
+- rewrites the README without any mention of Smithable,
+- leaves the app kit behind as ordinary project code. `src/custom/` is left untouched.
 
-Re-adopting a project after detaching is not supported initially (see §15). The guarantee is verified by a roadmap test (M4): after detaching, a developer adds a field and a page using only the Drizzle and TanStack docs, and the build and tests still pass.
+Re-adopting a project after detaching is not supported initially (see §15). The guarantee is verified by a roadmap test (M4): after detaching, a developer adds a field and a page using only the Drizzle and TanStack docs, `drizzle-kit generate` continues the migrations, and the typecheck, build, tests and server still pass (`pnpm test:apps`).
 
 ## 7. Implementation index
 
