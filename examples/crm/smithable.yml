@@ -1,0 +1,93 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+smithable: 0.1
+
+app:
+  name: Acme CRM
+  description: Lightweight CRM for a small B2B sales team.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Customer:
+    description: A company we have a commercial relationship with.
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      segment: smb | enterprise | government = smb
+      creditLimit:
+        type: money
+        min: 0
+        description: Maximum outstanding balance before new orders are held.
+      notes: text
+      accountManager: User          # relation to the built-in User model
+      orders: Order[]               # inverse of Order.customer
+    access:
+      read: [sales, admin]
+      write: [sales, admin]
+      delete: [admin]
+
+  Order:
+    fields:
+      number: string! unique
+      customer: Customer!
+      status: draft | placed | shipped | cancelled = draft
+      total: money!
+      placedAt: datetime
+    access:
+      read: [sales, admin]
+      write: [sales, admin]
+      delete: [admin]
+
+actions:
+  placeOrder:
+    on: Order
+    when: { status: draft }
+    set: { status: placed, placedAt: now }
+    allow: [sales, admin]
+
+  calculateShipping:
+    custom: true
+    input: { total: money, method: standard | express }
+    output: { cost: money }
+    intent: Calculate the shipping cost for an order.
+    rules:
+      - Orders above 100 EUR have free standard shipping.
+      - Express shipping always costs 15 EUR.
+    examples:
+      - input: { total: 150, method: standard }
+        expected: { cost: 0 }
+      - input: { total: 150, method: express }
+        expected: { cost: 15 }
+
+queries:
+  myCustomers:
+    from: Customer
+    where: { accountManager: currentUser }
+    orderBy: name
+
+pages:
+  overview:
+    route: /
+    intent: Give salespeople a rapid overview of customers requiring attention today.
+    dashboard:
+      - stat: { label: Open orders, count: Order, where: { status: placed } }
+      - list: { title: My customers, query: myCustomers, limit: 5 }
+
+  customers:
+    intent: Find a customer quickly and keep their details current.
+    crud: Customer
+    search: [name, email]
+
+  orders:
+    crud: Order
+    filters: [status]
+    actions: [placeOrder]
+
+navigation: [overview, customers, orders]
+
+jobs:
+  sendOverdueReminders:
+    schedule: daily 07:00
+    custom: true
+    intent: Email customers whose invoices are more than 14 days overdue.

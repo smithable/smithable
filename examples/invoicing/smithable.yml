@@ -1,0 +1,109 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+smithable: 0.1
+
+app:
+  name: Invoicely
+  description: Simple invoicing for freelancers. Each user manages their own clients and invoices.
+  currency: EUR
+
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+    ownedBy: user                   # implicit "user: User!" set to the creator
+    access: { all: [owner] }        # every user sees only their own clients
+
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = today
+      dueOn: date!
+      status: draft | sent | paid | overdue = draft
+      lines: InvoiceLine[]
+      total:
+        type: money
+        computed: sum(lines.amount)
+    ownedBy: user
+    access: { all: [owner] }
+    rules:
+      - Invoice numbers are sequential per user, like 2026-001, 2026-002.
+      - A sent or paid invoice can no longer be edited, only credited.
+      - The due date defaults to 30 days after the issue date.
+
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        computed: quantity * unitPrice
+    access: { all: [owner] }         # owner derived through invoice.user
+
+actions:
+  sendInvoice:
+    custom: true
+    input: { invoice: Invoice }
+    allow: [owner]
+    intent: Email the invoice as a PDF to the client and mark it as sent.
+
+  markPaid:
+    on: Invoice
+    when: { status: [sent, overdue] }
+    set: { status: paid }
+    allow: [owner]
+
+queries:
+  unpaidInvoices:
+    from: Invoice
+    where: { status: [sent, overdue] }
+    orderBy: dueOn
+
+pages:
+  home:
+    route: /
+    access: public
+    intent: Convince freelancers to sign up. Emphasise simplicity and getting paid faster.
+    landing:
+      - hero:
+          title: Get paid, without the paperwork
+          subtitle: Create and send professional invoices in under a minute.
+          cta: { label: Start free, to: signUp }
+      - features:
+          - { icon: zap, title: Invoice in a minute, text: Clients and prices are remembered. }
+          - { icon: mail, title: Sent for you, text: Invoices go out as PDFs, straight from Invoicely. }
+          - { icon: bell, title: Never chase payments, text: See at a glance who owes you. }
+      - pricing:
+          - { plan: Free, price: 0, features: [5 invoices per month, 1 user] }
+          - { plan: Pro, price: 9, period: month, features: [Unlimited invoices, Your logo, Reminders], highlight: true }
+      - testimonials:
+          - { quote: Invoicing went from an evening to ten minutes., author: "Maria, illustrator" }
+      - cta: { title: Ready to get paid?, label: Start free, to: signUp }
+
+  dashboard:
+    access: signedIn
+    dashboard:
+      - stat: { label: Outstanding, sum: Invoice.total, where: { status: [sent, overdue] } }
+      - stat: { label: Paid this month, sum: Invoice.total, where: { status: paid, issuedOn: thisMonth } }
+      - list: { title: Unpaid invoices, query: unpaidInvoices, actions: [markPaid] }
+
+  invoices:
+    access: signedIn
+    crud: Invoice
+    filters: [status, client]
+    actions: [sendInvoice, markPaid]
+
+  clients:
+    access: signedIn
+    crud: Client
+    search: [name, email]
+
+navigation:
+  public: [home]
+  main: [dashboard, invoices, clients]
