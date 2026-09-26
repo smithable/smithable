@@ -26,7 +26,8 @@ Commands:
                    (run "smithable op" for the list; --yes confirms changes that lose data)
   undo             Undo the last operation, including the dev database
   test [dir]       Run the app's tests and remember the results for rule status
-  inspect [c]      Show rules and their status, or one concept, e.g. inspect action:mergeCustomers
+  inspect [c]      Show rules and their status, or one concept: its meaning, rules, files,
+                   symbols, routes, tables and tests, e.g. inspect action:mergeCustomers (--json)
   detach [dir]     Turn the project into an ordinary one that no longer uses Smithable
 
 Options:
@@ -56,7 +57,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "op")
     return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
   if (command === "undo") return undo(values.dir ?? ".", io);
-  if (command === "inspect") return inspect(values.dir ?? ".", io, args[0]);
+  if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (args.length > 1) {
     io.err(`${command} takes at most one path.\n\n${HELP}`);
     return 2;
@@ -100,6 +101,7 @@ function parse(argv: string[]) {
       starter: { type: "string" },
       yes: { type: "boolean" },
       dir: { type: "string" },
+      json: { type: "boolean" },
     },
   });
 }

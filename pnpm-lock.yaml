@@ -196,6 +196,9 @@ importers:
       '@smithable/core':
         specifier: workspace:*
         version: link:../core
+      '@smithable/index':
+        specifier: workspace:*
+        version: link:../index
 
   packages/core:
     dependencies:
@@ -206,6 +209,12 @@ importers:
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+
+  packages/index:
+    dependencies:
+      '@smithable/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 

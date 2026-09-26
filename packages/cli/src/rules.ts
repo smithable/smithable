@@ -1,20 +1,13 @@
-import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { conceptsWithRules, ruleId, type SpecIR } from "@smithable/core";
+import { implementationIndex } from "@smithable/adapter-tanstack";
+import type { AuthIR, SpecIR } from "@smithable/core";
+import { buildIndex, hashRule, type ProjectIndex, type RuleStatus } from "@smithable/index";
 
 /** Where the texts of rules are recorded when they get an id; committed with the project. */
 const BASELINE = ".smithable/rules.json";
 /** The last `smithable test` results; local, like the rest of data/. */
 export const TEST_RESULTS = "data/.smithable/test-results.json";
-
-export type RuleStatus =
-  | "not-implemented"
-  | "untested"
-  | "not-run"
-  | "failing"
-  | "tested"
-  | "changed";
 
 export const STATUS_TEXT: Record<RuleStatus, string> = {
   "not-implemented": "Not implemented",
@@ -25,19 +18,6 @@ export const STATUS_TEXT: Record<RuleStatus, string> = {
   changed: "Changed since it was implemented: review the code",
 };
 
-export interface RuleReport {
-  concept: string;
-  id?: string;
-  text: string;
-  status: RuleStatus;
-  implementedIn: string[];
-  testedIn: string[];
-}
-
-export function hashRule(text: string): string {
-  return createHash("sha256").update(text.trim()).digest("hex").slice(0, 16);
-}
-
 /** Records a rule's text when it gets an id, so later edits show as "changed". */
 export function recordRule(dir: string, id: string, text: string): void {
   const baseline = readJson<Record<string, string>>(join(dir, BASELINE)) ?? {};
@@ -47,45 +27,21 @@ export function recordRule(dir: string, id: string, text: string): void {
 }
 
 /**
- * The status of every rule, computed from the project's files (ARCHITECTURE §2.3):
- * `// implements rule <id>` in src/custom marks code, `test("rule <id>: …")` marks tests,
- * and the last `smithable test` run says whether they pass.
+ * The project's implementation index (ARCHITECTURE §7), built from the spec, what the adapter
+ * generates, the custom code, the rule baselines and the last test run. Cheap enough to build
+ * on every use, so it is never stale.
  */
-export function ruleReports(dir: string, ir: SpecIR): RuleReport[] {
-  const implemented = new Map<string, string[]>();
-  const tested = new Map<string, string[]>();
-  for (const file of sourceFiles(join(dir, "src", "custom"))) {
-    const text = readFileSync(file, "utf8");
-    const path = relative(dir, file);
-    const isTest = /\.test\.tsx?$/.test(file);
-    const pattern = isTest
-      ? /\b(?:test|it)\(\s*["'`]rule ([\w.-]+):/g
-      : /implements rule ([\w.-]+)/g;
-    for (const match of text.matchAll(pattern)) {
-      const id = match[1] as string;
-      const map = isTest ? tested : implemented;
-      map.set(id, [...(map.get(id) ?? []), path]);
-    }
-  }
-  const baseline = readJson<Record<string, string>>(join(dir, BASELINE)) ?? {};
-  const results = testResults(dir);
-  return conceptsWithRules(ir).flatMap((concept) =>
-    concept.rules.map((rule) => {
-      const id = ruleId(concept, rule);
-      const report = { concept: concept.concept, text: rule.text, ...(id ? { id } : {}) };
-      const implementedIn = id ? (implemented.get(id) ?? []) : [];
-      const testedIn = id ? (tested.get(id) ?? []) : [];
-      const status: RuleStatus = (() => {
-        if (!id || implementedIn.length === 0) return "not-implemented";
-        if (baseline[id] && baseline[id] !== hashRule(rule.text)) return "changed";
-        if (testedIn.length === 0) return "untested";
-        const outcomes = results.filter((r) => r.title.startsWith(`rule ${id}:`));
-        if (outcomes.length === 0) return "not-run";
-        return outcomes.every((r) => r.passed) ? "tested" : "failing";
-      })();
-      return { ...report, status, implementedIn, testedIn };
-    }),
-  );
+export function projectIndex(dir: string, ir: SpecIR, auth: AuthIR): ProjectIndex {
+  return buildIndex({
+    ir,
+    generated: implementationIndex(ir, auth),
+    custom: sourceFiles(join(dir, "src", "custom")).map((file) => ({
+      path: relative(dir, file),
+      text: readFileSync(file, "utf8"),
+    })),
+    ruleBaseline: readJson<Record<string, string>>(join(dir, BASELINE)) ?? {},
+    testResults: testResults(dir),
+  });
 }
 
 function testResults(dir: string): { title: string; passed: boolean }[] {
@@ -99,11 +55,13 @@ function testResults(dir: string): { title: string; passed: boolean }[] {
 
 function sourceFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return /\.tsx?$/.test(entry.name) ? [path] : [];
-  });
+  return readdirSync(dir, { withFileTypes: true })
+    .sort((a, b) => (a.name < b.name ? -1 : 1))
+    .flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return sourceFiles(path);
+      return /\.tsx?$/.test(entry.name) ? [path] : [];
+    });
 }
 
 function readJson<T>(path: string): T | undefined {

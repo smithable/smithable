@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { checkFormula, FormulaError, parseFormula } from "./formula.js";
+import { checkFormula, FormulaError, formatFormula, parseFormula } from "./formula.js";
 import type { ModelIR, SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 
@@ -116,5 +116,22 @@ models:
     ],
   ])("%s fails", (text, expected) => {
     expect(failure(text)).toEqual(expected);
+  });
+});
+
+describe("formatFormula", () => {
+  test.each([
+    'IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))',
+    "quantity * unitPrice",
+    "(a + b) * c",
+    "a - (b - c)",
+    "a - b - c",
+    "-(a + b)",
+    'COUNTIF(bookings.status, "confirmed")',
+    "SUM(lines.amount) + COUNT(lines)",
+    'DATEADD(issuedOn, 30, "day")',
+    "TRUE",
+  ])("%s reads back the same", (source) => {
+    expect(formatFormula(parseFormula(source))).toBe(source);
   });
 });

@@ -19,6 +19,7 @@
   ],
   "dependencies": {
     "@smithable/core": "workspace:*",
-    "@smithable/adapter-tanstack": "workspace:*"
+    "@smithable/adapter-tanstack": "workspace:*",
+    "@smithable/index": "workspace:*"
   }
 }

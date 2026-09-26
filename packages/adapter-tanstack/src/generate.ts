@@ -132,7 +132,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
 }
 
 /** Visible text: from smithable.content.yml when given there, otherwise derived from names. */
-function texts(content: ContentIR) {
+export function texts(content: ContentIR) {
   return {
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
@@ -149,13 +149,13 @@ function texts(content: ContentIR) {
 type Texts = ReturnType<typeof texts>;
 
 /** The model's Drizzle table variable and SQL table name. */
-function tableNames(model: ModelIR) {
+export function tableNames(model: ModelIR) {
   const pluralName = plural(model.name);
   return { table: camel(pluralName), sqlTable: snake(pluralName) };
 }
 
 // Names derived from a model, used consistently across files.
-function names(model: ModelIR, t: Texts) {
+export function names(model: ModelIR, t: Texts) {
   const pluralName = plural(model.name);
   return {
     ...tableNames(model),
@@ -333,7 +333,7 @@ function modelNamed(ir: SpecIR, name: string): ModelIR {
 }
 
 /** Fields stored on the model itself: not lists of related records, not computed fields. */
-function storedFields(model: ModelIR): FieldIR[] {
+export function storedFields(model: ModelIR): FieldIR[] {
   return model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many) && !f.formula);
 }
 
@@ -372,7 +372,7 @@ function lists(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: st
 }
 
 /** The data key of a stored field: references are stored as <name>Id. */
-function dataKey(field: FieldIR): string {
+export function dataKey(field: FieldIR): string {
   return field.type.kind === "relation" ? `${field.name}Id` : field.name;
 }
 
@@ -1120,11 +1120,11 @@ ${sections.join("\n")}
 `;
 }
 
-function indexPath(route: string): string {
+export function indexPath(route: string): string {
   return route === "/" ? "/" : `${route}/`;
 }
 
-function join(route: string, segment: string): string {
+export function join(route: string, segment: string): string {
   return route === "/" ? `/${segment}` : `${route}/${segment}`;
 }
 
@@ -1196,7 +1196,7 @@ function outputType(field: FieldIR): string {
   return field.required ? base : `${base} | null`;
 }
 
-function actionNames(action: ActionIR) {
+export function actionNames(action: ActionIR) {
   const type = pascal(action.name);
   return {
     input: `${action.name}Input`,
