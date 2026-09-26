@@ -7,7 +7,7 @@
 // task's check again (regressions), and whether the code is still what the spec generates.
 // A and B use the user's Claude usage: ask before running them.
 // Run after `pnpm build`: `node scripts/bench-m7.mjs [S] [A] [B]` (default: all three).
-// Writes docs/benchmarks/m7.md.
+// Writes docs/benchmarks/m7.md (or m7-<setups>.md for a partial run).
 import { spawn, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -134,7 +134,7 @@ const TASKS = [
   {
     id: "search",
     prompt: "Make it possible to search customers by name on the customers page.",
-    ops: null,
+    ops: [["setSearch", "customers", "name"]],
     check: async ({ page, base, signIn }) => {
       await signIn("admin");
       await open(page, `${base}/customers`);
@@ -469,5 +469,7 @@ Files and lines exclude migration snapshots, the route tree, the lockfile and Sm
 ${JSON.stringify(results, null, 2)}
 \`\`\`
 `;
-writeFileSync(join(repo, "docs/benchmarks/m7.md"), report);
-console.log(`\nWrote docs/benchmarks/m7.md. The apps are in ${root}`);
+// A run of only some setups gets its own report, so the full run stays as it was.
+const file = `docs/benchmarks/m7${variants.join("") === "SAB" ? "" : `-${variants.join("")}`}.md`;
+writeFileSync(join(repo, file), report);
+console.log(`\nWrote ${file}. The apps are in ${root}`);
