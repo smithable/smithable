@@ -1,32 +1,39 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { formatDiagnostic, hasErrors, validateSpec } from "@smithable/core";
-import type { CliResult } from "./cli.js";
+import { formatDiagnostic, hasErrors, type SpecIR, validateSpec } from "@smithable/core";
+import type { Io } from "./io.js";
 
-/** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */
-export function validate(target: string): CliResult {
+/** Reads and validates the spec. Prints diagnostics; returns the IR only when it is valid. */
+export function loadSpec(target: string, io: Io): { ir?: SpecIR; path: string } {
   const path = isDirectory(target) ? join(target, "smithable.yml") : target;
   let text: string;
   try {
     text = readFileSync(path, "utf8");
   } catch {
-    return { code: 1, stdout: "", stderr: `No spec found at ${path}.\n` };
+    io.err(`No spec found at ${path}.\n`);
+    return { path };
   }
   const { ir, diagnostics } = validateSpec({ path, text });
-  const report = diagnostics.map((d) => `${formatDiagnostic(d)}\n`).join("");
+  for (const d of diagnostics) io.err(`${formatDiagnostic(d)}\n`);
   if (!ir || hasErrors(diagnostics)) {
     const errors = diagnostics.filter((d) => d.severity === "error").length;
-    return {
-      code: 1,
-      stdout: "",
-      stderr: `${report}\n${errors} ${errors === 1 ? "error" : "errors"} in ${path}.\n`,
-    };
+    io.err(`\n${errors} ${errors === 1 ? "error" : "errors"} in ${path}.\n`);
+    return { path };
   }
-  const summary = `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`;
-  return { code: 0, stdout: report + summary, stderr: "" };
+  return { ir, path };
 }
 
-function isDirectory(path: string): boolean {
+/** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */
+export function validate(target: string, io: Io): number {
+  const { ir, path } = loadSpec(target, io);
+  if (!ir) return 1;
+  io.out(
+    `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
+  );
+  return 0;
+}
+
+export function isDirectory(path: string): boolean {
   try {
     return statSync(path).isDirectory();
   } catch {
