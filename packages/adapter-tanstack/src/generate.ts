@@ -48,6 +48,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   add("package.json", packageJson(ir));
   add("smithable.lock", smithableLock(ir, options));
   add("README.md", readme(ir));
+  add("public/favicon.svg", favicon(ir));
   add("src/generated/app.ts", appModule(ir));
   add("src/db/schema.ts", schemaModule(ir));
   add("src/db/seed.ts", seedModule(ir));
@@ -397,7 +398,10 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: app.name },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    ],
   }),
   shellComponent: RootDocument,
 });
@@ -569,6 +573,16 @@ function indexPath(route: string): string {
 
 function join(route: string, segment: string): string {
   return route === "/" ? `/${segment}` : `${route}/${segment}`;
+}
+
+/** A simple icon with the app's initial, in the theme's primary colour. */
+function favicon(ir: SpecIR): string {
+  const initial = (ir.app.name.match(/[A-Za-z0-9]/)?.[0] ?? "A").toUpperCase();
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">${initial}</text>
+</svg>
+`;
 }
 
 // ── README ───────────────────────────────────────────────────────────────────
