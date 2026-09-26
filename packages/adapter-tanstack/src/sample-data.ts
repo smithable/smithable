@@ -87,13 +87,18 @@ function sampleValue(
             : ((i * 7) % 20) + 1,
       );
     case "decimal":
-      return clamp(field, ((i * 37) % 100) / 10);
+      return clamp(field, 1 + ((i * 37) % 40) / 10);
     case "money":
       return clamp(field, AMOUNTS[i % AMOUNTS.length] ?? 100) * 100;
     case "bool":
       return i % 3 !== 0;
-    case "date":
-      return addDays("2026-09-01T00:00:00Z", i * 4).slice(0, 10);
+    case "date": {
+      // Later date fields of a record get later dates (issued on, then due on).
+      const nth = model.fields
+        .filter((f) => f.type.kind === "scalar" && f.type.name === "date")
+        .indexOf(field);
+      return addDays("2026-09-01T00:00:00Z", i * 4 + nth * 30).slice(0, 10);
+    }
     case "datetime":
       return new Date(
         Date.parse(addDays("2026-09-01T08:00:00Z", i)) + (i % 3) * 2 * 3_600_000,

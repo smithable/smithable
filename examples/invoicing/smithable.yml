@@ -19,15 +19,38 @@ models:
     fields:
       number: string! unique
       client: Client!
-      issuedOn: date!
-      dueOn: date!
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date!
+        default: DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
     rules:
       - Invoice numbers are sequential per user, like 2026-001, 2026-002.
       - A sent or paid invoice can no longer be edited, only credited.
+
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+        examples:
+          - input: { quantity: 3, unitPrice: 40 }
+            expected: 120
+          - input: { quantity: 0.5, unitPrice: 19.99 }
+            expected: 10
 
 pages:
   invoices:
     crud: Invoice
   clients:
     crud: Client
+  invoice-lines:
+    crud: InvoiceLine
