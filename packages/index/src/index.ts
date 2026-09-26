@@ -1,3 +1,5 @@
+export type { ContextOptions, ContextSlice } from "./context.js";
+export { buildContext, estimateTokens } from "./context.js";
 export type {
   ConceptInfo,
   FileRef,
