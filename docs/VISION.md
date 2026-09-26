@@ -28,6 +28,17 @@ One product with two ways in, working on the same project:
 
 The switch is a toggle, not a migration. That enables the **handoff**: a non-developer builds the app, and a developer takes over the same project and finds clean code, a spec and tests.
 
+Developers can also start straight from GitHub: the open-source CLI, local Studio and MCP server work on their own, with any AI agent they already use.
+
+## Where we start: the beachhead
+
+We will not launch as "an app builder for everyone". The first customers are the people for whom Smithable's strengths are exactly what they are missing:
+
+1. **People who hit the wall with prompt-to-code builders.** Their project grew too big, the credits ran away, or every change broke something else. They already feel the pain Smithable solves, so they are the easiest customers to convince.
+2. **EU small businesses and agencies building business apps:** booking systems, customer portals, internal tools. They care about GDPR, reliability and handing work over to developers, and the spec model covers these apps well.
+
+Everything early (templates, page patterns, marketing, the benchmark and user interviews) is judged by whether it serves these two groups. We broaden only once they are well served.
+
 ## Why Smithable instead of prompt-to-code builders
 
 These are the problems users of prompt-to-code builders commonly hit, and each one is a design goal for Smithable:

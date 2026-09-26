@@ -17,6 +17,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 - DSL v0.1 grammar for `app`, `models` (scalar fields only), `pages` (`crud`), `navigation`, and the free-text fields. Short and long forms.
 - JSON Schema, parser with line/column errors, validator, IR.
+- Every spec file carries its format version. A minimal spec-migration mechanism with one test migration, so the path exists before it is needed ([ARCHITECTURE.md §14](ARCHITECTURE.md#14-versions-and-upgrades)).
 - Study Wasp's spec design first (including why they moved from their own DSL to a TypeScript config), and write down what to adopt and avoid.
 - Draft the DSL against the CRM plus two other sample apps (a booking site and a SaaS with a landing page) before freezing v0.1.
 - Lint rule: engine packages (`core`, `adapter-tanstack`) must not import Node built-ins ([ARCHITECTURE.md §1](ARCHITECTURE.md#1-layers)).
@@ -28,6 +29,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 - TanStack adapter: idiomatic Drizzle schema (`src/db/schema.ts`), drizzle-kit-format migrations, `src/generated/ui.ts`, app kit (`ModelTable`, `ModelForm`, generic CRUD), pages and routes, navigation, `/health`, Dockerfile, generated README.
 - Ownership zones and generated-file headers.
+- `smithable.lock`, a first stack profile, exact dependency versions and a committed package lockfile in generated apps.
 - `smithable new`, `smithable generate`, `smithable run`, `smithable build` (OCI image).
 - **First five minutes:** `smithable new` produces a running app with sample data and one polished default theme, and opens the preview automatically.
 
@@ -64,7 +66,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 ## M5 — Auth and access
 
-- `smithable.auth.yml` v0.1 (sign-in methods, roles, user fields). Decide the implementation approach ([ARCHITECTURE.md §14](ARCHITECTURE.md#14-open-questions)).
+- `smithable.auth.yml` v0.1 (sign-in methods, roles, user fields). Decide the implementation approach ([ARCHITECTURE.md §15](ARCHITECTURE.md#15-open-questions)).
 - Google sign-in by default, Facebook as a secondary provider, via the chosen auth library. Includes admin bootstrap, domain restriction, a dev-only sign-in-as-role, and a provider setup checklist.
 - `access` rules on models, actions and pages, validated against the defined roles, enforced server-side by the kit, with generated tests.
 - `setAccess` operation.
@@ -168,16 +170,19 @@ Removes the biggest technical risk of the browser-first product before building 
 
 - Playwright smoke tests generated from pages.
 - Security levels (Fast / Normal / Release) with detected external scanners. Findings are shown and never auto-suppressed.
+- `smithable upgrade` and `smithable update --security` through the normal change pipeline.
 - Deploy-target and backup-target interfaces, with built-in targets: local Docker, Compose export, remote Docker host over SSH, local-directory and S3-compatible backups. `smithable backup` / `smithable restore`.
 
 **Exit:**
 - A self-hosted deploy passes Release checks.
 - A backup to an S3-compatible bucket can be restored into a fresh container with no data lost.
+- A sample app with custom code upgrades across a stack profile change with tests passing, and a deliberately broken contract is reported, not silently fixed.
 
 ## M15 — Hosted beta (`smithable-cloud`)
 
 - Accounts with Google sign-in, project storage, and an AI gateway with plan allowances.
 - One-click publish to EU hosting with domains and TLS. Managed backups.
+- Automatic rebuild and redeploy for security patches, gated by tests.
 - Remote MCP endpoint.
 - A public demo that needs no sign-up, showing the change trace, with a limited number of sandboxes.
 
