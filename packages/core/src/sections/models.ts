@@ -11,6 +11,7 @@ import {
 import { type FieldIR, type FieldValue, type ModelIR, SCALAR_TYPES } from "../ir.js";
 import type { JsonSchema, SpecSection } from "../section.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
+import { modelOperations } from "./model-operations.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
@@ -55,6 +56,7 @@ const fieldSchema: JsonSchema = {
 export const modelsSection: SpecSection<"models"> = {
   key: "models",
   required: false,
+  operations: modelOperations,
   schema: {
     type: "object",
     description: "The data the application stores. Model names are PascalCase.",
