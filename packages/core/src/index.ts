@@ -1,11 +1,17 @@
+export type { OperationResult, ProjectFiles } from "./apply.js";
+export { applyOperation, findOperation, OPERATIONS, parseOperationArgs } from "./apply.js";
 export type { ContentIR, FieldContent, ModelContent } from "./content.js";
 export { CONTENT_VERSION, emptyContent, validateContent } from "./content.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
+export type { YamlValue } from "./edit.js";
+export { YamlEditor } from "./edit.js";
 export type * from "./ir.js";
 export { SCALAR_TYPES } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
+export type { AnyOperation, Effect, Operation, OperationArgs } from "./operation.js";
+export { OperationError } from "./operation.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export type { SpecFile, ValidateResult } from "./spec.js";
