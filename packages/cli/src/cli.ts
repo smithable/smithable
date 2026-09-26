@@ -3,6 +3,7 @@ import { SPEC_VERSION } from "@smithable/core";
 import { build } from "./build.js";
 import { runDev } from "./dev.js";
 import { generate } from "./generate.js";
+import { inspect, test } from "./inspect.js";
 import { type Io, processIo } from "./io.js";
 import { create } from "./new.js";
 import { op } from "./op.js";
@@ -23,11 +24,13 @@ Commands:
   op <name> …      Change the app with an operation, e.g. op addField Customer phone phone
                    (run "smithable op" for the list; --yes confirms changes that lose data)
   undo             Undo the last operation, including the dev database
+  test [dir]       Run the app's tests and remember the results for rule status
+  inspect [c]      Show rules and their status, or one concept, e.g. inspect action:mergeCustomers
 
 Options:
   -h, --help       Show this help
   -v, --version    Show the Smithable version
-  --dir <path>     Project directory for op and undo (default: current)
+  --dir <path>     Project directory for op, undo, inspect and test (default: current)
 `;
 
 export async function run(argv: string[], io: Io = processIo): Promise<number> {
@@ -51,6 +54,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "op")
     return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
   if (command === "undo") return undo(values.dir ?? ".", io);
+  if (command === "inspect") return inspect(values.dir ?? ".", io, args[0]);
   if (args.length > 1) {
     io.err(`${command} takes at most one path.\n\n${HELP}`);
     return 2;
@@ -71,6 +75,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return runDev(dir, io, values.open !== false);
     case "build":
       return build(dir, io);
+    case "test":
+      return test(values.dir ?? dir);
     default:
       io.err(`Unknown command: ${command}\n\n${HELP}`);
       return 2;

@@ -178,6 +178,27 @@ describe("operations", () => {
     });
   });
 
+  test("setRuleId turns a plain rule into { id, rule } and reports the qualified id", () => {
+    const result = ok("setRuleId", ["action:mergeCustomers", "1", "move-orders"]);
+    expect(result.files.spec).toContain(
+      "      - { id: move-orders, rule: All orders of the duplicate move to the kept customer. }\n",
+    );
+    expect(result.effects).toEqual([
+      {
+        kind: "rule-identified",
+        rule: "mergeCustomers.move-orders",
+        text: "All orders of the duplicate move to the kept customer.",
+      },
+    ]);
+    expect(apply("setRuleId", ["action:mergeCustomer", "1", "x"])).toMatchObject({
+      ok: false,
+      message: 'There is no concept "action:mergeCustomer". Did you mean "action:mergeCustomers"?',
+    });
+    expect(apply("setRuleId", ["action:mergeCustomers", "9", "x"])).toMatchObject({
+      message: "action:mergeCustomers has 3 rule(s), not 9.",
+    });
+  });
+
   test("every operation's positional arguments exist in its schema", () => {
     for (const op of OPERATIONS) {
       const properties = Object.keys((op.schema.properties ?? {}) as object);

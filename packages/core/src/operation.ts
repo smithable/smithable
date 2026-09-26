@@ -12,7 +12,9 @@ export interface Editors {
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */
 export type Effect =
   | { kind: "rename-field"; model: string; from: string; to: string; storage: Storage }
-  | { kind: "remove-field"; model: string; field: string; storage: Storage };
+  | { kind: "remove-field"; model: string; field: string; storage: Storage }
+  /** A rule got an id: its text is the baseline for noticing later edits. */
+  | { kind: "rule-identified"; rule: string; text: string };
 
 export type OperationArgs = { [key: string]: unknown };
 

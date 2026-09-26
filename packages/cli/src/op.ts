@@ -16,6 +16,7 @@ import { countValues, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
 import type { Io } from "./io.js";
+import { recordRule } from "./rules.js";
 
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
@@ -106,6 +107,9 @@ export function op(
   });
   if (code !== 0) return fail(`Regenerating the app failed.`);
 
+  for (const effect of result.effects) {
+    if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
+  }
   git(dir, ["add", "-A"]);
   const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\n`;
   const commit = git(dir, ["commit", "-q", "-m", message]);
