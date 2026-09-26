@@ -2,6 +2,16 @@
 
 Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `docs/ARCHITECTURE.md` for decisions, and `docs/ROADMAP.md` for the current milestone. Architecture changes must update `docs/ARCHITECTURE.md` in the same change.
 
+## Development
+
+- Node 24 (`.node-version`, managed with fnm) and pnpm (version pinned in `package.json`).
+- `pnpm install`, then:
+  - `pnpm build`: `tsc -b` over the project references in `tsconfig.json`.
+  - `pnpm test`: Vitest, tests live next to the code as `src/**/*.test.ts`.
+  - `pnpm lint`: Biome lint and format check. `pnpm fix` applies fixes.
+  - `pnpm check`: lint + build + test. This is the CI gate and must pass before every commit.
+- New packages go in `packages/<name>` with a `tsconfig.json` extending `tsconfig.base.json`. Add them to the root `tsconfig.json` references.
+
 ## Rules when working on Smithable
 
 1. `smithable.yml` is authoritative for functionality. Companions: `smithable.auth.yml` (sign-in, roles), `smithable.ux.yml` (presentation), `smithable.context.yml` (implementation policy; the only one that may name technologies). Never mix their concerns.

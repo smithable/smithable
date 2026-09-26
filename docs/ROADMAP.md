@@ -9,7 +9,7 @@ Strategy: prove the core loop (**manifest → operation → regenerated app → 
 ## M0 — Foundations
 
 - pnpm workspace, TypeScript project references, lint/format, Vitest, CI script runnable locally.
-- Skeleton packages per [ARCHITECTURE.md §13](ARCHITECTURE.md#13-smithables-own-codebase).
+- Skeleton packages for the next milestones: `core`, `adapter-tanstack`, `cli`. The rest of [ARCHITECTURE.md §13](ARCHITECTURE.md#13-smithables-own-codebase) is created when its milestone starts.
 
 **Exit:** `pnpm build && pnpm test` passes on a clean clone.
 

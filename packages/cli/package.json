@@ -1,0 +1,23 @@
+{
+  "name": "@smithable/cli",
+  "version": "0.0.0",
+  "description": "The smithable command-line interface.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "smithable": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/cli.d.ts",
+      "default": "./dist/cli.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
+  "dependencies": {
+    "@smithable/core": "workspace:*"
+  }
+}
