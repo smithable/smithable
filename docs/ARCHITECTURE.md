@@ -422,7 +422,7 @@ function CustomersPage() {
 | **Kit** | `src/kit/**` | Compiler | Updated when the Smithable version changes |
 | **Custom** | `src/custom/**` (actions, queries, pages, jobs, components, auth) | User / AI | **Never overwritten.** The compiler creates a typed stub once, then leaves the file alone |
 | **Migrations** | `drizzle/**` | Compiler writes them, then history owns them | Never rewritten after creation |
-| **Scaffold** | `pnpm-workspace.yaml`, `.gitignore`, `.dockerignore` | Created once, then the project and its tools | Never rewritten; tools like pnpm legitimately edit them |
+| **Scaffold** | `pnpm-workspace.yaml`, `.gitignore`, `.dockerignore`, `CLAUDE.md`, `.mcp.json` | Created once, then the project and its tools | Never rewritten; tools like pnpm legitimately edit them |
 
 Custom code is linked to the manifest by convention: `actions.calculateShipping` with `custom: true` corresponds to `src/custom/actions/calculateShipping.ts`. The compiler generates the typed input/output contract into `src/generated/`, so if the manifest's signature changes, the custom file fails typechecking. That turns drift into a compile error instead of a silent bug.
 
@@ -535,9 +535,9 @@ Models are poor judges of their own confidence, so Smithable does not rely on se
 Smithable ships a local **MCP server** (`smithable mcp`). MCP (Model Context Protocol) is an open standard that most AI coding tools support: Claude Code, Cursor, VS Code, Codex and many local-model clients.
 
 - **What it is.** A subcommand of the open-source CLI. The user's agent starts it as a local process and talks to it over stdin/stdout. There is no network service, no account and no cost.
-- **Tools exposed.** The semantic operations (`smithable_add_field`, …), `inspect`, `validate`, `test`, `undo` and `detach`. Tool schemas are the operation JSON Schemas, so there is one definition for the CLI, Studio, the internal AI and external agents.
+- **Tools exposed.** The semantic operations (`smithable_add_field`, …), `smithable_context` (the context builder, §9.3: where agents start), `inspect`, `validate`, `test` and `undo`. Tool schemas are the operation JSON Schemas, so there is one definition for the CLI, Studio, the internal AI and external agents. A destructive operation is refused with its data impact until it is called again with `confirm: true`, which the agent should only do after asking the user. `detach` is deliberately not a tool: leaving Smithable is the user's decision, not an agent's. The server's instructions tell agents to change the app through the tools and never edit generated files; child processes write to stderr, since stdout carries the protocol. Every tool call's input and output size is logged to the token log (§9.3).
 - **Why.** Any agent can change the app through operations instead of reading and editing the repository. This delivers the low-token benefit before Studio exists, and it works with whatever model the user already pays for.
-- **Agent guidance.** Every generated app includes an `AGENTS.md` (plus a `CLAUDE.md` pointer) explaining the ownership zones, where custom code goes, and to prefer Smithable tools over file edits.
+- **Agent guidance.** Every generated app includes an `AGENTS.md` (kit zone, updated with Smithable) explaining the ownership zones, where custom code goes, and to prefer Smithable tools over file edits, plus a `CLAUDE.md` pointer and a `.mcp.json` registering `smithable mcp` (both scaffold: the project's once created). `smithable detach` removes them.
 - The operation pipeline (§8) applies unchanged: validation, checkpoints, tests and undo.
 - The hosted service offers a **remote MCP endpoint** with the same tools, so Claude.ai, ChatGPT and other agents can work on hosted projects. The local server never depends on it.
 
@@ -615,7 +615,7 @@ Design quality comes from crafted templates, not AI improvisation. AI (even a sm
 
 - Locally, a Node **daemon** hosts a project session: file watching, compile, the app process, Git, AI calls, and container builds. It exposes HTTP + WebSocket. In the hosted product, the browser tab is the host (§10.2), and the hosted service provides project storage, AI and publishing.
 - The **CLI**, **Studio** and **MCP server** (§9.6) are all clients, and all use the same core packages. The CLI can also run core commands in-process without a daemon.
-- CLI surface: `smithable new | validate | generate | run | op <operation> | undo | inspect <concept> | test | security | build | deploy | backup | restore | upgrade | update | detach | mcp | studio`.
+- CLI surface: `smithable new | validate | generate | run | op <operation> | undo | inspect <concept> | context "<request>" | test | security | build | deploy | backup | restore | upgrade | update | detach | mcp | studio`.
 
 ## 12. Verification, security, deployment
 

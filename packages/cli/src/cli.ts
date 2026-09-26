@@ -7,6 +7,7 @@ import { runDev } from "./dev.js";
 import { generate } from "./generate.js";
 import { inspect, test } from "./inspect.js";
 import { type Io, processIo } from "./io.js";
+import { mcp } from "./mcp.js";
 import { create } from "./new.js";
 import { op } from "./op.js";
 import { undo } from "./undo.js";
@@ -31,6 +32,7 @@ Commands:
                    symbols, routes, tables and tests, e.g. inspect action:mergeCustomers (--json)
   context "<req>"  The smallest context an AI model needs for a request, with its size in tokens
                    (--implementation adds the custom code involved; --json)
+  mcp [dir]        Serve the project to AI agents (Claude Code, Cursor, …) over MCP on stdin/stdout
   detach [dir]     Turn the project into an ordinary one that no longer uses Smithable
 
 Options:
@@ -90,6 +92,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return test(values.dir ?? dir);
     case "detach":
       return detach(values.dir ?? dir, io);
+    case "mcp":
+      return mcp(values.dir ?? dir);
     default:
       io.err(`Unknown command: ${command}\n\n${HELP}`);
       return 2;
