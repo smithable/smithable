@@ -512,6 +512,8 @@ The system escalates only when the lower tier is unavailable, fails validation, 
 
 Before any model runs, simple fuzzy and embedding matching over the manifest shortlists the likely concepts, so even a 1–3B local model only chooses among a few candidates. A **context builder** then assembles the smallest useful slice from the manifest, the index and (only for custom code) the relevant source files: the request, the relevant concepts with their free text, available operations, and the implementation slice needed for that tier. Every tier gets the same semantic slice; escalating a tier never means adding unrelated project data.
 
+The context builder is `buildContext` in `@smithable/index`; `smithable context "<request>"` shows the slice a model would get. Shortlisting is deterministic word matching for now (names weigh most, weak matches are cut); embeddings come with Smithable's own AI (M12). Token counts are estimates (about four characters per token), good enough to compare contexts and budgets; each context and MCP call is logged to `data/.smithable/token-log.jsonl`.
+
 For each AI call, record (locally) the semantic-context tokens, implementation-context tokens, model, tier, operation type and whether escalation happened. Project content is never collected for analytics without explicit permission.
 
 ### 9.4 Confirmation over self-reported confidence
