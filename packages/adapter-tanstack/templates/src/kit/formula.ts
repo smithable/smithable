@@ -1,4 +1,4 @@
-// Smithable app kit: the spreadsheet functions formulas from smithable.yml use.
+// Smithable app kit: the spreadsheet functions used by the formulas in src/generated/*.formulas.ts.
 // Blank values behave like blank spreadsheet cells: 0 in arithmetic, "" in text.
 
 type Value = unknown;

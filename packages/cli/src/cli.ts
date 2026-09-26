@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { SPEC_VERSION } from "@smithable/core";
 import { build } from "./build.js";
+import { detach } from "./detach.js";
 import { runDev } from "./dev.js";
 import { generate } from "./generate.js";
 import { inspect, test } from "./inspect.js";
@@ -26,6 +27,7 @@ Commands:
   undo             Undo the last operation, including the dev database
   test [dir]       Run the app's tests and remember the results for rule status
   inspect [c]      Show rules and their status, or one concept, e.g. inspect action:mergeCustomers
+  detach [dir]     Turn the project into an ordinary one that no longer uses Smithable
 
 Options:
   -h, --help       Show this help
@@ -77,6 +79,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return build(dir, io);
     case "test":
       return test(values.dir ?? dir);
+    case "detach":
+      return detach(values.dir ?? dir, io);
     default:
       io.err(`Unknown command: ${command}\n\n${HELP}`);
       return 2;
