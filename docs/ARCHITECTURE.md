@@ -430,7 +430,7 @@ Custom files may import anything from `generated/` and `kit/`. Generated code im
 
 ### 6.5 Drift detection
 
-The compiler records a hash of every file it owns in `.smithable/`. If someone edits a compiler-owned file by hand, Smithable reports drift and offers two choices: **revert**, or **move the change into a custom file or the manifest**. It never silently overwrites a manual edit.
+The compiler records a hash of every file it owns in `.smithable/`. If someone edits a compiler-owned file by hand, Smithable reports drift and offers two choices: **revert**, or **move the change into a custom file or the manifest**. It never silently overwrites a manual edit. (So far it only reports and refuses; moving the change is planned for M7.5. In the M7 benchmark, one hand-edited route blocked every later operation.)
 
 Missing custom implementations (a manifest says `custom: true` but the file or export is missing) are also reported as drift.
 
@@ -552,7 +552,7 @@ Added churn scoring             frontier model   · 6.1k tokens · €0.03
 ```
 
 - Each entry shows the tier, model, tokens, cost and duration. A running total shows usage against the plan's allowance.
-- **Comparison with conventional AI builders is shown only as a labeled estimate** derived from the benchmark measurements (roadmap M7), never invented per change.
+- **Comparison with conventional AI builders is shown only as a labeled estimate** derived from the benchmark measurements (roadmap M7), never invented per change. The M7 baseline ([report](benchmarks/m7-report.md)): a coding agent editing the repository used about 350k–1.4M tokens (median about 400k) and $0.35–1.07 per small change; the same agent calling Smithable's operations about 110k tokens ($0.13); a deterministic operation none.
 - The trace is part of the product, not only the demo. It explains bills and builds trust. It is stored with the project's history and contains no project content in analytics unless explicitly permitted.
 
 ### 9.8 Starting from a sentence
