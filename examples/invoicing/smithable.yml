@@ -23,7 +23,7 @@ models:
       client: Client!
       issuedOn: date! = today
       dueOn: date!
-      status: draft | sent | paid | overdue = draft
+      status: draft | sent | paid | overdue
       lines: InvoiceLine[]
       total:
         type: money

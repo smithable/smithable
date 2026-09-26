@@ -13,7 +13,9 @@ models:
     fields:
       name: string!
       summary: text
-      level: beginner | all | advanced = all
+      level:                            # long form: default is not the first value
+        type: beginner | allLevels | advanced
+        default: allLevels
       durationMinutes: int! = 60
       image: image
     access: { read: public, write: [admin] }
@@ -39,7 +41,7 @@ models:
     fields:
       session: Session!
       user: User!
-      status: confirmed | cancelled = confirmed
+      status: confirmed | cancelled
     unique: [session, user]           # a user books a session only once
     ownedBy: user                     # enables the "owner" role below
     access:
