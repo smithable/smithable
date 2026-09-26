@@ -21,7 +21,7 @@ models:
         label: Nickname            # expect: text-in-spec
       due:
         type: date
-        default: TODAY()           # expect: not-yet-supported
+        default: TODAY()
       stars:
         type: int!
         required: false            # expect: conflict

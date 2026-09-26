@@ -157,9 +157,7 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
       throw new OperationError(`${m} already has a field named "${to}".`);
     spec.renameKey(fieldPath(m, from), to);
     if (content?.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
-    return [
-      { kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from).type) },
-    ];
+    return [{ kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from)) }];
   },
 };
 
@@ -174,14 +172,14 @@ const removeField: Operation<{ model: string; field: string }> = {
   },
   positional: ["model", "field"],
   describe: ({ model, field }) => `Remove field ${field} from ${model}`,
-  destructive: ({ model: m, field: f }, ir) => storageOf(field(ir, m, f).type) !== "none",
+  destructive: ({ model: m, field: f }, ir) => storageOf(field(ir, m, f)) !== "none",
   apply(editors: Editors, { model: m, field: f }, ir) {
     field(ir, m, f);
     if (model(ir, m).fields.length === 1)
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
     editors.spec.remove(fieldPath(m, f));
     if (editors.content?.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
-    return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f).type) }];
+    return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f)) }];
   },
 };
 
