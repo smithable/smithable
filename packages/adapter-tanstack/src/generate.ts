@@ -55,14 +55,14 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   add("src/routes/__root.tsx", rootRoute(ir, t));
   if (!ir.pages.some((p) => p.route === "/")) add("src/routes/index.tsx", indexRoute(ir));
   for (const model of ir.models)
-    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t));
+    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t, ir));
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === page.pattern.model);
     if (!model) continue;
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
     add(`${dir}/index.tsx`, listRoute(page, model, t));
-    add(`${dir}/new.tsx`, newRoute(page, model, t));
-    add(`${dir}/$id.tsx`, detailRoute(page, model, t));
+    add(`${dir}/new.tsx`, newRoute(page, model, t, ir));
+    add(`${dir}/$id.tsx`, detailRoute(page, model, t, ir));
   }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
@@ -103,6 +103,7 @@ function names(model: ModelIR, t: Texts) {
     update: `update${model.name}`,
     remove: `delete${model.name}`,
     module: `#/generated/${kebab(model.name)}`,
+    options: `${camel(model.name)}Options`,
     label: t.modelLabel(model),
     pluralLabel: t.modelPluralLabel(model),
   };
@@ -159,10 +160,20 @@ function schemaModule(ir: SpecIR): string {
   const imports = new Set(["integer", "sqliteTable"]);
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
-    const columns = model.fields.map((field) => {
+    const columns = model.fields.flatMap((field) => {
+      if (field.type.kind === "relation") {
+        if (field.type.many) return [];
+        const target = tableNames(modelNamed(ir, field.type.model)).table;
+        const onDelete = field.required ? "restrict" : "set null";
+        let expr = "integer()";
+        if (field.required) expr += ".notNull()";
+        if (field.unique) expr += ".unique()";
+        expr += `.references(() => ${target}.id, { onDelete: ${JSON.stringify(onDelete)} })`;
+        return [`  ${field.name}Id: ${expr},`];
+      }
       const { expr, uses } = column(field);
       imports.add(uses);
-      return `  ${field.name}: ${expr},`;
+      return [`  ${field.name}: ${expr},`];
     });
     return `export const ${n.table} = sqliteTable(${JSON.stringify(n.sqlTable)}, {
   id: integer().primaryKey({ autoIncrement: true }),
@@ -174,15 +185,65 @@ ${columns.join("\n")}
     .$onUpdate(() => new Date()),
 });`;
   });
-  return `${HEADER}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
+  const relationBlocks = ir.models.flatMap((model) => {
+    const n = tableNames(model);
+    const entries = model.fields.flatMap((field) => {
+      if (field.type.kind !== "relation") return [];
+      const target = tableNames(modelNamed(ir, field.type.model)).table;
+      return field.type.many
+        ? [`  ${field.name}: many(${target}),`]
+        : [
+            `  ${field.name}: one(${target}, { fields: [${n.table}.${field.name}Id], references: [${target}.id] }),`,
+          ];
+    });
+    if (entries.length === 0) return [];
+    const helpers = ["one", "many"].filter((h) => entries.some((e) => e.includes(`${h}(`)));
+    return [
+      `export const ${n.table}Relations = relations(${n.table}, ({ ${helpers.join(", ")} }) => ({\n${entries.join("\n")}\n}));`,
+    ];
+  });
+  return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 
-${tables.join("\n\n")}
+${[...tables, ...relationBlocks].join("\n\n")}
 `;
+}
+
+function modelNamed(ir: SpecIR, name: string): ModelIR {
+  const model = ir.models.find((m) => m.name === name);
+  if (!model) throw new Error(`Unknown model ${name}`);
+  return model;
+}
+
+/** Fields stored on the model itself: everything except lists of related records. */
+function storedFields(model: ModelIR): FieldIR[] {
+  return model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many));
+}
+
+/** The references a model holds, e.g. Order.customer. */
+function references(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: string } })[] {
+  return model.fields.filter(
+    (f): f is FieldIR & { type: { kind: "relation"; model: string; many: false } } =>
+      f.type.kind === "relation" && !f.type.many,
+  );
+}
+
+/** The lists of related records a model shows, e.g. Customer.orders. */
+function lists(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: string } })[] {
+  return model.fields.filter(
+    (f): f is FieldIR & { type: { kind: "relation"; model: string; many: true } } =>
+      f.type.kind === "relation" && f.type.many,
+  );
+}
+
+/** The data key of a stored field: references are stored as <name>Id. */
+function dataKey(field: FieldIR): string {
+  return field.type.kind === "relation" ? `${field.name}Id` : field.name;
 }
 
 function column(field: FieldIR): { expr: string; uses: string } {
   let expr: string;
   let uses = "text";
+  if (field.type.kind === "relation") throw new Error("References are columns of their own.");
   if (field.type.kind === "choice") {
     expr = `text({ enum: ${literal(field.type.values)} })`;
   } else {
@@ -223,12 +284,13 @@ function column(field: FieldIR): { expr: string; uses: string } {
 }
 
 function seedModule(ir: SpecIR): string {
-  const tables = ir.models.map((m) => tableNames(m).table);
-  const blocks = ir.models.map((model) => {
+  const ordered = dependencyOrder(ir.models);
+  const tables = ordered.map((m) => tableNames(m).table);
+  const blocks = ordered.map((model) => {
     const n = tableNames(model);
     const rows = sampleRows(model).map((row) => {
-      const entries = model.fields.map(
-        (field) => `${field.name}: ${sampleLiteral(field, row[field.name])}`,
+      const entries = storedFields(model).map(
+        (field) => `${dataKey(field)}: ${sampleLiteral(field, row[field.name])}`,
       );
       return `    { ${entries.join(", ")} },`;
     });
@@ -247,6 +309,22 @@ ${blocks.join("\n\n")}
 `;
 }
 
+/** Models ordered so that referenced models come first (for inserting sample data). */
+function dependencyOrder(models: ModelIR[]): ModelIR[] {
+  const done: ModelIR[] = [];
+  const visit = (model: ModelIR, path: Set<string>) => {
+    if (done.includes(model) || path.has(model.name)) return;
+    path.add(model.name);
+    for (const ref of references(model)) {
+      const target = models.find((m) => m.name === ref.type.model);
+      if (target && target !== model) visit(target, path);
+    }
+    done.push(model);
+  };
+  for (const model of models) visit(model, new Set());
+  return done;
+}
+
 function sampleLiteral(field: FieldIR, value: unknown): string {
   if (value === null || value === undefined) return "null";
   if (field.type.kind === "scalar" && field.type.name === "datetime")
@@ -256,27 +334,63 @@ function sampleLiteral(field: FieldIR, value: unknown): string {
 
 // ── Models: UI description, validation and server functions ─────────────────
 
-function modelModule(model: ModelIR, t: Texts): string {
+function modelModule(model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
+  const stored = storedFields(model);
   const ui = {
     label: n.label,
     pluralLabel: n.pluralLabel,
     titleField: titleField(model),
-    columns: model.fields
+    columns: stored
       .filter((f) => !(f.type.kind === "scalar" && f.type.name === "text"))
       .slice(0, 5)
-      .map((f) => f.name),
-    fields: model.fields.map((field) => fieldUi(model, field, t)),
+      .map(dataKey),
+    fields: stored.map((field) => fieldUi(model, field, t, ir)),
   };
-  const refinements = model.fields.flatMap((f) => {
+  const refinements = stored.flatMap((f) => {
     const r = refinement(f);
     return r ? [`  ${f.name}: ${r},`] : [];
   });
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
+  // Related records to include: the title of each referenced record, and for lists the
+  // listed records with the titles of what they refer to (except the way back).
+  const title = (m: ModelIR) => {
+    const f = titleField(m);
+    return f === "id" ? "{ id: true }" : `{ id: true, ${f}: true }`;
+  };
+  const withReferences = (m: ModelIR, except?: string) =>
+    references(m)
+      .filter((f) => f.type.model !== except)
+      .map((f) => `${f.name}: { columns: ${title(modelNamed(ir, f.type.model))} }`);
+  const listWith = withReferences(model);
+  const getWith = [
+    ...listWith,
+    ...lists(model).map((f) => {
+      const nested = withReferences(modelNamed(ir, f.type.model), model.name);
+      return nested.length ? `${f.name}: { with: { ${nested.join(", ")} } }` : `${f.name}: true`;
+    }),
+  ];
+  const withClause = (entries: string[], indent: string) =>
+    entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
+  const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
+  const titleColumn = titleField(model);
+  const options = referenced
+    ? `
+/** Choices for fields that refer to a ${n.label.toLowerCase()}. */
+export const ${n.options} = createServerFn().handler(() =>
+  db
+    .select({ value: ${n.table}.id, label: ${titleColumn === "id" ? `sql<string>\`'${n.label} #' || \${${n.table}.id}\`` : `${n.table}.${titleColumn}`} })
+    .from(${n.table})
+    .orderBy(${n.table}.${titleColumn})
+    .all(),
+);
+`
+    : "";
+  const drizzleImports = ["eq", ...(referenced && titleColumn === "id" ? ["sql"] : [])];
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-import { desc, eq } from "drizzle-orm";
+import { ${drizzleImports.join(", ")} } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { db } from "#/db";
@@ -288,13 +402,20 @@ export const ${n.ui}: ModelUi = ${literal(ui)};
 export const ${n.schema} = ${schema}.omit({ id: true, createdAt: true, updatedAt: true });
 
 export const ${n.list} = createServerFn().handler(() =>
-  db.select().from(${n.table}).orderBy(desc(${n.table}.id)).all(),
+  db.query.${n.table}.findMany({${withClause(listWith, "    ")}
+    orderBy: (t, { desc }) => [desc(t.id)],
+  }),
 );
 
 export const ${n.get} = createServerFn()
   .validator(z.number().int())
-  .handler(({ data: id }) => db.select().from(${n.table}).where(eq(${n.table}.id, id)).get() ?? null);
-
+  .handler(
+    async ({ data: id }) =>
+      (await db.query.${n.table}.findFirst({${withClause(getWith, "        ")}
+        where: (t, { eq }) => eq(t.id, id),
+      })) ?? null,
+  );
+${options}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
   .handler(({ data }) => db.insert(${n.table}).values(data).returning().get());
@@ -313,11 +434,11 @@ export const ${n.remove} = createServerFn({ method: "POST" })
 `;
 }
 
-function fieldUi(model: ModelIR, field: FieldIR, t: Texts) {
-  const kind = field.type.kind === "choice" ? "choice" : field.type.name;
+function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR) {
+  const kind = field.type.kind === "scalar" ? field.type.name : field.type.kind;
   const own = t.field(model, field);
   return {
-    name: field.name,
+    name: dataKey(field),
     label: own.label ?? humanize(field.name),
     kind,
     required: field.required,
@@ -329,6 +450,9 @@ function fieldUi(model: ModelIR, field: FieldIR, t: Texts) {
             label: own.values?.[value] ?? humanize(value),
           })),
         }
+      : {}),
+    ...(field.type.kind === "relation"
+      ? { relation: { key: field.name, titleField: titleField(modelNamed(ir, field.type.model)) } }
       : {}),
     ...(field.default !== undefined
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
@@ -344,7 +468,7 @@ function titleField(model: ModelIR): string {
 /** Zod refinements that go beyond the column types: formats, required text, bounds. */
 function refinement(field: FieldIR): string | undefined {
   const optional = field.required ? "" : ".nullish()";
-  if (field.type.kind === "choice") return undefined;
+  if (field.type.kind !== "scalar") return undefined;
   const bounds = (scale: number) =>
     `${field.min !== undefined ? `.min(${field.min * scale})` : ""}${field.max !== undefined ? `.max(${field.max * scale})` : ""}`;
   switch (field.type.name) {
@@ -487,18 +611,40 @@ function ${component}() {
 `;
 }
 
-function newRoute(page: PageIR, model: ModelIR, t: Texts): string {
+/** Loader code for the choices of a model's references, e.g. { customerId: await customerOptions() }. */
+function optionsFor(model: ModelIR, t: Texts, ir: SpecIR): { imports: string[]; expr: string } {
+  const refs = references(model);
+  const modules = new Map<string, string[]>();
+  for (const ref of refs) {
+    const target = names(modelNamed(ir, ref.type.model), t);
+    const list = modules.get(target.module) ?? [];
+    if (!list.includes(target.options)) list.push(target.options);
+    modules.set(target.module, list);
+  }
+  const entries = refs.map(
+    (ref) => `${dataKey(ref)}: await ${names(modelNamed(ir, ref.type.model), t).options}()`,
+  );
+  return {
+    imports: [...modules].map(([module, fns]) => `import { ${fns.join(", ")} } from "${module}";`),
+    expr: `{ ${entries.join(", ")} }`,
+  };
+}
+
+function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
   const component = `New${model.name}Page`;
+  const options = references(model).length ? optionsFor(model, t, ir) : undefined;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
-import { PageHeader } from "#/kit/AppShell";
+${options ? `${options.imports.join("\n")}\n` : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 
-export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({ component: ${component} });
+export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
+${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+});
 
 function ${component}() {
-  const navigate = useNavigate();
+${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const navigate = useNavigate();
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
@@ -506,7 +652,7 @@ function ${component}() {
       <ModelForm
         ui={${n.ui}}
         schema={${n.schema}}
-        submitLabel=${JSON.stringify(`Create ${n.label.toLowerCase()}`)}
+${options ? "        options={options}\n" : ""}        submitLabel=${JSON.stringify(`Create ${n.label.toLowerCase()}`)}
         onSubmit={async (values) => {
           await ${n.create}({ data: values });
           await back();
@@ -519,28 +665,54 @@ function ${component}() {
 `;
 }
 
-function detailRoute(page: PageIR, model: ModelIR, t: Texts): string {
+function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
   const component = `${model.name}Page`;
   const title = titleField(model);
   const heading =
     title === "id" ? `\`${n.label} #\${row.id}\`` : `row.${title} || \`${n.label} #\${row.id}\``;
+  const options = references(model).length ? optionsFor(model, t, ir) : undefined;
+  const imports = new Map<string, string[]>([
+    [n.module, [n.remove, n.get, n.schema, n.ui, n.update]],
+  ]);
+  const sections = lists(model).map((field) => {
+    const target = modelNamed(ir, field.type.model);
+    const tn = names(target, t);
+    imports.set(tn.module, [...(imports.get(tn.module) ?? []), tn.ui]);
+    const back = references(target)
+      .filter((f) => f.type.model === model.name)
+      .map(dataKey);
+    const targetPage = ir.pages.find((p) => p.pattern.model === target.name);
+    const open = targetPage
+      ? `\n          onOpen={(item) => navigate({ to: ${JSON.stringify(join(targetPage.route, "$id"))}, params: { id: String(item.id) } })}`
+      : "";
+    const label = t.field(model, field).label ?? humanize(field.name);
+    return `      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">${label}</h2>
+        <ModelTable
+          ui={${tn.ui}}
+          app={app}
+          rows={row.${field.name}}
+          hide={${JSON.stringify(back)}}${open}
+        />
+      </section>`;
+  });
   return `${HEADER}import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
-import { ${n.remove}, ${n.get}, ${n.schema}, ${n.ui}, ${n.update} } from "${n.module}";
-import { PageHeader } from "#/kit/AppShell";
+${sections.length ? 'import { app } from "#/generated/app";\n' : ""}${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
+${options ? `${options.imports.join("\n")}\n` : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-
+${sections.length ? 'import { ModelTable } from "#/kit/ModelTable";\n' : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
   loader: async ({ params }) => {
     const row = await ${n.get}({ data: Number(params.id) });
     if (!row) throw notFound();
-    return row;
+    return { row${options ? `, options: ${options.expr}` : ""} };
   },
   component: ${component},
 });
 
 function ${component}() {
-  const row = Route.useLoaderData();
+  const { row${options ? ", options" : ""} } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
@@ -550,7 +722,7 @@ function ${component}() {
         ui={${n.ui}}
         schema={${n.schema}}
         initial={row}
-        submitLabel="Save changes"
+${options ? "        options={options}\n" : ""}        submitLabel="Save changes"
         onSubmit={async (values) => {
           await ${n.update}({ data: { id: row.id, values } });
           await back();
@@ -561,6 +733,7 @@ function ${component}() {
           await back();
         }}
       />
+${sections.join("\n")}
     </>
   );
 }

@@ -59,6 +59,8 @@ function sampleValue(
 ): SampleValue {
   const name = field.name.toLowerCase();
   if (field.type.kind === "choice") return field.type.values[i % field.type.values.length] ?? null;
+  // A reference points at one of the related model's sample records; ids start at 1.
+  if (field.type.kind === "relation") return field.type.many ? null : (i % SAMPLE_COUNT) + 1;
   switch (field.type.name) {
     case "string":
       if (/number|code|reference|sku/.test(name)) return `${prefix(model, field)}-${1001 + i}`;

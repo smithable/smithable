@@ -79,6 +79,20 @@ function operationsFlow(dir) {
     const [{ remarks }] = query(dir, "select remarks from customers where id = 1");
     if (remarks !== notes || !notes) throw new Error(JSON.stringify({ notes, remarks }));
   });
+  step("op renameField on a reference keeps every link", () => {
+    const before = query(dir, "select id, customer_id from orders order by id");
+    expectOk(smithable(dir, "op", "renameField", "Order", "customer", "buyer"));
+    const after = query(dir, "select id, buyer_id as customer_id from orders order by id");
+    if (JSON.stringify(after) !== JSON.stringify(before))
+      throw new Error(JSON.stringify({ before, after }));
+    run("pnpm", ["typecheck"], dir);
+    expectOk(smithable(dir, "undo"));
+  });
+  step("a new required field on a table with rows is refused with a way forward", () => {
+    const refused = smithable(dir, "op", "addField", "Customer", "vatId", "string!");
+    if (refused.code !== 1 || !refused.out.includes("Add vatId as optional first"))
+      throw new Error(refused.out);
+  });
   step("a destructive op needs --yes", () => {
     const refused = smithable(dir, "op", "removeField", "Customer", "phone");
     if (refused.code !== 1 || !refused.out.includes("--yes")) throw new Error(refused.out);
@@ -151,6 +165,27 @@ async function browserFlow(base) {
     if (await page.getByText("Mariehamn Marine AB").count())
       throw new Error("The customer was not deleted");
     console.log("  ✓ browser: delete removes the customer");
+
+    await page.goto(`${base}/orders/new`);
+    await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
+    await page.getByLabel("Customer *").selectOption({ label: "Skerry Software" });
+    await page.getByRole("textbox", { name: "Total *" }).fill("99");
+    await page.getByRole("button", { name: "Create order" }).click();
+    await page.waitForURL(`${base}/orders`);
+    await page.getByRole("row", { name: /ORD-2001.*Skerry Software/ }).waitFor({ timeout: 5000 });
+    console.log("  ✓ browser: an order is created for a customer chosen from a list");
+
+    await page.goto(`${base}/customers`);
+    await page.getByRole("cell", { name: "Skerry Software" }).click();
+    await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
+    console.log("  ✓ browser: the customer's page lists its orders");
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "Delete" }).click();
+    await expectText(
+      "a customer with orders cannot be deleted, and it says why",
+      "This customer is still used by other records.",
+    );
   } catch (error) {
     console.log(`  ✗ browser: ${error.message.split("\n")[0]}`);
     failures.push("crm browser flow");

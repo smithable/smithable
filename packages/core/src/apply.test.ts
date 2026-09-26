@@ -99,7 +99,13 @@ describe("operations", () => {
     expect(result.files.spec).toContain("      maxCredit:\n        type: money");
     expect(result.files.content).toContain("      maxCredit:\n        help:");
     expect(result.effects).toEqual([
-      { kind: "rename-field", model: "Customer", from: "creditLimit", to: "maxCredit" },
+      {
+        kind: "rename-field",
+        model: "Customer",
+        from: "creditLimit",
+        to: "maxCredit",
+        storage: "value",
+      },
     ]);
   });
 

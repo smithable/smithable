@@ -23,8 +23,9 @@ const NUMERIC_TYPES = ["int", "decimal", "money"];
 
 const types = SCALAR_TYPES.join("|");
 const choice = "[a-z][A-Za-z0-9]*";
-const shorthandPattern = `^\\s*(?:(?:${types})!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
-const typePattern = `^\\s*(?:(?:${types})!?|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
+const model = "[A-Z][A-Za-z0-9]*";
+const shorthandPattern = `^\\s*(?:(?:${types})!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|${model}!?(?:\\s+unique)?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
+const typePattern = `^\\s*(?:(?:${types})!?|${model}!?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
 
 const fieldSchema: JsonSchema = {
   oneOf: [
@@ -79,6 +80,7 @@ export const modelsSection: SpecSection<"models"> = {
   parse(ctx, node) {
     if (node === undefined) return [];
     const models: ModelIR[] = [];
+    const relationNodes: RelationNodes = new Map();
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"models"`) ?? []) {
       if (!MODEL_NAME_PATTERN.test(key)) {
         ctx.error(
@@ -89,8 +91,9 @@ export const modelsSection: SpecSection<"models"> = {
         continue;
       }
       ctx.define("model", key);
-      models.push(readModel(ctx, key, keyNode, value));
+      models.push(readModel(ctx, key, keyNode, value, relationNodes));
     }
+    checkRelations(ctx, models, relationNodes);
     return models;
   },
 };
@@ -100,6 +103,7 @@ function readModel(
   name: string,
   keyNode: ParsedNode,
   node: ParsedNode | null,
+  relationNodes: RelationNodes,
 ): ModelIR {
   const model: ModelIR = { name, fields: [] };
   const entries = mapEntries(ctx, node, `model "${name}"`);
@@ -121,7 +125,12 @@ function readModel(
   }
   for (const entry of fieldEntries) {
     const field = readField(ctx, name, entry);
-    if (field) model.fields.push(field);
+    if (!field) continue;
+    model.fields.push(field);
+    if (field.type.kind === "relation") {
+      ctx.reference("model", field.type.model, entry.value);
+      relationNodes.set(`${name}.${field.name}`, entry.value ?? entry.keyNode);
+    }
   }
   return model;
 }
@@ -310,4 +319,51 @@ function buildField(
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Where each relation field was written ("Model.field"), for positioning cross-model errors. */
+type RelationNodes = Map<string, ParsedNode>;
+
+/**
+ * A list relation (`orders: Order[]`) needs exactly one reference back on the other model
+ * (`customer: Customer!`), which holds the foreign key. A reference's column
+ * (`customer` → `customerId`) must not clash with another field.
+ */
+function checkRelations(ctx: ParseContext, models: ModelIR[], relationNodes: RelationNodes): void {
+  for (const model of models) {
+    for (const field of model.fields) {
+      if (field.type.kind !== "relation") continue;
+      const at = relationNodes.get(`${model.name}.${field.name}`);
+      const target = models.find((m) => m.name === (field.type as { model: string }).model);
+      if (!target) continue; // reported as an unknown model
+      if (!field.type.many) {
+        if (model.fields.some((f) => f.name === `${field.name}Id`)) {
+          ctx.error(
+            at,
+            "invalid-field",
+            `"${field.name}" stores its reference as "${field.name}Id", which is also the name of another field of ${model.name}.`,
+          );
+        }
+        continue;
+      }
+      const back = target.fields.filter(
+        (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model.name,
+      );
+      if (back.length === 0) {
+        const suggestion = model.name.charAt(0).toLowerCase() + model.name.slice(1);
+        ctx.error(
+          at,
+          "missing-inverse",
+          `${target.name} has no reference to ${model.name}, so "${model.name}.${field.name}" cannot list anything.`,
+          `Add a field like "${suggestion}: ${model.name}!" to ${target.name}.`,
+        );
+      } else if (back.length > 1) {
+        ctx.error(
+          at,
+          "ambiguous-inverse",
+          `${target.name} refers to ${model.name} more than once (${back.map((f) => f.name).join(", ")}), so it is unclear which records "${model.name}.${field.name}" lists.`,
+        );
+      }
+    }
+  }
 }

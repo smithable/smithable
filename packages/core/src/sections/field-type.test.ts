@@ -32,6 +32,18 @@ describe("parseFieldShorthand", () => {
       },
     ],
     ["a|b", { type: { kind: "choice", values: ["a", "b"] }, required: true, unique: false }],
+    [
+      "Customer!",
+      { type: { kind: "relation", model: "Customer", many: false }, required: true, unique: false },
+    ],
+    [
+      "Customer unique",
+      { type: { kind: "relation", model: "Customer", many: false }, required: false, unique: true },
+    ],
+    [
+      "Order[]",
+      { type: { kind: "relation", model: "Order", many: true }, required: false, unique: false },
+    ],
   ])("%s", (input, expected) => {
     expect(parseFieldShorthand(input)).toEqual({ ok: true, value: expected });
   });
@@ -42,13 +54,13 @@ describe("parseFieldShorthand", () => {
     ["string required", "invalid-field", undefined],
     ["string uniqe", "invalid-field", 'Did you mean "unique"?'],
     ["int =", "invalid-default", undefined],
-    ["Customer!", "not-yet-supported", undefined],
-    ["Order[]", "not-yet-supported", undefined],
     [
       "draft | sent = sent",
       "invalid-choice",
       'Put the default first, or use the long form with "default:".',
     ],
+    ["Order[]!", "invalid-field", undefined],
+    ["Order[] unique", "invalid-field", undefined],
     ["draft | Sent", "invalid-choice", undefined],
     ["draft | draft", "invalid-choice", undefined],
     ["draft | ", "invalid-choice", undefined],

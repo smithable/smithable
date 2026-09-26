@@ -11,14 +11,17 @@ import {
   TableRow,
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
-import { formatValue } from "./format";
+import { displayValue, formatValue } from "./format";
 import type { AppUi, ModelUi, Row } from "./model";
 
 interface ModelTableProps<R extends Row> {
   ui: ModelUi;
   app: AppUi;
   rows: R[];
-  onOpen: (row: R) => void;
+  /** Opens a row; without it rows are not clickable. */
+  onOpen?: (row: R) => void;
+  /** Columns to leave out, e.g. the reference back to the record a list belongs to. */
+  hide?: string[];
   /** Shown when there are no records, e.g. a "New …" button. */
   emptyAction?: React.ReactNode;
 }
@@ -28,9 +31,12 @@ export function ModelTable<R extends Row>({
   app,
   rows,
   onOpen,
+  hide = [],
   emptyAction,
 }: ModelTableProps<R>) {
-  const columns = ui.columns.flatMap((name) => ui.fields.filter((f) => f.name === name));
+  const columns = ui.columns
+    .filter((name) => !hide.includes(name))
+    .flatMap((name) => ui.fields.filter((f) => f.name === name));
   if (rows.length === 0) {
     return (
       <Card className="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -57,9 +63,13 @@ export function ModelTable<R extends Row>({
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
-            <TableRow key={row.id} className="cursor-pointer" onClick={() => onOpen(row)}>
+            <TableRow
+              key={row.id}
+              className={onOpen ? "cursor-pointer" : undefined}
+              onClick={onOpen ? () => onOpen(row) : undefined}
+            >
               {columns.map((field) => {
-                const text = formatValue(field, row[field.name], app);
+                const text = formatValue(field, displayValue(field, row), app);
                 return (
                   <TableCell
                     key={field.name}

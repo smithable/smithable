@@ -7,7 +7,7 @@ export { formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
 export { YamlEditor } from "./edit.js";
 export type * from "./ir.js";
-export { SCALAR_TYPES } from "./ir.js";
+export { SCALAR_TYPES, storageOf, typeKey } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export type { AnyOperation, Effect, Operation, OperationArgs } from "./operation.js";

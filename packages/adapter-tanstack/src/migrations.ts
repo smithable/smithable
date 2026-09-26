@@ -1,14 +1,27 @@
 import { plural, snake } from "./naming.js";
 
-/** The SQL table and column of a model's field, as the generated Drizzle schema names them. */
-export function columnOf(model: string, field: string): { table: string; column: string } {
-  return { table: snake(plural(model)), column: snake(field) };
+/**
+ * The SQL table and column of a model's field, as the generated Drizzle schema names them.
+ * A reference (`customer: Customer!`) is stored in `customer_id`.
+ */
+export function columnOf(
+  model: string,
+  field: string,
+  reference = false,
+): { table: string; column: string } {
+  return { table: snake(plural(model)), column: reference ? `${snake(field)}_id` : snake(field) };
 }
 
 /** SQL for a custom migration that renames a field's column, keeping its data. */
-export function renameColumnSql(model: string, from: string, to: string): string {
-  const { table, column } = columnOf(model, from);
-  return `ALTER TABLE \`${table}\` RENAME COLUMN \`${column}\` TO \`${columnOf(model, to).column}\`;\n`;
+export function renameColumnSql(
+  model: string,
+  from: string,
+  to: string,
+  reference = false,
+): string {
+  const { table, column } = columnOf(model, from, reference);
+  const renamed = columnOf(model, to, reference).column;
+  return `ALTER TABLE \`${table}\` RENAME COLUMN \`${column}\` TO \`${renamed}\`;\n`;
 }
 
 type Snapshot = {
@@ -31,10 +44,11 @@ export function renameInSnapshot(
   model: string,
   from: string,
   to: string,
+  reference = false,
 ): string {
   const snapshot = JSON.parse(snapshotJson) as Snapshot;
-  const { table, column } = columnOf(model, from);
-  const renamed = columnOf(model, to).column;
+  const { table, column } = columnOf(model, from, reference);
+  const renamed = columnOf(model, to, reference).column;
   const t = snapshot.tables[table];
   const col = t?.columns[column];
   if (!t || !col) throw new Error(`The schema snapshot has no column ${table}.${column}.`);

@@ -33,6 +33,21 @@ export function parseFieldShorthand(text: string): Result<FieldShorthand> {
   const typeName = required ? typeToken.slice(0, -1) : typeToken;
   const type = parseTypeName(typeName);
   if (!type.ok) return type;
+  if (type.value.kind === "relation" && type.value.many) {
+    const extra = required
+      ? `"!"`
+      : modifiers.length
+        ? `"${modifiers.join(" ")}"`
+        : eq !== -1
+          ? "a default"
+          : "";
+    if (extra) {
+      return fail(
+        "invalid-field",
+        `A list of related records (${typeName}) cannot have ${extra}: it is always the records that refer to this one.`,
+      );
+    }
+  }
 
   let unique = false;
   for (const modifier of modifiers) {
@@ -93,11 +108,12 @@ function parseTypeName(name: string): Result<FieldType> {
   if ((SCALAR_TYPES as readonly string[]).includes(name)) {
     return { ok: true, value: { kind: "scalar", name: name as ScalarType } };
   }
-  if (/^[A-Z]/.test(name)) {
-    return fail(
-      "not-yet-supported",
-      `Relations to other models (like "${name.replace(/\[\]$/, "")}!" or "${name.replace(/\[\]$/, "")}[]") are not available in spec version 0.1 yet.`,
-    );
+  const relation = /^([A-Z][A-Za-z0-9]*)(\[\])?$/.exec(name);
+  if (relation?.[1]) {
+    return {
+      ok: true,
+      value: { kind: "relation", model: relation[1], many: relation[2] === "[]" },
+    };
   }
   if (name === "") return fail("invalid-field", "The field type is missing.");
   return fail(
@@ -110,6 +126,7 @@ function parseTypeName(name: string): Result<FieldType> {
 
 /** Converts a default (shorthand text or a YAML value) to the field's type. */
 export function parseDefault(type: FieldType, raw: FieldValue): Result<FieldValue> {
+  if (type.kind === "relation") return fail("invalid-default", "Relations cannot have a default.");
   if (typeof raw === "string" && raw.includes("(")) {
     return fail(
       "not-yet-supported",

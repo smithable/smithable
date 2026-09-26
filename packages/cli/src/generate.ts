@@ -25,7 +25,8 @@ export interface GenerateFlags {
 export interface MigrationPlan {
   /** Name for the migration file, e.g. add_field_phone_to_customer. */
   name: string;
-  renames: { model: string; from: string; to: string }[];
+  /** Stored fields to rename; `reference` for a reference column (customer_id). */
+  renames: { model: string; from: string; to: string; reference: boolean }[];
   /** Apply the migration to the dev database now. */
   apply: boolean;
 }
@@ -96,12 +97,18 @@ export function runTools(dir: string, io: Io, migration?: MigrationPlan): number
     const tag = latestMigration(dir);
     writeFileSync(
       join(dir, "drizzle", `${tag}.sql`),
-      renameColumnSql(rename.model, rename.from, rename.to),
+      renameColumnSql(rename.model, rename.from, rename.to, rename.reference),
     );
     const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
     writeFileSync(
       snapshot,
-      renameInSnapshot(readFileSync(snapshot, "utf8"), rename.model, rename.from, rename.to),
+      renameInSnapshot(
+        readFileSync(snapshot, "utf8"),
+        rename.model,
+        rename.from,
+        rename.to,
+        rename.reference,
+      ),
     );
   }
   const name = migration ? ["--name", migration.name] : [];
