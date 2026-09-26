@@ -52,7 +52,7 @@ models:
       name: string!                  # short form: "!" = required
       email: email unique
       phone: phone
-      segment: smb | enterprise | government = smb
+      segment: smb | enterprise | government   # one of; the first value is the default
       creditLimit:                   # long form
         type: money
         min: 0
@@ -158,7 +158,8 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 - Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
 - Splitting the manifest across several files for large apps is an open question (§15).
 - **Why YAML, not a TypeScript config?** The spec must be edited by deterministic operations, read by non-developers and small models, and stay technology-neutral. See [research/wasp.md](research/wasp.md) for the lessons from a predecessor that went the other way.
-- **The in-string grammar stays tiny.** It covers field shorthand (`string!`, `email unique`, `draft | sent = draft`, `Customer!`, `Order[]`), field-path templates (`"{classType.name}"`) and simple computed values (arithmetic on the same record, `sum`/`count`/`min`/`max`/`avg` over a relation). It is precisely specified, validated with helpful errors, and always has a long form. No conditionals, functions or loops; that is what custom code is for.
+- **The in-string grammar stays tiny.** It covers field shorthand (`string!`, `email unique`, `draft | sent | paid`, `Customer!`, `Order[]`), field-path templates (`"{classType.name}"`) and simple computed values (arithmetic on the same record, `sum`/`count`/`min`/`max`/`avg` over a relation). It is precisely specified, validated with helpful errors, and always has a long form. No conditionals, functions or loops; that is what custom code is for.
+- **Choice fields default to their first value.** `status: draft | sent | paid` defaults to `draft`. Exceptions use the long form: `{ type: beginner | allLevels | advanced, default: allLevels }`, or `default: none` to stay empty until chosen. Operations that reorder values warn when this changes the default, and the plain-language view always states the default explicitly.
 
 ## 3. Companion files
 
