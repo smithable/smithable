@@ -90,9 +90,9 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 - A generated `AGENTS.md` in the app (plus a `CLAUDE.md` pointer to it) explaining the ownership zones and the Smithable tools.
 
 **Exit:**
-- `inspect action:calculateShipping` returns its semantics, free text, files, symbols and tests.
-- In Claude Code with the Smithable MCP server registered, "Customers should have a phone number" is completed through `smithable_add_field`, without Claude opening source files.
-- Token use is recorded.
+- `inspect action:mergeCustomers` returns its semantics, free text, files, symbols and tests (`pnpm test:apps`).
+- In Claude Code with the Smithable MCP server registered, "Customers should have a website" is completed through `smithable_add_field`, without Claude opening source files (`node scripts/bench-m6.mjs`; the CRM already has a phone number).
+- Token use is recorded: Smithable logs every context and MCP call to `data/.smithable/token-log.jsonl`, and the M6 check records Claude's own usage.
 
 ## M7 — Benchmark and user interviews
 
