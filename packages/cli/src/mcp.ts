@@ -18,6 +18,7 @@ import { VERSION } from "./version.js";
 const INSTRUCTIONS = `This is a Smithable app. What it does is described in smithable.yml, sign-in and access in smithable.auth.yml, and visible text in smithable.content.yml; the code is generated from them.
 
 - Change the app with the smithable_* operation tools, not by editing files. Each one checks the change, regenerates the code, migrates the database and makes a checkpoint that smithable_undo reverts.
+- An operation's result says whether it worked: a successful one has already validated the spec, regenerated the code and migrated the database. Do not read files or run commands to verify it. Only if src/custom/ code uses what changed, run smithable_test.
 - Find what to change with smithable_context (give it the request) or smithable_inspect; you rarely need to open source files.
 - Code that the operations cannot express goes in src/custom/. Never edit src/generated/, src/kit/ or the generated routes: they are overwritten.`;
 
