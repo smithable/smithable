@@ -19,3 +19,5 @@ export {
   hashRule,
   inspect,
 } from "./project-index.js";
+export type { SummarySection } from "./summary.js";
+export { summarize } from "./summary.js";

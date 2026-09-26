@@ -1,5 +1,5 @@
 import type { FieldIR, FieldValue, ModelIR } from "@smithable/core";
-import { kebab, words } from "./naming.js";
+import { kebab, words } from "@smithable/core";
 
 /** Sample value as stored: money in cents, datetimes as ISO strings. */
 export type SampleValue = FieldValue | null;

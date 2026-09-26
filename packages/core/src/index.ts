@@ -18,6 +18,7 @@ export type * from "./ir.js";
 export { ACCESS_OPERATIONS, SCALAR_TYPES, storageOf, typeKey, USER_MODEL } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
+export { camel, humanize, kebab, pascal, plural, snake, words } from "./naming.js";
 export type { AnyOperation, Effect, Operation, OperationArgs } from "./operation.js";
 export { OperationError } from "./operation.js";
 export { buildJsonSchema } from "./schema.js";

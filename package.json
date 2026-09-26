@@ -7,16 +7,17 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/embed.mjs && tsc -b",
+    "build": "node scripts/embed.mjs && tsc -b && pnpm --filter @smithable/studio build",
     "clean": "tsc -b --clean",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome check .",
     "fix": "biome check --write .",
-    "check": "pnpm lint && pnpm build && pnpm test && pnpm test:apps",
+    "check": "pnpm lint && pnpm build && pnpm test && pnpm test:apps && pnpm test:studio",
     "schema": "pnpm build && node scripts/write-schema.mjs",
     "embed": "node scripts/embed.mjs",
     "test:apps": "node scripts/test-apps.mjs",
+    "test:studio": "node scripts/test-studio.mjs",
     "test:container": "node scripts/test-container.mjs"
   },
   "devDependencies": {

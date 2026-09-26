@@ -40,7 +40,8 @@ const toolName = (name: string) =>
   `smithable_${name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
 
 function tools(dir: string): Tool[] {
-  const operations: Tool[] = OPERATIONS.map((op) => ({
+  // Replacing the whole spec is for people in Studio's editor; agents use the specific operations.
+  const operations: Tool[] = OPERATIONS.filter((op) => op.name !== "editSpec").map((op) => ({
     name: toolName(op.name),
     description: `${op.summary} ${OPERATION_NOTE}`,
     inputSchema: {
