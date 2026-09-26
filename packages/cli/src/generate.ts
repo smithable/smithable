@@ -33,9 +33,13 @@ export interface MigrationPlan {
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
 export function generate(dir: string, io: Io, flags: GenerateFlags): number {
-  const { ir, content } = loadSpec(dir, io);
-  if (!ir) return 1;
-  const files = generateApp(ir, { smithableVersion: VERSION, ...(content ? { content } : {}) });
+  const { ir, auth, content } = loadSpec(dir, io);
+  if (!ir || !auth) return 1;
+  const files = generateApp(ir, {
+    smithableVersion: VERSION,
+    auth,
+    ...(content ? { content } : {}),
+  });
   const previous = readRecord(dir);
 
   // Never overwrite or delete a Smithable-owned file that was edited by hand.

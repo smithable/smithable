@@ -1,12 +1,28 @@
 import {
   type ActionIR,
+  type AuthIR,
+  actionAccess,
   type ContentIR,
   emptyContent,
   type FieldIR,
   type ModelIR,
+  modelAccess,
   type PageIR,
+  pageAccess,
   type SpecIR,
+  USER_MODEL,
 } from "@smithable/core";
+import { accessTestSource } from "./access-test.js";
+import {
+  authModule,
+  authTables,
+  hasSignIn,
+  SIGN_IN_KIT,
+  signInReadme,
+  signInRoute,
+  usersModule,
+  viewerModule,
+} from "./auth.js";
 import {
   defaultsName,
   formulasModuleSource,
@@ -38,6 +54,7 @@ export interface GenerateOptions {
   smithableVersion: string;
   /** Visible text from smithable.content.yml; anything missing is derived from names. */
   content?: ContentIR;
+  auth: AuthIR;
 }
 
 const HEADER =
@@ -45,25 +62,41 @@ const HEADER =
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  const { auth } = options;
   const t = texts(options.content ?? emptyContent());
-  const files: GeneratedFile[] = Object.entries(TEMPLATES).map(([path, content]) => ({
-    path,
-    content,
-    zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
-  }));
+  const files: GeneratedFile[] = Object.entries(TEMPLATES)
+    .filter(([path]) => hasSignIn(auth) || !SIGN_IN_KIT.includes(path))
+    .map(([path, content]) => ({
+      path,
+      content,
+      zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
+    }));
   const add = (path: string, content: string) => files.push({ path, content, zone: "generated" });
 
-  add("package.json", packageJson(ir));
+  add("package.json", packageJson(ir, auth));
   add("smithable.lock", smithableLock(ir, options));
-  add("README.md", readme(ir));
+  add("README.md", readme(ir, false, auth));
   add("public/favicon.svg", favicon(ir));
   add("src/generated/app.ts", appModule(ir));
-  add("src/db/schema.ts", schemaModule(ir));
+  add("src/generated/pages.ts", pagesModule(ir, auth));
+  add("src/lib/viewer.server.ts", viewerModule(auth));
+  add("src/db/schema.ts", schemaModule(ir, auth));
   add("src/db/seed.ts", seedModule(ir));
-  add("src/routes/__root.tsx", rootRoute(ir, t));
+  add("src/routes/__root.tsx", rootRoute(ir, t, auth));
+  if (hasSignIn(auth)) {
+    add("src/lib/auth.ts", authModule(auth));
+    add("src/routes/sign-in.tsx", signInRoute(auth));
+    if (
+      ir.models.some((m) => userFields(m).length) ||
+      ir.actions.some((a) => userFields(a.input).length)
+    )
+      add("src/generated/users.ts", usersModule());
+  }
   if (!ir.pages.some((p) => p.route === "/")) add("src/routes/index.tsx", indexRoute(ir));
+  if (ir.models.length) add("src/generated/access.test.ts", accessTestSource(ir, auth));
   for (const model of ir.models) {
-    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t, ir));
+    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t, ir, auth));
+    add(`src/generated/${kebab(model.name)}.server.ts`, dataModule(model, t, ir, auth));
     if (hasFormulas(model)) {
       add(`src/generated/${kebab(model.name)}.formulas.ts`, formulasModuleSource(model, ir));
       const test = formulasTestSource(model);
@@ -71,7 +104,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     }
   }
   for (const action of ir.actions) {
-    add(`src/generated/actions/${kebab(action.name)}.ts`, actionModule(action, ir));
+    add(`src/generated/actions/${kebab(action.name)}.ts`, actionModule(action, ir, auth));
     // Created once; the implementation belongs to the project from then on.
     files.push({
       path: `src/custom/actions/${kebab(action.name)}.ts`,
@@ -91,7 +124,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     const model = ir.models.find((m) => m.name === page.pattern.model);
     if (!model) continue;
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
-    add(`${dir}/index.tsx`, listRoute(page, model, t));
+    add(`${dir}/index.tsx`, listRoute(page, model, t, ir));
     add(`${dir}/new.tsx`, newRoute(page, model, t, ir));
     add(`${dir}/$id.tsx`, detailRoute(page, model, t, ir));
   }
@@ -135,12 +168,16 @@ function names(model: ModelIR, t: Texts) {
     remove: `delete${model.name}`,
     module: `#/generated/${kebab(model.name)}`,
     options: `${camel(model.name)}Options`,
+    access: `${camel(model.name)}Access`,
+    data: `${camel(model.name)}Data`,
+    values: `${model.name}Values`,
     label: t.modelLabel(model),
     pluralLabel: t.modelPluralLabel(model),
   };
 }
 
-function packageJson(ir: SpecIR): string {
+function packageJson(ir: SpecIR, auth: AuthIR): string {
+  const { "better-auth": _, ...withoutAuth } = STACK_PROFILE.dependencies;
   const pkg = {
     name: kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app",
     private: true,
@@ -158,7 +195,7 @@ function packageJson(ir: SpecIR): string {
       "db:seed": "tsx src/db/seed.ts",
       "db:studio": "drizzle-kit studio",
     },
-    dependencies: STACK_PROFILE.dependencies,
+    dependencies: hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth,
     devDependencies: STACK_PROFILE.devDependencies,
   };
   return `${JSON.stringify(pkg, null, 2)}\n`;
@@ -188,26 +225,40 @@ export const app: AppUi = ${literal(app)};
 
 // ── Database ─────────────────────────────────────────────────────────────────
 
-function schemaModule(ir: SpecIR): string {
+function schemaModule(ir: SpecIR, auth: AuthIR): string {
   const imports = new Set(["integer", "sqliteTable"]);
+  if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
+    const perOwner = uniquePerOwner(model, auth);
+    const reference = (field: FieldIR, target: string, type: string) => {
+      const onDelete = field.required ? "restrict" : "set null";
+      let expr = `${type}()`;
+      if (field.required) expr += ".notNull()";
+      if (field.unique && !perOwner) expr += ".unique()";
+      return `${expr}.references(() => ${target}.id, { onDelete: ${JSON.stringify(onDelete)} })`;
+    };
     const columns = model.fields.flatMap((field) => {
       if (field.type.kind === "relation") {
         if (field.type.many) return [];
-        const target = tableNames(modelNamed(ir, field.type.model)).table;
-        const onDelete = field.required ? "restrict" : "set null";
-        let expr = "integer()";
-        if (field.required) expr += ".notNull()";
-        if (field.unique) expr += ".unique()";
-        expr += `.references(() => ${target}.id, { onDelete: ${JSON.stringify(onDelete)} })`;
-        return [`  ${field.name}Id: ${expr},`];
+        const isUser = field.type.model === USER_MODEL;
+        if (isUser) imports.add("text");
+        const target = isUser ? "user" : tableNames(modelNamed(ir, field.type.model)).table;
+        return [`  ${field.name}Id: ${reference(field, target, isUser ? "text" : "integer")},`];
       }
-      const { expr, uses } = column(field);
+      const { expr, uses } = column(perOwner ? { ...field, unique: false } : field);
       imports.add(uses);
       return [`  ${field.name}: ${expr},`];
     });
-    return `export const ${n.table} = sqliteTable(${JSON.stringify(n.sqlTable)}, {
+    if (hasSignIn(auth) && !model.ownedBy)
+      columns.push(`  ownerId: text().references(() => user.id, { onDelete: "set null" }),`);
+    const uniques = perOwner
+      ? model.fields
+          .filter((f) => f.unique)
+          .map((f) => `unique().on(t.${ownerKey(model)}, t.${dataKey(f)})`)
+      : [];
+    if (uniques.length) imports.add("unique");
+    const body = `{
   id: integer().primaryKey({ autoIncrement: true }),
 ${columns.join("\n")}
   createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
@@ -215,13 +266,24 @@ ${columns.join("\n")}
     .notNull()
     .$defaultFn(() => new Date())
     .$onUpdate(() => new Date()),
-});`;
+}`;
+    return uniques.length
+      ? `// Records are private to their owner, so unique values are unique per owner.
+export const ${n.table} = sqliteTable(
+  ${JSON.stringify(n.sqlTable)},
+  ${body.replace(/\n/g, "\n  ")},
+  (t) => [${uniques.join(", ")}],
+);`
+      : `export const ${n.table} = sqliteTable(${JSON.stringify(n.sqlTable)}, ${body});`;
   });
   const relationBlocks = ir.models.flatMap((model) => {
     const n = tableNames(model);
     const entries = model.fields.flatMap((field) => {
       if (field.type.kind !== "relation") return [];
-      const target = tableNames(modelNamed(ir, field.type.model)).table;
+      const target =
+        field.type.model === USER_MODEL
+          ? "user"
+          : tableNames(modelNamed(ir, field.type.model)).table;
       return field.type.many
         ? [`  ${field.name}: many(${target}),`]
         : [
@@ -234,10 +296,34 @@ ${columns.join("\n")}
       `export const ${n.table}Relations = relations(${n.table}, ({ ${helpers.join(", ")} }) => ({\n${entries.join("\n")}\n}));`,
     ];
   });
+  const authBlock = hasSignIn(auth) ? [authTables(auth)] : [];
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 
-${[...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, ...tables, ...relationBlocks].join("\n\n")}
 `;
+}
+
+/** The column holding a record's owner: the automatic owner, or the model's ownedBy field. */
+function ownerKey(model: ModelIR): string {
+  return model.ownedBy ? `${model.ownedBy}Id` : "ownerId";
+}
+
+/** Records only their owners read (for some role): then "unique" means unique per owner. */
+function uniquePerOwner(model: ModelIR, auth: AuthIR): boolean {
+  const read = modelAccess(model, auth).read;
+  return (
+    hasSignIn(auth) &&
+    read.owner &&
+    !read.public &&
+    auth.roles.some((r) => !read.roles.includes(r.name))
+  );
+}
+
+/** Fields that refer to a user, e.g. an account manager. */
+function userFields(fields: FieldIR[] | ModelIR): FieldIR[] {
+  return (Array.isArray(fields) ? fields : fields.fields).filter(
+    (f) => f.type.kind === "relation" && f.type.model === USER_MODEL,
+  );
 }
 
 function modelNamed(ir: SpecIR, name: string): ModelIR {
@@ -273,7 +359,7 @@ function aggregatedLists(model: ModelIR): string[] {
 function references(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: string } })[] {
   return model.fields.filter(
     (f): f is FieldIR & { type: { kind: "relation"; model: string; many: false } } =>
-      f.type.kind === "relation" && !f.type.many,
+      f.type.kind === "relation" && !f.type.many && f.type.model !== USER_MODEL,
   );
 }
 
@@ -334,7 +420,20 @@ function column(field: FieldIR): { expr: string; uses: string } {
 }
 
 function seedModule(ir: SpecIR): string {
-  const ordered = dependencyOrder(ir.models);
+  // A record that must refer to a user cannot be invented, nor can records that need it.
+  const skipped = new Set<string>();
+  for (const model of dependencyOrder(ir.models)) {
+    const needs = model.fields.filter((f) => f.required && f.type.kind === "relation");
+    if (
+      needs.some(
+        (f) =>
+          (f.type as { model: string }).model === USER_MODEL ||
+          skipped.has((f.type as { model: string }).model),
+      )
+    )
+      skipped.add(model.name);
+  }
+  const ordered = dependencyOrder(ir.models).filter((m) => !skipped.has(m.name));
   const tables = ordered.map((m) => tableNames(m).table);
   const blocks = ordered.map((model) => {
     const n = tableNames(model);
@@ -384,7 +483,7 @@ function sampleLiteral(field: FieldIR, value: unknown): string {
 
 // ── Models: UI description, validation and server functions ─────────────────
 
-function modelModule(model: ModelIR, t: Texts, ir: SpecIR): string {
+function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string {
   const n = names(model, t);
   const stored = storedFields(model);
   const shown = shownFields(model);
@@ -413,91 +512,229 @@ function modelModule(model: ModelIR, t: Texts, ir: SpecIR): string {
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
-  // Related records to include: the title of each referenced record, and for lists the
-  // listed records with the titles of what they refer to (except the way back).
-  const title = (m: ModelIR) => {
-    const f = titleField(m);
-    return f === "id" ? "{ id: true }" : `{ id: true, ${f}: true }`;
-  };
-  const withReferences = (m: ModelIR, except?: string) =>
-    references(m)
-      .filter((f) => f.type.model !== except)
-      .map((f) => `${f.name}: { columns: ${title(modelNamed(ir, f.type.model))} }`);
-  const listWith = [
-    ...withReferences(model),
-    ...aggregatedLists(model).map((list) => `${list}: true`),
+  const omitted = [
+    "id",
+    ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
+    "createdAt",
+    "updatedAt",
   ];
-  const getWith = [
-    ...withReferences(model),
-    ...lists(model).map((f) => {
-      const nested = withReferences(modelNamed(ir, f.type.model), model.name);
-      return nested.length ? `${f.name}: { with: { ${nested.join(", ")} } }` : `${f.name}: true`;
-    }),
-  ];
-  const withClause = (entries: string[], indent: string) =>
-    entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
   const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
-  const titleColumn = titleField(model);
+  const owner = ownerKey(model);
   const options = referenced
     ? `
 /** Choices for fields that refer to a ${n.label.toLowerCase()}. */
-export const ${n.options} = createServerFn().handler(() =>
-  db
-    .select({ value: ${n.table}.id, label: ${titleColumn === "id" ? `sql<string>\`'${n.label} #' || \${${n.table}.id}\`` : `${n.table}.${titleColumn}`} })
-    .from(${n.table})
-    .orderBy(${n.table}.${titleColumn})
-    .all(),
+export const ${n.options} = createServerFn().handler(async () =>
+  ${n.data}.options(await currentViewer()),
 );
 `
     : "";
-  const drizzleImports = ["eq", ...(referenced && titleColumn === "id" ? ["sql"] : [])];
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-import { ${drizzleImports.join(", ")} } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { db } from "#/db";
 import { ${n.table} } from "#/db/schema";
+import { allows } from "#/kit/access";
 import type { ModelUi } from "#/kit/model";
-${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}
+${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+import { currentViewer } from "#/lib/viewer.server";
+
 export const ${n.ui}: ModelUi = ${uiSource};
 
-export const ${n.schema} = ${schema}.omit({ id: true, createdAt: true, updatedAt: true });
+export const ${n.schema} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
 
-export const ${n.list} = createServerFn().handler(${formulas ? "async " : ""}() =>
-  ${formulas ? "(await " : ""}db.query.${n.table}.findMany({${withClause(listWith, "    ")}
-    orderBy: (t, { desc }) => [desc(t.id)],
-  })${formulas ? `).map(${withFormulasName(model)})` : ""},
-);
+export type ${n.values} = z.output<typeof ${n.schema}>;
+
+export const ${n.list} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return { rows: await ${n.data}.list(viewer), canCreate: allows(${n.access}.create, viewer) };
+});
 
 export const ${n.get} = createServerFn()
   .validator(z.number().int())
   .handler(async ({ data: id }) => {
-    const row = await db.query.${n.table}.findFirst({${withClause(getWith, "      ")}
-      where: (t, { eq }) => eq(t.id, id),
-    });
-    return row ? ${formulas ? `${withFormulasName(model)}(row)` : "row"} : null;
+    const viewer = await currentViewer();
+    const row = await ${n.data}.get(viewer, id);
+    if (!row) return null;
+    return {
+      row,
+      canWrite: allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
+      canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
+    };
   });
 ${options}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
-  .handler(({ data }) => db.insert(${n.table}).values(data).returning().get());
+  .handler(async ({ data }) => ${n.data}.create(await currentViewer(), data));
 
 export const ${n.update} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: ${n.schema} }))
-  .handler(({ data }) =>
-    db.update(${n.table}).set(data.values).where(eq(${n.table}.id, data.id)).returning().get(),
-  );
+  .handler(async ({ data }) => ${n.data}.update(await currentViewer(), data.id, data.values));
 
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(({ data: id }) => {
+  .handler(async ({ data: id }) => ${n.data}.remove(await currentViewer(), id));
+`;
+}
+
+/**
+ * The model's data functions: every read and write goes through the access rules, for the
+ * given viewer. Server-only; custom code uses these too.
+ */
+function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string {
+  const n = names(model, t);
+  const formulas = hasFormulas(model);
+  const signedIn = hasSignIn(auth);
+  const owner = ownerKey(model);
+  const title = (m: ModelIR) => {
+    const f = titleField(m);
+    return f === "id" ? "{ id: true }" : `{ id: true, ${f}: true }`;
+  };
+  // Related records to include: the title of each referenced record (and user), and for
+  // lists the listed records the viewer may read, with the titles of what they refer to.
+  const withReferences = (m: ModelIR, except?: string) => [
+    ...references(m)
+      .filter((f) => f.type.model !== except)
+      .map((f) => `${f.name}: { columns: ${title(modelNamed(ir, f.type.model))} }`),
+    ...userFields(m).map((f) => `${f.name}: { columns: { id: true, name: true } }`),
+  ];
+  const listWith = [
+    ...withReferences(model),
+    ...aggregatedLists(model).map((list) => `${list}: true`),
+  ];
+  const others = new Set<ModelIR>();
+  const getWith = [
+    ...withReferences(model),
+    ...lists(model).map((f) => {
+      const target = modelNamed(ir, f.type.model);
+      others.add(target);
+      const nested = withReferences(target, model.name);
+      const where = `where: ${names(target, t).data}.readable(viewer)`;
+      return `${f.name}: { ${where}${nested.length ? `, with: { ${nested.join(", ")} }` : ""} }`;
+    }),
+  ];
+  const refs = references(model);
+  for (const ref of refs)
+    if (ref.type.model !== model.name) others.add(modelNamed(ir, ref.type.model));
+  const withClause = (entries: string[], indent: string) =>
+    entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
+  const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
+  const titleColumn = titleField(model);
+  const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
+  const drizzle = ["and", "eq", "sql", ...(referenced && titleColumn !== "id" ? ["asc"] : [])];
+  const ownerOf = signedIn ? `row.${owner}` : "undefined";
+  const createValues = !signedIn
+    ? "values"
+    : model.ownedBy
+      ? `{ ...values, ${owner}: values.${owner} ?? viewer?.id ?? null }`
+      : `{ ...values, ownerId: viewer?.id ?? null }`;
+  const access = modelAccess(model, auth);
+  const self = n.data;
+  const referenceChecks = refs.map(
+    (ref) =>
+      `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
+    throw new AccessDenied(viewer !== null);`,
+  );
+  const selectOwner = signedIn ? `{ ${owner}: ${n.table}.${owner} }` : `{ id: ${n.table}.id }`;
+  return `${HEADER}import { ${drizzle.sort().join(", ")} } from "drizzle-orm";
+import { db } from "#/db";
+import { ${n.table} } from "#/db/schema";
+import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+${[...others]
+  .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
+  .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
+${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}
+/** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
+export const ${n.access}: ModelAccess = ${literal(access)};
+${
+  refs.length
+    ? `
+/** Checks that the viewer may read the records the values refer to. */
+function checkReferences(viewer: Viewer | null, values: ${n.values}): void {
+${referenceChecks.join("\n")}
+}
+`
+    : ""
+}
+export const ${self} = {
+  /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
+  readable(viewer: Viewer | null) {
+    const scope = readScope(${n.access}.read, viewer);
+    if (scope === "all") return undefined;
+    ${signedIn ? `return scope === "own" && viewer ? eq(${n.table}.${owner}, viewer.id) : sql\`false\`;` : "return sql`false`;"}
+  },
+
+  canRead(viewer: Viewer | null, id: number): boolean {
+    const found = db
+      .select({ id: ${n.table}.id })
+      .from(${n.table})
+      .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
+      .get();
+    return found !== undefined;
+  },
+
+  async list(viewer: Viewer | null) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const rows = await db.query.${n.table}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { desc }) => [desc(t.id)],
+    });
+    return ${formulas ? `rows.map(${withFormulasName(model)})` : "rows"};
+  },
+
+  async get(viewer: Viewer | null, id: number) {
+    const row = await db.query.${n.table}.findFirst({
+      where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
+    });
+    return row ? ${compute("row")} : null;
+  },
+
+  create(viewer: Viewer | null, values: ${n.values}) {
+    check(${n.access}.create, viewer);
+${refs.length ? "    checkReferences(viewer, values);\n" : ""}    return db.insert(${n.table}).values(${createValues}).returning().get();
+  },
+
+  update(viewer: Viewer | null, id: number, values: ${n.values}) {
+    const row = db
+      .select(${selectOwner})
+      .from(${n.table})
+      .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
+      .get();
+    if (!row) throw new AccessDenied(viewer !== null);
+    check(${n.access}.write, viewer, ${ownerOf});
+${refs.length ? "    checkReferences(viewer, values);\n" : ""}    return db.update(${n.table}).set(values).where(eq(${n.table}.id, id)).returning().get();
+  },
+
+  remove(viewer: Viewer | null, id: number): void {
+    const row = db
+      .select(${selectOwner})
+      .from(${n.table})
+      .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
+      .get();
+    if (!row) throw new AccessDenied(viewer !== null);
+    check(${n.access}.delete, viewer, ${ownerOf});
     db.delete(${n.table}).where(eq(${n.table}.id, id)).run();
-  });
+  },
+${
+  referenced
+    ? `
+  /** Choices for fields that refer to a ${n.label.toLowerCase()}: the ones the viewer may read. */
+  options(viewer: Viewer | null) {
+    if (readScope(${n.access}.read, viewer) === "none") return [];
+    return db
+      .select({ value: ${n.table}.id, label: ${titleColumn === "id" ? `sql<string>\`'${n.label} #' || \${${n.table}.id}\`` : `${n.table}.${titleColumn}`} })
+      .from(${n.table})
+      .where(${self}.readable(viewer))
+      .orderBy(${titleColumn === "id" ? `${n.table}.id` : `asc(${n.table}.${titleColumn})`})
+      .all();
+  },
+`
+    : ""
+}};
 `;
 }
 
 function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR) {
-  const kind = field.type.kind === "scalar" ? field.type.name : field.type.kind;
+  const isUser = field.type.kind === "relation" && field.type.model === USER_MODEL;
+  const kind = isUser ? "user" : field.type.kind === "scalar" ? field.type.name : field.type.kind;
   const own = t.field(model, field);
   return {
     name: dataKey(field),
@@ -515,12 +752,17 @@ function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR) {
         }
       : {}),
     ...(field.type.kind === "relation"
-      ? { relation: { key: field.name, titleField: titleField(modelNamed(ir, field.type.model)) } }
+      ? { relation: { key: field.name, titleField: relatedTitle(ir, field.type.model) } }
       : {}),
     ...(field.default !== undefined
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
       : {}),
   };
+}
+
+/** The field that names a related record; users are named by their name. */
+function relatedTitle(ir: SpecIR, model: string): string {
+  return model === USER_MODEL ? "name" : titleField(modelNamed(ir, model));
 }
 
 function titleField(model: ModelIR): string {
@@ -558,27 +800,50 @@ function refinement(field: FieldIR): string | undefined {
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
-function rootRoute(ir: SpecIR, t: Texts): string {
+/** Who may open each page. */
+function pagesModule(ir: SpecIR, auth: AuthIR): string {
+  const entries = Object.fromEntries(ir.pages.map((p) => [p.id, pageAccess(p, auth)]));
+  return `${HEADER}import type { Rule } from "#/kit/access";
+
+/** Who may open each page. */
+export const pageAccess = ${literal(entries)} satisfies Record<string, Rule>;
+`;
+}
+
+/** A route's beforeLoad that checks the page's access. */
+function guard(rule: string): string {
+  return `  beforeLoad: ({ context, location }) => guardPage(${rule}, context.viewer, location.href),\n`;
+}
+
+function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR): string {
   const pageRoute = new Map(ir.pages.map((p) => [p.id, p.route]));
   const menus = ir.navigation.map((menu) => {
     const items = menu.pages.map(
       (id) =>
-        `      { to: ${JSON.stringify(pageRoute.get(id) ?? "/")}, label: ${JSON.stringify(t.pageTitle(id))} },`,
+        `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${JSON.stringify(t.pageTitle(id))},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
     );
     const menuLabel = t.menuLabel(menu.name);
     const label = menuLabel === undefined ? "" : ` label: ${JSON.stringify(menuLabel)},`;
     return `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`;
   });
-  return `${HEADER}import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+  const signIn = hasSignIn(auth);
+  return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""} } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { app } from "#/generated/app";
-import { AppShell, type MenuUi } from "#/kit/AppShell";
-import appCss from "#/styles.css?url";
+import { pageAccess } from "#/generated/pages";
+import { currentViewer } from "#/lib/viewer.server";
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
 const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
 
+const getViewer = createServerFn().handler(() => currentViewer());
+
 export const Route = createRootRoute({
+  // Every page knows who is signed in; pages check their access with it.
+  beforeLoad: async () => ({ viewer: await getViewer() }),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -591,16 +856,32 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: RootDocument,
+  errorComponent: ({ error }) => (
+    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+  ),
+  notFoundComponent: () => (
+    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+  ),
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  return (
+  const { viewer } = Route.useRouteContext();
+${
+  signIn
+    ? `  const router = useRouter();
+  const signOut = async () => {
+    await authClient.signOut();
+    await router.invalidate();
+  };
+`
+    : ""
+}  return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <AppShell appName={app.name} menus={menus}>
+        <AppShell appName={app.name} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
           {children}
         </AppShell>
         <Scripts />
@@ -635,34 +916,37 @@ export const Route = createFileRoute("/")({
 `;
 }
 
-function listRoute(page: PageIR, model: ModelIR, t: Texts): string {
+function listRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
+  const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
   return `${HEADER}import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { buttonVariants } from "#/components/ui/button";
-import { app } from "#/generated/app";
+${actions.map((a) => `import { ${actionNames(a).access} } from "${actionNames(a).module}";\n`).join("")}import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
 import { ${n.list}, ${n.ui} } from "${n.module}";
+import { ${actions.length ? "allows, " : ""}guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-  loader: () => ${n.list}(),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${n.list}(),
   component: ${component},
 });
 
 function ${component}() {
-  const rows = Route.useLoaderData();
-  const navigate = useNavigate();
-  const newButton = (
+  const { rows, canCreate } = Route.useLoaderData();
+${actions.length ? "  const { viewer } = Route.useRouteContext();\n" : ""}  const navigate = useNavigate();
+  const newButton = canCreate && (
     <Link to=${JSON.stringify(join(page.route, "new"))} className={buttonVariants()}>
       New ${n.label.toLowerCase()}
     </Link>
-  );${(page.actions ?? [])
+  );${actions
     .map(
       (a) => `
-  const ${a}Button = (
-    <Link to=${JSON.stringify(join(page.route, `actions/${kebab(a)}`))} className={buttonVariants({ variant: "outline" })}>
-      ${humanize(a)}
+  const ${a.name}Button = allows(${actionNames(a).access}, viewer) && (
+    <Link to=${JSON.stringify(join(page.route, `actions/${kebab(a.name)}`))} className={buttonVariants({ variant: "outline" })}>
+      ${humanize(a.name)}
     </Link>
   );`,
     )
@@ -671,19 +955,24 @@ function ${component}() {
     <>
       <PageHeader
         title=${JSON.stringify(t.pageTitle(page.id))}
-        actions={${(page.actions ?? []).length ? `<>${(page.actions ?? []).map((a) => `{${a}Button}`).join("")}{newButton}</>` : "newButton"}}
+        actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
       <ModelTable
         ui={${n.ui}}
         app={app}
         rows={rows}
-        emptyAction={newButton}
+        emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
       />
     </>
   );
 }
 `;
+}
+
+/** Whether a form needs choices loaded: for references to records or users. */
+function hasChoices(model: ModelIR): boolean {
+  return references(model).length + userFields(model).length > 0;
 }
 
 /** Loader code for the choices of a model's references, e.g. { customerId: await customerOptions() }. */
@@ -699,6 +988,9 @@ function optionsFor(model: ModelIR, t: Texts, ir: SpecIR): { imports: string[]; 
   const entries = refs.map(
     (ref) => `${dataKey(ref)}: await ${names(modelNamed(ir, ref.type.model), t).options}()`,
   );
+  const users = userFields(model);
+  if (users.length) modules.set("#/generated/users", ["userOptions"]);
+  for (const f of users) entries.push(`${dataKey(f)}: await userOptions()`);
   return {
     imports: [...modules].map(([module, fns]) => `import { ${fns.join(", ")} } from "${module}";`),
     expr: `{ ${entries.join(", ")} }`,
@@ -708,15 +1000,17 @@ function optionsFor(model: ModelIR, t: Texts, ir: SpecIR): { imports: string[]; 
 function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
   const n = names(model, t);
   const component = `New${model.name}Page`;
-  const options = references(model).length ? optionsFor(model, t, ir) : undefined;
+  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
 import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
-${options ? `${options.imports.join("\n")}\n` : ""}import { PageHeader } from "#/kit/AppShell";
+${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
-${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
@@ -748,7 +1042,7 @@ function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string
   const title = titleField(model);
   const heading =
     title === "id" ? `\`${n.label} #\${row.id}\`` : `row.${title} || \`${n.label} #\${row.id}\``;
-  const options = references(model).length ? optionsFor(model, t, ir) : undefined;
+  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
   const imports = new Map<string, string[]>([
     [n.module, [n.remove, n.get, n.schema, n.ui, n.update]],
   ]);
@@ -776,21 +1070,23 @@ function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string
   });
   return `${HEADER}import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}import { PageHeader } from "#/kit/AppShell";
+${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${sections.length ? 'import { ModelTable } from "#/kit/ModelTable";\n' : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
-  loader: async ({ params }) => {
-    const row = await ${n.get}({ data: Number(params.id) });
-    if (!row) throw notFound();
-    return { row${options ? `, options: ${options.expr}` : ""} };
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
+    const found = await ${n.get}({ data: Number(params.id) });
+    if (!found) throw notFound();
+    return { ...found${options ? `, options: ${options.expr}` : ""} };
   },
   component: ${component},
 });
 
 function ${component}() {
-  const { row${options ? ", options" : ""} } = Route.useLoaderData();
+  const { row, canWrite, canDelete${options ? ", options" : ""} } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
@@ -801,16 +1097,21 @@ function ${component}() {
         app={app}
         schema={${n.schema}}
         initial={row}
+        readOnly={!canWrite}
 ${options ? "        options={options}\n" : ""}        submitLabel="Save changes"
         onSubmit={async (values) => {
           await ${n.update}({ data: { id: row.id, values } });
           await back();
         }}
         onCancel={back}
-        onDelete={async () => {
-          await ${n.remove}({ data: row.id });
-          await back();
-        }}
+        onDelete={
+          canDelete
+            ? async () => {
+                await ${n.remove}({ data: row.id });
+                await back();
+              }
+            : undefined
+        }
       />
 ${sections.join("\n")}
     </>
@@ -843,7 +1144,8 @@ function favicon(ir: SpecIR): string {
 function zodFor(field: FieldIR): string {
   let schema: string;
   if (field.type.kind === "choice") schema = `z.enum(${literal(field.type.values)})`;
-  else if (field.type.kind === "relation") schema = "z.number().int()";
+  else if (field.type.kind === "relation")
+    schema = field.type.model === USER_MODEL ? "z.string()" : "z.number().int()";
   else {
     switch (field.type.name) {
       case "int":
@@ -881,7 +1183,9 @@ function outputType(field: FieldIR): string {
     field.type.kind === "choice"
       ? field.type.values.map((v) => JSON.stringify(v)).join(" | ")
       : field.type.kind === "relation"
-        ? "number"
+        ? field.type.model === USER_MODEL
+          ? "string"
+          : "number"
         : ["int", "decimal", "money"].includes(field.type.name)
           ? "number"
           : field.type.name === "bool"
@@ -899,12 +1203,13 @@ function actionNames(action: ActionIR) {
     inputType: `${type}Input`,
     outputType: `${type}Output`,
     ui: `${action.name}Ui`,
+    access: `${action.name}Access`,
     module: `#/generated/actions/${kebab(action.name)}`,
     custom: `#/custom/actions/${kebab(action.name)}`,
   };
 }
 
-function actionModule(action: ActionIR, ir: SpecIR): string {
+function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR): string {
   const a = actionNames(action);
   const input = action.input.map((f) => `  ${f.name}: ${zodFor(f)},`);
   const output = action.output?.length
@@ -918,22 +1223,30 @@ function actionModule(action: ActionIR, ir: SpecIR): string {
     fields: action.input.map((field) => ({
       name: field.name,
       label: humanize(field.name),
-      kind: field.type.kind === "scalar" ? field.type.name : field.type.kind,
+      kind:
+        field.type.kind === "scalar"
+          ? field.type.name
+          : field.type.kind === "relation" && field.type.model === USER_MODEL
+            ? "user"
+            : field.type.kind,
       required: field.required,
       ...(field.type.kind === "choice"
         ? { choices: field.type.values.map((value) => ({ value, label: humanize(value) })) }
         : {}),
       ...(field.type.kind === "relation"
-        ? {
-            relation: { key: field.name, titleField: titleField(modelNamed(ir, field.type.model)) },
-          }
+        ? { relation: { key: field.name, titleField: relatedTitle(ir, field.type.model) } }
         : {}),
     })),
   };
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { ${action.name} as implementation } from "${a.custom}";
+import { check, type Rule } from "#/kit/access";
 import type { ModelUi } from "#/kit/model";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** Who may run the "${action.name}" action. */
+export const ${a.access}: Rule = ${literal(actionAccess(action, auth))};
 
 /** What the "${action.name}" action needs. */
 export const ${a.input} = z.object({
@@ -949,7 +1262,10 @@ export const ${a.ui}: ModelUi = ${literal(ui)};
 
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${a.input})
-  .handler(({ data }) => implementation(data));
+  .handler(async ({ data }) => {
+    check(${a.access}, await currentViewer());
+    return implementation(data);
+  });
 `;
 }
 
@@ -965,6 +1281,8 @@ function actionStub(action: ActionIR): string {
   return `// Your implementation of the "${action.name}" action in smithable.yml. Smithable created this file
 // once and never changes it. The input and output types are generated from the spec, so a change
 // to the action's input or output shows up here as a type error.
+// The signed-in user is \`await currentViewer()\` from "#/lib/viewer.server"; the data functions
+// in src/generated/*.server.ts check access for them.
 import type { ${a.inputType}, ${a.outputType} } from "${a.module}";
 
 ${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}): Promise<${a.outputType}> {
@@ -979,23 +1297,27 @@ function actionRoute(page: PageIR, action: ActionIR, ir: SpecIR, t: Texts): stri
   const component = `${pascal(action.name)}Page`;
   const relations = action.input.filter((f) => f.type.kind === "relation");
   const optionFns = new Map<string, string>();
+  const optionsFn = (f: FieldIR) => {
+    const model = (f.type as { model: string }).model;
+    if (model === USER_MODEL) return ["userOptions", "#/generated/users"];
+    const target = names(modelNamed(ir, model), t);
+    return [target.options, target.module];
+  };
   for (const f of relations) {
-    const target = names(modelNamed(ir, (f.type as { model: string }).model), t);
-    optionFns.set(target.options, target.module);
+    const [fn, module] = optionsFn(f) as [string, string];
+    optionFns.set(fn, module);
   }
-  const options = relations.map(
-    (f) =>
-      `${f.name}: await ${names(modelNamed(ir, (f.type as { model: string }).model), t).options}()`,
-  );
+  const options = relations.map((f) => `${f.name}: await ${optionsFn(f)[0]}()`);
   const route = join(page.route, `actions/${kebab(action.name)}`);
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
-import { ${action.name}, ${a.input}, ${a.ui} } from "${a.module}";
-${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { PageHeader } from "#/kit/AppShell";
+import { ${action.name}, ${a.access}, ${a.input}, ${a.ui} } from "${a.module}";
+${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 
 export const Route = createFileRoute(${JSON.stringify(route)})({
-${options.length ? `  loader: async () => ({ options: { ${options.join(", ")} } }),\n` : ""}  component: ${component},
+${guard(a.access)}${options.length ? `  loader: async () => ({ options: { ${options.join(", ")} } }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
@@ -1027,7 +1349,7 @@ ${options.length ? "        options={options}\n" : ""}        submitLabel=${JSON
  * The app's README. After \`smithable detach\` the project is an ordinary one, and its README
  * says nothing about Smithable.
  */
-export function readme(ir: SpecIR, detached = false): string {
+export function readme(ir: SpecIR, detached = false, auth?: AuthIR): string {
   const name = kebab(ir.app.name) || "app";
   const origin = detached
     ? "A [TanStack Start](https://tanstack.com/start) app with [Drizzle](https://orm.drizzle.team) and SQLite."
@@ -1072,6 +1394,7 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
+${auth ? signInReadme(ir, auth) : ""}
 ## Project structure
 
 ${structure}`;

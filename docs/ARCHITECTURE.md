@@ -233,14 +233,17 @@ Every model gets an automatic **owner** field, set to the user who created the r
 
 All access checks go through **one generated access layer** in the app kit. Every generated query and write is filtered by it, including row-level filtering by owner. Custom code receives the same access-checked data functions by default, and bypassing them requires an explicit, reviewable call. Generated tests prove the effective access for every model and role.
 
+Concretely: `src/kit/access.ts` holds the rule type and the checks (`allows`, `readScope`, `guardPage`). Each model gets a server-only `src/generated/<model>.server.ts` with its effective rules (computed by `modelAccess` in core, so validation, generation and tests share one definition) and data functions that take the signed-in user: `list` and `get` filter by owner where needed, `create`, `update` and `remove` check the rule and the record's owner, and references to records the user cannot read are refused. The server functions the pages call are thin wrappers that pass `currentViewer()`. Pages check their rule in `beforeLoad`; menus and buttons hide what the user may not do, but the server is what enforces it. With `private` access, `unique` becomes unique per owner. `src/generated/access.test.ts` exercises every model for every role and for visitors: reading, creating, changing and deleting their own and others' records.
+
 Teams are not in v0.1, but the design leaves room for them. Records will later get a **group** (team or workspace) next to their owner, and existing apps migrate by putting each user's records into a personal default group. Because access is enforced in one layer, adding groups changes one place.
 
 #### Sign-in
 
 - **Google is the default sign-in method.** Facebook, Microsoft, GitHub and Apple are secondary options in the same `providers` list. Email/password and magic links exist but are never the default.
-- **It is implemented with a mainstream auth library as an ordinary dependency.** The leaning is Better Auth: self-hosted, with a Drizzle adapter, SQLite support and social providers. Confirm this in M5. Sign-in is the one place where a well-maintained library beats generated code.
+- **It is implemented with a mainstream auth library as an ordinary dependency: Better Auth** (self-hosted, with a Drizzle adapter, SQLite support, social providers and an official TanStack Start integration). Sign-in is the one place where a well-maintained library beats generated code. The generated `src/lib/auth.ts` is its ordinary configuration: providers whose keys are in the environment, the Drizzle tables (generated into `src/db/schema.ts` as Better Auth's CLI would), a `role` field, and a sign-up hook for `allowedDomains` and the `admins` bootstrap.
 - **OAuth client IDs and secrets live in environment variables**, never in YAML. Smithable provides a setup checklist per provider, including the exact redirect URLs.
-- **Dev sign-in.** In development and in the Studio preview, a dev-only sign-in lets you act as any role without contacting Google. This keeps offline development and role testing possible. It is disabled in production builds, and a generated test verifies that.
+- **Dev sign-in.** In development and in the Studio preview, a dev-only sign-in lets you act as any role without contacting Google. This keeps offline development and role testing possible. It uses Better Auth's email sign-in for one development user per role, and email sign-in is enabled only when `import.meta.env.DEV` is true, so production builds refuse it; `pnpm test:apps` verifies that against the production build.
+- **Not in v0.1:** `selfSignUp: false` (invitations need user management) and extra `user` fields; both are reported as "not available yet". `allowedDomains` covers the common internal-tool case.
 - **Build your own.** `signIn: custom` generates a typed session contract plus a stub in `src/custom/auth.ts`. This is never the default.
 
 ### 3.2 `smithable.ux.yml`: presentation
@@ -711,7 +714,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 
 | Question | Current leaning |
 |---|---|
-| **Auth library** | Better Auth (Drizzle adapter, social providers, self-hosted). Confirm in M5 against Google/Facebook flows and dev sign-in |
+| **Auth library** | Decided in M5: Better Auth (§3.1). Still to confirm with real Google and Facebook accounts before the hosted beta |
 | **Database escape hatch.** Where do indexes, constraints or column types the spec cannot express go? | A user-owned `src/custom/db/schema.ts` whose tables and indexes are merged with the generated schema |
 | **Translations** | `smithable.content.<locale>.yml` per language, with the default language in `smithable.content.yml`. Later |
 | **Teams and workspaces** | Later. Records get a group next to their owner, enforced in the same access layer (§3.1) |

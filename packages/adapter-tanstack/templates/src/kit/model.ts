@@ -14,7 +14,9 @@ export type FieldKind =
   | "phone"
   | "url"
   | "choice"
-  | "relation";
+  | "relation"
+  /** A reference to a user who signs in. */
+  | "user";
 
 export interface FieldUi {
   name: string;
@@ -53,4 +55,4 @@ export interface AppUi {
 export type Row = { id: number } & Record<string, unknown>;
 
 /** Choices for a reference field, keyed by the field's name, e.g. { customerId: [...] }. */
-export type Options = Record<string, { value: number; label: string }[]>;
+export type Options = Record<string, { value: number | string; label: string }[]>;

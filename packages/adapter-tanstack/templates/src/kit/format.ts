@@ -37,6 +37,7 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
     case "choice":
       return field.choices?.find((c) => c.value === value)?.label ?? String(value);
     case "relation":
+    case "user":
       return String(value);
     default:
       return String(value);

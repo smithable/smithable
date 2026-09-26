@@ -1,9 +1,10 @@
 // End-to-end test: every example becomes a real app that installs, type-checks, builds,
-// serves its pages with sample data, and regenerates without changes. The CRM (the
-// running example) is also used in a real browser: validation, create, edit, delete.
+// serves its pages with sample data, and regenerates without changes. The production
+// build is checked for page access and the absence of the development sign-in; the
+// development server is used in a real browser, signed in as the examples' roles.
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -17,6 +18,8 @@ const examples = process.argv.slice(2).length
       .map((e) => e.name);
 
 const failures = [];
+/** Apps under test; removed when everything passes, kept for inspection otherwise. */
+const dirs = [];
 
 function step(name, fn) {
   try {
@@ -44,6 +47,61 @@ async function waitFor(url) {
     await new Promise((r) => setTimeout(r, 250));
   }
   throw new Error(`${url} did not respond`);
+}
+
+/** Production needs a secret for sessions and the public address of the app. */
+const authEnv = (port) => ({
+  BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789",
+  BETTER_AUTH_URL: `http://localhost:${port}`,
+});
+
+/** Starts `pnpm start` (production) or the Vite dev server; returns a stop function. */
+async function serve(dir, port, mode) {
+  // A fixed port: Vite would otherwise move to another one while the old server is stopping.
+  const args =
+    mode === "dev" ? ["exec", "vite", "dev", "--port", String(port), "--strictPort"] : ["start"];
+  const server = spawn("pnpm", args, {
+    cwd: dir,
+    env: { ...process.env, PORT: String(port), ...authEnv(port) },
+    detached: true,
+  });
+  await waitFor(`http://localhost:${port}/health`);
+  return () => process.kill(-server.pid);
+}
+
+/** Saves what the page shows, for a failed browser check. */
+async function screenshot(page) {
+  const path = join(tmpdir(), `smithable-failure-${Date.now()}.png`);
+  await page.screenshot({ path, fullPage: true });
+  return path;
+}
+
+/** Opens a page and waits until it is interactive: the dev server loads code on demand. */
+async function open(page, url) {
+  await page.goto(url);
+  await page.waitForLoadState("networkidle");
+}
+
+/** Signs in through the development sign-in on the sign-in page. */
+async function signInAs(page, base, role) {
+  // A cold dev server optimizes dependencies and reloads the page, which can swallow a click.
+  for (let attempt = 1; ; attempt++) {
+    await page.goto(`${base}/sign-in`);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: `Sign in as ${role}` }).click();
+    try {
+      await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 5000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
+/** Writes to the app's dev database, e.g. records of another user. */
+function write(dir, sql) {
+  const code = `const D=require("better-sqlite3");new D("data/db/app.db").exec(${JSON.stringify(sql)})`;
+  run("node", ["-e", code], dir);
 }
 
 /** What a developer (or AI) writes for the CRM's mergeCustomers action: ordinary Drizzle code. */
@@ -106,13 +164,8 @@ async function detachFlow(dir, port) {
     run("pnpm", ["build"], dir);
     run("pnpm", ["test"], dir);
   });
-  const server = spawn("pnpm", ["start"], {
-    cwd: dir,
-    env: { ...process.env, PORT: String(port) },
-    detached: true,
-  });
+  const stop = await serve(dir, port, "production");
   try {
-    await waitFor(`http://localhost:${port}/health`);
     const about = await (await fetch(`http://localhost:${port}/about`)).text();
     const columns = query(dir, "select name from pragma_table_info('customers')").map(
       (c) => c.name,
@@ -121,7 +174,7 @@ async function detachFlow(dir, port) {
     console.log(`  ${ok ? "✓" : "✗"} the detached app serves the new page and has the new column`);
     if (!ok) failures.push("detached app");
   } finally {
-    process.kill(-server.pid);
+    stop();
   }
 }
 
@@ -147,22 +200,69 @@ async function formulaFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   try {
+    await signInAs(page, base, "member");
     const today = new Date().toISOString().slice(0, 10);
     const due = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-    await page.goto(`${base}/invoices/new`);
+    await open(page, `${base}/invoices/new`);
     const issued = await page.getByLabel("Issued on *").inputValue();
     const dueOn = await page.getByLabel("Due on *").inputValue();
     if (issued !== today || dueOn !== due) throw new Error(`defaults were ${issued} and ${dueOn}`);
     console.log("  ✓ browser: formula defaults fill a new invoice (today, today + 30 days)");
 
-    await page.goto(`${base}/invoice-lines/new`);
+    await open(page, `${base}/invoice-lines/new`);
     await page.getByRole("textbox", { name: "Quantity *" }).fill("2");
     await page.getByRole("textbox", { name: "Unit price *" }).fill("12.50");
     await page.getByText("€25.00").waitFor({ timeout: 5000 });
     console.log("  ✓ browser: a computed amount follows the inputs live");
   } catch (error) {
-    console.log(`  ✗ browser: ${error.message.split("\n")[0]}`);
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
     failures.push("invoicing formula flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/** In the invoicing app, a member never sees another user's invoices, even by their id. */
+async function isolationFlow(dir, base) {
+  write(
+    dir,
+    `insert into user (id, name, email, email_verified, role, created_at, updated_at)
+       values ('other-user', 'Other Freelancer', 'other@example.com', 1, 'member', 0, 0);
+     insert into clients (name, email, owner_id, created_at, updated_at)
+       values ('Other Client', 'client@other.example.com', 'other-user', 0, 0);
+     insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+       values ('OTHER-001', last_insert_rowid(), '2026-09-01', '2026-10-01', 'sent', 'other-user', 0, 0);`,
+  );
+  const [{ id }] = query(dir, "select id from invoices where number = 'OTHER-001'");
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await signInAs(page, base, "member");
+    await open(page, `${base}/clients/new`);
+    await page.getByRole("textbox", { name: "Name *" }).fill("My Client");
+    await page.getByRole("textbox", { name: "Email *" }).fill("me@client.example.com");
+    await page.getByRole("button", { name: "Create client" }).click();
+    await page.waitForURL(`${base}/clients`);
+    await page.getByRole("cell", { name: "My Client" }).waitFor({ timeout: 5000 });
+    if (await page.getByText("Other Client").count())
+      throw new Error("another user's client is listed");
+    await open(page, `${base}/invoices`);
+    await page.getByRole("heading", { name: "Invoices" }).waitFor();
+    if (await page.getByText("OTHER-001").count())
+      throw new Error("another user's invoice is listed");
+    await open(page, `${base}/invoices/${id}`);
+    await page.getByRole("heading", { name: "Not found" }).waitFor({ timeout: 5000 });
+    await open(page, `${base}/invoices/new`);
+    const clients = await page.getByLabel("Client *").locator("option").allTextContents();
+    if (clients.includes("Other Client")) throw new Error("another user's client can be chosen");
+    console.log("  ✓ browser: a member sees only their own clients and invoices, even by id");
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("invoicing isolation flow");
   } finally {
     await browser.close();
   }
@@ -315,7 +415,9 @@ async function browserFlow(base) {
     console.log(`  ✓ browser: ${name}`);
   };
   try {
-    await page.goto(`${base}/customers/new`);
+    await signInAs(page, base, "admin");
+    console.log("  ✓ browser: the development sign-in signs in as a role");
+    await open(page, `${base}/customers/new`);
     await page.getByRole("button", { name: "Create customer" }).click();
     await expectText("empty required field says Required", "Required");
 
@@ -349,7 +451,7 @@ async function browserFlow(base) {
       throw new Error("The customer was not deleted");
     console.log("  ✓ browser: delete removes the customer");
 
-    await page.goto(`${base}/orders/new`);
+    await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
     await page.getByLabel("Customer *").selectOption({ label: "Skerry Software" });
     await page.getByRole("textbox", { name: "Total *" }).fill("99");
@@ -358,7 +460,7 @@ async function browserFlow(base) {
     await page.getByRole("row", { name: /ORD-2001.*Skerry Software/ }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: an order is created for a customer chosen from a list");
 
-    await page.goto(`${base}/customers`);
+    await open(page, `${base}/customers`);
     await page.getByRole("cell", { name: "Skerry Software" }).click();
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
@@ -370,7 +472,7 @@ async function browserFlow(base) {
       "This customer is still used by other records.",
     );
 
-    await page.goto(`${base}/customers`);
+    await open(page, `${base}/customers`);
     await page.getByRole("link", { name: "Merge customers" }).click();
     await page.getByLabel("Keep *").selectOption({ label: "Nordic Timber Oy" });
     await page.getByLabel("Duplicate *").selectOption({ label: "Skerry Software" });
@@ -382,8 +484,22 @@ async function browserFlow(base) {
     await page.getByRole("cell", { name: "Nordic Timber Oy" }).click();
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the custom action merges customers and moves their orders");
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.waitForURL(/\/sign-in/);
+    await signInAs(page, base, "sales");
+    await open(page, `${base}/customers`);
+    if (await page.getByRole("link", { name: "Merge customers" }).count())
+      throw new Error("sales can merge customers");
+    await page.getByRole("cell", { name: "Nordic Timber Oy" }).click();
+    await page.getByRole("button", { name: "Save changes" }).waitFor();
+    if (await page.getByRole("button", { name: "Delete" }).count())
+      throw new Error("sales can delete customers");
+    console.log("  ✓ browser: sales edit customers but cannot delete or merge them; admins can");
   } catch (error) {
-    console.log(`  ✗ browser: ${error.message.split("\n")[0]}`);
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
     failures.push("crm browser flow");
   } finally {
     await browser.close();
@@ -393,6 +509,7 @@ async function browserFlow(base) {
 for (const [index, example] of examples.entries()) {
   console.log(`\n${example}`);
   const dir = join(mkdtempSync(join(tmpdir(), `smithable-${example}-`)), "app");
+  dirs.push(dir);
   const port = 4400 + index;
   try {
     step("smithable new", () => run("node", [cli, "new", dir, "--starter", example], repo));
@@ -407,30 +524,60 @@ for (const [index, example] of examples.entries()) {
     });
     step("type-checks", () => run("pnpm", ["typecheck"], dir));
     step("builds", () => run("pnpm", ["build"], dir));
-    step("the app's own tests pass (formula examples)", () => run("pnpm", ["test"], dir));
+    step("the app's own tests pass (access for every role, formula examples)", () =>
+      run("pnpm", ["test"], dir),
+    );
 
-    const server = spawn("pnpm", ["start"], {
-      cwd: dir,
-      env: { ...process.env, PORT: String(port) },
-      detached: true,
-    });
+    let stop = await serve(dir, port, "production");
     try {
-      await waitFor(`http://localhost:${port}/health`);
+      const base = `http://localhost:${port}`;
       const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+      const publicPages =
+        /public:\n(?:.*\n)*? {2}pages: \[([^\]]*)\]/.exec(
+          readFileSync(join(dir, "smithable.auth.yml"), "utf8"),
+        )?.[1] ?? "";
       const pages = spec.slice(spec.indexOf("\npages:"));
       const routes = [...pages.matchAll(/^ {2}([a-z][\w-]*):\n {4}(?:route: (\S+)\n {4})?/gm)];
-      for (const route of routes.length ? routes : []) {
+      for (const route of routes) {
         const path = route[2] ?? `/${route[1]}`;
-        const response = await fetch(`http://localhost:${port}${path}`);
+        const response = await fetch(`${base}${path}`, { redirect: "manual" });
         const html = await response.text();
-        const ok = response.status === 200 && html.includes("<table");
-        console.log(`  ${ok ? "✓" : "✗"} ${path} lists sample data`);
+        const isPublic = publicPages
+          .split(",")
+          .map((p) => p.trim())
+          .includes(route[1]);
+        const ok = isPublic
+          ? response.status === 200 && html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html)
+          : response.status === 307 && response.headers.get("location").includes("/sign-in");
+        const what = isPublic
+          ? "is public: lists sample data without sign-in, read-only"
+          : "needs sign-in";
+        console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
       }
-      if (example === "crm") await browserFlow(`http://localhost:${port}`);
-      if (example === "invoicing") await formulaFlow(`http://localhost:${port}`);
+      const signIn = await (await fetch(`${base}/sign-in`)).text();
+      const devSignIn = await fetch(`${base}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: base },
+        body: JSON.stringify({ email: "dev-admin@example.com", password: "dev-password" }),
+      });
+      const absent = !signIn.includes("Development only") && devSignIn.status === 400;
+      console.log(`  ${absent ? "✓" : "✗"} the production build has no development sign-in`);
+      if (!absent) failures.push(`${example} development sign-in in production`);
     } finally {
-      process.kill(-server.pid);
+      stop();
+    }
+
+    stop = await serve(dir, port + 100, "dev");
+    try {
+      const base = `http://localhost:${port + 100}`;
+      if (example === "crm") await browserFlow(base);
+      if (example === "invoicing") {
+        await formulaFlow(base);
+        await isolationFlow(dir, base);
+      }
+    } finally {
+      stop();
     }
 
     step("regenerating changes nothing", () => {
@@ -447,7 +594,8 @@ for (const [index, example] of examples.entries()) {
 }
 
 if (failures.length) {
-  console.log(`\n${failures.length} failed.`);
+  console.log(`\n${failures.length} failed. The apps are kept in:\n${dirs.join("\n")}`);
   process.exit(1);
 }
+for (const dir of dirs) rmSync(join(dir, ".."), { recursive: true, force: true });
 console.log(`\nAll ${examples.length} example apps passed.`);

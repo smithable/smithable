@@ -1,3 +1,4 @@
+import { validateAuth } from "./auth.js";
 import { validateContent } from "./content.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { YamlEditor } from "./edit.js";
@@ -13,6 +14,8 @@ export interface ProjectFiles {
   spec: string;
   /** smithable.content.yml, when the project has one. */
   content?: string;
+  /** smithable.auth.yml; without it, role names in the spec are not checked. */
+  auth?: string;
 }
 
 export type OperationResult =
@@ -53,7 +56,11 @@ export function applyOperation(
   const argError = checkArgs(op.schema, args);
   if (argError) return fail(`${name}: ${argError}`);
 
-  const before = validateSpec({ path: "smithable.yml", text: files.spec });
+  const auth = (text: string) => validateAuth({ path: "smithable.auth.yml", text });
+  const roles =
+    files.auth === undefined ? undefined : auth(files.auth).auth?.roles.map((r) => r.name);
+  const options = roles ? { roles } : {};
+  const before = validateSpec({ path: "smithable.yml", text: files.spec }, options);
   if (!before.ir)
     return fail(
       "smithable.yml has errors; fix them before applying operations.",
@@ -63,6 +70,7 @@ export function applyOperation(
   const editors = {
     spec: new YamlEditor(files.spec),
     ...(files.content === undefined ? {} : { content: new YamlEditor(files.content) }),
+    ...(files.auth === undefined ? {} : { auth: new YamlEditor(files.auth) }),
   };
   let effects: Effect[];
   try {
@@ -72,7 +80,7 @@ export function applyOperation(
     throw error;
   }
 
-  const after = validateSpec({ path: "smithable.yml", text: editors.spec.text });
+  const after = validateSpec({ path: "smithable.yml", text: editors.spec.text }, options);
   if (!after.ir) return fail(`${name} would make smithable.yml invalid.`, after.diagnostics);
   if (editors.content) {
     const content = validateContent(
@@ -82,11 +90,17 @@ export function applyOperation(
     if (!content.content)
       return fail(`${name} would make smithable.content.yml invalid.`, content.diagnostics);
   }
+  if (editors.auth) {
+    const result = validateAuth({ path: "smithable.auth.yml", text: editors.auth.text }, after.ir);
+    if (!result.auth)
+      return fail(`${name} would make smithable.auth.yml invalid.`, result.diagnostics);
+  }
   return {
     ok: true,
     files: {
       spec: editors.spec.text,
       ...(editors.content ? { content: editors.content.text } : {}),
+      ...(editors.auth ? { auth: editors.auth.text } : {}),
     },
     description: op.describe(args),
     destructive: op.destructive(args, before.ir),
