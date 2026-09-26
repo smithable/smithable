@@ -150,9 +150,15 @@ export function buildIndex(input: IndexInput): ProjectIndex {
     for (const id of file.testsRules) add(conceptOfRule(concepts, id), "tests");
     for (const { path, names } of file.imports) {
       for (const owner of byPath.get(path) ?? []) {
+        // A field's symbol is "table.column": the file must import the table and name the column.
         const used =
           owner.symbols.length === 0 ||
-          owner.symbols.some((s) => names.includes(s.split(".")[0] as string));
+          owner.symbols.some((s) => {
+            const [symbol, member] = s.split(".") as [string, string | undefined];
+            return (
+              names.includes(symbol) && (!member || new RegExp(`\\b${member}\\b`).test(file.text))
+            );
+          });
         if (used) add(owner.concept, file.isTest ? "tests" : "uses");
       }
     }
@@ -194,6 +200,7 @@ export function conceptsAt(index: ProjectIndex, path: string): string[] {
 interface CustomFile {
   path: string;
   isTest: boolean;
+  text: string;
   exports: string[];
   imports: { path: string; names: string[] }[];
   /** Rule ids from `// implements rule <id>`. */
@@ -210,6 +217,7 @@ function analyseCustom(files: SourceFile[]): CustomFile[] {
     const all = (pattern: RegExp) => [...text.matchAll(pattern)].map((m) => m[1] as string);
     return {
       path,
+      text,
       isTest,
       exports: all(/export\s+(?:async\s+)?(?:function|const|let|class|type|interface)\s+(\w+)/g),
       imports: [

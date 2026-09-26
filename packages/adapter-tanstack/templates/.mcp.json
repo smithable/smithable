@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "smithable": { "command": "smithable", "args": ["mcp"] }
+  }
+}

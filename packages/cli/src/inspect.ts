@@ -38,17 +38,19 @@ export function inspect(dir: string, io: Io, concept: string | undefined, json =
   return 0;
 }
 
+/** Vitest arguments that also keep the results, for rule status. */
+export const TEST_ARGS = [
+  "--reporter",
+  "default",
+  "--reporter",
+  "json",
+  "--outputFile.json",
+  TEST_RESULTS,
+];
+
 /** `smithable test [dir]`: runs the app's tests and keeps the results for rule status. */
 export function test(dir: string): number {
-  const reporters = [
-    "--reporter",
-    "default",
-    "--reporter",
-    "json",
-    "--outputFile.json",
-    TEST_RESULTS,
-  ];
-  return exec("pnpm", ["exec", "vitest", "run", ...reporters], dir);
+  return exec("pnpm", ["exec", "vitest", "run", ...TEST_ARGS], dir);
 }
 
 function ruleLine(rule: RuleInfo): string {
