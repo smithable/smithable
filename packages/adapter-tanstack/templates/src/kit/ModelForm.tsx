@@ -7,7 +7,7 @@ import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { FieldInput } from "./FieldInput";
 import { fromInput, toInput } from "./format";
-import type { ModelUi } from "./model";
+import type { FieldUi, ModelUi } from "./model";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
@@ -38,7 +38,13 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     );
     const result = schema.safeParse(values);
     if (!result.success) {
-      setErrors(Object.fromEntries(result.error.issues.map((i) => [String(i.path[0]), i.message])));
+      const messages: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const field = ui.fields.find((f) => f.name === issue.path[0]);
+        if (field && !messages[field.name])
+          messages[field.name] = friendly(field, issue, values[field.name]);
+      }
+      setErrors(messages);
       return;
     }
     setErrors({});
@@ -51,9 +57,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     try {
       await action();
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : "Something went wrong. Please try again.",
-      );
+      setFailure(failureMessage(ui, error));
     } finally {
       setBusy(false);
     }
@@ -116,4 +120,35 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       </form>
     </Card>
   );
+}
+
+/** A message a non-developer understands, instead of Zod's technical text. */
+function friendly(field: FieldUi, issue: z.core.$ZodIssue, value: unknown): string {
+  if (value === null || value === undefined) return "Required";
+  if (issue.code !== "invalid_type") return issue.message;
+  switch (field.kind) {
+    case "int":
+      return "Enter a whole number";
+    case "decimal":
+    case "money":
+      return "Enter a number";
+    case "date":
+      return "Enter a valid date";
+    case "datetime":
+      return "Enter a valid date and time";
+    default:
+      return issue.message;
+  }
+}
+
+/** Explains server errors; a unique column shows which field is taken. */
+function failureMessage(ui: ModelUi, error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  const column = /UNIQUE constraint failed: \w+\.(\w+)/.exec(message)?.[1];
+  const field = ui.fields.find(
+    (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
+  );
+  if (field)
+    return `Another ${ui.label.toLowerCase()} already has this ${field.label.toLowerCase()}.`;
+  return message || "Something went wrong. Please try again.";
 }

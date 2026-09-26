@@ -87,6 +87,14 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 "
 `;
 
+exports[`../../../examples/booking/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">S</text>
+</svg>
+"
+`;
+
 exports[`../../../examples/booking/smithable.yml > file list and generated code > smithable.lock 1`] = `
 "{
   "smithable": "0.0.0",
@@ -400,7 +408,10 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: app.name },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    ],
   }),
   shellComponent: RootDocument,
 });
@@ -783,6 +794,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: drizzle.config.ts",
   "generated: package.json",
   "scaffold: pnpm-workspace.yaml",
+  "generated: public/favicon.svg",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
   "kit: src/components/ui/button.tsx",
@@ -906,6 +918,14 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "vite": "8.3.1"
   }
 }
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">A</text>
+</svg>
 "
 `;
 
@@ -1157,7 +1177,10 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: app.name },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    ],
   }),
   shellComponent: RootDocument,
 });
@@ -1427,6 +1450,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: drizzle.config.ts",
   "generated: package.json",
   "scaffold: pnpm-workspace.yaml",
+  "generated: public/favicon.svg",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
   "kit: src/components/ui/button.tsx",
@@ -1546,6 +1570,14 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "vite": "8.3.1"
   }
 }
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">I</text>
+</svg>
 "
 `;
 
@@ -1782,7 +1814,10 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: app.name },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    ],
   }),
   shellComponent: RootDocument,
 });
@@ -2052,6 +2087,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: drizzle.config.ts",
   "generated: package.json",
   "scaffold: pnpm-workspace.yaml",
+  "generated: public/favicon.svg",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
   "kit: src/components/ui/button.tsx",
