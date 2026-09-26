@@ -49,6 +49,18 @@ Among the benchmark's tasks, search has the clearest direct demand, which suppor
 3. **The change trace's comparison estimate uses these numbers** (ARCHITECTURE §9.7): a conventional agent editing the repository used about 350k–1.4M tokens (median about 400k) and $0.35–1.07 per task on this app, against 0 for a deterministic operation and about 110k tokens ($0.13) for an agent calling operations.
 4. **Interviews move to M9**, as usability tests with the Builder, where people try Smithable on their own idea. Until then, the desk research stands in; its findings update VISION.md when it arrives.
 
+## After M7.5 (2026-09-27)
+
+With search in the spec (`setSearch`), custom pages and the MCP guidance to use them, the same seven tasks ([m7-SB.md](m7-SB.md)):
+
+| | Tasks done | Tokens | Cost | Time | Left drift |
+|---|---|---|---|---|---|
+| Smithable operations, no model | **7 / 7** | 0 | $0.00 | 12 s | 0 |
+| Claude Code + MCP | **7 / 7** | 0.95 M | **$0.92** | 2.0 min | **0** |
+| Claude Code, plain (M7 run) | 7 / 7 | 3.58 M | $3.15 | 7.4 min | 7 |
+
+Every task took Claude Code 5–9 turns, two or three Smithable calls and no file reads; search cost $0.12 instead of $0.58, and the menu reorder after it works. Against plain Claude Code: 3.4× cheaper, 3.6× faster, and the project stays exactly what the spec generates.
+
 ## Caveats
 
 One run per setup, on a small app, with one agent (Claude Code, default model). Each task was a fresh session; a long-running session would reuse context and cost less. The token counts include Claude Code's own system prompt, read from cache, which is most of B's cost. Each setup built on its own previous results, so a failure could carry over to later tasks (it did once, for B).

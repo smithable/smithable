@@ -492,7 +492,7 @@ function operationsFlow(dir) {
     },
   );
   step(
-    "customize page:customers gives the page its own component; regeneration leaves it alone; undo reverts it",
+    "customize page:customers gives the page its own component; regeneration leaves it alone; a spec change it no longer fits fails the type-check; undo reverts it",
     () => {
       run("git", ["add", "-A"], dir);
       run("git", ["commit", "-q", "-m", "custom action and its test"], dir);
@@ -511,6 +511,12 @@ function operationsFlow(dir) {
       if (!readFileSync(custom, "utf8").includes("Our customers"))
         throw new Error("the custom page was changed");
       run("git", ["checkout", "--", "src/custom/pages/customers.tsx"], dir);
+      // The spec no longer gives the page a search: the custom page's code no longer fits.
+      expectOk(smithable(dir, "op", "setSearch", "customers"));
+      const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
+      if (typecheck.status === 0 || !typecheck.stdout.includes("src/custom/pages/customers.tsx"))
+        throw new Error(`expected the custom page to fail type-checking:\n${typecheck.stdout}`);
+      expectOk(smithable(dir, "undo"));
       expectOk(smithable(dir, "undo"));
       if (spawnSync("test", ["-e", custom]).status === 0)
         throw new Error("undo kept the custom page");
