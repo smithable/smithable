@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { SPEC_VERSION } from "@smithable/core";
 import { build } from "./build.js";
 import { context } from "./context.js";
+import { customize } from "./customize.js";
 import { detach } from "./detach.js";
 import { runDev } from "./dev.js";
 import { generate } from "./generate.js";
@@ -30,6 +31,8 @@ Commands:
   test [dir]       Run the app's tests and remember the results for rule status
   inspect [c]      Show rules and their status, or one concept: its meaning, rules, files,
                    symbols, routes, tables and tests, e.g. inspect action:mergeCustomers (--json)
+  customize page:<p>  Give a page its own component in src/custom/pages/, starting from the generated
+                   one (or moving a hand edit of its route there); the route stays generated
   context "<req>"  The smallest context an AI model needs for a request, with its size in tokens
                    (--implementation adds the custom code involved; --json)
   mcp [dir]        Serve the project to AI agents (Claude Code, Cursor, …) over MCP on stdin/stdout
@@ -63,6 +66,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
   if (command === "undo") return undo(values.dir ?? ".", io);
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
+  if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
   if (command === "context")
     return context(values.dir ?? ".", io, args.join(" ") || undefined, {
       implementation: values.implementation === true,

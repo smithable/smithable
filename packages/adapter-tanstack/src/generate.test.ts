@@ -1,6 +1,6 @@
 import { type AuthIR, type SpecIR, validateAuth, validateSpec } from "@smithable/core";
 import { describe, expect, test } from "vitest";
-import { generateApp } from "./generate.js";
+import { customPageFromEdit, customPageSource, generateApp } from "./generate.js";
 
 const examples = import.meta.glob("../../../examples/*/smithable.yml", {
   query: "?raw",
@@ -115,4 +115,52 @@ test("an app without sign-in has no auth library, sign-in page or owners", () =>
   expect(paths).not.toContain("src/routes/sign-in.tsx");
   expect(paths).not.toContain("src/lib/auth-client.ts");
   expect(files.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("ownerId");
+});
+
+describe("custom pages", () => {
+  const path = "../../../examples/crm/smithable.yml";
+  const spec = ir(path, examples[path] as string);
+  const auth = authOf(authFiles["../../../examples/crm/smithable.auth.yml"] as string);
+  const route = (customPages: string[]) =>
+    generateApp(spec, { ...options, auth, customPages }).find(
+      (f) => f.path === "src/routes/customers/index.tsx",
+    )?.content ?? "";
+
+  test("a custom page starts as the generated component, reading the route's data with getRouteApi", () => {
+    const source = customPageSource(spec, "customers", { ...options, auth });
+    expect(source).toContain('const route = getRouteApi("/customers/");');
+    expect(source).toContain("export function CustomersPage() {");
+    expect(source).toContain("route.useLoaderData()");
+    expect(source).not.toContain("createFileRoute");
+    // The component's code is the generated one, with Route replaced by route.
+    const generated = route([]);
+    expect(source.slice(source.indexOf("export function") + 7)).toBe(
+      generated
+        .slice(generated.indexOf("function CustomersPage"))
+        .replace(/\bRoute\.use/g, "route.use"),
+    );
+  });
+
+  test("with a custom page, the generated route keeps loading, search and access, and renders it", () => {
+    const custom = route(["customers"]);
+    expect(custom).toContain('import { CustomersPage } from "#/custom/pages/customers";');
+    expect(custom).toContain("guardPage(pageAccess");
+    expect(custom).toContain("const searchCustomers = createServerFn()");
+    expect(custom).not.toContain("function CustomersPage");
+  });
+
+  test("a hand edit of the component moves into the custom page; an edit of the route does not", () => {
+    const generated = route([]);
+    const edited = generated.replace(
+      "  const navigate = useNavigate();",
+      "  const navigate = useNavigate();\n  const total = rows.length;",
+    );
+    const moved = customPageFromEdit(spec, "customers", { ...options, auth }, edited);
+    expect(moved.ok && moved.source).toContain("const total = rows.length;");
+    expect(moved.ok && moved.source).not.toMatch(
+      /customerData|pageAccess|createFileRoute|searchCustomers/,
+    );
+    const routeEdit = generated.replace("z.string().max(200)", "z.string().max(50)");
+    expect(customPageFromEdit(spec, "customers", { ...options, auth }, routeEdit).ok).toBe(false);
+  });
 });

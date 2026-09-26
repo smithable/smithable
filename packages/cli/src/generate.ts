@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { generateApp, renameColumnSql, renameInSnapshot } from "@smithable/adapter-tanstack";
 import { exec, type Io } from "./io.js";
@@ -18,6 +18,8 @@ export interface GenerateFlags {
   tools: boolean;
   /** Overwrite hand-edited Smithable-owned files. */
   force: boolean;
+  /** Hand-edited files that may be overwritten anyway, because their edit moved elsewhere. */
+  overwrite?: string[];
   /** How to create the migration; operations know about renames and apply it right away. */
   migration?: MigrationPlan;
 }
@@ -38,6 +40,7 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   const files = generateApp(ir, {
     smithableVersion: VERSION,
     auth,
+    customPages: customPages(dir),
     ...(content ? { content } : {}),
   });
   const previous = readRecord(dir);
@@ -45,11 +48,22 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   // Never overwrite or delete a Smithable-owned file that was edited by hand.
   const edited = Object.entries(previous.files)
     .filter(([path, hash]) => existsSync(join(dir, path)) && hashFile(join(dir, path)) !== hash)
-    .map(([path]) => path);
+    .map(([path]) => path)
+    .filter((path) => !flags.overwrite?.includes(path));
   if (edited.length > 0 && !flags.force) {
     io.err(
       `These files are owned by Smithable but were edited by hand:\n${edited.map((p) => `  ${p}\n`).join("")}` +
-        "Move the changes into smithable.yml or src/custom/, or run with --force to overwrite them.\n",
+        "Move the changes into smithable.yml or src/custom/, or run with --force to overwrite them.\n" +
+        edited
+          .flatMap((path) => {
+            // A page's list route: the edit can move into a custom page.
+            const route = /^src\/routes(?:\/(.+))?\/index\.tsx$/.exec(path);
+            const page = route && ir.pages.find((p) => p.route === `/${route[1] ?? ""}`);
+            return page
+              ? [`To keep the edit of ${path}: smithable customize page:${page.id}\n`]
+              : [];
+          })
+          .join(""),
     );
     return 1;
   }
@@ -135,7 +149,7 @@ function latestMigration(dir: string): string {
   return last.tag;
 }
 
-function readRecord(dir: string): FileRecord {
+export function readRecord(dir: string): FileRecord {
   try {
     return JSON.parse(readFileSync(join(dir, RECORD), "utf8")) as FileRecord;
   } catch {
@@ -147,6 +161,16 @@ function hash(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-function hashFile(path: string): string {
+export function hashFile(path: string): string {
   return hash(readFileSync(path, "utf8"));
+}
+
+/** Pages with their own component in src/custom/pages/<page>.tsx. */
+export function customPages(dir: string): string[] {
+  const pages = join(dir, "src", "custom", "pages");
+  if (!existsSync(pages)) return [];
+  return readdirSync(pages)
+    .filter((f) => f.endsWith(".tsx"))
+    .map((f) => f.slice(0, -4))
+    .sort();
 }
