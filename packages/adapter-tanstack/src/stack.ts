@@ -33,5 +33,6 @@ export const STACK_PROFILE = {
     tsx: "4.23.15",
     typescript: "6.0.3",
     vite: "8.3.1",
+    vitest: "5.0.2",
   },
 } as const;

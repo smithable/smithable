@@ -28,6 +28,18 @@ models:
       customer: Customer!
       status: draft | placed | shipped | cancelled
       total: money!
+      shippingMethod: standard | express
+      shippingCost:
+        type: money
+        formula: IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))
+        description: Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.
+        examples:
+          - input: { total: 150, shippingMethod: standard }
+            expected: 0
+          - input: { total: 80, shippingMethod: standard }
+            expected: 5
+          - input: { total: 150, shippingMethod: express }
+            expected: 15
       placedAt: datetime
 
 pages:

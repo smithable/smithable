@@ -294,7 +294,7 @@ export function checkFormula(expr: Expr, model: ModelIR, models: ModelIR[]): Val
         return callType(e);
       case "aggregate": {
         const list = fieldNamed(model, e.list);
-        if (!list || list.type.kind !== "relation" || !list.type.many) {
+        if (list?.type.kind !== "relation" || !list.type.many) {
           const lists = model.fields
             .filter((f) => f.type.kind === "relation" && f.type.many)
             .map((f) => f.name);

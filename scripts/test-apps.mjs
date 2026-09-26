@@ -46,6 +46,32 @@ async function waitFor(url) {
   throw new Error(`${url} did not respond`);
 }
 
+/** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
+async function formulaFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const due = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+    await page.goto(`${base}/invoices/new`);
+    const issued = await page.getByLabel("Issued on *").inputValue();
+    const dueOn = await page.getByLabel("Due on *").inputValue();
+    if (issued !== today || dueOn !== due) throw new Error(`defaults were ${issued} and ${dueOn}`);
+    console.log("  ✓ browser: formula defaults fill a new invoice (today, today + 30 days)");
+
+    await page.goto(`${base}/invoice-lines/new`);
+    await page.getByRole("textbox", { name: "Quantity *" }).fill("2");
+    await page.getByRole("textbox", { name: "Unit price *" }).fill("12.50");
+    await page.getByText("€25.00").waitFor({ timeout: 5000 });
+    console.log("  ✓ browser: a computed amount follows the inputs live");
+  } catch (error) {
+    console.log(`  ✗ browser: ${error.message.split("\n")[0]}`);
+    failures.push("invoicing formula flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 /** Runs a query against the app's dev database with the app's own SQLite driver. */
 function query(dir, sql) {
   const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).all()))`;
@@ -206,6 +232,7 @@ for (const [index, example] of examples.entries()) {
     });
     step("type-checks", () => run("pnpm", ["typecheck"], dir));
     step("builds", () => run("pnpm", ["build"], dir));
+    step("the app's own tests pass (formula examples)", () => run("pnpm", ["test"], dir));
 
     const server = spawn("pnpm", ["start"], {
       cwd: dir,
@@ -225,6 +252,7 @@ for (const [index, example] of examples.entries()) {
         if (!ok) failures.push(`${example} ${path}`);
       }
       if (example === "crm") await browserFlow(`http://localhost:${port}`);
+      if (example === "invoicing") await formulaFlow(`http://localhost:${port}`);
     } finally {
       process.kill(-server.pid);
     }

@@ -21,6 +21,8 @@ export interface FieldUi {
   label: string;
   kind: FieldKind;
   required: boolean;
+  /** Computed by a formula: shown, never entered. */
+  computed?: boolean;
   help?: string;
   choices?: { value: string; label: string }[];
   /** For a reference: the related record's key in a row, and the field that names it. */
@@ -36,6 +38,10 @@ export interface ModelUi {
   /** Fields shown as table columns, in order. */
   columns: string[];
   fields: FieldUi[];
+  /** Adds the computed fields to a record. */
+  compute?: (row: Record<string, unknown>) => Record<string, unknown>;
+  /** Values suggested for a new record, computed from the values entered so far. */
+  defaults?: Record<string, (row: Record<string, unknown>) => unknown>;
 }
 
 export interface AppUi {

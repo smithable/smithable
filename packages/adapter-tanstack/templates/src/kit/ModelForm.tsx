@@ -6,11 +6,12 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { FieldInput } from "./FieldInput";
-import { fromInput, toInput } from "./format";
-import type { FieldUi, ModelUi, Options } from "./model";
+import { formatValue, fromInput, toInput } from "./format";
+import type { AppUi, FieldUi, ModelUi, Options } from "./model";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
+  app: AppUi;
   schema: S;
   /** The stored record when editing; omit to create a new one. */
   initial?: Record<string, unknown>;
@@ -23,21 +24,18 @@ interface ModelFormProps<S extends z.ZodType> {
 }
 
 export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
-  const { ui, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete } = props;
-  const [inputs, setInputs] = useState(() =>
-    Object.fromEntries(
-      ui.fields.map((f) => [f.name, toInput(f, initial ? initial[f.name] : f.default)]),
-    ),
-  );
+  const { ui, app, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete } = props;
+  const [inputs, setInputs] = useState(() => initialInputs(ui, initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Computed fields follow what has been entered so far.
+  // The record comes first so values that are not inputs (like related lines) are included.
+  const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs) }) ?? {};
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const values = Object.fromEntries(
-      ui.fields.map((f) => [f.name, fromInput(f, inputs[f.name] ?? "")]),
-    );
+    const values = storedValues(ui, inputs);
     const result = schema.safeParse(values);
     if (!result.success) {
       const messages: Record<string, string> = {};
@@ -80,14 +78,22 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                   {field.required && <span className="text-destructive"> *</span>}
                 </Label>
               )}
-              <FieldInput
-                field={field}
-                id={id}
-                value={inputs[field.name] ?? ""}
-                invalid={error !== undefined}
-                options={options}
-                onChange={(value) => setInputs((current) => ({ ...current, [field.name]: value }))}
-              />
+              {field.computed ? (
+                <p id={id} className="rounded-md bg-muted px-3 py-2 text-sm tabular-nums">
+                  {formatValue(field, computed[field.name], app)}
+                </p>
+              ) : (
+                <FieldInput
+                  field={field}
+                  id={id}
+                  value={inputs[field.name] ?? ""}
+                  invalid={error !== undefined}
+                  options={options}
+                  onChange={(value) =>
+                    setInputs((current) => ({ ...current, [field.name]: value }))
+                  }
+                />
+              )}
               {inline && <Label htmlFor={id}>{field.label}</Label>}
               {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
               {error && <p className="text-xs text-destructive">{error}</p>}
@@ -157,4 +163,31 @@ function failureMessage(ui: ModelUi, error: unknown): string {
     return `This ${ui.label.toLowerCase()} is still used by other records. Change or delete those first.`;
   }
   return message || "Something went wrong. Please try again.";
+}
+
+/** Form inputs for a record being edited, or for a new one: defaults, including formula defaults. */
+function initialInputs(
+  ui: ModelUi,
+  initial?: Record<string, unknown>,
+): Record<string, string | boolean> {
+  const inputs: Record<string, string | boolean> = {};
+  const values: Record<string, unknown> = {};
+  for (const field of ui.fields) {
+    if (field.computed) continue;
+    const suggested = ui.defaults?.[field.name];
+    const value = initial ? initial[field.name] : suggested ? suggested(values) : field.default;
+    values[field.name] = value;
+    inputs[field.name] = toInput(field, value);
+  }
+  return inputs;
+}
+
+/** The values to validate and save: every entered field, never computed ones. */
+function storedValues(
+  ui: ModelUi,
+  inputs: Record<string, string | boolean>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    ui.fields.filter((f) => !f.computed).map((f) => [f.name, fromInput(f, inputs[f.name] ?? "")]),
+  );
 }
