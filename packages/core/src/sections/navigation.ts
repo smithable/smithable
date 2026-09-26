@@ -3,12 +3,14 @@ import { mapEntries, type ParseContext, readNameList } from "../context.js";
 import type { MenuIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { NAME_PATTERN } from "./names.js";
+import { navigationOperations } from "./page-operations.js";
 
 const pageList = { type: "array", items: { type: "string" }, uniqueItems: true };
 
 export const navigationSection: SpecSection<"navigation"> = {
   key: "navigation",
   required: false,
+  operations: navigationOperations,
   schema: {
     description:
       "Menus: a list of pages (the main menu), or named menus. Defaults to all pages in order.",

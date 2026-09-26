@@ -3,6 +3,7 @@ import { checkKeys, mapEntries, type ParseContext, readString } from "../context
 import type { PageIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { NAME_PATTERN } from "./names.js";
+import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
@@ -14,6 +15,7 @@ const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/];
 export const pagesSection: SpecSection<"pages"> = {
   key: "pages",
   required: false,
+  operations: pageOperations,
   schema: {
     type: "object",
     description:
