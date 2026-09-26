@@ -126,6 +126,8 @@ export interface PageIR extends SemanticText {
   actions?: string[];
   /** Only these roles may open the page (admins always can). */
   access?: string[];
+  /** Fields of the model a list can be searched by. */
+  search?: string[];
 }
 
 /** An action beyond create, edit and delete; in spec version 0.1 always custom code. */

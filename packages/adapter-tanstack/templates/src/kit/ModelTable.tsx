@@ -24,6 +24,8 @@ interface ModelTableProps<R extends Row> {
   hide?: string[];
   /** Shown when there are no records, e.g. a "New …" button. */
   emptyAction?: React.ReactNode;
+  /** Replaces "No … yet", e.g. when a search matches nothing. */
+  emptyMessage?: string;
 }
 
 export function ModelTable<R extends Row>({
@@ -33,6 +35,7 @@ export function ModelTable<R extends Row>({
   onOpen,
   hide = [],
   emptyAction,
+  emptyMessage,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = ui.columns
@@ -41,9 +44,15 @@ export function ModelTable<R extends Row>({
   if (rows.length === 0) {
     return (
       <Card className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-        <p className="font-medium">No {ui.pluralLabel.toLowerCase()} yet</p>
-        <p className="text-sm text-muted-foreground">Create the first one to get started.</p>
-        {emptyAction}
+        {emptyMessage ? (
+          <p className="font-medium">{emptyMessage}</p>
+        ) : (
+          <>
+            <p className="font-medium">No {ui.pluralLabel.toLowerCase()} yet</p>
+            <p className="text-sm text-muted-foreground">Create the first one to get started.</p>
+            {emptyAction}
+          </>
+        )}
       </Card>
     );
   }
