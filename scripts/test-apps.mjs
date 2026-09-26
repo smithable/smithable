@@ -60,6 +60,71 @@ export async function mergeCustomers(input: MergeCustomersInput): Promise<MergeC
 }
 `;
 
+/**
+ * After `smithable detach`, a developer who knows only Drizzle and TanStack adds a column and
+ * a page; migrations continue from the existing ones.
+ */
+async function detachFlow(dir, port) {
+  step("smithable detach leaves an ordinary project", () => {
+    run("git", ["add", "-A"], dir);
+    run("git", ["commit", "-q", "-m", "work before detaching"], dir);
+    const out = smithable(dir, "detach");
+    if (out.code !== 0) throw new Error(out.out);
+    const mentions = spawnSync("grep", ["-rli", "smithable", "src", "README.md", "package.json"], {
+      cwd: dir,
+      encoding: "utf8",
+    })
+      .stdout.split("\n")
+      .filter((f) => f && !f.startsWith("src/custom/"));
+    if (mentions.length) throw new Error(`still mentions Smithable: ${mentions.join(", ")}`);
+    for (const gone of [".smithable", "smithable.yml", "smithable.lock"]) {
+      if (spawnSync("test", ["-e", join(dir, gone)]).status === 0)
+        throw new Error(`${gone} is still there`);
+    }
+    readFileSync(join(dir, "docs/smithable/smithable.yml"), "utf8");
+  });
+  step("after detaching, a column and a page are added with only Drizzle and TanStack", () => {
+    const schema = join(dir, "src/db/schema.ts");
+    writeFileSync(
+      schema,
+      readFileSync(schema, "utf8").replace(
+        "  phone: text(),",
+        "  phone: text(),\n  website: text(),",
+      ),
+    );
+    const migrations = () =>
+      readdirSync(join(dir, "drizzle")).filter((f) => f.endsWith(".sql")).length;
+    const before = migrations();
+    run("pnpm", ["db:generate"], dir);
+    if (migrations() !== before + 1) throw new Error("drizzle-kit did not continue the migrations");
+    writeFileSync(
+      join(dir, "src/routes/about.tsx"),
+      'import { createFileRoute } from "@tanstack/react-router";\n\nexport const Route = createFileRoute("/about")({\n  component: () => <h1>About Acme</h1>,\n});\n',
+    );
+    run("pnpm", ["routes"], dir);
+    run("pnpm", ["typecheck"], dir);
+    run("pnpm", ["build"], dir);
+    run("pnpm", ["test"], dir);
+  });
+  const server = spawn("pnpm", ["start"], {
+    cwd: dir,
+    env: { ...process.env, PORT: String(port) },
+    detached: true,
+  });
+  try {
+    await waitFor(`http://localhost:${port}/health`);
+    const about = await (await fetch(`http://localhost:${port}/about`)).text();
+    const columns = query(dir, "select name from pragma_table_info('customers')").map(
+      (c) => c.name,
+    );
+    const ok = about.includes("About Acme") && columns.includes("website");
+    console.log(`  ${ok ? "✓" : "✗"} the detached app serves the new page and has the new column`);
+    if (!ok) failures.push("detached app");
+  } finally {
+    process.kill(-server.pid);
+  }
+}
+
 /** A test that names the rule it covers, as a developer (or AI) writes it. */
 const MERGE_CUSTOMERS_TEST = `import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
@@ -372,7 +437,10 @@ for (const [index, example] of examples.entries()) {
       const out = run("node", [cli, "generate", dir], repo);
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
     });
-    if (example === "crm") operationsFlow(dir);
+    if (example === "crm") {
+      operationsFlow(dir);
+      await detachFlow(dir, port);
+    }
   } catch {
     // Already reported; continue with the next example.
   }

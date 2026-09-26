@@ -1,5 +1,5 @@
 // Smithable app kit: describes models to the generic table and form components.
-// Each model's description is generated into src/generated/<model>.ts from smithable.yml.
+// Each model's description is in src/generated/<model>.ts.
 
 export type FieldKind =
   | "string"
