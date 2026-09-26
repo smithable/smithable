@@ -675,6 +675,8 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 ```
 
 - **Spec migrations** are small, versioned, deterministic transforms (like codemods). Before 1.0 the format may change, but every change ships with a migration. After 1.0, breaking changes require a major version.
+- **Compatibility starts at the public launch (M16).** Until then there are no users to protect: the format changes in place (it stays `0.1`), and examples, drafts and docs are updated directly, without migrations. From the launch on, every format change bumps the version and ships a migration.
+- **Branches.** Breaking changes land on `main` with a version bump and a migration, never on a long-lived branch. Development uses short-lived branches once there is CI; release branches (e.g. `release/1.x`) only exist to patch versions users still run.
 - **Custom code is protected by contracts.** If a regenerated contract changes, affected custom files fail typecheck and the upgrade report lists them. Nothing in `src/custom/` is edited without the user confirming.
 - **Security patches of dependencies** (within the stack profile) need no regeneration. `smithable update --security` applies them, and the usual tests run. Each stack profile's allowed patch ranges come from the Smithable release that defined it.
 - **Stack profiles** are released on a steady cadence (for example quarterly). Each is tested against all sample apps before release.
