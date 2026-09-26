@@ -456,3 +456,46 @@ export function fieldsUsed(expr: Expr): string[] {
       return [];
   }
 }
+
+const PRECEDENCE: Record<BinaryOp, number> = {
+  "=": 1,
+  "<>": 1,
+  "<": 1,
+  ">": 1,
+  "<=": 1,
+  ">=": 1,
+  "+": 2,
+  "-": 2,
+  "&": 2,
+  "*": 3,
+  "/": 3,
+};
+
+/** Writes a formula back as text, with only the parentheses it needs. */
+export function formatFormula(expr: Expr): string {
+  const operand = (e: Expr, min: number): string =>
+    e.kind === "binary" && PRECEDENCE[e.op] < min ? `(${formatFormula(e)})` : formatFormula(e);
+  switch (expr.kind) {
+    case "number":
+      return String(expr.value);
+    case "text":
+      return `"${expr.value}"`;
+    case "bool":
+      return expr.value ? "TRUE" : "FALSE";
+    case "field":
+      return expr.name;
+    case "unary":
+      return `-${operand(expr.operand, 4)}`;
+    case "binary": {
+      const p = PRECEDENCE[expr.op];
+      // Operators group to the left, so a right operand of the same level needs parentheses.
+      return `${operand(expr.left, p)} ${expr.op} ${operand(expr.right, p + 1)}`;
+    }
+    case "call":
+      return `${expr.name}(${expr.args.map(formatFormula).join(", ")})`;
+    case "aggregate": {
+      const target = expr.field ? `${expr.list}.${expr.field}` : expr.list;
+      return `${expr.name}(${target}${expr.value ? `, ${formatFormula(expr.value)}` : ""})`;
+    }
+  }
+}

@@ -467,10 +467,10 @@ Re-adopting a project after detaching is not supported initially (see §15). The
 
 The index maps each semantic concept to its code: `concept ↔ files/symbols ↔ routes ↔ DB tables ↔ UI elements ↔ tests`, plus the concept's free text.
 
-- Most of it is **emitted by the compiler as a by-product**, since the compiler knows exactly what it generated. Custom files are covered by light static analysis (TypeScript symbols and imports).
-- It is disposable and can always be rebuilt.
-- Storage: start with JSON in `.smithable/index/`. Move to SQLite when size or query needs justify it.
-- Query API (used by AI tools, Studio and the CLI): `inspect(concept)`, `findImplementation(concept)`, `findTests(concept)`, `conceptAt(file, line)`, `conceptForElement(id)`.
+- Most of it is **emitted by the compiler as a by-product**, since the compiler knows exactly what it generated: the adapter's `implementationIndex` lists each concept's files, symbols, routes, tables and tests. Custom files are covered by light static analysis: exported symbols, imports of generated symbols ("uses"), `// implements rule` markers and test names. The same analysis gives each rule its status (§2.3).
+- It lives in the engine package `@smithable/index` (browser-compatible; the host passes in the files).
+- It is disposable and **computed on demand**: building it for the example apps takes milliseconds, so it is never stale. It will be stored (JSON, later SQLite) when size or query needs justify it.
+- Query API (used by AI tools, Studio and the CLI): `inspect(concept)`, `findImplementation(concept)`, `findTests(concept)`, `conceptsAt(file)`; `conceptForElement(id)` comes with visual selection (§10.3). `smithable inspect <concept> [--json]` prints a concept.
 
 ## 8. Change pipeline and safety
 

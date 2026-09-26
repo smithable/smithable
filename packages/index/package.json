@@ -1,0 +1,20 @@
+{
+  "name": "@smithable/index",
+  "version": "0.0.0",
+  "description": "The implementation index and context builder: which code implements each concept of the spec.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
+  "dependencies": {
+    "@smithable/core": "workspace:*"
+  }
+}
