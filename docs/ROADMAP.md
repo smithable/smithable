@@ -59,9 +59,10 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 - `hasMany` / `belongsTo`, `Order` model, relation-aware kit components (select a customer on an order, list orders on a customer).
 - Custom actions, queries, pages and jobs: generated typed contracts plus one-time stubs in `src/custom/`. Missing-implementation drift.
 - `examples` compiled into Vitest tests.
+- Rule IDs, implementation and test markers, and rule status in `smithable inspect`.
 - `smithable detach`.
 
-**Exit:** the CRM has Orders and a custom `calculateShipping` action whose manifest examples run as passing tests. Changing the action's manifest signature makes the custom file fail typecheck.
+**Exit:** the CRM has Orders and a custom `calculateShipping` action whose manifest examples run as passing tests. Changing the action's manifest signature makes the custom file fail typecheck. The capacity rule on bookings moves from **Not implemented** to **Implemented and tested** once custom code and a named test exist, and editing the rule text marks it **Changed**.
 **Detach test:** after `smithable detach`, a field and a page are added using only the Drizzle and TanStack docs (no Smithable knowledge), and the build and tests pass. `drizzle-kit generate` continues from the existing migrations.
 
 ## M5 — Auth and access
