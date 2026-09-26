@@ -1,3 +1,5 @@
+export type { ContentIR, FieldContent, ModelContent } from "./content.js";
+export { CONTENT_VERSION, emptyContent, validateContent } from "./content.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type * from "./ir.js";
