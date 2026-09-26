@@ -3,6 +3,7 @@ import { checkKeys, mapEntries, ParseContext } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
 import type { SpecSection } from "./section.js";
+import { actionsSection } from "./sections/actions.js";
 import { appSection } from "./sections/app.js";
 import { modelsSection } from "./sections/models.js";
 import { navigationSection } from "./sections/navigation.js";
@@ -15,6 +16,7 @@ export const SPEC_VERSION = "0.1";
 export const SECTIONS: readonly SpecSection[] = [
   appSection,
   modelsSection,
+  actionsSection,
   pagesSection,
   navigationSection,
 ];
@@ -72,7 +74,7 @@ export function validateSpec(file: SpecFile): ValidateResult {
 
   checkKeys(ctx, entries, "smithable.yml", {
     allowed: ["smithable", ...SECTIONS.map((s) => s.key)],
-    later: ["actions", "queries", "jobs"],
+    later: ["queries", "jobs"],
   });
   const parsed: Partial<SpecIR> = {};
   for (const section of SECTIONS) {

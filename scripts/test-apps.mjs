@@ -46,6 +46,20 @@ async function waitFor(url) {
   throw new Error(`${url} did not respond`);
 }
 
+/** What a developer (or AI) writes for the CRM's mergeCustomers action: ordinary Drizzle code. */
+const MERGE_CUSTOMERS = `import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import { customers, orders } from "#/db/schema";
+import type { MergeCustomersInput, MergeCustomersOutput } from "#/generated/actions/merge-customers";
+
+export async function mergeCustomers(input: MergeCustomersInput): Promise<MergeCustomersOutput> {
+  db.transaction((tx) => {
+    tx.update(orders).set({ customerId: input.keep }).where(eq(orders.customerId, input.duplicate)).run();
+    tx.delete(customers).where(eq(customers.id, input.duplicate)).run();
+  });
+}
+`;
+
 /** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
@@ -105,15 +119,22 @@ function operationsFlow(dir) {
     const [{ remarks }] = query(dir, "select remarks from customers where id = 1");
     if (remarks !== notes || !notes) throw new Error(JSON.stringify({ notes, remarks }));
   });
-  step("op renameField on a reference keeps every link", () => {
-    const before = query(dir, "select id, customer_id from orders order by id");
-    expectOk(smithable(dir, "op", "renameField", "Order", "customer", "buyer"));
-    const after = query(dir, "select id, buyer_id as customer_id from orders order by id");
-    if (JSON.stringify(after) !== JSON.stringify(before))
-      throw new Error(JSON.stringify({ before, after }));
-    run("pnpm", ["typecheck"], dir);
-    expectOk(smithable(dir, "undo"));
-  });
+  step(
+    "op renameField on a reference keeps every link, and flags custom code using the old name",
+    () => {
+      const before = query(dir, "select id, customer_id from orders order by id");
+      expectOk(smithable(dir, "op", "renameField", "Order", "customer", "buyer"));
+      const after = query(dir, "select id, buyer_id as customer_id from orders order by id");
+      if (JSON.stringify(after) !== JSON.stringify(before))
+        throw new Error(JSON.stringify({ before, after }));
+      const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
+      if (typecheck.status === 0 || !typecheck.stdout.includes("merge-customers.ts")) {
+        throw new Error(`expected the custom code to be flagged:\n${typecheck.stdout}`);
+      }
+      expectOk(smithable(dir, "undo"));
+      run("pnpm", ["typecheck"], dir);
+    },
+  );
   step("a new required field on a table with rows is refused with a way forward", () => {
     const refused = smithable(dir, "op", "addField", "Customer", "vatId", "string!");
     if (refused.code !== 1 || !refused.out.includes("Add vatId as optional first"))
@@ -138,6 +159,25 @@ function operationsFlow(dir) {
       throw new Error("website still in the spec");
     run("pnpm", ["typecheck"], dir);
   });
+  step(
+    "changing an action's input breaks its custom code at type-check; regeneration leaves the code alone",
+    () => {
+      const specFile = join(dir, "smithable.yml");
+      const spec = readFileSync(specFile, "utf8");
+      const custom = readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8");
+      writeFileSync(specFile, spec.replace("keep: Customer!", "primary: Customer!"));
+      run("node", [cli, "generate", dir], repo);
+      const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
+      writeFileSync(specFile, spec);
+      run("node", [cli, "generate", dir], repo);
+      if (typecheck.status === 0) throw new Error("typecheck passed after the input changed");
+      if (!typecheck.stdout.includes("merge-customers.ts")) throw new Error(typecheck.stdout);
+      if (readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8") !== custom) {
+        throw new Error("the custom code was changed");
+      }
+      run("pnpm", ["typecheck"], dir);
+    },
+  );
   step("a hand-edited generated file is reported, not overwritten", () => {
     const file = join(dir, "src/generated/customer.ts");
     const edited = `${readFileSync(file, "utf8")}// my change\n`;
@@ -212,6 +252,19 @@ async function browserFlow(base) {
       "a customer with orders cannot be deleted, and it says why",
       "This customer is still used by other records.",
     );
+
+    await page.goto(`${base}/customers`);
+    await page.getByRole("link", { name: "Merge customers" }).click();
+    await page.getByLabel("Keep *").selectOption({ label: "Nordic Timber Oy" });
+    await page.getByLabel("Duplicate *").selectOption({ label: "Skerry Software" });
+    await page.getByRole("button", { name: "Merge customers" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
+    if (await page.getByRole("cell", { name: "Skerry Software" }).count())
+      throw new Error("the duplicate is still there");
+    await page.getByRole("cell", { name: "Nordic Timber Oy" }).click();
+    await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
+    console.log("  ✓ browser: the custom action merges customers and moves their orders");
   } catch (error) {
     console.log(`  ✗ browser: ${error.message.split("\n")[0]}`);
     failures.push("crm browser flow");
@@ -226,6 +279,11 @@ for (const [index, example] of examples.entries()) {
   const port = 4400 + index;
   try {
     step("smithable new", () => run("node", [cli, "new", dir, "--starter", example], repo));
+    if (example === "crm") {
+      step("a developer implements the custom action in src/custom", () => {
+        writeFileSync(join(dir, "src/custom/actions/merge-customers.ts"), MERGE_CUSTOMERS);
+      });
+    }
     step("no dependency on Smithable", () => {
       if (/smithable/i.test(readFileSync(join(dir, "package.json"), "utf8")))
         throw new Error("package.json mentions Smithable");
@@ -242,7 +300,8 @@ for (const [index, example] of examples.entries()) {
     try {
       await waitFor(`http://localhost:${port}/health`);
       const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-      const routes = [...spec.matchAll(/^ {2}([a-z][\w-]*):\n {4}(?:route: (\S+)\n {4})?/gm)];
+      const pages = spec.slice(spec.indexOf("\npages:"));
+      const routes = [...pages.matchAll(/^ {2}([a-z][\w-]*):\n {4}(?:route: (\S+)\n {4})?/gm)];
       for (const route of routes.length ? routes : []) {
         const path = route[2] ?? `/${route[1]}`;
         const response = await fetch(`http://localhost:${port}${path}`);

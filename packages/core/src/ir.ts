@@ -8,6 +8,7 @@ export interface SpecIR {
   specVersion: string;
   app: AppIR;
   models: ModelIR[];
+  actions: ActionIR[];
   pages: PageIR[];
   navigation: MenuIR[];
 }
@@ -110,6 +111,16 @@ export interface PageIR extends SemanticText {
   id: string;
   route: string;
   pattern: { kind: "crud"; model: string };
+  /** Actions offered on the page, e.g. a "Merge customers" button. */
+  actions?: string[];
+}
+
+/** An action beyond create, edit and delete; in spec version 0.1 always custom code. */
+export interface ActionIR extends SemanticText {
+  name: string;
+  custom: true;
+  input: FieldIR[];
+  output?: FieldIR[];
 }
 
 export interface MenuIR {

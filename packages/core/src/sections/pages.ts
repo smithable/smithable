@@ -1,5 +1,5 @@
 import type { ParsedNode } from "yaml";
-import { checkKeys, mapEntries, type ParseContext, readString } from "../context.js";
+import { checkKeys, mapEntries, type ParseContext, readNameList, readString } from "../context.js";
 import type { PageIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { NAME_PATTERN } from "./names.js";
@@ -32,6 +32,11 @@ export const pagesSection: SpecSection<"pages"> = {
           description: "Defaults to / plus the page name.",
         },
         crud: { type: "string", description: "A model to list, view, create, edit and delete." },
+        actions: {
+          type: "array",
+          items: { type: "string" },
+          description: "Actions offered on the page, as buttons.",
+        },
         ...textSchema,
       },
     },
@@ -77,22 +82,13 @@ function readPage(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["route", "crud", ...TEXT_KEYS],
-    later: [
-      "landing",
-      "dashboard",
-      "list",
-      "calendar",
-      "custom",
-      "access",
-      "search",
-      "filters",
-      "actions",
-    ],
+    allowed: ["route", "crud", "actions", ...TEXT_KEYS],
+    later: ["landing", "dashboard", "list", "calendar", "custom", "access", "search", "filters"],
     content: ["title", "label", "heading"],
   });
   let route = `/${kebab(id)}`;
   let model: string | undefined;
+  let actions: string[] | undefined;
   for (const { key, value } of known) {
     if (key === "route") {
       const r = readString(ctx, value, `The route of ${where}`);
@@ -108,6 +104,11 @@ function readPage(
       } else {
         route = r;
       }
+    } else if (key === "actions") {
+      actions = readNameList(ctx, value, `the actions of ${where}`).map(({ name, at }) => {
+        ctx.reference("action", name, at);
+        return name;
+      });
     } else if (key === "crud") {
       model = readString(ctx, value, `"crud" in ${where}`);
       if (model !== undefined) ctx.reference("model", model, value);
@@ -123,7 +124,13 @@ function readPage(
     }
     return undefined;
   }
-  return { id, route, pattern: { kind: "crud", model }, ...readSemanticText(ctx, known) };
+  return {
+    id,
+    route,
+    pattern: { kind: "crud", model },
+    ...(actions?.length ? { actions } : {}),
+    ...readSemanticText(ctx, known),
+  };
 }
 
 function kebab(name: string): string {
