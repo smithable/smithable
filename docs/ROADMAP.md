@@ -17,6 +17,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 - DSL v0.1 grammar for `app`, `models` (scalar fields only), `pages` (`crud`), `navigation`, and the free-text fields. Short and long forms.
 - JSON Schema, parser with line/column errors, validator, IR.
+- Internal plugin interface: each spec section (app, models, pages, navigation) registers its schema, validation and IR contribution through it ([ARCHITECTURE.md §5.1](ARCHITECTURE.md#51-plugins)). Unknown keys are validation errors.
 - Every spec file carries its format version. A minimal spec-migration mechanism with one test migration, so the path exists before it is needed ([ARCHITECTURE.md §14](ARCHITECTURE.md#14-versions-and-upgrades)).
 - Study Wasp's spec design first (including why they moved from their own DSL to a TypeScript config), and write down what to adopt and avoid.
 - Draft the DSL against the CRM plus two other sample apps (a booking site and a SaaS with a landing page) before freezing v0.1.
@@ -29,6 +30,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 - TanStack adapter: idiomatic Drizzle schema (`src/db/schema.ts`), drizzle-kit-format migrations, `src/generated/ui.ts`, app kit (`ModelTable`, `ModelForm`, generic CRUD), pages and routes, navigation, `/health`, Dockerfile, generated README.
 - Ownership zones and generated-file headers.
+- `smithable.content.yml`: derived default texts, with overrides for labels and titles.
 - `smithable.lock`, a first stack profile, exact dependency versions and a committed package lockfile in generated apps.
 - `smithable new`, `smithable generate`, `smithable run`, `smithable build` (OCI image).
 - **First five minutes:** `smithable new` produces a running app with sample data and one polished default theme, and opens the preview automatically.
@@ -168,8 +170,11 @@ Removes the biggest technical risk of the browser-first product before building 
 - Frontier providers (EU-hosted where possible, Anthropic API, Claude Code headless confined to the project).
 - Escalation between tiers using the same semantic slice.
 - AI writes custom code only in `src/custom/` for a named concept, then typecheck and tests run.
+- **Teach Smithable:** for a construct no plugin handles, AI writes a project plugin (schema, operations, generator) once, and it is reviewed like any other change.
 
-**Exit:** "prioritise customers most likely to churn on the dashboard" produces a spec change plus a custom query, with tests passing, and no generated files touched.
+**Exit:**
+- "Prioritise customers most likely to churn on the dashboard" produces a spec change plus a custom query, with tests passing, and no generated files touched.
+- A `newsletter:` section in a spec gets a project plugin written by AI. Regenerating afterwards uses no AI at all.
 
 ## M14 — Verification, security, deploy and backup targets
 
@@ -207,6 +212,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - Teams and collaboration.
 - In-browser local model (WebGPU) for small intent tasks.
 - A fine-tuned Smithable model, possibly with open weights.
+- A public plugin API, based on the internal plugins and real project plugins.
 - A second adapter, and a public adapter API based on two real implementations.
 - Scalable deployment mode (PostgreSQL, S3, multiple instances).
 - Integrations, external endpoints (OpenAPI), events (AsyncAPI).

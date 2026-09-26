@@ -1,0 +1,14 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+# Only texts that differ from the derived defaults are listed.
+smithableContent: 0.1
+
+models:
+  Customer:
+    fields:
+      accountManager: { label: Responsible salesperson, help: Gets notified about new orders. }
+      segment: { values: { smb: Small business } }
+
+actions:
+  mergeCustomers:
+    label: Merge duplicates
+    confirm: The duplicate is deleted after its orders have been moved. Continue?

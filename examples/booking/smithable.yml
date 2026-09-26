@@ -67,7 +67,7 @@ actions:
     when: { status: confirmed }
     set: { status: cancelled }
     allow: [owner, admin]
-    confirm: Cancel this booking?
+    confirm: true                     # ask before cancelling; wording in smithable.content.yml
     rules:
       - Owners can cancel until 2 hours before the session starts; admins at any time.
 
@@ -86,28 +86,18 @@ pages:
   home:
     route: /
     intent: Make a first-time visitor feel welcome and get them to book a class.
-    landing:
-      - hero:
-          title: Find your calm
-          subtitle: Small classes for every level, in the heart of Mariehamn.
-          image: hero.jpg
-          cta: { label: See the schedule, to: schedule }
-      - cards: { title: Our classes, query: ClassType }
-      - cards: { title: Meet the teachers, query: Instructor }
-      - faq:
-          - q: Do I need to bring a mat?
-            a: No, mats and props are provided.
-          - q: I have never done yoga. Where do I start?
-            a: Any class marked "beginner" is a great first step.
+    landing:                          # sections in display order; texts in smithable.content.yml
+      hero: { image: hero.jpg, to: schedule }
+      classes: { cards: ClassType }
+      teachers: { cards: Instructor }
+      faq: {}
 
   schedule:
     calendar:
       query: upcomingSessions
-      title: "{classType.name} with {instructor.name}"
       action: bookSession
 
   my-bookings:
-    title: My bookings
     list:
       query: myBookings
       actions: [cancelBooking]
