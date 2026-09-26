@@ -1,0 +1,35 @@
+# DRAFT: spec design proposal, not yet parsed by Smithable.
+# Only texts that differ from the derived defaults are listed.
+smithableContent: 0.1
+
+models:
+  ClassType:
+    fields:
+      level: { values: { allLevels: All levels } }
+      durationMinutes: { label: Duration (minutes) }
+
+actions:
+  bookSession: { label: Book }
+  cancelBooking: { label: Cancel booking, confirm: Cancel this booking? }
+
+pages:
+  home:
+    hero:
+      title: Find your calm
+      subtitle: Small classes for every level, in the heart of Mariehamn.
+      button: See the schedule
+    classes: { title: Our classes }
+    teachers: { title: Meet the teachers }
+    faq:
+      title: Good to know
+      items:
+        - q: Do I need to bring a mat?
+          a: No, mats and props are provided.
+        - q: I have never done yoga. Where do I start?
+          a: Any class marked "beginner" is a great first step.
+
+  schedule:
+    event: "{classType.name} with {instructor.name}"
+
+  my-bookings:
+    empty: You have no upcoming classes. Find one in the schedule!

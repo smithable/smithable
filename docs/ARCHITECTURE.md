@@ -8,6 +8,7 @@ This document records architectural decisions. When a decision changes, update i
  smithable.yml            WHAT the app does and WHY (structured DSL + scoped free text)
  smithable.auth.yml       WHO the users are: sign-in methods, roles
  smithable.ux.yml         HOW it looks and feels: layout, density, ordering, theme
+ smithable.content.yml    WHAT visitors read: labels, page texts, landing copy
  smithable.context.yml    HOW to implement it (stack, conventions, implementation guidance)
         │
         ▼  parse + validate
@@ -30,9 +31,9 @@ Every change, whether it comes from the CLI, Studio, AI or a plugin, goes throug
 
 ### 2.1 Content
 
-The manifest describes application functionality in technology-neutral terms. It never contains React, Drizzle, Tailwind, file paths or CSS.
+The manifest describes application functionality in technology-neutral terms. It never contains React, Drizzle, Tailwind, file paths, CSS or visible copy.
 
-v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions, `actions`, `queries`, `pages`, `navigation`, `jobs`. Integrations and external endpoints come later. Roles, access defaults and everything public are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` (§3).
+v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions, `actions`, `queries`, `pages`, `navigation`, `jobs`. Integrations and external endpoints come later. Roles, access defaults and everything public are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
 
 ### 2.2 Style: neat by default, explicit when needed
 
@@ -177,7 +178,7 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 
 ## 3. Companion files
 
-`smithable.yml` stays focused on functionality. Three companion files hold concerns that would otherwise clutter it. All of them are validated by JSON Schema, modified through operations, and edited with comment-preserving writes. Only `smithable.context.yml` may mention technology.
+`smithable.yml` stays focused on functionality. Four companion files hold concerns that would otherwise clutter it. All of them are validated by JSON Schema, modified through operations, and edited with comment-preserving writes. Only `smithable.context.yml` may mention technology.
 
 ### 3.1 `smithable.auth.yml`: users, roles and exposure
 
@@ -265,7 +266,35 @@ pages:
 - Anything beyond its vocabulary is handled by a custom component in `src/custom/`.
 - The same growth rule applies as for the DSL (§2.4): add structure only when it is common and deterministic.
 
-### 3.3 `smithable.context.yml`: implementation context
+### 3.3 `smithable.content.yml`: visible text
+
+`smithable.yml` holds structure; this file holds **every text a visitor sees**. That covers labels, help texts, choice-value names, page and section titles, landing page copy, button labels, confirmations, empty states and email texts. The same rule applies to every page, landing page or not.
+
+```yaml
+smithableContent: 0.1
+models:
+  Customer:
+    fields:
+      accountManager: { label: Responsible salesperson, help: Gets notified about new orders. }
+  ClassType:
+    fields:
+      level: { values: { allLevels: All levels } }
+actions:
+  cancelBooking: { label: Cancel booking, confirm: Cancel this booking? }
+pages:
+  home:
+    hero: { title: Find your calm, subtitle: Small classes for every level., button: See the schedule }
+```
+
+- **Derived by default.** Labels come from names (`accountManager` becomes "Account manager"), titles from page names, and button labels from action names. The file only contains what differs, so for many apps it stays short.
+- **Keyed by concept.** Entries follow the same IDs as the spec, so renaming a concept through an operation also moves its text. Landing page sections have names in the spec (`hero`, `classes`, `faq`), which their texts are keyed by.
+- **Semantic free text stays in the spec.** `description`, `intent` and `rules` describe meaning for AI and developers; they are not displayed.
+- **Why a separate file:**
+  - Copy is irrelevant to almost every AI request, so keeping it out of `smithable.yml` keeps AI context small.
+  - Visual text editing in the Builder has one natural target.
+  - Translations later become `smithable.content.<locale>.yml` without touching the spec.
+
+### 3.4 `smithable.context.yml`: implementation context
 
 This file describes HOW to implement the app: technology, conventions and guidance.
 
@@ -277,6 +306,7 @@ conventions:
   - Prefer existing components before creating new ones.
 guidance: >
   Tables should be compact; this is a back-office tool used all day.
+plugins: ["@acme/smithable-newsletter", ./smithable/plugins/loyalty]
 ai:
   policy: eu-only          # local-only | eu-only | best-available | custom
 ```
@@ -302,7 +332,7 @@ External agents (MCP) ┤
 Plugins ──────────────┘
 ```
 
-## 5. Compiler, IR and adapters
+## 5. Compiler, IR, adapters and plugins
 
 - **Parser/validator** → **semantic model** → **IR**. The IR has defaults applied, references resolved, derived facts computed (for example, a foreign key implied by `belongsTo`) and identifiers normalized. It carries no technology concepts.
 - **Adapter**: IR → a set of files, migrations, index entries, and build/run commands.
@@ -310,6 +340,28 @@ Plugins ──────────────┘
 - The adapter boundary is kept clean inside the codebase, but the **adapter API is not published** until a second adapter exists. Designing a public API from one example produces the wrong API.
 - Generation is **deterministic and idempotent**: the same manifest and the same Smithable version produce byte-identical output. This is tested.
 - **Templates are real, checked code.** The app kit and generator templates are real TypeScript that is linted and type-checked, and the sample apps in `examples/` are generated, type-checked and tested on every `pnpm check`.
+
+### 5.1 Plugins
+
+Smithable is extensible through **plugins**: npm packages, or folders inside a project (`smithable/plugins/<name>/`). A plugin can contribute:
+
+- **Spec keys** with their own JSON Schema. Validation, autocomplete and the plain-language view work for them like for built-in keys. Every key belongs to exactly one plugin, and a plugin declares where its keys may appear (top level, on models, on pages, …).
+- **Operations.** CLI commands, MCP tools and AI-usable actions are all derived from operations, so a plugin's operations appear in all of them automatically.
+- **A generator** that writes code into the app. The app-independence rule applies: generated apps must not depend on the plugin at runtime. Ordinary libraries the generated code uses (for example a payment provider's SDK) are fine.
+- **Extras:** additional CLI commands and MCP tools, a plain-language description for the Builder, and context for AI.
+
+Plugins are declared in `smithable.context.yml`, since they are an implementation choice.
+
+**Built-in features are internal plugins.** Models, fields, pages, access, formulas and jobs each register their schema, operations and generator through the same internal interface from the start (M1). That keeps the core honest, and makes the eventual public plugin API "publish what we already use" rather than a retrofit.
+
+**"Teach Smithable".** When the spec contains something Smithable does not understand, it does not guess. The validator reports it and offers: *"Smithable doesn't know `newsletter` — create a handler?"* AI then writes a **project plugin** (schema, operations and generator) **once**, reviewed like any other change. From then on the construct is handled deterministically and costs 0 tokens, like every built-in feature. AI is used to create a generator once, instead of writing code on every request. A useful project plugin can later be published for others.
+
+**Guardrails:**
+
+- **No unexplained constructs.** A key without a plugin is a validation error, never silently ignored.
+- **Trust.** Plugins run code. Locally they are trusted like any npm package you install. The hosted product runs only vetted plugins at first. Plugins follow the engine's browser-compatibility rule (§1).
+- **Core stays curated.** Plugins may add constructs for one domain freely; promoting a construct into the core DSL still requires the questions in §2.4.
+- **No public API before real use.** The plugin API is published only after several built-in features and at least one real project plugin have been built on it, for the same reason as the adapter API.
 
 ## 6. The generated application and code ownership
 
@@ -522,14 +574,14 @@ In WebContainers, native Node modules are unavailable, so the preview uses a Web
 - The app runs in an **iframe** preview.
 - **Instrumentation is dev-only, and the app does not depend on it.** Every preview runtime starts the app's Vite dev server with a wrapper config that extends the app's own `vite.config` and adds the Smithable plugin. The plugin tags rendered elements with concept IDs and injects a small editor runtime that talks to the UI via `postMessage`. Production builds use the app's plain config, so they contain nothing from Smithable.
 - Selecting an element resolves to a concept (`field:Customer.phone`) and shows the operations that apply to it ("required", "rename", "move", "hide from table"), plus a prompt box scoped to that concept.
-- **Semantic edits** (fields, pages, access) go through operations on `smithable.yml`. **Presentation edits** (theme, ordering, visibility, density, grouping, sections) go through operations on `smithable.ux.yml`. Anything finer is a custom component.
+- **Semantic edits** (fields, pages, access) go through operations on `smithable.yml`. **Presentation edits** (theme, ordering, visibility, density, grouping, sections) go through operations on `smithable.ux.yml`, and **text edits** (click a headline or label and retype it) on `smithable.content.yml`. Anything finer is a custom component.
 
 ### 10.4 Design system
 
 Design quality comes from crafted templates, not AI improvisation. AI (even a small model) only *chooses* among them.
 
 - **Themes.** A few carefully tuned presets (for example `modern`, `minimal`, `playful`, `corporate`): palette, typography, spacing, radius, dark mode. **Brand input** (a primary colour, a font, a mood) deterministically derives a custom theme from a preset.
-- **Page patterns** beyond data screens: landing pages built from sections (hero, features, pricing, testimonials, FAQ, call to action), dashboards (stat cards, charts), list/detail, kanban, calendar, settings, onboarding, and sign-in pages. They are common across almost all apps, so they pass the DSL growth test (§2.4). Pages declare *which* pattern and content in `smithable.yml`; `smithable.ux.yml` controls presentation.
+- **Page patterns** beyond data screens: landing pages built from sections (hero, features, pricing, testimonials, FAQ, call to action), dashboards (stat cards, charts), list/detail, kanban, calendar, settings, onboarding, and sign-in pages. They are common across almost all apps, so they pass the DSL growth test (§2.4). Pages declare *which* pattern and sections in `smithable.yml`; `smithable.content.yml` holds their text and `smithable.ux.yml` their presentation.
 - **Sample data** is generated with every new project, so no screen ever looks empty or broken.
 - **Visual checks.** Playwright screenshots every page and checks contrast, overflow and mobile layout. Optionally, a vision model reviews the screenshots once per session.
 - A professional designer creates the themes and patterns. This is a deliberate investment, not polish.
@@ -639,6 +691,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 |---|---|
 | **Auth library** | Better Auth (Drizzle adapter, social providers, self-hosted). Confirm in M5 against Google/Facebook flows and dev sign-in |
 | **Database escape hatch.** Where do indexes, constraints or column types the spec cannot express go? | A user-owned `src/custom/db/schema.ts` whose tables and indexes are merged with the generated schema |
+| **Translations** | `smithable.content.<locale>.yml` per language, with the default language in `smithable.content.yml`. Later |
 | **Teams and workspaces** | Later. Records get a group next to their owner, enforced in the same access layer (§3.1) |
 | **Re-adopting a detached app** | Not supported initially. It would need the deferred project import |
 | **`smithable.ux.yml` vocabulary** | Start minimal (density, column order/visibility, field order, groups) and grow only via §2.4 |
