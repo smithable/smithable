@@ -3,7 +3,7 @@
 // running example) is also used in a real browser: validation, create, edit, delete.
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -44,6 +44,69 @@ async function waitFor(url) {
     await new Promise((r) => setTimeout(r, 250));
   }
   throw new Error(`${url} did not respond`);
+}
+
+/** Runs a query against the app's dev database with the app's own SQLite driver. */
+function query(dir, sql) {
+  const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).all()))`;
+  return JSON.parse(run("node", ["-e", code], dir));
+}
+
+function smithable(dir, ...args) {
+  const result = spawnSync("node", [cli, ...args, "--dir", dir], { cwd: repo, encoding: "utf8" });
+  return { code: result.status, out: `${result.stdout}${result.stderr}` };
+}
+
+/** M3: operations change spec, code, migrations and data; undo restores both; drift is refused. */
+function operationsFlow(dir) {
+  const expectOk = (result) => {
+    if (result.code !== 0) throw new Error(result.out);
+  };
+  step("op addField keeps existing rows and adds the column", () => {
+    const before = query(dir, "select count(*) n from customers")[0].n;
+    expectOk(smithable(dir, "op", "addField", "Customer", "website", "url"));
+    const after = query(dir, "select count(*) n, count(website) w from customers")[0];
+    if (after.n !== before || after.w !== 0) throw new Error(JSON.stringify({ before, after }));
+    if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("      website: url\n"))
+      throw new Error("spec");
+    if (!readFileSync(join(dir, "src/generated/customer.ts"), "utf8").includes('name: "website"'))
+      throw new Error("form/table");
+    run("pnpm", ["typecheck"], dir);
+  });
+  step("op renameField keeps the data", () => {
+    const [{ notes }] = query(dir, "select notes from customers where id = 1");
+    expectOk(smithable(dir, "op", "renameField", "Customer", "notes", "remarks"));
+    const [{ remarks }] = query(dir, "select remarks from customers where id = 1");
+    if (remarks !== notes || !notes) throw new Error(JSON.stringify({ notes, remarks }));
+  });
+  step("a destructive op needs --yes", () => {
+    const refused = smithable(dir, "op", "removeField", "Customer", "phone");
+    if (refused.code !== 1 || !refused.out.includes("--yes")) throw new Error(refused.out);
+    if (query(dir, "select count(phone) p from customers")[0].p === 0)
+      throw new Error("phone was removed");
+  });
+  step("undo restores code and data, one operation at a time", () => {
+    expectOk(smithable(dir, "undo"));
+    if (query(dir, "select notes from customers where id = 1")[0].notes === undefined)
+      throw new Error("notes not back");
+    expectOk(smithable(dir, "undo"));
+    const columns = query(dir, "select name from pragma_table_info('customers')").map(
+      (c) => c.name,
+    );
+    if (columns.includes("website")) throw new Error("website still in the database");
+    if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("website"))
+      throw new Error("website still in the spec");
+    run("pnpm", ["typecheck"], dir);
+  });
+  step("a hand-edited generated file is reported, not overwritten", () => {
+    const file = join(dir, "src/generated/customer.ts");
+    const edited = `${readFileSync(file, "utf8")}// my change\n`;
+    writeFileSync(file, edited);
+    const result = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+    if (result.status !== 1 || !result.stderr.includes("src/generated/customer.ts"))
+      throw new Error(result.stderr);
+    if (readFileSync(file, "utf8") !== edited) throw new Error("the edit was overwritten");
+  });
 }
 
 /** Creates, edits and deletes a customer through the UI, checking messages on the way. */
@@ -135,6 +198,7 @@ for (const [index, example] of examples.entries()) {
       const out = run("node", [cli, "generate", dir], repo);
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
     });
+    if (example === "crm") operationsFlow(dir);
   } catch {
     // Already reported; continue with the next example.
   }
