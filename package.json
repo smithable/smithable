@@ -16,7 +16,8 @@
     "check": "pnpm lint && pnpm build && pnpm test && pnpm test:apps",
     "schema": "pnpm build && node scripts/write-schema.mjs",
     "embed": "node scripts/embed.mjs",
-    "test:apps": "node scripts/test-apps.mjs"
+    "test:apps": "node scripts/test-apps.mjs",
+    "test:container": "node scripts/test-container.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

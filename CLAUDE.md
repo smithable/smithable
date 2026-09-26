@@ -10,6 +10,7 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   - `pnpm test`: Vitest, tests live next to the code as `src/**/*.test.ts`.
   - `pnpm lint`: Biome lint and format check. `pnpm fix` applies fixes.
   - `pnpm test:apps`: generates every example in `examples/` into a temporary directory, then type-checks, builds, serves and regenerates it.
+  - `pnpm test:container` (needs Docker): builds the CRM image and checks that data survives replacing the container. Not part of `check`.
   - `pnpm check`: lint + build + test + test:apps. This is the CI gate and must pass before every commit.
   - `pnpm schema`: regenerate `packages/core/schema/smithable.schema.json` after changing a section's schema. A test fails if it is stale.
 - App templates live in `packages/adapter-tanstack/templates/` as real files; `pnpm build` embeds them (and the example specs used as starters) via `scripts/embed.mjs`. Generated `*.gen.ts` files are never edited by hand.
