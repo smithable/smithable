@@ -12,6 +12,7 @@ import {
 } from "@smithable/ai";
 import { validateSpec } from "@smithable/core";
 import { buildContext } from "@smithable/index";
+import { claudeCode } from "./claude-code.js";
 import { logTokens } from "./context.js";
 import type { Io } from "./io.js";
 import { requiredButEmpty, runOperation } from "./op.js";
@@ -50,6 +51,9 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
       }),
     );
   }
+  // A frontier model through the user's own Claude Code: SMITHABLE_FRONTIER=claude-code.
+  if (env.SMITHABLE_FRONTIER === "claude-code")
+    providers.push(claudeCode(env.SMITHABLE_FRONTIER_MODEL || undefined));
   return providers;
 }
 
@@ -98,8 +102,13 @@ export function usageLine(usage: Usage[]): string {
   const last = usage.at(-1);
   if (!last) return "No model was used";
   const tokens = usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
-  const cost = usage.reduce((sum, u) => sum + u.cost, 0);
-  return `${TIER_NAMES[last.tier]} (${last.model}) · ${tokens.toLocaleString("en")} tokens · €${cost.toFixed(4)}`;
+  // Mistral's prices are in euros, Claude Code reports dollars: each is totalled on its own.
+  const costs = (["EUR", "USD"] as const).flatMap((currency) => {
+    const list = usage.filter((u) => u.currency === currency);
+    const sum = list.reduce((n, u) => n + u.cost, 0);
+    return list.length ? [`${currency === "EUR" ? "€" : "$"}${sum.toFixed(4)}`] : [];
+  });
+  return `${TIER_NAMES[last.tier]} (${last.model}) · ${tokens.toLocaleString("en")} tokens · ${costs.join(" + ")}`;
 }
 
 /**
@@ -123,6 +132,7 @@ export function applyProposal(
       model: last?.model,
       tokens: i === 0 ? tokens : 0,
       cost: i === 0 ? Number(cost.toFixed(6)) : 0,
+      currency: last?.currency,
     })}`;
     const code = runOperation(dir, io, op, args, { yes: true, trailer });
     if (code !== 0) {

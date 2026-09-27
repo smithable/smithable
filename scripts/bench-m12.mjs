@@ -12,7 +12,12 @@ import { join } from "node:path";
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-bench-m12-"));
-const model = process.env.SMITHABLE_MODEL || process.env.SMITHABLE_LOCAL_MODEL;
+const model =
+  process.env.SMITHABLE_MODEL ||
+  process.env.SMITHABLE_LOCAL_MODEL ||
+  (process.env.SMITHABLE_FRONTIER === "claude-code"
+    ? process.env.SMITHABLE_FRONTIER_MODEL || "claude-code"
+    : undefined);
 if (!model) throw new Error("Set up a model first (docs/ai.md).");
 
 const DESCRIPTIONS = [
@@ -38,7 +43,7 @@ for (const [i, description] of DESCRIPTIONS.entries()) {
     maxBuffer: 64 * 1024 * 1024,
   });
   const out = `${run.stdout}${run.stderr}`;
-  const used = /\(([^)]+)\) · ([\d,]+) tokens · €([\d.]+)/.exec(out);
+  const used = /\(([^)]+)\) · ([\d,]+) tokens · ([€$])([\d.]+)/.exec(out);
   const typecheck =
     existsSync(join(dir, "package.json")) &&
     spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" }).status === 0;
@@ -48,7 +53,8 @@ for (const [i, description] of DESCRIPTIONS.entries()) {
     created: run.status === 0,
     typecheck,
     tokens: Number((used?.[2] ?? "0").replaceAll(",", "")),
-    cost: Number(used?.[3] ?? 0),
+    cost: Number(used?.[4] ?? 0),
+    currency: used?.[3] ?? "€",
     seconds: Math.round((Date.now() - started) / 1000),
     summary: out
       .slice(out.indexOf("\n", out.indexOf("tokens ·")) + 1, out.indexOf("Create this app?"))
@@ -57,18 +63,18 @@ for (const [i, description] of DESCRIPTIONS.entries()) {
   };
   rows.push(row);
   console.log(
-    `${i + 1}. ${row.created ? "created" : "failed"} (${row.starter}) · ${row.tokens} tokens · €${row.cost}`,
+    `${i + 1}. ${row.created ? "created" : "failed"} (${row.starter}) · ${row.tokens} tokens · ${row.currency}${row.cost}`,
   );
 }
 
 const yes = (v) => (v ? "yes" : "**no**");
 const report = `# M12 first builds: ${model} (${new Date().toISOString().slice(0, 10)})
 
-Ten app descriptions, each started with \`smithable new --describe\` (the closest starter, adapted by the model; errors go back once). Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, €${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
+Ten app descriptions, each started with \`smithable new --describe\` (the closest starter, adapted by the model; errors go back up to twice). Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, ${rows[0]?.currency ?? "€"}${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
 
 | Description | Starter | Created | Type-checks | Tokens | Cost | Time |
 |---|---|---|---|---|---|---|
-${rows.map((r) => `| ${r.description} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokens.toLocaleString("en")} | €${r.cost.toFixed(4)} | ${r.seconds} s |`).join("\n")}
+${rows.map((r) => `| ${r.description} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokens.toLocaleString("en")} | ${r.currency}${r.cost.toFixed(4)} | ${r.seconds} s |`).join("\n")}
 
 ## Summaries, for review
 

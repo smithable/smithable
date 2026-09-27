@@ -19,7 +19,11 @@ export interface Completion {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /** What the call cost, when the provider reports it (e.g. Claude Code, in dollars). */
+  cost?: { amount: number; currency: Currency };
 }
+
+export type Currency = "EUR" | "USD";
 
 export interface Provider {
   name: string;
@@ -137,8 +141,8 @@ export interface Usage {
   tier: Tier;
   inputTokens: number;
   outputTokens: number;
-  /** In euros. */
   cost: number;
+  currency: Currency;
 }
 
 /**
@@ -157,10 +161,13 @@ export async function completeJson(
     tier: provider.tier,
     inputTokens: completion.inputTokens,
     outputTokens: completion.outputTokens,
+    // Prices are in euros per million tokens, unless the provider reports its own cost.
     cost:
+      completion.cost?.amount ??
       (completion.inputTokens * provider.price.input +
         completion.outputTokens * provider.price.output) /
-      1_000_000,
+        1_000_000,
+    currency: completion.cost?.currency ?? "EUR",
   });
   return JSON.parse(completion.text);
 }

@@ -32,8 +32,8 @@ export interface TraceEntry {
   engine: "generator" | "local model" | "Smithable model" | "frontier model";
   model?: string;
   tokens: number;
-  /** In euros. */
   cost?: number;
+  currency?: "EUR" | "USD";
   ms?: number;
   undone: boolean;
   isUndo: boolean;
@@ -65,6 +65,7 @@ function trace(dir: string): TraceEntry[] {
           model: string;
           tokens: number;
           cost: number;
+          currency?: "EUR" | "USD";
         })
       : undefined;
     return [
@@ -73,7 +74,9 @@ function trace(dir: string): TraceEntry[] {
         at,
         engine: model ? ENGINES[model.tier] : ("generator" as const),
         tokens: model?.tokens ?? 0,
-        ...(model ? { model: model.model, cost: model.cost } : {}),
+        ...(model
+          ? { model: model.model, cost: model.cost, currency: model.currency ?? "EUR" }
+          : {}),
         ...(ms ? { ms: Number(ms) } : {}),
         undone: reverted.has(sha),
         isUndo,
