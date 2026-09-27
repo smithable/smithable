@@ -1,0 +1,2002 @@
+[
+  {
+    "id": 1,
+    "name": "Nordic Timber Oy",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 2,
+    "name": "Baltic Freight AB",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 3,
+    "name": "Skerry Software",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 4,
+    "name": "Kallio Design",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 5,
+    "name": "Arctic Outdoor Co.",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 6,
+    "name": "Mariehamn Marine and Offshore Services AB",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 7,
+    "name": "Ålands Skärgård Oy",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 8,
+    "name": "Österö Studio",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 9,
+    "name": "Nordic Timber Oy · Office 2",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 10,
+    "name": "Baltic Freight AB · Office 2",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 11,
+    "name": "Skerry Software · Office 2",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 12,
+    "name": "Kallio Design · Office 2",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 13,
+    "name": "Arctic Outdoor Co. · Office 2",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 14,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 2",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 15,
+    "name": "Ålands Skärgård Oy · Office 2",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 16,
+    "name": "Österö Studio · Office 2",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 17,
+    "name": "Nordic Timber Oy · Office 3",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 18,
+    "name": "Baltic Freight AB · Office 3",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 19,
+    "name": "Skerry Software · Office 3",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 20,
+    "name": "Kallio Design · Office 3",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 21,
+    "name": "Arctic Outdoor Co. · Office 3",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 22,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 3",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 23,
+    "name": "Ålands Skärgård Oy · Office 3",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 24,
+    "name": "Österö Studio · Office 3",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 25,
+    "name": "Nordic Timber Oy · Office 4",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 26,
+    "name": "Baltic Freight AB · Office 4",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 27,
+    "name": "Skerry Software · Office 4",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 28,
+    "name": "Kallio Design · Office 4",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 29,
+    "name": "Arctic Outdoor Co. · Office 4",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 30,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 4",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 31,
+    "name": "Ålands Skärgård Oy · Office 4",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 32,
+    "name": "Österö Studio · Office 4",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 33,
+    "name": "Nordic Timber Oy · Office 5",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 34,
+    "name": "Baltic Freight AB · Office 5",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 35,
+    "name": "Skerry Software · Office 5",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 36,
+    "name": "Kallio Design · Office 5",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 37,
+    "name": "Arctic Outdoor Co. · Office 5",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 38,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 5",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 39,
+    "name": "Ålands Skärgård Oy · Office 5",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 40,
+    "name": "Österö Studio · Office 5",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 41,
+    "name": "Nordic Timber Oy · Office 6",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 42,
+    "name": "Baltic Freight AB · Office 6",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 43,
+    "name": "Skerry Software · Office 6",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 44,
+    "name": "Kallio Design · Office 6",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 45,
+    "name": "Arctic Outdoor Co. · Office 6",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 46,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 6",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 47,
+    "name": "Ålands Skärgård Oy · Office 6",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 48,
+    "name": "Österö Studio · Office 6",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 49,
+    "name": "Nordic Timber Oy · Office 7",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 50,
+    "name": "Baltic Freight AB · Office 7",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 51,
+    "name": "Skerry Software · Office 7",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 52,
+    "name": "Kallio Design · Office 7",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 53,
+    "name": "Arctic Outdoor Co. · Office 7",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 54,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 7",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 55,
+    "name": "Ålands Skärgård Oy · Office 7",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 56,
+    "name": "Österö Studio · Office 7",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 57,
+    "name": "Nordic Timber Oy · Office 8",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 58,
+    "name": "Baltic Freight AB · Office 8",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 59,
+    "name": "Skerry Software · Office 8",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 60,
+    "name": "Kallio Design · Office 8",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 61,
+    "name": "Arctic Outdoor Co. · Office 8",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 62,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 8",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 63,
+    "name": "Ålands Skärgård Oy · Office 8",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 64,
+    "name": "Österö Studio · Office 8",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 65,
+    "name": "Nordic Timber Oy · Office 9",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 66,
+    "name": "Baltic Freight AB · Office 9",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 67,
+    "name": "Skerry Software · Office 9",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 68,
+    "name": "Kallio Design · Office 9",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 69,
+    "name": "Arctic Outdoor Co. · Office 9",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 70,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 9",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 71,
+    "name": "Ålands Skärgård Oy · Office 9",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 72,
+    "name": "Österö Studio · Office 9",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 73,
+    "name": "Nordic Timber Oy · Office 10",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 74,
+    "name": "Baltic Freight AB · Office 10",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 75,
+    "name": "Skerry Software · Office 10",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 76,
+    "name": "Kallio Design · Office 10",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 77,
+    "name": "Arctic Outdoor Co. · Office 10",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 78,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 10",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 79,
+    "name": "Ålands Skärgård Oy · Office 10",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 80,
+    "name": "Österö Studio · Office 10",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 81,
+    "name": "Nordic Timber Oy · Office 11",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 82,
+    "name": "Baltic Freight AB · Office 11",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 83,
+    "name": "Skerry Software · Office 11",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 84,
+    "name": "Kallio Design · Office 11",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 85,
+    "name": "Arctic Outdoor Co. · Office 11",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 86,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 11",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 87,
+    "name": "Ålands Skärgård Oy · Office 11",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 88,
+    "name": "Österö Studio · Office 11",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 89,
+    "name": "Nordic Timber Oy · Office 12",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 90,
+    "name": "Baltic Freight AB · Office 12",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 91,
+    "name": "Skerry Software · Office 12",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 92,
+    "name": "Kallio Design · Office 12",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 93,
+    "name": "Arctic Outdoor Co. · Office 12",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 94,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 12",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 95,
+    "name": "Ålands Skärgård Oy · Office 12",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 96,
+    "name": "Österö Studio · Office 12",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 97,
+    "name": "Nordic Timber Oy · Office 13",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 98,
+    "name": "Baltic Freight AB · Office 13",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 99,
+    "name": "Skerry Software · Office 13",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 100,
+    "name": "Kallio Design · Office 13",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 101,
+    "name": "Arctic Outdoor Co. · Office 13",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 102,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 13",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 103,
+    "name": "Ålands Skärgård Oy · Office 13",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 104,
+    "name": "Österö Studio · Office 13",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 105,
+    "name": "Nordic Timber Oy · Office 14",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 106,
+    "name": "Baltic Freight AB · Office 14",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 107,
+    "name": "Skerry Software · Office 14",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 108,
+    "name": "Kallio Design · Office 14",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 109,
+    "name": "Arctic Outdoor Co. · Office 14",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 110,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 14",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 111,
+    "name": "Ålands Skärgård Oy · Office 14",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 112,
+    "name": "Österö Studio · Office 14",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 113,
+    "name": "Nordic Timber Oy · Office 15",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 114,
+    "name": "Baltic Freight AB · Office 15",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 115,
+    "name": "Skerry Software · Office 15",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 116,
+    "name": "Kallio Design · Office 15",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 117,
+    "name": "Arctic Outdoor Co. · Office 15",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 118,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 15",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 119,
+    "name": "Ålands Skärgård Oy · Office 15",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 120,
+    "name": "Österö Studio · Office 15",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 121,
+    "name": "Nordic Timber Oy · Office 16",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 122,
+    "name": "Baltic Freight AB · Office 16",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 123,
+    "name": "Skerry Software · Office 16",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 124,
+    "name": "Kallio Design · Office 16",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 125,
+    "name": "Arctic Outdoor Co. · Office 16",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 126,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 16",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 127,
+    "name": "Ålands Skärgård Oy · Office 16",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 128,
+    "name": "Österö Studio · Office 16",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 129,
+    "name": "Nordic Timber Oy · Office 17",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 130,
+    "name": "Baltic Freight AB · Office 17",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 131,
+    "name": "Skerry Software · Office 17",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 132,
+    "name": "Kallio Design · Office 17",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 133,
+    "name": "Arctic Outdoor Co. · Office 17",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 134,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 17",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 135,
+    "name": "Ålands Skärgård Oy · Office 17",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 136,
+    "name": "Österö Studio · Office 17",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 137,
+    "name": "Nordic Timber Oy · Office 18",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 138,
+    "name": "Baltic Freight AB · Office 18",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 139,
+    "name": "Skerry Software · Office 18",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 140,
+    "name": "Kallio Design · Office 18",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 141,
+    "name": "Arctic Outdoor Co. · Office 18",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 142,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 18",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 143,
+    "name": "Ålands Skärgård Oy · Office 18",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 144,
+    "name": "Österö Studio · Office 18",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 145,
+    "name": "Nordic Timber Oy · Office 19",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 146,
+    "name": "Baltic Freight AB · Office 19",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 147,
+    "name": "Skerry Software · Office 19",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 148,
+    "name": "Kallio Design · Office 19",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 149,
+    "name": "Arctic Outdoor Co. · Office 19",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 150,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 19",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 151,
+    "name": "Ålands Skärgård Oy · Office 19",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 152,
+    "name": "Österö Studio · Office 19",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 153,
+    "name": "Nordic Timber Oy · Office 20",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 154,
+    "name": "Baltic Freight AB · Office 20",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 155,
+    "name": "Skerry Software · Office 20",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 156,
+    "name": "Kallio Design · Office 20",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 157,
+    "name": "Arctic Outdoor Co. · Office 20",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 158,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 20",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 159,
+    "name": "Ålands Skärgård Oy · Office 20",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 160,
+    "name": "Österö Studio · Office 20",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 161,
+    "name": "Nordic Timber Oy · Office 21",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 162,
+    "name": "Baltic Freight AB · Office 21",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 163,
+    "name": "Skerry Software · Office 21",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 164,
+    "name": "Kallio Design · Office 21",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 165,
+    "name": "Arctic Outdoor Co. · Office 21",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 166,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 21",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 167,
+    "name": "Ålands Skärgård Oy · Office 21",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 168,
+    "name": "Österö Studio · Office 21",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 169,
+    "name": "Nordic Timber Oy · Office 22",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 170,
+    "name": "Baltic Freight AB · Office 22",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 171,
+    "name": "Skerry Software · Office 22",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 172,
+    "name": "Kallio Design · Office 22",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 173,
+    "name": "Arctic Outdoor Co. · Office 22",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 174,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 22",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 175,
+    "name": "Ålands Skärgård Oy · Office 22",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 176,
+    "name": "Österö Studio · Office 22",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 177,
+    "name": "Nordic Timber Oy · Office 23",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 178,
+    "name": "Baltic Freight AB · Office 23",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 179,
+    "name": "Skerry Software · Office 23",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 180,
+    "name": "Kallio Design · Office 23",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 181,
+    "name": "Arctic Outdoor Co. · Office 23",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 182,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 23",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 183,
+    "name": "Ålands Skärgård Oy · Office 23",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 184,
+    "name": "Österö Studio · Office 23",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 185,
+    "name": "Nordic Timber Oy · Office 24",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 186,
+    "name": "Baltic Freight AB · Office 24",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 187,
+    "name": "Skerry Software · Office 24",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 188,
+    "name": "Kallio Design · Office 24",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 189,
+    "name": "Arctic Outdoor Co. · Office 24",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 190,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 24",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 191,
+    "name": "Ålands Skärgård Oy · Office 24",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 192,
+    "name": "Österö Studio · Office 24",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 193,
+    "name": "Nordic Timber Oy · Office 25",
+    "email": "nordic.timber.oy@example.com",
+    "phone": "+358 40 120 1000",
+    "segment": "Small business",
+    "credit_limit": "€12,000.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": null
+  },
+  {
+    "id": 194,
+    "name": "Baltic Freight AB · Office 25",
+    "email": "baltic.freight.ab@example.com",
+    "phone": "+358 40 127 1037",
+    "segment": "Enterprise",
+    "credit_limit": "€480,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 195,
+    "name": "Skerry Software · Office 25",
+    "email": "skerry.software@example.com",
+    "phone": "+358 40 134 1074",
+    "segment": "Small business",
+    "credit_limit": "€1,250.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 196,
+    "name": "Kallio Design · Office 25",
+    "email": "kallio.design@example.com",
+    "phone": null,
+    "segment": "Government",
+    "credit_limit": "€960.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 197,
+    "name": "Arctic Outdoor Co. · Office 25",
+    "email": "arctic.outdoor.co@example.com",
+    "phone": "+358 40 169 1259",
+    "segment": "Enterprise",
+    "credit_limit": "€640.00",
+    "notes": null,
+    "account_manager": null
+  },
+  {
+    "id": 198,
+    "name": "Mariehamn Marine and Offshore Services AB · Office 25",
+    "email": "accounts.receivable.mariehamn@example.com",
+    "phone": "+358 40 176 1296",
+    "segment": "Enterprise",
+    "credit_limit": "€1,000,000.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 199,
+    "name": "Ålands Skärgård Oy · Office 25",
+    "email": "talous@alandsskargard.example",
+    "phone": "+358 40 183 1333",
+    "segment": "Small business",
+    "credit_limit": "€0.00",
+    "notes": "Prefers email over phone calls.",
+    "account_manager": "Johan Ekenlycka"
+  },
+  {
+    "id": 200,
+    "name": "Österö Studio · Office 25",
+    "email": "hello@ostero.example",
+    "phone": null,
+    "segment": "Small business",
+    "credit_limit": "€3,400.00",
+    "notes": null,
+    "account_manager": "Johan Ekenlycka"
+  }
+]

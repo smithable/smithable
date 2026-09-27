@@ -1,0 +1,93 @@
+{
+  "typography": {
+    "pageTitle": {
+      "size": 32,
+      "lineHeight": 40,
+      "weight": 700
+    },
+    "mobilePageTitle": {
+      "size": 28,
+      "lineHeight": 36,
+      "weight": 700
+    },
+    "sectionTitle": {
+      "size": 22,
+      "lineHeight": 30,
+      "weight": 600
+    },
+    "body": {
+      "size": 14,
+      "lineHeight": 22,
+      "weight": 400
+    },
+    "small": {
+      "size": 12,
+      "lineHeight": 18,
+      "weight": 400
+    },
+    "label": {
+      "size": 14,
+      "lineHeight": 20,
+      "weight": 600
+    },
+    "tableHeader": {
+      "size": 11,
+      "lineHeight": 16,
+      "weight": 600
+    },
+    "numbers": {
+      "size": 14,
+      "lineHeight": 22,
+      "weight": 600,
+      "fontVariantNumeric": "tabular-nums"
+    }
+  },
+  "spacing": [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96],
+  "themes": {
+    "modern": {
+      "font": "Inter",
+      "radius": 12,
+      "shadow": "shadow-1"
+    },
+    "minimal": {
+      "font": "Inter",
+      "radius": 4,
+      "shadow": "none"
+    },
+    "playful": {
+      "font": "Nunito Sans",
+      "radius": 18,
+      "shadow": "shadow-1"
+    },
+    "corporate": {
+      "font": "Source Sans 3",
+      "radius": 4,
+      "shadow": "none"
+    }
+  },
+  "density": {
+    "comfortable": {
+      "row": 64,
+      "control": 44,
+      "cellPadding": 16,
+      "cardPadding": 24
+    },
+    "compact": {
+      "row": 44,
+      "control": 36,
+      "cellPadding": 12,
+      "cardPadding": 20
+    },
+    "mobile": {
+      "row": "content",
+      "control": 44,
+      "touchTarget": 44,
+      "cardPadding": 20
+    }
+  },
+  "shadows": {
+    "none": "none",
+    "shadow-1": "0 1px 3px rgb(0 0 0 / 0.08)",
+    "shadow-2": "0 8px 24px rgb(0 0 0 / 0.12)"
+  }
+}

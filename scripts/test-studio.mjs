@@ -64,7 +64,8 @@ try {
       await page.waitForTimeout(2000);
       await preview.getByRole("button", { name: "Sign in as admin" }).click({ timeout: 60000 });
       try {
-        await preview.getByText("Dev admin", { exact: true }).waitFor({ timeout: 8000 });
+        // Signed in: the customers page, which needs sign-in, opens.
+        await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 8000 });
         break;
       } catch (error) {
         if (attempt === 5) throw error;

@@ -16,6 +16,7 @@ export const STACK_PROFILE = {
     clsx: "2.1.1",
     "drizzle-orm": "0.45.3",
     "drizzle-zod": "0.8.3",
+    "lucide-react": "1.48.0",
     react: "19.3.0",
     "react-dom": "19.3.0",
     srvx: "1.0.5",
@@ -25,11 +26,8 @@ export const STACK_PROFILE = {
   },
   /** Self-hosted fonts (OFL); an app gets the one its theme uses. */
   fonts: {
-    "@fontsource-variable/figtree": "5.3.0",
-    "@fontsource-variable/ibm-plex-sans": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
-    "@fontsource-variable/merriweather-sans": "5.3.0",
-    "@fontsource-variable/nunito": "5.3.0",
+    "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.0",
   },
   devDependencies: {
