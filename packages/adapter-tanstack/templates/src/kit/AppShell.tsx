@@ -29,7 +29,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
     <div className="min-h-screen lg:flex">
       {/* Desktop: a sidebar. */}
       <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
-        <p className="px-6 pt-7 pb-6 text-2xl font-bold tracking-tight">{shell.appName}</p>
+        <p className="px-6 pt-7 pb-6 text-2xl font-bold">{shell.appName}</p>
         <Navigation {...shell} />
       </aside>
       {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
@@ -141,7 +141,7 @@ export function ErrorNotice({ title, message }: { title: string; message?: strin
 export function PageHeader({ title, actions }: { title: string; actions?: React.ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="min-w-0 break-words text-[28px] leading-9 font-bold tracking-tight lg:text-[32px] lg:leading-10">
+      <h1 className="min-w-0 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10">
         {title}
       </h1>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

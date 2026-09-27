@@ -3178,7 +3178,7 @@ function CustomerPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">Orders</h2>
+        <h2 className="mb-3 text-lg font-semibold">Orders</h2>
         <ModelTable
           ui={orderUi}
           app={app}
@@ -5185,7 +5185,7 @@ function ClientPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">Invoices</h2>
+        <h2 className="mb-3 text-lg font-semibold">Invoices</h2>
         <ModelTable
           ui={invoiceUi}
           app={app}
@@ -5492,7 +5492,7 @@ function InvoicePage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">Lines</h2>
+        <h2 className="mb-3 text-lg font-semibold">Lines</h2>
         <ModelTable
           ui={invoiceLineUi}
           app={app}

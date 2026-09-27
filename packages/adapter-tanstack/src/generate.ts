@@ -115,7 +115,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   if (!ir.pages.some((p) => p.route === "/")) add("src/routes/index.tsx", indexRoute(ir));
   if (ir.models.length) add("src/generated/access.test.ts", accessTestSource(ir, auth));
   for (const model of ir.models) {
-    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t, ir, auth));
+    add(`src/generated/${kebab(model.name)}.ts`, modelModule(model, t, ir, auth, ux));
     add(`src/generated/${kebab(model.name)}.server.ts`, dataModule(model, t, ir, auth));
     if (hasFormulas(model)) {
       add(`src/generated/${kebab(model.name)}.formulas.ts`, formulasModuleSource(model, ir));
@@ -510,7 +510,7 @@ function sampleLiteral(field: FieldIR, value: unknown): string {
 
 // ── Models: UI description, validation and server functions ─────────────────
 
-function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string {
+function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, ux: UxIR): string {
   const n = names(model, t);
   const stored = storedFields(model);
   const shown = shownFields(model);
@@ -524,7 +524,7 @@ function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string
       .filter((f) => !(f.type.kind === "scalar" && f.type.name === "text"))
       .slice(0, 5)
       .map(dataKey),
-    fields: shown.map((field) => fieldUi(model, field, t, ir)),
+    fields: shown.map((field) => fieldUi(model, field, t, ir, ux)),
   };
   // Functions cannot be written as a data literal: add them after it.
   const uiSource = formulas
@@ -761,7 +761,8 @@ ${
 `;
 }
 
-function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR) {
+function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux: UxIR) {
+  const tones = ux.tones[`${model.name}.${field.name}`] ?? {};
   const isUser = field.type.kind === "relation" && field.type.model === USER_MODEL;
   const kind = isUser ? "user" : field.type.kind === "scalar" ? field.type.name : field.type.kind;
   const own = t.field(model, field);
@@ -777,6 +778,7 @@ function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR) {
           choices: field.type.values.map((value) => ({
             value,
             label: own.values?.[value] ?? humanize(value),
+            ...(tones[value] && tones[value] !== "neutral" ? { tone: tones[value] } : {}),
           })),
         }
       : {}),
@@ -1290,7 +1292,7 @@ function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxI
       : "";
     const label = t.field(model, field).label ?? humanize(field.name);
     return `      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">${label}</h2>
+        <h2 className="mb-3 text-lg font-semibold">${label}</h2>
         <ModelTable
           ui={${tn.ui}}
           app={app}

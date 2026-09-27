@@ -70,7 +70,9 @@ export function ModelTable<R extends Row>({
   const secondary = others.find((f) => f !== status && f !== amount);
   const cell = (field: FieldUi, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
-    return field.kind === "choice" && text !== "—" ? <Badge>{text}</Badge> : text;
+    if (field.kind !== "choice" || text === "—") return text;
+    const tone = field.choices?.find((c) => c.value === displayValue(field, row))?.tone;
+    return <Badge variant={tone}>{text}</Badge>;
   };
   // Opening a record is a real button (keyboard and screen readers), stretched over the row.
   const open = (row: R, children: React.ReactNode, className?: string) =>

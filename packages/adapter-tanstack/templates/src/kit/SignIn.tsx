@@ -38,7 +38,7 @@ export function SignIn({
   }
   return (
     <Card className="mx-auto mt-10 max-w-sm space-y-5 p-card">
-      <h1 className="text-2xl font-bold tracking-tight">Sign in to {appName}</h1>
+      <h1 className="text-2xl font-bold">Sign in to {appName}</h1>
       {providers.map((provider) => (
         <Button
           key={provider}

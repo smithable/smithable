@@ -3,7 +3,6 @@ smithableUx: 0.1
 
 theme:
   preset: playful
-  brand: { primary: "#4f7c6b", font: Nunito Sans }
 
 pages:
   sessions:

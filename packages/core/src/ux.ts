@@ -17,6 +17,8 @@ export interface UxIR {
     density: "comfortable" | "compact";
   };
   pages: Record<string, PageUx>;
+  /** Colours of choice values by meaning, by "Model.field"; values not listed are neutral. */
+  tones: Record<string, Record<string, Tone>>;
 }
 
 export interface PageUx {
@@ -27,6 +29,8 @@ export interface PageUx {
 }
 
 export const UX_VERSION = "0.1";
+export const TONES = ["neutral", "success", "warning", "danger"] as const;
+export type Tone = (typeof TONES)[number];
 export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
@@ -34,7 +38,7 @@ export type ThemePreset = (typeof THEME_PRESETS)[number];
 export const FONTS = ["Inter", "Nunito Sans", "Source Sans 3"] as const;
 
 export function emptyUx(): UxIR {
-  return { theme: { preset: "modern", density: "comfortable" }, pages: {} };
+  return { theme: { preset: "modern", density: "comfortable" }, pages: {}, tones: {} };
 }
 
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
@@ -79,7 +83,7 @@ export function validateUx(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.ux.yml", {
-    allowed: ["smithableUx", "theme", "pages"],
+    allowed: ["smithableUx", "theme", "pages", "tones"],
     later: ["menus", "sections"],
   });
 
@@ -136,6 +140,46 @@ export function validateUx(
             }
           }
         }
+      }
+    }
+    if (key === "tones") {
+      for (const entry of mapEntries(ctx, value, `"tones"`) ?? []) {
+        const [modelName = "", fieldName = ""] = entry.key.split(".");
+        const model = ir.models.find((m) => m.name === modelName);
+        const field = model?.fields.find((f) => f.name === fieldName);
+        if (!model || !field) {
+          ctx.error(
+            entry.keyNode,
+            "unknown-field",
+            `There is no field "${entry.key}"; name a choice field as Model.field.`,
+          );
+          continue;
+        }
+        if (field.type.kind !== "choice") {
+          ctx.error(entry.keyNode, "invalid-field", `${entry.key} is not a choice field.`);
+          continue;
+        }
+        const values = field.type.values;
+        const tones: Record<string, Tone> = {};
+        for (const choice of mapEntries(ctx, entry.value, `"${entry.key}"`) ?? []) {
+          const tone = readString(ctx, choice.value, `"${choice.key}"`);
+          if (!values.includes(choice.key)) {
+            ctx.error(
+              choice.keyNode,
+              "unknown-value",
+              `${entry.key} has no value "${choice.key}".`,
+              didYouMean(choice.key, values) ?? `Its values: ${values.join(", ")}.`,
+            );
+          } else if (tone !== undefined && !(TONES as readonly string[]).includes(tone)) {
+            ctx.error(
+              choice.value,
+              "unknown-tone",
+              `"${tone}" is not a tone.`,
+              didYouMean(tone, TONES) ?? `Available: ${TONES.join(", ")}.`,
+            );
+          } else if (tone !== undefined) tones[choice.key] = tone as Tone;
+        }
+        ux.tones[entry.key] = tones;
       }
     }
     if (key === "pages") {
