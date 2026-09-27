@@ -1018,6 +1018,9 @@ for (const [index, example] of examples.entries()) {
     step("the app's own tests pass (access for every role, formula examples)", () =>
       run("pnpm", ["test"], dir),
     );
+    step("the generated smoke tests pass: every page opens for every role that may see it", () =>
+      run("pnpm", ["test:smoke"], dir),
+    );
 
     let stop = await serve(dir, port, "production");
     try {

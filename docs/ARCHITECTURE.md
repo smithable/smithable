@@ -645,6 +645,8 @@ Design quality comes from crafted templates, not AI improvisation. AI (even a sm
 
 Deploy and backup targets so far: `smithable deploy --target docker|ssh://user@host|compose` (the Release checks first; the image replaces the running container and keeps its `<app>-data` volume; the session secret is made once and kept in the ignored `data/`; provider keys pass through from the environment), and `smithable backup|restore` with a folder or `s3://bucket/prefix` (a built-in Signature V4 client for S3-compatible storage, credentials from `AWS_*` variables). A backup is a consistent `VACUUM INTO` snapshot plus uploads, from the development database or a container; restoring into a container stops it and fills its volume from a one-off container of the same image, then hands the files to the image's non-root user. `pnpm test:deploy` checks the exit criterion against SeaweedFS, which verifies signatures.
 
+Generated smoke tests: `tests/smoke.spec.ts` and a kit `playwright.config.ts` (the app's dev server on port 3100 with its own `data/smoke` database), run by `pnpm test:smoke`: public pages open for a visitor, protected pages redirect to sign-in, and each role signs in through the development sign-in and opens every page its access allows, failing on any browser error.
+
 **Deployment contract.** Every generated app produces an OCI image that:
 
 - listens on `PORT` and serves `GET /health`,
