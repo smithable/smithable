@@ -331,7 +331,7 @@ async function onboardingFlow(base) {
     )
       throw new Error("going back lost the business name");
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByRole("textbox", { name: "Iban" }).fill("FI21 1234 5600 0007 85");
+    await page.getByRole("textbox", { name: "IBAN" }).fill("FI21 1234 5600 0007 85");
     await page.getByRole("button", { name: "Finish" }).click();
     await page.waitForURL(`${base}/overview`);
     console.log(
