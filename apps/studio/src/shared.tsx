@@ -95,7 +95,9 @@ export function Trace({ entries }: { entries: TraceEntry[] }) {
             >
               <p className={cx("text-sm", e.undone && "line-through")}>{e.description}</p>
               <p className="mt-0.5 text-xs text-neutral-500">
-                {e.isUndo ? "undo" : "generator"} · {e.tokens} tokens
+                {e.isUndo ? "undo" : e.engine}
+                {e.model ? ` (${e.model})` : ""} · {e.tokens.toLocaleString("en")} tokens
+                {e.cost ? ` · €${e.cost.toFixed(4)}` : ""}
                 {e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
                 {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>

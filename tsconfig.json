@@ -4,6 +4,7 @@
     { "path": "packages/core" },
     { "path": "packages/adapter-tanstack" },
     { "path": "packages/index" },
+    { "path": "packages/ai" },
     { "path": "packages/cli" }
   ]
 }

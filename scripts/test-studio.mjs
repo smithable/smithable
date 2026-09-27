@@ -6,6 +6,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
+import { startFakeModel } from "./fake-model.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -32,7 +33,12 @@ async function step(name, fn) {
 
 const created = spawnSync("node", [cli, "new", dir], { encoding: "utf8" });
 if (created.status !== 0) throw new Error(created.stdout + created.stderr);
-const server = spawn("node", [cli, "studio", dir, "--port", String(port)], { detached: true });
+// A stand-in model, so describing a change works without a real one.
+const model = await startFakeModel();
+const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
+  detached: true,
+  env: { ...process.env, SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+});
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
@@ -160,6 +166,21 @@ try {
     await status.getByText("Set the theme: preset playful").waitFor({ timeout: 60000 });
   });
 
+  await step(
+    "describe a change: the model's proposal is shown, applied on confirmation, and traced",
+    async () => {
+      await page.getByRole("tab", { name: "Describe" }).click();
+      await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
+      await page.getByRole("button", { name: "Suggest" }).click();
+      const proposal = page.getByRole("region", { name: "Proposal" });
+      await proposal.getByText("Add field mobile (phone) to Customer").waitFor({ timeout: 30000 });
+      await proposal.getByText(/Local model \(fake-model\) · [\d,]+ tokens/).waitFor();
+      await proposal.getByRole("button", { name: "Apply" }).click();
+      await trace.getByText("Add field mobile (phone) to Customer").waitFor({ timeout: 60000 });
+      await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
+    },
+  );
+
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {
     await page.locator("label", { hasText: /^Studio$/ }).click();
@@ -229,6 +250,7 @@ try {
   try {
     process.kill(-server.pid);
   } catch {}
+  await model.close();
 }
 if (failed) {
   console.log(`\nFailed. The app is kept in ${dir}`);

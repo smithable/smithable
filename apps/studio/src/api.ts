@@ -4,8 +4,11 @@ import type { ConceptInfo } from "@smithable/index";
 export interface TraceEntry {
   description: string;
   at: string;
-  engine: "generator";
-  tokens: 0;
+  engine: "generator" | "local model" | "Smithable model" | "frontier model";
+  model?: string;
+  tokens: number;
+  /** In euros. */
+  cost?: number;
   ms?: number;
   undone: boolean;
   isUndo: boolean;
@@ -18,6 +21,17 @@ export interface Project {
   trace: TraceEntry[];
   preview: string;
 }
+
+/** A model's proposal for a request; nothing is applied until it is confirmed. */
+export type Proposal = { usage: string } & (
+  | {
+      kind: "change";
+      operations: { op: string; description: string; destructive: boolean }[];
+    }
+  | { kind: "question"; question: string; options: string[] }
+  | { kind: "none"; reason: string }
+  | { kind: "failed"; message: string }
+);
 
 export interface Result {
   ok: boolean;
@@ -44,6 +58,8 @@ export const api = {
     call<Result>("/api/op", { name, args, confirm }),
   customize: (page: string) => call<Result>("/api/customize", { page }),
   undo: () => call<Result>("/api/undo", {}),
+  ask: (request: string) => call<Proposal>("/api/ask", { request }),
+  applyProposal: () => call<Result>("/api/ask/apply", {}),
   /** Calls `onEvent` for every change and log line the daemon reports. */
   events(onEvent: (event: "changed" | "log", data: unknown) => void): () => void {
     const source = new EventSource("/api/events");
