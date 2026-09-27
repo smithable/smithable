@@ -25,5 +25,14 @@ export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
-export type { PageUx, ThemePreset, UxIR } from "./ux.js";
-export { emptyUx, FONTS, THEME_PRESETS, UX_VERSION, validateUx } from "./ux.js";
+export type { Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
+export {
+  emptyUx,
+  FONTS,
+  ICONS,
+  pageIcon,
+  THEME_PRESETS,
+  TONES,
+  UX_VERSION,
+  validateUx,
+} from "./ux.js";

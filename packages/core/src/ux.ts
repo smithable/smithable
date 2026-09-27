@@ -22,6 +22,8 @@ export interface UxIR {
 }
 
 export interface PageUx {
+  /** The page's icon in navigation; without it one is chosen from the model's name. */
+  icon?: Icon;
   /** The table's columns, in order. */
   columns?: string[];
   /** The form's fields in this order; fields not listed follow. */
@@ -31,6 +33,62 @@ export interface PageUx {
 export const UX_VERSION = "0.1";
 export const TONES = ["neutral", "success", "warning", "danger"] as const;
 export type Tone = (typeof TONES)[number];
+
+/** Navigation icons, named by what they show. */
+export const ICONS = [
+  "users",
+  "user",
+  "file",
+  "receipt",
+  "cart",
+  "package",
+  "calendar",
+  "layers",
+  "book",
+  "briefcase",
+  "building",
+  "chart",
+  "clipboard",
+  "home",
+  "mail",
+  "settings",
+  "star",
+  "tag",
+  "truck",
+  "list",
+] as const;
+export type Icon = (typeof ICONS)[number];
+
+/** Words in a model's name and the icon they suggest; the first match wins. */
+const ICON_WORDS: [RegExp, Icon][] = [
+  [
+    /customer|client|contact|member|people|person|user|staff|team|instructor|teacher|employee|student|author|coach/i,
+    "users",
+  ],
+  [/invoice|document|contract|quote/i, "file"],
+  [/payment|receipt|expense|transaction/i, "receipt"],
+  [/order|purchase|cart/i, "cart"],
+  [/product|item|inventory|stock|asset/i, "package"],
+  [/session|booking|event|appointment|schedule|shift|meeting|reservation/i, "calendar"],
+  [/type|category|class|group|kind/i, "layers"],
+  [/shipment|delivery/i, "truck"],
+  [/task|todo|ticket|issue/i, "clipboard"],
+  [/project|deal|opportunity/i, "briefcase"],
+  [/company|organi[sz]ation|supplier|vendor|account/i, "building"],
+  [/article|post|page|lesson|course/i, "book"],
+  [/message|email|mail/i, "mail"],
+  [/report|metric|stat/i, "chart"],
+  [/tag|label/i, "tag"],
+];
+
+/** A page's navigation icon: the one set in smithable.ux.yml, or one suggested by its model. */
+export function pageIcon(ux: UxIR, page: string, model: string | undefined): Icon {
+  return (
+    ux.pages[page]?.icon ??
+    ICON_WORDS.find(([words]) => model !== undefined && words.test(model))?.[1] ??
+    "list"
+  );
+}
 export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
@@ -229,9 +287,21 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["table", "form"],
+          allowed: ["icon", "table", "form"],
           later: ["detail", "calendar"],
         })) {
+          if (part.key === "icon") {
+            const icon = readString(ctx, part.value, `"icon"`);
+            if (icon !== undefined && !(ICONS as readonly string[]).includes(icon))
+              ctx.error(
+                part.value,
+                "unknown-icon",
+                `There is no icon "${icon}".`,
+                didYouMean(icon, ICONS) ?? `Available: ${ICONS.join(", ")}.`,
+              );
+            else if (icon !== undefined) result.icon = icon as Icon;
+            continue;
+          }
           const partWhere = `the ${part.key} of ${where}`;
           for (const option of checkKeys(
             ctx,

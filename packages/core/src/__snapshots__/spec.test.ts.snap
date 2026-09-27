@@ -16,7 +16,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "admin",
         ],
       },
-      "description": "A kind of class the studio offers, such as Vinyasa or Yin.",
+      "description": "A kind of class the studio offers, such as Vinyasa, Yin, Hatha or Foundations.",
       "fields": [
         {
           "name": "name",

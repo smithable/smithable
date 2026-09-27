@@ -1,6 +1,6 @@
 import type { YamlEditor } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
-import { FONTS, THEME_PRESETS, TONES } from "../ux.js";
+import { FONTS, ICONS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
 function put(ux: YamlEditor, path: string[], value: string | string[] | undefined): void {
@@ -135,4 +135,24 @@ const setTone: Operation<{ model: string; field: string; value: string; tone: st
   },
 };
 
-export const uxOperations: AnyOperation[] = [setTheme, setColumns, setFieldOrder, setTone];
+const setIcon: Operation<{ page: string; icon: string }> = {
+  name: "setIcon",
+  summary: 'Choose the icon a page has in navigation ("auto": chosen from its model\'s name).',
+  schema: {
+    type: "object",
+    required: ["page", "icon"],
+    additionalProperties: false,
+    properties: { page: { type: "string" }, icon: { type: "string", enum: [...ICONS, "auto"] } },
+  },
+  positional: ["page", "icon"],
+  describe: ({ page, icon }) => `Show the ${page} page with the ${icon} icon`,
+  destructive: () => false,
+  apply(editors, { page, icon }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    put(uxEditor(editors), ["pages", page, "icon"], icon === "auto" ? undefined : icon);
+    return [];
+  },
+};
+
+export const uxOperations: AnyOperation[] = [setTheme, setColumns, setFieldOrder, setTone, setIcon];

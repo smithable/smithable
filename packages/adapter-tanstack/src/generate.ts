@@ -8,11 +8,13 @@ import {
   emptyUx,
   type FieldIR,
   humanize,
+  type Icon,
   kebab,
   type ModelIR,
   modelAccess,
   type PageIR,
   pageAccess,
+  pageIcon,
   pascal,
   plural,
   type SpecIR,
@@ -102,7 +104,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   add("src/lib/viewer.server.ts", viewerModule(auth));
   add("src/db/schema.ts", schemaModule(ir, auth));
   add("src/db/seed.ts", seedModule(ir));
-  add("src/routes/__root.tsx", rootRoute(ir, t, auth));
+  add("src/routes/__root.tsx", rootRoute(ir, t, auth, ux));
   if (hasSignIn(auth)) {
     add("src/lib/auth.ts", authModule(auth));
     add("src/routes/sign-in.tsx", signInRoute(auth));
@@ -846,12 +848,39 @@ function guard(rule: string): string {
   return `  beforeLoad: ({ context, location }) => guardPage(${rule}, context.viewer, location.href),\n`;
 }
 
-function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR): string {
+/** The lucide-react component for each navigation icon. */
+const LUCIDE: Record<Icon, string> = {
+  users: "Users",
+  user: "User",
+  file: "FileText",
+  receipt: "Receipt",
+  cart: "ShoppingCart",
+  package: "Package",
+  calendar: "Calendar",
+  layers: "Layers",
+  book: "BookOpen",
+  briefcase: "Briefcase",
+  building: "Building2",
+  chart: "ChartColumn",
+  clipboard: "ClipboardList",
+  home: "House",
+  mail: "Mail",
+  settings: "Settings",
+  star: "Star",
+  tag: "Tag",
+  truck: "Truck",
+  list: "List",
+};
+
+function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
   const pageRoute = new Map(ir.pages.map((p) => [p.id, p.route]));
+  const iconOf = (id: string) =>
+    LUCIDE[pageIcon(ux, id, ir.pages.find((p) => p.id === id)?.pattern.model)];
+  const icons = [...new Set(ir.navigation.flatMap((m) => m.pages.map(iconOf)))].sort();
   const menus = ir.navigation.map((menu) => {
     const items = menu.pages.map(
       (id) =>
-        `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${JSON.stringify(t.pageTitle(id))},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
+        `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${JSON.stringify(t.pageTitle(id))},\n        icon: ${iconOf(id)},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
     );
     const menuLabel = t.menuLabel(menu.name);
     const label = menuLabel === undefined ? "" : ` label: ${JSON.stringify(menuLabel)},`;
@@ -860,7 +889,7 @@ function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR): string {
   const signIn = hasSignIn(auth);
   return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""} } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { app } from "#/generated/app";
+${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";

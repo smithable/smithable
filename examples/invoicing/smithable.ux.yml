@@ -7,3 +7,8 @@ theme:
 # Status colours by meaning; values not listed are neutral.
 tones:
   Invoice.status: { paid: success, overdue: warning }
+
+pages:
+  invoices:
+    table:
+      columns: [number, client, status, issuedOn, total]
