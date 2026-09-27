@@ -16,6 +16,8 @@ export SMITHABLE_LOCAL_MODEL=qwen2.5:7b
 # export SMITHABLE_LOCAL_URL=http://localhost:11434/v1   # the default
 ```
 
+Measured on a laptop without a GPU (WSL, 8 cores, 16 GB): `qwen2.5:7b` answers a request in one to two minutes and did 6 of the 7 benchmark tasks ([report](benchmarks/m12-report.md)), with nothing leaving the machine. With a GPU, or a smaller model such as `qwen2.5:3b`, it is much faster. To make sure no other model is used, set `SMITHABLE_AI_POLICY=local-only`.
+
 ## The Smithable model (tier 2)
 
 An open model on an EU-hosted, OpenAI-compatible endpoint, for example Mistral:
