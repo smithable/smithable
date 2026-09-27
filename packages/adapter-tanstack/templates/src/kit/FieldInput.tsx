@@ -1,5 +1,6 @@
 // Smithable app kit: the input control for one field, chosen by its kind.
 import { Checkbox, Input, NativeSelect, Textarea } from "#/components/ui/input";
+import { Combobox } from "./Combobox";
 import type { FieldUi, Options } from "./model";
 
 interface FieldInputProps {
@@ -48,14 +49,15 @@ export function FieldInput({
   }
   if (field.kind === "relation" || field.kind === "user") {
     return (
-      <NativeSelect {...common} value={text} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{field.required ? "Choose…" : "—"}</option>
-        {options?.[field.name]?.map((choice) => (
-          <option key={choice.value} value={String(choice.value)}>
-            {choice.label}
-          </option>
-        ))}
-      </NativeSelect>
+      <Combobox
+        id={id}
+        value={text}
+        options={options?.[field.name] ?? []}
+        required={field.required}
+        invalid={invalid}
+        describedBy={describedBy}
+        onChange={onChange}
+      />
     );
   }
   if (field.kind === "choice") {
