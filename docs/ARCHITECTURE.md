@@ -692,6 +692,8 @@ Security scanners, Claude Code, Ollama and Docker are all optional external tool
 
 The OSS repo contains only code eligible for publication. The hosted service goes in a separate private repo (`smithable-cloud`), which depends on OSS and never the other way round. That covers accounts, project storage, the AI gateway with allowances, publishing and hosting, managed backups, the remote MCP endpoint and billing.
 
+**Hosting of the beta (M15):** AWS Stockholm (`eu-north-1`), described with OpenTofu in `smithable-cloud/infra`, built only from pieces every EU provider has (a VM, S3-compatible storage, DNS), so moving to Hetzner, Scaleway or OVH is a migration, not a rewrite. The data stays in the EU; AWS being a US company (the CLOUD Act) is the known trade-off, revisited if customers ask for sovereignty. One Graviton host runs the service and published apps as containers behind Caddy (TLS), with S3 for projects and backups, within $50 a month.
+
 ## 14. Versions and upgrades
 
 Four things change over time, each on its own track:
