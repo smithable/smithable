@@ -105,6 +105,7 @@ pages:
       items:
         - { name: Pro, price: €9, features: [Unlimited customers, Support] }
   overview:
+    subtitle: The numbers that matter.
     customers: { label: Customers so far }
 `);
   expect(content?.pages).toEqual({
@@ -117,7 +118,10 @@ pages:
         },
       },
     },
-    overview: { sections: { customers: { label: "Customers so far" } } },
+    overview: {
+      subtitle: "The numbers that matter.",
+      sections: { customers: { label: "Customers so far" } },
+    },
   });
   expect(
     read(`smithableContent: 0.1
