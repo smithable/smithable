@@ -11,3 +11,6 @@ pages:
       columns: [name, segment, email, creditLimit]
     form:
       fieldOrder: [name, segment, email, phone]
+
+tones:
+  Order.status: { shipped: success, cancelled: danger }
