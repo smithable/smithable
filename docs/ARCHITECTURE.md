@@ -452,6 +452,7 @@ Concrete choices the v1 adapter makes; they are ordinary, documented practice fo
 - **Per-model code is explicit:** each model gets a module with its UI description, Zod schema (`drizzle-zod` plus format refinements) and `createServerFn` functions containing plain Drizzle queries. The kit components are generic; the generated routes connect them.
 - **The file record.** `.smithable/files.json` lists every Smithable-owned file with the hash of what was last written. Regeneration deletes files the spec no longer produces and refuses to overwrite files edited by hand (§6.5).
 - **Sample data** is generated deterministically from model and field names and loaded with `pnpm db:seed` (done by `smithable new`).
+- **One route tree.** The route tree is written by the router's own CLI (`tsr generate`) after each change, and rewritten by TanStack Start's plugin while the dev server runs. The kit's `tsr.config.json` gives the CLI the same footer the plugin adds (Start's `Register` declaration), so both write identical files and a running preview never leaves the tree changed, which would block the next operation.
 
 ### 6.8 Leaving Smithable: `smithable detach`
 
@@ -547,6 +548,7 @@ Smithable ships a local **MCP server** (`smithable mcp`). MCP (Model Context Pro
 - **Agent guidance.** Every generated app includes an `AGENTS.md` (kit zone, updated with Smithable) explaining the ownership zones, where custom code goes, and to prefer Smithable tools over file edits, plus a `CLAUDE.md` pointer and a `.mcp.json` registering `smithable mcp` (both scaffold: the project's once created). `smithable detach` removes them.
 - The operation pipeline (§8) applies unchanged: validation, checkpoints, tests and undo.
 - The hosted service offers a **remote MCP endpoint** with the same tools, so Claude.ai, ChatGPT and other agents can work on hosted projects. The local server never depends on it.
+- **Over HTTP (M15).** `smithable studio` also serves the tools at `/mcp` (the SDK's Streamable HTTP transport, stateless), and a tool call refreshes the open Studio, so an agent's changes appear there as they happen. The hosted endpoint is this, behind the service with a per-project token. On this machine Studio answers only requests addressed to `localhost` or `127.0.0.1`, so a web page cannot reach its API or `/mcp` through DNS rebinding.
 
 ### 9.7 Change trace
 

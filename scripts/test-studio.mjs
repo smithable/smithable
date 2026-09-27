@@ -3,9 +3,13 @@
 // Run after `pnpm build`: `pnpm test:studio`.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
+// The MCP SDK is the CLI's dependency.
+import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
+import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
@@ -242,6 +246,33 @@ try {
     // Every change logs what it generated.
     if (!(await page.getByLabel("Logs").innerText()).includes("Generated"))
       throw new Error("no logs");
+  });
+  await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
+    const client = new Client({ name: "test", version: "1" });
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`)),
+    );
+    const result = await client.callTool({
+      name: "smithable_add_field",
+      arguments: { model: "Customer", field: "vatNumber", type: "text" },
+    });
+    await client.close();
+    if (result.isError) throw new Error(result.content[0].text);
+    await page
+      .getByText("Add field vatNumber (text) to Customer")
+      .first()
+      .waitFor({ timeout: 30000 });
+  });
+  await step("a web page cannot reach Studio through another host name", async () => {
+    const status = await new Promise((resolve, reject) =>
+      request({ port, path: "/api/project", headers: { host: "evil.example" } }, (r) => {
+        r.resume();
+        resolve(r.statusCode);
+      })
+        .on("error", reject)
+        .end(),
+    );
+    if (status !== 403) throw new Error(`answered ${status}`);
   });
 } catch {
   // Reported above.
