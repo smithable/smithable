@@ -2,7 +2,9 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
+import type { Proposal } from "@smithable/ai";
 import type { OperationArgs } from "@smithable/core";
+import { applyProposal, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { git } from "./git.js";
 import type { Io } from "./io.js";
@@ -26,13 +28,22 @@ const TYPES: Record<string, string> = {
 export interface TraceEntry {
   description: string;
   at: string;
-  /** Every Smithable change so far is made by the generator: no model, no tokens. */
-  engine: "generator";
-  tokens: 0;
+  /** The generator (no model), or the tier of the model that proposed the change. */
+  engine: "generator" | "local model" | "Smithable model" | "frontier model";
+  model?: string;
+  tokens: number;
+  /** In euros. */
+  cost?: number;
   ms?: number;
   undone: boolean;
   isUndo: boolean;
 }
+
+const ENGINES = {
+  local: "local model",
+  smithable: "Smithable model",
+  frontier: "frontier model",
+} as const;
 
 function trace(dir: string): TraceEntry[] {
   const log = git(dir, ["log", "--format=%H%x1f%s%x1f%aI%x1f%b%x1e"]);
@@ -47,12 +58,22 @@ function trace(dir: string): TraceEntry[] {
     if (!(subject.startsWith("smithable: ") || isUndo) || subject === "smithable: start of history")
       return [];
     const ms = /^Smithable-Duration: (\d+) ms$/m.exec(body)?.[1];
+    const ai = /^Smithable-AI: (.+)$/m.exec(body)?.[1];
+    const model = ai
+      ? (JSON.parse(ai) as {
+          tier: keyof typeof ENGINES;
+          model: string;
+          tokens: number;
+          cost: number;
+        })
+      : undefined;
     return [
       {
         description: isUndo ? `Undid: ${subject.slice(19, -1)}` : subject.slice(11),
         at,
-        engine: "generator" as const,
-        tokens: 0 as const,
+        engine: model ? ENGINES[model.tier] : ("generator" as const),
+        tokens: model?.tokens ?? 0,
+        ...(model ? { model: model.model, cost: model.cost } : {}),
         ...(ms ? { ms: Number(ms) } : {}),
         undone: reverted.has(sha),
         isUndo,
@@ -116,6 +137,9 @@ export async function studio(dir: string, io: Io, port: number): Promise<number>
     }
   };
   startApp();
+
+  /** The last proposal a model made, waiting to be applied or dropped. */
+  let pending: { request: string; proposal: Proposal } | undefined;
 
   /** Runs a command with its output captured for the response. */
   const capture = (fn: (io: Io) => number) => {
@@ -205,6 +229,30 @@ export async function studio(dir: string, io: Io, port: number): Promise<number>
         const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
         if (result.ok) send("changed", { description: result.output });
         return json({ ...result, needsConfirm });
+      }
+      if (req.method === "POST" && url.pathname === "/api/ask") {
+        // A model proposes; nothing changes until the proposal is applied.
+        const { request } = await body();
+        const quiet = { out: () => {}, err: (t: string) => log(t) };
+        const proposal = await proposeFor(dir, quiet, String(request ?? ""));
+        pending = proposal ? { request: String(request), proposal } : undefined;
+        if (!proposal) return json({ kind: "failed", message: "The spec has errors.", usage: "" });
+        const { usage, ...rest } = proposal;
+        return json({
+          ...rest,
+          ...(rest.kind === "change" ? { files: undefined } : {}),
+          usage: usageLine(usage),
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/ask/apply") {
+        const confirmed = pending;
+        pending = undefined;
+        if (confirmed?.proposal.kind !== "change")
+          return json({ ok: false, output: "There is no proposed change to apply." });
+        const proposal = confirmed.proposal;
+        const result = capture((io) => applyProposal(dir, io, confirmed.request, proposal));
+        if (result.ok) send("changed", { description: result.output });
+        return json(result);
       }
       if (req.method === "POST" && url.pathname === "/api/customize") {
         const { page } = await body();

@@ -6,6 +6,7 @@ import type { Spec } from "../engine";
 import { isPreviewMessage, type Selection } from "../preview";
 import { Preview, Trace } from "../shared";
 import { Panel, Tabs } from "../ui";
+import { Ask } from "./Ask";
 import { ChangeForms, type Run } from "./ChangeForms";
 import { Selected } from "./Selected";
 
@@ -20,7 +21,7 @@ export function Builder({
   run: Run;
   version: number;
 }) {
-  const [tab, setTab] = useState<"app" | "change">("app");
+  const [tab, setTab] = useState<"app" | "ask" | "change">("app");
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<Selection>();
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
@@ -45,6 +46,7 @@ export function Builder({
           <Tabs
             tabs={[
               ["app", "Your app"],
+              ["ask", "Describe"],
               ["change", "Change"],
             ]}
             value={tab}
@@ -65,6 +67,8 @@ export function Builder({
               </section>
             ))}
           </div>
+        ) : tab === "ask" ? (
+          <Ask />
         ) : (
           <ChangeForms spec={spec} run={run} />
         )}
