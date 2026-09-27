@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
 import type { OperationArgs } from "@smithable/core";
@@ -7,6 +7,7 @@ import { customize } from "./customize.js";
 import { git } from "./git.js";
 import type { Io } from "./io.js";
 import { runOperation } from "./op.js";
+import { previewConfig } from "./preview-editor.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
@@ -89,12 +90,21 @@ export async function studio(dir: string, io: Io, port: number): Promise<number>
   };
 
   let app: ChildProcess | undefined;
+  // The preview runs with the editor (select, drag columns) through a wrapper config in data/,
+  // which Git ignores: the app's own config and builds stay as they are.
+  const config = join("data", ".smithable", "preview.vite.config.mjs");
+  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
+  writeFileSync(join(dir, config), previewConfig());
   const startApp = () => {
-    app = spawn("pnpm", ["exec", "vite", "dev", "--port", String(previewPort), "--strictPort"], {
-      cwd: dir,
-      env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" },
-      detached: true,
-    });
+    app = spawn(
+      "pnpm",
+      ["exec", "vite", "dev", "--config", config, "--port", String(previewPort), "--strictPort"],
+      {
+        cwd: dir,
+        env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" },
+        detached: true,
+      },
+    );
     app.stdout?.on("data", (d) => log(String(d)));
     app.stderr?.on("data", (d) => log(String(d)));
   };

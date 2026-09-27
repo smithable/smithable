@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8. **In progress:** M9 (usability tests), M10 (the designer's work). **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11. **In progress:** M9 (usability tests), M10 (the designer's work). **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -174,6 +174,8 @@ Removes the biggest technical risk of the browser-first product before building 
 - Click the email field in the preview → toggle "required" → the spec, validation and form all update.
 - Dragging a table column updates `smithable.ux.yml` and leaves `smithable.yml` untouched.
 - The production build contains no instrumentation.
+
+**Done (2026-09-27):** all three are checked by `pnpm test:studio` and `pnpm test:apps`. Presentation controls so far: theme and density (Builder form), column order (drag) and visibility (hide), field order (`setFieldOrder`, not yet in the panel); groups and section order wait for the design system's page patterns (M10).
 
 ## M12 — AI: Smithable model and local model
 

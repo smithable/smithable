@@ -7,7 +7,7 @@ import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { FieldInput } from "./FieldInput";
 import { formatValue, fromInput, toInput } from "./format";
-import type { AppUi, FieldUi, ModelUi, Options } from "./model";
+import { type AppUi, editorMarker, type FieldUi, type ModelUi, type Options } from "./model";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
@@ -78,7 +78,11 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             const error = errors[field.name];
             const inline = field.kind === "bool";
             return (
-              <div key={field.name} className={inline ? "flex items-center gap-3" : "space-y-2"}>
+              <div
+                key={field.name}
+                className={inline ? "flex items-center gap-3" : "space-y-2"}
+                {...editorMarker(ui, field, "field")}
+              >
                 {!inline && (
                   <Label htmlFor={id}>
                     {field.label}
