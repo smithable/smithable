@@ -8,7 +8,8 @@ theme:
 pages:
   customers:
     table:
-      columns: [name, segment, email, creditLimit]
+      columns: [name, email, segment, creditLimit]
+      below: { email: phone }   # the phone number under the email
     form:
       fieldOrder: [name, segment, email, phone]
 

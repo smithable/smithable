@@ -43,6 +43,9 @@ pages:
       title: Send your next invoice with Invoicely
       button: Get started
   overview:
+    subtitle: Who owes you what, at a glance.
     outstanding: { label: Outstanding }
     invoiced: { label: Invoiced by month }
     latest: { label: Latest invoices }
+  invoices: { subtitle: Every invoice and where it stands. }
+  clients: { subtitle: The people and companies you work for. }

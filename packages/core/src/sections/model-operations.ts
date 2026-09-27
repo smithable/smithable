@@ -225,6 +225,15 @@ function updateFieldLists(
       [editors.ux, ["pages", page.id, "table", "columns"]],
       [editors.ux, ["pages", page.id, "form", "fieldOrder"]],
     ];
+    // A second line under a column: the pair goes with either field, and follows a rename.
+    const below = ["pages", page.id, "table", "below"];
+    const pairs = editors.ux?.has(below) ? (editors.ux.get(below) as Record<string, string>) : {};
+    for (const [column, second] of Object.entries(pairs)) {
+      if (column !== from && second !== from) continue;
+      if (!to) editors.ux?.removeAndPrune([...below, column], 0);
+      else if (column === from) editors.ux?.renameKey([...below, column], to);
+      else editors.ux?.set([...below, column], to);
+    }
     for (const [editor, path] of lists) {
       const list = editor?.has(path) ? (editor.get(path) as string[]) : undefined;
       if (!editor || !list?.includes(from)) continue;

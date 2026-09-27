@@ -16,6 +16,8 @@ export interface ContentIR {
 
 export interface PageContent {
   title?: string;
+  /** A line under the title, e.g. "Keep every relationship in view." */
+  subtitle?: string;
   /** Texts of a landing page's sections and a dashboard's tiles, by name. */
   sections?: Record<string, SectionContent>;
 }
@@ -224,9 +226,9 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
         : {};
   const result: PageContent = {};
   for (const entry of mapEntries(ctx, node, where) ?? []) {
-    if (entry.key === "title") {
-      const title = readString(ctx, entry.value, `"title" of ${where}`);
-      if (title !== undefined) result.title = title;
+    if (entry.key === "title" || entry.key === "subtitle") {
+      const text = readString(ctx, entry.value, `"${entry.key}" of ${where}`);
+      if (text !== undefined) result[entry.key] = text;
       continue;
     }
     const kind = parts[entry.key];
@@ -235,8 +237,8 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
       ctx.error(
         entry.keyNode,
         "unknown-key",
-        `${capitalize(where)} has no title, section or tile named "${entry.key}".`,
-        didYouMean(entry.key, ["title", ...Object.keys(parts)]),
+        `${capitalize(where)} has no title, subtitle, section or tile named "${entry.key}".`,
+        didYouMean(entry.key, ["title", "subtitle", ...Object.keys(parts)]),
       );
       continue;
     }
