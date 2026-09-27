@@ -238,6 +238,10 @@ Steps 3, 5 and 6 (2026-09-28): backups of projects (Git history and database), p
 
 Then: hand-over (a Git bundle with the whole history that a developer cloned and continued with the CLI, and one-time transfer links that moved an app to a new account), weekly security rebuilds gated by the Normal checks and the tests, a "Publish and share" link from Studio (`studio --home`), and a deterministic repair for drafts whose texts contain ": ".
 
+Then (2026-09-28): the remote MCP endpoint (a per-project token from the project's page; Studio serves MCP over HTTP at `/mcp`, and an agent's change appears in the open Studio), staging per app (publish to `st-<id>`, with its own data, then put exactly that build live), and the public demo (a sandbox from the front page without signing up, with the change trace; three at a time, three per visitor per hour, €0.05 of AI, no publishing, deleted after two hours with everything in it). The route tree no longer changes under a running preview (which blocked the next operation), and local Studio answers only `localhost`.
+
+**Status:** everything in M15 is built and tested on the hosted beta. The exit needs two things from outside: a real domain (the service's own, and a tester's for their app; a nip.io name stood in) and Google sign-in (an OAuth client). Invites work until then.
+
 **Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
 ## M16 — Public launch
