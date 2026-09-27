@@ -2,7 +2,7 @@
 // preview and the Studio app; a real browser makes the M3-M5 changes in both modes.
 // Run after `pnpm build`: `pnpm test:studio`.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -20,7 +20,11 @@ async function step(name, fn) {
     await fn();
     console.log(`  ✓ ${name}`);
   } catch (error) {
-    console.log(`  ✗ ${name}\n    ${String(error.message).split("\n")[0]}`);
+    const shot = join(root, "failure.png");
+    await page.screenshot({ path: shot }).catch(() => {});
+    console.log(
+      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}`,
+    );
     failed = true;
     throw error;
   }
@@ -107,6 +111,46 @@ try {
     await page.getByText("Only admins can add orders.").waitFor();
   });
 
+  const project = async () => (await fetch(`${base}/api/project`)).json();
+  await step(
+    "click the email field in the preview, make it required: spec, validation and form follow",
+    async () => {
+      await openPreview("/customers/new");
+      await page.getByRole("button", { name: "Select" }).click();
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 60000 });
+      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+      await page.getByText("email: email unique", { exact: true }).waitFor();
+      await page.getByRole("checkbox", { name: "Required" }).click();
+      await status.getByText("Change Customer.email").waitFor({ timeout: 60000 });
+      await page.getByText("email: email! unique", { exact: true }).waitFor();
+      if (!(await project()).files.spec.includes("      email: email! unique\n"))
+        throw new Error("spec not changed");
+      await preview
+        .locator('[data-sm-concept="field:Customer.email"]')
+        .getByText("*")
+        .waitFor({ timeout: 60000 });
+    },
+  );
+  await step(
+    "drag a column in the preview: smithable.ux.yml changes, smithable.yml does not",
+    async () => {
+      const before = (await project()).files.spec;
+      await openPreview("/customers");
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 60000 });
+      const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
+      await header("email").dragTo(header("name"), { timeout: 60000 });
+      await status.getByText("in the customers table").waitFor({ timeout: 60000 });
+      const after = await project();
+      if (after.files.spec !== before) throw new Error("smithable.yml changed");
+      const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
+      if (!/columns: \[email, name/.test(ux)) throw new Error(ux);
+      await page.getByRole("button", { name: "Select" }).click();
+    },
+  );
   await step("look and feel: a theme and density are chosen without touching code", async () => {
     await change("Look and feel");
     await page.getByLabel("Theme").selectOption("playful");
@@ -173,7 +217,9 @@ try {
     await openPreview("/orders");
     await preview.getByRole("searchbox", { name: "Search by number" }).waitFor({ timeout: 60000 });
     await page.getByRole("tab", { name: "Logs" }).click();
-    if (!(await page.getByLabel("Logs").innerText()).includes("VITE")) throw new Error("no logs");
+    // Every change logs what it generated.
+    if (!(await page.getByLabel("Logs").innerText()).includes("Generated"))
+      throw new Error("no logs");
   });
 } catch {
   // Reported above.

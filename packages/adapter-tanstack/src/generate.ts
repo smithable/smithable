@@ -519,6 +519,7 @@ function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string
   const shown = shownFields(model);
   const formulas = hasFormulas(model);
   const ui = {
+    model: model.name,
     label: n.label,
     pluralLabel: n.pluralLabel,
     titleField: titleField(model),
@@ -1079,7 +1080,8 @@ ${
 `
     : ""
 }      <ModelTable
-        ui={${n.ui}}${columns ? `\n        columns={${literal(columns)}}` : ""}
+        ui={${n.ui}}
+        page=${JSON.stringify(page.id)}${columns ? `\n        columns={${literal(columns)}}` : ""}
         app={app}
         rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
