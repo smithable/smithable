@@ -1,3 +1,4 @@
+import type { YamlEditor } from "../edit.js";
 import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
 import { type AnyOperation, type Editors, type Operation, OperationError } from "../operation.js";
 import { parseFieldShorthand } from "./field-type.js";
@@ -150,13 +151,14 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
   positional: ["model", "from", "to"],
   describe: ({ model, from, to }) => `Rename ${model}.${from} to ${to}`,
   destructive: () => false,
-  apply({ spec, content }, { model: m, from, to }, ir) {
+  apply({ spec, content, ux }, { model: m, from, to }, ir) {
     field(ir, m, from);
     checkFieldName(to);
     if (model(ir, m).fields.some((x) => x.name === to))
       throw new OperationError(`${m} already has a field named "${to}".`);
     spec.renameKey(fieldPath(m, from), to);
     if (content?.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
+    updateFieldLists({ spec, ...(ux ? { ux } : {}) }, ir, m, from, to);
     if (model(ir, m).ownedBy === from) spec.set(["models", m, "ownedBy"], to);
     return [{ kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from)) }];
   },
@@ -180,6 +182,7 @@ const removeField: Operation<{ model: string; field: string }> = {
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
     editors.spec.remove(fieldPath(m, f));
     if (editors.content?.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
+    updateFieldLists(editors, ir, m, f, undefined);
     return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f)) }];
   },
 };
@@ -191,3 +194,30 @@ export const modelOperations: AnyOperation[] = [
   renameField,
   removeField,
 ];
+
+/**
+ * Keeps the lists that name a model's fields in step with a rename (or a removal): a page's
+ * search in smithable.yml, its table columns and form order in smithable.ux.yml.
+ */
+function updateFieldLists(
+  editors: Pick<Editors, "spec" | "ux">,
+  ir: SpecIR,
+  m: string,
+  from: string,
+  to: string | undefined,
+): void {
+  for (const page of ir.pages.filter((p) => p.pattern.model === m)) {
+    const lists: [YamlEditor | undefined, string[]][] = [
+      [editors.spec, ["pages", page.id, "search"]],
+      [editors.ux, ["pages", page.id, "table", "columns"]],
+      [editors.ux, ["pages", page.id, "form", "fieldOrder"]],
+    ];
+    for (const [editor, path] of lists) {
+      const list = editor?.has(path) ? (editor.get(path) as string[]) : undefined;
+      if (!editor || !list?.includes(from)) continue;
+      const next = to ? list.map((f) => (f === from ? to : f)) : list.filter((f) => f !== from);
+      if (next.length) editor.set(path, next);
+      else editor.removeAndPrune(path, editor === editors.spec ? 3 : 0);
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8. **In progress:** M9 (usability tests). **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8. **In progress:** M9 (usability tests), M10 (the designer's work). **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -161,6 +161,8 @@ Removes the biggest technical risk of the browser-first product before building 
 - Playwright visual checks: contrast, overflow and mobile layout.
 
 **Exit:** three sample apps (the CRM, a booking site, and a SaaS landing page with a dashboard) are approved by the designer, and the visual checks pass on desktop and mobile.
+
+**Status (2026-09-27):** the technical side is done, ready for the designer's values: the visual checks (axe-core, WCAG 2 AA and no sideways scrolling, light and dark, desktop and phone) run on every example in `pnpm test:apps`; `smithable.ux.yml` has themes (preset, brand colour and font, density), table columns and form order, with operations and a Builder form; placeholder presets and brand-input rules generate `src/theme.css`; lists become cards on phones. The designer brief is [design/brief.md](design/brief.md). Still to do: the designer's presets, rules and page patterns (landing sections, dashboard, settings, onboarding), which need new spec constructs and the brief's results.
 
 ## M11 — Visual selection and WYSIWYG
 

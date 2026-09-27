@@ -26,6 +26,8 @@ interface ModelTableProps<R extends Row> {
   emptyAction?: React.ReactNode;
   /** Replaces "No … yet", e.g. when a search matches nothing. */
   emptyMessage?: string;
+  /** The columns to show, in order, instead of the model's default ones. */
+  columns?: string[];
 }
 
 export function ModelTable<R extends Row>({
@@ -36,9 +38,10 @@ export function ModelTable<R extends Row>({
   hide = [],
   emptyAction,
   emptyMessage,
+  columns: chosen,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
-  const columns = ui.columns
+  const columns = (chosen ?? ui.columns)
     .filter((name) => !hide.includes(name))
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
   if (rows.length === 0) {

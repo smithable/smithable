@@ -1,5 +1,12 @@
 // The Builder's forms for the most common changes. Each one becomes an operation.
-import { ACCESS_OPERATIONS, type FieldIR, humanize, typeKey } from "@smithable/core";
+import {
+  ACCESS_OPERATIONS,
+  type FieldIR,
+  FONTS,
+  humanize,
+  THEME_PRESETS,
+  typeKey,
+} from "@smithable/core";
 import { useState } from "react";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
@@ -30,6 +37,7 @@ export function shorthandOf(field: FieldIR): string {
 }
 
 const CHANGES = [
+  ["setTheme", "Look and feel"],
   ["addField", "Add a field"],
   ["changeField", "Change a field"],
   ["renameField", "Rename a field"],
@@ -58,6 +66,7 @@ export function ChangeForms({ spec, run }: { spec: Spec; run: Run }) {
         />
       </Label>
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+        {change === "setTheme" && <SetTheme run={run} />}
         {change === "addField" && <AddField spec={spec} run={run} />}
         {change === "changeField" && <ChangeField spec={spec} run={run} />}
         {change === "renameField" && <RenameField spec={spec} run={run} />}
@@ -445,6 +454,65 @@ function SetNavigation({ spec, run }: FormProps) {
         ))}
       </ol>
       <Submit label="Save menu order" />
+    </Form>
+  );
+}
+
+function SetTheme({ run }: { run: Run }) {
+  const [preset, setPreset] = useState<string>(THEME_PRESETS[0]);
+  const [useBrand, setUseBrand] = useState(false);
+  const [primary, setPrimary] = useState("#2563eb");
+  const [font, setFont] = useState("none");
+  const [density, setDensity] = useState("comfortable");
+  return (
+    <Form
+      onSubmit={() =>
+        run("setTheme", { preset, primary: useBrand ? primary : "none", font, density })
+      }
+    >
+      <Label text="Theme">
+        <Select
+          aria-label="Theme"
+          value={preset}
+          onChange={(e) => setPreset(e.target.value)}
+          options={THEME_PRESETS.map((p) => [p, humanize(p)])}
+        />
+      </Label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={useBrand} onChange={(e) => setUseBrand(e.target.checked)} />{" "}
+        Use my brand colour
+      </label>
+      {useBrand && (
+        <Label text="Brand colour" hint="Adjusted where needed so text stays readable">
+          <Input
+            type="color"
+            aria-label="Brand colour"
+            value={primary}
+            onChange={(e) => setPrimary(e.target.value)}
+            className="h-10 p-1"
+          />
+        </Label>
+      )}
+      <Label text="Font">
+        <Select
+          aria-label="Font"
+          value={font}
+          onChange={(e) => setFont(e.target.value)}
+          options={[["none", "The theme's font"], ...FONTS.map((f) => [f, f] as [string, string])]}
+        />
+      </Label>
+      <Label text="Density">
+        <Select
+          aria-label="Density"
+          value={density}
+          onChange={(e) => setDensity(e.target.value)}
+          options={[
+            ["comfortable", "Comfortable"],
+            ["compact", "Compact: more on screen"],
+          ]}
+        />
+      </Label>
+      <Submit label="Apply" />
     </Form>
   );
 }

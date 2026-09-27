@@ -37,6 +37,7 @@ export function implementationIndex(ir: SpecIR, auth: AuthIR): Record<string, Ge
   file("app", "src/generated/app.ts", ["app"]);
   file("app", "src/routes/__root.tsx", ["Route"]);
   file("app", "src/generated/pages.ts", ["pageAccess"]);
+  file("app", "src/theme.css", []);
   if (hasSignIn(auth)) {
     file("app", "src/lib/auth.ts", ["auth", "PROVIDERS", "configuredProviders"]);
     file("app", "src/routes/sign-in.tsx", ["Route"]);

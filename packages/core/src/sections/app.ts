@@ -6,12 +6,13 @@ import { ruleOperations } from "./rule-operations.js";
 import { specOperations } from "./spec-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
+import { uxOperations } from "./ux-operations.js";
 
 export const appSection: SpecSection<"app"> = {
   key: "app",
   required: true,
   // Rules and access can belong to any concept; their operations live with the app as a whole.
-  operations: [...ruleOperations, ...accessOperations, ...specOperations],
+  operations: [...ruleOperations, ...accessOperations, ...specOperations, ...uxOperations],
   schema: {
     type: "object",
     description: "The application as a whole.",
