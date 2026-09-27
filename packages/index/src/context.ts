@@ -46,6 +46,8 @@ export function buildContext(
       : index.concepts.filter((c) => c.concept === "app" || c.concept.startsWith("model:"))
     ).map(conceptText),
     "",
+    `Menus: ${index.menus.map((m) => `${m.name}: [${m.pages.join(", ")}]`).join("; ")}`,
+    "",
     "Operations (change the app only through these):",
     ...OPERATIONS.map(
       (op) =>

@@ -120,10 +120,14 @@ const TASKS = [
         });
         await signIn(role);
         await open(page, `${base}/customers/${id}`);
-        const button = page.getByRole("button", { name: "Delete" });
+        const button = page.getByRole("button", { name: "Delete", exact: true });
         if (await button.count()) {
-          page.once("dialog", (d) => d.accept());
+          // The app asks in a dialog that names the record; confirm there.
           await button.click();
+          await page
+            .getByRole("dialog")
+            .getByRole("button", { name: /^Delete / })
+            .click();
           await page.waitForTimeout(1500);
         }
         return db.exists("customers", id);
@@ -159,8 +163,9 @@ const TASKS = [
     ops: [["setNavigation", "main", "orders", "customers"]],
     check: async ({ page, base }) => {
       await open(page, `${base}/customers`);
-      const first = await page.getByRole("navigation").getByRole("link").first().innerText();
-      return /orders/i.test(first);
+      // Orders first, and Customers still in the menu.
+      const links = await page.getByRole("navigation").getByRole("link").allInnerTexts();
+      return /orders/i.test(links[0] ?? "") && links.some((l) => /customers/i.test(l));
     },
   },
 ];

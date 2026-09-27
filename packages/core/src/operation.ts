@@ -38,7 +38,8 @@ export interface Operation<A extends OperationArgs = OperationArgs> {
    */
   positional: string[];
   /** Plain-language description, used in commit messages and the change trace. */
-  describe(args: A): string;
+  /** Plain language, e.g. "Add field phone (phone) to Customer"; `ir` is the app before it. */
+  describe(args: A, ir: SpecIR): string;
   /** True when the change can lose data and needs confirmation. */
   destructive(args: A, ir: SpecIR): boolean;
   /** Edits the files, or throws an OperationError explaining why it cannot. */

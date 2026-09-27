@@ -41,7 +41,8 @@ const addPage: Operation<{ page: string; model: string; route?: string }> = {
 
 const setNavigation: Operation<{ menu: string; pages: string[] }> = {
   name: "setNavigation",
-  summary: "Set which pages a menu shows, in order.",
+  summary:
+    "Set which pages a menu shows, in order. The list replaces the menu: include every page that stays.",
   schema: {
     type: "object",
     required: ["menu", "pages"],
@@ -52,7 +53,12 @@ const setNavigation: Operation<{ menu: string; pages: string[] }> = {
     },
   },
   positional: ["menu", "...pages"],
-  describe: ({ menu, pages }) => `Set the ${menu} menu to ${pages.join(", ")}`,
+  describe: ({ menu, pages }, ir) => {
+    // A page that leaves the menu is easy to miss in a list: name it.
+    const before = ir.navigation.find((m) => m.name === menu)?.pages ?? [];
+    const dropped = before.filter((p) => !pages.includes(p));
+    return `Set the ${menu} menu to ${pages.join(", ")}${dropped.length ? ` (no longer in it: ${dropped.join(", ")})` : ""}`;
+  },
   destructive: () => false,
   apply({ spec }, { menu, pages }, ir) {
     const unknown = pages.filter((p) => !ir.pages.some((page) => page.id === p));
