@@ -90,7 +90,12 @@ function trace(dir: string): TraceEntry[] {
  * server as the preview (the Local runtime) and serves the Studio app with a small API:
  * the project, operations, undo, the last change's diff, and events.
  */
-export async function studio(dir: string, io: Io, port: number): Promise<number> {
+export async function studio(
+  dir: string,
+  io: Io,
+  port: number,
+  options: { host?: string; previewUrl?: string } = {},
+): Promise<number> {
   const { ir } = loadSpec(dir, io);
   if (!ir) return 1;
   if (!existsSync(join(STUDIO, "index.html"))) {
@@ -98,7 +103,7 @@ export async function studio(dir: string, io: Io, port: number): Promise<number>
     return 1;
   }
   const previewPort = port + 1;
-  const preview = `http://localhost:${previewPort}`;
+  const preview = options.previewUrl ?? `http://localhost:${previewPort}`;
   const logs: string[] = [];
   const clients = new Set<ServerResponse>();
   const send = (event: string, data: unknown) => {
@@ -118,11 +123,21 @@ export async function studio(dir: string, io: Io, port: number): Promise<number>
   // which Git ignores: the app's own config and builds stay as they are.
   const config = join("data", ".smithable", "preview.vite.config.mjs");
   mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-  writeFileSync(join(dir, config), previewConfig());
+  writeFileSync(join(dir, config), previewConfig(options.previewUrl));
   const startApp = () => {
     app = spawn(
       "pnpm",
-      ["exec", "vite", "dev", "--config", config, "--port", String(previewPort), "--strictPort"],
+      [
+        "exec",
+        "vite",
+        "dev",
+        "--config",
+        config,
+        "--port",
+        String(previewPort),
+        "--strictPort",
+        ...(options.host ? ["--host", options.host] : []),
+      ],
       {
         cwd: dir,
         env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" },
@@ -283,7 +298,7 @@ export async function studio(dir: string, io: Io, port: number): Promise<number>
       json({ ok: false, output: error instanceof Error ? error.message : String(error) }, 500);
     }
   });
-  server.listen(port, "127.0.0.1");
+  server.listen(port, options.host ?? "127.0.0.1");
   io.out(`Smithable Studio: http://localhost:${port} (the app's preview runs on ${preview})\n`);
   await new Promise<void>((resolve) => {
     for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => resolve());
