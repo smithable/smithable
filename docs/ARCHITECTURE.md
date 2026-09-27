@@ -647,6 +647,8 @@ Deploy and backup targets so far: `smithable deploy --target docker|ssh://user@h
 
 Generated smoke tests: `tests/smoke.spec.ts` and a kit `playwright.config.ts` (the app's dev server on port 3100 with its own `data/smoke` database), run by `pnpm test:smoke`: public pages open for a visitor, protected pages redirect to sign-in, and each role signs in through the development sign-in and opens every page its access allows, failing on any browser error.
 
+Upgrades: `smithable.lock` records the stack profile an app was generated with; `generate` and operations refuse another one and point to `smithable upgrade`, which migrates the spec (§14), regenerates with this Smithable's profile, reinstalls, and keeps the result only when the type check and tests pass. When they fail it shows the errors in `src/custom/` (the contract the app's own code relied on) and undoes everything.
+
 **Deployment contract.** Every generated app produces an OCI image that:
 
 - listens on `PORT` and serves `GET /health`,
