@@ -2061,6 +2061,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/theme.css",
   "generated: tests/smoke.spec.ts",
   "kit: tsconfig.json",
+  "kit: tsr.config.json",
   "kit: vite.config.ts",
   "kit: vitest.config.ts",
 ]
@@ -3937,6 +3938,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "generated: src/theme.css",
   "generated: tests/smoke.spec.ts",
   "kit: tsconfig.json",
+  "kit: tsr.config.json",
   "kit: vite.config.ts",
   "kit: vitest.config.ts",
 ]
@@ -6676,6 +6678,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "generated: src/theme.css",
   "generated: tests/smoke.spec.ts",
   "kit: tsconfig.json",
+  "kit: tsr.config.json",
   "kit: vite.config.ts",
   "kit: vitest.config.ts",
 ]

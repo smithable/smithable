@@ -2,12 +2,14 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Proposal } from "@smithable/ai";
 import type { OperationArgs } from "@smithable/core";
 import { applyProposal, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { git } from "./git.js";
 import type { Io } from "./io.js";
+import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
 import { previewConfig } from "./preview-editor.js";
 import { projectIndex } from "./rules.js";
@@ -198,6 +200,27 @@ export async function studio(
       return JSON.parse(text || "{}") as Record<string, unknown>;
     };
     try {
+      // On this machine only this machine's own addresses: a web page cannot reach the API
+      // through DNS rebinding. Behind a proxy (--host), the proxy decides who gets in.
+      if (
+        !options.host &&
+        !["localhost", "127.0.0.1"].includes((req.headers.host ?? "").replace(/:\d+$/, ""))
+      )
+        return json({ ok: false, output: "Unknown host." }, 403);
+      // MCP over HTTP: an agent's changes show up in Studio right away.
+      if (url.pathname === "/mcp") {
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true,
+        });
+        const mcp = mcpServer(dir, () => send("changed", {}));
+        res.on("close", () => {
+          void transport.close();
+          void mcp.close();
+        });
+        await mcp.connect(transport);
+        return await transport.handleRequest(req, res);
+      }
       if (url.pathname === "/api/project") return json(state());
       if (url.pathname === "/api/logs") return json(logs);
       if (url.pathname === "/api/diff") {
