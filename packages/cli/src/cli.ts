@@ -19,6 +19,7 @@ import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
 import { undo } from "./undo.js";
+import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -44,6 +45,8 @@ Commands:
                    credentials in AWS_* variables); --container <name> for a deployed app
   restore [dir]    Restore the newest backup (or --backup <time>) --from a folder or s3://…,
                    into the project or --container <name>
+  upgrade [dir]    Move the app to this Smithable's spec version and stack profile; kept only
+                   when the type check and tests pass, and reported where custom code breaks
   update --security [dir]  Bring in this Smithable's security fixes; kept only when the checks pass
   ask "<request>"  A model proposes the change in plain language; it is applied after you
                    confirm (--yes applies it directly). Setting up models: docs/ai.md
@@ -164,6 +167,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.backup ? { backup: values.backup } : {}),
         ...(values.container ? { container: values.container } : {}),
       });
+    case "upgrade":
+      return upgrade(values.dir ?? dir, io);
     case "update":
       if (values.security !== true) {
         io.err("update takes --security: smithable update --security [dir]\n");
