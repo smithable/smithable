@@ -79,6 +79,8 @@ export interface ConceptInfo {
 
 export interface ProjectIndex {
   concepts: ConceptInfo[];
+  /** The menus and their pages, in order: every change to a menu needs the whole list. */
+  menus: { name: string; pages: string[] }[];
 }
 
 /** A short, stable hash of a rule's text, to notice when it changes. */
@@ -176,7 +178,7 @@ export function buildIndex(input: IndexInput): ProjectIndex {
       }
     }
   }
-  return { concepts };
+  return { concepts, menus: ir.navigation.map((m) => ({ name: m.name, pages: m.pages })) };
 }
 
 /** A concept by name. */

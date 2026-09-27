@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { checkSpecFiles, closestStarter, draftProject, type SpecFiles } from "./draft.js";
+import {
+  checkSpecFiles,
+  closestStarter,
+  draftProject,
+  REFERENCE,
+  type SpecFiles,
+} from "./draft.js";
 import type { Provider } from "./provider.js";
 
 const load = (example: string): SpecFiles => {
@@ -69,7 +75,12 @@ describe("starting from a sentence", () => {
     expect(weak.prompts).toHaveLength(0);
     expect(strong.prompts[0]).toContain("Description: A booking site for a pilates studio");
     expect(strong.prompts[1]).toMatch(/smithable\.yml:\d+:\d+ {2}error {2}.*Sesion/);
+    expect(strong.prompts[1]).toContain("Your draft:\nsmithable.yml:");
     expect(draft.usage.map((u) => u.cost)).toEqual([0.0165, 0.0165]);
+  });
+
+  test("the reference in the instructions is valid", () => {
+    expect(checkSpecFiles(REFERENCE)).toEqual([]);
   });
 
   test("the starters themselves are valid drafts", () => {

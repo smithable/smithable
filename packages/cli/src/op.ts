@@ -166,7 +166,7 @@ function migrationName(description: string): string {
  * while some rows have no value, or a new required field without a default on a table that
  * already has rows.
  */
-function requiredButEmpty(
+export function requiredButEmpty(
   dir: string,
   before: SpecIR,
   after: SpecIR,
