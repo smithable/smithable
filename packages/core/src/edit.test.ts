@@ -144,3 +144,13 @@ test("setItem replaces one list item on its line", () => {
   e.setItem(["rules"], 0, { id: "first", rule: "First rule." });
   expect(e.text).toBe("rules:\n  - { id: first, rule: First rule. }   # note\n  - Second rule.\n");
 });
+
+test("keys that YAML cannot write plainly are quoted, others are not", () => {
+  const editor = new YamlEditor("allowBuilds:\n  esbuild: true\n");
+  editor.add([], "overrides", { "@esbuild-kit/core-utils>esbuild": "0.25.12" });
+  editor.add(["allowBuilds"], "better-sqlite3", true);
+  expect(editor.text).toBe(
+    'allowBuilds:\n  esbuild: true\n  better-sqlite3: true\noverrides:\n  "@esbuild-kit/core-utils>esbuild": 0.25.12\n',
+  );
+  expect(editor.get(["overrides", "@esbuild-kit/core-utils>esbuild"])).toBe("0.25.12");
+});

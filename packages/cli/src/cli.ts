@@ -13,6 +13,7 @@ import { type Io, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
 import { create } from "./new.js";
 import { op } from "./op.js";
+import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
 import { undo } from "./undo.js";
@@ -32,6 +33,10 @@ Commands:
   validate [path]  Check smithable.yml in a directory (default: current) or a given file
                    (--plugin <name> also loads a plugin that is not declared yet)
   build [dir]      Build the app's container image with Docker
+  security [dir]   Check the app: --level fast (type check, tests), normal (+ dependencies,
+                   secrets, code; the default) or release (+ the image and the running app).
+                   Uses installed scanners, or their pinned images in Docker
+  update --security [dir]  Bring in this Smithable's security fixes; kept only when the checks pass
   ask "<request>"  A model proposes the change in plain language; it is applied after you
                    confirm (--yes applies it directly). Setting up models: docs/ai.md
   code <concept> "<what>"  Have a model write the custom code of a query, action or custom page,
@@ -118,6 +123,20 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return build(dir, io);
     case "test":
       return test(values.dir ?? dir);
+    case "security": {
+      const level = values.level ?? "normal";
+      if (!["fast", "normal", "release"].includes(level)) {
+        io.err(`--level is fast, normal or release.\n`);
+        return 2;
+      }
+      return security(values.dir ?? dir, io, level as Level);
+    }
+    case "update":
+      if (values.security !== true) {
+        io.err("update takes --security: smithable update --security [dir]\n");
+        return 2;
+      }
+      return updateSecurity(values.dir ?? dir, io);
     case "detach":
       return detach(values.dir ?? dir, io);
     case "mcp":
@@ -143,6 +162,8 @@ function parse(argv: string[]) {
       starter: { type: "string" },
       describe: { type: "string" },
       plugin: { type: "string" },
+      level: { type: "string" },
+      security: { type: "boolean" },
       yes: { type: "boolean" },
       dir: { type: "string" },
       json: { type: "boolean" },

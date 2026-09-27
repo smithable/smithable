@@ -79,7 +79,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "start": "srvx --prod -s ../client dist/server/server.js",
+    "start": "node server.mjs",
     "typecheck": "tsc",
     "test": "vitest run",
     "routes": "tsr generate",
@@ -1224,6 +1224,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -1261,6 +1262,7 @@ const getViewer = createServerFn().handler(() => currentViewer());
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
   beforeLoad: async () => ({ viewer: await getViewer() }),
+  headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -1942,6 +1944,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: package.json",
   "scaffold: pnpm-workspace.yaml",
   "generated: public/favicon.svg",
+  "kit: server.mjs",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
   "kit: src/components/ui/button.tsx",
@@ -1973,6 +1976,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/formula.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
+  "kit: src/kit/security.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
   "kit: src/lib/utils.ts",
@@ -2068,7 +2072,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "start": "srvx --prod -s ../client dist/server/server.js",
+    "start": "node server.mjs",
     "typecheck": "tsc",
     "test": "vitest run",
     "routes": "tsr generate",
@@ -3104,6 +3108,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -3133,6 +3138,7 @@ const getViewer = createServerFn().handler(() => currentViewer());
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
   beforeLoad: async () => ({ viewer: await getViewer() }),
+  headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -3752,6 +3758,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "generated: package.json",
   "scaffold: pnpm-workspace.yaml",
   "generated: public/favicon.svg",
+  "kit: server.mjs",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
   "kit: src/components/ui/button.tsx",
@@ -3785,6 +3792,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/formula.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
+  "kit: src/kit/security.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
   "kit: src/lib/utils.ts",
@@ -3878,7 +3886,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "start": "srvx --prod -s ../client dist/server/server.js",
+    "start": "node server.mjs",
     "typecheck": "tsc",
     "test": "vitest run",
     "routes": "tsr generate",
@@ -5412,6 +5420,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -5461,6 +5470,7 @@ const getViewer = createServerFn().handler(() => currentViewer());
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
   beforeLoad: async () => ({ viewer: await getViewer() }),
+  headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -6371,6 +6381,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "generated: package.json",
   "scaffold: pnpm-workspace.yaml",
   "generated: public/favicon.svg",
+  "kit: server.mjs",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
   "kit: src/components/ui/button.tsx",
@@ -6410,6 +6421,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/formula.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
+  "kit: src/kit/security.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
   "kit: src/lib/utils.ts",
