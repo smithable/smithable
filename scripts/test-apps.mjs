@@ -885,8 +885,13 @@ for (const [index, example] of examples.entries()) {
         headers: { "Content-Type": "application/json", Origin: base },
         body: JSON.stringify({ email: "dev-admin@example.com", password: "dev-password" }),
       });
-      const absent = !signIn.includes("Development only") && devSignIn.status === 400;
-      console.log(`  ${absent ? "✓" : "✗"} the production build has no development sign-in`);
+      const absent =
+        !signIn.includes("Development only") &&
+        !signIn.includes("missing from the environment") &&
+        devSignIn.status === 400;
+      console.log(
+        `  ${absent ? "✓" : "✗"} the production build has no development sign-in or setup notes`,
+      );
       if (!absent) failures.push(`${example} development sign-in in production`);
     } finally {
       stop();
