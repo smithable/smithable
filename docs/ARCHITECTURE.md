@@ -734,7 +734,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 
 ### 14.3 Hosted and detached apps
 
-- **Hosted apps** are rebuilt and redeployed automatically when a security patch or base-image update is available, but only if the tests pass. Otherwise the owner is notified. Smithable upgrades are offered to the owner, never forced.
+- **Hosted apps** are rebuilt and redeployed automatically when a security patch or base-image update is available, but only if the tests pass. Otherwise the owner is notified. Smithable upgrades are offered to the owner, never forced. As built (M15): every Sunday the service runs `smithable update --security` on each published project (kept only when the Normal checks pass: the workspace image carries the pinned OSV-Scanner, Gitleaks and Semgrep, so no Docker is needed), and publishes it again, with its tests, when that changed something or the base image has a newer version; a failure leaves the running version alone and is shown on the project's page. A project open in Studio waits for the next run. Notifying owners by email comes with the email sign-in.
 - **Self-hosted apps** run `smithable upgrade` or `smithable update --security`, then rebuild the container.
 - **Detached apps** are ordinary projects and use normal dependency management (for example Renovate or Dependabot).
 
