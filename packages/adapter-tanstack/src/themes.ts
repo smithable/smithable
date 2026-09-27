@@ -16,7 +16,7 @@ const FOUNDATIONS: Record<ThemePreset, { font: string; radius: string; shadow: s
 /** Control and row sizes per density; touch screens always get 44 px targets. */
 const DENSITY = {
   comfortable: { control: "2.75rem", row: "4rem", cell: "1rem", card: "1.5rem" },
-  compact: { control: "2.25rem", row: "2.75rem", cell: "0.75rem", card: "1.25rem" },
+  compact: { control: "2.25rem", row: "3.25rem", cell: "0.75rem", card: "1.25rem" },
 };
 
 /** Fonts hosted by the app itself (Fontsource, OFL); the package is added to package.json. */

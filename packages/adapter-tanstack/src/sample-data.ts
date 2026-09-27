@@ -112,6 +112,17 @@ function sampleValue(
 function titleFor(model: ModelIR, i: number): string {
   if (PERSON_MODELS.test(model.name)) return PEOPLE[i % PEOPLE.length] ?? "";
   if (COMPANY_MODELS.test(model.name)) return COMPANIES[i % COMPANIES.length] ?? "";
+  // Examples in the description, as in "A kind of class, such as Vinyasa or Yin."
+  const examples = /such as ([^.;]+)/i
+    .exec(model.description ?? "")?.[1]
+    ?.split(/,\s*|\s+(?:and|or)\s+/)
+    .map((e) => e.trim())
+    .filter(Boolean);
+  if (examples?.length) {
+    const example = examples[i % examples.length] ?? "";
+    const round = Math.floor(i / examples.length);
+    return round === 0 ? example : `${example} ${round + 1}`;
+  }
   const label = words(model.name).join(" ");
   return `${label.charAt(0).toUpperCase()}${label.slice(1)} ${i + 1}`;
 }
