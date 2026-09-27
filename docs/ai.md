@@ -42,6 +42,18 @@ export SMITHABLE_AI_POLICY=best-available  # Claude is not EU-hosted, so eu-only
 
 Smithable runs `claude -p` with no tools, no MCP servers and an empty working directory: it only answers, and cannot read or change the project. Its cost is reported in dollars.
 
+## Custom code
+
+Some requests need code, not an operation: ranking customers by churn risk, a custom action's behaviour. A coder writes it, only in `src/custom/`:
+
+```bash
+export SMITHABLE_CODER=claude-code         # Claude Code, headless in the project
+export SMITHABLE_CODER_MODEL=sonnet        # optional
+smithable code query:churnRisk "rank by days since the last order"
+```
+
+`smithable ask` runs the coder by itself when its proposal adds a query. The coder may read the project, edit only `src/custom/`, and run only the type check and the tests. Smithable then checks every changed file itself: a change anywhere else undoes everything, and so does a failing type check or test. The result is one commit that `smithable undo` reverts. Measured: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code for $0.45 with Sonnet.
+
 ## Policy
 
 `SMITHABLE_AI_POLICY` decides which models may see the project:

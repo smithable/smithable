@@ -80,7 +80,7 @@ const addTile: Operation<{
   },
   positional: ["page", "tile", "measure", "of"],
   describe: ({ page, tile, measure, of }) =>
-    `Add tile ${tile} (${measure} of ${of}) to the ${page} dashboard`,
+    `Add tile ${tile} (${measure} of ${of}) to ${page === "dashboard" ? "the dashboard" : `the ${page} dashboard`}`,
   destructive: () => false,
   apply({ spec }, { page, tile, measure, of, where, by, limit }, ir) {
     const value = {

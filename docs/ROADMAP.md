@@ -204,6 +204,8 @@ Removes the biggest technical risk of the browser-first product before building 
 - "Prioritise customers most likely to churn on the dashboard" produces a spec change plus a custom query, with tests passing, and no generated files touched.
 - A `newsletter:` section in a spec gets a project plugin written by AI. Regenerating afterwards uses no AI at all.
 
+**Status (2026-09-27):** in progress. Done: the frontier provider (Claude Code), escalation by tier, custom queries, and a coder confined to `src/custom/` (checked by Smithable, then type check and tests). The first exit check passes with Claude Sonnet: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code, with no generated files touched, for $0.45. Next: Teach Smithable.
+
 ## M14 — Verification, security, deploy and backup targets
 
 - Playwright smoke tests generated from pages.
