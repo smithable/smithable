@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { generateApp, renameColumnSql, renameInSnapshot } from "@smithable/adapter-tanstack";
+import {
+  generateApp,
+  renameColumnSql,
+  renameInSnapshot,
+  STACK_PROFILE,
+} from "@smithable/adapter-tanstack";
+import { YamlEditor } from "@smithable/core";
 import { exec, type Io } from "./io.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -93,11 +99,32 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   const removed = Object.keys(previous.files).filter((path) => !produced.has(path));
   for (const path of removed) rmSync(join(dir, path), { force: true });
   mkdirSync(join(dir, ".smithable"), { recursive: true });
-  writeFileSync(join(dir, RECORD), `${JSON.stringify(next, null, 2)}\n`);
+  writeFileSync(join(dir, RECORD), serializeRecord(next));
+  applyOverrides(dir);
   io.out(`Generated ${files.length} files (${written} changed, ${removed.length} removed).\n`);
 
   if (!flags.tools) return 0;
   return runTools(dir, io, flags.migration);
+}
+
+/**
+ * Keeps the stack profile's security overrides in pnpm-workspace.yaml. The file belongs to
+ * the project (pnpm edits it too): only these entries are Smithable's, the rest is left alone.
+ */
+function applyOverrides(dir: string): void {
+  const path = join(dir, "pnpm-workspace.yaml");
+  if (!existsSync(path)) return;
+  const workspace = new YamlEditor(readFileSync(path, "utf8"));
+  for (const retired of STACK_PROFILE.retiredOverrides)
+    if (workspace.has(["overrides", retired])) workspace.removeAndPrune(["overrides", retired], 0);
+  for (const [dependency, version] of Object.entries(STACK_PROFILE.overrides)) {
+    if (workspace.has(["overrides", dependency])) {
+      if (workspace.get(["overrides", dependency]) !== version)
+        workspace.set(["overrides", dependency], version);
+    } else if (workspace.has(["overrides"])) workspace.add(["overrides"], dependency, version);
+    else workspace.add([], "overrides", { [dependency]: version });
+  }
+  if (workspace.text !== readFileSync(path, "utf8")) writeFileSync(path, workspace.text);
 }
 
 /** Installs dependencies, then lets the app's own tools create migrations and the route tree. */
@@ -154,10 +181,27 @@ function latestMigration(dir: string): string {
 
 export function readRecord(dir: string): FileRecord {
   try {
-    return JSON.parse(readFileSync(join(dir, RECORD), "utf8")) as FileRecord;
+    const saved = JSON.parse(readFileSync(join(dir, RECORD), "utf8")) as {
+      files: Record<string, string> | { path: string; sha256: string }[];
+    };
+    // A list of { path, sha256 }; records written before 2026-09-28 map paths to hashes.
+    return {
+      files: Array.isArray(saved.files)
+        ? Object.fromEntries(saved.files.map((f) => [f.path, f.sha256]))
+        : saved.files,
+    };
   } catch {
     return { files: {} };
   }
+}
+
+/**
+ * The record as { path, sha256 } entries: a path like "auth.ts" next to a long hash looks
+ * like an API key to secret scanners, and a finding must be avoided, not suppressed.
+ */
+function serializeRecord(record: FileRecord): string {
+  const files = Object.entries(record.files).map(([path, sha256]) => ({ path, sha256 }));
+  return `${JSON.stringify({ files }, null, 2)}\n`;
 }
 
 function hash(text: string): string {

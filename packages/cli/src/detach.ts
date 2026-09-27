@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { readme } from "@smithable/adapter-tanstack";
+import { readRecord } from "./generate.js";
 import { git, uncommitted } from "./git.js";
 import type { Io } from "./io.js";
 import { loadSpec } from "./validate.js";
@@ -38,9 +39,7 @@ export function detach(dir: string, io: Io): number {
   const { ir, auth } = loadSpec(dir, io);
   if (!ir) return 1;
 
-  const { files } = JSON.parse(readFileSync(recordPath, "utf8")) as {
-    files: Record<string, string>;
-  };
+  const { files } = readRecord(dir);
   let cleaned = 0;
   for (const path of Object.keys(files)) {
     const file = join(dir, path);

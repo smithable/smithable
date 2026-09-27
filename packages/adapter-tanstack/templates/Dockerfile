@@ -5,16 +5,20 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build && pnpm prune --prod
+RUN pnpm build && pnpm prune --prod && mkdir -p /data
 
-FROM node:24-slim
+# A minimal runtime (Node and little else, no shell), as a user without root rights: fewer
+# packages means fewer vulnerabilities to patch (smithable security --level release checks it).
+FROM gcr.io/distroless/nodejs24-debian13:nonroot
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 DATA_DIR=/data
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
+COPY --from=build /app/server.mjs ./
+COPY --from=build --chown=nonroot:nonroot /data /data
 VOLUME /data
 EXPOSE 3000
-HEALTHCHECK CMD node -e "fetch('http://localhost:' + process.env.PORT + '/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
-CMD ["node_modules/.bin/srvx", "--prod", "-s", "../client", "dist/server/server.js"]
+HEALTHCHECK CMD ["/nodejs/bin/node", "-e", "fetch('http://localhost:' + process.env.PORT + '/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+CMD ["server.mjs"]
