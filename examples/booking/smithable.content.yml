@@ -14,7 +14,7 @@ pages:
       button: See the schedule
     classes:
       title: Our classes
-      text: A little time, just for you.
+      text: Something for every level, from first steps to deep stretches.
     faq:
       title: Before your first class
       items:
@@ -27,3 +27,6 @@ pages:
     callToAction:
       title: Your first class is waiting
       button: Book a class
+  sessions:
+    title: Class schedule
+    subtitle: A little time, just for you.

@@ -153,7 +153,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     if (page.pattern.kind === "landing")
       add(`${dir}/index.tsx`, landingRoute(page, page.pattern.sections, ir, t, auth));
     if (page.pattern.kind === "dashboard")
-      add(`${dir}/index.tsx`, dashboardRoute(page, page.pattern.items, ir, t));
+      add(`${dir}/index.tsx`, dashboardRoute(page, page.pattern.items, ir, t, ux));
     const model = ir.models.find((m) => m.name === pageModel(page));
     if (!model) continue;
     add(
@@ -183,6 +183,11 @@ export function texts(content: ContentIR) {
     },
     field: (model: ModelIR, field: FieldIR) => content.models[model.name]?.fields[field.name] ?? {},
     pageTitle: (id: string) => content.pages[id]?.title ?? humanize(id),
+    /** The subtitle prop of a page's header, or nothing. */
+    pageSubtitle: (id: string) => {
+      const subtitle = content.pages[id]?.subtitle;
+      return subtitle ? `\n        subtitle=${JSON.stringify(subtitle)}` : "";
+    },
     /** A landing section's or dashboard tile's texts. */
     section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
     menuLabel: (name: string) =>
@@ -1094,6 +1099,8 @@ function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR)
   const columns = ux.pages[page.id]?.columns?.map((name) =>
     dataKey(model.fields.find((f) => f.name === name) as FieldIR),
   );
+  const key = (name: string) => dataKey(model.fields.find((f) => f.name === name) as FieldIR);
+  const below = Object.entries(ux.pages[page.id]?.below ?? {}).map(([c, f]) => [key(c), key(f)]);
 
   const route = importList()
     .add("@tanstack/react-router", "createFileRoute")
@@ -1142,7 +1149,7 @@ ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  con
   return (
     <>
       <PageHeader
-        title=${JSON.stringify(t.pageTitle(page.id))}
+        title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
 ${
@@ -1156,7 +1163,7 @@ ${
     : ""
 }      <ModelTable
         ui={${n.ui}}
-        page=${JSON.stringify(page.id)}${columns ? `\n        columns={${literal(columns)}}` : ""}
+        page=${JSON.stringify(page.id)}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
         rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
@@ -1353,7 +1360,13 @@ ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(au
  * A dashboard: its numbers are worked out in a server function from the records the viewer
  * may read, so they follow the same access rules as the lists.
  */
-function dashboardRoute(page: PageIR, items: DashboardItem[], ir: SpecIR, t: Texts): string {
+function dashboardRoute(
+  page: PageIR,
+  items: DashboardItem[],
+  ir: SpecIR,
+  t: Texts,
+  ux: UxIR,
+): string {
   const component = `${pascal(page.id)}Page`;
   const fn = `get${pascal(page.id)}`;
   const route = importList()
@@ -1397,13 +1410,19 @@ function dashboardRoute(page: PageIR, items: DashboardItem[], ir: SpecIR, t: Tex
         .add("#/kit/ModelTable", "ModelTable");
       values.push(`${item.name}: latest(${filtered}, ${item.limit ?? 5})`);
       const target = ir.pages.find((p) => pageModel(p) === model.name);
+      // The same columns as the model's own list page.
+      const columns =
+        target &&
+        ux.pages[target.id]?.columns?.map((name) =>
+          dataKey(model.fields.find((f) => f.name === name) as FieldIR),
+        );
       return {
         block: "list",
         code: `<section aria-labelledby=${JSON.stringify(`${item.name}-title`)} className="space-y-3">
         <h2 id=${JSON.stringify(`${item.name}-title`)} className="font-semibold">${label}</h2>
         <ModelTable
           ui={${n.ui}}
-          app={app}
+          app={app}${columns ? `\n          columns={${literal(columns)}}` : ""}
           rows={data.${item.name}}${
             target
               ? `
@@ -1470,7 +1489,7 @@ function ${component}() {
   const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
   return (
     <>
-      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))} />
+      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
       <div className="space-y-6">
       ${blocks.join("\n      ")}
       </div>

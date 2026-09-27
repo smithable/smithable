@@ -198,3 +198,33 @@ test("a page's navigation icon is set with setIcon, or suggested by its model's 
     applyOperation({ spec: crm, ux: set.files.ux }, "setIcon", { page: "orders", icon: "auto" }),
   ).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
 });
+
+test("setBelow puts a second field under a column; it follows renames and goes with either field", () => {
+  const set = applyOperation({ spec: crm }, "setBelow", {
+    page: "customers",
+    column: "email",
+    field: "phone",
+  });
+  if (!set.ok) throw new Error(set.message);
+  const ux = set.files.ux as string;
+  expect(validateUx({ path: "smithable.ux.yml", text: ux }, ir).ux?.pages.customers).toEqual({
+    below: { email: "phone" },
+  });
+  const renamed = applyOperation({ spec: crm, ux }, "renameField", {
+    model: "Customer",
+    from: "phone",
+    to: "mobile",
+  });
+  expect(renamed).toMatchObject({
+    ok: true,
+    files: { ux: expect.stringContaining("email: mobile") },
+  });
+  const removed = applyOperation({ spec: crm, ux }, "removeField", {
+    model: "Customer",
+    field: "email",
+  });
+  expect(removed).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
+  expect(
+    codes("smithableUx: 0.1\npages:\n  customers:\n    table: { below: { email: fone } }\n"),
+  ).toEqual(["unknown-field"]);
+});

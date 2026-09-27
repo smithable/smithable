@@ -29,6 +29,8 @@ interface ModelTableProps<R extends Row> {
   emptyMessage?: string;
   /** The columns to show, in order, instead of the model's default ones. */
   columns?: string[];
+  /** A second field shown under a column's value, e.g. { email: "phone" }. */
+  below?: Record<string, string>;
   /** The page showing the table, so the preview editor can change its columns. */
   page?: string;
 }
@@ -42,6 +44,7 @@ export function ModelTable<R extends Row>({
   emptyAction,
   emptyMessage,
   columns: chosen,
+  below = {},
   page,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
@@ -63,6 +66,19 @@ export function ModelTable<R extends Row>({
       </Card>
     );
   }
+  const second = (field: FieldUi) => ui.fields.find((f) => f.name === below[field.name]);
+  // A column with a second field below its value: both on their own line.
+  const stacked = (field: FieldUi, row: R) => {
+    const other = second(field);
+    return other ? (
+      <>
+        <span className="block">{cell(field, row)}</span>
+        <span className="block text-muted-foreground">{cell(other, row)}</span>
+      </>
+    ) : (
+      cell(field, row)
+    );
+  };
   const title = columns.find((f) => f.name === ui.titleField) ?? columns[0];
   const others = columns.filter((f) => f !== title);
   const status = others.find((f) => f.kind === "choice");
@@ -101,7 +117,7 @@ export function ModelTable<R extends Row>({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   {title && open(row, cell(title, row), "break-words text-base font-semibold")}
-                  {secondary && <p className="break-words text-sm">{cell(secondary, row)}</p>}
+                  {secondary && <p className="break-words text-sm">{stacked(secondary, row)}</p>}
                 </div>
                 {status ? (
                   <div className="shrink-0">{cell(status, row)}</div>
@@ -135,7 +151,7 @@ export function ModelTable<R extends Row>({
                   className={numeric(field.kind) ? "text-right" : undefined}
                   {...editorMarker(ui, field, "column", page)}
                 >
-                  {field.label}
+                  {second(field) ? `${field.label} / ${second(field)?.label}` : field.label}
                 </TableHead>
               ))}
             </TableRow>
@@ -151,7 +167,7 @@ export function ModelTable<R extends Row>({
                       field.name === ui.titleField && "font-semibold",
                     )}
                   >
-                    {field === title ? open(row, cell(field, row)) : cell(field, row)}
+                    {field === title ? open(row, cell(field, row)) : stacked(field, row)}
                   </TableCell>
                 ))}
               </TableRow>
