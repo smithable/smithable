@@ -101,6 +101,7 @@ export const pagesSection: SpecSection<"pages"> = {
               sum: { type: "string", description: "Sum a number field, e.g. Invoice.total." },
               average: { type: "string", description: "Average a number field." },
               list: { type: "string", description: "Show a model's latest records." },
+              query: { type: "string", description: "Show a custom query's records." },
               where: {
                 type: "object",
                 description: "Only records with these choice values or yes/no values.",
@@ -418,21 +419,47 @@ function readDashboard(
     []) {
     const itemWhere = `"${name}" in the dashboard of ${where}`;
     const options = checkKeys(ctx, mapEntries(ctx, value, itemWhere) ?? [], itemWhere, {
-      allowed: ["count", "sum", "average", "list", "where", "by", "limit"],
+      allowed: ["count", "sum", "average", "list", "query", "where", "by", "limit"],
       content: ["label", "title"],
     });
-    const measures = options.filter((o) => ["count", "sum", "average", "list"].includes(o.key));
+    const measures = options.filter((o) =>
+      ["count", "sum", "average", "list", "query"].includes(o.key),
+    );
     const measure = measures[0];
     if (measures.length !== 1 || !measure) {
       ctx.error(
         keyNode,
         "invalid-dashboard",
-        `${capitalize(itemWhere)} needs one of count, sum, average or list.`,
+        `${capitalize(itemWhere)} needs one of count, sum, average, list or query.`,
       );
       continue;
     }
     const target = readString(ctx, measure.value, `"${measure.key}" in ${itemWhere}`);
     if (target === undefined) continue;
+    if (measure.key === "query") {
+      // The records of a custom query, e.g. the customers most likely to churn.
+      ctx.reference("query", target, measure.value);
+      const query = parsed.queries?.find((q) => q.name === target);
+      const item: DashboardItem = {
+        name,
+        kind: "list",
+        model: query?.returns ?? "",
+        query: target,
+      };
+      const limit = options.find((o) => o.key === "limit");
+      const n = limit ? readNumber(ctx, limit.value, `"limit" in ${itemWhere}`) : undefined;
+      if (n !== undefined && (!Number.isInteger(n) || n < 1))
+        ctx.error(limit?.value ?? null, "invalid-value", `"limit" must be a whole number above 0.`);
+      else if (n !== undefined) item.limit = n;
+      for (const o of options.filter((o) => o.key === "where" || o.key === "by"))
+        ctx.error(
+          o.keyNode,
+          "invalid-key",
+          `"${o.key}" does not apply to a query: its code chooses the records.`,
+        );
+      if (query) items.push(item);
+      continue;
+    }
     const [modelName = "", fieldName] = target.split(".");
     const model = parsed.models?.find((m) => m.name === modelName);
     ctx.reference("model", modelName, measure.value);

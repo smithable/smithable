@@ -155,6 +155,18 @@ export function summarize(
     });
   }
 
+  for (const query of ir.queries) {
+    const model = modelNamed(query.returns);
+    sections.push({
+      concept: `query:${query.name}`,
+      title: humanize(query.name),
+      sentences: [
+        `${query.intent ?? query.description ?? "Chosen by custom code."} (${model ? pluralLabel(model).toLowerCase() : query.returns})`,
+        ...(query.rules ?? []).map((r) => `Rule: ${r.text}`),
+      ],
+    });
+  }
+
   if (auth)
     sections.push({ concept: "auth", title: "Sign-in and access", sentences: access(auth) });
   return sections;

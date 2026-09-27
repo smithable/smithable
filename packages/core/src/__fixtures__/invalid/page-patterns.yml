@@ -9,6 +9,15 @@ models:
       total: money
       paid: bool
       issuedOn: date
+queries:
+  risky:                                                   # expect: missing-key
+    returns: Invoice[]
+  Risky:                                                   # expect: invalid-name
+    custom: true
+    returns: Invoice[]
+  wrong:
+    custom: true
+    returns: Invoice                                       # expect: invalid-query
 pages:
   home:
     route: /
@@ -30,6 +39,7 @@ pages:
       byMonth: { sum: Invoice.total, by: number }          # expect: invalid-dashboard
       latest: { list: Invoice, limit: 0 }                  # expect: invalid-value
       odd: { count: Invoice, where: { paid: yes } }        # expect: invalid-dashboard
+      chase: { query: chaseList }                          # expect: unknown-query
     search: [number]                                       # expect: invalid-key
   invoices:
     crud: Invoice

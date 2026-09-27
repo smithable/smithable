@@ -21,6 +21,7 @@ import {
   pageModel,
   pascal,
   plural,
+  type QueryIR,
   type SpecIR,
   snake,
   USER_MODEL,
@@ -139,6 +140,15 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     files.push({
       path: `src/custom/actions/${kebab(action.name)}.ts`,
       content: actionStub(action),
+      zone: "custom",
+    });
+  }
+  for (const query of ir.queries) {
+    add(`src/generated/queries/${kebab(query.name)}.ts`, queryContract(query, ir, t));
+    // Created once; the query's code belongs to the project from then on.
+    files.push({
+      path: `src/custom/queries/${kebab(query.name)}.ts`,
+      content: queryStub(query, ir, t),
       zone: "custom",
     });
   }
@@ -1590,7 +1600,8 @@ function dashboardRoute(
     .add("#/lib/viewer.server", "currentViewer");
   const view = importList().add("#/generated/app", "app").add("#/kit/AppShell", "PageHeader");
   const rowsOf = (model: string) => camel(plural(model));
-  const models = [...new Set(items.map((i) => i.model))];
+  // A query reads its own records; the other tiles share one list per model.
+  const models = [...new Set(items.filter((i) => !i.query).map((i) => i.model))];
   for (const name of models) {
     const n = names(modelNamed(ir, name), t);
     route.add(`#/generated/${kebab(name)}.server`, n.data);
@@ -1615,13 +1626,18 @@ function dashboardRoute(
           : field.type.name;
     const label = t.section(page.id, item.name).label ?? humanize(item.name);
     if (item.kind === "list") {
-      route.add("#/kit/aggregate", "latest");
+      if (item.query) route.add(`#/custom/queries/${kebab(item.query)}`, item.query);
+      else route.add("#/kit/aggregate", "latest");
       const n = names(model, t);
       view
         .add("@tanstack/react-router", "useNavigate")
         .add(n.module, n.ui)
         .add("#/kit/ModelTable", "ModelTable");
-      values.push(`${item.name}: latest(${filtered}, ${item.limit ?? 5})`);
+      values.push(
+        item.query
+          ? `${item.name}: (await ${item.query}(viewer)).slice(0, ${item.limit ?? 5})`
+          : `${item.name}: latest(${filtered}, ${item.limit ?? 5})`,
+      );
       const target = ir.pages.find((p) => pageModel(p) === model.name);
       // The same columns as the model's own list page.
       const columns =
@@ -2093,6 +2109,42 @@ export const ${action.name} = createServerFn({ method: "POST" })
     check(${a.access}, await currentViewer());
     return implementation(data);
   });
+`;
+}
+
+/** The type of a query's result: records as the returned model's data functions give them. */
+function queryContract(query: QueryIR, ir: SpecIR, t: Texts): string {
+  const n = names(modelNamed(ir, query.returns), t);
+  return `${HEADER}import type { ${n.data} } from "#/generated/${kebab(query.returns)}.server";
+
+/** What the "${query.name}" query returns: ${n.pluralLabel.toLowerCase()}, in its order. */
+export type ${pascal(query.name)}Rows = Awaited<ReturnType<typeof ${n.data}.list>>;
+`;
+}
+
+/**
+ * The one-time stub of a query: it returns every record the viewer may read, so pages using
+ * it work at once, with the query's intent and rules as the guide for the real code.
+ */
+function queryStub(query: QueryIR, ir: SpecIR, t: Texts): string {
+  const n = names(modelNamed(ir, query.returns), t);
+  const doc = [
+    ...(query.intent ? [query.intent] : query.description ? [query.description] : []),
+    ...(query.rules?.length
+      ? ["", "Rules (from smithable.yml):", ...query.rules.map((rule) => `- ${rule.text}`)]
+      : []),
+  ];
+  return `// Your implementation of the "${query.name}" query in smithable.yml. Smithable created this file
+// once and never changes it. Start from the records the viewer may read (the data functions in
+// src/generated/*.server.ts check access), then choose and order them.
+import { ${n.data} } from "#/generated/${kebab(query.returns)}.server";
+import type { ${pascal(query.name)}Rows } from "#/generated/queries/${kebab(query.name)}";
+import type { Viewer } from "#/kit/access";
+
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${query.name}(viewer: Viewer | null): Promise<${pascal(query.name)}Rows> {
+  // Not written yet: every ${n.label.toLowerCase()} the viewer may read, newest first.
+  return ${n.data}.list(viewer);
+}
 `;
 }
 
