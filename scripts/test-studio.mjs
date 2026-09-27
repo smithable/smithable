@@ -113,7 +113,7 @@ try {
     await page.getByLabel("Who can").selectOption({ label: "Create order records" });
     await page.getByRole("checkbox", { name: "admin" }).check();
     await page.getByRole("button", { name: "Set access" }).click();
-    await status.getByText("Allow model:Order.create for admin").waitFor({ timeout: 60000 });
+    await status.getByText("Only admin may create orders").waitFor({ timeout: 60000 });
     await page.getByRole("tab", { name: "Your app" }).click();
     await page.getByText("Only admins can add orders.").waitFor();
   });

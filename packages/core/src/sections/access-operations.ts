@@ -1,6 +1,23 @@
 import { ACCESS_OPERATIONS } from "../ir.js";
+import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 import { didYouMean } from "../suggest.js";
+
+const VERBS: Record<string, string> = {
+  read: "see",
+  create: "create",
+  update: "change",
+  delete: "delete",
+};
+
+/** "model:Order.delete" → "delete orders", "page:class-types" → "open the Class types page". */
+function accessText(target: string): string {
+  const [kind, name = ""] = target.split(":");
+  if (kind === "page") return `open the ${humanize(name)} page`;
+  if (kind === "action") return `use ${humanize(name)}`;
+  const [model = "", op = ""] = name.split(".");
+  return `${VERBS[op] ?? op} ${humanize(plural(model)).toLowerCase()}`;
+}
 
 const setAccess: Operation<{ target: string; roles?: string[] }> = {
   name: "setAccess",
@@ -23,10 +40,12 @@ const setAccess: Operation<{ target: string; roles?: string[] }> = {
     },
   },
   positional: ["target", "...roles"],
-  describe: ({ target, roles }) =>
-    roles?.length
-      ? `Allow ${target} for ${roles.join(", ")}`
-      : `Use the default access for ${target}`,
+  describe: ({ target, roles }) => {
+    const what = accessText(target);
+    if (!roles?.length) return `Let the default access decide who may ${what}`;
+    const who = roles.map((r) => (r === "owner" ? "the owner" : r));
+    return `Only ${who.length > 1 ? `${who.slice(0, -1).join(", ")} and ${who.at(-1)}` : who[0]} may ${what}`;
+  },
   destructive: () => false,
   apply({ spec }, { target, roles = [] }, ir) {
     const [kind, name = ""] = target.split(":");
