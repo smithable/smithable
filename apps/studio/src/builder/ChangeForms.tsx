@@ -316,6 +316,7 @@ function SetSearch({ spec, run }: FormProps) {
     (f) =>
       !f.formula &&
       (f.type.kind === "choice" ||
+        (f.type.kind === "relation" && !f.type.many) ||
         (f.type.kind === "scalar" &&
           ["string", "text", "email", "phone", "url"].includes(f.type.name))),
   );

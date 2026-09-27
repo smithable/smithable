@@ -60,6 +60,11 @@ function TODAY(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** The current date and time, e.g. for "placed at" when a record is created. */
+function NOW(): string {
+  return new Date().toISOString();
+}
+
 function DATEADD(date: string, amount: number, unit: "day" | "month" | "year"): string {
   if (date === "") return "";
   const value = new Date(`${date}T00:00:00Z`);
@@ -106,6 +111,7 @@ export const F = {
   compare,
   ROUND,
   TODAY,
+  NOW,
   DATEADD,
   DAYS,
   list,

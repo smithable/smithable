@@ -1037,13 +1037,34 @@ export const Route = createFileRoute("/")({
 }
 
 /** A searchable list's server function and route options: the search text is in the URL. */
-function searchCode(page: PageIR, model: ModelIR, t: Texts) {
+function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
   const n = names(model, t);
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
   );
   const fn = `search${pascal(plural(model.name))}`;
   const labels = fields.map((f) => (t.field(model, f).label ?? humanize(f.name)).toLowerCase());
+  // A reference is searched by the related record's name, e.g. an order by its customer.
+  const own = fields.filter((f) => f.type.kind !== "relation");
+  const terms = [
+    ...(own.length
+      ? [`contains([${own.map((f) => `${n.table}.${f.name}`).join(", ")}], data.q)`]
+      : []),
+    ...fields.flatMap((f) => {
+      if (f.type.kind !== "relation") return [];
+      const target =
+        f.type.model === USER_MODEL ? "user" : tableNames(modelNamed(ir, f.type.model)).table;
+      const title = relatedTitle(ir, f.type.model);
+      return [`relatedContains(${n.table}.${dataKey(f)}, ${target}, [${target}.${title}], data.q)`];
+    }),
+  ];
+  const related = fields
+    .filter((f) => f.type.kind === "relation")
+    .map((f) =>
+      f.type.kind === "relation" && f.type.model === USER_MODEL
+        ? "user"
+        : tableNames(modelNamed(ir, (f.type as { model: string }).model)).table,
+    );
   const placeholder = `Search by ${labels.length > 1 ? `${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}` : labels[0]}`;
   return {
     fn: `
@@ -1052,7 +1073,7 @@ const ${fn} = createServerFn()
   .validator(z.object({ q: z.string().max(200).optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    const where = data.q ? contains([${fields.map((f) => `${n.table}.${f.name}`).join(", ")}], data.q) : undefined;
+    const where = data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined;
     return { rows: await ${n.data}.list(viewer, where), canCreate: allows(${n.access}.create, viewer) };
   });
 `,
@@ -1061,6 +1082,12 @@ const ${fn} = createServerFn()
   loader: ({ deps }) => ${fn}({ data: { q: deps.q } }),
 `,
     placeholder,
+    imports: {
+      related: [...new Set(related)],
+      own: own.length > 0,
+      relation: related.length > 0,
+      or: terms.length > 1,
+    },
   };
 }
 
@@ -1103,7 +1130,7 @@ function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR)
   const component = `${pascal(page.id)}Page`;
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
-  const search = page.search?.length ? searchCode(page, model, t) : undefined;
+  const search = page.search?.length ? searchCode(page, model, t, ir) : undefined;
   const columns = ux.pages[page.id]?.columns?.map((name) =>
     dataKey(model.fields.find((f) => f.name === name) as FieldIR),
   );
@@ -1118,11 +1145,13 @@ function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR)
     route
       .add("@tanstack/react-start", "createServerFn")
       .add("zod", "z")
-      .add("#/db/schema", n.table)
+      .add("#/db/schema", n.table, ...search.imports.related)
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
-      .add("#/kit/access", "allows")
-      .add("#/kit/search", "contains")
-      .add("#/lib/viewer.server", "currentViewer");
+      .add("#/kit/access", "allows");
+    if (search.imports.or) route.add("drizzle-orm", "or");
+    if (search.imports.own) route.add("#/kit/search", "contains");
+    if (search.imports.relation) route.add("#/kit/search", "relatedContains");
+    route.add("#/lib/viewer.server", "currentViewer");
   } else {
     route.add(n.module, n.list);
   }
