@@ -28,6 +28,19 @@ export interface GenerateFlags {
   overwrite?: string[];
   /** How to create the migration; operations know about renames and apply it right away. */
   migration?: MigrationPlan;
+  /** Move the app to this Smithable's stack profile (`smithable upgrade`, which checks it). */
+  upgrade?: boolean;
+}
+
+/** The stack profile the project was last generated with, from smithable.lock. */
+export function projectProfile(dir: string): string | undefined {
+  try {
+    return (
+      JSON.parse(readFileSync(join(dir, "smithable.lock"), "utf8")) as { stackProfile?: string }
+    ).stackProfile;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface MigrationPlan {
@@ -41,6 +54,15 @@ export interface MigrationPlan {
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
 export function generate(dir: string, io: Io, flags: GenerateFlags): number {
+  // A new stack profile changes libraries and the kit under custom code: only through
+  // `smithable upgrade`, which checks the app and can be undone as one change.
+  const profile = projectProfile(dir);
+  if (profile && profile !== STACK_PROFILE.id && !flags.upgrade) {
+    io.err(
+      `This app uses stack profile ${profile}; this Smithable generates ${STACK_PROFILE.id}. Run "smithable upgrade" to move it: it checks the app and can be undone.\n`,
+    );
+    return 1;
+  }
   const { ir, auth, content, ux, plugins } = loadSpec(dir, io);
   if (!ir || !auth) return 1;
   const files = generateApp(ir, {
