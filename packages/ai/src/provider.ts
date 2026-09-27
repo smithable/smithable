@@ -52,22 +52,30 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
     location: options.location,
     price: options.price ?? { input: 0, output: 0 },
     async complete({ system, user, schema }) {
-      const response = await fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
-        },
-        body: JSON.stringify({
-          model: options.model,
-          temperature: 0,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-          response_format: { type: "json_schema", json_schema: { name: "answer", schema } },
-        }),
-      });
+      const post = () =>
+        fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
+          },
+          body: JSON.stringify({
+            model: options.model,
+            temperature: 0,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: user },
+            ],
+            response_format: { type: "json_schema", json_schema: { name: "answer", schema } },
+          }),
+        });
+      // Hosted APIs limit requests per second: wait as long as they ask (or 1, 2, 4 s), then retry.
+      let response = await post();
+      for (let retry = 0; response.status === 429 && retry < 3; retry++) {
+        const after = Number(response.headers.get("retry-after"));
+        await new Promise((r) => setTimeout(r, after > 0 ? after * 1000 : 1000 * 2 ** retry));
+        response = await post();
+      }
       if (!response.ok)
         throw new Error(`${options.name} answered ${response.status}: ${await response.text()}`);
       const body = (await response.json()) as {
