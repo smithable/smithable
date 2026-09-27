@@ -1,11 +1,13 @@
 // M7 benchmark: the roadmap's seven tasks, one after another on the same app, done by
 //   S  Smithable operations run by this script (no model),
 //   A  plain Claude Code editing the repository,
-//   B  Claude Code with the same permissions plus the Smithable MCP server.
+//   B  Claude Code with the same permissions plus the Smithable MCP server,
+//   M  Smithable's own AI: `smithable ask "<task>" --yes` with the models set up in the
+//      environment (docs/ai.md), e.g. a local model or the Smithable model.
 // After every task, the same checks run for all three: type-check, build, the app's tests,
 // the task's own check (database or a real browser signed in as a role), every earlier
 // task's check again (regressions), and whether the code is still what the spec generates.
-// A and B use the user's Claude usage: ask before running them.
+// A and B use the user's Claude usage, and M the configured models': ask before running them.
 // Run after `pnpm build`: `node scripts/bench-m7.mjs [S] [A] [B]` (default: all three).
 // Writes docs/benchmarks/m7.md (or m7-<setups>.md for a partial run).
 import { spawn, spawnSync } from "node:child_process";
@@ -393,6 +395,18 @@ for (const variant of variants) {
         possible: task.ops !== null,
         opsOk: ok,
       };
+    } else if (variant === "M") {
+      const started = Date.now();
+      const asked = sh("node", [cli, "ask", task.prompt, "--yes", "--dir", dir], repo);
+      const used = /\(([^)]+)\) · ([\d,]+) tokens · €([\d.]+)/.exec(asked.out);
+      run = {
+        ms: Date.now() - started,
+        model: used?.[1] ?? "none",
+        tokens: Number((used?.[2] ?? "0").replaceAll(",", "")),
+        costUsd: 0,
+        costEur: Number(used?.[3] ?? 0),
+        outcome: asked.out.split("\n").slice(1, 4).join(" ").slice(0, 200),
+      };
     } else {
       run = claude(dir, task.prompt, variant === "B");
     }
@@ -424,7 +438,14 @@ for (const variant of variants) {
 // ── Report ───────────────────────────────────────────────────────────────────
 
 const yes = (v) => (v ? "yes" : "**no**");
-const NAMES = { S: "Smithable ops (no model)", A: "Claude Code", B: "Claude Code + MCP" };
+const NAMES = {
+  S: "Smithable ops (no model)",
+  A: "Claude Code",
+  B: "Claude Code + MCP",
+  M: `smithable ask (${process.env.SMITHABLE_MODEL || process.env.SMITHABLE_LOCAL_MODEL || "no model"})`,
+};
+// Smithable's models are priced in euros, Claude Code in dollars.
+const money = (v, r) => (v === "M" ? `€${r.costEur.toFixed(4)}` : `$${r.costUsd.toFixed(2)}`);
 const rows = TASKS.flatMap((task, i) =>
   variants.map((v) => {
     const r = results[v][i];
@@ -434,14 +455,16 @@ const rows = TASKS.flatMap((task, i) =>
         ? r.possible
           ? "operations"
           : "no operation fits"
-        : `${r.turns} turns, ${r.smithableCalls} Smithable calls, ${r.fileTools} file tools`;
-    return `| ${task.prompt} | ${NAMES[v]} | ${r.tokens.toLocaleString("en")} | $${r.costUsd.toFixed(2)} | ${(r.ms / 1000).toFixed(0)} s | ${how} | ${r.files} / ${r.lines} | ${yes(r.typecheck && r.build && r.tests)} | ${yes(r.done)} | ${r.regressions.length ? `**${r.regressions.join(", ")}**` : "none"} | ${yes(r.regenerates)} |`;
+        : v === "M"
+          ? r.outcome
+          : `${r.turns} turns, ${r.smithableCalls} Smithable calls, ${r.fileTools} file tools`;
+    return `| ${task.prompt} | ${NAMES[v]} | ${r.tokens.toLocaleString("en")} | ${money(v, r)} | ${(r.ms / 1000).toFixed(0)} s | ${how} | ${r.files} / ${r.lines} | ${yes(r.typecheck && r.build && r.tests)} | ${yes(r.done)} | ${r.regressions.length ? `**${r.regressions.join(", ")}**` : "none"} | ${yes(r.regenerates)} |`;
   }),
 );
 const totals = variants.map((v) => {
   const list = results[v];
   const sum = (k) => list.reduce((n, r) => n + r[k], 0);
-  return `| ${NAMES[v]} | ${list.filter((r) => r.done).length} / ${list.length} | ${sum("tokens").toLocaleString("en")} | $${sum("costUsd").toFixed(2)} | ${(sum("ms") / 1000).toFixed(0)} s | ${list.filter((r) => r.regressions.length).length} | ${list.filter((r) => !r.regenerates).length} |`;
+  return `| ${NAMES[v]} | ${list.filter((r) => r.done).length} / ${list.length} | ${sum("tokens").toLocaleString("en")} | ${v === "M" ? `€${sum("costEur").toFixed(4)}` : `$${sum("costUsd").toFixed(2)}`} | ${(sum("ms") / 1000).toFixed(0)} s | ${list.filter((r) => r.regressions.length).length} | ${list.filter((r) => !r.regenerates).length} |`;
 });
 const report = `# M7 benchmark (${new Date().toISOString().slice(0, 10)})
 
