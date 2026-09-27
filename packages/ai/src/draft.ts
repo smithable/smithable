@@ -120,6 +120,23 @@ function answerSchema(): object {
   };
 }
 
+/**
+ * Quotes plain one-line texts that YAML would misread: a value containing ": " ("summary:
+ * Classes: all levels" is a nested mapping to YAML). A trailing comment stays a comment;
+ * quoted, flow ({…}, […]), block (|, >) and alias values stay as they are.
+ */
+export function quoteTexts(yaml: string): string {
+  return yaml
+    .split("\n")
+    .map((line) => {
+      const m = /^(\s*(?:- )?[\w.@-]+:[ \t]+)(.*?)(\s+#.*)?$/.exec(line);
+      const value = m?.[2] ?? "";
+      if (!m || !value.includes(": ") || /^["'{[|>&*!#]/.test(value)) return line;
+      return `${m[1]}${JSON.stringify(value)}${m[3] ?? ""}`;
+    })
+    .join("\n");
+}
+
 /** Every problem in the drafted files, as "file:line:column  error  message" lines. */
 export function checkSpecFiles(files: SpecFiles): Diagnostic[] {
   const auth = validateAuth({
@@ -183,7 +200,16 @@ export async function draftProject(options: {
           typeof files[f] === "string" ? [[f, (files[f] as string).replace(/^---.*\n/, "")]] : [],
         ),
       );
-      const errors = checkSpecFiles(kept);
+      let errors = checkSpecFiles(kept);
+      // Unquoted texts are the most common slip, and fixing them needs no model.
+      if (errors.length) {
+        const quoted = Object.fromEntries(Object.entries(kept).map(([f, t]) => [f, quoteTexts(t)]));
+        const remaining = checkSpecFiles(quoted);
+        if (remaining.length < errors.length) {
+          Object.assign(kept, quoted);
+          errors = remaining;
+        }
+      }
       if (errors.length === 0) return { kind: "draft", files: kept, usage };
       problem = errors.map(formatDiagnostic).join("\n");
       // The model fixes its own draft rather than starting over.

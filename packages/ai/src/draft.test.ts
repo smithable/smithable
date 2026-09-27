@@ -3,6 +3,7 @@ import {
   checkSpecFiles,
   closestStarter,
   draftProject,
+  quoteTexts,
   REFERENCE,
   type SpecFiles,
 } from "./draft.js";
@@ -77,6 +78,33 @@ describe("starting from a sentence", () => {
     expect(strong.prompts[1]).toMatch(/smithable\.yml:\d+:\d+ {2}error {2}.*Sesion/);
     expect(strong.prompts[1]).toContain("Your draft:\nsmithable.yml:");
     expect(draft.usage.map((u) => u.cost)).toEqual([0.0165, 0.0165]);
+  });
+
+  test("an unquoted text with a colon is quoted without asking the model again", async () => {
+    const booking = starters.booking;
+    const slip = {
+      ...booking,
+      "smithable.yml":
+        booking["smithable.yml"]?.replace(
+          "Class schedule and online booking",
+          "Classes: schedule and booking",
+        ) ?? "",
+    };
+    const model = scripted([slip]);
+    const draft = await draftProject({ description: "Yoga", starter: booking, providers: [model] });
+    expect(draft.kind).toBe("draft");
+    expect(draft.kind === "draft" && draft.files["smithable.yml"]).toContain(
+      '"Classes: schedule and booking',
+    );
+    expect(model.prompts).toHaveLength(1);
+  });
+
+  test("quoting leaves quoted, flow and block values alone", () => {
+    const yaml =
+      'a: "x: y"\nb: { c: d }\ne: |\n  f: g\n- h: i: j\nk: plain  # note: kept\nl: m: n # o';
+    expect(quoteTexts(yaml)).toBe(
+      'a: "x: y"\nb: { c: d }\ne: |\n  f: g\n- h: "i: j"\nk: plain  # note: kept\nl: "m: n" # o',
+    );
   });
 
   test("the reference in the instructions is valid", () => {
