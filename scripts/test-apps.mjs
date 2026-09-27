@@ -97,6 +97,12 @@ async function open(page, url) {
   await page.waitForLoadState("networkidle");
 }
 
+/** Chooses a related record in a searchable field: type part of its name, click it. */
+async function chooseRecord(page, label, name) {
+  await page.getByRole("combobox", { name: label }).fill(name.slice(0, 5));
+  await page.getByRole("option", { name }).click();
+}
+
 /** Signs in through the development sign-in on the sign-in page. */
 async function signInAs(page, base, role) {
   // A cold dev server optimizes dependencies and reloads the page, which can swallow a click.
@@ -674,17 +680,26 @@ async function browserFlow(base) {
     await expectText("edit: the change is saved", "€2,750.50");
 
     await page.getByRole("cell", { name: "Mariehamn Marine AB" }).click();
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "Delete" }).click();
+    // The confirmation names the record and starts on Cancel, so Enter does not delete.
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    const confirm = page.getByRole("dialog", { name: "Delete “Mariehamn Marine AB”?" });
+    await confirm.waitFor();
+    if (
+      !(await confirm
+        .getByRole("button", { name: "Cancel" })
+        .evaluate((b) => b === document.activeElement))
+    )
+      throw new Error("the delete confirmation does not start on Cancel");
+    await confirm.getByRole("button", { name: "Delete customer" }).click();
     await page.waitForURL(`${base}/customers`);
     await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
     if (await page.getByText("Mariehamn Marine AB").count())
       throw new Error("The customer was not deleted");
-    console.log("  ✓ browser: delete removes the customer");
+    console.log("  ✓ browser: delete asks first, naming the customer, then removes it");
 
     await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
-    await page.getByLabel("Customer *").selectOption({ label: "Skerry Software" });
+    await chooseRecord(page, "Customer *", "Skerry Software");
     await page.getByRole("textbox", { name: "Total *" }).fill("99");
     await page.getByRole("button", { name: "Create order" }).click();
     await page.waitForURL(`${base}/orders`);
@@ -696,8 +711,8 @@ async function browserFlow(base) {
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
 
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete customer" }).click();
     await expectText(
       "a customer with orders cannot be deleted, and it says why",
       "This customer is still used by other records.",
@@ -705,8 +720,15 @@ async function browserFlow(base) {
 
     await open(page, `${base}/customers`);
     await page.getByRole("link", { name: "Merge customers" }).click();
-    await page.getByLabel("Keep *").selectOption({ label: "Nordic Timber Oy" });
-    await page.getByLabel("Duplicate *").selectOption({ label: "Skerry Software" });
+    // By keyboard: type part of the name, then Enter on the first match.
+    const keep = page.getByRole("combobox", { name: "Keep *" });
+    await keep.fill("nordic");
+    await keep.press("ArrowDown");
+    await keep.press("ArrowUp");
+    await keep.press("Enter");
+    if ((await keep.inputValue()) !== "Nordic Timber Oy")
+      throw new Error(`the keyboard chose "${await keep.inputValue()}"`);
+    await chooseRecord(page, "Duplicate *", "Skerry Software");
     await page.getByRole("button", { name: "Merge customers" }).click();
     await page.waitForURL(`${base}/customers`);
     await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
