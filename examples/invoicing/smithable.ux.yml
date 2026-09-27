@@ -3,4 +3,7 @@ smithableUx: 0.1
 
 theme:
   preset: modern
-  brand: { primary: "#f76707" }   # a bright orange: the theme keeps text on it readable
+
+# Status colours by meaning; values not listed are neutral.
+tones:
+  Invoice.status: { paid: success, overdue: warning }

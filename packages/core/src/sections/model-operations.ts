@@ -118,9 +118,16 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
   destructive: ({ model: m, field: f, type }, ir) => {
     return typeKey(field(ir, m, f).type) !== baseType(type);
   },
-  apply({ spec }, { model: m, field: f, type }, ir) {
+  apply({ spec, ux }, { model: m, field: f, type }, ir) {
     checkType(type);
     field(ir, m, f);
+    // Tones of choice values the new type no longer has go with them.
+    const parsed = parseFieldShorthand(type);
+    const values = parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
+    const tones = ["tones", `${m}.${f}`];
+    if (ux?.has(tones))
+      for (const value of Object.keys(ux.get(tones) as object))
+        if (!values.includes(value)) ux.removeAndPrune([...tones, value], 0);
     const path = fieldPath(m, f);
     const current = spec.get(path);
     if (typeof current === "object" && current !== null) {
@@ -197,7 +204,8 @@ export const modelOperations: AnyOperation[] = [
 
 /**
  * Keeps the lists that name a model's fields in step with a rename (or a removal): a page's
- * search in smithable.yml, its table columns and form order in smithable.ux.yml.
+ * search in smithable.yml, its table columns and form order in smithable.ux.yml, and the
+ * field's tones.
  */
 function updateFieldLists(
   editors: Pick<Editors, "spec" | "ux">,
@@ -206,6 +214,11 @@ function updateFieldLists(
   from: string,
   to: string | undefined,
 ): void {
+  const tones = ["tones", `${m}.${from}`];
+  if (editors.ux?.has(tones)) {
+    if (to) editors.ux.renameKey(tones, `${m}.${to}`);
+    else editors.ux.removeAndPrune(tones, 0);
+  }
   for (const page of ir.pages.filter((p) => p.pattern.model === m)) {
     const lists: [YamlEditor | undefined, string[]][] = [
       [editors.spec, ["pages", page.id, "search"]],
