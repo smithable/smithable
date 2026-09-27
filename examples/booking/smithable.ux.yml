@@ -1,0 +1,11 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: playful
+  brand: { primary: "#4f7c6b", font: Nunito }
+
+pages:
+  sessions:
+    table:
+      columns: [startsAt, classType, instructor, capacity]

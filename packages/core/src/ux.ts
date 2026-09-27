@@ -1,0 +1,218 @@
+import { isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import { checkKeys, mapEntries, ParseContext, readNameList, readString } from "./context.js";
+import { type Diagnostic, hasErrors } from "./diagnostics.js";
+import type { SpecIR } from "./ir.js";
+import { didYouMean } from "./suggest.js";
+
+/**
+ * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
+ * presets and choices, never CSS. Everything is optional.
+ */
+export interface UxIR {
+  theme: {
+    preset: ThemePreset;
+    /** A colour like "#2563eb"; the preset derives its colours from it. */
+    primary?: string;
+    font?: string;
+    density: "comfortable" | "compact";
+  };
+  pages: Record<string, PageUx>;
+}
+
+export interface PageUx {
+  /** The table's columns, in order. */
+  columns?: string[];
+  /** The form's fields in this order; fields not listed follow. */
+  fieldOrder?: string[];
+}
+
+export const UX_VERSION = "0.1";
+export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
+export type ThemePreset = (typeof THEME_PRESETS)[number];
+
+/** Open-licence fonts the generated apps can host themselves. */
+export const FONTS = [
+  "Inter",
+  "Nunito",
+  "IBM Plex Sans",
+  "Source Sans 3",
+  "Merriweather Sans",
+  "Figtree",
+] as const;
+
+export function emptyUx(): UxIR {
+  return { theme: { preset: "modern", density: "comfortable" }, pages: {} };
+}
+
+/** Parses smithable.ux.yml and checks every page and field it names against the spec. */
+export function validateUx(
+  file: { path: string; text: string },
+  ir: SpecIR,
+): { ux?: UxIR; diagnostics: Diagnostic[] } {
+  const lines = new LineCounter();
+  const doc = parseDocument(file.text, {
+    lineCounter: lines,
+    uniqueKeys: true,
+    prettyErrors: false,
+  });
+  const ctx = new ParseContext(file.path, lines);
+  const ux = emptyUx();
+  const done = () => ({
+    ...(hasErrors(ctx.diagnostics) ? {} : { ux }),
+    diagnostics: [...ctx.diagnostics].sort((a, b) => a.line - b.line || a.column - b.column),
+  });
+  for (const error of doc.errors) {
+    ctx.errorAtOffset(
+      error.pos[0],
+      error.code === "DUPLICATE_KEY" ? "duplicate-key" : "yaml-syntax",
+      error.message.split("\n")[0] ?? "",
+    );
+  }
+  if (hasErrors(ctx.diagnostics)) return done();
+
+  const root = doc.contents as ParsedNode | null;
+  const entries = mapEntries(ctx, root, "smithable.ux.yml") ?? [];
+  const byKey = new Map(entries.map((e) => [e.key, e]));
+  const version = byKey.get("smithableUx");
+  const versionText = isScalar(version?.value)
+    ? (version.value.source ?? String(version.value.value))
+    : undefined;
+  if (versionText !== UX_VERSION) {
+    ctx.error(
+      version?.value ?? root,
+      "invalid-version",
+      `The ux file must start with "smithableUx: ${UX_VERSION}".`,
+    );
+    return done();
+  }
+  const known = checkKeys(ctx, entries, "smithable.ux.yml", {
+    allowed: ["smithableUx", "theme", "pages"],
+    later: ["menus", "sections"],
+  });
+
+  for (const { key, value } of known) {
+    if (key === "theme") {
+      const where = `"theme"`;
+      for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
+        allowed: ["preset", "brand", "density"],
+        later: ["radius", "darkMode"],
+      })) {
+        if (entry.key === "preset") {
+          const preset = readString(ctx, entry.value, `"preset"`);
+          if (preset !== undefined && !(THEME_PRESETS as readonly string[]).includes(preset)) {
+            ctx.error(
+              entry.value,
+              "unknown-preset",
+              `There is no theme preset "${preset}".`,
+              didYouMean(preset, THEME_PRESETS) ?? `Available: ${THEME_PRESETS.join(", ")}.`,
+            );
+          } else if (preset !== undefined) ux.theme.preset = preset as ThemePreset;
+        } else if (entry.key === "density") {
+          const density = readString(ctx, entry.value, `"density"`);
+          if (density === "comfortable" || density === "compact") ux.theme.density = density;
+          else if (density !== undefined)
+            ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
+        } else {
+          for (const brand of checkKeys(
+            ctx,
+            mapEntries(ctx, entry.value, `"brand"`) ?? [],
+            `"brand"`,
+            {
+              allowed: ["primary", "font"],
+            },
+          )) {
+            const text = readString(ctx, brand.value, `"${brand.key}"`);
+            if (text === undefined) continue;
+            if (brand.key === "primary") {
+              if (/^#[0-9a-fA-F]{6}$/.test(text)) ux.theme.primary = text.toLowerCase();
+              else
+                ctx.error(
+                  brand.value,
+                  "invalid-color",
+                  `"primary" must be a colour like "#2563eb".`,
+                );
+            } else if ((FONTS as readonly string[]).includes(text)) {
+              ux.theme.font = text;
+            } else {
+              ctx.error(
+                brand.value,
+                "unknown-font",
+                `"${text}" is not one of the available fonts.`,
+                didYouMean(text, FONTS) ?? `Available: ${FONTS.join(", ")}.`,
+              );
+            }
+          }
+        }
+      }
+    }
+    if (key === "pages") {
+      for (const page of mapEntries(ctx, value, `"pages"`) ?? []) {
+        const spec = ir.pages.find((p) => p.id === page.key);
+        if (!spec) {
+          ctx.error(
+            page.keyNode,
+            "unknown-page",
+            `There is no page named "${page.key}" in smithable.yml.`,
+            didYouMean(
+              page.key,
+              ir.pages.map((p) => p.id),
+            ),
+          );
+          continue;
+        }
+        const model = ir.models.find((m) => m.name === spec.pattern.model);
+        const fields = (model?.fields ?? []).filter(
+          (f) => !(f.type.kind === "relation" && f.type.many),
+        );
+        const where = `page "${page.key}"`;
+        const result: PageUx = {};
+        const names = (node: ParsedNode | null, what: string, allowComputed: boolean) =>
+          readNameList(ctx, node, what).flatMap(({ name, at }) => {
+            const field = fields.find((f) => f.name === name);
+            if (!field) {
+              ctx.error(
+                at,
+                "unknown-field",
+                `${model?.name} has no field named "${name}" to show.`,
+                didYouMean(
+                  name,
+                  fields.map((f) => f.name),
+                ),
+              );
+              return [];
+            }
+            if (field.formula && !allowComputed) {
+              ctx.error(
+                at,
+                "invalid-field",
+                `"${name}" is computed, so it is not entered in the form.`,
+              );
+              return [];
+            }
+            return [name];
+          });
+        for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
+          allowed: ["table", "form"],
+          later: ["detail", "calendar"],
+        })) {
+          const partWhere = `the ${part.key} of ${where}`;
+          for (const option of checkKeys(
+            ctx,
+            mapEntries(ctx, part.value, partWhere) ?? [],
+            partWhere,
+            {
+              allowed: part.key === "table" ? ["columns"] : ["fieldOrder"],
+              later: part.key === "table" ? ["sort", "pageSize"] : ["groups"],
+            },
+          )) {
+            if (option.key === "columns")
+              result.columns = names(option.value, `the columns of ${where}`, true);
+            else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
+          }
+        }
+        ux.pages[page.key] = result;
+      }
+    }
+  }
+  return done();
+}

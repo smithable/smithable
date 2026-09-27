@@ -6,6 +6,7 @@ import { type AnyOperation, type Effect, type OperationArgs, OperationError } fr
 import type { JsonSchema } from "./section.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
+import { validateUx } from "./ux.js";
 
 /** Every operation, from all sections. */
 export const OPERATIONS: readonly AnyOperation[] = SECTIONS.flatMap((s) => s.operations ?? []);
@@ -16,6 +17,8 @@ export interface ProjectFiles {
   content?: string;
   /** smithable.auth.yml; without it, role names in the spec are not checked. */
   auth?: string;
+  /** smithable.ux.yml, when the project has one. */
+  ux?: string;
 }
 
 export type OperationResult =
@@ -71,6 +74,7 @@ export function applyOperation(
     spec: new YamlEditor(files.spec),
     ...(files.content === undefined ? {} : { content: new YamlEditor(files.content) }),
     ...(files.auth === undefined ? {} : { auth: new YamlEditor(files.auth) }),
+    ux: new YamlEditor(files.ux ?? `smithableUx: 0.1\n`),
   };
   let effects: Effect[];
   try {
@@ -90,6 +94,12 @@ export function applyOperation(
     if (!content.content)
       return fail(`${name} would make smithable.content.yml invalid.`, content.diagnostics);
   }
+  // The ux file is written only if the project has one or the operation changed it.
+  const uxChanged = editors.ux.text !== (files.ux ?? `smithableUx: 0.1\n`);
+  if (files.ux !== undefined || uxChanged) {
+    const result = validateUx({ path: "smithable.ux.yml", text: editors.ux.text }, after.ir);
+    if (!result.ux) return fail(`${name} would make smithable.ux.yml invalid.`, result.diagnostics);
+  }
   if (editors.auth) {
     const result = validateAuth({ path: "smithable.auth.yml", text: editors.auth.text }, after.ir);
     if (!result.auth)
@@ -101,6 +111,7 @@ export function applyOperation(
       spec: editors.spec.text,
       ...(editors.content ? { content: editors.content.text } : {}),
       ...(editors.auth ? { auth: editors.auth.text } : {}),
+      ...(files.ux !== undefined || uxChanged ? { ux: editors.ux.text } : {}),
     },
     description: op.describe(args),
     destructive: op.destructive(args, before.ir),

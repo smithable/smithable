@@ -23,6 +23,15 @@ export const STACK_PROFILE = {
     tailwindcss: "4.3.3",
     zod: "4.6.5",
   },
+  /** Self-hosted fonts (OFL); an app gets the one its theme uses. */
+  fonts: {
+    "@fontsource-variable/figtree": "5.3.0",
+    "@fontsource-variable/ibm-plex-sans": "5.3.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/merriweather-sans": "5.3.0",
+    "@fontsource-variable/nunito": "5.3.0",
+    "@fontsource-variable/source-sans-3": "5.3.0",
+  },
   devDependencies: {
     "@tanstack/router-cli": "1.167.38",
     "@types/better-sqlite3": "9.6.0",

@@ -1,0 +1,6 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: modern
+  brand: { primary: "#f76707" }   # a bright orange: the theme keeps text on it readable
