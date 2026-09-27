@@ -200,8 +200,7 @@ export function names(model: ModelIR, t: Texts) {
 }
 
 function packageJson(ir: SpecIR, auth: AuthIR, ux: UxIR): string {
-  const font = themeFont(ux);
-  const fontPackage = font ? (FONT_PACKAGES[font] as string) : undefined;
+  const fontPackage = FONT_PACKAGES[themeFont(ux)] as string;
   const { "better-auth": _, ...withoutAuth } = STACK_PROFILE.dependencies;
   const pkg = {
     name: kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app",
@@ -222,9 +221,7 @@ function packageJson(ir: SpecIR, auth: AuthIR, ux: UxIR): string {
     },
     dependencies: {
       ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
-      ...(fontPackage
-        ? { [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts] }
-        : {}),
+      [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts],
     },
     devDependencies: STACK_PROFILE.devDependencies,
   };

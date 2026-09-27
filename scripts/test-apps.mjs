@@ -618,6 +618,24 @@ async function browserFlow(base) {
   try {
     await signInAs(page, base, "admin");
     console.log("  ✓ browser: the development sign-in signs in as a role");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page, `${base}/customers`);
+    const menu = page.getByRole("button", { name: "Open menu" });
+    const drawer = page.getByRole("dialog", { name: "Menu" });
+    await menu.click();
+    await drawer.getByRole("button", { name: "Sign out" }).waitFor();
+    await page.keyboard.press("Escape");
+    await drawer.waitFor({ state: "hidden" });
+    if (!(await menu.evaluate((button) => button === document.activeElement)))
+      throw new Error("closing the menu did not return focus to its button");
+    await menu.click();
+    await drawer.getByRole("link", { name: "Orders" }).click();
+    await page.waitForURL(`${base}/orders`);
+    await drawer.waitFor({ state: "hidden" });
+    await page.setViewportSize({ width: 1280, height: 720 });
+    console.log(
+      "  ✓ browser: on a phone the menu is a drawer: Escape closes it and returns focus, a link in it navigates",
+    );
     await open(page, `${base}/customers`);
     await page.getByRole("searchbox", { name: "Search by name or email" }).fill("NORDIC");
     await page.waitForURL(/q=NORDIC/);

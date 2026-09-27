@@ -1,6 +1,7 @@
 // Smithable app kit: the application frame with navigation menus and the signed-in user.
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { Button } from "#/components/ui/button";
+import { LogOut, Menu, X } from "lucide-react";
+import { useRef } from "react";
 import { allows, type Rule, type Viewer } from "./access";
 
 export interface MenuUi {
@@ -10,68 +11,120 @@ export interface MenuUi {
   items: { to: LinkProps["to"]; label: string; access: Rule }[];
 }
 
-export function AppShell({
-  appName,
-  menus,
-  viewer,
-  onSignOut,
-  children,
-}: {
+interface ShellProps {
   appName: string;
   menus: MenuUi[];
   viewer: Viewer | null;
   /** Without it the app has no sign-in. */
   onSignOut?: () => Promise<void>;
-  children: React.ReactNode;
-}) {
+}
+
+// Links and buttons on the sidebar's own colours, with 44 px targets.
+const sidebarItem =
+  "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground";
+
+export function AppShell({ children, ...shell }: ShellProps & { children: React.ReactNode }) {
+  const drawer = useRef<HTMLDialogElement>(null);
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="border-b bg-sidebar md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-r md:border-b-0">
-        <div className="px-5 py-4 text-base font-semibold tracking-tight">{appName}</div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:gap-4">
-          {menus.map((menu) => (
-            <div key={menu.name} className="flex gap-1 md:flex-col">
+    <div className="min-h-screen lg:flex">
+      {/* Desktop: a sidebar. */}
+      <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
+        <p className="px-6 pt-7 pb-6 text-2xl font-bold tracking-tight">{shell.appName}</p>
+        <Navigation {...shell} />
+      </aside>
+      {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
+      <header className="sticky top-0 z-10 flex h-18 items-center gap-2 bg-sidebar px-2 text-sidebar-foreground lg:hidden">
+        <button
+          type="button"
+          aria-label="Open menu"
+          className={`${sidebarItem} size-11 justify-center px-0`}
+          onClick={() => drawer.current?.showModal()}
+        >
+          <Menu aria-hidden className="size-6" />
+        </button>
+        <p className="min-w-0 truncate text-lg font-bold">{shell.appName}</p>
+      </header>
+      <dialog
+        ref={drawer}
+        aria-label="Menu"
+        className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
+      >
+        <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
+          <p className="min-w-0 truncate text-lg font-bold">{shell.appName}</p>
+          <button
+            type="button"
+            aria-label="Close menu"
+            className={`${sidebarItem} size-11 justify-center px-0`}
+            onClick={() => drawer.current?.close()}
+          >
+            <X aria-hidden className="size-6" />
+          </button>
+        </div>
+        <Navigation {...shell} onNavigate={() => drawer.current?.close()} />
+      </dialog>
+      <main className="min-w-0 flex-1 px-5 py-6 lg:px-9 lg:py-8">{children}</main>
+    </div>
+  );
+}
+
+function Navigation({
+  menus,
+  viewer,
+  onSignOut,
+  onNavigate,
+}: ShellProps & { onNavigate?: () => void }) {
+  return (
+    <>
+      <nav aria-label="Main" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 pb-4">
+        {menus.map((menu) => {
+          const items = menu.items.filter((item) => allows(item.access, viewer));
+          if (items.length === 0) return null;
+          return (
+            <div key={menu.name} className="flex flex-col gap-1">
               {menu.label && (
-                <p className="hidden px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground md:block">
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide">
                   {menu.label}
                 </p>
               )}
-              {menu.items
-                .filter((item) => allows(item.access, viewer))
-                .map((item) => (
-                  <Link
-                    key={String(item.to)}
-                    to={item.to}
-                    className="whitespace-nowrap rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    activeProps={{ className: "bg-accent font-medium text-accent-foreground" }}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+              {items.map((item) => (
+                <Link
+                  key={String(item.to)}
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={sidebarItem}
+                  activeProps={{
+                    className:
+                      "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
-          ))}
-        </nav>
-        {onSignOut && (
-          <div className="border-t px-5 py-3 text-sm md:absolute md:bottom-0 md:w-60">
-            {viewer ? (
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-muted-foreground" title={viewer.email}>
-                  {viewer.name}
-                </span>
-                <Button variant="ghost" size="sm" onClick={onSignOut}>
-                  Sign out
-                </Button>
-              </div>
-            ) : (
-              <a href="/sign-in" className="font-medium">
-                Sign in
-              </a>
-            )}
-          </div>
-        )}
-      </aside>
-      <main className="flex-1 px-4 py-6 md:px-10 md:py-8">{children}</main>
-    </div>
+          );
+        })}
+      </nav>
+      {onSignOut && (
+        <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm">
+          {viewer ? (
+            <>
+              <p className="truncate font-semibold" title={viewer.email}>
+                {viewer.name}
+              </p>
+              <p className="capitalize">{viewer.role}</p>
+              <button type="button" onClick={onSignOut} className={`${sidebarItem} -mx-3 mt-2`}>
+                <LogOut aria-hidden className="size-5" />
+                Sign out
+              </button>
+            </>
+          ) : (
+            <a href="/sign-in" className={`${sidebarItem} -mx-3`}>
+              Sign in
+            </a>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -88,8 +141,10 @@ export function ErrorNotice({ title, message }: { title: string; message?: strin
 export function PageHeader({ title, actions }: { title: string; actions?: React.ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      <h1 className="min-w-0 break-words text-[28px] leading-9 font-bold tracking-tight lg:text-[32px] lg:leading-10">
+        {title}
+      </h1>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
