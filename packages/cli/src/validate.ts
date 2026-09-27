@@ -7,6 +7,7 @@ import {
   formatDiagnostic,
   hasErrors,
   type SpecIR,
+  type SpecPlugin,
   type UxIR,
   validateAuth,
   validateContent,
@@ -14,6 +15,7 @@ import {
   validateUx,
 } from "@smithable/core";
 import type { Io } from "./io.js";
+import { loadPlugins } from "./plugins.js";
 
 /**
  * Reads and validates the spec with its companions: smithable.auth.yml (required) and,
@@ -23,7 +25,14 @@ import type { Io } from "./io.js";
 export function loadSpec(
   target: string,
   io: Io,
-): { ir?: SpecIR; auth?: AuthIR; content?: ContentIR; ux?: UxIR; path: string } {
+): {
+  ir?: SpecIR;
+  auth?: AuthIR;
+  content?: ContentIR;
+  ux?: UxIR;
+  plugins?: SpecPlugin[];
+  path: string;
+} {
   const path = isDirectory(target) ? join(target, "smithable.yml") : target;
   let text: string;
   try {
@@ -51,7 +60,17 @@ export function loadSpec(
   const authFile = { path: authPath, text: readFileSync(authPath, "utf8") };
   // The roles are needed to check smithable.yml; the full check of the auth file needs its IR.
   const roles = validateAuth(authFile).auth?.roles.map((r) => r.name);
-  const { ir, diagnostics } = validateSpec({ path, text }, roles ? { roles } : {});
+  let plugins: SpecPlugin[];
+  try {
+    plugins = loadPlugins(dirname(path));
+  } catch (error) {
+    io.err(`${error instanceof Error ? error.message : String(error)}\n`);
+    return { path };
+  }
+  const { ir, diagnostics } = validateSpec(
+    { path, text },
+    { ...(roles ? { roles } : {}), plugins },
+  );
   print(diagnostics);
   if (!ir || hasErrors(diagnostics)) return failed(path, diagnostics);
   const authResult = validateAuth(authFile, ir);
@@ -79,7 +98,7 @@ export function loadSpec(
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;
   }
-  return { ir, auth, path, ...(content ? { content } : {}), ...(ux ? { ux } : {}) };
+  return { ir, auth, path, plugins, ...(content ? { content } : {}), ...(ux ? { ux } : {}) };
 }
 
 /** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */

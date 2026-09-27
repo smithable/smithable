@@ -35,11 +35,12 @@ export interface MigrationPlan {
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
 export function generate(dir: string, io: Io, flags: GenerateFlags): number {
-  const { ir, auth, content, ux } = loadSpec(dir, io);
+  const { ir, auth, content, ux, plugins } = loadSpec(dir, io);
   if (!ir || !auth) return 1;
   const files = generateApp(ir, {
     smithableVersion: VERSION,
     auth,
+    ...(plugins?.length ? { plugins } : {}),
     customPages: customPages(dir),
     ...(content ? { content } : {}),
     ...(ux ? { ux } : {}),

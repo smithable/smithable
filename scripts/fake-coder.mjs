@@ -1,8 +1,43 @@
 // A stand-in coder for tests: it gets the prompt on stdin and writes the churn query's code.
 // With FAKE_CODER=trespass it also edits a generated file, which Smithable must undo.
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const prompt = readFileSync(0, "utf8");
+
+// Teaching Smithable a newsletter section: a plugin that expands it into a model and a page.
+if (prompt.includes('does not know the section "newsletter"')) {
+  mkdirSync(`${process.env.SMITHABLE_CODER_AREA}`, { recursive: true });
+  writeFileSync(
+    `${process.env.SMITHABLE_CODER_AREA}/plugin.mjs`,
+    `export default {
+  key: "newsletter",
+  description: "A newsletter visitors subscribe to, on one or more lists.",
+  schema: {
+    type: "object",
+    required: ["from"],
+    additionalProperties: false,
+    properties: { from: { type: "string" }, lists: { type: "array", items: { type: "string" } } },
+  },
+  expand(value) {
+    const lists = value.lists ?? [];
+    return {
+      models: {
+        Subscriber: {
+          description: "Someone who receives the newsletter from " + value.from + ".",
+          fields: { email: "email! unique", ...(lists.length > 1 ? { list: lists.join(" | ") } : {}) },
+        },
+      },
+      pages: { subscribers: { crud: "Subscriber", access: ["admin"] } },
+    };
+  },
+  generate(value) {
+    return [{ path: "src/generated/plugins/newsletter/sender.ts", content: "export const sender = " + JSON.stringify(value.from) + ";\\n" }];
+  },
+};
+`,
+  );
+  process.exit(0);
+}
 if (!prompt.includes("query:churnRisk")) throw new Error("the prompt does not name the query");
 writeFileSync(
   "src/custom/queries/churn-risk.ts",

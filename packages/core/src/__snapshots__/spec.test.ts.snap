@@ -9,6 +9,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
     "name": "Stillwater Yoga",
     "timezone": "Europe/Mariehamn",
   },
+  "extensions": {},
   "models": [
     {
       "access": {
@@ -273,6 +274,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
     "name": "Acme CRM",
     "timezone": "Europe/Mariehamn",
   },
+  "extensions": {},
   "models": [
     {
       "access": {
@@ -605,6 +607,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
     "description": "Simple invoicing for freelancers. Each user manages their own clients and invoices.",
     "name": "Invoicely",
   },
+  "extensions": {},
   "models": [
     {
       "description": "The freelancer's own business details, printed on their invoices.",
@@ -1098,6 +1101,7 @@ exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
   "app": {
     "name": "Access",
   },
+  "extensions": {},
   "models": [
     {
       "access": {
@@ -1240,6 +1244,7 @@ exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
   "app": {
     "name": "Actions",
   },
+  "extensions": {},
   "models": [
     {
       "fields": [
@@ -1292,6 +1297,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
     "name": "Field showcase",
     "timezone": "Europe/Mariehamn",
   },
+  "extensions": {},
   "models": [
     {
       "description": "One field of each kind.",
@@ -1486,6 +1492,7 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
   "app": {
     "name": "Formulas",
   },
+  "extensions": {},
   "models": [
     {
       "fields": [
@@ -1768,6 +1775,7 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
   "app": {
     "name": "Menus",
   },
+  "extensions": {},
   "models": [
     {
       "fields": [
@@ -1850,6 +1858,7 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
   "app": {
     "name": "Minimal",
   },
+  "extensions": {},
   "models": [],
   "navigation": [
     {
@@ -1869,6 +1878,7 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
   "app": {
     "name": "Page patterns",
   },
+  "extensions": {},
   "models": [
     {
       "fields": [
@@ -2069,6 +2079,7 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
   "app": {
     "name": "Relations",
   },
+  "extensions": {},
   "models": [
     {
       "fields": [

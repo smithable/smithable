@@ -2,6 +2,7 @@ import { isScalar, LineCounter, type ParsedNode, parseDocument, visit } from "ya
 import { checkKeys, mapEntries, ParseContext } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
+import { applyPlugins, type SpecPlugin } from "./plugin.js";
 import type { SpecSection } from "./section.js";
 import { actionsSection } from "./sections/actions.js";
 import { appSection } from "./sections/app.js";
@@ -9,6 +10,7 @@ import { modelsSection } from "./sections/models.js";
 import { navigationSection } from "./sections/navigation.js";
 import { pagesSection } from "./sections/pages.js";
 import { queriesSection } from "./sections/queries.js";
+import { didYouMean } from "./suggest.js";
 
 /** The spec format version this build of Smithable reads and writes. */
 export const SPEC_VERSION = "0.1";
@@ -37,6 +39,8 @@ export interface ValidateResult {
 export interface ValidateOptions {
   /** The roles defined in smithable.auth.yml. Without them, role names are not checked. */
   roles?: string[];
+  /** Project plugins: the sections of smithable.yml Smithable itself does not know. */
+  plugins?: SpecPlugin[];
 }
 
 /** Parses and validates smithable.yml. Pure: no file system or network access. */
@@ -79,10 +83,26 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
     return done();
   }
 
-  checkKeys(ctx, entries, "smithable.yml", {
-    allowed: ["smithable", ...SECTIONS.map((s) => s.key)],
-    later: ["queries", "jobs"],
-  });
+  const plugins = options.plugins ?? [];
+  const allowed = ["smithable", ...SECTIONS.map((s) => s.key), ...plugins.map((p) => p.key)];
+  for (const { key, keyNode } of entries) {
+    if (allowed.includes(key) || key === "jobs") continue;
+    // A section nobody handles is an error, never ignored: a plugin can be written for it.
+    ctx.error(
+      keyNode,
+      "unknown-key",
+      `Smithable doesn't know "${key}".`,
+      didYouMean(key, allowed) ??
+        `Teach it: "smithable teach ${key}" has AI write a project plugin for it once; after that it costs nothing.`,
+    );
+  }
+  checkKeys(
+    ctx,
+    entries.filter((e) => allowed.includes(e.key) || e.key === "jobs"),
+    "smithable.yml",
+    { allowed, later: ["jobs"] },
+  );
+  const extensions = applyPlugins(ctx, doc, byKey, plugins);
   const parsed: Partial<SpecIR> = {};
   for (const section of SECTIONS) {
     const entry = byKey.get(section.key);
@@ -98,7 +118,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
 
   if (hasErrors(ctx.diagnostics)) return done();
   return {
-    ir: { specVersion: SPEC_VERSION, ...parsed } as SpecIR,
+    ir: { specVersion: SPEC_VERSION, ...parsed, extensions } as SpecIR,
     diagnostics: sortDiagnostics(ctx.diagnostics),
   };
 }

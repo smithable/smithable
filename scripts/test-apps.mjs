@@ -1087,6 +1087,7 @@ for (const [index, example] of examples.entries()) {
       const out = run("node", [cli, "generate", dir], repo);
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
     });
+    if (example === "booking") await teachFlow(dir);
     if (example === "crm") {
       await mcpFlow(dir);
       await askFlow(dir);
@@ -1096,6 +1097,68 @@ for (const [index, example] of examples.entries()) {
   } catch {
     // Already reported; continue with the next example.
   }
+}
+
+/** Teach Smithable (ARCHITECTURE §5.1): an unknown section gets a project plugin, once. */
+async function teachFlow(dir) {
+  const specPath = join(dir, "smithable.yml");
+  writeFileSync(
+    specPath,
+    `${readFileSync(specPath, "utf8")}\nnewsletter:\n  from: hello@stillwater.ax\n  lists: [classes, offers]\n`,
+  );
+  // A person edits the spec and commits, as in any project under Git.
+  if (spawnSync("git", ["rev-parse"], { cwd: dir }).status !== 0) run("git", ["init", "-q"], dir);
+  run("git", ["add", "-A"], dir);
+  run(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-q",
+      "-m",
+      "Add a newsletter section by hand",
+    ],
+    dir,
+  );
+  await asyncStep("an unknown section is an error that suggests teaching Smithable", async () => {
+    const result = spawnSync("node", [cli, "validate", dir], { encoding: "utf8" });
+    const out = `${result.stdout}${result.stderr}`;
+    if (result.status === 0 || !out.includes("smithable teach newsletter")) throw new Error(out);
+  });
+  await asyncStep(
+    "teach: a coder writes a plugin in smithable/plugins only; the app gets its model and page",
+    async () => {
+      const result = await smithableAsync(
+        dir,
+        { SMITHABLE_CODER_COMMAND: `node ${join(repo, "scripts/fake-coder.mjs")}` },
+        "teach",
+        "newsletter",
+      );
+      if (result.code !== 0) throw new Error(result.out);
+      const files = run("git", ["show", "--name-only", "--format=", "HEAD"], dir)
+        .trim()
+        .split("\n");
+      for (const expected of [
+        "smithable/plugins/newsletter/plugin.mjs",
+        "smithable.context.yml",
+        "src/routes/subscribers/index.tsx",
+        "src/generated/plugins/newsletter/sender.ts",
+      ])
+        if (!files.includes(expected))
+          throw new Error(`${expected} is not in the change: ${files.join(", ")}`);
+      if (
+        !/sqliteTable\(\s*"subscribers"/.test(readFileSync(join(dir, "src/db/schema.ts"), "utf8"))
+      )
+        throw new Error("no subscribers table");
+    },
+  );
+  await asyncStep("after teaching, regenerating uses no AI and changes nothing", async () => {
+    const out = run("node", [cli, "generate", dir], repo);
+    if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
+  });
 }
 
 if (examples.includes("booking")) {

@@ -14,6 +14,7 @@ import { mcp } from "./mcp.js";
 import { create } from "./new.js";
 import { op } from "./op.js";
 import { studio } from "./studio.js";
+import { teach } from "./teach.js";
 import { undo } from "./undo.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -35,6 +36,8 @@ Commands:
   code <concept> "<what>"  Have a model write the custom code of a query, action or custom page,
                    e.g. code query:churnRisk "rank by days since the last order"; only src/custom/
                    may change, and the type check and tests must pass
+  teach <section>  Have a model write a project plugin for a section of smithable.yml Smithable
+                   does not know (e.g. newsletter:); afterwards it is generated without AI
   op <name> …      Change the app with an operation, e.g. op addField Customer phone phone
                    (run "smithable op" for the list; --yes confirms changes that lose data)
   undo             Undo the last operation, including the dev database
@@ -77,6 +80,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "op")
     return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
   if (command === "undo") return undo(values.dir ?? ".", io);
+  if (command === "teach") return teach(values.dir ?? ".", io, args[0]);
   if (command === "code")
     return writeCode(values.dir ?? ".", io, args[0] ?? "", args.slice(1).join(" "));
   if (command === "ask")

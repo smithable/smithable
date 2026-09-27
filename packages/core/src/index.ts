@@ -36,6 +36,8 @@ export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export { camel, humanize, kebab, pascal, plural, snake, words } from "./naming.js";
 export type { AnyOperation, Effect, Operation, OperationArgs } from "./operation.js";
 export { OperationError } from "./operation.js";
+export type { SpecPlugin } from "./plugin.js";
+export { checkJson } from "./plugin.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
