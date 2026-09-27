@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
-import type { SpecPlugin } from "./plugin.js";
+import { checkJson, type SpecPlugin } from "./plugin.js";
 import { validateSpec } from "./spec.js";
 
 /** A newsletter section: who it is from, and its lists; it stands for a Subscriber model. */
@@ -100,4 +100,22 @@ test("operations work on a spec with a plugin section", () => {
   expect(
     applyOperation({ spec: text }, "addField", { model: "Class", field: "x", type: "string" }),
   ).toMatchObject({ ok: false });
+});
+
+test("the schema check covers patterns, minimum items and repeated items", () => {
+  expect(
+    checkJson(
+      {
+        type: "array",
+        minItems: 1,
+        uniqueItems: true,
+        items: { type: "string", pattern: "^[a-z]+$" },
+      },
+      ["news", "news", "Offers"],
+      "lists",
+    ),
+  ).toEqual([`"lists" has the same item twice.`, `"lists[2]" must match ^[a-z]+$.`]);
+  expect(checkJson({ type: "array", minItems: 1 }, [], "lists")).toEqual([
+    `"lists" needs at least 1 item.`,
+  ]);
 });

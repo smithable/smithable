@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11. **In progress:** M9 (usability tests), M10 (approval of the built apps), M12 (needs real models). **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11, M13. **In progress:** M9 (usability tests), M10 (approval of the built apps), M12 (needs real models). **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -204,7 +204,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - "Prioritise customers most likely to churn on the dashboard" produces a spec change plus a custom query, with tests passing, and no generated files touched.
 - A `newsletter:` section in a spec gets a project plugin written by AI. Regenerating afterwards uses no AI at all.
 
-**Status (2026-09-27):** in progress. Done: the frontier provider (Claude Code), escalation by tier, custom queries, and a coder confined to `src/custom/` (checked by Smithable, then type check and tests). The first exit check passes with Claude Sonnet: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code, with no generated files touched, for $0.45. Next: Teach Smithable.
+**Done (2026-09-27):** both exit checks pass with Claude Sonnet through Claude Code. "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code in `src/custom/`, with no generated files touched ($0.45). A `newsletter:` section got a project plugin written by AI (a subscriber model with a yes/no per list, an admin page), and regenerating afterwards used no AI ($0.60). Both are also in `pnpm test:apps` with a stand-in model and coder, including a coder that writes outside its folder, which is undone. Limits: plugins are not yet loaded in Studio's in-browser engine.
 
 ## M14 — Verification, security, deploy and backup targets
 
