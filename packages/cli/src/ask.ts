@@ -1,0 +1,172 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { createInterface } from "node:readline/promises";
+import {
+  openAICompatible,
+  type Proposal,
+  type Provider,
+  parsePolicy,
+  proposeChange,
+  route,
+  type Usage,
+} from "@smithable/ai";
+import { buildContext } from "@smithable/index";
+import { logTokens } from "./context.js";
+import type { Io } from "./io.js";
+import { runOperation } from "./op.js";
+import { projectIndex } from "./rules.js";
+import { loadSpec } from "./validate.js";
+
+/**
+ * The models Smithable may use, from the environment (ARCHITECTURE §9.5), so keys never end
+ * up in the project. A local model (Ollama by default) and the Smithable model, an open model
+ * on an EU-hosted OpenAI-compatible endpoint.
+ */
+export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
+  const providers: Provider[] = [];
+  if (env.SMITHABLE_LOCAL_MODEL)
+    providers.push(
+      openAICompatible({
+        name: "local",
+        baseUrl: env.SMITHABLE_LOCAL_URL ?? "http://localhost:11434/v1",
+        model: env.SMITHABLE_LOCAL_MODEL,
+        tier: "local",
+        location: "local",
+      }),
+    );
+  if (env.SMITHABLE_MODEL && env.SMITHABLE_MODEL_URL) {
+    // "0.1/0.3": euros per million input and output tokens.
+    const [input = 0, output = 0] = (env.SMITHABLE_MODEL_PRICE ?? "0/0").split("/").map(Number);
+    providers.push(
+      openAICompatible({
+        name: "smithable",
+        baseUrl: env.SMITHABLE_MODEL_URL,
+        model: env.SMITHABLE_MODEL,
+        ...(env.SMITHABLE_MODEL_KEY ? { apiKey: env.SMITHABLE_MODEL_KEY } : {}),
+        tier: "smithable",
+        location: env.SMITHABLE_MODEL_LOCATION === "elsewhere" ? "elsewhere" : "eu",
+        price: { input, output },
+      }),
+    );
+  }
+  return providers;
+}
+
+/** The model's proposal for a request, dry-run against the project; nothing is applied. */
+export async function proposeFor(
+  dir: string,
+  io: Io,
+  request: string,
+): Promise<Proposal | undefined> {
+  const { ir, auth } = loadSpec(dir, io);
+  if (!ir || !auth) return undefined;
+  const read = (name: string) =>
+    existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : undefined;
+  const files = {
+    spec: read("smithable.yml") as string,
+    ...(read("smithable.content.yml") ? { content: read("smithable.content.yml") } : {}),
+    ...(read("smithable.auth.yml") ? { auth: read("smithable.auth.yml") } : {}),
+    ...(read("smithable.ux.yml") ? { ux: read("smithable.ux.yml") } : {}),
+  };
+  const context = buildContext(projectIndex(dir, ir, auth), request);
+  const providers = route(aiProviders(), parsePolicy(process.env.SMITHABLE_AI_POLICY));
+  const proposal = await proposeChange({ request, files, context, providers });
+  logTokens(dir, { source: "ask", request, concepts: context.concepts, usage: proposal.usage });
+  return proposal;
+}
+
+const TIER_NAMES = {
+  local: "Local model",
+  smithable: "Smithable model",
+  frontier: "Frontier model",
+};
+
+/** "Smithable model (mistral-small) · 1,234 tokens · €0.0003", for what a request used. */
+export function usageLine(usage: Usage[]): string {
+  const last = usage.at(-1);
+  if (!last) return "No model was used";
+  const tokens = usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
+  const cost = usage.reduce((sum, u) => sum + u.cost, 0);
+  return `${TIER_NAMES[last.tier]} (${last.model}) · ${tokens.toLocaleString("en")} tokens · €${cost.toFixed(4)}`;
+}
+
+/**
+ * Applies a confirmed proposal through the normal operation pipeline: each operation is
+ * checked, regenerated, migrated and committed on its own, so each can be undone. The first
+ * commit carries what the model used.
+ */
+export function applyProposal(
+  dir: string,
+  io: Io,
+  request: string,
+  proposal: Extract<Proposal, { kind: "change" }>,
+): number {
+  const tokens = proposal.usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
+  const cost = proposal.usage.reduce((sum, u) => sum + u.cost, 0);
+  const last = proposal.usage.at(-1);
+  for (const [i, { op, args }] of proposal.operations.entries()) {
+    const trailer = `Smithable-AI: ${JSON.stringify({
+      request,
+      tier: last?.tier,
+      model: last?.model,
+      tokens: i === 0 ? tokens : 0,
+      cost: i === 0 ? Number(cost.toFixed(6)) : 0,
+    })}`;
+    const code = runOperation(dir, io, op, args, { yes: true, trailer });
+    if (code !== 0) {
+      if (i > 0)
+        io.err(`The first ${i} operation(s) were applied; undo them with smithable undo.\n`);
+      return code;
+    }
+  }
+  return 0;
+}
+
+/**
+ * `smithable ask "<request>"`: a model proposes the operations a request means; they are
+ * shown in plain language and applied only after confirmation (ARCHITECTURE §9.4).
+ */
+export async function ask(
+  dir: string,
+  io: Io,
+  request: string | undefined,
+  flags: { yes: boolean },
+): Promise<number> {
+  if (!request) {
+    io.err('ask needs a request, like: smithable ask "Customers should have a website"\n');
+    return 2;
+  }
+  const proposal = await proposeFor(dir, io, request);
+  if (!proposal) return 1;
+  io.out(`${usageLine(proposal.usage)}\n`);
+  switch (proposal.kind) {
+    case "failed":
+      io.err(`${proposal.message}\n`);
+      return 1;
+    case "none":
+      io.out(`No operation can do this: ${proposal.reason}\n`);
+      return 0;
+    case "question":
+      io.out(
+        `${proposal.question}\n${proposal.options.map((o) => `  - ${o}\n`).join("")}Ask again with the details.\n`,
+      );
+      return 0;
+  }
+  io.out("Proposed change:\n");
+  for (const [i, o] of proposal.operations.entries())
+    io.out(`  ${i + 1}. ${o.description}${o.destructive ? " (loses data)" : ""}\n`);
+  if (!flags.yes) {
+    if (!process.stdin.isTTY) {
+      io.err("Run again with --yes to apply it.\n");
+      return 1;
+    }
+    const prompt = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await prompt.question("Apply it? [y/N] ");
+    prompt.close();
+    if (!/^y(es)?$/i.test(answer.trim())) {
+      io.out("Nothing was changed.\n");
+      return 0;
+    }
+  }
+  return applyProposal(dir, io, request, proposal);
+}

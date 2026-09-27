@@ -12,6 +12,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { chromium } from "playwright";
 import { validateSpec } from "../packages/core/dist/index.js";
+import { startFakeModel } from "./fake-model.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -417,6 +418,113 @@ function query(dir, sql) {
 function smithable(dir, ...args) {
   const result = spawnSync("node", [cli, ...args, "--dir", dir], { cwd: repo, encoding: "utf8" });
   return { code: result.status, out: `${result.stdout}${result.stderr}` };
+}
+
+/** Runs the CLI without blocking, so a stand-in model in this process can answer it. */
+function smithableAsync(dir, env, ...args) {
+  return new Promise((resolve) => {
+    const child = spawn("node", [cli, ...args, "--dir", dir], {
+      cwd: repo,
+      env: { ...process.env, ...env },
+    });
+    let out = "";
+    child.stdout.on("data", (d) => (out += d));
+    child.stderr.on("data", (d) => (out += d));
+    child.on("close", (code) => resolve({ code, out }));
+  });
+}
+
+/** Smithable's own AI (ARCHITECTURE §9): a model proposes, the user confirms, undo reverts. */
+async function askFlow(dir) {
+  const model = await startFakeModel();
+  const local = { SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url };
+  try {
+    await asyncStep(
+      "ask: a model proposes in plain language; nothing changes without confirmation",
+      async () => {
+        const unconfirmed = await smithableAsync(
+          dir,
+          local,
+          "ask",
+          "Customers should have a mobile number",
+        );
+        if (
+          unconfirmed.code === 0 ||
+          !unconfirmed.out.includes("Add field mobile (phone) to Customer")
+        )
+          throw new Error(unconfirmed.out);
+        if (!unconfirmed.out.includes("Run again with --yes"))
+          throw new Error(`no confirmation asked:\n${unconfirmed.out}`);
+        if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("mobile"))
+          throw new Error("the spec changed without confirmation");
+        // The model got the relevant slice and the operations, with a schema for its answer.
+        const sent = model.requests[0];
+        if (
+          !sent.response_format?.json_schema ||
+          !sent.messages[1].content.includes("model:Customer")
+        )
+          throw new Error("the model was not given the context and the answer's schema");
+      },
+    );
+    await asyncStep(
+      "ask --yes applies it through an operation, records the model in the commit, and undo reverts it",
+      async () => {
+        const applied = await smithableAsync(
+          dir,
+          local,
+          "ask",
+          "Customers should have a mobile number",
+          "--yes",
+        );
+        if (applied.code !== 0) throw new Error(applied.out);
+        if (!applied.out.includes("Local model (fake-model)")) throw new Error(applied.out);
+        if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("mobile: phone"))
+          throw new Error("mobile not in the spec");
+        const body = run("git", ["log", "-1", "--format=%B"], dir);
+        if (!/Smithable-AI: .*"tier":"local".*"model":"fake-model"/.test(body))
+          throw new Error(body);
+        const undone = smithable(dir, "undo");
+        if (undone.code !== 0) throw new Error(undone.out);
+        if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("mobile"))
+          throw new Error("undo left mobile in the spec");
+      },
+    );
+    await asyncStep(
+      "ask: an unclear request gets a question; custom code is said to be custom code",
+      async () => {
+        const question = await smithableAsync(dir, local, "ask", "Add a date");
+        if (!question.out.includes("A date on what?") || !question.out.includes("- Orders"))
+          throw new Error(question.out);
+        const none = await smithableAsync(
+          dir,
+          local,
+          "ask",
+          "Email the customer when an order ships",
+        );
+        if (!none.out.includes("No operation can do this: Sending email needs custom code."))
+          throw new Error(none.out);
+      },
+    );
+    await asyncStep("ask: the policy decides which models may see the project", async () => {
+      const asked = model.requests.length;
+      const refused = await smithableAsync(
+        dir,
+        {
+          SMITHABLE_MODEL: "fake-model",
+          SMITHABLE_MODEL_URL: model.url,
+          SMITHABLE_MODEL_LOCATION: "elsewhere",
+          SMITHABLE_AI_POLICY: "eu-only",
+        },
+        "ask",
+        "Customers should have a mobile number",
+      );
+      if (refused.code === 0 || !refused.out.includes("No model is available under the AI policy"))
+        throw new Error(refused.out);
+      if (model.requests.length !== asked) throw new Error("a model outside the policy was asked");
+    });
+  } finally {
+    await model.close();
+  }
 }
 
 /** An agent's view: the MCP server finds the concept and changes the app through an operation. */
@@ -917,6 +1025,7 @@ for (const [index, example] of examples.entries()) {
     });
     if (example === "crm") {
       await mcpFlow(dir);
+      await askFlow(dir);
       operationsFlow(dir);
       await detachFlow(dir, port);
     }

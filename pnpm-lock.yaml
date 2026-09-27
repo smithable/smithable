@@ -228,6 +228,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/ai:
+    dependencies:
+      '@smithable/core':
+        specifier: workspace:*
+        version: link:../core
+      '@smithable/index':
+        specifier: workspace:*
+        version: link:../index
+
   packages/cli:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -236,6 +245,9 @@ importers:
       '@smithable/adapter-tanstack':
         specifier: workspace:*
         version: link:../adapter-tanstack
+      '@smithable/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@smithable/core':
         specifier: workspace:*
         version: link:../core

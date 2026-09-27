@@ -30,6 +30,8 @@ export interface OpFlags {
   yes: boolean;
   /** Called through MCP: messages name the tools instead of CLI commands. */
   mcp?: boolean;
+  /** An extra commit trailer, e.g. what the model that proposed the change used. */
+  trailer?: string;
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -143,7 +145,7 @@ export function runOperation(
   git(dir, ["add", "-A"]);
   // A whole edited spec is in the diff; the trailer stays short.
   const recorded = operation.name === "editSpec" ? {} : args;
-  const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n`;
+  const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.trailer ? `${flags.trailer}\n` : ""}`;
   const commit = git(dir, ["commit", "-q", "-m", message]);
   if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
   io.out(`${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`);
