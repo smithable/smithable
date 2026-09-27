@@ -403,13 +403,13 @@ for (const variant of variants) {
     } else if (variant === "M") {
       const started = Date.now();
       const asked = sh("node", [cli, "ask", task.prompt, "--yes", "--dir", dir], repo);
-      const used = /\(([^)]+)\) · ([\d,]+) tokens · €([\d.]+)/.exec(asked.out);
+      const used = /\(([^)]+)\) · ([\d,]+) tokens · ([€$])([\d.]+)/.exec(asked.out);
       run = {
         ms: Date.now() - started,
         model: used?.[1] ?? "none",
         tokens: Number((used?.[2] ?? "0").replaceAll(",", "")),
-        costUsd: 0,
-        costEur: Number(used?.[3] ?? 0),
+        costEur: used?.[3] === "€" ? Number(used[4]) : 0,
+        costUsd: used?.[3] === "$" ? Number(used[4]) : 0,
         outcome: asked.out.split("\n").slice(1, 4).join(" ").slice(0, 200),
       };
     } else {
@@ -447,10 +447,11 @@ const NAMES = {
   S: "Smithable ops (no model)",
   A: "Claude Code",
   B: "Claude Code + MCP",
-  M: `smithable ask (${process.env.SMITHABLE_MODEL || process.env.SMITHABLE_LOCAL_MODEL || "no model"})`,
+  M: `smithable ask (${process.env.SMITHABLE_MODEL || process.env.SMITHABLE_LOCAL_MODEL || (process.env.SMITHABLE_FRONTIER ? "Claude Code" : "no model")})`,
 };
 // Smithable's models are priced in euros, Claude Code in dollars.
-const money = (v, r) => (v === "M" ? `€${r.costEur.toFixed(4)}` : `$${r.costUsd.toFixed(2)}`);
+const money = (v, r) =>
+  v === "M" && r.costEur ? `€${r.costEur.toFixed(4)}` : `$${r.costUsd.toFixed(v === "M" ? 4 : 2)}`;
 const rows = TASKS.flatMap((task, i) =>
   variants.map((v) => {
     const r = results[v][i];

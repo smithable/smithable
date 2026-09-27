@@ -17,6 +17,7 @@ Each task is one `smithable ask "<task>" --yes` on the same app, checked like ev
 
 | 11 | Local: `qwen2.5:7b` on the CPU, offline (`local-only`) | Same | **6 / 7** | ≈21,000 | €0 (about 11 minutes) |
 | 12–13 | Small | Instructions: new fields are optional unless required; "already done" is an answer | **7, 7 / 7** | ≈21,000 | ≈€0.0022 |
+| 14 | Local qwen2.5:7b | Same | 6 / 7 | 22,145 | €0 (13 minutes, sharing the CPU) |
 
 Detailed results: [Mistral Small](m7-M-mistral-small.md), [local qwen2.5:7b](m7-M-local.md).
 
@@ -38,13 +39,18 @@ Detailed results: [Mistral Small](m7-M-mistral-small.md), [local qwen2.5:7b](m7-
 | Small (fenced files; repairs see their own draft) | 2 / 10 | €0.023 |
 | Medium (same) | 4 / 10 | €0.10 |
 | Small (search by a related record and `NOW()` in the spec) | 3 / 10 | €0.022 |
-| Medium (same) | **7 / 10** | €0.08 |
+| Medium (same) | 7 / 10 | €0.08 |
+| Claude Sonnet through Claude Code (same) | **10 / 10** | $0.94 |
 
-Details and every summary: [Small](m12-first-builds-mistral-small-latest.md), [Medium](m12-first-builds-mistral-medium-latest.md).
+Details and every summary: [Small](m12-first-builds-mistral-small-latest.md), [Medium](m12-first-builds-mistral-medium-latest.md), [Sonnet](m12-first-builds-sonnet.md).
+
+Sonnet's ten drafts were all valid, but two apps did not type-check: a required user field that is also the owner (`lender: User!` with `ownedBy: lender`) got a possibly empty value in the generated access tests. That was a generator bug, fixed (with a test) and confirmed by regenerating both apps; the report above shows the run before the fix.
+
+**Default for first builds:** a frontier model when the policy allows one (Sonnet: every draft valid, about $0.09 each, once per project), otherwise Mistral Medium (7 / 10, about €0.008 each), and without a model a starter. The strongest allowed model already goes first (`draftProject`), so this needs no new code.
 
 The remaining errors are mostly one or two per app that repairs do not fix: searching by a related record (`jobPost`), a many-to-many link between two models, an `owner` field declared by hand, a YAML colon in a description. Two of these are features worth adding to the spec (search by a related record's name, `NOW()`), and the rest point to drafting **as a batch of operations** (ARCHITECTURE §9.8) rather than whole YAML files: each operation is small, validated on its own and repaired in place.
 
 ## Next
 
 - Draft first builds as operations (search by a related record and `NOW()` are in the spec now: Medium went from 4 to 7 of 10).
-- Measure a local model (Ollama) and a frontier model the same way; choose the default for first builds from the results.
+- People review the first builds' quality (the summaries in the reports, and the apps themselves); the numbers above only say they are valid.

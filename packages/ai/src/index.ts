@@ -5,6 +5,7 @@ export { proposeChange } from "./propose.js";
 export type {
   Completion,
   CompletionRequest,
+  Currency,
   Location,
   OpenAICompatibleOptions,
   Policy,

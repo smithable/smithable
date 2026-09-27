@@ -30,6 +30,18 @@ export SMITHABLE_MODEL_PRICE=0.1/0.3        # euros per million input/output tok
 # export SMITHABLE_MODEL_LOCATION=elsewhere  # if the endpoint is not in the EU
 ```
 
+## A frontier model through Claude Code (tier 3)
+
+If you use [Claude Code](https://claude.com/claude-code), Smithable can use it as its frontier model, with your own subscription: no API key, and Smithable never reads its credentials.
+
+```bash
+export SMITHABLE_FRONTIER=claude-code
+export SMITHABLE_FRONTIER_MODEL=sonnet     # optional; Claude Code's default otherwise
+export SMITHABLE_AI_POLICY=best-available  # Claude is not EU-hosted, so eu-only never uses it
+```
+
+Smithable runs `claude -p` with no tools, no MCP servers and an empty working directory: it only answers, and cannot read or change the project. Its cost is reported in dollars.
+
 ## Policy
 
 `SMITHABLE_AI_POLICY` decides which models may see the project:
