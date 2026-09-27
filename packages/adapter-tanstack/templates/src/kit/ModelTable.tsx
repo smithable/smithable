@@ -67,7 +67,8 @@ export function ModelTable<R extends Row>({
   const others = columns.filter((f) => f !== title);
   const status = others.find((f) => f.kind === "choice");
   const amount = others.find((f) => numeric(f.kind));
-  const secondary = others.find((f) => f !== status && f !== amount);
+  const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
+  const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const cell = (field: FieldUi, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
     if (field.kind !== "choice" || text === "—") return text;
@@ -92,7 +93,7 @@ export function ModelTable<R extends Row>({
     );
   return (
     <>
-      {/* Phones: one card per record: its name, a contact or other identifier, a status and a key amount. */}
+      {/* Phones: one card per record: its name and status, a contact or other identifier, then a date and a key amount. */}
       <ul className="space-y-3 md:hidden">
         {shown.map((row) => (
           <li key={row.id}>
@@ -100,21 +101,24 @@ export function ModelTable<R extends Row>({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   {title && open(row, cell(title, row), "break-words text-base font-semibold")}
-                  {secondary && (
-                    <p className="break-words text-sm text-muted-foreground">
-                      {cell(secondary, row)}
-                    </p>
-                  )}
+                  {secondary && <p className="break-words text-sm">{cell(secondary, row)}</p>}
                 </div>
-                {onOpen && <ChevronRight aria-hidden className="mt-0.5 size-5 shrink-0" />}
+                {status ? (
+                  <div className="shrink-0">{cell(status, row)}</div>
+                ) : (
+                  onOpen && <ChevronRight aria-hidden className="mt-0.5 size-5 shrink-0" />
+                )}
               </div>
-              {status && <div>{cell(status, row)}</div>}
-              {amount && (
-                <p className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{amount.label}</span>
-                  <span className="font-semibold whitespace-nowrap tabular-nums">
-                    {cell(amount, row)}
+              {(date || amount) && (
+                <p className="flex items-baseline justify-between gap-3 pt-2 text-sm">
+                  <span className="text-muted-foreground">
+                    {date ? cell(date, row) : amount?.label}
                   </span>
+                  {amount && (
+                    <span className="text-lg font-semibold whitespace-nowrap tabular-nums">
+                      {cell(amount, row)}
+                    </span>
+                  )}
                 </p>
               )}
             </Card>
