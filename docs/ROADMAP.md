@@ -230,6 +230,8 @@ Removes the biggest technical risk of the browser-first product before building 
 - Remote MCP endpoint.
 - A public demo that needs no sign-up, showing the change trace, with a limited number of sandboxes.
 
+**Progress:** step 1 (2026-09-27): the infrastructure, in `smithable-cloud` with OpenTofu on AWS Stockholm: one host with Docker and Caddy serving HTTPS, an S3 bucket, daily snapshots. Until a domain is registered it runs at an sslip.io name.
+
 **Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
 ## M16 — Public launch
