@@ -155,4 +155,39 @@ const setIcon: Operation<{ page: string; icon: string }> = {
   },
 };
 
-export const uxOperations: AnyOperation[] = [setTheme, setColumns, setFieldOrder, setTone, setIcon];
+const setBelow: Operation<{ page: string; column: string; field: string }> = {
+  name: "setBelow",
+  summary:
+    'Show a second field under a table column\'s value, e.g. phone under email ("none" removes it).',
+  schema: {
+    type: "object",
+    required: ["page", "column", "field"],
+    additionalProperties: false,
+    properties: { page: { type: "string" }, column: { type: "string" }, field: { type: "string" } },
+  },
+  positional: ["page", "column", "field"],
+  describe: ({ page, column, field }) =>
+    field === "none"
+      ? `Show nothing under ${column} in the ${page} table`
+      : `Show ${field} under ${column} in the ${page} table`,
+  destructive: () => false,
+  apply(editors, { page, column, field }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    put(
+      uxEditor(editors),
+      ["pages", page, "table", "below", column],
+      field === "none" ? undefined : field,
+    );
+    return [];
+  },
+};
+
+export const uxOperations: AnyOperation[] = [
+  setTheme,
+  setColumns,
+  setFieldOrder,
+  setTone,
+  setIcon,
+  setBelow,
+];

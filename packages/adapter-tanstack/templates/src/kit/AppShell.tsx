@@ -139,12 +139,23 @@ export function ErrorNotice({ title, message }: { title: string; message?: strin
   );
 }
 
-export function PageHeader({ title, actions }: { title: string; actions?: React.ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+}) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      <h1 className="min-w-0 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10">
-        {title}
-      </h1>
+      <div className="min-w-0">
+        <h1 className="break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10">
+          {title}
+        </h1>
+        {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
+      </div>
       {actions && (
         <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:flex-1">{actions}</div>
       )}

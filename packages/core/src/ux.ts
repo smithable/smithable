@@ -26,6 +26,8 @@ export interface PageUx {
   icon?: Icon;
   /** The table's columns, in order. */
   columns?: string[];
+  /** A second field shown under a column's value, e.g. { email: "phone" }. */
+  below?: Record<string, string>;
   /** The form's fields in this order; fields not listed follow. */
   fieldOrder?: string[];
 }
@@ -309,13 +311,37 @@ export function validateUx(
             mapEntries(ctx, part.value, partWhere) ?? [],
             partWhere,
             {
-              allowed: part.key === "table" ? ["columns"] : ["fieldOrder"],
+              allowed: part.key === "table" ? ["columns", "below"] : ["fieldOrder"],
               later: part.key === "table" ? ["sort", "pageSize"] : ["groups"],
             },
           )) {
             if (option.key === "columns")
               result.columns = names(option.value, `the columns of ${where}`, true);
-            else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
+            else if (option.key === "below") {
+              result.below = {};
+              for (const pair of mapEntries(ctx, option.value, `"below" of ${where}`) ?? []) {
+                const known = (name: string, at: ParsedNode | null) => {
+                  if (fields.some((f) => f.name === name)) return true;
+                  ctx.error(
+                    at,
+                    "unknown-field",
+                    `${model?.name} has no field named "${name}" to show.`,
+                    didYouMean(
+                      name,
+                      fields.map((f) => f.name),
+                    ),
+                  );
+                  return false;
+                };
+                const second = readString(ctx, pair.value, `"${pair.key}" in "below"`);
+                if (
+                  known(pair.key, pair.keyNode) &&
+                  second !== undefined &&
+                  known(second, pair.value)
+                )
+                  result.below[pair.key] = second;
+              }
+            } else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
           }
         }
         ux.pages[page.key] = result;

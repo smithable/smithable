@@ -11,3 +11,7 @@ models:
   Order:
     fields:
       placedAt: { label: Placed on }
+
+pages:
+  customers: { subtitle: Keep every relationship in view. }
+  orders: { subtitle: Every order and where it stands. }
