@@ -49,8 +49,12 @@ async function asyncStep(name, fn) {
   }
 }
 
-function run(command, args, cwd) {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" });
+function run(command, args, cwd, env) {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    ...(env ? { env: { ...process.env, ...env } } : {}),
+  });
   if (result.status !== 0)
     throw new Error(`${command} ${args.join(" ")} failed:\n${result.stdout}\n${result.stderr}`);
   return result.stdout;
@@ -997,7 +1001,8 @@ for (const [index, example] of examples.entries()) {
   console.log(`\n${example}`);
   const dir = join(mkdtempSync(join(tmpdir(), `smithable-${example}-`)), "app");
   dirs.push(dir);
-  const port = 4400 + index;
+  // Parallel runs (scripts/test-apps-parallel.mjs) give each process its own ports.
+  const port = Number(process.env.TEST_APPS_PORT ?? 4400) + index;
   try {
     step("smithable new", () => run("node", [cli, "new", dir, "--starter", example], repo));
     if (example === "crm") {
@@ -1022,7 +1027,7 @@ for (const [index, example] of examples.entries()) {
       run("pnpm", ["test"], dir),
     );
     step("the generated smoke tests pass: every page opens for every role that may see it", () =>
-      run("pnpm", ["test:smoke"], dir),
+      run("pnpm", ["test:smoke"], dir, { SMOKE_PORT: String(port + 200) }),
     );
 
     let stop = await serve(dir, port, "production");
