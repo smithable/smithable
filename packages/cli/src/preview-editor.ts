@@ -88,13 +88,27 @@ export function smithableEditor() {
 }
 
 /** The wrapper config: the app's own Vite config plus the editor, for the preview only. */
-export function previewConfig(): string {
+export function previewConfig(publicUrl?: string): string {
   const plugin = new URL("./preview-editor.js", import.meta.url).pathname;
+  // Behind a proxy on its own public address, the dev server accepts that host and its
+  // hot reload goes through the proxy.
+  const server = publicUrl
+    ? `, server: ${JSON.stringify({
+        allowedHosts: [new URL(publicUrl).hostname],
+        hmr: {
+          host: new URL(publicUrl).hostname,
+          protocol: publicUrl.startsWith("https:") ? "wss" : "ws",
+          clientPort: Number(
+            new URL(publicUrl).port || (publicUrl.startsWith("https:") ? 443 : 80),
+          ),
+        },
+      })}`
+    : "";
   return `// Written by smithable studio for the preview; the app's own config is ../../vite.config.ts.
 import { mergeConfig } from "vite";
 import app from "../../vite.config.ts";
 import { smithableEditor } from ${JSON.stringify(plugin)};
 
-export default mergeConfig(app, { plugins: [smithableEditor()] });
+export default mergeConfig(app, { plugins: [smithableEditor()]${server} });
 `;
 }
