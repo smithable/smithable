@@ -159,6 +159,34 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   ],
   "pages": [
     {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "sessions",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "records",
+            "model": "ClassType",
+            "name": "classes",
+          },
+          {
+            "kind": "faq",
+            "name": "faq",
+          },
+          {
+            "button": "sessions",
+            "kind": "callToAction",
+            "name": "callToAction",
+          },
+        ],
+      },
+      "route": "/",
+    },
+    {
       "id": "sessions",
       "pattern": {
         "kind": "crud",
@@ -816,6 +844,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
     {
       "name": "main",
       "pages": [
+        "overview",
         "invoices",
         "clients",
         "invoice-lines",
@@ -823,6 +852,90 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
     },
   ],
   "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "overview",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "features",
+            "name": "features",
+          },
+          {
+            "kind": "pricing",
+            "name": "pricing",
+          },
+          {
+            "kind": "faq",
+            "name": "faq",
+          },
+          {
+            "button": "overview",
+            "kind": "callToAction",
+            "name": "callToAction",
+          },
+        ],
+      },
+      "route": "/",
+    },
+    {
+      "id": "overview",
+      "pattern": {
+        "items": [
+          {
+            "field": "total",
+            "kind": "stat",
+            "measure": "sum",
+            "model": "Invoice",
+            "name": "outstanding",
+            "where": {
+              "status": "sent",
+            },
+          },
+          {
+            "field": "total",
+            "kind": "stat",
+            "measure": "sum",
+            "model": "Invoice",
+            "name": "overdue",
+            "where": {
+              "status": "overdue",
+            },
+          },
+          {
+            "field": "total",
+            "kind": "stat",
+            "measure": "sum",
+            "model": "Invoice",
+            "name": "paid",
+            "where": {
+              "status": "paid",
+            },
+          },
+          {
+            "by": "issuedOn",
+            "field": "total",
+            "kind": "chart",
+            "measure": "sum",
+            "model": "Invoice",
+            "name": "invoiced",
+          },
+          {
+            "kind": "list",
+            "limit": 5,
+            "model": "Invoice",
+            "name": "latest",
+          },
+        ],
+        "kind": "dashboard",
+      },
+      "route": "/overview",
+    },
     {
       "id": "invoices",
       "pattern": {
@@ -1643,6 +1756,158 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
     },
   ],
   "pages": [],
+  "specVersion": "0.1",
+}
+`;
+
+exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
+{
+  "actions": [],
+  "app": {
+    "name": "Page patterns",
+  },
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "number",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "draft",
+              "sent",
+              "paid",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "total",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "name": "issuedOn",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Invoice",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "overview",
+        "invoices",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "invoices",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "features",
+            "name": "features",
+          },
+          {
+            "kind": "records",
+            "limit": 3,
+            "model": "Invoice",
+            "name": "latest",
+          },
+          {
+            "kind": "faq",
+            "name": "faq",
+          },
+          {
+            "button": "overview",
+            "kind": "callToAction",
+            "name": "callToAction",
+          },
+        ],
+      },
+      "route": "/",
+    },
+    {
+      "id": "overview",
+      "pattern": {
+        "items": [
+          {
+            "kind": "stat",
+            "measure": "count",
+            "model": "Invoice",
+            "name": "open",
+            "where": {
+              "status": "sent",
+            },
+          },
+          {
+            "field": "total",
+            "kind": "stat",
+            "measure": "sum",
+            "model": "Invoice",
+            "name": "paid",
+            "where": {
+              "status": "paid",
+            },
+          },
+          {
+            "by": "issuedOn",
+            "field": "total",
+            "kind": "chart",
+            "measure": "sum",
+            "model": "Invoice",
+            "name": "revenue",
+          },
+          {
+            "kind": "list",
+            "limit": 5,
+            "model": "Invoice",
+            "name": "latest",
+          },
+        ],
+        "kind": "dashboard",
+      },
+      "route": "/overview",
+    },
+    {
+      "id": "invoices",
+      "pattern": {
+        "kind": "crud",
+        "model": "Invoice",
+      },
+      "route": "/invoices",
+    },
+  ],
   "specVersion": "0.1",
 }
 `;

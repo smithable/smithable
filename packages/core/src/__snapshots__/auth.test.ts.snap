@@ -10,6 +10,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
   "public": {
     "create": [],
     "pages": [
+      "home",
       "sessions",
     ],
     "read": [
@@ -79,7 +80,9 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
   "defaultRole": "member",
   "public": {
     "create": [],
-    "pages": [],
+    "pages": [
+      "home",
+    ],
     "read": [],
   },
   "roles": [

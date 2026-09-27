@@ -1,0 +1,29 @@
+# What visitors read. Derived from names when not given here.
+smithableContent: 0.1
+
+models:
+  ClassType:
+    fields:
+      level: { values: { allLevels: All levels } }
+
+pages:
+  home:
+    hero:
+      title: Find your calm
+      subtitle: Small yoga classes for every level, in the heart of Mariehamn.
+      button: See the schedule
+    classes:
+      title: Our classes
+      text: A little time, just for you.
+    faq:
+      title: Before your first class
+      items:
+        - question: Do I need experience?
+          answer: No. Foundations and all-levels classes are made for beginners.
+        - question: What should I bring?
+          answer: Comfortable clothes and water. Mats are there for you.
+        - question: How do I cancel a booking?
+          answer: Open your booking and cancel it; the spot goes to someone else.
+    callToAction:
+      title: Your first class is waiting
+      button: Book a class

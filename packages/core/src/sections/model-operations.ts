@@ -1,5 +1,5 @@
 import type { YamlEditor } from "../edit.js";
-import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
+import { type FieldIR, type ModelIR, pageModel, type SpecIR, storageOf, typeKey } from "../ir.js";
 import { type AnyOperation, type Editors, type Operation, OperationError } from "../operation.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
@@ -219,7 +219,7 @@ function updateFieldLists(
     if (to) editors.ux.renameKey(tones, `${m}.${to}`);
     else editors.ux.removeAndPrune(tones, 0);
   }
-  for (const page of ir.pages.filter((p) => p.pattern.model === m)) {
+  for (const page of ir.pages.filter((p) => pageModel(p) === m)) {
     const lists: [YamlEditor | undefined, string[]][] = [
       [editors.spec, ["pages", page.id, "search"]],
       [editors.ux, ["pages", page.id, "table", "columns"]],

@@ -6,7 +6,13 @@ export type { AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
 export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
 export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
-export type { ContentIR, FieldContent, ModelContent } from "./content.js";
+export type {
+  ContentIR,
+  FieldContent,
+  ModelContent,
+  PageContent,
+  SectionContent,
+} from "./content.js";
 export { CONTENT_VERSION, emptyContent, validateContent } from "./content.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
@@ -15,7 +21,16 @@ export { YamlEditor } from "./edit.js";
 export type { Expr } from "./formula.js";
 export { formatFormula } from "./formula.js";
 export type * from "./ir.js";
-export { ACCESS_OPERATIONS, SCALAR_TYPES, storageOf, typeKey, USER_MODEL } from "./ir.js";
+export {
+  ACCESS_OPERATIONS,
+  pageModel,
+  pageModels,
+  SCALAR_TYPES,
+  SECTION_KINDS,
+  storageOf,
+  typeKey,
+  USER_MODEL,
+} from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export { camel, humanize, kebab, pascal, plural, snake, words } from "./naming.js";
