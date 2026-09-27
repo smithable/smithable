@@ -9,7 +9,7 @@ app:
 
 models:
   ClassType:
-    description: A kind of class the studio offers, such as Vinyasa or Yin.
+    description: A kind of class the studio offers, such as Vinyasa, Yin, Hatha or Foundations.
     fields:
       name: string!
       summary: text

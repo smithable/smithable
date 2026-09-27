@@ -1,6 +1,6 @@
 // Smithable app kit: the application frame with navigation menus and the signed-in user.
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
 import { useRef } from "react";
 import { allows, type Rule, type Viewer } from "./access";
 
@@ -8,7 +8,7 @@ export interface MenuUi {
   name: string;
   label?: string;
   /** Only pages the viewer may open are shown. */
-  items: { to: LinkProps["to"]; label: string; access: Rule }[];
+  items: { to: LinkProps["to"]; label: string; icon?: LucideIcon; access: Rule }[];
 }
 
 interface ShellProps {
@@ -33,7 +33,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         <Navigation {...shell} />
       </aside>
       {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
-      <header className="sticky top-0 z-10 flex h-18 items-center gap-2 bg-sidebar px-2 text-sidebar-foreground lg:hidden">
+      <header className="sticky top-0 z-10 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden">
         <button
           type="button"
           aria-label="Open menu"
@@ -97,6 +97,7 @@ function Navigation({
                       "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",
                   }}
                 >
+                  {item.icon && <item.icon aria-hidden className="size-5 shrink-0" />}
                   {item.label}
                 </Link>
               ))}
@@ -140,11 +141,13 @@ export function ErrorNotice({ title, message }: { title: string; message?: strin
 
 export function PageHeader({ title, actions }: { title: string; actions?: React.ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <h1 className="min-w-0 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10">
         {title}
       </h1>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:flex-1">{actions}</div>
+      )}
     </div>
   );
 }
