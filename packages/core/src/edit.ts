@@ -134,7 +134,7 @@ export class YamlEditor {
       const inner = this.source.slice(map.range[0] + 1, close);
       const sep = inner.trim() === "" ? " " : inner.trimEnd().endsWith(",") ? " " : ", ";
       const trimmedClose = map.range[0] + 1 + inner.trimEnd().length;
-      this.splice(trimmedClose, close, `${sep}${key}: ${flow(value)} `);
+      this.splice(trimmedClose, close, `${sep}${scalar(key)}: ${flow(value)} `);
       return;
     }
     const last = map.items[map.items.length - 1] as Pair<ParsedNode, ParsedNode | null>;
@@ -142,7 +142,7 @@ export class YamlEditor {
     const end = last.value ? last.value.range[1] : last.key.range[1];
     const at = Math.min(this.lineEnd(end - 1) + 1, this.source.length);
     const lead = at === this.source.length && !this.source.endsWith("\n") ? "\n" : "";
-    this.splice(at, at, `${lead}${indent}${key}:${render(value, indent)}\n`);
+    this.splice(at, at, `${lead}${indent}${scalar(key)}:${render(value, indent)}\n`);
   }
 
   private pair(path: Path): Pair<ParsedNode, ParsedNode | null> {
@@ -193,7 +193,7 @@ function flow(value: YamlValue): string {
   if (Array.isArray(value)) return `[${value.map(scalar).join(", ")}]`;
   if (isBlock(value)) {
     return `{ ${Object.entries(value)
-      .map(([k, v]) => `${k}: ${flow(v)}`)
+      .map(([k, v]) => `${scalar(k)}: ${flow(v)}`)
       .join(", ")} }`;
   }
   return scalar(value);
@@ -205,12 +205,13 @@ function render(value: YamlValue, indent: string): string {
   if (isBlock(value)) {
     const inner = `${indent}  `;
     return Object.entries(value)
-      .map(([k, v]) => `\n${inner}${k}:${render(v, inner)}`)
+      .map(([k, v]) => `\n${inner}${scalar(k)}:${render(v, inner)}`)
       .join("");
   }
   return ` ${scalar(value)}`;
 }
 
+/** A key or scalar value as YAML: quoted only when it has to be (e.g. "@scope/package"). */
 function scalar(value: string | number | boolean): string {
   return stringify(value).trimEnd();
 }
