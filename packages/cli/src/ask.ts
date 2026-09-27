@@ -10,10 +10,11 @@ import {
   route,
   type Usage,
 } from "@smithable/ai";
+import { validateSpec } from "@smithable/core";
 import { buildContext } from "@smithable/index";
 import { logTokens } from "./context.js";
 import type { Io } from "./io.js";
-import { runOperation } from "./op.js";
+import { requiredButEmpty, runOperation } from "./op.js";
 import { projectIndex } from "./rules.js";
 import { loadSpec } from "./validate.js";
 
@@ -70,7 +71,18 @@ export async function proposeFor(
   };
   const context = buildContext(projectIndex(dir, ir, auth), request);
   const providers = route(aiProviders(), parsePolicy(process.env.SMITHABLE_AI_POLICY));
-  const proposal = await proposeChange({ request, files, context, providers });
+  const irOf = (text: string) => validateSpec({ path: "smithable.yml", text }).ir;
+  const proposal = await proposeChange({
+    request,
+    files,
+    context,
+    providers,
+    // What only the project's data can tell: a new required field on a table with rows.
+    check: (before, after, effects) => {
+      const [was, will] = [irOf(before.spec), irOf(after.spec)];
+      return was && will ? requiredButEmpty(dir, was, will, effects) : undefined;
+    },
+  });
   logTokens(dir, { source: "ask", request, concepts: context.concepts, usage: proposal.usage });
   return proposal;
 }

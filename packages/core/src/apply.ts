@@ -113,7 +113,7 @@ export function applyOperation(
       ...(editors.auth ? { auth: editors.auth.text } : {}),
       ...(files.ux !== undefined || uxChanged ? { ux: editors.ux.text } : {}),
     },
-    description: op.describe(args),
+    description: op.describe(args, before.ir),
     destructive: op.destructive(args, before.ir),
     effects,
   };

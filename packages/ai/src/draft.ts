@@ -38,8 +38,78 @@ export function closestStarter(description: string, starters: Record<string, Spe
   );
 }
 
+/**
+ * Every page pattern and an auth file with several roles, in their exact syntax: the part of
+ * the grammar the starters do not all show. A test keeps it valid.
+ */
+export const REFERENCE = {
+  "smithable.yml": `smithable: 0.1
+app:
+  name: Example
+  description: What the app is for, in one sentence.
+models:
+  Profile:
+    description: The user's own details.
+    fields:
+      displayName: string!
+      city: string
+  Ticket:
+    fields:
+      title: string!
+      status: open | waiting | closed
+      priority: int! = 3
+      openedOn: date! = TODAY()
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: tickets }
+      features:
+      faq:
+      callToAction: { button: tickets }
+  overview:
+    dashboard:
+      open: { count: Ticket, where: { status: open } }
+      byMonth: { count: Ticket, by: openedOn }
+      latest: { list: Ticket, limit: 5 }
+  tickets:
+    crud: Ticket
+    search: [title]
+  settings:
+    settings: Profile
+  welcome:
+    onboarding:
+      model: Profile
+      steps:
+        you: [displayName]
+        where: [city]
+`,
+  "smithable.auth.yml": `smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
+roles:
+  admin: { description: Runs the app. }
+  agent: { description: Handles tickets. }
+defaultRole: agent
+public:
+  pages: [home]
+`,
+};
+
+const fenced = (yaml: string) => `\`\`\`yaml\n${yaml.trimEnd()}\n\`\`\``;
+
 const SYSTEM = `You design the first version of a web app as Smithable spec files. Smithable generates the whole app from them.
-Adapt the example project to the description: its models and fields, pages (crud, landing, dashboard, settings, onboarding), roles and access, theme, and the visible texts (landing page copy, labels). Keep what fits, remove what does not, and add what the description needs. Keep the files' format and version lines exactly.
+Adapt the example project to the description: its models and fields, pages, roles and access, theme, and the visible texts (landing page copy, labels). Keep what fits, remove what does not, and add what the description needs. Keep the files' format and version lines exactly.
+Keep it small: crud pages for the records people manage; a landing page only for an app with public visitors; a dashboard, settings or onboarding only when the description asks for one. Use exactly the syntax of the example project and of this reference.
+The reference only shows syntax: its models (Profile, Ticket) belong to no app. Name only models and fields your own files declare.
+
+Reference smithable.yml, with every page pattern:
+${fenced(REFERENCE["smithable.yml"])}
+
+Reference smithable.auth.yml (several roles need defaultRole):
+${fenced(REFERENCE["smithable.auth.yml"])}
+
 Answer with JSON only: {"smithable.yml": "<YAML>", "smithable.auth.yml": "<YAML>", "smithable.content.yml": "<YAML>", "smithable.ux.yml": "<YAML>"}.`;
 
 function answerSchema(): object {
@@ -77,7 +147,7 @@ export function checkSpecFiles(files: SpecFiles): Diagnostic[] {
 
 /**
  * Adapts a starter to a description with the strongest allowed model first. A draft with
- * errors goes back once with the exact diagnostics; then the next model tries.
+ * errors goes back with the exact diagnostics, up to twice; then the next model tries.
  */
 export async function draftProject(options: {
   description: string;
@@ -89,13 +159,13 @@ export async function draftProject(options: {
   if (options.providers.length === 0)
     return { kind: "failed", message: "No model is available under the AI policy.", usage };
   const example = FILES.filter((f) => options.starter[f])
-    .map((f) => `--- ${f}\n${options.starter[f]}`)
-    .join("\n");
+    .map((f) => `${f}:\n${fenced(options.starter[f] as string)}`)
+    .join("\n\n");
   const user = `Description: ${options.description}\n\nExample project:\n${example}\n\nJSON Schema of smithable.yml:\n${JSON.stringify(buildJsonSchema())}`;
   let problem = "";
   for (const provider of [...options.providers].reverse()) {
     let prompt = user;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       let files: SpecFiles;
       try {
         files = (await completeJson(
@@ -107,13 +177,20 @@ export async function draftProject(options: {
         problem = error instanceof Error ? error.message : String(error);
         break;
       }
+      // A model sometimes starts a file with a "---" line; it is not part of the file.
       const kept = Object.fromEntries(
-        FILES.flatMap((f) => (typeof files[f] === "string" ? [[f, files[f] as string]] : [])),
+        FILES.flatMap((f) =>
+          typeof files[f] === "string" ? [[f, (files[f] as string).replace(/^---.*\n/, "")]] : [],
+        ),
       );
       const errors = checkSpecFiles(kept);
       if (errors.length === 0) return { kind: "draft", files: kept, usage };
       problem = errors.map(formatDiagnostic).join("\n");
-      prompt = `${user}\n\nYour previous files have errors:\n${problem}\nAnswer again with all files corrected.`;
+      // The model fixes its own draft rather than starting over.
+      const previous = Object.entries(kept)
+        .map(([f, text]) => `${f}:\n${fenced(text)}`)
+        .join("\n\n");
+      prompt = `${user}\n\nYour draft:\n${previous}\n\nIt has these errors:\n${problem}\nFix exactly these errors and change nothing else. Answer with all files.`;
     }
   }
   return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };

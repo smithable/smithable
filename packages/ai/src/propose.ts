@@ -4,6 +4,7 @@
 import {
   type AnyOperation,
   applyOperation,
+  type Effect,
   OPERATIONS,
   type OperationArgs,
   type ProjectFiles,
@@ -30,7 +31,7 @@ Answer with JSON only:
 - {"kind":"operations","operations":[{"op":"<operation>","args":{…}}]} when the request clearly means one change (one or more operations).
 - {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
 - {"kind":"none","reason":"…"} when no operation can do it. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
-Do only what is asked. Never change or remove an existing field, page or rule unless the request asks for exactly that. If something similar already exists (asked for a "mobile number" when there is a phone field), ask whether that is what is meant.
+Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
 Use the exact names of models, fields and pages from the app. New names are camelCase (fields) or PascalCase (models).
 Field types (shorthand): string, text, email, phone, url, int, decimal, money, bool, date, datetime; choices as "a | b | c"; a reference to another model as "Customer"; a list of related records as "Order[]". Append ! for required, add "unique", and "= value" for a default: "email! unique", "int = 60".`;
 
@@ -87,7 +88,7 @@ interface Answer {
 
 /**
  * Asks the allowed models, cheapest tier first, for the operations a request means. A model
- * gets one chance to repair an answer that does not apply; after that the request goes to
+ * gets two chances to repair an answer that does not apply; after that the request goes to
  * the next tier. The same semantic context goes to every tier.
  */
 export async function proposeChange(options: {
@@ -96,6 +97,11 @@ export async function proposeChange(options: {
   context: ContextSlice;
   /** Allowed by the AI policy, in the order to try them (see `route`). */
   providers: Provider[];
+  /**
+   * What only the host can check, e.g. that a new required field has no existing rows to
+   * fill. A message sends the proposal back for repair like any other error.
+   */
+  check?: (before: ProjectFiles, after: ProjectFiles, effects: Effect[]) => string | undefined;
 }): Promise<Proposal> {
   const { files, context, providers } = options;
   const usage: Usage[] = [];
@@ -114,7 +120,7 @@ export async function proposeChange(options: {
   let problem = "";
   for (const provider of providers) {
     let prompt = user;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       let answer: Answer;
       try {
         answer = (await completeJson(
@@ -137,9 +143,13 @@ export async function proposeChange(options: {
       if (answer.kind === "none")
         return { kind: "none", reason: answer.reason ?? "No operation can do this.", usage };
       const checked = dryRun(files, answer.operations ?? []);
-      if (checked.ok) return { kind: "change", ...checked, usage };
-      problem = checked.message;
-      prompt = `${user}\n\nYour previous answer was:\n${JSON.stringify(answer)}\nIt cannot be applied: ${checked.message}\nAnswer again.`;
+      const refused = checked.ok
+        ? options.check?.(files, checked.files, checked.effects)
+        : undefined;
+      if (checked.ok && !refused)
+        return { kind: "change", operations: checked.operations, files: checked.files, usage };
+      problem = checked.ok ? (refused as string) : checked.message;
+      prompt = `${user}\n\nYour previous answer was:\n${JSON.stringify(answer)}\nIt cannot be applied: ${problem}\nAnswer again.`;
     }
   }
   return { kind: "failed", message: `No model found a change that applies. ${problem}`, usage };
@@ -150,11 +160,12 @@ function dryRun(
   files: ProjectFiles,
   operations: { op?: string; args?: OperationArgs }[],
 ):
-  | { ok: true; operations: ProposedOperation[]; files: ProjectFiles }
+  | { ok: true; operations: ProposedOperation[]; files: ProjectFiles; effects: Effect[] }
   | { ok: false; message: string } {
   if (operations.length === 0) return { ok: false, message: "The answer has no operations." };
   let current = files;
   const proposed: ProposedOperation[] = [];
+  const effects: Effect[] = [];
   for (const { op = "", args = {} } of operations) {
     const result = applyOperation(current, op, args);
     if (!result.ok) {
@@ -162,7 +173,8 @@ function dryRun(
       return { ok: false, message: `${op}: ${result.message}${detail ? ` ${detail}` : ""}` };
     }
     proposed.push({ op, args, description: result.description, destructive: result.destructive });
+    effects.push(...result.effects);
     current = result.files;
   }
-  return { ok: true, operations: proposed, files: current };
+  return { ok: true, operations: proposed, files: current, effects };
 }
