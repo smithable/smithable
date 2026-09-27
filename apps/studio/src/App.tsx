@@ -112,6 +112,11 @@ export function App() {
         </fieldset>
         <div className="ml-auto flex items-center gap-3">
           {busy && <span className="text-xs text-neutral-500">Working…</span>}
+          {project.home && (
+            <a href={project.home} className="text-xs font-medium text-accent hover:underline">
+              Publish and share
+            </a>
+          )}
           <Button
             variant="ghost"
             onClick={undo}

@@ -94,7 +94,7 @@ export async function studio(
   dir: string,
   io: Io,
   port: number,
-  options: { host?: string; previewUrl?: string } = {},
+  options: { host?: string; previewUrl?: string; home?: string } = {},
 ): Promise<number> {
   const { ir } = loadSpec(dir, io);
   if (!ir) return 1;
@@ -182,6 +182,7 @@ export async function studio(
       concepts: ir && auth ? projectIndex(dir, ir, auth).concepts : [],
       trace: trace(dir),
       preview,
+      ...(options.home ? { home: options.home } : {}),
     };
   };
 
