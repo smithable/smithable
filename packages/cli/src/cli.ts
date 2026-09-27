@@ -1,10 +1,12 @@
 import { parseArgs } from "node:util";
 import { SPEC_VERSION } from "@smithable/core";
 import { ask } from "./ask.js";
+import { backup, restore } from "./backup.js";
 import { build } from "./build.js";
 import { writeCode } from "./code.js";
 import { context } from "./context.js";
 import { customize } from "./customize.js";
+import { deploy } from "./deploy.js";
 import { detach } from "./detach.js";
 import { runDev } from "./dev.js";
 import { generate } from "./generate.js";
@@ -36,6 +38,12 @@ Commands:
   security [dir]   Check the app: --level fast (type check, tests), normal (+ dependencies,
                    secrets, code; the default) or release (+ the image and the running app).
                    Uses installed scanners, or their pinned images in Docker
+  deploy [dir]     Release checks, then run the app: --target docker (default), ssh://user@host
+                   (a remote Docker host) or compose (writes compose.yaml); --port, --url
+  backup [dir]     Back up the database and uploads --to a folder or s3://bucket/prefix (S3
+                   credentials in AWS_* variables); --container <name> for a deployed app
+  restore [dir]    Restore the newest backup (or --backup <time>) --from a folder or s3://…,
+                   into the project or --container <name>
   update --security [dir]  Bring in this Smithable's security fixes; kept only when the checks pass
   ask "<request>"  A model proposes the change in plain language; it is applied after you
                    confirm (--yes applies it directly). Setting up models: docs/ai.md
@@ -131,6 +139,31 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       }
       return security(values.dir ?? dir, io, level as Level);
     }
+    case "deploy":
+      return deploy(values.dir ?? dir, io, {
+        target: values.target ?? "docker",
+        port: Number(values.port ?? 3000),
+        ...(values.url ? { url: values.url } : {}),
+      });
+    case "backup":
+      if (!values.to) {
+        io.err("backup needs --to <folder or s3://bucket/prefix>\n");
+        return 2;
+      }
+      return backup(values.dir ?? dir, io, {
+        to: values.to,
+        ...(values.container ? { container: values.container } : {}),
+      });
+    case "restore":
+      if (!values.from) {
+        io.err("restore needs --from <folder or s3://bucket/prefix>\n");
+        return 2;
+      }
+      return restore(values.dir ?? dir, io, {
+        from: values.from,
+        ...(values.backup ? { backup: values.backup } : {}),
+        ...(values.container ? { container: values.container } : {}),
+      });
     case "update":
       if (values.security !== true) {
         io.err("update takes --security: smithable update --security [dir]\n");
@@ -164,6 +197,12 @@ function parse(argv: string[]) {
       plugin: { type: "string" },
       level: { type: "string" },
       security: { type: "boolean" },
+      target: { type: "string" },
+      to: { type: "string" },
+      from: { type: "string" },
+      backup: { type: "string" },
+      container: { type: "string" },
+      url: { type: "string" },
       yes: { type: "boolean" },
       dir: { type: "string" },
       json: { type: "boolean" },

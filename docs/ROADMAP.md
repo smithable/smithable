@@ -218,7 +218,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - A backup to an S3-compatible bucket can be restored into a fresh container with no data lost.
 - A sample app with custom code upgrades across a stack profile change with tests passing, and a deliberately broken contract is reported, not silently fixed.
 
-**Status (2026-09-27):** in progress. Done: `smithable security` (fast, normal, release) with pinned external scanners, and `smithable update --security`; a fresh Acme CRM passes all Release checks (image and running app included) after the fixes they found. Next: deploy targets, backups with restore, generated smoke tests, `smithable upgrade`.
+**Status (2026-09-27):** in progress. Done: `smithable security` (fast, normal, release) with pinned external scanners, and `smithable update --security`; a fresh Acme CRM passes all Release checks (image and running app included) after the fixes they found. Deploy targets (local Docker, a Docker host over SSH, a Compose export) and backups with restore (folder or S3-compatible) are done; `pnpm test:deploy` passes the backup exit check against SeaweedFS: a customer survives a backup, destroying the container and its volume, a fresh deploy and a restore. Next: generated smoke tests, `smithable upgrade`.
 
 ## M15 — Hosted beta (`smithable-cloud`)
 
