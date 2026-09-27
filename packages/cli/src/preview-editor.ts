@@ -1,0 +1,100 @@
+// The preview editor (ARCHITECTURE §10.3): a Vite plugin that `smithable studio` adds to the
+// app's own Vite config for the preview only. It injects a small runtime into the page that,
+// in select mode, outlines the part of the spec under the pointer, reports a click to Studio,
+// and lets table columns be dragged. The app's own builds never include it.
+
+/** The runtime, run in the preview page inside Studio's iframe. */
+const RUNTIME = `
+if (typeof window !== "undefined" && window.parent !== window) {
+  let selecting = false;
+  let hovered = null;
+  let dragged = null;
+  const style = document.createElement("style");
+  style.textContent =
+    "[data-sm-hover]{outline:2px dashed #3b5bdb!important;outline-offset:2px;cursor:pointer!important}" +
+    "[data-sm-selected]{outline:2px solid #3b5bdb!important;outline-offset:2px}" +
+    "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
+    "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}";
+  document.head.append(style);
+  const post = (message) => window.parent.postMessage({ source: "smithable-preview", ...message }, "*");
+  const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
+  const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
+  const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
+
+  window.addEventListener("message", (event) => {
+    if (event.data?.type !== "smithable:select-mode") return;
+    selecting = Boolean(event.data.on);
+    // Visible to people (a cursor) and to tests: the page is in select mode.
+    document.documentElement.toggleAttribute("data-sm-selecting", selecting);
+    clear("data-sm-hover");
+    if (!selecting) clear("data-sm-selected");
+    document.querySelectorAll("[data-sm-part=column]").forEach((th) => (th.draggable = selecting));
+  });
+  document.addEventListener("mouseover", (event) => {
+    if (!selecting) return;
+    hovered?.removeAttribute("data-sm-hover");
+    hovered = markedAt(event.target);
+    hovered?.setAttribute("data-sm-hover", "");
+    if (hovered?.dataset.smPart === "column") hovered.draggable = true;
+  }, true);
+  document.addEventListener("click", (event) => {
+    if (!selecting) return;
+    const marked = markedAt(event.target);
+    event.preventDefault();
+    event.stopPropagation();
+    if (!marked) return;
+    clear("data-sm-selected");
+    marked.setAttribute("data-sm-selected", "");
+    // A column comes with its table's columns, so Studio can hide it or change their order.
+    const columns = marked.dataset.smPart === "column"
+      ? [...marked.closest("tr").querySelectorAll("[data-sm-part=column]")].map(fieldOf)
+      : null;
+    post({ type: "select", concept: marked.dataset.smConcept, part: marked.dataset.smPart ?? null, page: marked.dataset.smPage ?? null, columns });
+  }, true);
+  // Dropping a column header on another moves it there.
+  document.addEventListener("dragstart", (event) => {
+    const marked = markedAt(event.target);
+    if (selecting && marked?.dataset.smPart === "column") dragged = marked;
+  });
+  document.addEventListener("dragover", (event) => {
+    if (dragged && markedAt(event.target)?.dataset.smPart === "column") event.preventDefault();
+  });
+  document.addEventListener("drop", (event) => {
+    const target = markedAt(event.target);
+    if (!dragged || target?.dataset.smPart !== "column" || target === dragged) return;
+    event.preventDefault();
+    const headers = [...target.closest("tr").querySelectorAll("[data-sm-part=column]")];
+    const order = headers.filter((h) => h !== dragged);
+    order.splice(order.indexOf(target) + (headers.indexOf(dragged) < headers.indexOf(target) ? 1 : 0), 0, dragged);
+    post({ type: "columns", page: target.dataset.smPage, columns: order.map(fieldOf) });
+    dragged = null;
+  });
+  post({ type: "ready" });
+}
+`;
+
+const ID = "virtual:smithable-editor";
+
+/** The Vite plugin: serves the runtime and imports it from the app's router module. */
+export function smithableEditor() {
+  return {
+    name: "smithable-editor",
+    apply: "serve",
+    resolveId: (id: string) => (id === ID ? `\0${ID}` : undefined),
+    load: (id: string) => (id === `\0${ID}` ? RUNTIME : undefined),
+    transform: (code: string, id: string) =>
+      id.endsWith("/src/router.tsx") ? `${code}\nimport "${ID}";\n` : undefined,
+  };
+}
+
+/** The wrapper config: the app's own Vite config plus the editor, for the preview only. */
+export function previewConfig(): string {
+  const plugin = new URL("./preview-editor.js", import.meta.url).pathname;
+  return `// Written by smithable studio for the preview; the app's own config is ../../vite.config.ts.
+import { mergeConfig } from "vite";
+import app from "../../vite.config.ts";
+import { smithableEditor } from ${JSON.stringify(plugin)};
+
+export default mergeConfig(app, { plugins: [smithableEditor()] });
+`;
+}

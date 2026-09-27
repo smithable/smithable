@@ -15,4 +15,14 @@ sqlite.pragma("foreign_keys = ON");
 
 export const db = drizzle(sqlite, { schema, casing: "snake_case" });
 
-migrate(db, { migrationsFolder: "drizzle" });
+// Some changes rebuild a table (e.g. making a column required). SQLite only lets a migration do
+// that with foreign keys off, and ignores switching them off inside the migration's transaction;
+// so they are off around it, and every reference is checked afterwards.
+sqlite.pragma("foreign_keys = OFF");
+try {
+  migrate(db, { migrationsFolder: "drizzle" });
+  const broken = sqlite.pragma("foreign_key_check") as unknown[];
+  if (broken.length > 0) throw new Error(`A migration left ${broken.length} broken references.`);
+} finally {
+  sqlite.pragma("foreign_keys = ON");
+}

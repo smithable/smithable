@@ -134,7 +134,8 @@ export function runTools(dir: string, io: Io, migration?: MigrationPlan): number
   const name = migration ? ["--name", migration.name] : [];
   if (!run(["exec", "drizzle-kit", "generate", ...name])) return 1;
   if (!run(["exec", "tsr", "generate"])) return 1;
-  if (migration?.apply && !run(["exec", "drizzle-kit", "migrate"])) return 1;
+  // Applied by the app's own database module, which handles migrations that rebuild a table.
+  if (migration?.apply && !run(["exec", "tsx", "src/db/index.ts"])) return 1;
   return 0;
 }
 

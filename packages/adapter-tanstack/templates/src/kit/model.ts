@@ -33,6 +33,8 @@ export interface FieldUi {
 }
 
 export interface ModelUi {
+  /** The model's name in the spec, e.g. "Customer"; none for an action's form. */
+  model?: string;
   label: string;
   pluralLabel: string;
   /** The field that names a record, e.g. "name". */
@@ -56,3 +58,22 @@ export type Row = { id: number } & Record<string, unknown>;
 
 /** Choices for a reference field, keyed by the field's name, e.g. { customerId: [...] }. */
 export type Options = Record<string, { value: number | string; label: string }[]>;
+
+/**
+ * Marks an element with the part of the app description it shows, for the preview editor
+ * (select a field, drag a column). Only in development: production builds leave it out.
+ */
+export function editorMarker(
+  ui: ModelUi,
+  field?: FieldUi,
+  part?: "field" | "column",
+  page?: string,
+) {
+  if (!import.meta.env.DEV || !ui.model) return {};
+  const name = field ? (field.relation?.key ?? field.name) : undefined;
+  return {
+    "data-sm-concept": name ? `field:${ui.model}.${name}` : `model:${ui.model}`,
+    ...(part ? { "data-sm-part": part } : {}),
+    ...(page ? { "data-sm-page": page } : {}),
+  };
+}
