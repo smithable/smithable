@@ -535,6 +535,11 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "defaultFormula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
           "name": "placedAt",
           "required": false,
           "type": {
@@ -580,6 +585,10 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         "model": "Order",
       },
       "route": "/orders",
+      "search": [
+        "number",
+        "customer",
+      ],
     },
   ],
   "specVersion": "0.1",

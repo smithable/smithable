@@ -32,7 +32,9 @@ Detailed results of the last run: [m7-M.md](m7-M.md).
 | Small (first version) | 1 / 10 | €0.017 |
 | Small (reference of every page pattern, three attempts) | 0 / 10 | €0.023 |
 | Small (fenced files; repairs see their own draft) | 2 / 10 | €0.023 |
-| Medium (same) | **4 / 10** | €0.10 |
+| Medium (same) | 4 / 10 | €0.10 |
+| Small (search by a related record and `NOW()` in the spec) | 3 / 10 | €0.022 |
+| Medium (same) | **7 / 10** | €0.08 |
 
 Details and every summary: [Small](m12-first-builds-mistral-small-latest.md), [Medium](m12-first-builds-mistral-medium-latest.md).
 
@@ -40,5 +42,5 @@ The remaining errors are mostly one or two per app that repairs do not fix: sear
 
 ## Next
 
-- Draft first builds as operations, and add search by a related record.
+- Draft first builds as operations (search by a related record and `NOW()` are in the spec now: Medium went from 4 to 7 of 10).
 - Measure a local model (Ollama) and a frontier model the same way; choose the default for first builds from the results.
