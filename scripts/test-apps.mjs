@@ -879,6 +879,16 @@ async function browserFlow(base) {
       "a customer with orders cannot be deleted, and it says why",
       "This customer is still used by other records.",
     );
+    await open(page, `${base}/orders`);
+    await page.getByRole("searchbox", { name: "Search by number or customer" }).fill("skerry");
+    await page.waitForURL(/q=skerry/);
+    // The other customers' orders go; Skerry's stay.
+    await page
+      .getByRole("cell", { name: "Nordic Timber Oy" })
+      .first()
+      .waitFor({ state: "detached", timeout: 5000 });
+    await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
+    console.log("  ✓ browser: orders are found by their customer's name");
 
     await open(page, `${base}/customers`);
     await page.getByRole("link", { name: "Merge customers" }).click();
