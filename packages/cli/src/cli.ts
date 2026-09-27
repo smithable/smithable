@@ -66,7 +66,8 @@ Commands:
   context "<req>"  The smallest context an AI model needs for a request, with its size in tokens
                    (--implementation adds the custom code involved; --json)
   studio [dir]     Open Smithable Studio for the project: Builder and Studio modes, with the
-                   app's preview (--port, default 4321)
+                   app's preview (--port, default 4321). Behind a proxy (the hosted service):
+                   --host 0.0.0.0 and --preview-url, the preview's public address
   mcp [dir]        Serve the project to AI agents (Claude Code, Cursor, …) over MCP on stdin/stdout
   detach [dir]     Turn the project into an ordinary one that no longer uses Smithable
 
@@ -180,7 +181,10 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     case "mcp":
       return mcp(values.dir ?? dir);
     case "studio":
-      return studio(values.dir ?? dir, io, Number(values.port ?? 4321));
+      return studio(values.dir ?? dir, io, Number(values.port ?? 4321), {
+        ...(values.host ? { host: values.host } : {}),
+        ...(values["preview-url"] ? { previewUrl: values["preview-url"] } : {}),
+      });
     default:
       io.err(`Unknown command: ${command}\n\n${HELP}`);
       return 2;
@@ -213,6 +217,8 @@ function parse(argv: string[]) {
       json: { type: "boolean" },
       implementation: { type: "boolean" },
       port: { type: "string" },
+      host: { type: "string" },
+      "preview-url": { type: "string" },
     },
   });
 }

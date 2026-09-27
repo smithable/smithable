@@ -232,6 +232,8 @@ Removes the biggest technical risk of the browser-first product before building 
 
 **Progress:** step 1 (2026-09-27): the infrastructure, in `smithable-cloud` with OpenTofu on AWS Stockholm: one host with Docker and Caddy serving HTTPS, an S3 bucket, daily snapshots. Until a domain is registered it runs at an sslip.io name.
 
+Step 2 (2026-09-27): the service in `smithable-cloud`: invite sign-in, a project list, one gVisor-sandboxed workspace per project running `smithable studio` (which gained `--host` and `--preview-url`), and a proxy with per-address sessions. On AWS an invited tester goes from the invite to a new CRM's Studio in about 30 s and its preview in about 40 s, signs in to the preview and applies an operation. Known rough edge: the first preview load of a new project can hit Vite's one-time dependency reload.
+
 **Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
 ## M16 — Public launch
