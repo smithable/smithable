@@ -121,3 +121,38 @@ export function parsePolicy(text: string | undefined): Policy {
     `Unknown AI policy "${text}". Use local-only, eu-only, best-available or allow:<provider>,…`,
   );
 }
+
+/** What one model call used, for the change trace. */
+export interface Usage {
+  provider: string;
+  model: string;
+  tier: Tier;
+  inputTokens: number;
+  outputTokens: number;
+  /** In euros. */
+  cost: number;
+}
+
+/**
+ * Asks a provider for a JSON answer and records what the call used. Throws when the model
+ * is unreachable or its answer is not JSON.
+ */
+export async function completeJson(
+  provider: Provider,
+  request: CompletionRequest,
+  usage: Usage[],
+): Promise<unknown> {
+  const completion = await provider.complete(request);
+  usage.push({
+    provider: provider.name,
+    model: completion.model,
+    tier: provider.tier,
+    inputTokens: completion.inputTokens,
+    outputTokens: completion.outputTokens,
+    cost:
+      (completion.inputTokens * provider.price.input +
+        completion.outputTokens * provider.price.output) /
+      1_000_000,
+  });
+  return JSON.parse(completion.text);
+}
