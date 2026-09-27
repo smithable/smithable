@@ -17,6 +17,7 @@ import { countValues, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
 import type { Io } from "./io.js";
+import { loadPlugins } from "./plugins.js";
 import { recordRule } from "./rules.js";
 
 const SPEC = "smithable.yml";
@@ -86,6 +87,7 @@ export function runOperation(
     ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
     ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
     ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
+    plugins: loadPlugins(dir),
   };
   const result = applyOperation(files, operation.name, args);
   if (!result.ok) {
@@ -93,8 +95,10 @@ export function runOperation(
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
     return 1;
   }
-  const before = validateSpec({ path: SPEC, text: files.spec }).ir as SpecIR;
-  const after = validateSpec({ path: SPEC, text: result.files.spec }).ir as SpecIR;
+  const before = validateSpec({ path: SPEC, text: files.spec }, { plugins: files.plugins })
+    .ir as SpecIR;
+  const after = validateSpec({ path: SPEC, text: result.files.spec }, { plugins: files.plugins })
+    .ir as SpecIR;
 
   const blocker = requiredButEmpty(dir, before, after, result.effects);
   if (blocker) {

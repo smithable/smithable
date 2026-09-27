@@ -1,5 +1,5 @@
 export type { Draft, SpecFiles } from "./draft.js";
-export { checkSpecFiles, closestStarter, draftProject } from "./draft.js";
+export { checkSpecFiles, closestStarter, draftProject, REFERENCE } from "./draft.js";
 export type { Proposal, ProposedOperation } from "./propose.js";
 export { proposeChange } from "./propose.js";
 export type {

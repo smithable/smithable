@@ -12,6 +12,8 @@ export interface SpecIR {
   queries: QueryIR[];
   pages: PageIR[];
   navigation: MenuIR[];
+  /** The values of plugin sections, by key (ARCHITECTURE §5.1). */
+  extensions?: Record<string, unknown>;
 }
 
 /** Semantic free text: meaning for AI and developers, never shown to visitors. */

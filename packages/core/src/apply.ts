@@ -3,6 +3,7 @@ import { validateContent } from "./content.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { YamlEditor } from "./edit.js";
 import { type AnyOperation, type Effect, type OperationArgs, OperationError } from "./operation.js";
+import type { SpecPlugin } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
@@ -19,6 +20,8 @@ export interface ProjectFiles {
   auth?: string;
   /** smithable.ux.yml, when the project has one. */
   ux?: string;
+  /** The project's plugins, for the sections of smithable.yml they handle. */
+  plugins?: SpecPlugin[];
 }
 
 export type OperationResult =
@@ -62,7 +65,10 @@ export function applyOperation(
   const auth = (text: string) => validateAuth({ path: "smithable.auth.yml", text });
   const roles =
     files.auth === undefined ? undefined : auth(files.auth).auth?.roles.map((r) => r.name);
-  const options = roles ? { roles } : {};
+  const options = {
+    ...(roles ? { roles } : {}),
+    ...(files.plugins ? { plugins: files.plugins } : {}),
+  };
   const before = validateSpec({ path: "smithable.yml", text: files.spec }, options);
   if (!before.ir)
     return fail(
