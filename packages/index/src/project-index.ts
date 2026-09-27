@@ -151,6 +151,11 @@ export function buildIndex(input: IndexInput): ProjectIndex {
       const match = ir.actions.find((a) => kebab(a.name) === action);
       if (match) add(`action:${match.name}`, "implements");
     }
+    const query = /^src\/custom\/queries\/([\w-]+)\.ts$/.exec(file.path)?.[1];
+    if (query) {
+      const match = ir.queries.find((q) => kebab(q.name) === query);
+      if (match) add(`query:${match.name}`, "implements");
+    }
     for (const id of file.implements) add(conceptOfRule(concepts, id), "implements");
     for (const id of file.testsRules) add(conceptOfRule(concepts, id), "tests");
     for (const { path, names } of file.imports) {
@@ -306,6 +311,8 @@ function semanticText(ir: SpecIR, concept: string): SemanticText {
       return ir.models.find((m) => m.name === model)?.fields.find((f) => f.name === field) ?? {};
     case "action":
       return ir.actions.find((a) => a.name === name) ?? {};
+    case "query":
+      return ir.queries.find((q) => q.name === name) ?? {};
     case "page":
       return ir.pages.find((p) => p.id === name) ?? {};
     default:
@@ -356,6 +363,12 @@ function summary(ir: SpecIR, concept: string): string {
         fields.map((f) => `${f.name}: ${fieldSummary(f)}`).join(", ");
       return `Custom action ${name}(${list(action.input)})${action.output ? ` → { ${list(action.output)} }` : ""}${action.allow ? `; allowed for ${action.allow.join(", ")}` : ""}`;
     }
+    case "query": {
+      const query = ir.queries.find((q) => q.name === name);
+      return query
+        ? `Custom query ${name}: returns ${query.returns} records, chosen and ordered by code`
+        : "";
+    }
     case "page": {
       const page = ir.pages.find((p) => p.id === name);
       if (!page) return "";
@@ -396,6 +409,15 @@ function related(ir: SpecIR, concept: string): string[] {
       );
       const pages = ir.pages.filter((p) => p.actions?.includes(name)).map((p) => `page:${p.id}`);
       return [...new Set([...models, ...pages])];
+    }
+    case "query": {
+      const query = ir.queries.find((q) => q.name === name);
+      const pages = ir.pages
+        .filter(
+          (p) => p.pattern.kind === "dashboard" && p.pattern.items.some((i) => i.query === name),
+        )
+        .map((p) => `page:${p.id}`);
+      return [...(query ? [`model:${query.returns}`] : []), ...pages];
     }
     case "page": {
       const page = ir.pages.find((p) => p.id === name);

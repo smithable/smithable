@@ -32,6 +32,7 @@ export function conceptsWithRules(ir: SpecIR): ConceptRules[] {
       ),
     ]),
     ...ir.actions.map((a) => entry(`action:${a.name}`, a.name, ["actions", a.name], a)),
+    ...ir.queries.map((q) => entry(`query:${q.name}`, q.name, ["queries", q.name], q)),
     ...ir.pages.map((p) => entry(`page:${p.id}`, p.id, ["pages", p.id], p)),
   ];
 }

@@ -323,3 +323,32 @@ test("editSpec replaces the spec; removing a stored field is destructive; broken
     message: "editSpec would make smithable.yml invalid.",
   });
 });
+
+test("addQuery and addTile put a custom query on a new dashboard", () => {
+  const query = ok("addQuery", ["churnRisk", "Customer"]);
+  expect(query.files.spec).toContain(
+    "queries:\n  churnRisk:\n    custom: true\n    returns: Customer[]\n",
+  );
+  const tile = applyOperation({ ...files, spec: query.files.spec }, "addTile", {
+    page: "overview",
+    tile: "atRisk",
+    measure: "query",
+    of: "churnRisk",
+    limit: 5,
+  });
+  if (!tile.ok) throw new Error(tile.message);
+  expect(tile.files.spec).toContain(
+    "  overview:\n    dashboard:\n      atRisk:\n        query: churnRisk\n        limit: 5\n",
+  );
+  expect(tile.description).toBe("Add tile atRisk (query of churnRisk) to the overview dashboard");
+  // A second tile joins the same dashboard; a crud page cannot take one.
+  const second = applyOperation({ ...files, spec: tile.files.spec }, "addTile", {
+    page: "overview",
+    tile: "customers",
+    measure: "count",
+    of: "Customer",
+  });
+  expect(second).toMatchObject({ ok: true });
+  expect(apply("addTile", ["customers", "x", "count", "Customer"])).toMatchObject({ ok: false });
+  expect(apply("addQuery", ["churnRisk", "Client"])).toMatchObject({ ok: false });
+});

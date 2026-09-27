@@ -162,9 +162,11 @@ function checkArgs(schema: JsonSchema, args: OperationArgs): string | undefined 
         ? Array.isArray(value) && value.every((v) => typeof v === "string")
         : property.type === "object"
           ? typeof value === "object" && value !== null && !Array.isArray(value)
-          : typeof value === property.type;
+          : property.type === "integer"
+            ? Number.isInteger(value)
+            : typeof value === property.type;
     if (!ok)
-      return `"${key}" must be ${property.type === "array" ? "a list" : `a ${property.type}`}.`;
+      return `"${key}" must be ${property.type === "array" ? "a list" : property.type === "integer" ? "a whole number" : `a ${property.type}`}.`;
   }
   return undefined;
 }

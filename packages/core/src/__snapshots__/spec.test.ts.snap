@@ -217,6 +217,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/instructors",
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -591,6 +592,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       ],
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1055,6 +1057,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       "route": "/welcome",
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1155,6 +1158,7 @@ exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
       ],
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1274,6 +1278,7 @@ exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
       "route": "/customers",
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1470,6 +1475,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
     },
   ],
   "pages": [],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1751,6 +1757,7 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
     },
   ],
   "pages": [],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1832,6 +1839,7 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
       "route": "/admin/lines",
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1850,6 +1858,7 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
     },
   ],
   "pages": [],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;
@@ -1989,6 +1998,13 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
             "model": "Invoice",
             "name": "latest",
           },
+          {
+            "kind": "list",
+            "limit": 3,
+            "model": "Invoice",
+            "name": "chase",
+            "query": "overdueFirst",
+          },
         ],
         "kind": "dashboard",
       },
@@ -2033,6 +2049,14 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         ],
       },
       "route": "/welcome",
+    },
+  ],
+  "queries": [
+    {
+      "custom": true,
+      "intent": "Unpaid invoices, the longest overdue first.",
+      "name": "overdueFirst",
+      "returns": "Invoice",
     },
   ],
   "specVersion": "0.1",
@@ -2166,6 +2190,7 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
       "route": "/orders",
     },
   ],
+  "queries": [],
   "specVersion": "0.1",
 }
 `;

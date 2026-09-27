@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { SPEC_VERSION } from "@smithable/core";
 import { ask } from "./ask.js";
 import { build } from "./build.js";
+import { writeCode } from "./code.js";
 import { context } from "./context.js";
 import { customize } from "./customize.js";
 import { detach } from "./detach.js";
@@ -31,6 +32,9 @@ Commands:
   build [dir]      Build the app's container image with Docker
   ask "<request>"  A model proposes the change in plain language; it is applied after you
                    confirm (--yes applies it directly). Setting up models: docs/ai.md
+  code <concept> "<what>"  Have a model write the custom code of a query, action or custom page,
+                   e.g. code query:churnRisk "rank by days since the last order"; only src/custom/
+                   may change, and the type check and tests must pass
   op <name> …      Change the app with an operation, e.g. op addField Customer phone phone
                    (run "smithable op" for the list; --yes confirms changes that lose data)
   undo             Undo the last operation, including the dev database
@@ -73,6 +77,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "op")
     return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
   if (command === "undo") return undo(values.dir ?? ".", io);
+  if (command === "code")
+    return writeCode(values.dir ?? ".", io, args[0] ?? "", args.slice(1).join(" "));
   if (command === "ask")
     return ask(values.dir ?? ".", io, args.join(" ") || undefined, { yes: values.yes === true });
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);

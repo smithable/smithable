@@ -356,6 +356,66 @@
         }
       }
     },
+    "queries": {
+      "type": "object",
+      "description": "Records chosen or ordered by code in src/custom/queries/.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "custom",
+          "returns"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "custom": {
+            "const": true,
+            "description": "Implemented in src/custom/queries/."
+          },
+          "returns": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z0-9]*\\[\\]$",
+            "description": "The records it returns, e.g. \"Customer[]\"."
+          },
+          "description": {
+            "type": "string",
+            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+          },
+          "intent": {
+            "type": "string",
+            "description": "The outcome or experience this should achieve."
+          },
+          "rules": {
+            "type": "array",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "rule"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
     "pages": {
       "type": "object",
       "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings or onboarding.",
@@ -476,6 +536,10 @@
                 "list": {
                   "type": "string",
                   "description": "Show a model's latest records."
+                },
+                "query": {
+                  "type": "string",
+                  "description": "Show a custom query's records."
                 },
                 "where": {
                   "type": "object",

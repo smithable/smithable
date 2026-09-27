@@ -9,6 +9,7 @@ export interface SpecIR {
   app: AppIR;
   models: ModelIR[];
   actions: ActionIR[];
+  queries: QueryIR[];
   pages: PageIR[];
   navigation: MenuIR[];
 }
@@ -174,11 +175,24 @@ export interface DashboardItem {
   measure?: "count" | "sum" | "average";
   /** The number field summed or averaged. */
   field?: string;
+  /** A custom query whose records a list shows, instead of the latest ones. */
+  query?: string;
   /** Only records whose fields have these values (choice values or yes/no). */
   where?: Record<string, string | boolean>;
   /** A date field: the chart has one bar per month. */
   by?: string;
   limit?: number;
+}
+
+/**
+ * A custom query: records of a model chosen or ordered by code in src/custom/queries/, e.g.
+ * the customers most likely to churn. The code starts from the records the viewer may read.
+ */
+export interface QueryIR extends SemanticText {
+  name: string;
+  custom: true;
+  /** The model whose records the query returns. */
+  returns: string;
 }
 
 /** An action beyond create, edit and delete; in spec version 0.1 always custom code. */

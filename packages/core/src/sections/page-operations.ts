@@ -1,3 +1,4 @@
+import type { YamlEditor } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 import { NAME_PATTERN } from "./names.js";
 
@@ -29,11 +30,81 @@ const addPage: Operation<{ page: string; model: string; route?: string }> = {
     if (!ir.models.some((m) => m.name === model))
       throw new OperationError(`There is no model named "${model}".`);
     spec.add(["pages"], page, route ? { route, crud: model } : { crud: model });
-    // Without a "navigation" key every page is in the main menu already.
-    const navigation = spec.get(["navigation"]);
-    if (Array.isArray(navigation)) spec.set(["navigation"], [...navigation, page]);
-    else if (spec.has(["navigation", "main"])) {
-      spec.set(["navigation", "main"], [...(spec.get(["navigation", "main"]) as string[]), page]);
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
+/** Puts a new page at the end of the main menu. */
+function addToMainMenu(spec: YamlEditor, page: string): void {
+  // Without a "navigation" key every page is in the main menu already.
+  const navigation = spec.get(["navigation"]);
+  if (Array.isArray(navigation)) spec.set(["navigation"], [...navigation, page]);
+  else if (spec.has(["navigation", "main"])) {
+    spec.set(["navigation", "main"], [...(spec.get(["navigation", "main"]) as string[]), page]);
+  }
+}
+
+const addTile: Operation<{
+  page: string;
+  tile: string;
+  measure: "count" | "sum" | "average" | "list" | "query";
+  of: string;
+  where?: Record<string, string | boolean>;
+  by?: string;
+  limit?: number;
+}> = {
+  name: "addTile",
+  summary:
+    "Add a tile to a dashboard page (created, and added to the main menu, when it does not exist): a count, sum or average of records, a list of the latest ones, or a custom query's records.",
+  schema: {
+    type: "object",
+    required: ["page", "tile", "measure", "of"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "The dashboard page, e.g. overview." },
+      tile: { type: "string", description: "The tile's name, e.g. outstanding." },
+      measure: { type: "string", enum: ["count", "sum", "average", "list", "query"] },
+      of: {
+        type: "string",
+        description:
+          'A model for count and list ("Invoice"), a number field for sum and average ("Invoice.total"), a query name for query.',
+      },
+      where: {
+        type: "object",
+        description: 'Only records with these values, e.g. { "status": "sent" }.',
+      },
+      by: { type: "string", description: "A date field: one bar per month." },
+      limit: { type: "integer", minimum: 1, description: "For a list or query: how many records." },
+    },
+  },
+  positional: ["page", "tile", "measure", "of"],
+  describe: ({ page, tile, measure, of }) =>
+    `Add tile ${tile} (${measure} of ${of}) to the ${page} dashboard`,
+  destructive: () => false,
+  apply({ spec }, { page, tile, measure, of, where, by, limit }, ir) {
+    const value = {
+      [measure]: of,
+      ...(where && Object.keys(where).length ? { where } : {}),
+      ...(by ? { by } : {}),
+      ...(limit ? { limit } : {}),
+    };
+    const existing = ir.pages.find((p) => p.id === page);
+    if (!existing) {
+      if (!NAME_PATTERN.test(page))
+        throw new OperationError(
+          `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+        );
+      spec.add(["pages"], page, { dashboard: { [tile]: value } });
+      addToMainMenu(spec, page);
+    } else if (existing.pattern.kind !== "dashboard") {
+      throw new OperationError(
+        `Page "${page}" is a ${existing.pattern.kind} page, not a dashboard.`,
+      );
+    } else if (existing.pattern.items.some((i) => i.name === tile)) {
+      throw new OperationError(`The ${page} dashboard already has a tile named "${tile}".`);
+    } else {
+      spec.add(["pages", page, "dashboard"], tile, value);
     }
     return [];
   },
@@ -117,5 +188,5 @@ const setSearch: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
-export const pageOperations: AnyOperation[] = [addPage, setSearch];
+export const pageOperations: AnyOperation[] = [addPage, setSearch, addTile];
 export const navigationOperations: AnyOperation[] = [setNavigation];

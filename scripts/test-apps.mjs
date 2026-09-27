@@ -505,6 +505,60 @@ async function askFlow(dir) {
           throw new Error(none.out);
       },
     );
+    const coder = {
+      ...local,
+      SMITHABLE_CODER_COMMAND: `node ${join(repo, "scripts/fake-coder.mjs")}`,
+    };
+    await asyncStep(
+      "ask: 'prioritise customers likely to churn on the dashboard' adds a query and a tile, and a coder writes the query in src/custom only",
+      async () => {
+        const result = await smithableAsync(
+          dir,
+          coder,
+          "ask",
+          "Prioritise customers most likely to churn on the dashboard",
+          "--yes",
+        );
+        if (result.code !== 0) throw new Error(result.out);
+        const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+        if (!spec.includes("churnRisk:") || !spec.includes("query: churnRisk"))
+          throw new Error(`the spec has no query or tile:\n${spec}`);
+        const log = run("git", ["log", "-3", "--format=%s"], dir);
+        if (!log.startsWith("smithable: Write the code of query:churnRisk")) throw new Error(log);
+        const files = run("git", ["show", "--name-only", "--format=", "HEAD"], dir)
+          .trim()
+          .split("\n");
+        if (files.some((f) => !f.startsWith("src/custom/")))
+          throw new Error(`the code commit touches more than src/custom: ${files.join(", ")}`);
+        if (
+          !readFileSync(join(dir, "src/custom/queries/churn-risk.ts"), "utf8").includes(
+            "orderData.list",
+          )
+        )
+          throw new Error("the query's code was not written");
+      },
+    );
+    await asyncStep("code: a coder that edits a generated file is undone entirely", async () => {
+      const before = readFileSync(join(dir, "src/custom/queries/churn-risk.ts"), "utf8");
+      const result = await smithableAsync(
+        dir,
+        { ...coder, FAKE_CODER: "trespass" },
+        "code",
+        "query:churnRisk",
+        "rank by the last order",
+      );
+      if (result.code === 0 || !result.out.includes("src/generated/app.ts"))
+        throw new Error(result.out);
+      if (run("git", ["status", "--porcelain"], dir).trim())
+        throw new Error("changes were left behind");
+      if (readFileSync(join(dir, "src/custom/queries/churn-risk.ts"), "utf8") !== before)
+        throw new Error("the custom file was left changed");
+      // Back to where the flow started: code, tile, query.
+      for (let i = 0; i < 3; i++) {
+        const undone = smithable(dir, "undo");
+        if (undone.code !== 0) throw new Error(undone.out);
+      }
+    });
     await asyncStep("ask: the policy decides which models may see the project", async () => {
       const asked = model.requests.length;
       const refused = await smithableAsync(
