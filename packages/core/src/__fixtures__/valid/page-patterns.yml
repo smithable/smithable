@@ -25,3 +25,11 @@ pages:
       latest: { list: Invoice, limit: 5 }
   invoices:
     crud: Invoice
+  settings:
+    settings: Invoice
+  welcome:
+    onboarding:
+      model: Invoice
+      steps:
+        first: [number, status]
+        second: [total, issuedOn]

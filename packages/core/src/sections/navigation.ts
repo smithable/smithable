@@ -13,7 +13,7 @@ export const navigationSection: SpecSection<"navigation"> = {
   operations: navigationOperations,
   schema: {
     description:
-      "Menus: a list of pages (the main menu), or named menus. Defaults to all pages but landing pages, in order.",
+      "Menus: a list of pages (the main menu), or named menus. Defaults to all pages but landing and onboarding pages, in order.",
     oneOf: [
       pageList,
       {
@@ -24,12 +24,14 @@ export const navigationSection: SpecSection<"navigation"> = {
     ],
   },
   parse(ctx, node, parsed) {
-    // By default every page is in the main menu, except landing pages: they are ways in.
+    // By default every page is in the main menu, except landing and onboarding pages: they are ways in.
     if (node === undefined)
       return [
         {
           name: "main",
-          pages: (parsed.pages ?? []).filter((p) => p.pattern.kind !== "landing").map((p) => p.id),
+          pages: (parsed.pages ?? [])
+            .filter((p) => p.pattern.kind !== "landing" && p.pattern.kind !== "onboarding")
+            .map((p) => p.id),
         },
       ];
     if (isSeq(node)) return [readMenu(ctx, "main", node)];

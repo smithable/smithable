@@ -14,6 +14,7 @@ import {
   type LandingSection,
   type ModelIR,
   modelAccess,
+  type OnboardingStep,
   type PageIR,
   pageAccess,
   pageIcon,
@@ -113,7 +114,8 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   add("src/routes/__root.tsx", rootRoute(ir, t, auth, ux));
   if (hasSignIn(auth)) {
     add("src/lib/auth.ts", authModule(auth));
-    add("src/routes/sign-in.tsx", signInRoute(auth));
+    const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");
+    add("src/routes/sign-in.tsx", signInRoute(auth, onboarding?.route));
     if (
       ir.models.some((m) => userFields(m).length) ||
       ir.actions.some((a) => userFields(a.input).length)
@@ -152,6 +154,8 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
     if (page.pattern.kind === "landing")
       add(`${dir}/index.tsx`, landingRoute(page, page.pattern.sections, ir, t, auth));
+    if (page.pattern.kind === "settings" || page.pattern.kind === "onboarding")
+      add(`${dir}/index.tsx`, recordPageRoute(page, page.pattern, ir, t, auth));
     if (page.pattern.kind === "dashboard")
       add(`${dir}/index.tsx`, dashboardRoute(page, page.pattern.items, ir, t, ux));
     const model = ir.models.find((m) => m.name === pageModel(page));
@@ -167,7 +171,8 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
 }
 
 /** Kit files only apps with a page of that kind need. */
-const PATTERN_KIT: Record<string, "landing" | "dashboard"> = {
+const PATTERN_KIT: Record<string, PageIR["pattern"]["kind"]> = {
+  "src/kit/Onboarding.tsx": "onboarding",
   "src/kit/Landing.tsx": "landing",
   "src/kit/Dashboard.tsx": "dashboard",
   "src/kit/aggregate.ts": "dashboard",
@@ -921,7 +926,10 @@ function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
     return `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`;
   });
   const signIn = hasSignIn(auth);
-  const landings = ir.pages.filter((p) => p.pattern.kind === "landing").map((p) => p.route);
+  // Landing and onboarding pages have their own frame instead of the app's navigation.
+  const landings = ir.pages
+    .filter((p) => p.pattern.kind === "landing" || p.pattern.kind === "onboarding")
+    .map((p) => p.route);
   return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""}${landings.length ? ", useRouterState" : ""} } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
@@ -1351,6 +1359,182 @@ ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(au
     <LandingLayout appName=${JSON.stringify(ir.app.name)} link={${header}}>
       ${parts.join("\n      ")}
     </LandingLayout>
+  );
+}
+`;
+}
+
+/** The first page of the app itself: not a landing or onboarding page. */
+function appStart(ir: SpecIR): PageIR | undefined {
+  const inApp = (p: PageIR | undefined) =>
+    p && p.pattern.kind !== "landing" && p.pattern.kind !== "onboarding";
+  return (
+    ir.navigation
+      .flatMap((m) => m.pages)
+      .map((id) => ir.pages.find((p) => p.id === id))
+      .find(inApp) ?? ir.pages.find(inApp)
+  );
+}
+
+/**
+ * A settings page edits the viewer's one record of a model (their own when the model's
+ * records are private, the app's when shared); an onboarding fills it in steps and hands
+ * over to the app once it exists.
+ */
+function recordPageRoute(
+  page: PageIR,
+  pattern: { kind: "settings" | "onboarding"; model: string; steps?: OnboardingStep[] },
+  ir: SpecIR,
+  t: Texts,
+  auth: AuthIR,
+): string {
+  const model = modelNamed(ir, pattern.model);
+  const n = names(model, t);
+  const component = `${pascal(page.id)}Page`;
+  const fn = `get${pascal(page.id)}`;
+  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const start = appStart(ir)?.route ?? "/";
+  const imports = importList()
+    .add("@tanstack/react-router", "createFileRoute")
+    .add("@tanstack/react-start", "createServerFn")
+    .add("#/generated/app", "app")
+    .add("#/generated/pages", "pageAccess")
+    .add(n.module, n.create, n.schema, n.ui)
+    .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
+    .add("#/kit/access", "allows", "guardPage")
+    .add("#/kit/ModelForm", "ModelForm")
+    .add("#/lib/viewer.server", "currentViewer");
+  const writeCheck = `allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${ownerKey(model)}` : ""})`;
+  const server = `
+/** The viewer's ${n.label.toLowerCase()}: the first one they may read. */
+const ${fn} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  const row = (await ${n.data}.list(viewer)).at(-1) ?? null;
+  return {
+    row,
+    canSave: row ? ${writeCheck} : allows(${n.access}.create, viewer),${
+      options
+        ? `
+    options: ${options.expr},`
+        : ""
+    }
+  };
+});
+`;
+  const optionImports = options ? `${options.imports.join("\n")}\n` : "";
+  if (pattern.kind === "settings") {
+    imports
+      .add("@tanstack/react-router", "useRouter")
+      .add("react", "useState")
+      .add(n.module, n.update);
+    imports.add("#/kit/AppShell", "PageHeader");
+    return `${HEADER}${imports.render()}${optionImports}${server}
+export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${fn}(),
+  component: ${component},
+});
+
+function ${component}() {
+  const { row, canSave${options ? ", options" : ""} } = Route.useLoaderData();
+  const router = useRouter();
+  const [saved, setSaved] = useState(false);
+  return (
+    <>
+      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <ModelForm
+        key={row?.id ?? "new"}
+        ui={${n.ui}}
+        app={app}
+        schema={${n.schema}}
+        initial={row ?? undefined}
+        readOnly={!canSave}${options ? "\n        options={options}" : ""}
+        submitLabel="Save changes"
+        onSubmit={async (values) => {
+          setSaved(false);
+          if (row) await ${n.update}({ data: { id: row.id, values } });
+          else await ${n.create}({ data: values });
+          await router.invalidate();
+          setSaved(true);
+        }}
+      />
+      <p role="status" className="mt-4 text-sm font-semibold">
+        {saved ? "Saved." : ""}
+      </p>
+    </>
+  );
+}
+`;
+  }
+  const steps = (pattern.steps ?? []).map((step) => {
+    const own = t.section(page.id, step.name);
+    const keys = step.fields.map((name) =>
+      dataKey(model.fields.find((f) => f.name === name) as FieldIR),
+    );
+    return `  {
+    title: ${JSON.stringify(own.title ?? humanize(step.name))},${own.text ? `\n    text: ${JSON.stringify(own.text)},` : ""}
+    fields: ${literal(keys)},
+    schema: ${n.schema}.pick({ ${keys.map((k) => `${k}: true`).join(", ")} }),
+  },`;
+  });
+  imports
+    .add("@tanstack/react-router", "Link", "redirect", "useNavigate")
+    .add("react", "useState")
+    .add("#/kit/Onboarding", "OnboardingLayout")
+    .add(n.module, `type ${n.values}`);
+  const title =
+    t.pageTitle(page.id) === humanize(page.id) ? `Welcome to ${ir.app.name}` : t.pageTitle(page.id);
+  return `${HEADER}${imports.render()}${optionImports}${server}
+const steps = [
+${steps.join("\n")}
+];
+
+export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async () => {
+    const found = await ${fn}();
+    // Set up already: on to the app.
+    if (found.row) throw redirect({ to: ${JSON.stringify(start)} });
+    return found;
+  },
+  component: ${component},
+});
+
+function ${component}() {
+${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const [values, setValues] = useState<Partial<${n.values}>>({});
+  const current = steps[step] as (typeof steps)[number];
+  return (
+    <OnboardingLayout
+      title=${JSON.stringify(title)}${t.pageSubtitle(page.id).replace(/\n {8}/, "\n      ")}
+      step={step}
+      count={steps.length}
+      stepTitle={current.title}${steps.some((s) => s.includes("text:")) ? '\n      stepText={"text" in current ? current.text : undefined}' : ""}
+      footer={
+        <Link to=${JSON.stringify(start)} className="font-semibold underline-offset-4 hover:underline">
+          Do this later
+        </Link>
+      }
+    >
+      <ModelForm
+        key={step}
+        ui={{ ...${n.ui}, fields: ${n.ui}.fields.filter((f) => current.fields.includes(f.name)) }}
+        app={app}
+        schema={current.schema}
+        initial={current.fields.some((f) => f in values) ? values : undefined}${options ? "\n        options={options}" : ""}
+        submitLabel={step === steps.length - 1 ? "Finish" : "Continue"}
+        onSubmit={async (stepValues) => {
+          const all = { ...values, ...stepValues };
+          if (step < steps.length - 1) {
+            setValues(all);
+            setStep(step + 1);
+            return;
+          }
+          // Every required field is asked for in some step (smithable validate checks it).
+          await ${n.create}({ data: all as ${n.values} });
+          await navigate({ to: ${JSON.stringify(start)} });
+        }}${'\n        onCancel={step > 0 ? () => setStep(step - 1) : undefined}\n        cancelLabel="Back"'}
+      />
+    </OnboardingLayout>
   );
 }
 `;

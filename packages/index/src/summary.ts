@@ -128,6 +128,12 @@ export function summarize(
         p.pattern.kind === "dashboard"
           ? `a dashboard: ${list(p.pattern.items.map((i) => humanize(i.name).toLowerCase()))}`
           : "",
+        p.pattern.kind === "settings"
+          ? `settings: edits your ${humanize(p.pattern.model).toLowerCase()}`
+          : "",
+        p.pattern.kind === "onboarding"
+          ? `a first-time setup of your ${humanize(p.pattern.model).toLowerCase()} in ${p.pattern.steps.length} steps`
+          : "",
         searched.length ? `search by ${list(searched, "or")}` : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         p.access ? `only for ${who(p.access)}` : "",
