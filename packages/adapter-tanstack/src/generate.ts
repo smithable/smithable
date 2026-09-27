@@ -4,17 +4,20 @@ import {
   actionAccess,
   type ContentIR,
   camel,
+  type DashboardItem,
   emptyContent,
   emptyUx,
   type FieldIR,
   humanize,
   type Icon,
   kebab,
+  type LandingSection,
   type ModelIR,
   modelAccess,
   type PageIR,
   pageAccess,
   pageIcon,
+  pageModel,
   pascal,
   plural,
   type SpecIR,
@@ -87,6 +90,9 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   const t = texts(options.content ?? emptyContent());
   const files: GeneratedFile[] = Object.entries(TEMPLATES)
     .filter(([path]) => hasSignIn(auth) || !SIGN_IN_KIT.includes(path))
+    .filter(
+      ([path]) => !PATTERN_KIT[path] || ir.pages.some((p) => p.pattern.kind === PATTERN_KIT[path]),
+    )
     .map(([path, content]) => ({
       path,
       content,
@@ -143,9 +149,13 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
           actionRoute(page, action, ir, t),
         );
     }
-    const model = ir.models.find((m) => m.name === page.pattern.model);
-    if (!model) continue;
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
+    if (page.pattern.kind === "landing")
+      add(`${dir}/index.tsx`, landingRoute(page, page.pattern.sections, ir, t, auth));
+    if (page.pattern.kind === "dashboard")
+      add(`${dir}/index.tsx`, dashboardRoute(page, page.pattern.items, ir, t));
+    const model = ir.models.find((m) => m.name === pageModel(page));
+    if (!model) continue;
     add(
       `${dir}/index.tsx`,
       listRoute(page, model, t, ir, options.customPages?.includes(page.id) ?? false, ux),
@@ -155,6 +165,13 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
+
+/** Kit files only apps with a page of that kind need. */
+const PATTERN_KIT: Record<string, "landing" | "dashboard"> = {
+  "src/kit/Landing.tsx": "landing",
+  "src/kit/Dashboard.tsx": "dashboard",
+  "src/kit/aggregate.ts": "dashboard",
+};
 
 /** Visible text: from smithable.content.yml when given there, otherwise derived from names. */
 export function texts(content: ContentIR) {
@@ -166,6 +183,8 @@ export function texts(content: ContentIR) {
     },
     field: (model: ModelIR, field: FieldIR) => content.models[model.name]?.fields[field.name] ?? {},
     pageTitle: (id: string) => content.pages[id]?.title ?? humanize(id),
+    /** A landing section's or dashboard tile's texts. */
+    section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
     menuLabel: (name: string) =>
       content.menus[name]?.label ?? (name === "main" ? undefined : humanize(name)),
   };
@@ -353,6 +372,14 @@ function userFields(fields: FieldIR[] | ModelIR): FieldIR[] {
   return (Array.isArray(fields) ? fields : fields.fields).filter(
     (f) => f.type.kind === "relation" && f.type.model === USER_MODEL,
   );
+}
+
+/** The model of a crud page; only crud pages have a list to customize. */
+function crudModel(ir: SpecIR, page: PageIR): ModelIR {
+  const model = pageModel(page);
+  if (!model)
+    throw new Error(`Page ${page.id} is a ${page.pattern.kind} page, not a list of records.`);
+  return modelNamed(ir, model);
 }
 
 function modelNamed(ir: SpecIR, name: string): ModelIR {
@@ -874,8 +901,10 @@ const LUCIDE: Record<Icon, string> = {
 
 function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
   const pageRoute = new Map(ir.pages.map((p) => [p.id, p.route]));
-  const iconOf = (id: string) =>
-    LUCIDE[pageIcon(ux, id, ir.pages.find((p) => p.id === id)?.pattern.model)];
+  const iconOf = (id: string) => {
+    const page = ir.pages.find((p) => p.id === id);
+    return LUCIDE[page ? pageIcon(ux, page) : "list"];
+  };
   const icons = [...new Set(ir.navigation.flatMap((m) => m.pages.map(iconOf)))].sort();
   const menus = ir.navigation.map((menu) => {
     const items = menu.pages.map(
@@ -887,7 +916,8 @@ function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
     return `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`;
   });
   const signIn = hasSignIn(auth);
-  return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""} } from "@tanstack/react-router";
+  const landings = ir.pages.filter((p) => p.pattern.kind === "landing").map((p) => p.route);
+  return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""}${landings.length ? ", useRouterState" : ""} } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
@@ -898,6 +928,7 @@ ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCs
 const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
+${landings.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}
 
 const getViewer = createServerFn().handler(() => currentViewer());
 
@@ -925,7 +956,13 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();
+  const { viewer } = Route.useRouteContext();${
+    landings.length
+      ? `
+  // Landing pages have their own frame instead of the app's navigation.
+  const pathname = useRouterState({ select: (state) => state.location.pathname });`
+      : ""
+  }
 ${
   signIn
     ? `  const router = useRouter();
@@ -941,9 +978,19 @@ ${
         <HeadContent />
       </head>
       <body>
-        <AppShell appName={app.name} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
+        ${
+          landings.length
+            ? `{landingRoutes.includes(pathname) ? (
+          children
+        ) : (
+          <AppShell appName={app.name} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
+            {children}
+          </AppShell>
+        )}`
+            : `<AppShell appName={app.name} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
           {children}
-        </AppShell>
+        </AppShell>`
+        }
         <Scripts />
       </body>
     </html>
@@ -1147,6 +1194,292 @@ ${head}
 ${p.body("Route")}`;
 }
 
+/** A landing page: its sections in order, with texts from smithable.content.yml or derived ones. */
+function landingRoute(
+  page: PageIR,
+  sections: LandingSection[],
+  ir: SpecIR,
+  t: Texts,
+  auth: AuthIR,
+): string {
+  const text = (name: string) => t.section(page.id, name);
+  const component = `${pascal(page.id)}Page`;
+  const imports = importList()
+    .add("@tanstack/react-router", "createFileRoute")
+    .add("#/generated/pages", "pageAccess")
+    .add("#/kit/access", "guardPage")
+    .add("#/kit/Landing", "LandingLayout");
+  const routeOf = (id: string | undefined) => ir.pages.find((p) => p.id === id)?.route;
+  // Into the app: the first page in the navigation that is not a landing page.
+  const appPage = ir.navigation
+    .flatMap((m) => m.pages)
+    .map((id) => ir.pages.find((p) => p.id === id))
+    .find((p) => p && p.pattern.kind !== "landing");
+  const start = sections.map((s) => routeOf(s.button)).find(Boolean) ?? appPage?.route;
+  const link = (to: string | undefined, label: string) =>
+    to ? `{{ to: ${JSON.stringify(to)}, label: ${JSON.stringify(label)} }}` : "{undefined}";
+  const records = sections.filter((s) => s.model);
+  const loaders = [...new Set(records.map((s) => s.model as string))].map((name) => {
+    const n = names(modelNamed(ir, name), t);
+    imports.add(n.module, n.list);
+    return `${camel(plural(name))}: (await ${n.list}()).rows`;
+  });
+  const items = (name: string) => literal(text(name).items ?? []);
+  const parts = sections.flatMap((section) => {
+    const own = text(section.name);
+    switch (section.kind) {
+      case "hero":
+        imports.add("#/kit/Landing", "Hero");
+        return [
+          `<Hero
+          title=${JSON.stringify(own.title ?? ir.app.name)}${
+            (own.subtitle ?? ir.app.description)
+              ? `
+          subtitle=${JSON.stringify(own.subtitle ?? ir.app.description)}`
+              : ""
+          }
+          link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}
+        />`,
+        ];
+      case "records": {
+        const model = modelNamed(ir, section.model as string);
+        const n = names(model, t);
+        imports.add("#/kit/Landing", "RecordCards");
+        const title = titleField(model);
+        const summary = model.fields.find(
+          (f) => f.type.kind === "scalar" && f.type.name === "text",
+        );
+        const choice = model.fields.find((f) => f.type.kind === "choice");
+        const labels =
+          choice?.type.kind === "choice"
+            ? Object.fromEntries(
+                choice.type.values.map((v) => [
+                  v,
+                  t.field(model, choice).values?.[v] ?? humanize(v),
+                ]),
+              )
+            : undefined;
+        return [
+          `<RecordCards
+          id=${JSON.stringify(section.name)}
+          title=${JSON.stringify(own.title ?? n.pluralLabel)}${
+            own.text
+              ? `
+          text=${JSON.stringify(own.text)}`
+              : ""
+          }
+          cards={data.${camel(plural(model.name))}.slice(0, ${section.limit ?? 6}).map((row) => ({
+            key: row.id,
+            title: String(row.${title}),${
+              summary
+                ? `
+            text: row.${summary.name} ?? undefined,`
+                : ""
+            }${
+              labels && choice
+                ? `
+            badge: (${literal(labels)} as Record<string, string>)[row.${choice.name}],`
+                : ""
+            }
+          }))}
+        />`,
+        ];
+      }
+      case "callToAction":
+        imports.add("#/kit/Landing", "CallToAction");
+        return [
+          `<CallToAction
+          title=${JSON.stringify(own.title ?? "Ready to get started?")}${
+            own.text
+              ? `
+          text=${JSON.stringify(own.text)}`
+              : ""
+          }
+          link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}
+        />`,
+        ];
+      default: {
+        // Sections of items show nothing until smithable.content.yml gives them items.
+        if (!own.items?.length) return [];
+        const kit = {
+          features: "Features",
+          pricing: "Pricing",
+          testimonials: "Testimonials",
+          faq: "Faq",
+        }[section.kind];
+        imports.add("#/kit/Landing", kit);
+        const heading = own.title
+          ? `
+          title=${JSON.stringify(own.title)}`
+          : "";
+        const lead = own.text
+          ? `
+          text=${JSON.stringify(own.text)}`
+          : "";
+        return section.kind === "pricing"
+          ? [
+              `<Pricing${heading}${lead}
+          plans={${items(section.name)}}
+          link=${link(start, "Get started")}
+        />`,
+            ]
+          : [
+              `<${kit}${heading}${section.kind === "features" ? lead : ""}
+          items={${items(section.name)}}
+        />`,
+            ];
+      }
+    }
+  });
+  const header = hasSignIn(auth)
+    ? `viewer ? ${link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1)} : { to: "/sign-in", label: "Sign in" }`
+    : link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1);
+  return `${HEADER}${imports.render()}
+export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
+});
+
+function ${component}() {
+${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
+    <LandingLayout appName=${JSON.stringify(ir.app.name)} link={${header}}>
+      ${parts.join("\n      ")}
+    </LandingLayout>
+  );
+}
+`;
+}
+
+/**
+ * A dashboard: its numbers are worked out in a server function from the records the viewer
+ * may read, so they follow the same access rules as the lists.
+ */
+function dashboardRoute(page: PageIR, items: DashboardItem[], ir: SpecIR, t: Texts): string {
+  const component = `${pascal(page.id)}Page`;
+  const fn = `get${pascal(page.id)}`;
+  const route = importList()
+    .add("@tanstack/react-router", "createFileRoute")
+    .add("@tanstack/react-start", "createServerFn")
+    .add("#/generated/pages", "pageAccess")
+    .add("#/kit/access", "guardPage")
+    .add("#/lib/viewer.server", "currentViewer");
+  const view = importList().add("#/generated/app", "app").add("#/kit/AppShell", "PageHeader");
+  const rowsOf = (model: string) => camel(plural(model));
+  const models = [...new Set(items.map((i) => i.model))];
+  for (const name of models) {
+    const n = names(modelNamed(ir, name), t);
+    route.add(`#/generated/${kebab(name)}.server`, n.data);
+  }
+  const values: string[] = [];
+  const tiles = items.map((item) => {
+    const model = modelNamed(ir, item.model);
+    const field = model.fields.find((f) => f.name === item.field);
+    const rows = rowsOf(item.model);
+    const conditions = Object.entries(item.where ?? {}).map(
+      ([key, value]) => `row.${key} === ${JSON.stringify(value)}`,
+    );
+    const filtered = conditions.length
+      ? `${rows}.filter((row) => ${conditions.join(" && ")})`
+      : rows;
+    const value = `(row) => row.${item.field}`;
+    const kind =
+      item.measure === "count" || !field || field.type.kind !== "scalar"
+        ? "int"
+        : item.measure === "average" && field.type.name === "int"
+          ? "decimal"
+          : field.type.name;
+    const label = t.section(page.id, item.name).label ?? humanize(item.name);
+    if (item.kind === "list") {
+      route.add("#/kit/aggregate", "latest");
+      const n = names(model, t);
+      view
+        .add("@tanstack/react-router", "useNavigate")
+        .add(n.module, n.ui)
+        .add("#/kit/ModelTable", "ModelTable");
+      values.push(`${item.name}: latest(${filtered}, ${item.limit ?? 5})`);
+      const target = ir.pages.find((p) => pageModel(p) === model.name);
+      return {
+        block: "list",
+        code: `<section aria-labelledby=${JSON.stringify(`${item.name}-title`)} className="space-y-3">
+        <h2 id=${JSON.stringify(`${item.name}-title`)} className="font-semibold">${label}</h2>
+        <ModelTable
+          ui={${n.ui}}
+          app={app}
+          rows={data.${item.name}}${
+            target
+              ? `
+          onOpen={(row) => navigate({ to: ${JSON.stringify(join(target.route, "$id"))}, params: { id: String(row.id) } })}`
+              : ""
+          }
+        />
+      </section>`,
+      };
+    }
+    if (item.kind === "chart") {
+      route.add("#/kit/aggregate", "byMonth");
+      view.add("#/kit/Dashboard", "BarChart");
+      const amount =
+        item.measure === "count" ? "() => 1" : `(row) => Number(row.${item.field}) || 0`;
+      values.push(`${item.name}: byMonth(${filtered}, (row) => row.${item.by}, ${amount})`);
+      return {
+        block: "chart",
+        code: `<BarChart label=${JSON.stringify(label)} kind="${kind}" app={app} bars={data.${item.name}} />`,
+      };
+    }
+    view.add("#/kit/Dashboard", "StatCard", "formatNumber");
+    if (item.measure === "count") values.push(`${item.name}: ${filtered}.length`);
+    else {
+      route.add("#/kit/aggregate", item.measure === "sum" ? "sum" : "average");
+      values.push(
+        `${item.name}: ${item.measure === "sum" ? "sum" : "average"}(${filtered}, ${value})`,
+      );
+    }
+    return {
+      block: "stat",
+      code: `<StatCard label=${JSON.stringify(label)} value={formatNumber("${kind}", data.${item.name}, app)} />`,
+    };
+  });
+  // Numbers side by side; charts and lists each take the full width.
+  const blocks: string[] = [];
+  tiles.forEach((tile, i) => {
+    if (tile.block !== "stat") blocks.push(tile.code);
+    else if (tiles[i - 1]?.block === "stat")
+      blocks[blocks.length - 1] = blocks
+        .at(-1)
+        ?.replace(/\n {6}<\/div>$/, `\n        ${tile.code}\n      </div>`) as string;
+    else
+      blocks.push(
+        `<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">\n        ${tile.code}\n      </div>`,
+      );
+  });
+  const navigate = tiles.some((tile) => tile.block === "list");
+  return `${HEADER}${route.merge(view).render()}
+const ${fn} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+${models.map((name) => `  const ${rowsOf(name)} = await ${names(modelNamed(ir, name), t).data}.list(viewer);`).join("\n")}
+  return {
+${values.map((v) => `    ${v},`).join("\n")}
+  };
+});
+
+export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${fn}(),
+  component: ${component},
+});
+
+function ${component}() {
+  const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
+  return (
+    <>
+      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))} />
+      <div className="space-y-6">
+      ${blocks.join("\n      ")}
+      </div>
+    </>
+  );
+}
+`;
+}
+
 /**
  * A hand-edited list route turned into a custom page (ARCHITECTURE §6.5): the edited
  * component moves to src/custom/pages/, and the route is generated again. Only when the
@@ -1161,10 +1494,10 @@ export function customPageFromEdit(
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir, options.ux ?? emptyUx());
+  const p = listParts(page, crudModel(ir, page), t, ir, options.ux ?? emptyUx());
   const routeBlock = /export const Route = createFileRoute\([\s\S]*?\n\}\);\n/;
   const generatedRoute = routeBlock.exec(
-    listRoute(page, modelNamed(ir, page.pattern.model), t, ir, false, options.ux ?? emptyUx()),
+    listRoute(page, crudModel(ir, page), t, ir, false, options.ux ?? emptyUx()),
   )?.[0];
   const editedRoute = routeBlock.exec(edited)?.[0];
   if (
@@ -1211,7 +1544,7 @@ export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOp
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir, options.ux ?? emptyUx());
+  const p = listParts(page, crudModel(ir, page), t, ir, options.ux ?? emptyUx());
   p.view.add("@tanstack/react-router", "getRouteApi");
   return `// Your version of the "${page.id}" page. Smithable created it from the generated page and never
 // changes it. The route (loading, search, access) stays generated: read its data with \`route\`.
@@ -1315,7 +1648,7 @@ function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxI
     const back = references(target)
       .filter((f) => f.type.model === model.name)
       .map(dataKey);
-    const targetPage = ir.pages.find((p) => p.pattern.model === target.name);
+    const targetPage = ir.pages.find((p) => pageModel(p) === target.name);
     const open = targetPage
       ? `\n          onOpen={(item) => navigate({ to: ${JSON.stringify(join(targetPage.route, "$id"))}, params: { id: String(item.id) } })}`
       : "";

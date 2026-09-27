@@ -48,6 +48,21 @@ models:
             expected: 10
 
 pages:
+  home:
+    route: /
+    landing:
+      hero: { button: overview }
+      features:
+      pricing:
+      faq:
+      callToAction: { button: overview }
+  overview:
+    dashboard:
+      outstanding: { sum: Invoice.total, where: { status: sent } }
+      overdue: { sum: Invoice.total, where: { status: overdue } }
+      paid: { sum: Invoice.total, where: { status: paid } }
+      invoiced: { sum: Invoice.total, by: issuedOn }
+      latest: { list: Invoice, limit: 5 }
   invoices:
     crud: Invoice
   clients:

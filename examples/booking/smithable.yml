@@ -37,6 +37,13 @@ models:
       - A session never has more confirmed bookings than its capacity.
 
 pages:
+  home:
+    route: /
+    landing:
+      hero: { button: sessions }
+      classes: { records: ClassType }
+      faq:
+      callToAction: { button: sessions }
   sessions:
     crud: Session
   class-types:

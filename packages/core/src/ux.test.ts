@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
+import type { PageIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 import { emptyUx, pageIcon, validateUx } from "./ux.js";
 
@@ -179,13 +180,19 @@ test("setTone colours a choice value; the tone follows renames and goes with its
 
 test("a page's navigation icon is set with setIcon, or suggested by its model's name", () => {
   const empty = emptyUx();
-  expect(pageIcon(empty, "customers", "Customer")).toBe("users");
-  expect(pageIcon(empty, "orders", "Order")).toBe("cart");
-  expect(pageIcon(empty, "widgets", "Widget")).toBe("list");
+  const page = (id: string) => ir.pages.find((p) => p.id === id) as PageIR;
+  expect(pageIcon(empty, page("customers"))).toBe("users");
+  expect(pageIcon(empty, page("orders"))).toBe("cart");
+  expect(
+    pageIcon(empty, { id: "widgets", route: "/", pattern: { kind: "crud", model: "Widget" } }),
+  ).toBe("list");
+  expect(
+    pageIcon(empty, { id: "home", route: "/", pattern: { kind: "landing", sections: [] } }),
+  ).toBe("home");
   const set = applyOperation({ spec: crm }, "setIcon", { page: "orders", icon: "truck" });
   if (!set.ok) throw new Error(set.message);
   const { ux } = validateUx({ path: "smithable.ux.yml", text: set.files.ux as string }, ir);
-  expect(ux && pageIcon(ux, "orders", "Order")).toBe("truck");
+  expect(ux && pageIcon(ux, page("orders"))).toBe("truck");
   expect(codes("smithableUx: 0.1\npages:\n  orders: { icon: truk }\n")).toEqual(["unknown-icon"]);
   expect(
     applyOperation({ spec: crm, ux: set.files.ux }, "setIcon", { page: "orders", icon: "auto" }),

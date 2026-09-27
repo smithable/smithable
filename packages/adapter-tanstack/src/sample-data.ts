@@ -69,8 +69,13 @@ function sampleValue(
       if (/number|code|reference|sku/.test(name)) return `${prefix(model, field)}-${1001 + i}`;
       if (/name|title/.test(name)) return titleFor(model, i);
       return `${words(field.name).join(" ")} ${i + 1}`;
-    case "text":
-      return SENTENCES[i % SENTENCES.length] ?? null;
+    case "text": {
+      // The notes suit people and companies; elsewhere a plain placeholder.
+      if (PERSON_MODELS.test(model.name) || COMPANY_MODELS.test(model.name))
+        return SENTENCES[i % SENTENCES.length] ?? null;
+      const title = Object.values(row).find((v) => typeof v === "string");
+      return `A short description of ${title ?? `${words(model.name).join(" ")} ${i + 1}`}.`;
+    }
     case "email": {
       const title = Object.values(row).find((v) => typeof v === "string" && v.includes(" "));
       const local = typeof title === "string" ? slug(title) : `${kebab(model.name)}${i + 1}`;
@@ -100,7 +105,8 @@ function sampleValue(
       const nth = model.fields
         .filter((f) => f.type.kind === "scalar" && f.type.name === "date")
         .indexOf(field);
-      return addDays("2026-09-01T00:00:00Z", i * 4 + nth * 30).slice(0, 10);
+      // Spread over six months, so charts by month have something to show.
+      return addDays("2026-04-15T00:00:00Z", i * 23 + nth * 30).slice(0, 10);
     }
     case "datetime":
       return new Date(

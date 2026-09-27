@@ -358,14 +358,28 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern; in spec version 0.1 that is crud.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing or dashboard.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
       "additionalProperties": {
         "type": "object",
-        "required": [
-          "crud"
+        "oneOf": [
+          {
+            "required": [
+              "crud"
+            ]
+          },
+          {
+            "required": [
+              "landing"
+            ]
+          },
+          {
+            "required": [
+              "dashboard"
+            ]
+          }
         ],
         "additionalProperties": false,
         "properties": {
@@ -377,6 +391,69 @@
           "crud": {
             "type": "string",
             "description": "A model to list, view, create, edit and delete."
+          },
+          "landing": {
+            "type": "object",
+            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction.",
+            "additionalProperties": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "records": {
+                  "type": "string",
+                  "description": "A model whose records the section shows."
+                },
+                "button": {
+                  "type": "string",
+                  "description": "The page the section's button opens."
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "dashboard": {
+            "type": "object",
+            "description": "Tiles of a dashboard, in order: numbers, charts by month, latest records.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "count": {
+                  "type": "string",
+                  "description": "Count a model's records, e.g. Invoice."
+                },
+                "sum": {
+                  "type": "string",
+                  "description": "Sum a number field, e.g. Invoice.total."
+                },
+                "average": {
+                  "type": "string",
+                  "description": "Average a number field."
+                },
+                "list": {
+                  "type": "string",
+                  "description": "Show a model's latest records."
+                },
+                "where": {
+                  "type": "object",
+                  "description": "Only records with these choice values or yes/no values."
+                },
+                "by": {
+                  "type": "string",
+                  "description": "A date field: one bar per month."
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
           },
           "actions": {
             "type": "array",
@@ -437,7 +514,7 @@
       }
     },
     "navigation": {
-      "description": "Menus: a list of pages (the main menu), or named menus. Defaults to all pages in order.",
+      "description": "Menus: a list of pages (the main menu), or named menus. Defaults to all pages but landing pages, in order.",
       "oneOf": [
         {
           "type": "array",
