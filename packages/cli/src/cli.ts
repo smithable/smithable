@@ -22,7 +22,9 @@ export { VERSION } from "./version.js";
 const HELP = `Usage: smithable <command> [options]
 
 Commands:
-  new <dir>        Create a project from a starter (--starter crm|booking|invoicing, default crm)
+  new <dir>        Create a project from a starter (--starter crm|booking|invoicing, default crm),
+                   or --describe "a booking site for a yoga studio": a model adapts the closest
+                   starter, and you confirm the result (--yes creates it directly)
   run [dir]        Generate if needed, start the app and open it in the browser (--no-open)
   generate [dir]   Regenerate the app from smithable.yml (--force overwrites hand-edited files)
   validate [path]  Check smithable.yml in a directory (default: current) or a given file
@@ -95,7 +97,10 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         io.err(`new needs a directory, like: smithable new my-app\n`);
         return 2;
       }
-      return create(dir, io, values.starter ?? "crm");
+      return create(dir, io, values.starter, {
+        ...(values.describe ? { describe: values.describe } : {}),
+        yes: values.yes === true,
+      });
     case "run":
       return runDev(dir, io, values.open !== false);
     case "build":
@@ -125,6 +130,7 @@ function parse(argv: string[]) {
       force: { type: "boolean" },
       open: { type: "boolean" },
       starter: { type: "string" },
+      describe: { type: "string" },
       yes: { type: "boolean" },
       dir: { type: "string" },
       json: { type: "boolean" },
