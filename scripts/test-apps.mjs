@@ -442,6 +442,22 @@ function operationsFlow(dir) {
       run("pnpm", ["typecheck"], dir);
     },
   );
+  step("making a field required rebuilds its table and keeps every row and reference", () => {
+    const before = query(dir, "select count(*) c from customers")[0].c;
+    expectOk(smithable(dir, "op", "changeField", "Customer", "email", "email!", "unique"));
+    const [{ n }] = query(
+      dir,
+      "select \"notnull\" n from pragma_table_info('customers') where name = 'email'",
+    );
+    const after = query(dir, "select count(*) c from customers")[0].c;
+    const orphans = query(
+      dir,
+      "select count(*) c from orders where customer_id not in (select id from customers)",
+    )[0].c;
+    if (n !== 1 || after !== before || orphans !== 0)
+      throw new Error(JSON.stringify({ n, before, after, orphans }));
+    expectOk(smithable(dir, "undo"));
+  });
   step("a new required field on a table with rows is refused with a way forward", () => {
     const refused = smithable(dir, "op", "addField", "Customer", "vatId", "string!");
     if (refused.code !== 1 || !refused.out.includes("Add vatId as optional first"))
@@ -674,8 +690,13 @@ async function browserFlow(base) {
     await page.getByRole("button", { name: "Merge customers" }).click();
     await page.waitForURL(`${base}/customers`);
     await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
-    if (await page.getByRole("cell", { name: "Skerry Software" }).count())
-      throw new Error("the duplicate is still there");
+    // The list refreshes after the action; the duplicate must disappear from it.
+    await page
+      .getByRole("cell", { name: "Skerry Software" })
+      .waitFor({ state: "detached", timeout: 10000 })
+      .catch(() => {
+        throw new Error("the duplicate is still there");
+      });
     await page.getByRole("cell", { name: "Nordic Timber Oy" }).click();
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the custom action merges customers and moves their orders");
@@ -718,7 +739,14 @@ for (const [index, example] of examples.entries()) {
         throw new Error("package.json mentions Smithable");
     });
     step("type-checks", () => run("pnpm", ["typecheck"], dir));
-    step("builds", () => run("pnpm", ["build"], dir));
+    step("builds, and the production build contains no preview-editor markers", () => {
+      run("pnpm", ["build"], dir);
+      const found = spawnSync("grep", ["-rl", "data-sm-\\|smithable-editor", "dist"], {
+        cwd: dir,
+        encoding: "utf8",
+      }).stdout.trim();
+      if (found) throw new Error(`found in ${found}`);
+    });
     step("the app's own tests pass (access for every role, formula examples)", () =>
       run("pnpm", ["test"], dir),
     );

@@ -12,7 +12,7 @@ import {
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
 import { displayValue, formatValue } from "./format";
-import type { AppUi, FieldUi, ModelUi, Row } from "./model";
+import { type AppUi, editorMarker, type FieldUi, type ModelUi, type Row } from "./model";
 
 interface ModelTableProps<R extends Row> {
   ui: ModelUi;
@@ -28,6 +28,8 @@ interface ModelTableProps<R extends Row> {
   emptyMessage?: string;
   /** The columns to show, in order, instead of the model's default ones. */
   columns?: string[];
+  /** The page showing the table, so the preview editor can change its columns. */
+  page?: string;
 }
 
 export function ModelTable<R extends Row>({
@@ -39,6 +41,7 @@ export function ModelTable<R extends Row>({
   emptyAction,
   emptyMessage,
   columns: chosen,
+  page,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
@@ -117,6 +120,7 @@ export function ModelTable<R extends Row>({
                 <TableHead
                   key={field.name}
                   className={numeric(field.kind) ? "text-right" : undefined}
+                  {...editorMarker(ui, field, "column", page)}
                 >
                   {field.label}
                 </TableHead>

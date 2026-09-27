@@ -729,6 +729,7 @@ import { classTypeAccess, classTypeData } from "./class-type.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const classTypeUi: ModelUi = {
+  model: "ClassType",
   label: "Class type",
   pluralLabel: "Class types",
   titleField: "name",
@@ -904,6 +905,7 @@ import { instructorAccess, instructorData } from "./instructor.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const instructorUi: ModelUi = {
+  model: "Instructor",
   label: "Instructor",
   pluralLabel: "Instructors",
   titleField: "name",
@@ -1076,6 +1078,7 @@ import { sessionAccess, sessionData } from "./session.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const sessionUi: ModelUi = {
+  model: "Session",
   label: "Session",
   pluralLabel: "Sessions",
   titleField: "id",
@@ -1381,6 +1384,7 @@ function ClassTypesPage() {
       />
       <ModelTable
         ui={classTypeUi}
+        page="class-types"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}
@@ -1530,6 +1534,7 @@ function InstructorsPage() {
       />
       <ModelTable
         ui={instructorUi}
+        page="instructors"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}
@@ -1670,6 +1675,7 @@ function SessionsPage() {
       />
       <ModelTable
         ui={sessionUi}
+        page="sessions"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}
@@ -2605,6 +2611,7 @@ import { customerAccess, customerData } from "./customer.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const customerUi: ModelUi = {
+  model: "Customer",
   label: "Customer",
   pluralLabel: "Customers",
   titleField: "name",
@@ -2833,6 +2840,7 @@ import { orderAccess, orderData } from "./order.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const orderUi: ModelUi = {
+  model: "Order",
   label: "Order",
   pluralLabel: "Orders",
   titleField: "number",
@@ -3274,6 +3282,7 @@ function CustomersPage() {
       />
       <ModelTable
         ui={customerUi}
+        page="customers"
         app={app}
         rows={rows}
         emptyMessage={q ? \`No customers match “\${q}”.\` : undefined}
@@ -3430,6 +3439,7 @@ function OrdersPage() {
       />
       <ModelTable
         ui={orderUi}
+        page="orders"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}
@@ -4429,6 +4439,7 @@ import { clientAccess, clientData } from "./client.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const clientUi: ModelUi = {
+  model: "Client",
   label: "Client",
   pluralLabel: "Clients",
   titleField: "name",
@@ -4627,6 +4638,7 @@ import { invoiceAccess, invoiceData } from "./invoice.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const invoiceUi: ModelUi = {
+  model: "Invoice",
   label: "Invoice",
   pluralLabel: "Invoices",
   titleField: "number",
@@ -4858,6 +4870,7 @@ import { invoiceLineAccess, invoiceLineData } from "./invoice-line.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const invoiceLineUi: ModelUi = {
+  model: "InvoiceLine",
   label: "Invoice line",
   pluralLabel: "Invoice lines",
   titleField: "description",
@@ -5189,6 +5202,7 @@ function ClientsPage() {
       />
       <ModelTable
         ui={clientUi}
+        page="clients"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}
@@ -5340,6 +5354,7 @@ function InvoiceLinesPage() {
       />
       <ModelTable
         ui={invoiceLineUi}
+        page="invoice-lines"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}
@@ -5494,6 +5509,7 @@ function InvoicesPage() {
       />
       <ModelTable
         ui={invoiceUi}
+        page="invoices"
         app={app}
         rows={rows}
         emptyAction={newButton || undefined}

@@ -1,11 +1,13 @@
 // Builder mode: the app in plain language, forms for changes, and the preview.
 import { summarize } from "@smithable/index";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
+import { isPreviewMessage, type Selection } from "../preview";
 import { Preview, Trace } from "../shared";
 import { Panel, Tabs } from "../ui";
 import { ChangeForms, type Run } from "./ChangeForms";
+import { Selected } from "./Selected";
 
 export function Builder({
   project,
@@ -19,6 +21,19 @@ export function Builder({
   version: number;
 }) {
   const [tab, setTab] = useState<"app" | "change">("app");
+  const [selecting, setSelecting] = useState(false);
+  const [selection, setSelection] = useState<Selection>();
+  // The preview reports what was clicked in select mode, and columns dragged to a new place.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e.data)) return;
+      if (e.data.type === "select") setSelection(e.data);
+      if (e.data.type === "columns")
+        run("setColumns", { page: e.data.page, columns: e.data.columns });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [run]);
   const sections = useMemo(
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content) : []),
     [spec],
@@ -54,8 +69,25 @@ export function Builder({
           <ChangeForms spec={spec} run={run} />
         )}
       </Panel>
-      <Preview url={project.preview} version={version} />
-      <Trace entries={project.trace} />
+      <Preview
+        url={project.preview}
+        version={version}
+        selecting={selecting}
+        onSelecting={setSelecting}
+      />
+      {selection ? (
+        <div className="grid min-h-0 grid-rows-[auto_1fr] divide-y divide-neutral-200">
+          <Selected
+            selection={selection}
+            spec={spec}
+            run={run}
+            onClose={() => setSelection(undefined)}
+          />
+          <Trace entries={project.trace} />
+        </div>
+      ) : (
+        <Trace entries={project.trace} />
+      )}
     </div>
   );
 }
