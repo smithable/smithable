@@ -30,6 +30,7 @@ Commands:
   run [dir]        Generate if needed, start the app and open it in the browser (--no-open)
   generate [dir]   Regenerate the app from smithable.yml (--force overwrites hand-edited files)
   validate [path]  Check smithable.yml in a directory (default: current) or a given file
+                   (--plugin <name> also loads a plugin that is not declared yet)
   build [dir]      Build the app's container image with Docker
   ask "<request>"  A model proposes the change in plain language; it is applied after you
                    confirm (--yes applies it directly). Setting up models: docs/ai.md
@@ -99,7 +100,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   const dir = args[0] ?? ".";
   switch (command) {
     case "validate":
-      return validate(dir, io);
+      return validate(dir, io, values.plugin ? [values.plugin] : []);
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
     case "new":
@@ -141,6 +142,7 @@ function parse(argv: string[]) {
       open: { type: "boolean" },
       starter: { type: "string" },
       describe: { type: "string" },
+      plugin: { type: "string" },
       yes: { type: "boolean" },
       dir: { type: "string" },
       json: { type: "boolean" },

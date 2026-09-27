@@ -15,8 +15,11 @@ import { loadSpec } from "./validate.js";
  */
 export interface Coder {
   name: string;
-  /** Runs in `dir`; it should change files only in `area`, e.g. "src/custom". */
-  run(dir: string, prompt: string, area: string): Promise<Usage>;
+  /**
+   * Runs in `dir`; it should change files only in `area`, e.g. "src/custom", and may run
+   * the type check, the tests and `commands`.
+   */
+  run(dir: string, prompt: string, area: string, commands?: string[]): Promise<Usage>;
 }
 
 /** The coder from the environment: SMITHABLE_CODER=claude-code, or a command to run. */
@@ -49,13 +52,13 @@ function run(
 }
 
 /**
- * Claude Code as the coder, headless in the project: it may read the project, edit only
- * src/custom/, and run only the type check and the tests. No MCP servers.
+ * Claude Code as the coder, headless in the project: it may read the project, edit only its
+ * area, and run only the type check, the tests and the given commands. No MCP servers.
  */
 function claudeCodeCoder(model?: string): Coder {
   return {
     name: "claude-code",
-    async run(dir, prompt, area) {
+    async run(dir, prompt, area, commands = []) {
       const out = await run(
         "claude",
         [
@@ -65,17 +68,20 @@ function claudeCodeCoder(model?: string): Coder {
           "json",
           "--no-session-persistence",
           "--strict-mcp-config",
+          // Only what is allowed below; acceptEdits would accept any edit in the project.
           "--permission-mode",
-          "acceptEdits",
+          "dontAsk",
           "--allowedTools",
-          "Read",
-          "Glob",
-          "Grep",
+          // Reading too stays in the project: plain "Read" would allow any file on the machine.
+          "Read(./**)",
+          "Glob(./**)",
+          "Grep(./**)",
           `Edit(${area}/**)`,
           `Write(${area}/**)`,
           "Bash(pnpm typecheck)",
           "Bash(pnpm test *)",
           "Bash(pnpm test)",
+          ...commands.map((c) => `Bash(${c})`),
           ...(model ? ["--model", model] : []),
         ],
         dir,
@@ -147,6 +153,8 @@ export async function runCoder(
   task: {
     prompt: string;
     area: string;
+    /** Extra commands the coder may run, e.g. validating the spec. */
+    commands?: string[];
     request: string;
     subject: string;
     after?: () => number;
@@ -167,7 +175,7 @@ export async function runCoder(
   const started = Date.now();
   let usage: Usage;
   try {
-    usage = await coder.run(dir, task.prompt, task.area);
+    usage = await coder.run(dir, task.prompt, task.area, task.commands);
   } catch (error) {
     discardChanges(dir);
     io.err(
@@ -175,6 +183,8 @@ export async function runCoder(
     );
     return 1;
   }
+  // What the coder used is reported whatever happens next.
+  io.out(`${usageLine([usage])}\n`);
   const changed = changedFiles(dir);
   const outside = changed.filter((path) => !path.startsWith(`${task.area}/`));
   if (outside.length > 0) {
@@ -216,9 +226,7 @@ export async function runCoder(
     io.err(`Could not commit: ${commit.out}\n`);
     return 1;
   }
-  io.out(
-    `${usageLine([usage])}\nWrote ${changed.join(", ")}; the type check and tests pass. Undo with: smithable undo\n`,
-  );
+  io.out(`Wrote ${changed.join(", ")}; the type check and tests pass. Undo with: smithable undo\n`);
   return 0;
 }
 

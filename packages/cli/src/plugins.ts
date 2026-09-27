@@ -23,8 +23,12 @@ export function declaredPlugins(dir: string): string[] {
  * like any package the project installs. A long-running process (Studio, MCP) keeps the
  * version it loaded first; restart it after changing a plugin.
  */
-export function loadPlugins(dir: string): SpecPlugin[] {
-  return declaredPlugins(dir).flatMap((name) => {
+export function loadPlugins(dir: string, extra: string[] = []): SpecPlugin[] {
+  const names = [
+    ...declaredPlugins(dir),
+    ...extra.filter((n) => !declaredPlugins(dir).includes(n)),
+  ];
+  return names.flatMap((name) => {
     const path = pluginPath(dir, name);
     if (!existsSync(path)) throw new Error(`Plugin "${name}" is declared but ${path} is missing.`);
     const plugin = (require(path) as { default?: SpecPlugin }).default;
