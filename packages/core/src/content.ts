@@ -45,6 +45,7 @@ const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[] }> = {
   faq: { texts: ["title"], items: ["question", "answer"] },
   callToAction: { texts: ["title", "text", "button"] },
   tile: { texts: ["label"] },
+  step: { texts: ["title", "text"] },
 };
 
 export interface ModelContent {
@@ -223,7 +224,9 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
       ? Object.fromEntries(pattern.sections.map((s) => [s.name, s.kind]))
       : pattern?.kind === "dashboard"
         ? Object.fromEntries(pattern.items.map((i) => [i.name, "tile"]))
-        : {};
+        : pattern?.kind === "onboarding"
+          ? Object.fromEntries(pattern.steps.map((step) => [step.name, "step"]))
+          : {};
   const result: PageContent = {};
   for (const entry of mapEntries(ctx, node, where) ?? []) {
     if (entry.key === "title" || entry.key === "subtitle") {

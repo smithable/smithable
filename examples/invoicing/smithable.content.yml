@@ -49,3 +49,11 @@ pages:
     latest: { label: Latest invoices }
   invoices: { subtitle: Every invoice and where it stands. }
   clients: { subtitle: The people and companies you work for. }
+  settings:
+    subtitle: Your business details, as your invoices show them.
+  welcome:
+    subtitle: A little setup now, and your invoices are ready to send.
+    business: { title: Your business }
+    payment:
+      title: Getting paid
+      text: Clients see these on every invoice.

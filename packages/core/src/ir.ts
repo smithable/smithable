@@ -124,13 +124,21 @@ export interface PageIR extends SemanticText {
   pattern:
     | { kind: "crud"; model: string }
     | { kind: "landing"; sections: LandingSection[] }
-    | { kind: "dashboard"; items: DashboardItem[] };
+    | { kind: "dashboard"; items: DashboardItem[] }
+    | { kind: "settings"; model: string }
+    | { kind: "onboarding"; model: string; steps: OnboardingStep[] };
   /** Actions offered on the page, e.g. a "Merge customers" button. */
   actions?: string[];
   /** Only these roles may open the page (admins always can). */
   access?: string[];
   /** Fields of the model a list can be searched by. */
   search?: string[];
+}
+
+/** One step of an onboarding: some fields of the record it fills in. */
+export interface OnboardingStep {
+  name: string;
+  fields: string[];
 }
 
 export const SECTION_KINDS = [
@@ -201,6 +209,8 @@ export function pageModels(page: PageIR): string[] {
       ? [pattern.model]
       : pattern.kind === "landing"
         ? pattern.sections.flatMap((s) => (s.model ? [s.model] : []))
-        : pattern.items.map((i) => i.model);
+        : pattern.kind === "dashboard"
+          ? pattern.items.map((i) => i.model)
+          : [pattern.model];
   return [...new Set(models)];
 }

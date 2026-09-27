@@ -358,7 +358,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing or dashboard.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings or onboarding.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -379,6 +379,16 @@
             "required": [
               "dashboard"
             ]
+          },
+          {
+            "required": [
+              "settings"
+            ]
+          },
+          {
+            "required": [
+              "onboarding"
+            ]
           }
         ],
         "additionalProperties": false,
@@ -391,6 +401,33 @@
           "crud": {
             "type": "string",
             "description": "A model to list, view, create, edit and delete."
+          },
+          "settings": {
+            "type": "string",
+            "description": "A model with one record per user (private data) or per app (shared): the page edits it."
+          },
+          "onboarding": {
+            "type": "object",
+            "required": [
+              "model",
+              "steps"
+            ],
+            "additionalProperties": false,
+            "description": "Fills the settings record in steps after the first sign-in.",
+            "properties": {
+              "model": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
           },
           "landing": {
             "type": "object",
@@ -514,7 +551,7 @@
       }
     },
     "navigation": {
-      "description": "Menus: a list of pages (the main menu), or named menus. Defaults to all pages but landing pages, in order.",
+      "description": "Menus: a list of pages (the main menu), or named menus. Defaults to all pages but landing and onboarding pages, in order.",
       "oneOf": [
         {
           "type": "array",

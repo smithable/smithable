@@ -89,6 +89,8 @@ export function pageIcon(ux: UxIR, page: PageIR): Icon {
   if (set) return set;
   if (page.pattern.kind === "landing") return "home";
   if (page.pattern.kind === "dashboard") return "chart";
+  if (page.pattern.kind === "settings") return "settings";
+  if (page.pattern.kind === "onboarding") return "home";
   const model = page.pattern.model;
   return ICON_WORDS.find(([words]) => words.test(model))?.[1] ?? "list";
 }

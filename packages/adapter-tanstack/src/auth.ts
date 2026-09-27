@@ -132,8 +132,11 @@ export const userOptions = createServerFn().handler(async () => {
 `;
 }
 
-/** The sign-in page, with a development-only sign-in as any role. */
-export function signInRoute(auth: AuthIR): string {
+/**
+ * The sign-in page, with a development-only sign-in as any role. Without a page to return
+ * to, signing in goes to `start` (the onboarding, when the app has one).
+ */
+export function signInRoute(auth: AuthIR, start = "/"): string {
   const roles = auth.roles.map((r) => r.name);
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
@@ -177,7 +180,7 @@ export const Route = createFileRoute("/sign-in")({
 
 function SignInPage() {
   const { providers, missing } = Route.useLoaderData();
-  const { redirect = "/" } = Route.useSearch();
+  const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
   const router = useRouter();
   return (
     <SignIn

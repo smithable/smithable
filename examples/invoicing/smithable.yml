@@ -7,6 +7,15 @@ app:
   currency: EUR
 
 models:
+  BusinessProfile:
+    description: The freelancer's own business details, printed on their invoices.
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+
   Client:
     fields:
       name: string!
@@ -69,3 +78,11 @@ pages:
     crud: Client
   invoice-lines:
     crud: InvoiceLine
+  settings:
+    settings: BusinessProfile
+  welcome:
+    onboarding:
+      model: BusinessProfile
+      steps:
+        business: [businessName, vatNumber]
+        payment: [iban, paymentTermDays]

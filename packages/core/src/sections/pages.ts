@@ -12,6 +12,7 @@ import {
 import {
   type DashboardItem,
   type LandingSection,
+  type OnboardingStep,
   type PageIR,
   SECTION_KINDS,
   type SectionKind,
@@ -26,6 +27,8 @@ import { textSchema } from "./text-schema.js";
 
 const ROUTE_PATTERN = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/;
 
+const PATTERNS = ["crud", "landing", "dashboard", "settings", "onboarding"] as const;
+
 /** Routes the generated app uses itself (see the deployment contract). */
 const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/];
 
@@ -35,11 +38,18 @@ export const pagesSection: SpecSection<"pages"> = {
   operations: pageOperations,
   schema: {
     type: "object",
-    description: "The application's pages. Each page uses one pattern: crud, landing or dashboard.",
+    description:
+      "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings or onboarding.",
     propertyNames: { pattern: NAME_PATTERN.source },
     additionalProperties: {
       type: "object",
-      oneOf: [{ required: ["crud"] }, { required: ["landing"] }, { required: ["dashboard"] }],
+      oneOf: [
+        { required: ["crud"] },
+        { required: ["landing"] },
+        { required: ["dashboard"] },
+        { required: ["settings"] },
+        { required: ["onboarding"] },
+      ],
       additionalProperties: false,
       properties: {
         route: {
@@ -48,6 +58,24 @@ export const pagesSection: SpecSection<"pages"> = {
           description: "Defaults to / plus the page name.",
         },
         crud: { type: "string", description: "A model to list, view, create, edit and delete." },
+        settings: {
+          type: "string",
+          description:
+            "A model with one record per user (private data) or per app (shared): the page edits it.",
+        },
+        onboarding: {
+          type: "object",
+          required: ["model", "steps"],
+          additionalProperties: false,
+          description: "Fills the settings record in steps after the first sign-in.",
+          properties: {
+            model: { type: "string" },
+            steps: {
+              type: "object",
+              additionalProperties: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
         landing: {
           type: "object",
           description:
@@ -143,7 +171,7 @@ function readPage(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["route", "crud", "landing", "dashboard", "actions", "access", "search", ...TEXT_KEYS],
+    allowed: ["route", ...PATTERNS, "actions", "access", "search", ...TEXT_KEYS],
     later: ["list", "calendar", "custom", "filters"],
     content: ["title", "label", "heading"],
   });
@@ -184,14 +212,23 @@ function readPage(
       pattern = { kind: "landing", sections: readLanding(ctx, value, where) };
     } else if (key === "dashboard") {
       pattern = { kind: "dashboard", items: readDashboard(ctx, value, where, parsed) };
+    } else if (key === "settings") {
+      const settings = readString(ctx, value, `"settings" in ${where}`);
+      if (settings !== undefined) {
+        ctx.reference("model", settings, value);
+        pattern = { kind: "settings", model: settings };
+      }
+    } else if (key === "onboarding") {
+      const onboarding = readOnboarding(ctx, value, where, parsed);
+      if (onboarding) pattern = { kind: "onboarding", ...onboarding };
     }
   }
-  const patterns = known.filter((e) => ["crud", "landing", "dashboard"].includes(e.key));
+  const patterns = known.filter((e) => (PATTERNS as readonly string[]).includes(e.key));
   if (patterns.length > 1) {
     ctx.error(
       patterns[1]?.keyNode ?? keyNode,
       "invalid-key",
-      `${capitalize(where)} can use only one pattern: crud, landing or dashboard.`,
+      `${capitalize(where)} can use only one pattern: ${PATTERNS.join(", ")}.`,
     );
     return undefined;
   }
@@ -215,11 +252,11 @@ function readPage(
     );
   }
   if (model === undefined) {
-    if (!known.some((e) => e.key === "crud")) {
+    if (patterns.length === 0) {
       ctx.error(
         keyNode,
         "missing-pattern",
-        `${capitalize(where)} needs a pattern: "crud: <Model>", "landing" or "dashboard".`,
+        `${capitalize(where)} needs a pattern: "crud: <Model>", "landing", "dashboard", "settings: <Model>" or "onboarding".`,
       );
     }
     return undefined;
@@ -292,6 +329,73 @@ function readLanding(ctx: ParseContext, node: ParsedNode | null, where: string):
 }
 
 const NUMBER_TYPES = ["int", "decimal", "money"];
+
+/** Steps of an onboarding; together they must ask for every required field without a default. */
+function readOnboarding(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): { model: string; steps: OnboardingStep[] } | undefined {
+  const onboardingWhere = `the onboarding of ${where}`;
+  const options = checkKeys(ctx, mapEntries(ctx, node, onboardingWhere) ?? [], onboardingWhere, {
+    allowed: ["model", "steps"],
+    content: ["title", "subtitle"],
+  });
+  const modelEntry = options.find((o) => o.key === "model");
+  const stepsEntry = options.find((o) => o.key === "steps");
+  if (!modelEntry || !stepsEntry) {
+    ctx.error(node, "missing-key", `${capitalize(onboardingWhere)} needs "model" and "steps".`);
+    return undefined;
+  }
+  const modelName = readString(ctx, modelEntry.value, `"model" in ${onboardingWhere}`);
+  if (modelName === undefined) return undefined;
+  ctx.reference("model", modelName, modelEntry.value);
+  const model = parsed.models?.find((m) => m.name === modelName);
+  const steps: OnboardingStep[] = [];
+  for (const step of mapEntries(ctx, stepsEntry.value, `the steps of ${onboardingWhere}`) ?? []) {
+    const fields = readNameList(
+      ctx,
+      step.value,
+      `step "${step.key}" of ${onboardingWhere}`,
+    ).flatMap(({ name, at }) => {
+      const field = model?.fields.find((f) => f.name === name);
+      if (model && !field) {
+        ctx.error(
+          at,
+          "unknown-field",
+          `${modelName} has no field named "${name}".`,
+          didYouMean(
+            name,
+            model.fields.map((f) => f.name),
+          ),
+        );
+        return [];
+      }
+      if (field && (field.formula || (field.type.kind === "relation" && field.type.many))) {
+        ctx.error(
+          at,
+          "invalid-field",
+          `"${name}" is not entered in a form, so no step can ask for it.`,
+        );
+        return [];
+      }
+      return [name];
+    });
+    steps.push({ name: step.key, fields });
+  }
+  const asked = new Set(steps.flatMap((s) => s.fields));
+  const missing = (model?.fields ?? []).filter(
+    (f) => f.required && f.default === undefined && !f.formula && !asked.has(f.name),
+  );
+  if (missing.length)
+    ctx.error(
+      stepsEntry.keyNode,
+      "missing-field",
+      `The steps never ask for ${missing.map((f) => f.name).join(", ")}, which ${modelName} requires.`,
+    );
+  return { model: modelName, steps };
+}
 
 /** Dashboard tiles; every model, field and value they name is checked against the models. */
 function readDashboard(

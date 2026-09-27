@@ -21,6 +21,8 @@ interface ModelFormProps<S extends z.ZodType> {
   submitLabel: string;
   onSubmit: (values: z.output<S>) => Promise<unknown>;
   onCancel?: () => void;
+  /** The cancel button's text, e.g. "Back" in a step of an onboarding. */
+  cancelLabel?: string;
   onDelete?: () => Promise<unknown>;
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
@@ -29,8 +31,18 @@ interface ModelFormProps<S extends z.ZodType> {
 }
 
 export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
-  const { app, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete, readOnly } =
-    props;
+  const {
+    app,
+    schema,
+    initial,
+    options,
+    submitLabel,
+    onSubmit,
+    onCancel,
+    cancelLabel,
+    onDelete,
+    readOnly,
+  } = props;
   const ui = ordered(props.ui, props.fieldOrder);
   const [inputs, setInputs] = useState(() => initialInputs(ui, initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -158,7 +170,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           )}
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-              {readOnly ? "Back" : "Cancel"}
+              {cancelLabel ?? (readOnly ? "Back" : "Cancel")}
             </Button>
           )}
           {onDelete && (
