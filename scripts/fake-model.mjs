@@ -1,6 +1,24 @@
 // A stand-in for an OpenAI-compatible model server (Ollama, Mistral, …), for tests: it answers
 // known requests with scripted operations or questions, and reports token usage like a real one.
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
+
+/** A first draft from a sentence: the booking starter, renamed. */
+function draft() {
+  const example = new URL("../examples/booking/", import.meta.url);
+  const files = [
+    "smithable.yml",
+    "smithable.auth.yml",
+    "smithable.content.yml",
+    "smithable.ux.yml",
+  ];
+  return Object.fromEntries(
+    files.map((f) => [
+      f,
+      readFileSync(new URL(f, example), "utf8").replaceAll("Stillwater Yoga", "Lotus Pilates"),
+    ]),
+  );
+}
 
 const ANSWERS = [
   [
@@ -26,11 +44,14 @@ export async function startFakeModel() {
     const body = JSON.parse(text || "{}");
     requests.push(body);
     const user = body.messages?.find((m) => m.role === "user")?.content ?? "";
+    const system = body.messages?.find((m) => m.role === "system")?.content ?? "";
     const request = /^Request: (.*)$/m.exec(user)?.[1] ?? "";
-    const answer = ANSWERS.find(([pattern]) => pattern.test(request))?.[1] ?? {
-      kind: "none",
-      reason: "The stand-in model only knows a few requests.",
-    };
+    const answer = system.includes("first version of a web app")
+      ? draft()
+      : (ANSWERS.find(([pattern]) => pattern.test(request))?.[1] ?? {
+          kind: "none",
+          reason: "The stand-in model only knows a few requests.",
+        });
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({

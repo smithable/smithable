@@ -123,6 +123,24 @@ export function applyProposal(
 }
 
 /**
+ * Asks in the terminal whether to go ahead: true to go ahead, otherwise the exit code. Without
+ * a terminal, only --yes goes ahead.
+ */
+export async function confirm(io: Io, question: string, yes: boolean): Promise<true | number> {
+  if (yes) return true;
+  if (!process.stdin.isTTY) {
+    io.err("Run again with --yes to apply it.\n");
+    return 1;
+  }
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await prompt.question(`${question} [y/N] `);
+  prompt.close();
+  if (/^y(es)?$/i.test(answer.trim())) return true;
+  io.out("Nothing was changed.\n");
+  return 0;
+}
+
+/**
  * `smithable ask "<request>"`: a model proposes the operations a request means; they are
  * shown in plain language and applied only after confirmation (ARCHITECTURE §9.4).
  */
@@ -155,18 +173,7 @@ export async function ask(
   io.out("Proposed change:\n");
   for (const [i, o] of proposal.operations.entries())
     io.out(`  ${i + 1}. ${o.description}${o.destructive ? " (loses data)" : ""}\n`);
-  if (!flags.yes) {
-    if (!process.stdin.isTTY) {
-      io.err("Run again with --yes to apply it.\n");
-      return 1;
-    }
-    const prompt = createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await prompt.question("Apply it? [y/N] ");
-    prompt.close();
-    if (!/^y(es)?$/i.test(answer.trim())) {
-      io.out("Nothing was changed.\n");
-      return 0;
-    }
-  }
+  const confirmed = await confirm(io, "Apply it?", flags.yes);
+  if (confirmed !== true) return confirmed;
   return applyProposal(dir, io, request, proposal);
 }

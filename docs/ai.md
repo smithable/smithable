@@ -2,6 +2,8 @@
 
 `smithable ask "<request>"` (and the Builder's **Describe** tab in Studio) turns a request in your own words into Smithable operations. The model only proposes; you see the change in plain language and it is applied when you confirm. Nothing it does bypasses the operation pipeline: each change is checked, migrated, committed and undoable like any other.
 
+`smithable new <dir> --describe "a booking site for a yoga studio"` starts a project from a sentence. The closest starter is picked without a model; then the strongest model the policy allows adapts its spec files to the description, once. The draft is validated like a hand-written spec (a draft with errors goes back once with the exact messages), summarised in plain language, and used after you confirm. Without a model, start from a starter with `--starter`.
+
 Models are configured with environment variables, so keys never end up in a project.
 
 ## A local model (tier 1)
