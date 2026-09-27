@@ -67,7 +67,8 @@ Commands:
                    (--implementation adds the custom code involved; --json)
   studio [dir]     Open Smithable Studio for the project: Builder and Studio modes, with the
                    app's preview (--port, default 4321). Behind a proxy (the hosted service):
-                   --host 0.0.0.0 and --preview-url, the preview's public address
+                   --host 0.0.0.0, --preview-url (the preview's public address) and --home
+                   (a link back to the service's page for the project)
   mcp [dir]        Serve the project to AI agents (Claude Code, Cursor, …) over MCP on stdin/stdout
   detach [dir]     Turn the project into an ordinary one that no longer uses Smithable
 
@@ -184,6 +185,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return studio(values.dir ?? dir, io, Number(values.port ?? 4321), {
         ...(values.host ? { host: values.host } : {}),
         ...(values["preview-url"] ? { previewUrl: values["preview-url"] } : {}),
+        ...(values.home ? { home: values.home } : {}),
       });
     default:
       io.err(`Unknown command: ${command}\n\n${HELP}`);
@@ -219,6 +221,7 @@ function parse(argv: string[]) {
       port: { type: "string" },
       host: { type: "string" },
       "preview-url": { type: "string" },
+      home: { type: "string" },
     },
   });
 }
