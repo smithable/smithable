@@ -30,6 +30,18 @@ export const STACK_PROFILE = {
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.0",
   },
+  /**
+   * Security fixes for dependencies of dependencies, kept in the project's pnpm-workspace.yaml
+   * (pnpm reads overrides only there). Each names why.
+   */
+  overrides: {
+    // Every esbuild in one patched version: drizzle-kit's @esbuild-kit loader pins 0.18
+    // (GHSA-67mh-4wv8-2f99), and 0.25's binary is built with a Go affected by 22 advisories.
+    // drizzle-kit stays in production images as an optional peer of better-auth.
+    esbuild: "0.28.2",
+  },
+  /** Overrides earlier profiles set, which Smithable removes again. */
+  retiredOverrides: ["@esbuild-kit/core-utils>esbuild"],
   devDependencies: {
     "@tanstack/router-cli": "1.167.38",
     "@types/better-sqlite3": "9.6.0",

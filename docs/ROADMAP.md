@@ -218,6 +218,8 @@ Removes the biggest technical risk of the browser-first product before building 
 - A backup to an S3-compatible bucket can be restored into a fresh container with no data lost.
 - A sample app with custom code upgrades across a stack profile change with tests passing, and a deliberately broken contract is reported, not silently fixed.
 
+**Status (2026-09-27):** in progress. Done: `smithable security` (fast, normal, release) with pinned external scanners, and `smithable update --security`; a fresh Acme CRM passes all Release checks (image and running app included) after the fixes they found. Next: deploy targets, backups with restore, generated smoke tests, `smithable upgrade`.
+
 ## M15 — Hosted beta (`smithable-cloud`)
 
 - Accounts with Google sign-in, project storage, and an AI gateway with plan allowances.
@@ -239,6 +241,8 @@ Removes the biggest technical risk of the browser-first product before building 
 ---
 
 ## Later (not before M16)
+
+- **Smithing as the product's voice** (idea, 2026-09-27): names for the tiers in the change trace ("hammer" for operations without AI, "small anvil" for a local model, "big anvil" for hosted and frontier models, always with the plain name beside them), and a small animated smith at the anvil while a change is being made, drawn as SVG/CSS (a still image with reduced motion, and the status as text for screen readers). Designed with the design system, for Studio's polish.
 
 - A desktop app (Electron) for local-first non-developers with one-click local model download.
 - Teams and collaboration.

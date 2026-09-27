@@ -1065,6 +1065,33 @@ for (const [index, example] of examples.entries()) {
         `  ${absent ? "✓" : "✗"} the production build has no development sign-in or setup notes`,
       );
       if (!absent) failures.push(`${example} development sign-in in production`);
+      await asyncStep(
+        "production pages carry the security headers, and the Content Security Policy blocks nothing they need",
+        async () => {
+          const path = ir.pages.find((p) => publicPages.includes(p.id))?.route ?? "/sign-in";
+          const headers = (await fetch(`${base}${path}`)).headers;
+          for (const name of [
+            "content-security-policy",
+            "x-content-type-options",
+            "cross-origin-embedder-policy",
+          ])
+            if (!headers.get(name)) throw new Error(`${path} has no ${name} header`);
+          if (!/script-src 'self' 'nonce-/.test(headers.get("content-security-policy") ?? ""))
+            throw new Error("the policy does not use a nonce");
+          const browser = await chromium.launch();
+          try {
+            const page = await browser.newPage();
+            const errors = [];
+            page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+            page.on("pageerror", (e) => errors.push(e.message));
+            await open(page, `${base}${path}`);
+            await page.waitForTimeout(500);
+            if (errors.length) throw new Error(errors.join("\n"));
+          } finally {
+            await browser.close();
+          }
+        },
+      ).catch(() => {});
     } finally {
       stop();
     }

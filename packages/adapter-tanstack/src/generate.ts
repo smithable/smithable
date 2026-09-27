@@ -268,7 +268,7 @@ function packageJson(ir: SpecIR, auth: AuthIR, ux: UxIR): string {
     scripts: {
       dev: "vite dev --port 3000",
       build: "vite build",
-      start: "srvx --prod -s ../client dist/server/server.js",
+      start: "node server.mjs",
       typecheck: "tsc",
       test: "vitest run",
       routes: "tsr generate",
@@ -962,6 +962,7 @@ ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}im
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { pageHeaders } from "#/kit/security";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
 const menus: MenuUi[] = [
@@ -974,6 +975,7 @@ const getViewer = createServerFn().handler(() => currentViewer());
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
   beforeLoad: async () => ({ viewer: await getViewer() }),
+  headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
       { charSet: "utf-8" },

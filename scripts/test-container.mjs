@@ -63,7 +63,8 @@ try {
     run("docker", [
       "exec",
       name,
-      "node",
+      // The minimal image has Node here, and no shell.
+      "/nodejs/bin/node",
       "-e",
       `const D=require("better-sqlite3");const r=new D("/data/db/app.db").prepare(${JSON.stringify(sql)});console.log(JSON.stringify(r.reader?r.all():r.run()))`,
     ]);
