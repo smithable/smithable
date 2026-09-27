@@ -1,6 +1,16 @@
 # What visitors read. Derived from names when not given here.
 smithableContent: 0.1
 
+models:
+  BusinessProfile:
+    fields:
+      vatNumber: { label: VAT number }
+      iban: { label: IBAN, help: Where clients pay your invoices. }
+      paymentTermDays: { label: Days to pay }
+  Client:
+    fields:
+      vatNumber: { label: VAT number }
+
 pages:
   home:
     hero:
