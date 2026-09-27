@@ -21,6 +21,9 @@ interface Reference {
 }
 
 /** Shared state while parsing one spec file: diagnostics and cross-section symbols. */
+/** For text that YAML split: a ", " inside { … } or a ": " anywhere starts a new entry. */
+const QUOTE_HINT = `A ", " inside { … } or a ": " inside a text starts a new entry: put the whole text in quotes.`;
+
 export class ParseContext {
   readonly diagnostics: Diagnostic[] = [];
   private readonly symbols = new Map<SymbolKind, Set<string>>();
@@ -43,10 +46,15 @@ export class ParseContext {
   /** Reports at a character offset, for YAML syntax errors that have no node. */
   errorAtOffset(offset: number, code: string, message: string): void {
     const pos = this.lines.linePos(offset);
+    // "description: Works with contacts: deals" is the usual cause.
+    const colon = /Nested mappings are not allowed|Implicit keys need to be on a single line/.test(
+      message,
+    );
     this.diagnostics.push({
       severity: "error",
       code,
       message,
+      ...(colon ? { hint: QUOTE_HINT } : {}),
       file: this.file,
       line: pos.line,
       column: pos.col,
@@ -157,7 +165,8 @@ export function checkKeys(ctx: ParseContext, entries: Entry[], where: string, ru
         keyNode,
         "unknown-key",
         `Unknown key "${key}" in ${where}.`,
-        didYouMean(key, rules.allowed),
+        // "{ description: Contacts, deals }" makes "deals" a key.
+        /\s/.test(key) ? QUOTE_HINT : didYouMean(key, rules.allowed),
       );
     }
   }

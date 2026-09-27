@@ -1,4 +1,4 @@
-import { isScalar as isScalarNode, type ParsedNode } from "yaml";
+import { isMap, isScalar as isScalarNode, type ParsedNode } from "yaml";
 import {
   type At,
   checkKeys,
@@ -280,6 +280,15 @@ function readLanding(ctx: ParseContext, node: ParsedNode | null, where: string):
     const sectionWhere = `section "${name}" of ${where}`;
     // "faq:" with nothing after it is a section with no options.
     const empty = value === null || (isScalarNode(value) && value.value === null);
+    if (!empty && !isMap(value)) {
+      ctx.error(
+        value,
+        "expected-mapping",
+        `${capitalize(sectionWhere)} takes options or nothing.`,
+        `Write "${name}:" with nothing after it, or options like "hero: { button: <page> }" or "classes: { records: <Model> }". Its texts go in smithable.content.yml.`,
+      );
+      continue;
+    }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
     const options = checkKeys(ctx, entries, sectionWhere, {
       allowed: ["records", "button", "limit"],
