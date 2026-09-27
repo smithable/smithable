@@ -5,6 +5,7 @@ import {
   type ContentIR,
   camel,
   emptyContent,
+  emptyUx,
   type FieldIR,
   humanize,
   kebab,
@@ -17,6 +18,7 @@ import {
   type SpecIR,
   snake,
   USER_MODEL,
+  type UxIR,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
@@ -39,6 +41,7 @@ import {
 import { sampleRows } from "./sample-data.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
+import { FONT_PACKAGES, themeCss, themeFont } from "./themes.js";
 
 /**
  * Who owns a file (ARCHITECTURE §6.4). "scaffold" files are created once and then belong
@@ -68,6 +71,8 @@ export interface GenerateOptions {
   auth: AuthIR;
   /** Pages with a custom component in src/custom/pages/ (found by the host). */
   customPages?: string[];
+  /** Presentation from smithable.ux.yml: theme, table columns, form field order. */
+  ux?: UxIR;
 }
 
 const HEADER =
@@ -76,6 +81,7 @@ const HEADER =
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
   const { auth } = options;
+  const ux = options.ux ?? emptyUx();
   const t = texts(options.content ?? emptyContent());
   const files: GeneratedFile[] = Object.entries(TEMPLATES)
     .filter(([path]) => hasSignIn(auth) || !SIGN_IN_KIT.includes(path))
@@ -86,7 +92,8 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     }));
   const add = (path: string, content: string) => files.push({ path, content, zone: "generated" });
 
-  add("package.json", packageJson(ir, auth));
+  add("package.json", packageJson(ir, auth, ux));
+  add("src/theme.css", themeCss(ux));
   add("smithable.lock", smithableLock(ir, options));
   add("README.md", readme(ir, false, auth));
   add("public/favicon.svg", favicon(ir));
@@ -139,10 +146,10 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
     add(
       `${dir}/index.tsx`,
-      listRoute(page, model, t, ir, options.customPages?.includes(page.id) ?? false),
+      listRoute(page, model, t, ir, options.customPages?.includes(page.id) ?? false, ux),
     );
-    add(`${dir}/new.tsx`, newRoute(page, model, t, ir));
-    add(`${dir}/$id.tsx`, detailRoute(page, model, t, ir));
+    add(`${dir}/new.tsx`, newRoute(page, model, t, ir, ux));
+    add(`${dir}/$id.tsx`, detailRoute(page, model, t, ir, ux));
   }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
@@ -192,7 +199,9 @@ export function names(model: ModelIR, t: Texts) {
   };
 }
 
-function packageJson(ir: SpecIR, auth: AuthIR): string {
+function packageJson(ir: SpecIR, auth: AuthIR, ux: UxIR): string {
+  const font = themeFont(ux);
+  const fontPackage = font ? (FONT_PACKAGES[font] as string) : undefined;
   const { "better-auth": _, ...withoutAuth } = STACK_PROFILE.dependencies;
   const pkg = {
     name: kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app",
@@ -211,7 +220,12 @@ function packageJson(ir: SpecIR, auth: AuthIR): string {
       "db:seed": "tsx src/db/seed.ts",
       "db:studio": "drizzle-kit studio",
     },
-    dependencies: hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth,
+    dependencies: {
+      ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
+      ...(fontPackage
+        ? { [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts] }
+        : {}),
+    },
     devDependencies: STACK_PROFILE.devDependencies,
   };
   return `${JSON.stringify(pkg, null, 2)}\n`;
@@ -995,12 +1009,15 @@ function importList() {
  * both go in one route file; customized (ARCHITECTURE §6.4), the component moves to
  * src/custom/pages/ and reads the route's data with getRouteApi.
  */
-function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
+function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR) {
   const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
   const search = page.search?.length ? searchCode(page, model, t) : undefined;
+  const columns = ux.pages[page.id]?.columns?.map((name) =>
+    dataKey(model.fields.find((f) => f.name === name) as FieldIR),
+  );
 
   const route = importList()
     .add("@tanstack/react-router", "createFileRoute")
@@ -1062,7 +1079,7 @@ ${
 `
     : ""
 }      <ModelTable
-        ui={${n.ui}}
+        ui={${n.ui}}${columns ? `\n        columns={${literal(columns)}}` : ""}
         app={app}
         rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
@@ -1076,8 +1093,15 @@ ${
 }
 
 /** The route file of a list page; with a custom page, it renders that instead. */
-function listRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, custom: boolean): string {
-  const p = listParts(page, model, t, ir);
+function listRoute(
+  page: PageIR,
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  custom: boolean,
+  ux: UxIR,
+): string {
+  const p = listParts(page, model, t, ir, ux);
   const head = `export const Route = createFileRoute(${JSON.stringify(p.path)})({
 ${p.options}  component: ${p.component},
 });
@@ -1107,10 +1131,10 @@ export function customPageFromEdit(
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir);
+  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir, options.ux ?? emptyUx());
   const routeBlock = /export const Route = createFileRoute\([\s\S]*?\n\}\);\n/;
   const generatedRoute = routeBlock.exec(
-    listRoute(page, modelNamed(ir, page.pattern.model), t, ir, false),
+    listRoute(page, modelNamed(ir, page.pattern.model), t, ir, false, options.ux ?? emptyUx()),
   )?.[0];
   const editedRoute = routeBlock.exec(edited)?.[0];
   if (
@@ -1157,7 +1181,7 @@ export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOp
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir);
+  const p = listParts(page, modelNamed(ir, page.pattern.model), t, ir, options.ux ?? emptyUx());
   p.view.add("@tanstack/react-router", "getRouteApi");
   return `// Your version of the "${page.id}" page. Smithable created it from the generated page and never
 // changes it. The route (loading, search, access) stays generated: read its data with \`route\`.
@@ -1166,6 +1190,14 @@ ${p.view.render()}
 const route = getRouteApi(${JSON.stringify(p.path)});
 
 export ${p.body("route")}`;
+}
+
+/** The fieldOrder prop of a page's form, from smithable.ux.yml, or nothing. */
+function fieldOrder(page: PageIR, model: ModelIR, ux: UxIR): string {
+  const order = ux.pages[page.id]?.fieldOrder;
+  if (!order) return "";
+  const keys = order.map((name) => dataKey(model.fields.find((f) => f.name === name) as FieldIR));
+  return `\n        fieldOrder={${literal(keys)}}`;
 }
 
 /** Whether a form needs choices loaded: for references to records or users. */
@@ -1195,8 +1227,9 @@ function optionsFor(model: ModelIR, t: Texts, ir: SpecIR): { imports: string[]; 
   };
 }
 
-function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
+function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR): string {
   const n = names(model, t);
+  const order = fieldOrder(page, model, ux);
   const component = `New${model.name}Page`;
   const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -1220,7 +1253,7 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
       <ModelForm
         ui={${n.ui}}
         app={app}
-        schema={${n.schema}}
+        schema={${n.schema}}${order}
 ${options ? "        options={options}\n" : ""}        submitLabel=${JSON.stringify(`Create ${n.label.toLowerCase()}`)}
         onSubmit={async (values) => {
           await ${n.create}({ data: values });
@@ -1234,8 +1267,9 @@ ${options ? "        options={options}\n" : ""}        submitLabel=${JSON.string
 `;
 }
 
-function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR): string {
+function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR): string {
   const n = names(model, t);
+  const order = fieldOrder(page, model, ux);
   const component = `${model.name}Page`;
   const title = titleField(model);
   const heading =
@@ -1293,7 +1327,7 @@ function ${component}() {
       <ModelForm
         ui={${n.ui}}
         app={app}
-        schema={${n.schema}}
+        schema={${n.schema}}${order}
         initial={row}
         readOnly={!canWrite}
 ${options ? "        options={options}\n" : ""}        submitLabel="Save changes"

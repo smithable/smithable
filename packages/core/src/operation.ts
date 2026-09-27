@@ -9,6 +9,8 @@ export interface Editors {
   content?: YamlEditor;
   /** smithable.auth.yml, when given. */
   auth?: YamlEditor;
+  /** smithable.ux.yml; created on first use. */
+  ux?: YamlEditor;
 }
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */

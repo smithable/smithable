@@ -596,7 +596,7 @@ async function browserFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const expectText = async (name, text) => {
-    await page.getByText(text).first().waitFor({ timeout: 5000 });
+    await page.getByText(text).filter({ visible: true }).first().waitFor({ timeout: 5000 });
     console.log(`  ✓ browser: ${name}`);
   };
   try {

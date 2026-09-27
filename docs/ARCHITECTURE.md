@@ -267,6 +267,7 @@ pages:
 ```
 
 - Visual edits in Builder or Studio (pick a theme, reorder columns, hide a field, change density) write to this file through operations. Themes and page patterns are described in §10.4.
+- **Implemented so far (M10):** `theme` (preset, brand colour and font, density) and per page `table.columns` and `form.fieldOrder`, with `setTheme`, `setColumns` and `setFieldOrder`; renaming or removing a field updates it, as it does `smithable.content.yml`. The adapter generates `src/theme.css` (shadcn/ui token names in OKLCH, light and dark); a brand colour goes through the brand-input rules (its hue and chroma kept, its lightness clamped for readable text, neutrals tinted with its hue); fonts are self-hosted Fontsource packages (OFL) added to the app's `package.json`; compact density shrinks Tailwind's spacing unit. The four presets and the rules are placeholders until the designer's work arrives ([design/brief.md](design/brief.md)); `pnpm test:apps` checks every example's theme for contrast (axe-core, WCAG 2 AA) in light and dark, on desktop and a phone.
 - Anything beyond its vocabulary is handled by a custom component in `src/custom/`.
 - The same growth rule applies as for the DSL (§2.4): add structure only when it is common and deterministic.
 

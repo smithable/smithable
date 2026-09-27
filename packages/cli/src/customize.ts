@@ -21,7 +21,7 @@ export function customize(dir: string, io: Io, target: string | undefined, via =
     io.err("customize needs a page, like: smithable customize page:customers\n");
     return 2;
   }
-  const { ir, auth, content } = loadSpec(dir, io);
+  const { ir, auth, content, ux } = loadSpec(dir, io);
   if (!ir || !auth) return 1;
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) {
@@ -46,7 +46,12 @@ export function customize(dir: string, io: Io, target: string | undefined, via =
   const routePath = implementationIndex(ir, auth)[`page:${pageId}`]?.files.find((f) =>
     f.path.endsWith("/index.tsx"),
   )?.path as string;
-  const options = { smithableVersion: "", auth, ...(content ? { content } : {}) };
+  const options = {
+    smithableVersion: "",
+    auth,
+    ...(content ? { content } : {}),
+    ...(ux ? { ux } : {}),
+  };
   const recorded = readRecord(dir).files[routePath];
   const current = readFileSync(join(dir, routePath), "utf8");
   const edited = recorded !== undefined && recorded !== hashFile(join(dir, routePath));

@@ -7,9 +7,11 @@ import {
   formatDiagnostic,
   hasErrors,
   type SpecIR,
+  type UxIR,
   validateAuth,
   validateContent,
   validateSpec,
+  validateUx,
 } from "@smithable/core";
 import type { Io } from "./io.js";
 
@@ -21,7 +23,7 @@ import type { Io } from "./io.js";
 export function loadSpec(
   target: string,
   io: Io,
-): { ir?: SpecIR; auth?: AuthIR; content?: ContentIR; path: string } {
+): { ir?: SpecIR; auth?: AuthIR; content?: ContentIR; ux?: UxIR; path: string } {
   const path = isDirectory(target) ? join(target, "smithable.yml") : target;
   let text: string;
   try {
@@ -57,15 +59,27 @@ export function loadSpec(
   if (!authResult.auth) return failed(authPath, authResult.diagnostics);
   const auth = authResult.auth;
 
+  // The optional companions: visible text and presentation.
+  let content: ContentIR | undefined;
   const contentPath = join(dirname(path), "smithable.content.yml");
-  if (!existsSync(contentPath)) return { ir, auth, path };
-  const result = validateContent(
-    { path: contentPath, text: readFileSync(contentPath, "utf8") },
-    ir,
-  );
-  print(result.diagnostics);
-  if (!result.content) return failed(contentPath, result.diagnostics);
-  return { ir, auth, content: result.content, path };
+  if (existsSync(contentPath)) {
+    const result = validateContent(
+      { path: contentPath, text: readFileSync(contentPath, "utf8") },
+      ir,
+    );
+    print(result.diagnostics);
+    if (!result.content) return failed(contentPath, result.diagnostics);
+    content = result.content;
+  }
+  let ux: UxIR | undefined;
+  const uxPath = join(dirname(path), "smithable.ux.yml");
+  if (existsSync(uxPath)) {
+    const result = validateUx({ path: uxPath, text: readFileSync(uxPath, "utf8") }, ir);
+    print(result.diagnostics);
+    if (!result.ux) return failed(uxPath, result.diagnostics);
+    ux = result.ux;
+  }
+  return { ir, auth, path, ...(content ? { content } : {}), ...(ux ? { ux } : {}) };
 }
 
 /** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */
