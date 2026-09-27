@@ -16,10 +16,11 @@
     "check": "pnpm lint && pnpm build && pnpm test && pnpm test:apps && pnpm test:studio",
     "schema": "pnpm build && node scripts/write-schema.mjs",
     "embed": "node scripts/embed.mjs",
-    "test:apps": "node scripts/test-apps.mjs",
+    "test:apps": "node scripts/test-apps-parallel.mjs",
     "test:studio": "node scripts/test-studio.mjs",
     "test:container": "node scripts/test-container.mjs",
-    "test:deploy": "node scripts/test-deploy.mjs"
+    "test:deploy": "node scripts/test-deploy.mjs",
+    "test:apps:one": "node scripts/test-apps.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
