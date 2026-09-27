@@ -13,6 +13,7 @@ import {
 import { validateSpec } from "@smithable/core";
 import { buildContext } from "@smithable/index";
 import { claudeCode } from "./claude-code.js";
+import { coderFromEnv, writeCode } from "./code.js";
 import { logTokens } from "./context.js";
 import type { Io } from "./io.js";
 import { requiredButEmpty, runOperation } from "./op.js";
@@ -197,5 +198,27 @@ export async function ask(
     io.out(`  ${i + 1}. ${o.description}${o.destructive ? " (loses data)" : ""}\n`);
   const confirmed = await confirm(io, "Apply it?", flags.yes);
   if (confirmed !== true) return confirmed;
-  return applyProposal(dir, io, request, proposal);
+  const applied = applyProposal(dir, io, request, proposal);
+  if (applied !== 0) return applied;
+  // A new query needs its code: a coder writes it when one is set up (ARCHITECTURE §9.2).
+  for (const { op, args } of proposal.operations) {
+    if (op !== "addQuery") continue;
+    const concept = `query:${String(args.query)}`;
+    const coder = coderFromEnv();
+    if (!coder) {
+      io.out(
+        `${concept} works with a placeholder (every record, newest first). Write its code in src/custom/queries/, or set up a coder and run: smithable code ${concept} "${request}"\n`,
+      );
+      continue;
+    }
+    const code = await writeCode(
+      dir,
+      io,
+      concept,
+      `${request}${args.intent ? ` (${String(args.intent)})` : ""}`,
+      coder,
+    );
+    if (code !== 0) return code;
+  }
+  return 0;
 }
