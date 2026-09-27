@@ -271,7 +271,11 @@ export function checks(
   results.push(dependencies(dir), secrets(dir), code(dir));
   if (level === "normal") return results;
   if (!release) throw new Error("Release checks need the built image and the running app.");
-  results.push(image(dir, release.image), running(dir, release.url));
+  results.push(
+    command(dir, "Smoke tests", ["test:smoke"]),
+    image(dir, release.image),
+    running(dir, release.url),
+  );
   return results;
 }
 

@@ -43,6 +43,7 @@ export const STACK_PROFILE = {
   /** Overrides earlier profiles set, which Smithable removes again. */
   retiredOverrides: ["@esbuild-kit/core-utils>esbuild"],
   devDependencies: {
+    "@playwright/test": "1.63.0",
     "@tanstack/router-cli": "1.167.38",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.0",
