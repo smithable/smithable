@@ -86,8 +86,15 @@ export function accessTestSource(ir: SpecIR, auth: AuthIR): string {
     );
     const entries = fields.map((f) => {
       const key = f.type.kind === "relation" ? `${f.name}Id` : f.name;
+      // A required owner still needs a user when the test acts as a visitor (owner null).
       const value =
-        f.name === model.ownedBy ? "owner" : f.required || f.unique ? testValue(f, model) : "null";
+        f.name === model.ownedBy
+          ? f.required
+            ? "owner ?? stranger.id"
+            : "owner"
+          : f.required || f.unique
+            ? testValue(f, model)
+            : "null";
       return `${key}: ${value}`;
     });
     const usesOwner = entries.some((e) => /\bowner\b/.test(e));

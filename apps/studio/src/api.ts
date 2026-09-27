@@ -7,8 +7,8 @@ export interface TraceEntry {
   engine: "generator" | "local model" | "Smithable model" | "frontier model";
   model?: string;
   tokens: number;
-  /** In euros. */
   cost?: number;
+  currency?: "EUR" | "USD";
   ms?: number;
   undone: boolean;
   isUndo: boolean;

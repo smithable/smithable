@@ -117,6 +117,17 @@ test("an app without sign-in has no auth library, sign-in page or owners", () =>
   expect(files.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("ownerId");
 });
 
+test("a required owner gets a user in the access tests, also for a visitor", () => {
+  const spec = ir(
+    "smithable.yml",
+    "smithable: 0.1\napp: { name: Tools }\nmodels:\n  Tool:\n    fields: { name: string!, lender: User! }\n    ownedBy: lender\npages:\n  tools: { crud: Tool }\n",
+  );
+  const crmAuth = Object.entries(authFiles).find(([path]) => path.includes("/crm/"))?.[1] ?? "";
+  const files = generateApp(spec, { ...options, auth: authOf(crmAuth) });
+  const test = files.find((f) => f.path === "src/generated/access.test.ts")?.content ?? "";
+  expect(test).toContain("lenderId: owner ?? stranger.id");
+});
+
 describe("custom pages", () => {
   const path = "../../../examples/crm/smithable.yml";
   const spec = ir(path, examples[path] as string);
