@@ -147,6 +147,10 @@ describe("operations", () => {
     expect(ok("setNavigation", ["main", "orders", "customers"]).files.spec).toContain(
       "navigation: [orders, customers]",
     );
+    // A page leaving the menu is named, so it is not missed when confirming.
+    expect(ok("setNavigation", ["main", "orders"]).description).toBe(
+      "Set the main menu to orders (no longer in it: customers)",
+    );
     const admin = ok("setNavigation", ["admin", "orders"]);
     expect(admin.files.spec).toContain(
       "navigation:\n  main: [customers, orders]\n  admin: [orders]\n",

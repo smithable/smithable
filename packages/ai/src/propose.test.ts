@@ -81,7 +81,7 @@ describe("proposeChange", () => {
   });
 
   test("when a tier cannot do it, the next tier gets the same request; costs add up", async () => {
-    const local = scripted(["not json", "still not json"]);
+    const local = scripted(["not json"]);
     const hosted = scripted([addPhone], {
       name: "smithable",
       tier: "smithable",
@@ -106,6 +106,26 @@ describe("proposeChange", () => {
       question: "A date on what?",
       options: ["Orders", "Customers"],
     });
+  });
+
+  test("what only the host knows (existing rows) sends a proposal back for repair", async () => {
+    const required = {
+      kind: "operations",
+      operations: [
+        { op: "addField", args: { model: "Customer", field: "mobile", type: "phone!" } },
+      ],
+    };
+    const model = scripted([required, addPhone]);
+    const proposal = await proposeChange({
+      request: "Customers should have a mobile number",
+      files: { spec },
+      context: buildContext(index, "Customers should have a mobile number"),
+      providers: [model],
+      check: (_before, after) =>
+        after.spec.includes("mobile: phone!") ? "There are already 8 customers." : undefined,
+    });
+    expect(proposal.kind).toBe("change");
+    expect(model.prompts[1]).toContain("It cannot be applied: There are already 8 customers.");
   });
 
   test("custom code is not an operation: the model says so", async () => {
