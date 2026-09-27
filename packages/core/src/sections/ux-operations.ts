@@ -1,6 +1,6 @@
 import type { YamlEditor } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
-import { FONTS, THEME_PRESETS } from "../ux.js";
+import { FONTS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
 function put(ux: YamlEditor, path: string[], value: string | string[] | undefined): void {
@@ -100,4 +100,39 @@ const setFieldOrder: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
-export const uxOperations: AnyOperation[] = [setTheme, setColumns, setFieldOrder];
+const setTone: Operation<{ model: string; field: string; value: string; tone: string }> = {
+  name: "setTone",
+  summary:
+    "Give a choice value a colour by meaning, e.g. paid: success, overdue: warning (neutral: the default).",
+  schema: {
+    type: "object",
+    required: ["model", "field", "value", "tone"],
+    additionalProperties: false,
+    properties: {
+      model: { type: "string" },
+      field: { type: "string" },
+      value: { type: "string" },
+      tone: { type: "string", enum: [...TONES] },
+    },
+  },
+  positional: ["model", "field", "value", "tone"],
+  describe: ({ model, field, value, tone }) => `Show ${model}.${field} ${value} as ${tone}`,
+  destructive: () => false,
+  apply(editors, { model, field, value, tone }, ir) {
+    const type = ir.models
+      .find((m) => m.name === model)
+      ?.fields.find((f) => f.name === field)?.type;
+    if (type?.kind !== "choice")
+      throw new OperationError(`${model}.${field} is not a choice field.`);
+    if (!type.values.includes(value))
+      throw new OperationError(`${model}.${field} has no value "${value}".`);
+    put(
+      uxEditor(editors),
+      ["tones", `${model}.${field}`, value],
+      tone === "neutral" ? undefined : tone,
+    );
+    return [];
+  },
+};
+
+export const uxOperations: AnyOperation[] = [setTheme, setColumns, setFieldOrder, setTone];

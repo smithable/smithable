@@ -29,6 +29,8 @@ pages:
   customers:
     table: { columns: [name, segment, email] }
     form: { fieldOrder: [name, email] }
+tones:
+  Order.status: { shipped: success, cancelled: danger }
 `,
       },
       ir,
@@ -38,6 +40,7 @@ pages:
       pages: {
         customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
       },
+      tones: { "Order.status": { shipped: "success", cancelled: "danger" } },
     });
   });
 
@@ -51,6 +54,10 @@ pages:
   orders:
     table: { columns: [number, shipingCost] }
     form: { fieldOrder: [shippingCost] }
+tones:
+  Order.stat: { shipped: success }
+  Order.number: { a: success }
+  Order.status: { shiped: success, cancelled: red }
 `),
     ).toEqual([
       "unknown-preset",
@@ -60,6 +67,10 @@ pages:
       "unknown-page",
       "unknown-field",
       "invalid-field",
+      "unknown-field",
+      "invalid-field",
+      "unknown-value",
+      "unknown-tone",
     ]);
   });
 });
@@ -116,4 +127,52 @@ test("renaming or removing a field updates the search, table columns and form or
   if (!removed.ok) throw new Error(removed.message);
   expect(removed.files.spec).toContain("    search: [name]\n");
   expect(removed.files.ux).toContain("columns: [name]");
+});
+
+test("setTone colours a choice value; the tone follows renames and goes with its field or value", () => {
+  const toned = applyOperation({ spec: crm }, "setTone", {
+    model: "Order",
+    field: "status",
+    value: "shipped",
+    tone: "success",
+  });
+  if (!toned.ok) throw new Error(toned.message);
+  expect(toned.files.ux).toBe("smithableUx: 0.1\ntones:\n  Order.status:\n    shipped: success\n");
+  const ux = toned.files.ux as string;
+  expect(
+    applyOperation({ spec: crm, ux }, "setTone", {
+      model: "Order",
+      field: "status",
+      value: "shipped",
+      tone: "neutral",
+    }),
+  ).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
+  expect(
+    applyOperation({ spec: crm, ux }, "setTone", {
+      model: "Order",
+      field: "number",
+      value: "x",
+      tone: "success",
+    }),
+  ).toMatchObject({ ok: false, message: "Order.number is not a choice field." });
+  const renamed = applyOperation({ spec: crm, ux }, "renameField", {
+    model: "Order",
+    from: "status",
+    to: "state",
+  });
+  expect(renamed).toMatchObject({
+    ok: true,
+    files: { ux: expect.stringContaining("Order.state:") },
+  });
+  const removed = applyOperation({ spec: crm, ux }, "removeField", {
+    model: "Order",
+    field: "status",
+  });
+  expect(removed).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
+  const changed = applyOperation({ spec: crm, ux }, "changeField", {
+    model: "Order",
+    field: "status",
+    type: "draft | placed | sent",
+  });
+  expect(changed).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
 });
