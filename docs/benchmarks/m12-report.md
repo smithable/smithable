@@ -15,7 +15,10 @@ Each task is one `smithable ask "<task>" --yes` on the same app, checked like ev
 | 7 | Medium | Same | 4 / 7 | 12,744 | €0.0057 |
 | 8–10 | Small | Menus in the context; no "ask when something similar exists" rule | **6, 7, 7 / 7** | ≈21,000 | ≈€0.0023 |
 
-Detailed results of the last run: [m7-M.md](m7-M.md).
+| 11 | Local: `qwen2.5:7b` on the CPU, offline (`local-only`) | Same | **6 / 7** | ≈21,000 | €0 (about 11 minutes) |
+| 12–13 | Small | Instructions: new fields are optional unless required; "already done" is an answer | **7, 7 / 7** | ≈21,000 | ≈€0.0022 |
+
+Detailed results: [Mistral Small](m7-M-mistral-small.md), [local qwen2.5:7b](m7-M-local.md).
 
 ### What the runs showed
 
@@ -24,6 +27,7 @@ Detailed results of the last run: [m7-M.md](m7-M.md).
 3. **Models do more than asked.** Unasked required flags, searches and menu changes were the most common errors. The instructions now forbid them, and what only the project's data can tell (a new required field on a table with rows) goes back to the model for repair instead of failing later.
 4. **The safety net held.** No run applied a wrong change without it being visible: invalid proposals were refused by the dry run or the operation pipeline, and descriptions now name what a change removes ("no longer in it: customers"). One benchmark check was too weak to notice a dropped menu entry; it is stricter now.
 5. **Small is enough for everyday changes.** Medium was not better here and costs about three times as much.
+6. **A local 7B model works offline.** `qwen2.5:7b` did 6 of 7 tasks with nothing leaving the machine; on a CPU-only laptop each request takes one to two minutes. Its one miss (a new field made required on a table with rows) was refused by the pipeline, not applied.
 
 ## First builds: ten descriptions through `smithable new --describe`
 
