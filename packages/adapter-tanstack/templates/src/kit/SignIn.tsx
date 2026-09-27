@@ -49,10 +49,16 @@ export function SignIn({
           Continue with {PROVIDER_LABELS[provider] ?? provider}
         </Button>
       ))}
-      {missing.length > 0 && (
+      {/* Setup notes are for the developer; visitors only learn that sign-in is unavailable. */}
+      {devRoles && missing.length > 0 && (
         <p className="text-xs text-muted-foreground">
           Sign-in with {missing.map((p) => PROVIDER_LABELS[p] ?? p).join(" and ")} is not set up
           yet: its keys are missing from the environment. See the README.
+        </p>
+      )}
+      {!devRoles && providers.length === 0 && (
+        <p className="text-muted-foreground">
+          Signing in is not available right now. Please contact whoever runs {appName}.
         </p>
       )}
       {failure && (
