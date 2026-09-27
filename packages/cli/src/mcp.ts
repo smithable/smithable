@@ -198,8 +198,11 @@ function customUsers(dir: string, operation: string, args: OperationArgs): strin
 }
 
 /** `smithable mcp`: an MCP server on stdin/stdout for the project in `dir` (ARCHITECTURE §9.6). */
-export async function mcp(dir: string): Promise<number> {
-  keepStdoutForProtocol();
+/**
+ * The MCP server for a project. `onChange` is told after a tool that may have changed it
+ * (Studio refreshes).
+ */
+export function mcpServer(dir: string, onChange: () => void = () => {}): Server {
   const available = tools(dir);
   const server = new Server(
     { name: "smithable", version: VERSION },
@@ -230,9 +233,16 @@ export async function mcp(dir: string): Promise<number> {
       tool: tool.name,
       tokens: { input: estimateTokens(JSON.stringify(args)), output: estimateTokens(output) },
     });
+    onChange();
     return { content: [{ type: "text", text: output }], isError: code !== 0 };
   });
-  await server.connect(new StdioServerTransport());
+  return server;
+}
+
+/** `smithable mcp [dir]`: the MCP server on stdin/stdout. */
+export async function mcp(dir: string): Promise<number> {
+  keepStdoutForProtocol();
+  await mcpServer(dir).connect(new StdioServerTransport());
   // Serve until the client closes stdin.
   await new Promise<void>((resolve) => process.stdin.on("close", resolve));
   return 0;
