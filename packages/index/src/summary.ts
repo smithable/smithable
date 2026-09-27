@@ -6,6 +6,7 @@ import {
   formatFormula,
   humanize,
   type ModelIR,
+  pageModel,
   plural,
   type SpecIR,
   USER_MODEL,
@@ -112,7 +113,8 @@ export function summarize(
 
   if (ir.pages.length) {
     const pages = ir.pages.map((p) => {
-      const model = modelNamed(p.pattern.model);
+      const crud = pageModel(p);
+      const model = crud === undefined ? undefined : modelNamed(crud);
       const title = content.pages[p.id]?.title ?? humanize(p.id);
       const searched = (p.search ?? []).map((name) => {
         const field = model?.fields.find((f) => f.name === name);
@@ -120,6 +122,12 @@ export function summarize(
       });
       const notes = [
         model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
+        p.pattern.kind === "landing"
+          ? `a landing page: ${list(p.pattern.sections.map((s) => humanize(s.name).toLowerCase()))}`
+          : "",
+        p.pattern.kind === "dashboard"
+          ? `a dashboard: ${list(p.pattern.items.map((i) => humanize(i.name).toLowerCase()))}`
+          : "",
         searched.length ? `search by ${list(searched, "or")}` : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         p.access ? `only for ${who(p.access)}` : "",

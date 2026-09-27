@@ -1,0 +1,35 @@
+smithable: 0.1
+app:
+  name: Broken page patterns
+models:
+  Invoice:
+    fields:
+      number: string!
+      status: draft | sent | paid
+      total: money
+      paid: bool
+      issuedOn: date
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: invoces }       # expect: unknown-page
+      herro: {}                       # expect: unknown-section
+      latest: { records: Invoce }     # expect: unknown-model
+      faq: { button: invoices }       # expect: invalid-key
+      features: { title: Features }   # expect: text-in-spec
+  both:
+    crud: Invoice
+    dashboard:                        # expect: invalid-key
+      open: { count: Invoice }
+  overview:
+    dashboard:
+      open: { count: Invoice, where: { status: open } }    # expect: unknown-value
+      nothing: { where: { paid: true } }                   # expect: invalid-dashboard
+      money: { sum: Invoice.number }                       # expect: invalid-dashboard
+      byMonth: { sum: Invoice.total, by: number }          # expect: invalid-dashboard
+      latest: { list: Invoice, limit: 0 }                  # expect: invalid-value
+      odd: { count: Invoice, where: { paid: yes } }        # expect: invalid-dashboard
+    search: [number]                                       # expect: invalid-key
+  invoices:
+    crud: Invoice

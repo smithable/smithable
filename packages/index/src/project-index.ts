@@ -2,6 +2,7 @@ import {
   conceptsWithRules,
   type FieldIR,
   formatFormula,
+  pageModels,
   ruleId,
   type SemanticText,
   type SpecIR,
@@ -356,7 +357,13 @@ function summary(ir: SpecIR, concept: string): string {
     case "page": {
       const page = ir.pages.find((p) => p.id === name);
       if (!page) return "";
-      return `Page ${name} at ${page.route}: list, view, create, edit and delete ${page.pattern.model}${page.actions ? `; actions ${page.actions.join(", ")}` : ""}${page.access ? `; for ${page.access.join(", ")}` : ""}`;
+      const pattern =
+        page.pattern.kind === "crud"
+          ? `list, view, create, edit and delete ${page.pattern.model}`
+          : page.pattern.kind === "landing"
+            ? `landing page with ${page.pattern.sections.map((s) => s.name).join(", ")}`
+            : `dashboard with ${page.pattern.items.map((i) => i.name).join(", ")}`;
+      return `Page ${name} at ${page.route}: ${pattern}${page.actions ? `; actions ${page.actions.join(", ")}` : ""}${page.access ? `; for ${page.access.join(", ")}` : ""}`;
     }
     default:
       return "";
@@ -371,7 +378,7 @@ function related(ir: SpecIR, concept: string): string[] {
       const refs = (model?.fields ?? []).flatMap((f) =>
         f.type.kind === "relation" && f.type.model !== "User" ? [`model:${f.type.model}`] : [],
       );
-      const pages = ir.pages.filter((p) => p.pattern.model === name).map((p) => `page:${p.id}`);
+      const pages = ir.pages.filter((p) => pageModels(p).includes(name)).map((p) => `page:${p.id}`);
       return [...new Set([...refs, ...pages])];
     }
     case "field":
@@ -387,7 +394,10 @@ function related(ir: SpecIR, concept: string): string[] {
     case "page": {
       const page = ir.pages.find((p) => p.id === name);
       return page
-        ? [`model:${page.pattern.model}`, ...(page.actions ?? []).map((a) => `action:${a}`)]
+        ? [
+            ...pageModels(page).map((m) => `model:${m}`),
+            ...(page.actions ?? []).map((a) => `action:${a}`),
+          ]
         : [];
     }
     default:

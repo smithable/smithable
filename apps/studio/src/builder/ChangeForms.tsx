@@ -4,6 +4,7 @@ import {
   type FieldIR,
   FONTS,
   humanize,
+  pageModel,
   THEME_PRESETS,
   typeKey,
 } from "@smithable/core";
@@ -307,10 +308,10 @@ function AddPage({ spec, run }: FormProps) {
 }
 
 function SetSearch({ spec, run }: FormProps) {
-  const pages = spec.ir?.pages ?? [];
+  const pages = (spec.ir?.pages ?? []).filter((p) => pageModel(p) !== undefined);
   const [page, setPage] = useState(pages[0]?.id ?? "");
   const current = pages.find((p) => p.id === page);
-  const model = spec.ir?.models.find((m) => m.name === current?.pattern.model);
+  const model = spec.ir?.models.find((m) => current && m.name === pageModel(current));
   const searchable = (model?.fields ?? []).filter(
     (f) =>
       !f.formula &&
