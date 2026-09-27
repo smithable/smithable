@@ -111,7 +111,8 @@ async function signInAs(page, base, role) {
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: `Sign in as ${role}` }).click();
     try {
-      await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 5000 });
+      // Signed in: on to the app, or first to its onboarding.
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 5000 });
       return;
     } catch (error) {
       if (attempt === 3) throw error;
@@ -305,6 +306,59 @@ async function visualChecks(dir, base) {
       `  ${ok ? "✓" : "✗"} visual checks: ${paths.length} pages, light and dark, desktop and phone: no accessibility violations or sideways scrolling${ok ? "" : `\n    ${problems.slice(0, 10).join("\n    ")}`}`,
     );
     if (!ok) failures.push("visual checks");
+  } finally {
+    await browser.close();
+  }
+}
+
+/** In the invoicing app, a new member is welcomed by the onboarding, then edits it in settings. */
+async function onboardingFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await signInAs(page, base, "member");
+    await page.waitForURL(`${base}/welcome`);
+    await page.getByText("Step 1 of 2").waitFor();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByText("Required", { exact: true }).waitFor();
+    await page.getByRole("textbox", { name: "Business name *" }).fill("Åland Design Studio");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("heading", { name: "Getting paid" }).waitFor();
+    await page.getByRole("button", { name: "Back" }).click();
+    if (
+      (await page.getByRole("textbox", { name: "Business name *" }).inputValue()) !==
+      "Åland Design Studio"
+    )
+      throw new Error("going back lost the business name");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("textbox", { name: "Iban" }).fill("FI21 1234 5600 0007 85");
+    await page.getByRole("button", { name: "Finish" }).click();
+    await page.waitForURL(`${base}/overview`);
+    console.log(
+      "  ✓ browser: a new member is welcomed in two steps, with Back, then lands in the app",
+    );
+
+    await open(page, `${base}/welcome`);
+    await page.waitForURL(`${base}/overview`);
+    await open(page, `${base}/settings`);
+    const name = page.getByRole("textbox", { name: "Business name *" });
+    if ((await name.inputValue()) !== "Åland Design Studio")
+      throw new Error("settings do not show the onboarding's business name");
+    await name.fill("Åland Design Studio Ab");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("status").getByText("Saved.").waitFor();
+    await open(page, `${base}/settings`);
+    if (
+      (await page.getByRole("textbox", { name: "Business name *" }).inputValue()) !==
+      "Åland Design Studio Ab"
+    )
+      throw new Error("the settings change was not saved");
+    console.log("  ✓ browser: the onboarding is done once; settings edit the same record");
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("invoicing onboarding flow");
   } finally {
     await browser.close();
   }
@@ -845,6 +899,7 @@ for (const [index, example] of examples.entries()) {
       if (example === "crm") await browserFlow(base);
       if (example === "invoicing") {
         await formulaFlow(base);
+        await onboardingFlow(base);
         await isolationFlow(dir, base);
       }
     } finally {

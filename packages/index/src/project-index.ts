@@ -362,7 +362,11 @@ function summary(ir: SpecIR, concept: string): string {
           ? `list, view, create, edit and delete ${page.pattern.model}`
           : page.pattern.kind === "landing"
             ? `landing page with ${page.pattern.sections.map((s) => s.name).join(", ")}`
-            : `dashboard with ${page.pattern.items.map((i) => i.name).join(", ")}`;
+            : page.pattern.kind === "dashboard"
+              ? `dashboard with ${page.pattern.items.map((i) => i.name).join(", ")}`
+              : page.pattern.kind === "settings"
+                ? `settings: the viewer's ${page.pattern.model} record`
+                : `onboarding: fills the viewer's ${page.pattern.model} record in steps ${page.pattern.steps.map((s) => s.name).join(", ")}`;
       return `Page ${name} at ${page.route}: ${pattern}${page.actions ? `; actions ${page.actions.join(", ")}` : ""}${page.access ? `; for ${page.access.join(", ")}` : ""}`;
     }
     default:
