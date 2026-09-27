@@ -1,0 +1,36 @@
+{
+  "currency": "EUR",
+  "monthly_revenue": [
+    {
+      "month": "2026-04",
+      "revenue": 6000
+    },
+    {
+      "month": "2026-05",
+      "revenue": 9900
+    },
+    {
+      "month": "2026-06",
+      "revenue": 18300
+    },
+    {
+      "month": "2026-07",
+      "revenue": 15600
+    },
+    {
+      "month": "2026-08",
+      "revenue": 21000
+    },
+    {
+      "month": "2026-09",
+      "revenue": 26100
+    }
+  ],
+  "orders_by_status": {
+    "draft": 8,
+    "placed": 24,
+    "shipped": 42,
+    "cancelled": 3
+  },
+  "customers": 200
+}

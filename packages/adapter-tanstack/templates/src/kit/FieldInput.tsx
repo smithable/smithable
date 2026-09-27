@@ -7,6 +7,8 @@ interface FieldInputProps {
   id: string;
   value: string | boolean;
   invalid: boolean;
+  /** Ids of the field's help and error text. */
+  describedBy?: string;
   /** Choices for reference fields. */
   options?: Options;
   onChange: (value: string | boolean) => void;
@@ -20,8 +22,21 @@ const inputTypes: Partial<Record<FieldUi["kind"], string>> = {
   datetime: "datetime-local",
 };
 
-export function FieldInput({ field, id, value, invalid, options, onChange }: FieldInputProps) {
-  const common = { id, name: field.name, "aria-invalid": invalid || undefined };
+export function FieldInput({
+  field,
+  id,
+  value,
+  invalid,
+  describedBy,
+  options,
+  onChange,
+}: FieldInputProps) {
+  const common = {
+    id,
+    name: field.name,
+    "aria-invalid": invalid || undefined,
+    "aria-describedby": describedBy,
+  };
   if (field.kind === "bool") {
     return (
       <Checkbox {...common} checked={value === true} onChange={(e) => onChange(e.target.checked)} />
@@ -60,7 +75,7 @@ export function FieldInput({ field, id, value, invalid, options, onChange }: Fie
     <Input
       {...common}
       type={inputTypes[field.kind] ?? "text"}
-      inputMode={numeric ? "decimal" : undefined}
+      inputMode={numeric ? (field.kind === "int" ? "numeric" : "decimal") : undefined}
       value={text}
       onChange={(e) => onChange(e.target.value)}
     />
