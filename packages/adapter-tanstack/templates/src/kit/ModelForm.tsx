@@ -23,11 +23,14 @@ interface ModelFormProps<S extends z.ZodType> {
   onDelete?: () => Promise<unknown>;
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
+  /** These fields first, in this order; the others follow. */
+  fieldOrder?: string[];
 }
 
 export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
-  const { ui, app, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete, readOnly } =
+  const { app, schema, initial, options, submitLabel, onSubmit, onCancel, onDelete, readOnly } =
     props;
+  const ui = ordered(props.ui, props.fieldOrder);
   const [inputs, setInputs] = useState(() => initialInputs(ui, initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Computed fields follow what has been entered so far.
@@ -198,4 +201,14 @@ function storedValues(
   return Object.fromEntries(
     ui.fields.filter((f) => !f.computed).map((f) => [f.name, fromInput(f, inputs[f.name] ?? "")]),
   );
+}
+
+/** The model's fields with `order` first, in that order. */
+function ordered(ui: ModelUi, order?: string[]): ModelUi {
+  if (!order) return ui;
+  const rank = (name: string) => {
+    const i = order.indexOf(name);
+    return i === -1 ? order.length : i;
+  };
+  return { ...ui, fields: [...ui.fields].sort((a, b) => rank(a.name) - rank(b.name)) };
 }

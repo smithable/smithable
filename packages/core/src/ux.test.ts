@@ -1,0 +1,119 @@
+import { describe, expect, test } from "vitest";
+import { applyOperation } from "./apply.js";
+import { validateSpec } from "./spec.js";
+import { validateUx } from "./ux.js";
+
+const crm = Object.values(
+  import.meta.glob("../../../examples/crm/smithable.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }),
+)[0] as string;
+const ir = validateSpec({ path: "smithable.yml", text: crm }).ir;
+if (!ir) throw new Error("invalid spec");
+const codes = (text: string) =>
+  validateUx({ path: "smithable.ux.yml", text }, ir).diagnostics.map((d) => d.code);
+
+describe("smithable.ux.yml", () => {
+  test("theme, brand and page settings", () => {
+    const { ux } = validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: `smithableUx: 0.1
+theme:
+  preset: corporate
+  brand: { primary: "#1D4ED8", font: Inter }
+  density: compact
+pages:
+  customers:
+    table: { columns: [name, segment, email] }
+    form: { fieldOrder: [name, email] }
+`,
+      },
+      ir,
+    );
+    expect(ux).toEqual({
+      theme: { preset: "corporate", primary: "#1d4ed8", font: "Inter", density: "compact" },
+      pages: {
+        customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
+      },
+    });
+  });
+
+  test("mistakes are reported, with suggestions", () => {
+    expect(codes("theme: {}")).toEqual(["invalid-version"]);
+    expect(
+      codes(`smithableUx: 0.1
+theme: { preset: modrn, brand: { primary: blue, font: Comic Sans }, density: tight }
+pages:
+  customer: {}
+  orders:
+    table: { columns: [number, shipingCost] }
+    form: { fieldOrder: [shippingCost] }
+`),
+    ).toEqual([
+      "unknown-preset",
+      "invalid-color",
+      "unknown-font",
+      "invalid-value",
+      "unknown-page",
+      "unknown-field",
+      "invalid-field",
+    ]);
+  });
+});
+
+describe("ux operations", () => {
+  test("setTheme creates the file; setColumns and setFieldOrder add to it; empty lists remove", () => {
+    const theme = applyOperation({ spec: crm }, "setTheme", {
+      preset: "playful",
+      primary: "#4f7c6b",
+    });
+    if (!theme.ok) throw new Error(theme.message);
+    expect(theme.files.ux).toBe(
+      'smithableUx: 0.1\ntheme:\n  preset: playful\n  brand:\n    primary: "#4f7c6b"\n',
+    );
+    const columns = applyOperation({ spec: crm, ux: theme.files.ux }, "setColumns", {
+      page: "customers",
+      columns: ["name", "email"],
+    });
+    if (!columns.ok) throw new Error(columns.message);
+    expect(columns.files.ux).toContain("  customers:\n    table:\n      columns: [name, email]\n");
+    const back = applyOperation({ spec: crm, ux: columns.files.ux }, "setColumns", {
+      page: "customers",
+    });
+    if (!back.ok) throw new Error(back.message);
+    expect(back.files.ux).toBe(theme.files.ux);
+    expect(
+      applyOperation({ spec: crm }, "setColumns", { page: "customers", columns: ["nme"] }),
+    ).toMatchObject({
+      ok: false,
+      message: "setColumns would make smithable.ux.yml invalid.",
+    });
+    expect(
+      applyOperation({ spec: crm }, "addField", { model: "Customer", field: "fax", type: "phone" }),
+    ).not.toHaveProperty("files.ux");
+  });
+});
+
+test("renaming or removing a field updates the search, table columns and form order that name it", () => {
+  const ux =
+    "smithableUx: 0.1\npages:\n  customers:\n    table: { columns: [name, email] }\n    form: { fieldOrder: [email, name] }\n";
+  const renamed = applyOperation({ spec: crm, ux }, "renameField", {
+    model: "Customer",
+    from: "email",
+    to: "mail",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toContain("    search: [name, mail]\n");
+  expect(renamed.files.ux).toContain("columns: [name, mail]");
+  expect(renamed.files.ux).toContain("fieldOrder: [mail, name]");
+  const removed = applyOperation({ spec: crm, ux }, "removeField", {
+    model: "Customer",
+    field: "email",
+  });
+  if (!removed.ok) throw new Error(removed.message);
+  expect(removed.files.spec).toContain("    search: [name]\n");
+  expect(removed.files.ux).toContain("columns: [name]");
+});

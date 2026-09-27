@@ -22,6 +22,7 @@ import { recordRule } from "./rules.js";
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
 const AUTH = "smithable.auth.yml";
+const UX = "smithable.ux.yml";
 const OPLOG = ".smithable/oplog.jsonl";
 
 export interface OpFlags {
@@ -77,10 +78,12 @@ export function runOperation(
 
   const contentPath = join(dir, CONTENT);
   const authPath = join(dir, AUTH);
+  const uxPath = join(dir, UX);
   const files = {
     spec: readFileSync(join(dir, SPEC), "utf8"),
     ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
     ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
+    ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
   };
   const result = applyOperation(files, operation.name, args);
   if (!result.ok) {
@@ -115,6 +118,7 @@ export function runOperation(
   writeFileSync(join(dir, SPEC), result.files.spec);
   if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
   if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
+  if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
   mkdirSync(join(dir, ".smithable"), { recursive: true });
   appendFileSync(
     join(dir, OPLOG),

@@ -107,6 +107,14 @@ try {
     await page.getByText("Only admins can add orders.").waitFor();
   });
 
+  await step("look and feel: a theme and density are chosen without touching code", async () => {
+    await change("Look and feel");
+    await page.getByLabel("Theme").selectOption("playful");
+    await page.getByLabel("Density").selectOption("compact");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await status.getByText("Set the theme: preset playful").waitFor({ timeout: 60000 });
+  });
+
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {
     await page.locator("label", { hasText: /^Studio$/ }).click();
