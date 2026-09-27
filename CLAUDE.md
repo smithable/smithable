@@ -13,7 +13,8 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   - `pnpm test:studio`: runs `smithable studio` on a new CRM and makes the M3–M5 changes in both modes in a real browser.
   - `pnpm test:container` (needs Docker): builds the CRM image and checks that data survives replacing the container. Not part of `check`.
   - `node scripts/bench-m3.mjs`: the M3 mini-benchmark (Smithable operations vs Claude Code headless on the same tasks). Uses the user's Claude usage; ask before running. Writes `docs/benchmarks/m3-mini.md`.
-  - `node scripts/bench-m7.mjs [S] [A] [B]`: the M7 benchmark (seven tasks by Smithable operations, plain Claude Code, and Claude Code with MCP). S is free; A and B use the user's Claude usage, so ask before running them. Writes `docs/benchmarks/m7.md`.
+  - `node scripts/bench-m7.mjs [S] [A] [B] [M]`: the M7 benchmark (seven tasks by Smithable operations, plain Claude Code, Claude Code with MCP, and `smithable ask` with the configured model). S is free; A and B use the user's Claude usage and M the configured model's, so ask before running them. Writes `docs/benchmarks/m7.md` (or `m7-<setups>.md`).
+  - `node scripts/bench-m12.mjs`: M12 first builds: ten descriptions through `smithable new --describe` with the configured model (see `docs/ai.md`). Ask before running with a paid model. Writes `docs/benchmarks/m12-first-builds-<model>.md`.
   - `node scripts/bench-m6.mjs`: the M6 exit check (Claude Code headless with only the Smithable MCP server). Uses the user's Claude usage; ask before running. Writes `docs/benchmarks/m6-mcp.md`.
   - `pnpm check`: lint + build + test + test:apps + test:studio. This is the CI gate and must pass before every commit.
   - `pnpm schema`: regenerate `packages/core/schema/smithable.schema.json` after changing a section's schema. A test fails if it is stale.
