@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11. **In progress:** M9 (usability tests), M10 (the designer's work). **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11. **In progress:** M9 (usability tests), M10 (approval of the built apps), M12 (needs real models). **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -190,6 +190,8 @@ Removes the biggest technical risk of the browser-first product before building 
 - Ambiguous requests ask a question instead of guessing.
 - The M7 benchmark is re-run with both models and added to the report.
 - First builds from the same 10 app descriptions are compared across a mid-size Smithable model and a frontier model, for quality (designer and user review) and cost. The default model for first builds is chosen from the result.
+
+**Status (2026-09-27):** in progress. Built and tested with a stand-in model: providers, policy, proposals constrained to the operation schemas with dry-run, repair and escalation, questions for unclear requests, confirmation in `smithable ask` and Studio's Describe tab, and tokens and cost in the change trace ([ai.md](ai.md)). Needs a real model for the exit checks: a local one (Ollama) and an EU-hosted one.
 
 ## M13 — Escalation and AI-written custom code
 

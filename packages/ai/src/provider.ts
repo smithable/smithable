@@ -1,0 +1,123 @@
+// Model providers and the AI policy (ARCHITECTURE §9.5). Every tier speaks the same operation
+// schemas, so swapping the model behind a tier never changes the product.
+
+/** Tier 1 runs on the user's machine, tier 2 is the Smithable model, tier 3 a frontier model. */
+export type Tier = "local" | "smithable" | "frontier";
+
+/** Where a model runs: what the AI policy decides on. */
+export type Location = "local" | "eu" | "elsewhere";
+
+export interface CompletionRequest {
+  system: string;
+  user: string;
+  /** The answer must be JSON matching this schema (constrained decoding where supported). */
+  schema: object;
+}
+
+export interface Completion {
+  text: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface Provider {
+  name: string;
+  tier: Tier;
+  location: Location;
+  /** Euros per million input and output tokens; 0 for a local model. */
+  price: { input: number; output: number };
+  complete(request: CompletionRequest): Promise<Completion>;
+}
+
+export interface OpenAICompatibleOptions {
+  name: string;
+  /** E.g. http://localhost:11434/v1 for Ollama, https://api.mistral.ai/v1 for Mistral. */
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+  tier: Tier;
+  location: Location;
+  price?: { input: number; output: number };
+}
+
+/**
+ * A provider for any OpenAI-compatible chat completions API: Ollama, llama.cpp, vLLM, Mistral
+ * and most EU hosts. The answer is constrained to the JSON schema where the server supports it.
+ */
+export function openAICompatible(options: OpenAICompatibleOptions): Provider {
+  return {
+    name: options.name,
+    tier: options.tier,
+    location: options.location,
+    price: options.price ?? { input: 0, output: 0 },
+    async complete({ system, user, schema }) {
+      const response = await fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model: options.model,
+          temperature: 0,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: "answer", schema } },
+        }),
+      });
+      if (!response.ok)
+        throw new Error(`${options.name} answered ${response.status}: ${await response.text()}`);
+      const body = (await response.json()) as {
+        model?: string;
+        choices?: { message?: { content?: string } }[];
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
+      };
+      return {
+        text: body.choices?.[0]?.message?.content ?? "",
+        model: body.model ?? options.model,
+        inputTokens: body.usage?.prompt_tokens ?? 0,
+        outputTokens: body.usage?.completion_tokens ?? 0,
+      };
+    },
+  };
+}
+
+/**
+ * Which models may see the project: only local ones, local and EU-hosted ones (the default),
+ * any, or the providers named in an allowlist.
+ */
+export type Policy = "local-only" | "eu-only" | "best-available" | { allow: string[] };
+
+export function allowedBy(policy: Policy, provider: Provider): boolean {
+  if (policy === "local-only") return provider.location === "local";
+  if (policy === "eu-only") return provider.location !== "elsewhere";
+  if (policy === "best-available") return true;
+  return policy.allow.includes(provider.name);
+}
+
+/** The providers a policy allows, cheapest tier first: the order requests escalate in. */
+export function route(providers: Provider[], policy: Policy): Provider[] {
+  const order: Tier[] = ["local", "smithable", "frontier"];
+  return providers
+    .filter((p) => allowedBy(policy, p))
+    .sort((a, b) => order.indexOf(a.tier) - order.indexOf(b.tier));
+}
+
+export function parsePolicy(text: string | undefined): Policy {
+  if (!text) return "eu-only";
+  if (text === "local-only" || text === "eu-only" || text === "best-available") return text;
+  if (text.startsWith("allow:"))
+    return {
+      allow: text
+        .slice(6)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    };
+  throw new Error(
+    `Unknown AI policy "${text}". Use local-only, eu-only, best-available or allow:<provider>,…`,
+  );
+}
