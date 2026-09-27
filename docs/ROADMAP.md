@@ -234,6 +234,8 @@ Removes the biggest technical risk of the browser-first product before building 
 
 Step 2 (2026-09-27): the service in `smithable-cloud`: invite sign-in, a project list, one gVisor-sandboxed workspace per project running `smithable studio` (which gained `--host` and `--preview-url`), and a proxy with per-address sessions. On AWS an invited tester goes from the invite to a new CRM's Studio in about 30 s and its preview in about 40 s, signs in to the preview and applies an operation. Known rough edge: the first preview load of a new project can hit Vite's one-time dependency reload.
 
+Steps 3, 5 and 6 (2026-09-28): backups of projects (Git history and database), published apps and the service's own data to S3, each with a tested restore (a deleted project came back with its history, spec change and records); the AI gateway (per-project tokens, a monthly allowance per tester, Mistral Medium for apps from a sentence and Small for changes); and publishing: a new CRM was checked, built and live in 75 s, with its security headers, then on a stand-in for the tester's own domain with a certificate made on the first visit. Still open for the exit: a real domain (the service's and a tester's), Google sign-in, and handing a project to a developer through Git. First builds from a sentence still fall back to the chosen starter when the model's draft is invalid (M12's quality).
+
 **Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
 ## M16 — Public launch
