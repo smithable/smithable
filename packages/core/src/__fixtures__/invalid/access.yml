@@ -16,6 +16,6 @@ pages:
   customers:
     crud: Customer
     access: [owner]                       # expect: invalid-role
-    search: [name, nam, manager]          # expect: unknown-field, invalid-search
+    search: [name, nam, helpers]          # expect: unknown-field, invalid-search
   sign-in:                                # expect: reserved-route
     crud: Customer

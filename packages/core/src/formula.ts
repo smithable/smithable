@@ -30,6 +30,7 @@ const FUNCTIONS = [
   "MIN",
   "MAX",
   "TODAY",
+  "NOW",
   "DATEADD",
   "DAYS",
   "CONCAT",
@@ -416,6 +417,9 @@ export function checkFormula(expr: Expr, model: ModelIR, models: ModelIR[]): Val
       case "TODAY":
         count(0);
         return "date";
+      case "NOW":
+        count(0);
+        return "datetime";
       case "DATEADD": {
         count(3);
         need(types[0] as ValueType, "date", "DATEADD");

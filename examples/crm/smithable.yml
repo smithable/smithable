@@ -45,7 +45,7 @@ models:
             expected: 5
           - input: { total: 150, shippingMethod: express }
             expected: 15
-      placedAt: datetime
+      placedAt: datetime = NOW()
     access:
       write: [sales]
       delete: [admin]
@@ -69,5 +69,6 @@ pages:
     actions: [mergeCustomers]
   orders:
     crud: Order
+    search: [number, customer]
 
 navigation: [customers, orders]

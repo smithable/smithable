@@ -530,7 +530,7 @@ function readDashboard(
   return items;
 }
 
-/** Text you can type into a search box: strings, text, emails, phone numbers, web addresses, choices. */
+/** Text you can type into a search box: strings, text, emails, phone numbers, web addresses, choices; and references, by the related record's name. */
 const SEARCHABLE = ["string", "text", "email", "phone", "url"];
 
 function checkSearch(
@@ -554,6 +554,22 @@ function checkSearch(
           target.fields.map((f) => f.name),
         ),
       );
+    } else if (field.type.kind === "relation") {
+      // A reference is searched by the related record's name: it needs a text field.
+      const related = parsed.models?.find(
+        (m) => field.type.kind === "relation" && m.name === field.type.model,
+      );
+      const named =
+        field.type.model === "User" ||
+        related?.fields.some((f) => f.type.kind === "scalar" && f.type.name === "string");
+      if (field.type.many || !named)
+        ctx.error(
+          at,
+          "invalid-search",
+          field.type.many
+            ? `"${name}" is a list of records; search the other page instead.`
+            : `"${name}" cannot be searched: ${field.type.model} has no text field to search by.`,
+        );
     } else if (
       field.formula ||
       !(
@@ -564,7 +580,7 @@ function checkSearch(
       ctx.error(
         at,
         "invalid-search",
-        `"${name}" cannot be searched: only stored text, email, phone, web address and choice fields can.`,
+        `"${name}" cannot be searched: only stored text, email, phone, web address and choice fields, and references to records with a name, can.`,
       );
     }
   }

@@ -89,6 +89,7 @@ models:
     ['status = "paid"', "bool"],
     ['DATEADD(issuedOn, 30, "day")', "date"],
     ["DAYS(TODAY(), issuedOn)", "number"],
+    ["NOW()", "datetime"],
     ['COUNTIF(lines.kind, "service")', "number"],
     ["SUM(lines.amount) - total", "number"],
     ['"Invoice " & total', "text"],

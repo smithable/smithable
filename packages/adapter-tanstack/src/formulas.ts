@@ -108,6 +108,8 @@ export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
             return `Math.max(${a.join(", ")})`;
           case "TODAY":
             return "F.TODAY()";
+          case "NOW":
+            return "F.NOW()";
           case "DATEADD":
             return `F.DATEADD(${a.join(", ")})`;
           case "DAYS":

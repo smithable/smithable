@@ -275,8 +275,18 @@ describe("setAccess", () => {
 });
 
 test("setSearch adds, changes and removes a page's search", () => {
-  const added = ok("setSearch", ["orders", "number"]);
-  expect(changed(files.spec, added.files.spec)).toEqual({
+  // Orders are searched by number and by their customer's name.
+  const removed = ok("setSearch", ["orders"]);
+  expect(changed(files.spec, removed.files.spec)).toEqual({
+    added: [],
+    removed: ["    search: [number, customer]"],
+  });
+  const added = applyOperation({ ...files, spec: removed.files.spec }, "setSearch", {
+    page: "orders",
+    fields: ["number"],
+  });
+  if (!added.ok) throw new Error(added.message);
+  expect(changed(removed.files.spec, added.files.spec)).toEqual({
     added: ["    search: [number]"],
     removed: [],
   });
