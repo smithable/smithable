@@ -31,14 +31,7 @@ export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as co
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
 /** Open-licence fonts the generated apps can host themselves. */
-export const FONTS = [
-  "Inter",
-  "Nunito",
-  "IBM Plex Sans",
-  "Source Sans 3",
-  "Merriweather Sans",
-  "Figtree",
-] as const;
+export const FONTS = ["Inter", "Nunito Sans", "Source Sans 3"] as const;
 
 export function emptyUx(): UxIR {
   return { theme: { preset: "modern", density: "comfortable" }, pages: {} };

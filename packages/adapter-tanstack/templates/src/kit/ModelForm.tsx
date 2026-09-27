@@ -1,5 +1,6 @@
 // Smithable app kit: a create/edit form for any model, validated with the model's Zod schema.
 // To customise a form, copy this file into src/custom/components/ and edit the copy.
+import { Calculator, CircleAlert } from "lucide-react";
 import { useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
@@ -70,13 +71,21 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   }
 
   return (
-    <Card className="max-w-2xl">
-      <form onSubmit={submit} noValidate className="space-y-5 p-6">
-        <fieldset disabled={readOnly} className="space-y-5">
+    <Card className="max-w-3xl">
+      <form onSubmit={submit} noValidate className="space-y-6 p-card">
+        {!readOnly && ui.fields.some((f) => f.required && !f.computed) && (
+          <p className="text-sm text-muted-foreground">
+            Fields marked <span className="text-destructive">*</span> are required.
+          </p>
+        )}
+        <fieldset disabled={readOnly} className="space-y-6">
           {ui.fields.map((field) => {
             const id = `field-${field.name}`;
             const error = errors[field.name];
             const inline = field.kind === "bool";
+            const described =
+              [field.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") ||
+              undefined;
             return (
               <div
                 key={field.name}
@@ -90,8 +99,13 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                   </Label>
                 )}
                 {field.computed ? (
-                  <p id={id} className="rounded-md bg-muted px-3 py-2 text-sm tabular-nums">
+                  <p
+                    id={id}
+                    className="flex min-h-control items-center gap-2 rounded-md bg-muted px-3 text-sm font-semibold tabular-nums"
+                  >
+                    <Calculator aria-hidden className="size-5 text-muted-foreground" />
                     {formatValue(field, computed[field.name], app)}
+                    <span className="sr-only">(calculated)</span>
                   </p>
                 ) : (
                   <FieldInput
@@ -99,6 +113,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                     id={id}
                     value={inputs[field.name] ?? ""}
                     invalid={error !== undefined}
+                    describedBy={described}
                     options={options}
                     onChange={(value) =>
                       setInputs((current) => ({ ...current, [field.name]: value }))
@@ -106,23 +121,41 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                   />
                 )}
                 {inline && <Label htmlFor={id}>{field.label}</Label>}
-                {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
-                {error && <p className="text-xs text-destructive">{error}</p>}
+                {field.help && (
+                  <p id={`${id}-help`} className="text-sm text-muted-foreground">
+                    {field.help}
+                  </p>
+                )}
+                {error && (
+                  <p
+                    id={`${id}-error`}
+                    className="flex items-center gap-1.5 text-sm text-destructive"
+                  >
+                    <CircleAlert aria-hidden className="size-4 shrink-0" />
+                    {error}
+                  </p>
+                )}
               </div>
             );
           })}
         </fieldset>
         {failure && (
-          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{failure}</p>
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-md border border-destructive p-3 text-sm text-destructive"
+          >
+            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {failure}
+          </p>
         )}
-        <div className="flex items-center gap-2 border-t pt-5">
+        <div className="flex flex-wrap items-center gap-3 border-t pt-6">
           {!readOnly && (
             <Button type="submit" disabled={busy}>
-              {submitLabel}
+              {busy ? "Saving…" : submitLabel}
             </Button>
           )}
           {onCancel && (
-            <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
               {readOnly ? "Back" : "Cancel"}
             </Button>
           )}
@@ -130,7 +163,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             <Button
               type="button"
               variant="outline"
-              className="ml-auto text-destructive"
+              className="ml-auto border-destructive text-destructive"
               disabled={busy}
               onClick={() =>
                 window.confirm(`Delete this ${ui.label.toLowerCase()}?`) && run(onDelete)

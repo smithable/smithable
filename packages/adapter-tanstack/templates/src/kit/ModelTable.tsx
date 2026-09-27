@@ -1,5 +1,6 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customise a table, copy this file into src/custom/components/ and edit the copy.
+import { ChevronRight } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import {
@@ -63,6 +64,10 @@ export function ModelTable<R extends Row>({
     );
   }
   const title = columns.find((f) => f.name === ui.titleField) ?? columns[0];
+  const others = columns.filter((f) => f !== title);
+  const status = others.find((f) => f.kind === "choice");
+  const amount = others.find((f) => numeric(f.kind));
+  const secondary = others.find((f) => f !== status && f !== amount);
   const cell = (field: FieldUi, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
     return field.kind === "choice" && text !== "—" ? <Badge>{text}</Badge> : text;
@@ -74,7 +79,7 @@ export function ModelTable<R extends Row>({
         type="button"
         onClick={() => onOpen(row)}
         className={cn(
-          "text-left font-medium outline-none after:absolute after:inset-0 focus-visible:after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring",
+          "cursor-pointer text-left font-semibold outline-none after:absolute after:inset-0 focus-visible:after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring",
           className,
         )}
       >
@@ -85,34 +90,36 @@ export function ModelTable<R extends Row>({
     );
   return (
     <>
-      {/* Phones: one card per record, with its name and a few values. */}
-      <ul className="space-y-2 md:hidden">
+      {/* Phones: one card per record: its name, a contact or other identifier, a status and a key amount. */}
+      <ul className="space-y-3 md:hidden">
         {shown.map((row) => (
           <li key={row.id}>
-            <Card className="relative space-y-1 p-4 hover:bg-accent/40">
-              <div className="flex items-baseline justify-between gap-3">
-                {title && open(row, cell(title, row), "min-w-0 break-words")}
+            <Card className="relative space-y-3 p-5 hover:bg-accent/40">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  {title && open(row, cell(title, row), "break-words text-base font-semibold")}
+                  {secondary && (
+                    <p className="break-words text-sm text-muted-foreground">
+                      {cell(secondary, row)}
+                    </p>
+                  )}
+                </div>
+                {onOpen && <ChevronRight aria-hidden className="mt-0.5 size-5 shrink-0" />}
               </div>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
-                {columns
-                  .filter((f) => f !== title)
-                  .slice(0, 3)
-                  .map((field) => (
-                    <div key={field.name} className="contents">
-                      <dt className="text-muted-foreground">{field.label}</dt>
-                      <dd
-                        className={cn("min-w-0 break-words", numeric(field.kind) && "tabular-nums")}
-                      >
-                        {cell(field, row)}
-                      </dd>
-                    </div>
-                  ))}
-              </dl>
+              {status && <div>{cell(status, row)}</div>}
+              {amount && (
+                <p className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">{amount.label}</span>
+                  <span className="font-semibold whitespace-nowrap tabular-nums">
+                    {cell(amount, row)}
+                  </span>
+                </p>
+              )}
             </Card>
           </li>
         ))}
       </ul>
-      <Card className="hidden md:block">
+      <Card className="hidden overflow-hidden md:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -135,7 +142,7 @@ export function ModelTable<R extends Row>({
                     key={field.name}
                     className={cn(
                       numeric(field.kind) && "text-right tabular-nums",
-                      field.name === ui.titleField && "font-medium",
+                      field.name === ui.titleField && "font-semibold",
                     )}
                   >
                     {field === title ? open(row, cell(field, row)) : cell(field, row)}
