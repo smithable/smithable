@@ -596,6 +596,58 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
   },
   "models": [
     {
+      "description": "The freelancer's own business details, printed on their invoices.",
+      "fields": [
+        {
+          "name": "businessName",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "vatNumber",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "iban",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": 30,
+          "name": "paymentTermDays",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "invoiceFooter",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "BusinessProfile",
+    },
+    {
       "fields": [
         {
           "name": "name",
@@ -848,6 +900,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "invoices",
         "clients",
         "invoice-lines",
+        "settings",
       ],
     },
   ],
@@ -959,6 +1012,38 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "InvoiceLine",
       },
       "route": "/invoice-lines",
+    },
+    {
+      "id": "settings",
+      "pattern": {
+        "kind": "settings",
+        "model": "BusinessProfile",
+      },
+      "route": "/settings",
+    },
+    {
+      "id": "welcome",
+      "pattern": {
+        "kind": "onboarding",
+        "model": "BusinessProfile",
+        "steps": [
+          {
+            "fields": [
+              "businessName",
+              "vatNumber",
+            ],
+            "name": "business",
+          },
+          {
+            "fields": [
+              "iban",
+              "paymentTermDays",
+            ],
+            "name": "payment",
+          },
+        ],
+      },
+      "route": "/welcome",
     },
   ],
   "specVersion": "0.1",
@@ -1820,6 +1905,7 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
       "pages": [
         "overview",
         "invoices",
+        "settings",
       ],
     },
   ],
@@ -1906,6 +1992,38 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         "model": "Invoice",
       },
       "route": "/invoices",
+    },
+    {
+      "id": "settings",
+      "pattern": {
+        "kind": "settings",
+        "model": "Invoice",
+      },
+      "route": "/settings",
+    },
+    {
+      "id": "welcome",
+      "pattern": {
+        "kind": "onboarding",
+        "model": "Invoice",
+        "steps": [
+          {
+            "fields": [
+              "number",
+              "status",
+            ],
+            "name": "first",
+          },
+          {
+            "fields": [
+              "total",
+              "issuedOn",
+            ],
+            "name": "second",
+          },
+        ],
+      },
+      "route": "/welcome",
     },
   ],
   "specVersion": "0.1",

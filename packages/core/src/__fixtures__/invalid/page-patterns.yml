@@ -33,3 +33,12 @@ pages:
     search: [number]                                       # expect: invalid-key
   invoices:
     crud: Invoice
+  settings:
+    settings: Invoce                                       # expect: unknown-model
+  welcome:
+    onboarding:
+      model: Invoice
+      steps:                                               # expect: missing-field
+        first: [status, totl]                              # expect: unknown-field
+  later:
+    onboarding: { model: Invoice }                         # expect: missing-key
