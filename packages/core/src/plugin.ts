@@ -96,8 +96,9 @@ export function applyPlugins(
 }
 
 /**
- * A small JSON Schema check (type, properties, required, additionalProperties, items, enum),
- * enough for plugin sections, with messages that name the path.
+ * A small JSON Schema check (type, properties, required, additionalProperties, items, enum,
+ * pattern, minItems, uniqueItems), enough for plugin sections, with messages that name the
+ * path. Other keywords are not checked.
  */
 export function checkJson(schema: JsonSchema, value: unknown, path: string): string[] {
   const s = schema as {
@@ -107,6 +108,9 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     required?: string[];
     additionalProperties?: boolean | JsonSchema;
     items?: JsonSchema;
+    pattern?: string;
+    minItems?: number;
+    uniqueItems?: boolean;
   };
   const kind = Array.isArray(value)
     ? "array"
@@ -120,6 +124,8 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     return [`"${path}" must be ${types.join(" or ")}.`];
   if (s.enum && !s.enum.includes(value))
     return [`"${path}" must be one of ${s.enum.map((v) => JSON.stringify(v)).join(", ")}.`];
+  if (s.pattern && typeof value === "string" && !new RegExp(s.pattern).test(value))
+    return [`"${path}" must match ${s.pattern}.`];
   const problems: string[] = [];
   if (kind === "object") {
     const object = value as Record<string, unknown>;
@@ -134,9 +140,16 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
         problems.push(...checkJson(s.additionalProperties, item, `${path}.${key}`));
     }
   }
-  if (kind === "array" && s.items)
-    (value as unknown[]).forEach((item, i) => {
-      problems.push(...checkJson(s.items as JsonSchema, item, `${path}[${i}]`));
-    });
+  if (kind === "array") {
+    const items = value as unknown[];
+    if (s.minItems !== undefined && items.length < s.minItems)
+      problems.push(`"${path}" needs at least ${s.minItems} item${s.minItems === 1 ? "" : "s"}.`);
+    if (s.uniqueItems && new Set(items.map((i) => JSON.stringify(i))).size < items.length)
+      problems.push(`"${path}" has the same item twice.`);
+    if (s.items)
+      items.forEach((item, i) => {
+        problems.push(...checkJson(s.items as JsonSchema, item, `${path}[${i}]`));
+      });
+  }
   return problems;
 }

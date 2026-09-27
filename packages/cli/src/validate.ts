@@ -25,6 +25,8 @@ import { loadPlugins } from "./plugins.js";
 export function loadSpec(
   target: string,
   io: Io,
+  /** Plugins to load besides the declared ones, e.g. one being written. */
+  extraPlugins: string[] = [],
 ): {
   ir?: SpecIR;
   auth?: AuthIR;
@@ -62,7 +64,7 @@ export function loadSpec(
   const roles = validateAuth(authFile).auth?.roles.map((r) => r.name);
   let plugins: SpecPlugin[];
   try {
-    plugins = loadPlugins(dirname(path));
+    plugins = loadPlugins(dirname(path), extraPlugins);
   } catch (error) {
     io.err(`${error instanceof Error ? error.message : String(error)}\n`);
     return { path };
@@ -102,8 +104,8 @@ export function loadSpec(
 }
 
 /** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */
-export function validate(target: string, io: Io): number {
-  const { ir, path } = loadSpec(target, io);
+export function validate(target: string, io: Io, extraPlugins: string[] = []): number {
+  const { ir, path } = loadSpec(target, io, extraPlugins);
   if (!ir) return 1;
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
