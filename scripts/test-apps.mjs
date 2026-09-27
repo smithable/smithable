@@ -1034,6 +1034,56 @@ for (const [index, example] of examples.entries()) {
   }
 }
 
+if (examples.includes("booking")) {
+  console.log("\nnew from a sentence");
+  const model = await startFakeModel();
+  const dir = join(mkdtempSync(join(tmpdir(), "smithable-describe-")), "app");
+  dirs.push(dir);
+  try {
+    await asyncStep("without a model, it says how to start from a starter instead", async () => {
+      const result = await smithableAsync(
+        dir,
+        { SMITHABLE_LOCAL_MODEL: "" },
+        "new",
+        dir,
+        "--describe",
+        "A booking site for a pilates studio",
+      );
+      if (result.code === 0 || !result.out.includes("--starter booking"))
+        throw new Error(result.out);
+    });
+    await asyncStep(
+      "the closest starter, adapted by a model, is summarised in plain language and becomes the app",
+      async () => {
+        const result = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+          "new",
+          dir,
+          "--describe",
+          "A booking site for a pilates studio",
+          "--yes",
+        );
+        if (result.code !== 0) throw new Error(result.out);
+        for (const expected of [
+          "Starting from the booking starter.",
+          "Local model (fake-model)",
+          "Lotus Pilates",
+          "Created",
+        ])
+          if (!result.out.includes(expected))
+            throw new Error(`missing "${expected}":\n${result.out}`);
+        if (!readFileSync(join(dir, "src/generated/app.ts"), "utf8").includes("Lotus Pilates"))
+          throw new Error("the app was not generated from the draft");
+      },
+    );
+  } catch {
+    // Already reported.
+  } finally {
+    await model.close();
+  }
+}
+
 if (failures.length) {
   console.log(`\n${failures.length} failed. The apps are kept in:\n${dirs.join("\n")}`);
   process.exit(1);

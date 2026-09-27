@@ -9,18 +9,7 @@ import {
   type ProjectFiles,
 } from "@smithable/core";
 import type { ContextSlice } from "@smithable/index";
-import type { Provider, Tier } from "./provider.js";
-
-/** What one model call used, for the change trace. */
-export interface Usage {
-  provider: string;
-  model: string;
-  tier: Tier;
-  inputTokens: number;
-  outputTokens: number;
-  /** In euros. */
-  cost: number;
-}
+import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export interface ProposedOperation {
   op: string;
@@ -127,23 +116,11 @@ export async function proposeChange(options: {
     for (let attempt = 0; attempt < 2; attempt++) {
       let answer: Answer;
       try {
-        const completion = await provider.complete({
-          system: SYSTEM,
-          user: prompt,
-          schema: answerSchema(),
-        });
-        usage.push({
-          provider: provider.name,
-          model: completion.model,
-          tier: provider.tier,
-          inputTokens: completion.inputTokens,
-          outputTokens: completion.outputTokens,
-          cost:
-            (completion.inputTokens * provider.price.input +
-              completion.outputTokens * provider.price.output) /
-            1_000_000,
-        });
-        answer = JSON.parse(completion.text) as Answer;
+        answer = (await completeJson(
+          provider,
+          { system: SYSTEM, user: prompt, schema: answerSchema() },
+          usage,
+        )) as Answer;
       } catch (error) {
         // Unreachable or not JSON: the next tier gets the request.
         problem = error instanceof Error ? error.message : String(error);

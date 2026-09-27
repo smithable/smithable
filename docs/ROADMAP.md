@@ -191,7 +191,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - The M7 benchmark is re-run with both models and added to the report.
 - First builds from the same 10 app descriptions are compared across a mid-size Smithable model and a frontier model, for quality (designer and user review) and cost. The default model for first builds is chosen from the result.
 
-**Status (2026-09-27):** in progress. Built and tested with a stand-in model: providers, policy, proposals constrained to the operation schemas with dry-run, repair and escalation, questions for unclear requests, confirmation in `smithable ask` and Studio's Describe tab, and tokens and cost in the change trace ([ai.md](ai.md)). Needs a real model for the exit checks: a local one (Ollama) and an EU-hosted one.
+**Status (2026-09-27):** in progress. Built and tested with a stand-in model: providers, policy, proposals constrained to the operation schemas with dry-run, repair and escalation, questions for unclear requests, confirmation in `smithable ask` and Studio's Describe tab, tokens and cost in the change trace, and `smithable new --describe` (a model adapts the closest starter; you confirm the summary) ([ai.md](ai.md)). Needs a real model for the exit checks: a local one (Ollama) and an EU-hosted one.
 
 ## M13 — Escalation and AI-written custom code
 
