@@ -9,16 +9,14 @@ import { exec, type Io } from "./io.js";
 import { projectIndex } from "./rules.js";
 import { loadSpec } from "./validate.js";
 
-/** Where AI may write code: the custom zone (ARCHITECTURE §6.4), nothing else. */
-const CUSTOM = /^src\/custom\//;
-
 /**
  * Something that writes code in a project, given instructions: Claude Code, or a command
  * (for tests and other agents). It may try anything; Smithable checks what it changed.
  */
 export interface Coder {
   name: string;
-  run(dir: string, prompt: string): Promise<Usage>;
+  /** Runs in `dir`; it should change files only in `area`, e.g. "src/custom". */
+  run(dir: string, prompt: string, area: string): Promise<Usage>;
 }
 
 /** The coder from the environment: SMITHABLE_CODER=claude-code, or a command to run. */
@@ -28,9 +26,19 @@ export function coderFromEnv(env: NodeJS.ProcessEnv = process.env): Coder | unde
   return undefined;
 }
 
-function run(command: string, args: string[], dir: string, input?: string): Promise<string> {
+function run(
+  command: string,
+  args: string[],
+  dir: string,
+  input?: string,
+  env?: Record<string, string>,
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: dir, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(command, args, {
+      cwd: dir,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, ...env },
+    });
     let out = "";
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (out += d));
@@ -47,7 +55,7 @@ function run(command: string, args: string[], dir: string, input?: string): Prom
 function claudeCodeCoder(model?: string): Coder {
   return {
     name: "claude-code",
-    async run(dir, prompt) {
+    async run(dir, prompt, area) {
       const out = await run(
         "claude",
         [
@@ -63,8 +71,8 @@ function claudeCodeCoder(model?: string): Coder {
           "Read",
           "Glob",
           "Grep",
-          "Edit(src/custom/**)",
-          "Write(src/custom/**)",
+          `Edit(${area}/**)`,
+          `Write(${area}/**)`,
           "Bash(pnpm typecheck)",
           "Bash(pnpm test *)",
           "Bash(pnpm test)",
@@ -94,12 +102,15 @@ function claudeCodeCoder(model?: string): Coder {
   };
 }
 
-/** A command that gets the prompt on stdin, e.g. another agent, or a stand-in for tests. */
+/**
+ * A command that gets the prompt on stdin and the folder it may change in
+ * SMITHABLE_CODER_AREA: another agent, or a stand-in for tests.
+ */
 function commandCoder(command: string): Coder {
   return {
     name: command,
-    async run(dir, prompt) {
-      await run("sh", ["-c", command], dir, prompt);
+    async run(dir, prompt, area) {
+      await run("sh", ["-c", command], dir, prompt, { SMITHABLE_CODER_AREA: area });
       return {
         provider: "command",
         model: command,
@@ -124,9 +135,108 @@ function customFile(concept: string): string | undefined {
 }
 
 /**
+ * Runs a coder in the project and checks what it did, never trusting it: every changed file
+ * must be in `area`, or everything is undone. Then `after` (Smithable's own follow-up, e.g.
+ * regenerating), the type check and the tests; any failure undoes everything. The result is
+ * one commit that `smithable undo` reverts.
+ */
+export async function runCoder(
+  dir: string,
+  io: Io,
+  coder: Coder | undefined,
+  task: {
+    prompt: string;
+    area: string;
+    request: string;
+    subject: string;
+    after?: () => number;
+  },
+): Promise<number> {
+  if (!coder) {
+    io.err(
+      "No coder is set up: set SMITHABLE_CODER=claude-code (see docs/ai.md), or write the code yourself.\n",
+    );
+    return 1;
+  }
+  ensureRepository(dir);
+  const dirty = uncommitted(dir);
+  if (dirty.length > 0) {
+    io.err(`Commit or discard these changes first:\n${dirty.map((l) => `  ${l}\n`).join("")}`);
+    return 1;
+  }
+  const started = Date.now();
+  let usage: Usage;
+  try {
+    usage = await coder.run(dir, task.prompt, task.area);
+  } catch (error) {
+    discardChanges(dir);
+    io.err(
+      `The coder failed: ${error instanceof Error ? error.message : String(error)}\nNothing was changed.\n`,
+    );
+    return 1;
+  }
+  const changed = changedFiles(dir);
+  const outside = changed.filter((path) => !path.startsWith(`${task.area}/`));
+  if (outside.length > 0) {
+    discardChanges(dir);
+    io.err(
+      `The coder changed files outside ${task.area}/, so every change was undone:\n${outside.map((p) => `  ${p}\n`).join("")}`,
+    );
+    return 1;
+  }
+  if (changed.length === 0) {
+    io.err("The coder changed nothing.\n");
+    return 1;
+  }
+  const checks: [string, () => boolean][] = [
+    ...(task.after ? [["Smithable", () => task.after?.() === 0] as [string, () => boolean]] : []),
+    ["The type check", () => exec("pnpm", ["typecheck"], dir) === 0],
+    ["The tests", () => exec("pnpm", ["test"], dir) === 0],
+  ];
+  for (const [what, check] of checks) {
+    if (!check()) {
+      discardChanges(dir);
+      io.err(`${what} failed with the new code, so everything was undone.\n`);
+      return 1;
+    }
+  }
+  git(dir, ["add", "-A"]);
+  const trailer = `Smithable-AI: ${JSON.stringify({
+    request: task.request,
+    tier: usage.tier,
+    model: usage.model,
+    tokens: usage.inputTokens + usage.outputTokens,
+    cost: Number(usage.cost.toFixed(6)),
+    currency: usage.currency,
+  })}`;
+  const message = `smithable: ${task.subject}\n\nSmithable-Code: ${JSON.stringify({ files: changed })}\nSmithable-Duration: ${Date.now() - started} ms\n${trailer}\n`;
+  const commit = git(dir, ["commit", "-q", "-m", message]);
+  if (!commit.ok) {
+    discardChanges(dir);
+    io.err(`Could not commit: ${commit.out}\n`);
+    return 1;
+  }
+  io.out(
+    `${usageLine([usage])}\nWrote ${changed.join(", ")}; the type check and tests pass. Undo with: smithable undo\n`,
+  );
+  return 0;
+}
+
+/** Every changed file, one by one (also inside new folders); a rename counts as both names. */
+function changedFiles(dir: string): string[] {
+  return (
+    git(dir, ["status", "--porcelain", "-uall"])
+      .out.split("\n")
+      .filter(Boolean)
+      // "XY path": the status letters, then the path (the helper trims the first line's space).
+      .flatMap((line) => line.replace(/^\s*\S{1,2}\s+/, "").split(" -> "))
+      .map((path) => path.replace(/^"|"$/g, ""))
+  );
+}
+
+/**
  * Has a coder write the custom code of a concept (ARCHITECTURE §9.1): only files in
- * src/custom/ may change, then the type check and the tests must pass. Otherwise every
- * change is undone. The result is committed as one change that `smithable undo` reverts.
+ * src/custom/ may change, then the type check and the tests must pass.
  */
 export async function writeCode(
   dir: string,
@@ -135,23 +245,11 @@ export async function writeCode(
   instructions: string,
   coder: Coder | undefined = coderFromEnv(),
 ): Promise<number> {
-  if (!coder) {
-    io.err(
-      "No coder is set up: set SMITHABLE_CODER=claude-code (see docs/ai.md), or implement the code yourself.\n",
-    );
-    return 1;
-  }
   const { ir, auth } = loadSpec(dir, io);
   if (!ir || !auth) return 1;
   const file = customFile(concept);
   if (!file || !existsSync(join(dir, file))) {
     io.err(`${concept} has no custom code to write. Queries, actions and customized pages do.\n`);
-    return 1;
-  }
-  ensureRepository(dir);
-  const dirty = uncommitted(dir);
-  if (dirty.length > 0) {
-    io.err(`Commit or discard these changes first:\n${dirty.map((l) => `  ${l}\n`).join("")}`);
     return 1;
   }
   const index = projectIndex(dir, ir, auth);
@@ -175,64 +273,10 @@ Rules:
 - Finish when "pnpm typecheck" and "pnpm test" pass.
 
 ${context.text}`;
-  const started = Date.now();
-  let usage: Usage;
-  try {
-    usage = await coder.run(dir, prompt);
-  } catch (error) {
-    discardChanges(dir);
-    io.err(
-      `The coder failed: ${error instanceof Error ? error.message : String(error)}\nNothing was changed.\n`,
-    );
-    return 1;
-  }
-  // Every changed file, one by one (also inside new folders); a rename counts as both names.
-  const changed = git(dir, ["status", "--porcelain", "-uall"])
-    .out.split("\n")
-    .filter(Boolean)
-    // "XY path": the status letters, then the path (the helper trims the first line's space).
-    .flatMap((line) => line.replace(/^\s*\S{1,2}\s+/, "").split(" -> "))
-    .map((path) => path.replace(/^"|"$/g, ""));
-  const outside = changed.filter((path) => !CUSTOM.test(path));
-  if (outside.length > 0) {
-    discardChanges(dir);
-    io.err(
-      `The coder changed files outside src/custom/, so every change was undone:\n${outside.map((p) => `  ${p}\n`).join("")}`,
-    );
-    return 1;
-  }
-  if (changed.length === 0) {
-    io.err("The coder changed nothing.\n");
-    return 1;
-  }
-  for (const [what, args] of [
-    ["The type check", ["typecheck"]],
-    ["The tests", ["test"]],
-  ] as const) {
-    if (exec("pnpm", [...args], dir) !== 0) {
-      discardChanges(dir);
-      io.err(`${what} failed with the new code, so it was undone. Nothing was changed.\n`);
-      return 1;
-    }
-  }
-  git(dir, ["add", "-A"]);
-  const trailer = `Smithable-AI: ${JSON.stringify({
+  return runCoder(dir, io, coder, {
+    prompt,
+    area: "src/custom",
     request: instructions,
-    tier: usage.tier,
-    model: usage.model,
-    tokens: usage.inputTokens + usage.outputTokens,
-    cost: Number(usage.cost.toFixed(6)),
-    currency: usage.currency,
-  })}`;
-  const message = `smithable: Write the code of ${concept}\n\nSmithable-Code: ${JSON.stringify({ concept, files: changed })}\nSmithable-Duration: ${Date.now() - started} ms\n${trailer}\n`;
-  const commit = git(dir, ["commit", "-q", "-m", message]);
-  if (!commit.ok) {
-    discardChanges(dir);
-    io.err(`Could not commit the code: ${commit.out}\n`);
-    return 1;
-  }
-  io.out(
-    `${usageLine([usage])}\nWrote ${changed.join(", ")}; the type check and tests pass. Undo with: smithable undo\n`,
-  );
-  return 0;
+    subject: `Write the code of ${concept}`,
+  });
 }

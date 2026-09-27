@@ -5,7 +5,7 @@ import type { AnyOperation } from "./operation.js";
 
 export type JsonSchema = { [key: string]: unknown };
 
-export type SectionKey = Exclude<keyof SpecIR, "specVersion">;
+export type SectionKey = Exclude<keyof SpecIR, "specVersion" | "extensions">;
 
 /**
  * A top-level section of smithable.yml, registered like a plugin (ARCHITECTURE §5.1).

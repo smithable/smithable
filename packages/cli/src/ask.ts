@@ -17,6 +17,7 @@ import { coderFromEnv, writeCode } from "./code.js";
 import { logTokens } from "./context.js";
 import type { Io } from "./io.js";
 import { requiredButEmpty, runOperation } from "./op.js";
+import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
 import { loadSpec } from "./validate.js";
 
@@ -73,10 +74,12 @@ export async function proposeFor(
     ...(read("smithable.content.yml") ? { content: read("smithable.content.yml") } : {}),
     ...(read("smithable.auth.yml") ? { auth: read("smithable.auth.yml") } : {}),
     ...(read("smithable.ux.yml") ? { ux: read("smithable.ux.yml") } : {}),
+    plugins: loadPlugins(dir),
   };
   const context = buildContext(projectIndex(dir, ir, auth), request);
   const providers = route(aiProviders(), parsePolicy(process.env.SMITHABLE_AI_POLICY));
-  const irOf = (text: string) => validateSpec({ path: "smithable.yml", text }).ir;
+  const irOf = (text: string) =>
+    validateSpec({ path: "smithable.yml", text }, { plugins: files.plugins }).ir;
   const proposal = await proposeChange({
     request,
     files,

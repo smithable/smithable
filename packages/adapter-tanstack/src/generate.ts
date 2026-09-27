@@ -23,6 +23,7 @@ import {
   plural,
   type QueryIR,
   type SpecIR,
+  type SpecPlugin,
   snake,
   USER_MODEL,
   type UxIR,
@@ -80,6 +81,8 @@ export interface GenerateOptions {
   customPages?: string[];
   /** Presentation from smithable.ux.yml: theme, table columns, form field order. */
   ux?: UxIR;
+  /** Project plugins: their extra files (ARCHITECTURE §5.1). */
+  plugins?: SpecPlugin[];
 }
 
 const HEADER =
@@ -176,6 +179,19 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     );
     add(`${dir}/new.tsx`, newRoute(page, model, t, ir, ux));
     add(`${dir}/$id.tsx`, detailRoute(page, model, t, ir, ux));
+  }
+  // A plugin's own files, only in its folder: everything else is built from its expansion.
+  for (const plugin of options.plugins ?? []) {
+    const value = ir.extensions?.[plugin.key];
+    if (value === undefined || !plugin.generate) continue;
+    const folder = `src/generated/plugins/${plugin.key}/`;
+    for (const file of plugin.generate(value, ir)) {
+      if (!file.path.startsWith(folder) || file.path.includes(".."))
+        throw new Error(
+          `The ${plugin.key} plugin may only write files in ${folder}, not ${file.path}.`,
+        );
+      add(file.path, file.content);
+    }
   }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
