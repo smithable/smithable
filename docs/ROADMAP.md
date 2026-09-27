@@ -2,7 +2,7 @@
 
 Planned for one developer working with AI coding agents. Milestones are small and ordered so that each one produces something runnable. Each has **exit criteria**, and a milestone is done only when all of them hold. The running example throughout is the CRM in `examples/crm`.
 
-**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11, M13. **In progress:** M9 (usability tests), M10 (approval of the built apps), M12 (needs real models). **In progress:** M5 (everything but the sign-in with a real Google account).
+**Done:** M0, M1, M2, M3, M4, M6, M7, M7.5, M8, M11, M13, M14. **In progress:** M9 (usability tests), M10 (approval of the built apps), M12 (needs real models). **In progress:** M5 (everything but the sign-in with a real Google account).
 
 Strategy: prove the core loop (**spec → operation → regenerated app → undo**) from the CLI first. Then open it to existing coding agents through MCP and benchmark it (M7). After that, de-risk the browser, then build the Builder/Studio app, the design system and Smithable's own AI, and finally the hosted beta. Building AI or UI on top of an unproven deterministic core would hide its weaknesses, and the developer core is a useful product on its own if the rest takes longer.
 
@@ -218,7 +218,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - A backup to an S3-compatible bucket can be restored into a fresh container with no data lost.
 - A sample app with custom code upgrades across a stack profile change with tests passing, and a deliberately broken contract is reported, not silently fixed.
 
-**Status (2026-09-27):** in progress. Done: `smithable security` (fast, normal, release) with pinned external scanners, and `smithable update --security`; a fresh Acme CRM passes all Release checks (image and running app included) after the fixes they found. Deploy targets (local Docker, a Docker host over SSH, a Compose export) and backups with restore (folder or S3-compatible) are done; `pnpm test:deploy` passes the backup exit check against SeaweedFS: a customer survives a backup, destroying the container and its volume, a fresh deploy and a restore. Generated smoke tests are done: every app gets `tests/smoke.spec.ts` (Playwright), in which visitors open the public pages, protected pages send them to sign-in, and every role opens each page it may, without browser errors; they run in `pnpm test:apps` and at the Release level. Next: `smithable upgrade`.
+**Done (2026-09-27):** all three exit checks pass. `pnpm test:deploy` deploys the CRM after the Release checks (type check, tests, generated smoke tests, OSV-Scanner, Gitleaks, Semgrep, Trivy on the image, ZAP against it running), and a customer survives a backup to an S3-compatible bucket (SeaweedFS), destroying the container and its volume, a fresh deploy and a restore. `pnpm test:apps` upgrades the CRM, with its custom action, from a simulated older stack profile: custom code that no longer fits is reported with its file and name and nothing changes, and after it is updated the upgrade passes its tests as one commit. Getting a fresh app through the Release checks took real fixes: a distroless nonroot image, security headers with a nonce-based CSP, patched esbuild, and a file record that no longer looks like API keys. Not yet automated: the SSH deploy target against a real remote host.
 
 ## M15 — Hosted beta (`smithable-cloud`)
 
