@@ -1,7 +1,7 @@
 import { isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { checkKeys, mapEntries, ParseContext, readNameList, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { SpecIR } from "./ir.js";
+import { type PageIR, pageModel, type SpecIR } from "./ir.js";
 import { didYouMean } from "./suggest.js";
 
 /**
@@ -81,13 +81,14 @@ const ICON_WORDS: [RegExp, Icon][] = [
   [/tag|label/i, "tag"],
 ];
 
-/** A page's navigation icon: the one set in smithable.ux.yml, or one suggested by its model. */
-export function pageIcon(ux: UxIR, page: string, model: string | undefined): Icon {
-  return (
-    ux.pages[page]?.icon ??
-    ICON_WORDS.find(([words]) => model !== undefined && words.test(model))?.[1] ??
-    "list"
-  );
+/** A page's navigation icon: the one set in smithable.ux.yml, or one suggested by its kind or model. */
+export function pageIcon(ux: UxIR, page: PageIR): Icon {
+  const set = ux.pages[page.id]?.icon;
+  if (set) return set;
+  if (page.pattern.kind === "landing") return "home";
+  if (page.pattern.kind === "dashboard") return "chart";
+  const model = page.pattern.model;
+  return ICON_WORDS.find(([words]) => words.test(model))?.[1] ?? "list";
 }
 export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
@@ -255,7 +256,7 @@ export function validateUx(
           );
           continue;
         }
-        const model = ir.models.find((m) => m.name === spec.pattern.model);
+        const model = ir.models.find((m) => m.name === pageModel(spec));
         const fields = (model?.fields ?? []).filter(
           (f) => !(f.type.kind === "relation" && f.type.many),
         );

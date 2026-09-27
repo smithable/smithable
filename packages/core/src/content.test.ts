@@ -75,3 +75,56 @@ pages:
 test("the content file needs its version", () => {
   expect(check("models: {}\n").diagnostics.map((d) => d.code)).toEqual(["invalid-version"]);
 });
+
+test("a landing page's sections and a dashboard's tiles have their own texts", () => {
+  const patterns = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: CRM }
+models:
+  Customer:
+    fields: { name: string! }
+pages:
+  home:
+    route: /
+    landing: { hero: { button: customers }, faq: {}, pricing: {} }
+  overview:
+    dashboard: { customers: { count: Customer } }
+  customers: { crud: Customer }
+`,
+  }).ir as SpecIR;
+  const read = (text: string) => validateContent({ path: "smithable.content.yml", text }, patterns);
+  const { content } = read(`smithableContent: 0.1
+pages:
+  home:
+    hero: { title: Know your customers, button: Open the app }
+    faq:
+      items:
+        - { question: Is it free?, answer: Yes. }
+    pricing:
+      items:
+        - { name: Pro, price: €9, features: [Unlimited customers, Support] }
+  overview:
+    customers: { label: Customers so far }
+`);
+  expect(content?.pages).toEqual({
+    home: {
+      sections: {
+        hero: { title: "Know your customers", button: "Open the app" },
+        faq: { items: [{ question: "Is it free?", answer: "Yes." }] },
+        pricing: {
+          items: [{ name: "Pro", price: "€9", features: ["Unlimited customers", "Support"] }],
+        },
+      },
+    },
+    overview: { sections: { customers: { label: "Customers so far" } } },
+  });
+  expect(
+    read(`smithableContent: 0.1
+pages:
+  home:
+    heroo: { title: Hi }
+    faq: { items: [{ question: Q, reply: A }] }
+`).diagnostics.map((d) => d.code),
+  ).toEqual(["unknown-key", "unknown-key"]);
+});

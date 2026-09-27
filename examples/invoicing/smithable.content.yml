@@ -1,0 +1,48 @@
+# What visitors read. Derived from names when not given here.
+smithableContent: 0.1
+
+pages:
+  home:
+    hero:
+      title: Get paid for your work, without the paperwork
+      subtitle: Invoicely keeps your clients, invoices and payments in one place, so you always know who owes you what.
+      button: Start invoicing
+    features:
+      title: Everything a freelancer needs
+      items:
+        - title: Invoices in a minute
+          text: Add the lines, and the total works itself out.
+        - title: See what is overdue
+          text: Every invoice shows whether it is a draft, sent, paid or overdue.
+        - title: Your clients in one place
+          text: Addresses and VAT numbers are there when you need them.
+    pricing:
+      title: Simple pricing
+      text: Example plans; the prices are illustrative.
+      items:
+        - name: Free
+          price: €0
+          period: per month
+          features: [Up to 5 clients, Unlimited invoices]
+          button: Start for free
+        - name: Pro
+          price: €9
+          period: per month
+          features: [Unlimited clients, Reminders for overdue invoices, Priority support]
+          button: Try Pro
+    faq:
+      title: Questions
+      items:
+        - question: Can I use my own invoice numbers?
+          answer: Yes. Numbers are yours to choose, like 2026-001.
+        - question: Who can see my invoices?
+          answer: Only you. Each freelancer sees their own clients and invoices.
+        - question: Can I change an invoice after sending it?
+          answer: A sent or paid invoice is not edited; you credit it instead.
+    callToAction:
+      title: Send your next invoice with Invoicely
+      button: Get started
+  overview:
+    outstanding: { label: Outstanding }
+    invoiced: { label: Invoiced by month }
+    latest: { label: Latest invoices }

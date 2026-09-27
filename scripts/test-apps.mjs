@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { chromium } from "playwright";
+import { validateSpec } from "../packages/core/dist/index.js";
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -251,16 +252,17 @@ async function formulaFlow(base) {
  */
 async function visualChecks(dir, base) {
   const axe = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
-  const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-  const routes = [
-    ...spec.slice(spec.indexOf("\npages:")).matchAll(/^ {2}([a-z][\w-]*):\n(?: {4}.*\n)*?/gm),
-  ].map((m) => {
-    const route = new RegExp(`^ {2}${m[1]}:\\n(?: {4}.*\\n)*? {4}route: (\\S+)`, "m").exec(
-      spec,
-    )?.[1];
-    return route ?? `/${m[1]}`;
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: readFileSync(join(dir, "smithable.yml"), "utf8"),
   });
-  const paths = [...routes.flatMap((r) => [r, `${r}/new`, `${r}/1`]), "/sign-in"];
+  // A crud page also has its form and a record; landing pages and dashboards are one page.
+  const paths = [
+    ...ir.pages.flatMap((p) =>
+      p.pattern.kind === "crud" ? [p.route, join(p.route, "new"), join(p.route, "1")] : [p.route],
+    ),
+    "/sign-in",
+  ];
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const problems = [];
@@ -772,27 +774,32 @@ for (const [index, example] of examples.entries()) {
     let stop = await serve(dir, port, "production");
     try {
       const base = `http://localhost:${port}`;
-      const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+      const { ir } = validateSpec({
+        path: "smithable.yml",
+        text: readFileSync(join(dir, "smithable.yml"), "utf8"),
+      });
       const publicPages =
-        /public:\n(?:.*\n)*? {2}pages: \[([^\]]*)\]/.exec(
-          readFileSync(join(dir, "smithable.auth.yml"), "utf8"),
-        )?.[1] ?? "";
-      const pages = spec.slice(spec.indexOf("\npages:"));
-      const routes = [...pages.matchAll(/^ {2}([a-z][\w-]*):\n {4}(?:route: (\S+)\n {4})?/gm)];
-      for (const route of routes) {
-        const path = route[2] ?? `/${route[1]}`;
+        /public:\n(?:.*\n)*? {2}pages: \[([^\]]*)\]/
+          .exec(readFileSync(join(dir, "smithable.auth.yml"), "utf8"))?.[1]
+          ?.split(",")
+          .map((p) => p.trim()) ?? [];
+      for (const page of ir.pages) {
+        const path = page.route;
         const response = await fetch(`${base}${path}`, { redirect: "manual" });
         const html = await response.text();
-        const isPublic = publicPages
-          .split(",")
-          .map((p) => p.trim())
-          .includes(route[1]);
+        const isPublic = publicPages.includes(page.id);
+        const landing = page.pattern.kind === "landing";
         const ok = isPublic
-          ? response.status === 200 && html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html)
+          ? response.status === 200 &&
+            (landing
+              ? html.includes("<h1")
+              : html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
-        const what = isPublic
-          ? "is public: lists sample data without sign-in, read-only"
-          : "needs sign-in";
+        const what = !isPublic
+          ? "needs sign-in"
+          : landing
+            ? "is public: the landing page opens without sign-in"
+            : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
       }
