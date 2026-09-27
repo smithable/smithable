@@ -18,7 +18,8 @@
     "embed": "node scripts/embed.mjs",
     "test:apps": "node scripts/test-apps.mjs",
     "test:studio": "node scripts/test-studio.mjs",
-    "test:container": "node scripts/test-container.mjs"
+    "test:container": "node scripts/test-container.mjs",
+    "test:deploy": "node scripts/test-deploy.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
