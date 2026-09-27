@@ -20,6 +20,8 @@ export interface Project {
   concepts: ConceptInfo[];
   trace: TraceEntry[];
   preview: string;
+  /** Where the project's publishing and settings live, when Studio is hosted. */
+  home?: string;
 }
 
 /** A model's proposal for a request; nothing is applied until it is confirmed. */
