@@ -8,6 +8,11 @@ models:
       status: draft | sent | paid
       total: money
       issuedOn: date
+queries:
+  overdueFirst:
+    custom: true
+    returns: Invoice[]
+    intent: Unpaid invoices, the longest overdue first.
 pages:
   home:
     route: /
@@ -23,6 +28,7 @@ pages:
       paid: { sum: Invoice.total, where: { status: paid } }
       revenue: { sum: Invoice.total, by: issuedOn }
       latest: { list: Invoice, limit: 5 }
+      chase: { query: overdueFirst, limit: 3 }
   invoices:
     crud: Invoice
   settings:

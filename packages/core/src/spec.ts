@@ -8,6 +8,7 @@ import { appSection } from "./sections/app.js";
 import { modelsSection } from "./sections/models.js";
 import { navigationSection } from "./sections/navigation.js";
 import { pagesSection } from "./sections/pages.js";
+import { queriesSection } from "./sections/queries.js";
 
 /** The spec format version this build of Smithable reads and writes. */
 export const SPEC_VERSION = "0.1";
@@ -17,6 +18,7 @@ export const SECTIONS: readonly SpecSection[] = [
   appSection,
   modelsSection,
   actionsSection,
+  queriesSection,
   pagesSection,
   navigationSection,
 ];

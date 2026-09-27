@@ -738,4 +738,5 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 | **License** | Apache-2.0 for engine, tools and spec; 0BSD for app kit and templates |
 | **Preview vs production SQLite** | WebAssembly driver in the preview, native SQLite in production. Verify that behaviour matches (M8) |
 | **Hosted project storage** | Projects saved server-side as Git repositories, synced from the browser. Decide in M8 |
+| **Other kinds of apps** (desktop, iOS, CLI tools, pipelines…), possibly community-made types in a Git repository stating their grammar, meaning, operations, generators and stack | A different platform for the same app is a new adapter with mostly the same spec (§5); a different kind of thing is a bundle of plugins plus an adapter (§5.1). Community types would be pinned by commit and hash, and their generators (pure functions) sandboxed. Web apps stay the one product until the launch; the order is the public plugin API, a second adapter, then types |
 | **In-browser local model (WebGPU)** | Possible later for small intent tasks. Model download size is the obstacle |

@@ -32,6 +32,27 @@ const ANSWERS = [
     /add a date/i,
     { kind: "question", question: "A date on what?", options: ["Orders", "Customers"] },
   ],
+  [
+    /churn/i,
+    {
+      kind: "operations",
+      operations: [
+        {
+          op: "addQuery",
+          args: {
+            query: "churnRisk",
+            returns: "Customer",
+            intent:
+              "Customers most likely to stop buying: the longest since their last order first.",
+          },
+        },
+        {
+          op: "addTile",
+          args: { page: "overview", tile: "atRisk", measure: "query", of: "churnRisk", limit: 5 },
+        },
+      ],
+    },
+  ],
   [/email .* ships/i, { kind: "none", reason: "Sending email needs custom code." }],
 ];
 
