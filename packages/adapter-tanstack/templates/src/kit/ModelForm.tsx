@@ -1,7 +1,7 @@
 // Smithable app kit: a create/edit form for any model, validated with the model's Zod schema.
 // To customise a form, copy this file into src/custom/components/ and edit the copy.
 import { Calculator, CircleAlert } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -39,6 +39,8 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs) }) ?? {};
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const confirmDelete = useRef<HTMLDialogElement>(null);
+  const recordName = initial?.[ui.titleField];
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -165,12 +167,46 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               variant="outline"
               className="ml-auto border-destructive text-destructive"
               disabled={busy}
-              onClick={() =>
-                window.confirm(`Delete this ${ui.label.toLowerCase()}?`) && run(onDelete)
-              }
+              onClick={() => confirmDelete.current?.showModal()}
             >
               Delete
             </Button>
+          )}
+          {onDelete && (
+            // Opening it focuses Cancel, the first button; Escape closes it.
+            <dialog
+              ref={confirmDelete}
+              aria-labelledby="delete-title"
+              className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+            >
+              <h2 id="delete-title" className="text-lg font-semibold">
+                Delete{" "}
+                {typeof recordName === "string" && recordName
+                  ? `“${recordName}”`
+                  : `this ${ui.label.toLowerCase()}`}
+                ?
+              </h2>
+              <p className="mt-2 text-muted-foreground">This cannot be undone.</p>
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => confirmDelete.current?.close()}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    confirmDelete.current?.close();
+                    run(onDelete);
+                  }}
+                >
+                  Delete {ui.label.toLowerCase()}
+                </Button>
+              </div>
+            </dialog>
           )}
         </div>
       </form>
