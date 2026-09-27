@@ -5,6 +5,7 @@
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -239,6 +240,63 @@ async function formulaFlow(base) {
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
     failures.push("invoicing formula flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Every page, in light and dark, on desktop and on a phone: no accessibility violations
+ * (axe-core, WCAG 2 A and AA, including contrast) and no sideways scrolling.
+ */
+async function visualChecks(dir, base) {
+  const axe = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
+  const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+  const routes = [
+    ...spec.slice(spec.indexOf("\npages:")).matchAll(/^ {2}([a-z][\w-]*):\n(?: {4}.*\n)*?/gm),
+  ].map((m) => {
+    const route = new RegExp(`^ {2}${m[1]}:\\n(?: {4}.*\\n)*? {4}route: (\\S+)`, "m").exec(
+      spec,
+    )?.[1];
+    return route ?? `/${m[1]}`;
+  });
+  const paths = [...routes.flatMap((r) => [r, `${r}/new`, `${r}/1`]), "/sign-in"];
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const problems = [];
+  try {
+    if (!readFileSync(join(dir, "smithable.auth.yml"), "utf8").includes("signIn: none"))
+      await signInAs(page, base, "admin");
+    for (const colorScheme of ["light", "dark"]) {
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+      ]) {
+        await page.emulateMedia({ colorScheme });
+        await page.setViewportSize({ width, height });
+        for (const path of paths) {
+          await open(page, `${base}${path}`);
+          await page.addScriptTag({ path: axe });
+          const violations = await page.evaluate(async () => {
+            const result = await window.axe.run(document, {
+              runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] },
+            });
+            return result.violations.map((v) => `${v.id} at ${v.nodes[0]?.target.join(" ")}`);
+          });
+          const overflow = await page.evaluate(
+            () => document.documentElement.scrollWidth - window.innerWidth,
+          );
+          const where = `${path} (${colorScheme}, ${width} px)`;
+          for (const v of violations) problems.push(`${where}: ${v}`);
+          if (overflow > 1) problems.push(`${where}: scrolls sideways by ${overflow} px`);
+        }
+      }
+    }
+    const ok = problems.length === 0;
+    console.log(
+      `  ${ok ? "✓" : "✗"} visual checks: ${paths.length} pages, light and dark, desktop and phone: no accessibility violations or sideways scrolling${ok ? "" : `\n    ${problems.slice(0, 10).join("\n    ")}`}`,
+    );
+    if (!ok) failures.push("visual checks");
   } finally {
     await browser.close();
   }
@@ -708,6 +766,7 @@ for (const [index, example] of examples.entries()) {
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
+      await visualChecks(dir, base);
       if (example === "crm") await browserFlow(base);
       if (example === "invoicing") {
         await formulaFlow(base);
