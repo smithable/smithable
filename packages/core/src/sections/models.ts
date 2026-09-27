@@ -231,6 +231,9 @@ function readField(
       keyNode,
       "reserved-name",
       `"${name}" is added to every model automatically, so it cannot be declared.`,
+      name === "owner"
+        ? `Every record already has an owner: whoever created it. To make someone else the owner, add a user field (like "lender: User") and "ownedBy: lender".`
+        : undefined,
     );
     return undefined;
   }
@@ -564,11 +567,18 @@ function checkRelations(ctx: ParseContext, models: ModelIR[], relationNodes: Rel
       );
       if (back.length === 0) {
         const suggestion = model.name.charAt(0).toLowerCase() + model.name.slice(1);
+        // Both sides listing each other (talks and attendees) need a record in between.
+        const mutual = target.fields.some(
+          (f) => f.type.kind === "relation" && f.type.many && f.type.model === model.name,
+        );
+        const link = `${model.name}${target.name}`;
         ctx.error(
           at,
           "missing-inverse",
           `${target.name} has no reference to ${model.name}, so "${model.name}.${field.name}" cannot list anything.`,
-          `Add a field like "${suggestion}: ${model.name}!" to ${target.name}.`,
+          mutual
+            ? `${model.name} and ${target.name} list each other: add a model that links them, like ${link} with "${suggestion}: ${model.name}!" and "${target.name.charAt(0).toLowerCase()}${target.name.slice(1)}: ${target.name}!", and list ${link} records on both sides.`
+            : `Add a field like "${suggestion}: ${model.name}!" to ${target.name}.`,
         );
       } else if (back.length > 1) {
         ctx.error(

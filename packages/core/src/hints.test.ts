@@ -1,0 +1,72 @@
+// Hints say how to fix a mistake: people read them, and so do models repairing a draft.
+import { expect, test } from "vitest";
+import { validateAuth } from "./auth.js";
+import { validateSpec } from "./spec.js";
+
+const hints = (text: string) =>
+  validateSpec({ path: "smithable.yml", text }).diagnostics.map((d) => d.hint);
+
+test("two models listing each other get a link model suggested", () => {
+  expect(
+    hints(`smithable: 0.1
+app: { name: Conference }
+models:
+  Talk:
+    fields:
+      title: string!
+      attendees: Attendee[]
+  Attendee:
+    fields:
+      name: string!
+      talks: Talk[]
+`),
+  ).toContain(
+    'Talk and Attendee list each other: add a model that links them, like TalkAttendee with "talk: Talk!" and "attendee: Attendee!", and list TalkAttendee records on both sides.',
+  );
+});
+
+test("declaring owner explains the automatic owner and ownedBy", () => {
+  expect(
+    hints(`smithable: 0.1
+app: { name: Tools }
+models:
+  Tool:
+    fields: { name: string!, owner: User }
+`)[0],
+  ).toContain('add a user field (like "lender: User") and "ownedBy: lender"');
+});
+
+test("a landing section written as a list shows the accepted forms", () => {
+  expect(
+    hints(`smithable: 0.1
+app: { name: Site }
+pages:
+  home:
+    route: /
+    landing:
+      features: [fast, simple]
+`)[0],
+  ).toContain('Write "features:" with nothing after it');
+});
+
+test("a comma or colon that splits a description is explained", () => {
+  const { diagnostics } = validateAuth({
+    path: "smithable.auth.yml",
+    text: `smithableAuth: 0.1
+signIn: { providers: [google] }
+defaultAccess: shared
+roles:
+  admin: { description: Runs the app. }
+  sales: { description: Works with contacts, deals and follow-ups. }
+defaultRole: sales
+`,
+  });
+  const hint =
+    'A ", " inside { … } or a ": " inside a text starts a new entry: put the whole text in quotes.';
+  expect(diagnostics.map((d) => d.hint)).toContain(hint);
+  const colon = validateAuth({
+    path: "smithable.auth.yml",
+    text: "smithableAuth: 0.1\nroles:\n  sales:\n    description: Works with contacts: deals.\n",
+  });
+  expect(colon.diagnostics.map((d) => d.hint)).toContain(hint);
+});
