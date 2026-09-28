@@ -443,6 +443,48 @@ try {
     );
     if (status !== 403) throw new Error(`answered ${status}`);
   });
+  await step("a message from a window other than the preview is ignored", async () => {
+    const before = (await project()).files.content;
+    // Studio's own window, not the preview frame, pretending to be the preview.
+    await page.evaluate(() =>
+      window.postMessage(
+        {
+          source: "smithable-preview",
+          type: "text",
+          path: "pages.customers.title",
+          text: "Hacked",
+        },
+        "*",
+      ),
+    );
+    await page.waitForTimeout(2000);
+    if ((await project()).files.content !== before) throw new Error("the message was acted on");
+  });
+  await step(
+    "a form on another site cannot change the project, and a folder path is no crash",
+    async () => {
+      const answer = (path, method, headers, body) =>
+        new Promise((resolve, reject) =>
+          request(
+            { port, path, method, headers: { host: `localhost:${port}`, ...headers } },
+            (r) => {
+              r.resume();
+              resolve(r.statusCode);
+            },
+          )
+            .on("error", reject)
+            .end(body),
+        );
+      const form = await answer(
+        "/api/op",
+        "POST",
+        { "content-type": "text/plain", origin: "https://evil.example" },
+        JSON.stringify({ name: "removeField", args: { model: "Customer", field: "notes" } }),
+      );
+      if (form !== 403) throw new Error(`a cross-site form answered ${form}`);
+      if ((await answer("/assets", "GET", {})) !== 200) throw new Error("a folder path failed");
+    },
+  );
 } catch {
   // Reported above.
 } finally {
