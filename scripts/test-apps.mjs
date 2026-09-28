@@ -1068,6 +1068,13 @@ for (const [index, example] of examples.entries()) {
             : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
+        // A starter's pictures (its hero) are in the app and served.
+        for (const [, src] of html.matchAll(/<img[^>]* src="(\/images\/[^"]+)"/g)) {
+          const image = await fetch(`${base}${src}`);
+          const served = image.ok && image.headers.get("content-type")?.startsWith("image/");
+          console.log(`  ${served ? "✓" : "✗"} ${path} shows ${src}`);
+          if (!served) failures.push(`${example} ${src}`);
+        }
       }
       const signIn = await (await fetch(`${base}/sign-in`)).text();
       const devSignIn = await fetch(`${base}/api/auth/sign-in/email`, {

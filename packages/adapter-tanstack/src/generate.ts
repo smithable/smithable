@@ -1405,7 +1405,12 @@ function landingRoute(
           subtitle=${JSON.stringify(own.subtitle ?? ir.app.description)}`
               : ""
           }
-          link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}
+          link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}${
+            own.image
+              ? `
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)} }}`
+              : ""
+          }
         />`,
         ];
       case "records": {

@@ -7,6 +7,7 @@ import type { Proposal } from "@smithable/ai";
 import type { OperationArgs } from "@smithable/core";
 import { applyProposal, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
+import { warmTools } from "./generate.js";
 import { git } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
@@ -179,6 +180,8 @@ export async function studio(
     }
   };
   startApp();
+  // The first operation then finds its tools loaded.
+  void warmTools(dir);
 
   /** The last proposal a model made, waiting to be applied or dropped. */
   let pending: { request: string; proposal: Proposal } | undefined;
