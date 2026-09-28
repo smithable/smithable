@@ -137,6 +137,14 @@ export function quoteTexts(yaml: string): string {
     .join("\n");
 }
 
+/**
+ * Removes a "!" after a choice's last value ("unit: g | kg | pieces!"): a model's way of
+ * saying required, which a choice always is.
+ */
+export function choiceWithoutBang(yaml: string): string {
+  return yaml.replace(/^(\s*[\w-]+:[ \t]+[^#\n]*\|[^#\n]*?)!([ \t]*(#.*)?)$/gm, "$1$2");
+}
+
 /** Files a draft can do without: the app falls back to its default presentation and texts. */
 const OPTIONAL = ["smithable.ux.yml", "smithable.content.yml"];
 
@@ -204,12 +212,13 @@ export async function draftProject(options: {
         ),
       );
       let errors = checkSpecFiles(kept);
-      // Unquoted texts are the most common slip, and fixing them needs no model.
-      if (errors.length) {
-        const quoted = Object.fromEntries(Object.entries(kept).map(([f, t]) => [f, quoteTexts(t)]));
-        const remaining = checkSpecFiles(quoted);
+      // Common slips are fixed without a model, each kept only if it leaves fewer errors.
+      for (const repair of [quoteTexts, choiceWithoutBang]) {
+        if (!errors.length) break;
+        const repaired = Object.fromEntries(Object.entries(kept).map(([f, t]) => [f, repair(t)]));
+        const remaining = checkSpecFiles(repaired);
         if (remaining.length < errors.length) {
-          Object.assign(kept, quoted);
+          Object.assign(kept, repaired);
           errors = remaining;
         }
       }

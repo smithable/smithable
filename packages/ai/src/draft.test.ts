@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   checkSpecFiles,
+  choiceWithoutBang,
   closestStarter,
   draftProject,
   quoteTexts,
@@ -108,6 +109,12 @@ describe("starting from a sentence", () => {
     expect(draft.kind === "draft" && draft.files["smithable.ux.yml"]).toBeUndefined();
     expect(draft.kind === "draft" && draft.files["smithable.yml"]).toBe(booking["smithable.yml"]);
     expect(model.prompts).toHaveLength(1);
+  });
+
+  test('a choice\'s stray "!" is removed; other lines stay', () => {
+    expect(choiceWithoutBang("      unit: g | kg | pieces!\n      name: string!\n")).toBe(
+      "      unit: g | kg | pieces\n      name: string!\n",
+    );
   });
 
   test("quoting leaves quoted, flow and block values alone", () => {
