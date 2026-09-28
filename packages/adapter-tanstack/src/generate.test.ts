@@ -183,3 +183,17 @@ describe("custom pages", () => {
     expect(customPageFromEdit(spec, "customers", { ...options, auth }, routeEdit).ok).toBe(false);
   });
 });
+
+test("an action checks that the viewer may read every record its input names", () => {
+  const crm = Object.entries(examples).find(([path]) => path.includes("/crm/"));
+  const auth = Object.entries(authFiles).find(([path]) => path.includes("/crm/"));
+  if (!crm || !auth) throw new Error("no CRM");
+  const files = generateApp(ir(crm[0], crm[1] as string), {
+    ...options,
+    auth: authOf(auth[1] as string),
+  });
+  const action = files.find((f) => f.path === "src/generated/actions/merge-customers.ts")?.content;
+  expect(action).toContain("customerData.canRead(viewer, data.keep)");
+  expect(action).toContain("customerData.canRead(viewer, data.duplicate)");
+  expect(action).toContain("return run(data, viewer);");
+});

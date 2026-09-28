@@ -211,3 +211,16 @@ import { ${formulasName(model)} } from "${formulasModule(model)}";
 ${byField.join("\n\n")}
 `;
 }
+
+/** Lists that aggregates in the model's formulas read, e.g. "lines" for SUM(lines.amount). */
+export function aggregatedLists(model: ModelIR): string[] {
+  const found = new Set<string>();
+  const visit = (e: unknown): void => {
+    if (!e || typeof e !== "object") return;
+    const node = e as { kind?: string; list?: string };
+    if (node.kind === "aggregate" && node.list) found.add(node.list);
+    for (const value of Object.values(e)) visit(value);
+  };
+  for (const field of model.fields) visit(field.formula);
+  return [...found];
+}
