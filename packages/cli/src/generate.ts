@@ -203,11 +203,8 @@ export async function runTools(
     if (made === undefined && !migrate(dir, migration, run)) return 1;
   }
   lap("drizzle-kit");
-  // Always: skipping it when no route file changed leaves a request to the Studio preview
-  // hanging after an Undo restarted the dev server (test:studio's "click the email field"
-  // step); running it touches the route tree and Vite recovers. Ruled out so far: the
-  // in-process migration, the preview warm-up, Undo not regenerating the route tree.
-  if (!run(["exec", "tsr", "generate"])) return 1;
+  // In this process it costs well under 0.1 s.
+  if (!(await routeTree(dir)) && !run(["exec", "tsr", "generate"])) return 1;
   lap("route generator");
   if (schema && migration?.apply) {
     const applied = applyMigrations(dir, io);
@@ -217,6 +214,29 @@ export async function runTools(
     lap("migration");
   }
   return 0;
+}
+
+/**
+ * Writes the route tree in this process with the app's own router generator (what `tsr
+ * generate` runs; tsr.config.json is read the same way): about 0.05 s instead of 2 s for a
+ * process in a sandbox. False if it can't be loaded here, so the caller runs tsr.
+ */
+async function routeTree(dir: string): Promise<boolean> {
+  const root = resolve(dir);
+  try {
+    const cli = createRequire(join(root, "package.json")).resolve(
+      "@tanstack/router-cli/package.json",
+    );
+    const generator = createRequire(cli).resolve("@tanstack/router-generator");
+    const { Generator, getConfig } = (await import(pathToFileURL(generator).href)) as {
+      Generator: new (options: { config: unknown; root: string }) => { run(): Promise<void> };
+      getConfig(inline: object, root: string): unknown;
+    };
+    await new Generator({ config: getConfig({}, root), root }).run();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

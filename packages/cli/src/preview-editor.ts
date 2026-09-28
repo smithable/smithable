@@ -106,10 +106,42 @@ if (typeof window !== "undefined" && window.parent !== window) {
 const ID = "virtual:smithable-editor";
 
 /** The Vite plugin: serves the runtime and imports it from the app's router module. */
+/** The parts of Vite's dev server the plugin uses. */
+interface DevServer {
+  watcher: { on(event: string, listener: () => void): void };
+  middlewares: {
+    use(
+      path: string,
+      handler: (req: unknown, res: { end(body: string): void }) => void | Promise<void>,
+    ): void;
+  };
+}
+
 export function smithableEditor() {
   return {
     name: "smithable-editor",
     apply: "serve",
+    /**
+     * /__smithable/settled answers once the dev server has taken in the latest file changes:
+     * its watcher saw them and has been quiet for 300 ms (at most 3 s). Studio waits for it
+     * before reloading the preview; reloading while changed files are still being picked up
+     * can leave the request hanging.
+     */
+    configureServer(server: DevServer) {
+      let changed = 0;
+      for (const event of ["add", "change", "unlink"])
+        server.watcher.on(event, () => {
+          changed = Date.now();
+        });
+      server.middlewares.use("/__smithable/settled", async (_req, res) => {
+        const start = Date.now();
+        const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        // The change may still be on its way to the watcher.
+        while (changed < start - 1000 && Date.now() - start < 1000) await pause(25);
+        while (Date.now() - changed < 300 && Date.now() - start < 3000) await pause(25);
+        res.end("settled");
+      });
+    },
     resolveId: (id: string) => (id === ID ? `\0${ID}` : undefined),
     load: (id: string) => (id === `\0${ID}` ? RUNTIME : undefined),
     transform: (code: string, id: string) =>
