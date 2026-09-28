@@ -15,6 +15,7 @@ import { previewConfig } from "./preview-editor.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
+import { warmPreview } from "./warm.js";
 
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
 const STUDIO = new URL("../../../apps/studio/dist/", import.meta.url).pathname;
@@ -148,6 +149,7 @@ export async function studio(
     );
     app.stdout?.on("data", (d) => log(String(d)));
     app.stderr?.on("data", (d) => log(String(d)));
+    void warmPreview(previewPort, log);
   };
   const stopApp = () => {
     if (app?.pid) {
