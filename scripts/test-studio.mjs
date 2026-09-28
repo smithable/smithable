@@ -91,7 +91,7 @@ try {
   console.log("Builder mode");
   await step("the app is described in plain language", async () => {
     await page.goto(base);
-    await page.getByText("Customers have:").waitFor();
+    await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
   });
   await step("the preview runs the app, with the development sign-in", async () => {
