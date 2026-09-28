@@ -1,5 +1,6 @@
 // What was selected in the preview, and the changes that apply to it.
-import { humanize } from "@smithable/core";
+import { humanize, type SpecIR } from "@smithable/core";
+import { wordsFor } from "@smithable/index";
 import { useState } from "react";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
@@ -38,8 +39,9 @@ export function Selected({
             {humanize(field.name)}{" "}
             <span className="text-neutral-500">of {humanize(model.name)}</span>
           </p>
-          <p className="font-mono text-xs text-neutral-500">
-            {fieldName}: {shorthandOf(field)}
+          {/* As "Your app" lists it. */}
+          <p className="text-xs text-neutral-500">
+            {wordsFor(spec.ir as SpecIR, spec.content).item(model, field)}
           </p>
         </div>
         {canBeRequired && (

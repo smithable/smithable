@@ -1,5 +1,5 @@
 // Builder mode: the app in plain language, forms for changes, and the preview.
-import { summarize } from "@smithable/index";
+import { describeChange, summarize } from "@smithable/index";
 import { useEffect, useMemo, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
@@ -41,6 +41,8 @@ export function Builder({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [run]);
+  const words = (op: string, args: Record<string, unknown>) =>
+    spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
   const sections = useMemo(
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content) : []),
     [spec],
@@ -60,7 +62,7 @@ export function Builder({
         }
       >
         {tab === "app" ? (
-          <AppSummary app={project.name} sections={sections} spec={spec} run={run} />
+          <AppSummary app={project.name} sections={sections} spec={spec} run={run} words={words} />
         ) : (
           <div>
             <div className="border-b border-neutral-200 px-3 py-2">
@@ -78,6 +80,7 @@ export function Builder({
             </div>
             {how === "describe" ? (
               <Ask
+                words={words}
                 onEdit={(p) => {
                   setPrefill(p);
                   setHow("manual");
@@ -103,10 +106,10 @@ export function Builder({
             run={run}
             onClose={() => setSelection(undefined)}
           />
-          <Trace entries={project.trace} />
+          <Trace entries={project.trace} words={words} />
         </div>
       ) : (
-        <Trace entries={project.trace} />
+        <Trace entries={project.trace} words={words} />
       )}
     </div>
   );

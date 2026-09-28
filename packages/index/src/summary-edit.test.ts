@@ -1,5 +1,6 @@
 import { validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
+import { describeChange } from "./change-words.js";
 import { summarize } from "./summary.js";
 import { readSummaryEdit } from "./summary-edit.js";
 
@@ -18,36 +19,56 @@ const content = validateContent(
 ).content;
 const customers = summarize(ir, auth, content).find((s) => s.concept === "model:Customer");
 if (!customers) throw new Error("no customers");
-const [first = "", ...rest] = customers.sentences;
-const edit = (sentence: string, others = rest) =>
-  readSummaryEdit(customers, [sentence, ...others].join("\n"), ir);
+const lines = customers.sentences;
+const edit = (change: (lines: string[]) => string[]) =>
+  readSummaryEdit(customers, change([...lines]).join("\n"), ir);
+const after =
+  (item: string, ...added: string[]) =>
+  (l: string[]) => {
+    l.splice(l.indexOf(item) + 1, 0, ...added);
+    return l;
+  };
 
-test("items added to, removed from or changed in a model's sentence become operations", () => {
-  expect(edit(first)).toEqual([]);
+test("lines added to, removed from or changed in a model's list of fields become operations", () => {
+  expect(edit((l) => l)).toEqual([]);
   expect(
-    edit(
-      first.replace(
-        " and notes.",
-        ", a website (a web address), notes and a VAT number (required, unique).",
-      ),
-    ),
+    edit(after("- notes", "- a website (a web address)", "- a VAT number (required, unique)")),
   ).toEqual([
     { op: "addField", args: { model: "Customer", field: "website", type: "url" } },
     { op: "addField", args: { model: "Customer", field: "vatNumber", type: "string! unique" } },
   ]);
-  expect(edit(first.replace("a phone, ", ""))).toEqual([
+  expect(edit((l) => l.filter((x) => x !== "- a phone"))).toEqual([
     { op: "removeField", args: { model: "Customer", field: "phone" } },
   ]);
-  // The same item with new notes changes the field.
-  expect(edit(first.replace("a phone,", "a phone (required),"))).toEqual([
+  // The same field with new notes changes it.
+  expect(edit((l) => l.map((x) => (x === "- a phone" ? "- a phone (required)" : x)))).toEqual([
     { op: "changeField", args: { model: "Customer", field: "phone", type: "phone!" } },
   ]);
 });
 
 test("anything else is left to the model", () => {
-  expect(
-    edit(first.replace(" and notes.", " and a favourite colour (blue or green).")),
-  ).toBeUndefined();
-  expect(edit(first, ["Customers must be approved."])).toBeUndefined();
-  expect(edit(`Clients have ${first.slice("Customers have ".length)}`)).toBeUndefined();
+  expect(edit(after("- notes", "- a favourite colour (blue or green)"))).toBeUndefined();
+  expect(edit((l) => [...l, "Customers must be approved."])).toBeUndefined();
+  expect(edit((l) => ["Clients have:", ...l.slice(1)])).toBeUndefined();
+});
+
+test("changes are worded like the summary", () => {
+  const words = (op: string, args: Record<string, unknown>) =>
+    describeChange(op, args, ir, content);
+  expect(words("addField", { model: "Customer", field: "website", type: "url" })).toBe(
+    "Customers: added a website (a web address)",
+  );
+  expect(words("addField", { model: "Customer", field: "vatNumber", type: "string! unique" })).toBe(
+    "Customers: added a vat number (required, unique)",
+  );
+  expect(words("changeField", { model: "Customer", field: "phone", type: "phone!" })).toBe(
+    "Customers: now a phone (required)",
+  );
+  expect(words("removeField", { model: "Customer", field: "phone" })).toBe(
+    "Customers: removed the phone",
+  );
+  expect(words("setAccess", { target: "model:Order.create", roles: ["admin"] })).toBe(
+    "Only admins can add orders",
+  );
+  expect(words("setIcon", { page: "customers", icon: "users" })).toBeUndefined();
 });

@@ -6,7 +6,7 @@ import { Button, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 
 /** `onEdit` opens a proposed operation in Manual, with its values filled in. */
-export function Ask({ onEdit }: { onEdit: (prefill: Prefill) => void }) {
+export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; words?: Words }) {
   const [request, setRequest] = useState("");
   const [proposal, setProposal] = useState<Proposal>();
   const [busy, setBusy] = useState(false);
@@ -51,6 +51,7 @@ export function Ask({ onEdit }: { onEdit: (prefill: Prefill) => void }) {
       {proposal && (
         <ProposalView
           proposal={proposal}
+          words={words}
           busy={busy}
           onApply={apply}
           onCancel={() => setProposal(undefined)}
@@ -68,8 +69,12 @@ export function Ask({ onEdit }: { onEdit: (prefill: Prefill) => void }) {
 }
 
 /** A proposed change in plain language, with Apply; or the model's question or refusal. */
+/** Words an operation the Builder's way, where it can. */
+export type Words = (op: string, args: Record<string, unknown>) => string | undefined;
+
 export function ProposalView({
   proposal,
+  words,
   busy,
   onApply,
   onCancel,
@@ -77,6 +82,7 @@ export function ProposalView({
   onOption,
 }: {
   proposal: Proposal;
+  words?: Words;
   busy: boolean;
   onApply: () => void;
   onCancel: () => void;
@@ -92,7 +98,7 @@ export function ProposalView({
           <ol className="list-decimal space-y-1 pl-5 text-sm">
             {proposal.operations.map((o) => (
               <li key={o.description}>
-                {o.description}
+                {words?.(o.op, o.args) ?? o.description}
                 {o.destructive && <span className="text-red-700"> (loses data)</span>}
                 {onEdit && PREFILLED.includes(o.op) && o.args.route === undefined && (
                   <button

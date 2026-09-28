@@ -7,10 +7,10 @@ export interface SummaryOperation {
 }
 
 /**
- * An edit of a model's part of the summary, read back without AI when it only changes the
- * items of its first sentence ("Customers have a name (required), a website (a web address)
- * …"): a new item adds a field, a missing one removes it, and an item with new notes changes
- * it. Undefined for anything else, which is the model's to read; [] when nothing changed.
+ * An edit of a model's part of the summary, read back without AI when it only changes its
+ * list of fields ("Customers have:" and a line per field, "- a website (a web address)"): a
+ * new line adds a field, a missing one removes it, and a line with new notes changes it.
+ * Undefined for anything else, which is the model's to read; [] when nothing changed.
  */
 export function readSummaryEdit(
   section: SummarySection,
@@ -18,20 +18,20 @@ export function readSummaryEdit(
   ir: SpecIR,
 ): SummaryOperation[] | undefined {
   const model = ir.models.find((m) => `model:${m.name}` === section.concept);
-  const first = section.sentences[0];
-  if (!model || !section.fields || !first) return undefined;
+  if (!model || !section.fields) return undefined;
   const lines = text
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const prefix = first.slice(0, first.indexOf(" have ") + " have ".length);
-  const [head, ...rest] = lines;
+  const bullet = (l: string) => /^[-•*]\s+/.test(l);
+  const others = (all: string[]) => all.slice(1).filter((l) => !bullet(l));
+  // The list's heading and every other sentence stay as they were.
   const sameRest =
-    rest.length === section.sentences.length - 1 &&
-    rest.every((l, i) => l === section.sentences[i + 1]);
-  if (!head?.startsWith(prefix) || !head.endsWith(".") || !sameRest) return undefined;
+    lines[0] === section.sentences[0] &&
+    others(lines).join("\n") === others(section.sentences).join("\n");
+  if (!sameRest) return undefined;
 
-  const items = splitList(head.slice(prefix.length, -1));
+  const items = lines.filter(bullet).map((l) => l.replace(/^[-•*]\s+/, ""));
   const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
   const kept = new Set<string>();
   const added: string[] = [];
@@ -90,21 +90,3 @@ function parseItem(item: string): Item | undefined {
 
 const shorthand = (kind: string, item: Item) =>
   `${kind}${item.required ? "!" : ""}${item.unique ? " unique" : ""}`;
-
-/** "a, b (c, d) and e" → [a, "b (c, d)", e]: commas inside parentheses stay. */
-function splitList(list: string): string[] {
-  const items: string[] = [];
-  let depth = 0;
-  let current = "";
-  const parts = list.split(/(\(|\)|,\s*|\s+and\s+)/);
-  for (const part of parts) {
-    if (part === "(") depth++;
-    if (part === ")") depth--;
-    if (depth === 0 && (/^,\s*$/.test(part) || /^\s+and\s+$/.test(part))) {
-      if (current.trim()) items.push(current.trim());
-      current = "";
-    } else current += part;
-  }
-  if (current.trim()) items.push(current.trim());
-  return items;
-}

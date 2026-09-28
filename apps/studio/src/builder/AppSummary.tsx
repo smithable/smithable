@@ -7,11 +7,17 @@ import { useEffect, useState } from "react";
 import { api, type Proposal } from "../api";
 import type { Spec } from "../engine";
 import { Button } from "../ui";
-import { ProposalView } from "./Ask";
+import { ProposalView, type Words } from "./Ask";
 import type { Run } from "./ChangeForms";
 
 /** Headings for the summary's groups of sections (models, actions, queries). */
-const GROUPS: Record<string, string> = { model: "Records", action: "Actions", query: "Queries" };
+const GROUPS: Record<string, string> = {
+  model: "Records",
+  pages: "Pages",
+  action: "Actions",
+  query: "Queries",
+  auth: "Sign-in and access",
+};
 const kind = (concept: string) => concept.split(":")[0] ?? "";
 
 /**
@@ -39,11 +45,13 @@ export function AppSummary({
   sections,
   spec,
   run,
+  words,
 }: {
   app: string;
   sections: SummarySection[];
   spec: Spec;
   run: Run;
+  words: Words;
 }) {
   const [wording, setWording] = useState(() => loadWording(app));
   const [updated, setUpdated] = useState<string[]>([]);
@@ -89,6 +97,9 @@ export function AppSummary({
             section={s}
             spec={spec}
             run={run}
+            words={words}
+            // A part named like its group (Pages) needs no heading of its own.
+            titled={s.title !== GROUPS[kind(s.concept)]}
             wording={wording[s.concept]?.text}
             updated={updated.includes(s.concept)}
             onApplied={(text) =>
@@ -110,6 +121,8 @@ function Part({
   section,
   spec,
   run,
+  words,
+  titled,
   wording,
   updated,
   onApplied,
@@ -117,6 +130,8 @@ function Part({
   section: SummarySection;
   spec: Spec;
   run: Run;
+  words: Words;
+  titled: boolean;
   wording?: string;
   updated: boolean;
   onApplied: (text: string) => void;
@@ -187,7 +202,7 @@ function Part({
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold">
-          {section.title}
+          {titled && section.title}
           {updated && <span className="ml-2 text-xs font-normal text-accent">updated</span>}
         </h3>
         {draft === undefined && section.concept !== "auth" && (
@@ -202,11 +217,7 @@ function Part({
         )}
       </div>
       {draft === undefined ? (
-        shown.split("\n").map((sentence) => (
-          <p key={sentence} className="text-sm leading-relaxed text-neutral-700">
-            {sentence}
-          </p>
-        ))
+        <Lines text={shown} />
       ) : (
         <div className="space-y-2">
           <textarea
@@ -232,6 +243,7 @@ function Part({
           {proposal && (
             <ProposalView
               proposal={proposal}
+              words={words}
               busy={busy}
               onApply={() => void apply()}
               onCancel={() => setSuggestion(undefined)}
@@ -239,6 +251,35 @@ function Part({
           )}
           {note && <p className="text-sm text-neutral-600">{note}</p>}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Sentences as paragraphs, and runs of "- " lines as a bulleted list. */
+function Lines({ text }: { text: string }) {
+  const blocks: (string | string[])[] = [];
+  for (const line of text.split("\n")) {
+    const item = /^[-•*]\s+(.*)$/.exec(line)?.[1];
+    const last = blocks.at(-1);
+    if (item === undefined) blocks.push(line);
+    else if (Array.isArray(last)) last.push(item);
+    else blocks.push([item]);
+  }
+  return (
+    <div className="space-y-1 text-sm leading-relaxed text-neutral-700">
+      {blocks.map((block, i) =>
+        Array.isArray(block) ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the blocks have no identity of their own
+          <ul key={i} className="list-disc space-y-0.5 pl-5">
+            {block.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the blocks have no identity of their own
+          <p key={i}>{block}</p>
+        ),
       )}
     </div>
   );
