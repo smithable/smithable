@@ -15,12 +15,39 @@ const HEADERS = {
   "Cross-Origin-Embedder-Policy": "require-corp",
 };
 
+/**
+ * Changes (anything but GET and HEAD) per address: a burst of 60, then one a second. Enough
+ * for anyone using the app, and a brake on a script filling a public form.
+ */
+const BURST = 60;
+const buckets = new Map();
+function allowed(request) {
+  if (request.method === "GET" || request.method === "HEAD") return true;
+  // Behind a proxy (the hosted service, Caddy) the first forwarded address is the visitor's.
+  const address = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.ip || "";
+  const now = Date.now() / 1000;
+  const bucket = buckets.get(address) ?? { tokens: BURST, at: now };
+  bucket.tokens = Math.min(BURST, bucket.tokens + (now - bucket.at));
+  bucket.at = now;
+  buckets.set(address, bucket);
+  if (buckets.size > 10_000)
+    for (const [key, b] of buckets) if (b.tokens >= BURST) buckets.delete(key);
+  if (bucket.tokens < 1) return false;
+  bucket.tokens -= 1;
+  return true;
+}
+
 serve({
   port: Number(process.env.PORT ?? 3000),
   gracefulShutdown: true,
   fetch: app.fetch,
   middleware: [
-    async (_request, next) => {
+    async (request, next) => {
+      if (!allowed(request))
+        return new Response("Too many requests; try again in a moment.", {
+          status: 429,
+          headers: { "Retry-After": "5", ...HEADERS },
+        });
       const response = await next();
       for (const [name, value] of Object.entries(HEADERS))
         if (!response.headers.has(name)) response.headers.set(name, value);

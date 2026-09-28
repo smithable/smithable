@@ -30,6 +30,23 @@ export class AccessDenied extends Error {
   }
 }
 
+/** A change the database refused, as a code the form turns into words: "taken:<column>" or "in-use". */
+export class Conflict extends Error {}
+
+/**
+ * A database error as people may see it: a unique value already taken, or a record still in
+ * use. Anything else stays in the server's log; the page gets a plain apology.
+ */
+export function refusal(error: unknown): Error {
+  const message = error instanceof Error ? error.message : "";
+  // With several columns (unique per owner), the last one is the field.
+  const column = /UNIQUE constraint failed: (?:\w+\.\w+, )*\w+\.(\w+)/.exec(message)?.[1];
+  if (column) return new Conflict(`taken:${column}`);
+  if (message.includes("FOREIGN KEY constraint failed")) return new Conflict("in-use");
+  console.error(error);
+  return new Error("Something went wrong. Please try again.");
+}
+
 /** Whether the viewer may do something; `ownerId` is the owner of the record involved, if any. */
 export function allows(rule: Rule, viewer: Viewer | null, ownerId?: string | null): boolean {
   if (rule.public) return true;

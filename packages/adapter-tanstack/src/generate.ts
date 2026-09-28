@@ -40,6 +40,7 @@ import {
   viewerModule,
 } from "./auth.js";
 import {
+  aggregatedLists,
   defaultsName,
   formulasModuleSource,
   formulasTestSource,
@@ -141,7 +142,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     }
   }
   for (const action of ir.actions) {
-    add(`src/generated/actions/${kebab(action.name)}.ts`, actionModule(action, ir, auth));
+    add(`src/generated/actions/${kebab(action.name)}.ts`, actionModule(action, ir, auth, t));
     // Created once; the implementation belongs to the project from then on.
     files.push({
       path: `src/custom/actions/${kebab(action.name)}.ts`,
@@ -444,19 +445,6 @@ function shownFields(model: ModelIR): FieldIR[] {
   return model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many));
 }
 
-/** Lists that aggregates in the model's formulas read, e.g. "lines" for SUM(lines.amount). */
-function aggregatedLists(model: ModelIR): string[] {
-  const found = new Set<string>();
-  const visit = (e: unknown): void => {
-    if (!e || typeof e !== "object") return;
-    const node = e as { kind?: string; list?: string };
-    if (node.kind === "aggregate" && node.list) found.add(node.list);
-    for (const value of Object.values(e)) visit(value);
-  };
-  for (const field of model.fields) visit(field.formula);
-  return [...found];
-}
-
 /** The references a model holds, e.g. Order.customer. */
 function references(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: string } })[] {
   return model.fields.filter(
@@ -608,8 +596,10 @@ function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, ux: UxI
         `\n  compute: ${withFormulasName(model)},\n  defaults: ${defaultsName(model)},\n}`,
       )
     : literal(ui);
+  // Records visitors add, without an account (e.g. a contact form's messages).
+  const visitors = modelAccess(model, auth).create.public;
   const refinements = stored.flatMap((f) => {
-    const r = refinement(f);
+    const r = refinement(f, visitors);
     return r ? [`  ${f.name}: ${r},`] : [];
   });
   const schema = refinements.length
@@ -722,14 +712,21 @@ function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string 
   const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
   const titleColumn = titleField(model);
   const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
-  const drizzle = ["and", "eq", "sql", ...(referenced && titleColumn !== "id" ? ["asc"] : [])];
+  const access = modelAccess(model, auth);
+  const drizzle = [
+    "and",
+    "eq",
+    "sql",
+    ...(referenced && titleColumn !== "id" ? ["asc"] : []),
+    ...(access.create.public ? ["count"] : []),
+    ...(access.create.public && signedIn ? ["isNull"] : []),
+  ];
   const ownerOf = signedIn ? `row.${owner}` : "undefined";
   const createValues = !signedIn
     ? "values"
     : model.ownedBy
-      ? `{ ...values, ${owner}: values.${owner} ?? viewer?.id ?? null }`
+      ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner}) }`
       : `{ ...values, ownerId: viewer?.id ?? null }`;
-  const access = modelAccess(model, auth);
   const self = n.data;
   const referenceChecks = refs.map(
     (ref) =>
@@ -740,14 +737,29 @@ function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string 
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${n.table} } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
-${[...others]
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${[
+  ...others,
+]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}
 /** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
 export const ${n.access}: ModelAccess = ${literal(access)};
 ${
+  model.ownedBy && signedIn
+    ? `
+/**
+ * Whose record it is: anyone's for a role that may change everyone's, otherwise the viewer's
+ * own, whatever the form sent.
+ */
+function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
+  if (viewer && ${n.access}.write.roles.includes(viewer.role)) return given ?? viewer.id;
+  return viewer?.id ?? null;
+}
+`
+    : ""
+}${
   refs.length
     ? `
 /** Checks that the viewer may read the records the values refer to. */
@@ -781,7 +793,15 @@ export const ${self} = {
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [desc(t.id)],
     });
-    return ${formulas ? `rows.map(${withFormulasName(model)})` : "rows"};
+    ${
+      aggregatedLists(model).length
+        ? `// The related records are here for the totals only: some may not be the viewer's to read.
+    return rows.map((row) => {
+      const { ${aggregatedLists(model).join(", ")}, ...listed } = ${compute("row")};
+      return listed;
+    });`
+        : `return ${formulas ? `rows.map(${withFormulasName(model)})` : "rows"};`
+    }
   },
 
   async get(viewer: Viewer | null, id: number) {
@@ -793,7 +813,18 @@ export const ${self} = {
 
   create(viewer: Viewer | null, values: ${n.values}) {
     check(${n.access}.create, viewer);
-${refs.length ? "    checkReferences(viewer, values);\n" : ""}    return db.insert(${n.table}).values(${createValues}).returning().get();
+${
+  access.create.public
+    ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.
+    const made = db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}.get();
+    if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
+`
+    : ""
+}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    try {
+      return db.insert(${n.table}).values(${createValues}).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: ${n.values}) {
@@ -804,7 +835,11 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    return db.inse
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.write, viewer, ${ownerOf});
-${refs.length ? "    checkReferences(viewer, values);\n" : ""}    return db.update(${n.table}).set(values).where(eq(${n.table}.id, id)).returning().get();
+${refs.length ? "    checkReferences(viewer, values);\n" : ""}    try {
+      return db.update(${n.table}).set(${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"}).where(eq(${n.table}.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -815,11 +850,32 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    return db.upda
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.delete, viewer, ${ownerOf});
-    db.delete(${n.table}).where(eq(${n.table}.id, id)).run();
+    try {
+      db.delete(${n.table}).where(eq(${n.table}.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 ${
   referenced
-    ? `
+    ? `${
+        titleColumn === "id"
+          ? ""
+          : `
+  /**
+   * The ${n.pluralLabel.toLowerCase()} the viewer may read whose ${titleColumn} contains the text: a search of records that
+   * refer to them finds them only among these.
+   */
+  titled(viewer: Viewer | null, text: string): number[] {
+    return db
+      .select({ id: ${n.table}.id })
+      .from(${n.table})
+      .where(and(contains([${n.table}.${titleColumn}], text), ${self}.readable(viewer)))
+      .all()
+      .map((row) => row.id);
+  },
+`
+      }
   /** Choices for fields that refer to a ${n.label.toLowerCase()}: the ones the viewer may read. */
   options(viewer: Viewer | null) {
     if (readScope(${n.access}.read, viewer) === "none") return [];
@@ -876,20 +932,27 @@ function titleField(model: ModelIR): string {
   return (strings.find((f) => /name|title/i.test(f.name)) ?? strings[0])?.name ?? "id";
 }
 
-/** Longest texts by default, unless the spec gives a `max`: a line, and a longer text. */
-const TEXT_MAX = { string: 200, text: 10_000 };
+/** Records visitors may add to a model before it takes no more (see create in a data module). */
+const VISITOR_ROWS = 10_000;
+
+/**
+ * Longest texts by default, unless the spec gives a `max`: a line, and a longer text; shorter
+ * where visitors write it (a contact form's message).
+ */
+const TEXT_MAX = { string: 200, text: 10_000, publicText: 2_000 };
 
 /** A text's length rules: required (not only spaces), `min` and `max` characters. */
-function textBounds(field: FieldIR): string {
+function textBounds(field: FieldIR, visitors = false): string {
+  const long = visitors ? TEXT_MAX.publicText : TEXT_MAX.text;
   const max =
     field.max ??
-    (field.type.kind === "scalar" && field.type.name === "text" ? TEXT_MAX.text : TEXT_MAX.string);
+    (field.type.kind === "scalar" && field.type.name === "text" ? long : TEXT_MAX.string);
   const min = field.min ?? (field.required ? 1 : 0);
   return `${field.required ? ".trim()" : ""}${min > 0 ? `.min(${min}, ${JSON.stringify(min === 1 ? "Required" : `At least ${min} characters`)})` : ""}.max(${max}, "At most ${max.toLocaleString("en")} characters")`;
 }
 
 /** Zod refinements that go beyond the column types: formats, required text, bounds. */
-function refinement(field: FieldIR): string | undefined {
+function refinement(field: FieldIR, visitors = false): string | undefined {
   const optional = field.required ? "" : ".nullish()";
   if (field.type.kind !== "scalar") return undefined;
   const bounds = (scale: number) =>
@@ -905,7 +968,7 @@ function refinement(field: FieldIR): string | undefined {
       return `(s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")`;
     case "string":
     case "text":
-      return `(s) => s${textBounds(field)}`;
+      return `(s) => s${textBounds(field, visitors)}`;
     case "int":
     case "decimal":
       return bounds(1) ? `(s) => s${bounds(1)}` : undefined;
@@ -1102,14 +1165,28 @@ function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
       : []),
     ...fields.flatMap((f) => {
       if (f.type.kind !== "relation") return [];
+      const title = relatedTitle(ir, f.type.model);
+      // Among the related records the viewer may read (a user's name is shown anyway).
+      if (f.type.model !== USER_MODEL && title !== "id")
+        return [
+          `inArray(${n.table}.${dataKey(f)}, ${names(modelNamed(ir, f.type.model), t).data}.titled(viewer, data.q))`,
+        ];
       const target =
         f.type.model === USER_MODEL ? "user" : tableNames(modelNamed(ir, f.type.model)).table;
-      const title = relatedTitle(ir, f.type.model);
       return [`relatedContains(${n.table}.${dataKey(f)}, ${target}, [${target}.${title}], data.q)`];
     }),
   ];
+  const byTitle = (f: FieldIR) =>
+    f.type.kind === "relation" &&
+    f.type.model !== USER_MODEL &&
+    relatedTitle(ir, f.type.model) !== "id";
+  // Related records found through their data module (titled), and the rest by their table.
+  const titled = fields.filter(byTitle).map((f) => {
+    const target = modelNamed(ir, (f.type as { model: string }).model);
+    return { module: `#/generated/${kebab(target.name)}.server`, data: names(target, t).data };
+  });
   const related = fields
-    .filter((f) => f.type.kind === "relation")
+    .filter((f) => f.type.kind === "relation" && !byTitle(f))
     .map((f) =>
       f.type.kind === "relation" && f.type.model === USER_MODEL
         ? "user"
@@ -1134,6 +1211,7 @@ const ${fn} = createServerFn()
     placeholder,
     imports: {
       related: [...new Set(related)],
+      titled,
       own: own.length > 0,
       relation: related.length > 0,
       or: terms.length > 1,
@@ -1210,6 +1288,8 @@ function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR)
     if (search.imports.or) route.add("drizzle-orm", "or");
     if (search.imports.own) route.add("#/kit/search", "contains");
     if (search.imports.relation) route.add("#/kit/search", "relatedContains");
+    if (search.imports.titled.length) route.add("drizzle-orm", "inArray");
+    for (const t of search.imports.titled) route.add(t.module, t.data);
     route.add("#/lib/viewer.server", "currentViewer");
   } else {
     route.add(n.module, n.list);
@@ -1480,14 +1560,14 @@ function landingRoute(
         imports.add("#/generated/app", "app").add("#/kit/ModelForm", "ModelForm");
         return [
           `<Contact${props}
-          form={(sent) => (
+          form={(sent, human) => (
             <ModelForm
               ui={${n.ui}}
               app={app}
               schema={${n.schema}}
               submitLabel=${attr(own.button ?? "Send")}
               onSubmit={async (values) => {
-                await ${n.create}({ data: values });
+                if (human()) await ${n.create}({ data: values });
                 sent();
               }}
             />
@@ -2244,7 +2324,7 @@ export function actionNames(action: ActionIR) {
   };
 }
 
-function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR): string {
+function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Texts): string {
   const a = actionNames(action);
   const input = action.input.map((f) => `  ${f.name}: ${zodFor(f)},`);
   const output = action.output?.length
@@ -2273,10 +2353,15 @@ function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR): string {
         : {}),
     })),
   };
+  // Records the input refers to: the viewer must be able to read each (not users).
+  const records = action.input.filter(
+    (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
+  );
+  const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { ${action.name} as implementation } from "${a.custom}";
-import { check, type Rule } from "#/kit/access";
+${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -2298,8 +2383,18 @@ export const ${a.ui}: ModelUi = ${literal(ui)};
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${a.input})
   .handler(async ({ data }) => {
-    check(${a.access}, await currentViewer());
-    return implementation(data);
+    const viewer = await currentViewer();
+    check(${a.access}, viewer);
+${records
+  .map(
+    (f, i) =>
+      `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
+  )
+  .join(
+    "",
+  )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
+    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;
+    return run(data, viewer);
   });
 `;
 }
@@ -2352,11 +2447,12 @@ function actionStub(action: ActionIR): string {
   return `// Your implementation of the "${action.name}" action in smithable.yml. Smithable created this file
 // once and never changes it. The input and output types are generated from the spec, so a change
 // to the action's input or output shows up here as a type error.
-// The signed-in user is \`await currentViewer()\` from "#/lib/viewer.server"; the data functions
-// in src/generated/*.server.ts check access for them.
+// \`viewer\` is the signed-in user (null for a visitor). The records the input refers to are ones
+// they may read; the data functions in src/generated/*.server.ts check access for them.
 import type { ${a.inputType}, ${a.outputType} } from "${a.module}";
+import type { Viewer } from "#/kit/access";
 
-${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}): Promise<${a.outputType}> {
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null): Promise<${a.outputType}> {
   throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
 }
 `;
