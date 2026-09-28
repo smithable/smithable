@@ -55,7 +55,13 @@ export async function deploy(
     return 1;
   }
   // A remote Docker host is used over SSH by Docker itself.
-  const env = { ...process.env, ...(remote ? { DOCKER_HOST: options.target } : {}) };
+  // The secret goes to `docker run -e NAME` through the environment, not on its command line.
+  const env = {
+    ...process.env,
+    BETTER_AUTH_SECRET: authSecret(dir),
+    BETTER_AUTH_URL: url,
+    ...(remote ? { DOCKER_HOST: options.target } : {}),
+  };
   const docker = (args: string[]) =>
     spawnSync("docker", args, { cwd: dir, env, encoding: "utf8", maxBuffer: 1 << 26 });
   io.out(`Deploying ${name} to ${remote ? options.target : "Docker on this machine"}…\n`);
@@ -64,7 +70,21 @@ export async function deploy(
     io.err(`${built.stderr}\nThe image did not build.\n`);
     return 1;
   }
-  docker(["rm", "-f", name]);
+  // The running version steps aside (renamed and stopped, which frees its port) and comes
+  // back if the new one does not start or answer.
+  const previous = `${name}-previous`;
+  docker(["rm", "-f", previous]);
+  const hadOne = docker(["rename", name, previous]).status === 0;
+  if (hadOne) docker(["stop", previous]);
+  const putBack = (why: string) => {
+    docker(["rm", "-f", name]);
+    if (hadOne) {
+      docker(["rename", previous, name]);
+      docker(["start", name]);
+    }
+    io.err(`${why}${hadOne ? " The previous version runs again." : ""}\n`);
+    return 1;
+  };
   const started = docker([
     "run",
     "-d",
@@ -77,27 +97,27 @@ export async function deploy(
     "-v",
     `${name}-data:/data`,
     "-e",
-    `BETTER_AUTH_SECRET=${authSecret(dir)}`,
+    "BETTER_AUTH_SECRET",
     "-e",
-    `BETTER_AUTH_URL=${url}`,
+    "BETTER_AUTH_URL",
     ...PROVIDER_KEYS.filter((k) => process.env[k]).flatMap((k) => ["-e", k]),
     name,
   ]);
-  if (started.status !== 0) {
-    io.err(`${started.stderr}\nThe container did not start.\n`);
-    return 1;
-  }
+  if (started.status !== 0) return putBack(`${started.stderr}\nThe container did not start.`);
   for (let i = 0; i < 120; i++) {
     try {
       if ((await fetch(`${url}/health`)).ok) {
+        docker(["rm", "-f", previous]);
         io.out(`Deployed: ${url} (data in the Docker volume ${name}-data).\n`);
         return 0;
       }
     } catch {}
     await new Promise((r) => setTimeout(r, 500));
   }
-  io.err(`The container started but ${url}/health did not answer. See: docker logs ${name}\n`);
-  return 1;
+  const logs = docker(["logs", "--tail", "20", name]);
+  return putBack(
+    `${logs.stdout}${logs.stderr}\nThe container started but ${url}/health did not answer.`,
+  );
 }
 
 /** compose.yaml for `docker compose up -d`, with its secrets in .env (never committed). */
