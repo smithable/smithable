@@ -9,7 +9,8 @@ RUN pnpm build && pnpm prune --prod && mkdir -p /data
 
 # A minimal runtime (Node and little else, no shell), as a user without root rights: fewer
 # packages means fewer vulnerabilities to patch (smithable security --level release checks it).
-FROM gcr.io/distroless/nodejs24-debian13:nonroot
+# Pinned by digest, so a build is reproducible; a Smithable update moves the pin.
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:bb6b03d81066993293a10feda7250e8e1cc034035fe9b61cfceededa7c8bf04d
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 DATA_DIR=/data
 COPY --from=build /app/package.json ./

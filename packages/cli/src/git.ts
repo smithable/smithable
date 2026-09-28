@@ -18,6 +18,21 @@ export function uncommitted(dir: string): string[] {
   return git(dir, ["status", "--porcelain"]).out.split("\n").filter(Boolean);
 }
 
+/**
+ * The refusal when there are uncommitted changes (listing them), or undefined: a change made
+ * on top of someone's edits could not be undone on its own.
+ */
+export function uncommittedRefusal(dir: string, why = ""): string | undefined {
+  const dirty = uncommitted(dir);
+  if (dirty.length === 0) return undefined;
+  return `Commit or discard these changes first${why ? `, ${why}` : ""}:\n${dirty.map((l) => `  ${l}\n`).join("")}`;
+}
+
+/** Returns a commit message's trailer value (`Smithable-Op: …`), if it has one. */
+export function trailer(body: string, key: string): string | undefined {
+  return new RegExp(`^${key}: (.+)$`, "m").exec(body)?.[1];
+}
+
 /** Puts every file back as in the last commit: undoes a failed operation's writes. */
 export function discardChanges(dir: string): void {
   git(dir, ["checkout", "--", "."]);

@@ -2,6 +2,7 @@ import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "ya
 import { checkKeys, type Entry, mapEntries, ParseContext, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
+import { capitalize } from "./naming.js";
 import { didYouMean } from "./suggest.js";
 
 /**
@@ -403,8 +404,4 @@ function readTexts(
     if (text !== undefined) texts[key] = text;
   }
   return texts;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

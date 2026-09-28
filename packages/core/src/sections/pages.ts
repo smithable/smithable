@@ -18,6 +18,7 @@ import {
   type SectionKind,
   type SpecIR,
 } from "../ir.js";
+import { capitalize, kebab } from "../naming.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { NAME_PATTERN } from "./names.js";
@@ -649,12 +650,4 @@ function checkSearch(
     }
   }
   return fields.map((f) => f.name);
-}
-
-function kebab(name: string): string {
-  return name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

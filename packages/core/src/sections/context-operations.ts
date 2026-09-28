@@ -1,4 +1,3 @@
-import type { YamlEditor } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 
 /** An npm package name, e.g. chart.js or @turf/turf. */
@@ -26,7 +25,7 @@ const setPackage: Operation<{ name: string; version: string }> = {
     version === "none" ? `Remove the package ${name}` : `Add the package ${name} ${version}`,
   destructive: () => false,
   apply(editors, { name, version }) {
-    const context = editors.context as YamlEditor;
+    const context = editors.context;
     if (!PACKAGE_NAME.test(name)) throw new OperationError(`"${name}" is not an npm package name.`);
     if (version === "none") {
       if (!context.has(["packages", name]))

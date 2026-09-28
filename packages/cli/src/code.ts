@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { allowedBy, type Location, parsePolicy, type Usage } from "@smithable/ai";
 import { buildContext } from "@smithable/index";
 import { usageLine } from "./ask.js";
-import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
+import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { projectIndex } from "./rules.js";
 import { loadSpec } from "./validate.js";
@@ -185,9 +185,9 @@ export async function runCoder(
     discardChanges(dir);
     git(dir, ["clean", "-fdxq", "--", task.area]);
   };
-  const dirty = uncommitted(dir);
-  if (dirty.length > 0) {
-    io.err(`Commit or discard these changes first:\n${dirty.map((l) => `  ${l}\n`).join("")}`);
+  const refused = uncommittedRefusal(dir);
+  if (refused) {
+    io.err(refused);
     return 1;
   }
   const started = Date.now();
