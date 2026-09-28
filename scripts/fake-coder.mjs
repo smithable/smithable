@@ -1,5 +1,6 @@
 // A stand-in coder for tests: it gets the prompt on stdin and writes the churn query's code.
-// With FAKE_CODER=trespass it also edits a generated file, which Smithable must undo.
+// With FAKE_CODER=trespass it also edits a generated file, and with FAKE_CODER=hook it plants a
+// Git hook: Smithable must undo both.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const prompt = readFileSync(0, "utf8");
@@ -60,3 +61,6 @@ export async function churnRisk(viewer: Viewer | null): Promise<ChurnRiskRows> {
 );
 if (process.env.FAKE_CODER === "trespass")
   writeFileSync("src/generated/app.ts", "// edited by a coder that should not\n", { flag: "a" });
+// A hook runs on the user's next commit, and is not in Git's diff.
+if (process.env.FAKE_CODER === "hook")
+  writeFileSync(".git/hooks/pre-commit", "#!/bin/sh\necho planted\n", { mode: 0o755 });

@@ -35,8 +35,6 @@ export async function teach(
     return 1;
   }
   const area = `smithable/plugins/${key}`;
-  // The coder checks its own work with Smithable's validator, and nothing else of Smithable.
-  const validate = `node ${new URL("./bin.js", import.meta.url).pathname} validate --plugin ${key} .`;
   const section = specText.slice(specText.search(new RegExp(`^${key}:`, "m"))).split(/\n(?=\S)/)[0];
   const prompt = `You teach Smithable a new section of smithable.yml by writing a project plugin. Smithable generates whole web apps from smithable.yml; it does not know the section "${key}" yet.
 
@@ -64,7 +62,7 @@ Rules:
 - Make the schema strict (additionalProperties: false) and give defaults in expand for optional values.
 - Field types: string, text, int, decimal, money, bool, date, datetime, email, phone, url; choices "a | b | c"; a reference "Customer"; a list of related records "Order[]". Append ! for required, "unique", "= value" for a default.
 - Change only files in ${area}/. Smithable declares the plugin, validates it and regenerates the app afterwards.
-- Check the plugin with "${validate}": it declares the plugin temporarily and validates smithable.yml with it. Finish when it reports the spec valid.
+- You may run "pnpm typecheck" only. Smithable validates the plugin and regenerates the app afterwards, and undoes everything if it fails.
 
 The spec's grammar, by example:
 \`\`\`yaml
@@ -76,7 +74,6 @@ ${specText}\`\`\``;
   const code = await runCoder(dir, io, coder, {
     prompt,
     area,
-    commands: [validate],
     request: `Teach Smithable "${key}"`,
     subject: `Teach Smithable the ${key} section`,
     // Smithable's own part: declare the plugin, then check and regenerate the app with it.

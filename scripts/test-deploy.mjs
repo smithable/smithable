@@ -118,6 +118,13 @@ try {
     const out = smithable("deploy", dir, "--port", String(port));
     if (!out.includes("All checks passed.") || !out.includes(`Deployed: http://localhost:${port}`))
       throw new Error(out);
+    // Scan reports can quote secrets: none is left in the project, committed or not.
+    for (const report of [
+      ".smithable/gitleaks.json",
+      ".smithable/zap.json",
+      "data/.smithable/reports",
+    ])
+      if (existsSync(join(dir, report))) throw new Error(`${report} was left behind`);
   });
   step("a customer written in the running app is backed up to the bucket", () => {
     sql(
