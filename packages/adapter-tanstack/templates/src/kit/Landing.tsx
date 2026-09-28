@@ -519,17 +519,17 @@ export function Contact({
     <Section id="contact" texts={texts} title={title} text={text}>
       <div className={cn("grid gap-10", form && "lg:grid-cols-2")}>
         {details}
-        {form && (
-          <Card className="p-card">
-            {sent ? (
+        {form &&
+          (sent ? (
+            <Card className="p-card">
               <p role="status" className="text-lg" {...mark(texts, "thanks")}>
                 {thanks ?? "Thank you! We will get back to you soon."}
               </p>
-            ) : (
-              form(() => setSent(true))
-            )}
-          </Card>
-        )}
+            </Card>
+          ) : (
+            // The form draws its own card.
+            form(() => setSent(true))
+          ))}
       </div>
     </Section>
   );
