@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Usage } from "@smithable/ai";
+import { allowedBy, type Location, parsePolicy, type Usage } from "@smithable/ai";
 import { buildContext } from "@smithable/index";
 import { usageLine } from "./ask.js";
 import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
@@ -15,11 +15,14 @@ import { loadSpec } from "./validate.js";
  */
 export interface Coder {
   name: string;
+  /** Where the project goes when it runs: the AI policy decides whether it may. */
+  location: Location;
   /**
-   * Runs in `dir`; it should change files only in `area`, e.g. "src/custom", and may run
-   * the type check, the tests and `commands`.
+   * Runs in `dir`; it should change files only in `area`, e.g. "src/custom", and may run the
+   * type check. It runs nothing that executes the project's code (the tests would): Smithable
+   * runs those itself afterwards, once the changes are checked.
    */
-  run(dir: string, prompt: string, area: string, commands?: string[]): Promise<Usage>;
+  run(dir: string, prompt: string, area: string): Promise<Usage>;
 }
 
 /** The coder from the environment: SMITHABLE_CODER=claude-code, or a command to run. */
@@ -58,7 +61,8 @@ function run(
 function claudeCodeCoder(model?: string): Coder {
   return {
     name: "claude-code",
-    async run(dir, prompt, area, commands = []) {
+    location: "elsewhere",
+    async run(dir, prompt, area) {
       const out = await run(
         "claude",
         [
@@ -78,10 +82,8 @@ function claudeCodeCoder(model?: string): Coder {
           "Grep(./**)",
           `Edit(${area}/**)`,
           `Write(${area}/**)`,
+          // The type check only: tests run the code the coder wrote, so Smithable runs them.
           "Bash(pnpm typecheck)",
-          "Bash(pnpm test *)",
-          "Bash(pnpm test)",
-          ...commands.map((c) => `Bash(${c})`),
           ...(model ? ["--model", model] : []),
         ],
         dir,
@@ -115,6 +117,10 @@ function claudeCodeCoder(model?: string): Coder {
 function commandCoder(command: string): Coder {
   return {
     name: command,
+    // A command says where it runs; unsaid, it may send the project anywhere.
+    location:
+      (["local", "eu"] as const).find((l) => l === process.env.SMITHABLE_CODER_LOCATION) ??
+      "elsewhere",
     async run(dir, prompt, area) {
       await run("sh", ["-c", command], dir, prompt, { SMITHABLE_CODER_AREA: area });
       return {
@@ -153,8 +159,6 @@ export async function runCoder(
   task: {
     prompt: string;
     area: string;
-    /** Extra commands the coder may run, e.g. validating the spec. */
-    commands?: string[];
     request: string;
     subject: string;
     after?: () => number | Promise<number>;
@@ -166,7 +170,21 @@ export async function runCoder(
     );
     return 1;
   }
+  // The same policy as every model call: a coder elsewhere needs a policy that allows it.
+  const policy = parsePolicy(process.env.SMITHABLE_AI_POLICY);
+  const as = { name: coder.name, location: coder.location } as Parameters<typeof allowedBy>[1];
+  if (!allowedBy(policy, as)) {
+    io.err(
+      `The coder (${coder.name}) runs ${coder.location === "elsewhere" ? "outside the EU" : `on ${coder.location}`}, which the AI policy (${process.env.SMITHABLE_AI_POLICY ?? "eu-only"}) does not allow. Set SMITHABLE_AI_POLICY to best-available or allow:${coder.name} to use it (see docs/ai.md).\n`,
+    );
+    return 1;
+  }
   ensureRepository(dir);
+  // Undoing also clears ignored files the coder may have left in its folder.
+  const discard = () => {
+    discardChanges(dir);
+    git(dir, ["clean", "-fdxq", "--", task.area]);
+  };
   const dirty = uncommitted(dir);
   if (dirty.length > 0) {
     io.err(`Commit or discard these changes first:\n${dirty.map((l) => `  ${l}\n`).join("")}`);
@@ -175,9 +193,23 @@ export async function runCoder(
   const started = Date.now();
   let usage: Usage;
   try {
-    usage = await coder.run(dir, task.prompt, task.area, task.commands);
+    const before = watched(dir);
+    const hooks = saveHooks(dir);
+    usage = await coder.run(dir, task.prompt, task.area);
+    const after = watched(dir);
+    // Ignored files and Git's hooks are not in the diff: they must not change either.
+    const touched = [...after]
+      .filter(([path, stamp]) => before.get(path) !== stamp)
+      .map(([p]) => p);
+    touched.push(...[...before.keys()].filter((path) => !after.has(path)));
+    const strays = touched.filter((path) => !path.startsWith(`${task.area}/`));
+    if (strays.length) {
+      // Git's undo does not reach its hooks: they are put back as they were.
+      hooks();
+      throw new Error(`it changed ${strays.slice(0, 5).join(", ")}`);
+    }
   } catch (error) {
-    discardChanges(dir);
+    discard();
     io.err(
       `The coder failed: ${error instanceof Error ? error.message : String(error)}\nNothing was changed.\n`,
     );
@@ -188,7 +220,7 @@ export async function runCoder(
   const changed = changedFiles(dir);
   const outside = changed.filter((path) => !path.startsWith(`${task.area}/`));
   if (outside.length > 0) {
-    discardChanges(dir);
+    discard();
     io.err(
       `The coder changed files outside ${task.area}/, so every change was undone:\n${outside.map((p) => `  ${p}\n`).join("")}`,
     );
@@ -212,7 +244,7 @@ export async function runCoder(
   ];
   for (const [what, check] of checks) {
     if (!(await check())) {
-      discardChanges(dir);
+      discard();
       io.err(`${what} failed with the new code, so everything was undone.\n`);
       return 1;
     }
@@ -229,12 +261,60 @@ export async function runCoder(
   const message = `smithable: ${task.subject}\n\nSmithable-Code: ${JSON.stringify({ files: changed })}\nSmithable-Duration: ${Date.now() - started} ms\n${trailer}\n`;
   const commit = git(dir, ["commit", "-q", "-m", message]);
   if (!commit.ok) {
-    discardChanges(dir);
+    discard();
     io.err(`Could not commit: ${commit.out}\n`);
     return 1;
   }
   io.out(`Wrote ${changed.join(", ")}; the type check and tests pass. Undo with: smithable undo\n`);
   return 0;
+}
+
+/**
+ * What the diff does not show: ignored files (such as .env), and Git's hooks, each with its
+ * modification time.
+ */
+function watched(dir: string): Map<string, number> {
+  // Not the installed packages, databases and build output (large, and changed by tools).
+  const ignored = git(dir, [
+    "status",
+    "--porcelain",
+    "--ignored",
+    "-uall",
+    "--",
+    ".",
+    ":!node_modules",
+    ":!data",
+    ":!dist",
+    ":!test-results",
+  ])
+    .out.split("\n")
+    .filter((line) => line.startsWith("!! "))
+    .map((line) => line.slice(3));
+  const hooks = join(dir, ".git", "hooks");
+  const paths = [
+    ...ignored.map((p) => [p, join(dir, p)] as const),
+    ...(existsSync(hooks)
+      ? readdirSync(hooks).map((h) => [`.git/hooks/${h}`, join(hooks, h)] as const)
+      : []),
+  ];
+  return new Map(
+    paths.map(([name, path]) => [name, existsSync(path) ? statSync(path).mtimeMs : 0]),
+  );
+}
+
+/** Git's hooks as they are now; the function returned puts them back exactly so. */
+function saveHooks(dir: string): () => void {
+  const hooks = join(dir, ".git", "hooks");
+  const saved = new Map(
+    existsSync(hooks)
+      ? readdirSync(hooks).map((h) => [h, readFileSync(join(hooks, h))] as const)
+      : [],
+  );
+  return () => {
+    if (!existsSync(hooks)) return;
+    for (const h of readdirSync(hooks)) if (!saved.has(h)) rmSync(join(hooks, h), { force: true });
+    for (const [h, content] of saved) writeFileSync(join(hooks, h), content);
+  };
 }
 
 /** Every changed file, one by one (also inside new folders); a rename counts as both names. */
@@ -285,7 +365,7 @@ Rules:
 - Read and write data only through the functions in src/generated/*.server.ts: they apply the access rules for the viewer.
 - Keep the exported function's name and signature; its types come from src/generated/.
 - For each rule of this part that you implement, put "// implements rule <id>" above the code, and a Vitest test named "rule <id>: …" in src/custom/ next to it.
-- Finish when "pnpm typecheck" and "pnpm test" pass.
+- Finish when "pnpm typecheck" passes; Smithable runs the tests afterwards.
 
 ${context.text}`;
   return runCoder(dir, io, coder, {

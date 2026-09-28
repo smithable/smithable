@@ -26,6 +26,11 @@ import { loadSpec } from "./validate.js";
  * up in the project. A local model (Ollama by default) and the Smithable model, an open model
  * on an EU-hosted OpenAI-compatible endpoint.
  */
+/** The models the AI policy (SMITHABLE_AI_POLICY) allows, cheapest first: every caller's. */
+export function providersFor(env: NodeJS.ProcessEnv = process.env): Provider[] {
+  return route(aiProviders(env), parsePolicy(env.SMITHABLE_AI_POLICY));
+}
+
 export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
   const providers: Provider[] = [];
   if (env.SMITHABLE_LOCAL_MODEL)
@@ -77,7 +82,7 @@ export async function proposeFor(
     plugins: loadPlugins(dir),
   };
   const context = buildContext(projectIndex(dir, ir, auth), request);
-  const providers = route(aiProviders(), parsePolicy(process.env.SMITHABLE_AI_POLICY));
+  const providers = providersFor();
   const irOf = (text: string) =>
     validateSpec({ path: "smithable.yml", text }, { plugins: files.plugins }).ir;
   const proposal = await proposeChange({

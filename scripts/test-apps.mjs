@@ -539,7 +539,27 @@ async function askFlow(dir) {
     const coder = {
       ...local,
       SMITHABLE_CODER_COMMAND: `node ${join(repo, "scripts/fake-coder.mjs")}`,
+      // It runs on this machine; unsaid, a coder counts as outside the EU.
+      SMITHABLE_CODER_LOCATION: "local",
     };
+    await asyncStep(
+      "code: a coder the AI policy does not allow is refused before it runs",
+      async () => {
+        const result = await smithableAsync(
+          dir,
+          { ...coder, SMITHABLE_CODER_LOCATION: "" },
+          "code",
+          "action:mergeCustomers",
+          "anything",
+        );
+        if (
+          result.code === 0 ||
+          !result.out.includes("which the AI policy (eu-only) does not allow")
+        )
+          throw new Error(result.out);
+        if (run("git", ["status", "--porcelain"], dir).trim()) throw new Error("something changed");
+      },
+    );
     await asyncStep(
       "ask: 'prioritise customers likely to churn on the dashboard' adds a query and a tile, and a coder writes the query in src/custom only",
       async () => {
@@ -569,6 +589,20 @@ async function askFlow(dir) {
           throw new Error("the query's code was not written");
       },
     );
+    await asyncStep("code: a coder that plants a Git hook is undone, hook and all", async () => {
+      const result = await smithableAsync(
+        dir,
+        { ...coder, FAKE_CODER: "hook" },
+        "code",
+        "query:churnRisk",
+        "rank by the last order",
+      );
+      if (result.code === 0 || !result.out.includes(".git/hooks/pre-commit"))
+        throw new Error(result.out);
+      if (run("git", ["status", "--porcelain"], dir).trim())
+        throw new Error("changes were left behind");
+      if (existsSync(join(dir, ".git/hooks/pre-commit"))) throw new Error("the hook was left");
+    });
     await asyncStep("code: a coder that edits a generated file is undone entirely", async () => {
       const before = readFileSync(join(dir, "src/custom/queries/churn-risk.ts"), "utf8");
       const result = await smithableAsync(
@@ -1299,7 +1333,10 @@ async function teachFlow(dir) {
     async () => {
       const result = await smithableAsync(
         dir,
-        { SMITHABLE_CODER_COMMAND: `node ${join(repo, "scripts/fake-coder.mjs")}` },
+        {
+          SMITHABLE_CODER_COMMAND: `node ${join(repo, "scripts/fake-coder.mjs")}`,
+          SMITHABLE_CODER_LOCATION: "local",
+        },
         "teach",
         "newsletter",
       );
