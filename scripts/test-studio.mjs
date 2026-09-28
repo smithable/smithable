@@ -190,6 +190,24 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
     },
   );
+  await step("colours of a choice and a page's icon, from Manual", async () => {
+    await change("Colours of a choice");
+    await page.getByLabel("Choice field").selectOption({ label: "Status of Order" });
+    await page.getByLabel("Value", { exact: true }).selectOption({ label: "Shipped" });
+    await page.getByLabel("Colour").selectOption({ label: "Green (good)" });
+    await page.getByRole("button", { name: "Set colour" }).click();
+    await status.getByText("Show Order.status shipped as success").waitFor({ timeout: 60000 });
+    await change("A page's icon");
+    await page.getByLabel("Page", { exact: true }).selectOption({ label: "Orders" });
+    await page.getByLabel("Icon").selectOption({ label: "Truck" });
+    await page.getByRole("button", { name: "Set icon" }).click();
+    await status
+      .getByText(/orders/i)
+      .first()
+      .waitFor({ timeout: 60000 });
+    const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
+    if (!ux.includes("shipped: success") || !ux.includes("truck")) throw new Error(ux);
+  });
   await step("look and feel: a theme and density are chosen without touching code", async () => {
     await change("Look and feel");
     await page.getByLabel("Theme").selectOption("playful");
