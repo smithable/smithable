@@ -59,7 +59,9 @@ export function Studio({
           />
         }
       >
-        {tab === "spec" && <SpecEditor project={project} run={run} jump={jump} />}
+        {tab === "spec" && (
+          <SpecEditor project={project} plugins={spec.plugins} run={run} jump={jump} />
+        )}
         {tab === "operation" && <OperationForm run={run} />}
         {/* Remounted for every new change. */}
         {tab === "diff" && <Diff key={version} />}
@@ -258,10 +260,12 @@ function ConceptDetails({
 
 function SpecEditor({
   project,
+  plugins,
   run,
   jump,
 }: {
   project: Project;
+  plugins: Spec["plugins"];
   run: Run;
   jump?: { concept: string; at: number };
 }) {
@@ -281,7 +285,10 @@ function SpecEditor({
     editor.scrollTop = Math.max(0, (line - 3) * 20);
   }, [jump]);
   // Checked in the tab, as you type: the same validator the CLI uses.
-  const { diagnostics } = useMemo(() => readSpec(project.files, text), [project.files, text]);
+  const { diagnostics } = useMemo(
+    () => readSpec(project.files, text, plugins),
+    [project.files, text, plugins],
+  );
   const errors = diagnostics.filter((d) => d.severity === "error");
   return (
     <div className="flex h-full flex-col">
