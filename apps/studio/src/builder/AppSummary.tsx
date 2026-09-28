@@ -217,7 +217,8 @@ function Part({
         )}
       </div>
       {draft === undefined ? (
-        <Lines text={shown} />
+        // Under the heading "Customers", "Customers have:" would only repeat it.
+        <Lines text={titled ? shown.replace(`${section.title} have:\n`, "") : shown} />
       ) : (
         <div className="space-y-2">
           <textarea

@@ -59,7 +59,7 @@ test("changes are worded like the summary", () => {
     "Customers: added a website (a web address)",
   );
   expect(words("addField", { model: "Customer", field: "vatNumber", type: "string! unique" })).toBe(
-    "Customers: added a vat number (required, unique)",
+    "Customers: added a VAT number (required, unique)",
   );
   expect(words("changeField", { model: "Customer", field: "phone", type: "phone!" })).toBe(
     "Customers: now a phone (required)",

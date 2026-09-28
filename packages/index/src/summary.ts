@@ -161,7 +161,7 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
     return own?.pluralLabel ?? (own?.label ? plural(own.label) : humanize(plural(m.name)));
   };
   const fieldLabel = (m: ModelIR, f: FieldIR) =>
-    (content.models[m.name]?.fields[f.name]?.label ?? humanize(f.name)).toLowerCase();
+    lower(content.models[m.name]?.fields[f.name]?.label ?? humanize(f.name));
   const choice = (m: ModelIR, f: FieldIR, value: string) =>
     (content.models[m.name]?.fields[f.name]?.values?.[value] ?? humanize(value)).toLowerCase();
   const modelNamed = (name: string) => ir.models.find((m) => m.name === name);
@@ -198,7 +198,8 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
     if (f.unique) notes.push("unique");
     if (f.default !== undefined && f.type.kind !== "choice") notes.push(`${f.default} by default`);
     if (f.defaultFormula) notes.push(`${words(model, f.defaultFormula)} by default`);
-    const named = name.endsWith("s") ? name : article(name);
+    // "notes" and "issued on" read better without "a".
+    const named = /s$| (on|at)$/.test(name) ? name : article(name);
     return notes.length ? `${named} (${notes.join(", ")})` : named;
   };
   return { label, pluralLabel, fieldLabel, modelNamed, words, item };
@@ -232,6 +233,32 @@ function access(auth: AuthIR): string[] {
   ];
   if (open.length) sentences.push(`Open to anyone without signing in: ${list(open)}.`);
   return sentences;
+}
+
+/** Common abbreviations stay in capitals when a label is lowercased: "a VAT number". */
+const ACRONYMS = new Set([
+  "vat",
+  "iban",
+  "bic",
+  "id",
+  "url",
+  "sku",
+  "ean",
+  "pin",
+  "api",
+  "faq",
+  "pdf",
+  "gps",
+]);
+
+/** A label inside a sentence: lowercase, except abbreviations. */
+function lower(label: string): string {
+  return label
+    .split(" ")
+    .map((w) =>
+      ACRONYMS.has(w.toLowerCase()) || /^[A-Z0-9]{2,}$/.test(w) ? w.toUpperCase() : w.toLowerCase(),
+    )
+    .join(" ");
 }
 
 /** Who a list of roles means; admins can always do everything, so they come last. */
