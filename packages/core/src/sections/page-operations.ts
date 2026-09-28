@@ -36,6 +36,42 @@ const addPage: Operation<{ page: string; model: string; route?: string }> = {
   },
 };
 
+const addLandingPage: Operation<{ page: string; route?: string; public?: boolean }> = {
+  name: "addLandingPage",
+  summary:
+    "Add a landing page for visitors, starting with a hero and a footer (add more with addSection). It opens without sign-in unless public is false.",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. home." },
+      route: { type: "string", description: "Defaults to / when free, else / plus the page name." },
+      public: { type: "boolean", description: "Open without sign-in (the default)." },
+    },
+  },
+  positional: ["page", "route"],
+  describe: ({ page }) => `Add landing page ${page}`,
+  destructive: () => false,
+  apply({ spec, auth }, { page, route, public: open = true }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    const path = route ?? (ir.pages.some((p) => p.route === "/") ? `/${page}` : "/");
+    spec.add(["pages"], page, { route: path, landing: { hero: {}, footer: {} } });
+    // A landing page is for visitors: listed as public, so it opens without an account.
+    if (open && auth) {
+      const pages = auth.get(["public", "pages"]);
+      if (Array.isArray(pages)) auth.set(["public", "pages"], [...(pages as string[]), page]);
+      else auth.add(["public"], "pages", [page]);
+    }
+    return [];
+  },
+};
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
@@ -312,6 +348,7 @@ const removeSection: Operation<{ page: string; section: string }> = {
 
 export const pageOperations: AnyOperation[] = [
   addPage,
+  addLandingPage,
   setSearch,
   addTile,
   removePage,
