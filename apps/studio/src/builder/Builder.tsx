@@ -10,6 +10,10 @@ import { Ask } from "./Ask";
 import { ChangeForms, type Run } from "./ChangeForms";
 import { Selected } from "./Selected";
 
+/** Headings for the summary's groups of sections (models, actions, queries). */
+const GROUPS: Record<string, string> = { model: "Records", action: "Actions", query: "Queries" };
+const kind = (concept: string) => concept.split(":")[0] ?? "";
+
 export function Builder({
   project,
   spec,
@@ -21,7 +25,9 @@ export function Builder({
   run: Run;
   version: number;
 }) {
-  const [tab, setTab] = useState<"app" | "ask" | "change">("app");
+  const [tab, setTab] = useState<"app" | "change">("app");
+  // A change is described in words (the default) or made with a form.
+  const [how, setHow] = useState<"describe" | "manual">("describe");
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<Selection>();
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
@@ -46,7 +52,6 @@ export function Builder({
           <Tabs
             tabs={[
               ["app", "Your app"],
-              ["ask", "Describe"],
               ["change", "Change"],
             ]}
             value={tab}
@@ -56,8 +61,14 @@ export function Builder({
       >
         {tab === "app" ? (
           <div className="space-y-5 p-4">
-            {sections.map((s) => (
+            {sections.map((s, i) => (
               <section key={s.concept} aria-label={s.title}>
+                {GROUPS[kind(s.concept)] &&
+                  kind(sections[i - 1]?.concept ?? "") !== kind(s.concept) && (
+                    <h2 className="mb-3 border-b border-neutral-200 pb-1 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
+                      {GROUPS[kind(s.concept)]}
+                    </h2>
+                  )}
                 <h3 className="mb-1 text-sm font-semibold">{s.title}</h3>
                 {s.sentences.map((sentence) => (
                   <p key={sentence} className="text-sm leading-relaxed text-neutral-700">
@@ -67,10 +78,20 @@ export function Builder({
               </section>
             ))}
           </div>
-        ) : tab === "ask" ? (
-          <Ask />
         ) : (
-          <ChangeForms spec={spec} run={run} />
+          <div>
+            <div className="border-b border-neutral-200 px-3 py-2">
+              <Tabs
+                tabs={[
+                  ["describe", "Describe"],
+                  ["manual", "Manual"],
+                ]}
+                value={how}
+                onChange={setHow}
+              />
+            </div>
+            {how === "describe" ? <Ask /> : <ChangeForms spec={spec} run={run} />}
+          </div>
         )}
       </Panel>
       <Preview

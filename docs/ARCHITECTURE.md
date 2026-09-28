@@ -568,6 +568,8 @@ Added churn scoring             frontier model   · 6.1k tokens · €0.03
 
 `smithable new "a booking site for a yoga studio"` (or the Builder's first prompt) uses a model **once** to draft the initial project: models, pages, page patterns, theme and sample data, expressed as a batch of operations. The user confirms the plain-language summary, the operations are applied, and everything after that follows the normal routing. Without a model, `smithable new` offers templates instead.
 
+A starter (an example in `examples/`) may carry its own custom code under `src/custom/` with its tests, e.g. the CRM's customer merge, so a demo's custom action works. `smithable new` writes it for the plain starter only; an app drafted from a description gets the generated stubs, since the draft may have changed what that code relies on.
+
 This is the one step that needs a **capable model**: it requires world knowledge (a yoga studio needs classes, teachers and bookings), design judgement and good copy. Small models only classify the request into a template. Three things keep it cheap:
 
 - **A spec is far smaller than code.** The output is a compact spec (roughly 2,000–4,000 tokens) constrained by the spec's JSON Schema. The generators then produce the code.

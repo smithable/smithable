@@ -868,6 +868,18 @@ function titleField(model: ModelIR): string {
   return (strings.find((f) => /name|title/i.test(f.name)) ?? strings[0])?.name ?? "id";
 }
 
+/** Longest texts by default, unless the spec gives a `max`: a line, and a longer text. */
+const TEXT_MAX = { string: 200, text: 10_000 };
+
+/** A text's length rules: required (not only spaces), `min` and `max` characters. */
+function textBounds(field: FieldIR): string {
+  const max =
+    field.max ??
+    (field.type.kind === "scalar" && field.type.name === "text" ? TEXT_MAX.text : TEXT_MAX.string);
+  const min = field.min ?? (field.required ? 1 : 0);
+  return `${field.required ? ".trim()" : ""}${min > 0 ? `.min(${min}, ${JSON.stringify(min === 1 ? "Required" : `At least ${min} characters`)})` : ""}.max(${max}, "At most ${max.toLocaleString("en")} characters")`;
+}
+
 /** Zod refinements that go beyond the column types: formats, required text, bounds. */
 function refinement(field: FieldIR): string | undefined {
   const optional = field.required ? "" : ".nullish()";
@@ -885,7 +897,7 @@ function refinement(field: FieldIR): string | undefined {
       return `(s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")`;
     case "string":
     case "text":
-      return field.required ? `(s) => s.trim().min(1, "Required")` : undefined;
+      return `(s) => s${textBounds(field)}`;
     case "int":
     case "decimal":
       return bounds(1) ? `(s) => s${bounds(1)}` : undefined;
@@ -2106,7 +2118,7 @@ function zodFor(field: FieldIR): string {
         schema = 'z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")';
         break;
       default:
-        schema = field.required ? 'z.string().trim().min(1, "Required")' : "z.string()";
+        schema = `z.string()${field.type.name === "string" || field.type.name === "text" ? textBounds(field) : field.required ? '.trim().min(1, "Required")' : ""}`;
     }
   }
   return field.required ? schema : `${schema}.nullish()`;
