@@ -257,6 +257,24 @@ try {
       .first()
       .waitFor();
   });
+  await step(
+    "a field's properties: its label changes, and it is shown in smithable.yml",
+    async () => {
+      const tree = page.getByRole("navigation", { name: "Concepts" });
+      await tree.getByRole("button", { name: "Open Customer" }).click();
+      await tree.getByRole("button", { name: /^email/ }).click();
+      await page.getByLabel("Label", { exact: true }).fill("E-mail address");
+      await page.getByLabel("Label", { exact: true }).press("Enter");
+      await status
+        .getByText('Change the text models.Customer.fields.email.label to "E-mail address"')
+        .waitFor({ timeout: 60000 });
+      await page.getByRole("button", { name: "Show in smithable.yml" }).click();
+      const selected = await page
+        .getByLabel("smithable.yml")
+        .evaluate((e) => e.value.slice(e.selectionStart, e.selectionEnd));
+      if (!/^\s+email:/.test(selected)) throw new Error(`selected: ${selected}`);
+    },
+  );
   await step("the spec editor checks as you type, and saves an edit as a change", async () => {
     const editor = page.getByLabel("smithable.yml");
     const text = await editor.inputValue();
@@ -265,11 +283,11 @@ try {
       .getByRole("list", { name: "Problems" })
       .getByText(/Unknown field type "txt"/)
       .waitFor();
-    if (await page.getByRole("button", { name: "Save" }).isEnabled())
+    if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
       throw new Error("Save is enabled");
     await editor.fill(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await status.getByText("Edit smithable.yml").waitFor({ timeout: 60000 });
   });
   await step("the last change is shown as a diff", async () => {

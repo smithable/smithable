@@ -163,6 +163,7 @@ export function App() {
         ) : (
           <Studio
             project={project}
+            spec={spec}
             run={run}
             version={version}
             logs={logs}
