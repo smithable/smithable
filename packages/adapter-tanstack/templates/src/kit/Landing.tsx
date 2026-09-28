@@ -447,11 +447,15 @@ export function Contact({
   email?: string;
   hours?: string;
   thanks?: string;
-  /** The form; it calls `sent` once the message is stored. */
-  form?: (sent: () => void) => React.ReactNode;
+  /**
+   * The form; it calls `sent` once the message is stored, and stores it only when `human()`:
+   * a field people never see stays empty, while form-filling bots fill it.
+   */
+  form?: (sent: () => void, human: () => boolean) => React.ReactNode;
   texts?: string;
 }) {
   const [sent, setSent] = useState(false);
+  const trap = useRef<HTMLInputElement>(null);
   const details = (
     <dl className="space-y-5">
       {address && (
@@ -527,8 +531,20 @@ export function Contact({
               </p>
             </Card>
           ) : (
-            // The form draws its own card.
-            form(() => setSent(true))
+            <div>
+              {/* Off screen and out of the tab order: only a bot fills it in. */}
+              <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
+                <label>
+                  Leave this empty
+                  <input ref={trap} tabIndex={-1} autoComplete="off" name="company-website" />
+                </label>
+              </div>
+              {/* The form draws its own card. */}
+              {form(
+                () => setSent(true),
+                () => !trap.current?.value,
+              )}
+            </div>
           ))}
       </div>
     </Section>

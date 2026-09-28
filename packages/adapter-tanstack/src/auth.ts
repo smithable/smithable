@@ -63,6 +63,11 @@ ${providers.map(provider).join("\n")}
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+// Production needs both: without a secret sessions could be forged, without the address
+// sign-in breaks. Better to refuse to start than to run like that.
+if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
+  throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),

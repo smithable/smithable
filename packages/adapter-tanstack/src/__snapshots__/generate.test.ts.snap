@@ -746,7 +746,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { classTypes } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { contains } from "#/kit/search";
 import type { ClassTypeValues } from "./class-type";
 
 /** Who may read, create, change and delete class types. */
@@ -793,7 +794,11 @@ export const classTypeData = {
 
   create(viewer: Viewer | null, values: ClassTypeValues) {
     check(classTypeAccess.create, viewer);
-    return db.insert(classTypes).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(classTypes).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: ClassTypeValues) {
@@ -804,7 +809,11 @@ export const classTypeData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(classTypeAccess.write, viewer, row.ownerId);
-    return db.update(classTypes).set(values).where(eq(classTypes.id, id)).returning().get();
+    try {
+      return db.update(classTypes).set(values).where(eq(classTypes.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -815,7 +824,24 @@ export const classTypeData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(classTypeAccess.delete, viewer, row.ownerId);
-    db.delete(classTypes).where(eq(classTypes.id, id)).run();
+    try {
+      db.delete(classTypes).where(eq(classTypes.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /**
+   * The class types the viewer may read whose name contains the text: a search of records that
+   * refer to them finds them only among these.
+   */
+  titled(viewer: Viewer | null, text: string): number[] {
+    return db
+      .select({ id: classTypes.id })
+      .from(classTypes)
+      .where(and(contains([classTypes.name], text), classTypeData.readable(viewer)))
+      .all()
+      .map((row) => row.id);
   },
 
   /** Choices for fields that refer to a class type: the ones the viewer may read. */
@@ -923,7 +949,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { instructors } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { contains } from "#/kit/search";
 import type { InstructorValues } from "./instructor";
 
 /** Who may read, create, change and delete instructors. */
@@ -970,7 +997,11 @@ export const instructorData = {
 
   create(viewer: Viewer | null, values: InstructorValues) {
     check(instructorAccess.create, viewer);
-    return db.insert(instructors).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(instructors).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: InstructorValues) {
@@ -981,7 +1012,11 @@ export const instructorData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(instructorAccess.write, viewer, row.ownerId);
-    return db.update(instructors).set(values).where(eq(instructors.id, id)).returning().get();
+    try {
+      return db.update(instructors).set(values).where(eq(instructors.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -992,7 +1027,24 @@ export const instructorData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(instructorAccess.delete, viewer, row.ownerId);
-    db.delete(instructors).where(eq(instructors.id, id)).run();
+    try {
+      db.delete(instructors).where(eq(instructors.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /**
+   * The instructors the viewer may read whose name contains the text: a search of records that
+   * refer to them finds them only among these.
+   */
+  titled(viewer: Viewer | null, text: string): number[] {
+    return db
+      .select({ id: instructors.id })
+      .from(instructors)
+      .where(and(contains([instructors.name], text), instructorData.readable(viewer)))
+      .all()
+      .map((row) => row.id);
   },
 
   /** Choices for fields that refer to a instructor: the ones the viewer may read. */
@@ -1078,10 +1130,10 @@ export const deleteInstructor = createServerFn({ method: "POST" })
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/message.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, eq, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { messages } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 import type { MessageValues } from "./message";
 
 /** Who may read, create, change and delete messages. */
@@ -1128,7 +1180,14 @@ export const messageData = {
 
   create(viewer: Viewer | null, values: MessageValues) {
     check(messageAccess.create, viewer);
-    return db.insert(messages).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    // Visitors add these without an account: at most 10,000 of theirs, so a flood stops here.
+    const made = db.select({ n: count() }).from(messages).where(isNull(messages.ownerId)).get();
+    if (viewer === null && (made?.n ?? 0) >= 10000) throw new AccessDenied(false);
+    try {
+      return db.insert(messages).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: MessageValues) {
@@ -1139,7 +1198,11 @@ export const messageData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(messageAccess.write, viewer, row.ownerId);
-    return db.update(messages).set(values).where(eq(messages.id, id)).returning().get();
+    try {
+      return db.update(messages).set(values).where(eq(messages.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -1150,7 +1213,11 @@ export const messageData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(messageAccess.delete, viewer, row.ownerId);
-    db.delete(messages).where(eq(messages.id, id)).run();
+    try {
+      db.delete(messages).where(eq(messages.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 };
 "
@@ -1183,7 +1250,7 @@ export const messageUi: ModelUi = {
 export const messageSchema = createInsertSchema(messages, {
   name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
   email: z.email("Enter a valid email address"),
-  message: (s) => s.trim().min(1, "Required").max(10000, "At most 10,000 characters"),
+  message: (s) => s.trim().min(1, "Required").max(2000, "At most 2,000 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type MessageValues = z.output<typeof messageSchema>;
@@ -1240,7 +1307,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { sessions } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 import { classTypeData } from "./class-type.server";
 import { instructorData } from "./instructor.server";
 import type { SessionValues } from "./session";
@@ -1300,7 +1367,11 @@ export const sessionData = {
   create(viewer: Viewer | null, values: SessionValues) {
     check(sessionAccess.create, viewer);
     checkReferences(viewer, values);
-    return db.insert(sessions).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(sessions).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: SessionValues) {
@@ -1312,7 +1383,11 @@ export const sessionData = {
     if (!row) throw new AccessDenied(viewer !== null);
     check(sessionAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
-    return db.update(sessions).set(values).where(eq(sessions.id, id)).returning().get();
+    try {
+      return db.update(sessions).set(values).where(eq(sessions.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -1323,7 +1398,11 @@ export const sessionData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(sessionAccess.delete, viewer, row.ownerId);
-    db.delete(sessions).where(eq(sessions.id, id)).run();
+    try {
+      db.delete(sessions).where(eq(sessions.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 };
 "
@@ -1432,6 +1511,11 @@ const socialProviders = {
 
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
+
+// Production needs both: without a secret sessions could be forged, without the address
+// sign-in breaks. Better to refuse to start than to run like that.
+if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
+  throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
@@ -1765,14 +1849,14 @@ function HomePage() {
         />
       <Contact
           texts="pages.home.contact"
-          form={(sent) => (
+          form={(sent, human) => (
             <ModelForm
               ui={messageUi}
               app={app}
               schema={messageSchema}
               submitLabel="Send"
               onSubmit={async (values) => {
-                await createMessage({ data: values });
+                if (human()) await createMessage({ data: values });
                 sent();
               }}
             />
@@ -3020,7 +3104,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { mergeCustomers as implementation } from "#/custom/actions/merge-customers";
-import { check, type Rule } from "#/kit/access";
+import { customerData } from "#/generated/customer.server";
+import { AccessDenied, check, type Rule, type Viewer } from "#/kit/access";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -3064,8 +3149,13 @@ export const mergeCustomersUi: ModelUi = {
 export const mergeCustomers = createServerFn({ method: "POST" })
   .validator(mergeCustomersInput)
   .handler(async ({ data }) => {
-    check(mergeCustomersAccess, await currentViewer());
-    return implementation(data);
+    const viewer = await currentViewer();
+    check(mergeCustomersAccess, viewer);
+    if (data.keep != null && !customerData.canRead(viewer, data.keep)) throw new AccessDenied(true);
+    if (data.duplicate != null && !customerData.canRead(viewer, data.duplicate)) throw new AccessDenied(true);
+    // The implementation may take the viewer too, e.g. to use the data functions as them.
+    const run: (input: MergeCustomersInput, viewer: Viewer | null) => Promise<MergeCustomersOutput> = implementation;
+    return run(data, viewer);
   });
 "
 `;
@@ -3083,7 +3173,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { customers } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { contains } from "#/kit/search";
 import { orderData } from "./order.server";
 import type { CustomerValues } from "./customer";
 
@@ -3094,6 +3185,15 @@ export const customerAccess: ModelAccess = {
   write: { public: false, roles: ["admin", "sales"], owner: false },
   delete: { public: false, roles: ["admin"], owner: false },
 };
+
+/**
+ * Whose record it is: anyone's for a role that may change everyone's, otherwise the viewer's
+ * own, whatever the form sent.
+ */
+function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
+  if (viewer && customerAccess.write.roles.includes(viewer.role)) return given ?? viewer.id;
+  return viewer?.id ?? null;
+}
 
 export const customerData = {
   /** A condition for the customers the viewer may read. */
@@ -3133,7 +3233,11 @@ export const customerData = {
 
   create(viewer: Viewer | null, values: CustomerValues) {
     check(customerAccess.create, viewer);
-    return db.insert(customers).values({ ...values, accountManagerId: values.accountManagerId ?? viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(customers).values({ ...values, accountManagerId: ownerFor(viewer, values.accountManagerId) }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: CustomerValues) {
@@ -3144,7 +3248,11 @@ export const customerData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(customerAccess.write, viewer, row.accountManagerId);
-    return db.update(customers).set(values).where(eq(customers.id, id)).returning().get();
+    try {
+      return db.update(customers).set({ ...values, accountManagerId: ownerFor(viewer, values.accountManagerId ?? row.accountManagerId) }).where(eq(customers.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -3155,7 +3263,24 @@ export const customerData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(customerAccess.delete, viewer, row.accountManagerId);
-    db.delete(customers).where(eq(customers.id, id)).run();
+    try {
+      db.delete(customers).where(eq(customers.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /**
+   * The customers the viewer may read whose name contains the text: a search of records that
+   * refer to them finds them only among these.
+   */
+  titled(viewer: Viewer | null, text: string): number[] {
+    return db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(contains([customers.name], text), customerData.readable(viewer)))
+      .all()
+      .map((row) => row.id);
   },
 
   /** Choices for fields that refer to a customer: the ones the viewer may read. */
@@ -3314,7 +3439,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { orders } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 import { customerData } from "./customer.server";
 import type { OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
@@ -3372,7 +3497,11 @@ export const orderData = {
   create(viewer: Viewer | null, values: OrderValues) {
     check(orderAccess.create, viewer);
     checkReferences(viewer, values);
-    return db.insert(orders).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(orders).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: OrderValues) {
@@ -3384,7 +3513,11 @@ export const orderData = {
     if (!row) throw new AccessDenied(viewer !== null);
     check(orderAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
-    return db.update(orders).set(values).where(eq(orders.id, id)).returning().get();
+    try {
+      return db.update(orders).set(values).where(eq(orders.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -3395,7 +3528,11 @@ export const orderData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(orderAccess.delete, viewer, row.ownerId);
-    db.delete(orders).where(eq(orders.id, id)).run();
+    try {
+      db.delete(orders).where(eq(orders.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 };
 "
@@ -3556,6 +3693,11 @@ const socialProviders = {
 
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
+
+// Production needs both: without a secret sessions could be forged, without the address
+// sign-in breaks. Better to refuse to start than to run like that.
+if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
+  throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
@@ -3994,10 +4136,11 @@ import { pageAccess } from "#/generated/pages";
 import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { orders, customers } from "#/db/schema";
+import { orders } from "#/db/schema";
 import { orderAccess, orderData } from "#/generated/order.server";
-import { or } from "drizzle-orm";
-import { contains, relatedContains } from "#/kit/search";
+import { or, inArray } from "drizzle-orm";
+import { contains } from "#/kit/search";
+import { customerData } from "#/generated/customer.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
@@ -4011,7 +4154,7 @@ const searchOrders = createServerFn()
   .validator(z.object({ q: z.string().max(200).optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    const where = data.q ? or(contains([orders.number], data.q), relatedContains(orders.customerId, customers, [customers.name], data.q)) : undefined;
+    const where = data.q ? or(contains([orders.number], data.q), inArray(orders.customerId, customerData.titled(viewer, data.q))) : undefined;
     return { rows: await orderData.list(viewer, where), canCreate: allows(orderAccess.create, viewer) };
   });
 
@@ -5055,6 +5198,12 @@ describe("Invoice", () => {
       deleteOwn: false,
     });
   });
+
+  test("a list carries no related records, only what they add up to", async () => {
+    const viewer = signedIn("admin");
+    insertInvoice(viewer.id);
+    for (const row of await invoiceData.list(viewer)) expect(Object.keys(row)).not.toContain("lines");
+  });
 });
 
 describe("InvoiceLine", () => {
@@ -5142,7 +5291,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { businessProfiles } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 import type { BusinessProfileValues } from "./business-profile";
 
 /** Who may read, create, change and delete business profiles. */
@@ -5189,7 +5338,11 @@ export const businessProfileData = {
 
   create(viewer: Viewer | null, values: BusinessProfileValues) {
     check(businessProfileAccess.create, viewer);
-    return db.insert(businessProfiles).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(businessProfiles).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: BusinessProfileValues) {
@@ -5200,7 +5353,11 @@ export const businessProfileData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(businessProfileAccess.write, viewer, row.ownerId);
-    return db.update(businessProfiles).set(values).where(eq(businessProfiles.id, id)).returning().get();
+    try {
+      return db.update(businessProfiles).set(values).where(eq(businessProfiles.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -5211,7 +5368,11 @@ export const businessProfileData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(businessProfileAccess.delete, viewer, row.ownerId);
-    db.delete(businessProfiles).where(eq(businessProfiles.id, id)).run();
+    try {
+      db.delete(businessProfiles).where(eq(businessProfiles.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 };
 "
@@ -5300,7 +5461,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { clients } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { contains } from "#/kit/search";
 import { invoiceData } from "./invoice.server";
 import type { ClientValues } from "./client";
 
@@ -5349,7 +5511,11 @@ export const clientData = {
 
   create(viewer: Viewer | null, values: ClientValues) {
     check(clientAccess.create, viewer);
-    return db.insert(clients).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(clients).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: ClientValues) {
@@ -5360,7 +5526,11 @@ export const clientData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(clientAccess.write, viewer, row.ownerId);
-    return db.update(clients).set(values).where(eq(clients.id, id)).returning().get();
+    try {
+      return db.update(clients).set(values).where(eq(clients.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -5371,7 +5541,24 @@ export const clientData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(clientAccess.delete, viewer, row.ownerId);
-    db.delete(clients).where(eq(clients.id, id)).run();
+    try {
+      db.delete(clients).where(eq(clients.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /**
+   * The clients the viewer may read whose name contains the text: a search of records that
+   * refer to them finds them only among these.
+   */
+  titled(viewer: Viewer | null, text: string): number[] {
+    return db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(contains([clients.name], text), clientData.readable(viewer)))
+      .all()
+      .map((row) => row.id);
   },
 
   /** Choices for fields that refer to a client: the ones the viewer may read. */
@@ -5489,7 +5676,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { invoices } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { contains } from "#/kit/search";
 import { invoiceLineData } from "./invoice-line.server";
 import { clientData } from "./client.server";
 import type { InvoiceValues } from "./invoice";
@@ -5534,7 +5722,11 @@ export const invoiceData = {
       with: { client: { columns: { id: true, name: true } }, lines: true },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
-    return rows.map(withInvoiceFormulas);
+    // The related records are here for the totals only: some may not be the viewer's to read.
+    return rows.map((row) => {
+      const { lines, ...listed } = withInvoiceFormulas(row);
+      return listed;
+    });
   },
 
   async get(viewer: Viewer | null, id: number) {
@@ -5548,7 +5740,11 @@ export const invoiceData = {
   create(viewer: Viewer | null, values: InvoiceValues) {
     check(invoiceAccess.create, viewer);
     checkReferences(viewer, values);
-    return db.insert(invoices).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(invoices).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: InvoiceValues) {
@@ -5560,7 +5756,11 @@ export const invoiceData = {
     if (!row) throw new AccessDenied(viewer !== null);
     check(invoiceAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
-    return db.update(invoices).set(values).where(eq(invoices.id, id)).returning().get();
+    try {
+      return db.update(invoices).set(values).where(eq(invoices.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -5571,7 +5771,24 @@ export const invoiceData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(invoiceAccess.delete, viewer, row.ownerId);
-    db.delete(invoices).where(eq(invoices.id, id)).run();
+    try {
+      db.delete(invoices).where(eq(invoices.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /**
+   * The invoices the viewer may read whose number contains the text: a search of records that
+   * refer to them finds them only among these.
+   */
+  titled(viewer: Viewer | null, text: string): number[] {
+    return db
+      .select({ id: invoices.id })
+      .from(invoices)
+      .where(and(contains([invoices.number], text), invoiceData.readable(viewer)))
+      .all()
+      .map((row) => row.id);
   },
 
   /** Choices for fields that refer to a invoice: the ones the viewer may read. */
@@ -5733,7 +5950,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { invoiceLines } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 import { invoiceData } from "./invoice.server";
 import type { InvoiceLineValues } from "./invoice-line";
 import { withInvoiceLineFormulas } from "./invoice-line.formulas";
@@ -5791,7 +6008,11 @@ export const invoiceLineData = {
   create(viewer: Viewer | null, values: InvoiceLineValues) {
     check(invoiceLineAccess.create, viewer);
     checkReferences(viewer, values);
-    return db.insert(invoiceLines).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    try {
+      return db.insert(invoiceLines).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   update(viewer: Viewer | null, id: number, values: InvoiceLineValues) {
@@ -5803,7 +6024,11 @@ export const invoiceLineData = {
     if (!row) throw new AccessDenied(viewer !== null);
     check(invoiceLineAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
-    return db.update(invoiceLines).set(values).where(eq(invoiceLines.id, id)).returning().get();
+    try {
+      return db.update(invoiceLines).set(values).where(eq(invoiceLines.id, id)).returning().get();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 
   remove(viewer: Viewer | null, id: number): void {
@@ -5814,7 +6039,11 @@ export const invoiceLineData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(invoiceLineAccess.delete, viewer, row.ownerId);
-    db.delete(invoiceLines).where(eq(invoiceLines.id, id)).run();
+    try {
+      db.delete(invoiceLines).where(eq(invoiceLines.id, id)).run();
+    } catch (error) {
+      throw refusal(error);
+    }
   },
 };
 "
@@ -5943,6 +6172,11 @@ const socialProviders = {
 
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
+
+// Production needs both: without a secret sessions could be forged, without the address
+// sign-in breaks. Better to refuse to start than to run like that.
+if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
+  throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
