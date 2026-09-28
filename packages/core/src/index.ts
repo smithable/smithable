@@ -7,6 +7,7 @@ export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
 export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
 export type {
+  ContentImage,
   ContentIR,
   FieldContent,
   ModelContent,

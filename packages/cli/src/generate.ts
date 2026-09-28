@@ -248,6 +248,42 @@ async function routeTree(dir: string): Promise<boolean> {
  * (a project's first migration, a full generate) or didn't work here: the caller then runs
  * the command line.
  */
+let schemaVersion = 0;
+
+/**
+ * The app's schema, fresh each time (the file has just changed). Node strips its types itself,
+ * and a new query string makes a new module while drizzle-orm stays loaded: milliseconds, where
+ * tsx takes a quarter of a second (seconds in a sandbox). tsx remains for a schema Node cannot
+ * load that way.
+ */
+async function importSchema(load: NodeJS.Require, path: string): Promise<unknown> {
+  const url = pathToFileURL(path).href;
+  try {
+    return await import(`${url}?v=${++schemaVersion}`);
+  } catch {
+    const { tsImport } = (await import(pathToFileURL(load.resolve("tsx/esm/api")).href)) as {
+      tsImport(url: string, parent: string): Promise<unknown>;
+    };
+    return tsImport(url, import.meta.url);
+  }
+}
+
+/**
+ * Loads what an operation's tools use (drizzle-kit's API, drizzle-orm through the schema, the
+ * router generator) ahead of the first operation, which otherwise pays seconds for it in a
+ * sandbox. Studio calls it once it has started; failures only mean no head start.
+ */
+export async function warmTools(dir: string): Promise<void> {
+  const root = resolve(dir);
+  const load = createRequire(join(root, "package.json"));
+  try {
+    load("drizzle-kit/api");
+    await importSchema(load, join(root, "src/db/schema.ts"));
+    const cli = load.resolve("@tanstack/router-cli/package.json");
+    await import(pathToFileURL(createRequire(cli).resolve("@tanstack/router-generator")).href);
+  } catch {}
+}
+
 async function createMigration(
   dir: string,
   migration?: MigrationPlan,
@@ -265,9 +301,6 @@ async function createMigration(
       ): Promise<Snapshot>;
       generateSQLiteMigration(prev: Snapshot, cur: Snapshot): Promise<string[]>;
     };
-    const { tsImport } = (await import(pathToFileURL(load.resolve("tsx/esm/api")).href)) as {
-      tsImport(url: string, parent: string): Promise<unknown>;
-    };
     const journal = JSON.parse(readFileSync(join(meta, "_journal.json"), "utf8")) as {
       entries: { idx: number; version: string; when: number; tag: string; breakpoints: boolean }[];
     };
@@ -277,11 +310,7 @@ async function createMigration(
     const prev = JSON.parse(
       readFileSync(join(meta, `${numbered(last.idx)}_snapshot.json`), "utf8"),
     ) as Snapshot;
-    // A fresh import each time: the schema file has just changed.
-    const schema = await tsImport(
-      pathToFileURL(join(root, "src/db/schema.ts")).href,
-      import.meta.url,
-    );
+    const schema = await importSchema(load, join(root, "src/db/schema.ts"));
     const current = await api.generateSQLiteDrizzleJson(schema, prev.id, "snake_case");
     const statements = migration.renames.length
       ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
