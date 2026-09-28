@@ -763,7 +763,8 @@ export const classTypeUi: ModelUi = {
 };
 
 export const classTypeSchema = createInsertSchema(classTypes, {
-  name: (s) => s.trim().min(1, "Required"),
+  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
+  summary: (s) => s.max(10000, "At most 10,000 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ClassTypeValues = z.output<typeof classTypeSchema>;
@@ -920,7 +921,8 @@ export const instructorUi: ModelUi = {
 };
 
 export const instructorSchema = createInsertSchema(instructors, {
-  name: (s) => s.trim().min(1, "Required"),
+  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
+  bio: (s) => s.max(10000, "At most 10,000 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InstructorValues = z.output<typeof instructorSchema>;
@@ -2778,10 +2780,11 @@ export const customerUi: ModelUi = {
 };
 
 export const customerSchema = createInsertSchema(customers, {
-  name: (s) => s.trim().min(1, "Required"),
+  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
   email: z.email("Enter a valid email address").nullish(),
   phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, "Enter a valid phone number"),
   creditLimit: (s) => s.min(0),
+  notes: (s) => s.max(10000, "At most 10,000 characters"),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type CustomerValues = z.output<typeof customerSchema>;
@@ -3026,7 +3029,7 @@ export const orderUi: ModelUi = {
 };
 
 export const orderSchema = createInsertSchema(orders, {
-  number: (s) => s.trim().min(1, "Required"),
+  number: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type OrderValues = z.output<typeof orderSchema>;
@@ -4812,7 +4815,10 @@ export const businessProfileUi: ModelUi = {
 };
 
 export const businessProfileSchema = createInsertSchema(businessProfiles, {
-  businessName: (s) => s.trim().min(1, "Required"),
+  businessName: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
+  vatNumber: (s) => s.max(200, "At most 200 characters"),
+  iban: (s) => s.max(200, "At most 200 characters"),
+  invoiceFooter: (s) => s.max(10000, "At most 10,000 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type BusinessProfileValues = z.output<typeof businessProfileSchema>;
@@ -4968,8 +4974,10 @@ export const clientUi: ModelUi = {
 };
 
 export const clientSchema = createInsertSchema(clients, {
-  name: (s) => s.trim().min(1, "Required"),
+  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
   email: z.email("Enter a valid email address"),
+  address: (s) => s.max(10000, "At most 10,000 characters"),
+  vatNumber: (s) => s.max(200, "At most 200 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ClientValues = z.output<typeof clientSchema>;
@@ -5195,7 +5203,7 @@ export const invoiceUi: ModelUi = {
 };
 
 export const invoiceSchema = createInsertSchema(invoices, {
-  number: (s) => s.trim().min(1, "Required"),
+  number: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
   issuedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
   dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -5420,7 +5428,7 @@ export const invoiceLineUi: ModelUi = {
 };
 
 export const invoiceLineSchema = createInsertSchema(invoiceLines, {
-  description: (s) => s.trim().min(1, "Required"),
+  description: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InvoiceLineValues = z.output<typeof invoiceLineSchema>;
