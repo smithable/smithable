@@ -26,15 +26,20 @@ export function App() {
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    setProject(await api.project());
+    // While the daemon restarts, what is shown stays; the next event brings it up to date.
+    const next = await api.project().catch(() => undefined);
+    if (!next) return;
+    setProject(next);
     setVersion((v) => v + 1);
   }, []);
 
   useEffect(() => {
     refresh();
-    api.logs().then(setLogs);
+    api.logs().then(setLogs, () => {});
     return api.events((event, data) => {
       if (event === "changed") refresh();
+      // After a reconnect: the project as it is now, without reloading the preview.
+      else if (event === "open") api.project().then(setProject, () => {});
       else setLogs((current) => [...current.slice(-499), String(data)]);
     });
   }, [refresh]);
@@ -45,8 +50,15 @@ export function App() {
   const run = async (name: string, args: Record<string, unknown>, confirm = false) => {
     setBusy(true);
     setMessage(undefined);
-    const result = await api.operation(name, args, confirm);
-    setBusy(false);
+    let result: Awaited<ReturnType<typeof api.operation>>;
+    try {
+      result = await api.operation(name, args, confirm);
+    } catch (error) {
+      setMessage({ ok: false, text: (error as Error).message });
+      return false;
+    } finally {
+      setBusy(false);
+    }
     if (result.needsConfirm) {
       setPending({
         name,
@@ -78,7 +90,7 @@ export function App() {
         ? describeChange(last.op, last.args, spec.ir, spec.content)
         : undefined;
     setBusy(true);
-    const result = await api.undo();
+    const result = await api.undo().catch((e: Error) => ({ ok: false, output: e.message }));
     setBusy(false);
     setMessage({
       ok: result.ok,
@@ -115,7 +127,9 @@ export function App() {
 
   const customize = async (page: string) => {
     setBusy(true);
-    const result = await api.customize(page);
+    const result = await api
+      .customize(page)
+      .catch((e: Error) => ({ ok: false, output: e.message }));
     setBusy(false);
     const lines = result.output.split("\n").filter((l) => l.trim());
     setMessage({ ok: result.ok, text: result.ok ? (lines.at(-1) ?? "") : result.output });

@@ -101,6 +101,7 @@ export function Panel({
   );
 }
 
+/** The ARIA tabs pattern: one tab in the Tab order, arrow keys (and Home, End) move between them. */
 export function Tabs<T extends string>({
   tabs,
   value,
@@ -110,14 +111,24 @@ export function Tabs<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const move = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const at = tabs.findIndex(([id]) => id === value);
+    const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const next = (to + tabs.length) % tabs.length;
+    onChange(tabs[next][0]);
+    (e.currentTarget.children[next] as HTMLElement).focus();
+  };
   return (
-    <div role="tablist" className="flex gap-1">
+    <div role="tablist" className="flex gap-1" onKeyDown={move}>
       {tabs.map(([id, label]) => (
         <button
           key={id}
           type="button"
           role="tab"
           aria-selected={value === id}
+          tabIndex={value === id ? 0 : -1}
           onClick={() => onChange(id)}
           className={cx(
             "h-7 rounded-md px-2.5 text-xs font-medium",
