@@ -6,6 +6,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
+import { textMarker } from "./model";
 
 export interface LandingLink {
   to: LinkProps["to"];
@@ -42,7 +43,12 @@ export function LandingLayout({
   );
 }
 
+/** Marks one of a section's texts with where it is kept, e.g. "pages.home.hero.title". */
+const mark = (texts: string | undefined, key: string) =>
+  texts ? textMarker(`${texts}.${key}`) : {};
+
 function Section({
+  texts,
   id,
   title,
   text,
@@ -52,6 +58,7 @@ function Section({
   title?: string;
   text?: string;
   children: React.ReactNode;
+  texts?: string;
 }) {
   return (
     <section
@@ -59,17 +66,22 @@ function Section({
       className="mx-auto max-w-6xl px-5 py-16"
     >
       {title && (
-        <h2 id={`${id}-title`} className="text-2xl font-bold sm:text-3xl">
+        <h2 id={`${id}-title`} className="text-2xl font-bold sm:text-3xl" {...mark(texts, "title")}>
           {title}
         </h2>
       )}
-      {text && <p className="mt-3 max-w-2xl text-lg text-muted-foreground">{text}</p>}
+      {text && (
+        <p className="mt-3 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "text")}>
+          {text}
+        </p>
+      )}
       <div className={title || text ? "mt-10" : undefined}>{children}</div>
     </section>
   );
 }
 
 export function Hero({
+  texts,
   title,
   subtitle,
   link,
@@ -77,14 +89,24 @@ export function Hero({
   title: string;
   subtitle?: string;
   link?: LandingLink;
+  texts?: string;
 }) {
   return (
     <section className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
-      <h1 className="max-w-3xl text-4xl leading-tight font-bold sm:text-5xl">{title}</h1>
-      {subtitle && <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{subtitle}</p>}
+      <h1
+        className="max-w-3xl text-4xl leading-tight font-bold sm:text-5xl"
+        {...mark(texts, "title")}
+      >
+        {title}
+      </h1>
+      {subtitle && (
+        <p className="mt-6 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "subtitle")}>
+          {subtitle}
+        </p>
+      )}
       {link && (
         <Link to={link.to} className={cn(buttonVariants(), "mt-10 h-12 px-6 text-base")}>
-          {link.label}
+          <span {...mark(texts, "button")}>{link.label}</span>
         </Link>
       )}
     </section>
@@ -92,6 +114,7 @@ export function Hero({
 }
 
 export function Features({
+  texts,
   title,
   text,
   items,
@@ -99,9 +122,10 @@ export function Features({
   title?: string;
   text?: string;
   items: { title?: string; text?: string }[];
+  texts?: string;
 }) {
   return (
-    <Section id="features" title={title} text={text}>
+    <Section id="features" texts={texts} title={title} text={text}>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li key={item.title ?? item.text}>
@@ -118,6 +142,7 @@ export function Features({
 
 /** Records shown as cards, e.g. the classes a studio offers. */
 export function RecordCards({
+  texts,
   id,
   title,
   text,
@@ -127,10 +152,11 @@ export function RecordCards({
   title?: string;
   text?: string;
   cards: { key: string | number; title: string; text?: string; badge?: string }[];
+  texts?: string;
 }) {
   if (cards.length === 0) return null;
   return (
-    <Section id={id} title={title} text={text}>
+    <Section id={id} texts={texts} title={title} text={text}>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <li key={card.key}>
@@ -153,6 +179,7 @@ export function RecordCards({
 }
 
 export function Pricing({
+  texts,
   title,
   text,
   plans,
@@ -169,9 +196,10 @@ export function Pricing({
     button?: string;
   }[];
   link?: LandingLink;
+  texts?: string;
 }) {
   return (
-    <Section id="pricing" title={title} text={text}>
+    <Section id="pricing" texts={texts} title={title} text={text}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan) => (
           <li key={plan.name}>
@@ -208,14 +236,16 @@ export function Pricing({
 }
 
 export function Testimonials({
+  texts,
   title,
   items,
 }: {
   title?: string;
   items: { quote?: string; name?: string; role?: string }[];
+  texts?: string;
 }) {
   return (
-    <Section id="testimonials" title={title}>
+    <Section id="testimonials" texts={texts} title={title}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li key={item.quote}>
@@ -237,14 +267,16 @@ export function Testimonials({
 
 /** Questions that open in place; the browser handles the keyboard and the expanded state. */
 export function Faq({
+  texts,
   title,
   items,
 }: {
   title?: string;
   items: { question?: string; answer?: string }[];
+  texts?: string;
 }) {
   return (
-    <Section id="faq" title={title}>
+    <Section id="faq" texts={texts} title={title}>
       <div className="max-w-3xl divide-y border-y">
         {items.map((item) => (
           <details key={item.question} className="group">
@@ -264,6 +296,7 @@ export function Faq({
 }
 
 export function CallToAction({
+  texts,
   title,
   text,
   link,
@@ -271,18 +304,25 @@ export function CallToAction({
   title: string;
   text?: string;
   link?: LandingLink;
+  texts?: string;
 }) {
   return (
     <section className="mx-auto max-w-6xl px-5 py-16">
       <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
-        <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
-        {text && <p className="mt-3 max-w-2xl text-lg">{text}</p>}
+        <h2 className="text-2xl font-bold sm:text-3xl" {...mark(texts, "title")}>
+          {title}
+        </h2>
+        {text && (
+          <p className="mt-3 max-w-2xl text-lg" {...mark(texts, "text")}>
+            {text}
+          </p>
+        )}
         {link && (
           <Link
             to={link.to}
             className={cn(buttonVariants({ variant: "secondary" }), "mt-8 h-12 px-6 text-base")}
           >
-            {link.label}
+            <span {...mark(texts, "button")}>{link.label}</span>
           </Link>
         )}
       </div>
