@@ -27,6 +27,7 @@ import {
   SCALAR_TYPES,
   USER_MODEL,
 } from "../ir.js";
+import { capitalize } from "../naming.js";
 import type { JsonSchema, SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
@@ -509,10 +510,6 @@ function buildField(
   }
   field.default = converted.value;
   return field;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /** Where each relation field was written ("Model.field"), for positioning cross-model errors. */

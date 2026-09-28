@@ -164,8 +164,8 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
     if (model(ir, m).fields.some((x) => x.name === to))
       throw new OperationError(`${m} already has a field named "${to}".`);
     spec.renameKey(fieldPath(m, from), to);
-    if (content?.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
-    updateFieldLists({ spec, ...(ux ? { ux } : {}) }, ir, m, from, to);
+    if (content.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
+    updateFieldLists({ spec, ux }, ir, m, from, to);
     if (model(ir, m).ownedBy === from) spec.set(["models", m, "ownedBy"], to);
     return [{ kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from)) }];
   },
@@ -188,7 +188,7 @@ const removeField: Operation<{ model: string; field: string }> = {
     if (model(ir, m).fields.length === 1)
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
     editors.spec.remove(fieldPath(m, f));
-    if (editors.content?.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
+    if (editors.content.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
     updateFieldLists(editors, ir, m, f, undefined);
     return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f)) }];
   },
@@ -215,7 +215,7 @@ function updateFieldLists(
   to: string | undefined,
 ): void {
   const tones = ["tones", `${m}.${from}`];
-  if (editors.ux?.has(tones)) {
+  if (editors.ux.has(tones)) {
     if (to) editors.ux.renameKey(tones, `${m}.${to}`);
     else editors.ux.removeAndPrune(tones, 0);
   }
@@ -227,12 +227,12 @@ function updateFieldLists(
     ];
     // A second line under a column: the pair goes with either field, and follows a rename.
     const below = ["pages", page.id, "table", "below"];
-    const pairs = editors.ux?.has(below) ? (editors.ux.get(below) as Record<string, string>) : {};
+    const pairs = editors.ux.has(below) ? (editors.ux.get(below) as Record<string, string>) : {};
     for (const [column, second] of Object.entries(pairs)) {
       if (column !== from && second !== from) continue;
-      if (!to) editors.ux?.removeAndPrune([...below, column], 0);
-      else if (column === from) editors.ux?.renameKey([...below, column], to);
-      else editors.ux?.set([...below, column], to);
+      if (!to) editors.ux.removeAndPrune([...below, column], 0);
+      else if (column === from) editors.ux.renameKey([...below, column], to);
+      else editors.ux.set([...below, column], to);
     }
     for (const [editor, path] of lists) {
       const list = editor?.has(path) ? (editor.get(path) as string[]) : undefined;

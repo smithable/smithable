@@ -2,6 +2,7 @@ import {
   conceptsWithRules,
   type FieldIR,
   formatFormula,
+  kebab,
   pageModels,
   ruleId,
   type SemanticText,
@@ -431,8 +432,4 @@ function related(ir: SpecIR, concept: string): string[] {
     default:
       return [];
   }
-}
-
-function kebab(name: string): string {
-  return name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }

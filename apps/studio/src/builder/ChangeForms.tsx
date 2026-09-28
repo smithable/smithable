@@ -849,9 +849,8 @@ function SetTone({ spec, run }: FormProps) {
 function SetBelow({ spec, run }: FormProps) {
   const pages = (spec.ir?.pages ?? []).filter((p) => pageModel(p) !== undefined);
   const [page, setPage] = useState(pages[0]?.id ?? "");
-  const model = spec.ir?.models.find(
-    (m) => m.name === pageModel(pages.find((p) => p.id === page) ?? pages[0]!),
-  );
+  const shown = pages.find((p) => p.id === page) ?? pages[0];
+  const model = shown && spec.ir?.models.find((m) => m.name === pageModel(shown));
   const fields = (model?.fields ?? []).filter((f) => !(f.type.kind === "relation" && f.type.many));
   const [column, setColumn] = useState("");
   const [field, setField] = useState("none");

@@ -9,7 +9,7 @@ import type { OperationArgs } from "@smithable/core";
 import { applyProposal, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
-import { git } from "./git.js";
+import { git, trailer } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
@@ -63,7 +63,7 @@ function trace(dir: string): TraceEntry[] {
   const operations = new Map(
     entries.flatMap((e) => {
       const [sha = "", , , body = ""] = e.trim().split("\x1f");
-      const op = /^Smithable-Op: (.+)$/m.exec(body)?.[1];
+      const op = trailer(body, "Smithable-Op");
       return op ? [[sha, JSON.parse(op) as TraceEntry["operation"]]] : [];
     }),
   );
@@ -72,11 +72,11 @@ function trace(dir: string): TraceEntry[] {
     const isUndo = subject.startsWith('Revert "smithable: ');
     if (!(subject.startsWith("smithable: ") || isUndo) || subject === "smithable: start of history")
       return [];
-    const ms = /^Smithable-Duration: (\d+) ms$/m.exec(body)?.[1];
+    const ms = /^(\d+) ms$/.exec(trailer(body, "Smithable-Duration") ?? "")?.[1];
     const operation = operations.get(
       isUndo ? (/This reverts commit ([0-9a-f]{40})/.exec(body)?.[1] ?? "") : sha,
     );
-    const ai = /^Smithable-AI: (.+)$/m.exec(body)?.[1];
+    const ai = trailer(body, "Smithable-AI");
     const model = ai
       ? (JSON.parse(ai) as {
           tier: keyof typeof ENGINES;

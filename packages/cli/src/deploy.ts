@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { security } from "./security.js";
 
@@ -24,10 +25,6 @@ function authSecret(dir: string): string {
     writeFileSync(path, randomBytes(32).toString("base64url"), { mode: 0o600 });
   }
   return readFileSync(path, "utf8").trim();
-}
-
-function appName(dir: string): string {
-  return (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string }).name;
 }
 
 /**
