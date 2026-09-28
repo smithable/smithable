@@ -18,10 +18,12 @@ export interface SummarySection {
   concept: string;
   title: string;
   sentences: string[];
+  /** A model's first sentence, item by item ("a phone (a phone number)"), and their fields. */
+  fields?: { field: string; label: string; text: string }[];
 }
 
 /** What a field holds, where its name does not say it; plain text needs no note. */
-const KINDS: Record<string, string> = {
+export const KINDS: Record<string, string> = {
   int: "a whole number",
   decimal: "a number",
   money: "an amount",
@@ -63,7 +65,8 @@ export function summarize(
   for (const model of ir.models) {
     const isOwnValue = (f: FieldIR) =>
       !f.formula && !(f.type.kind === "relation" && (f.type.many || f.type.model === USER_MODEL));
-    const parts = model.fields.filter(isOwnValue).map((f) => {
+    const own = model.fields.filter(isOwnValue);
+    const parts = own.map((f) => {
       const name = fieldLabel(model, f);
       const notes: string[] = [];
       if (f.type.kind === "choice") {
@@ -108,7 +111,16 @@ export function summarize(
       sentences.push(`Only ${who(roles)} can ${verb} ${pluralLabel(model).toLowerCase()}.`);
     }
     for (const rule of model.rules ?? []) sentences.push(`Rule: ${rule.text}`);
-    sections.push({ concept: `model:${model.name}`, title: pluralLabel(model), sentences });
+    sections.push({
+      concept: `model:${model.name}`,
+      title: pluralLabel(model),
+      sentences,
+      fields: own.map((f, i) => ({
+        field: f.name,
+        label: fieldLabel(model, f),
+        text: parts[i] as string,
+      })),
+    });
   }
 
   if (ir.pages.length) {
