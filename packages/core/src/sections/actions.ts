@@ -9,6 +9,7 @@ import {
   readString,
 } from "../context.js";
 import type { ActionIR, FieldIR } from "../ir.js";
+import { capitalize } from "../naming.js";
 import type { JsonSchema, SpecSection } from "../section.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN } from "./names.js";
@@ -153,8 +154,4 @@ function readFields(ctx: ParseContext, entry: Entry, where: string): FieldIR[] {
     fields.push({ name: key, type, required: required || type.kind === "choice", unique: false });
   }
   return fields;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

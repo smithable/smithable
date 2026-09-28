@@ -50,6 +50,11 @@ export function pascal(name: string): string {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
+/** "credit limit" → "Credit limit": only the first letter changes. */
+export function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function kebab(name: string): string {
   return words(name).join("-");
 }

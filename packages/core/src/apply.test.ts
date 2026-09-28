@@ -190,6 +190,10 @@ describe("operations", () => {
     ).toMatchObject({
       message: 'addField: Unknown argument "color".',
     });
+    // Types come from the shared JSON Schema check, in words.
+    expect(
+      applyOperation(files, "addField", { model: "Customer", field: 3, type: "url" }),
+    ).toMatchObject({ message: 'addField: "field" must be a string.' });
     expect(applyOperation(files, "addFeild", {})).toMatchObject({
       message: 'Unknown operation "addFeild". Did you mean "addField"?',
     });

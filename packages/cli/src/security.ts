@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { appName } from "./build.js";
 import { generate } from "./generate.js";
-import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
+import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
 
 /**
@@ -313,7 +314,7 @@ export function report(io: Io, level: Level, results: Result[]): number {
  */
 export async function security(dir: string, io: Io, level: Level): Promise<number> {
   if (level !== "release") return report(io, level, checks(dir, level));
-  const { name } = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string };
+  const name = appName(dir);
   const docker = (args: string[]) => spawnSync("docker", args, { cwd: dir, encoding: "utf8" });
   if (!has("docker")) {
     io.err("Release checks build and run the app's image: they need Docker.\n");
@@ -366,8 +367,9 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
  */
 export async function updateSecurity(dir: string, io: Io): Promise<number> {
   ensureRepository(dir);
-  if (uncommitted(dir).length > 0) {
-    io.err("Commit or discard your changes first, so the update can be undone on its own.\n");
+  const refused = uncommittedRefusal(dir, "so the update can be undone on its own");
+  if (refused) {
+    io.err(refused);
     return 1;
   }
   if ((await generate(dir, io, { tools: true, force: false })) !== 0) {

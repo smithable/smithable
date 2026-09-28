@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { migrateSpec } from "@smithable/core";
 import { generate, projectProfile } from "./generate.js";
-import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
+import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
 import { VERSION } from "./version.js";
 
@@ -16,8 +16,9 @@ import { VERSION } from "./version.js";
  */
 export async function upgrade(dir: string, io: Io): Promise<number> {
   ensureRepository(dir);
-  if (uncommitted(dir).length > 0) {
-    io.err("Commit or discard your changes first, so the upgrade can be undone on its own.\n");
+  const refused = uncommittedRefusal(dir, "so the upgrade can be undone on its own");
+  if (refused) {
+    io.err(refused);
     return 1;
   }
   const from = projectProfile(dir) ?? "unknown";

@@ -13,11 +13,6 @@ function put(ux: YamlEditor, path: string[], value: string | string[] | undefine
   }
 }
 
-function uxEditor(editors: { ux?: YamlEditor }): YamlEditor {
-  if (!editors.ux) throw new OperationError("This project has no smithable.ux.yml editor.");
-  return editors.ux;
-}
-
 const setTheme: Operation<{ preset?: string; primary?: string; font?: string; density?: string }> =
   {
     name: "setTheme",
@@ -40,7 +35,7 @@ const setTheme: Operation<{ preset?: string; primary?: string; font?: string; de
         .join(", ")}`,
     destructive: () => false,
     apply(editors, args) {
-      const ux = uxEditor(editors);
+      const ux = editors.ux;
       if (Object.keys(args).length === 0)
         throw new OperationError("Say what to set: preset, primary, font or density.");
       if (args.preset !== undefined) put(ux, ["theme", "preset"], args.preset);
@@ -72,7 +67,7 @@ const setColumns: Operation<{ page: string; columns?: string[] }> = {
   apply(editors, { page, columns }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    put(uxEditor(editors), ["pages", page, "table", "columns"], columns);
+    put(editors.ux, ["pages", page, "table", "columns"], columns);
     return [];
   },
 };
@@ -95,7 +90,7 @@ const setFieldOrder: Operation<{ page: string; fields?: string[] }> = {
   apply(editors, { page, fields }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    put(uxEditor(editors), ["pages", page, "form", "fieldOrder"], fields);
+    put(editors.ux, ["pages", page, "form", "fieldOrder"], fields);
     return [];
   },
 };
@@ -126,11 +121,7 @@ const setTone: Operation<{ model: string; field: string; value: string; tone: st
       throw new OperationError(`${model}.${field} is not a choice field.`);
     if (!type.values.includes(value))
       throw new OperationError(`${model}.${field} has no value "${value}".`);
-    put(
-      uxEditor(editors),
-      ["tones", `${model}.${field}`, value],
-      tone === "neutral" ? undefined : tone,
-    );
+    put(editors.ux, ["tones", `${model}.${field}`, value], tone === "neutral" ? undefined : tone);
     return [];
   },
 };
@@ -150,7 +141,7 @@ const setIcon: Operation<{ page: string; icon: string }> = {
   apply(editors, { page, icon }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    put(uxEditor(editors), ["pages", page, "icon"], icon === "auto" ? undefined : icon);
+    put(editors.ux, ["pages", page, "icon"], icon === "auto" ? undefined : icon);
     return [];
   },
 };
@@ -175,7 +166,7 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
     put(
-      uxEditor(editors),
+      editors.ux,
       ["pages", page, "table", "below", column],
       field === "none" ? undefined : field,
     );

@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { S3 } from "./s3.js";
 
@@ -76,10 +77,6 @@ function target(spec: string): Target {
       }
     },
   };
-}
-
-function appName(dir: string): string {
-  return (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string }).name;
 }
 
 const stamp = () => new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
