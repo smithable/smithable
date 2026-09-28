@@ -157,7 +157,7 @@ export async function runCoder(
     commands?: string[];
     request: string;
     subject: string;
-    after?: () => number;
+    after?: () => number | Promise<number>;
   },
 ): Promise<number> {
   if (!coder) {
@@ -198,13 +198,20 @@ export async function runCoder(
     io.err("The coder changed nothing.\n");
     return 1;
   }
-  const checks: [string, () => boolean][] = [
-    ...(task.after ? [["Smithable", () => task.after?.() === 0] as [string, () => boolean]] : []),
+  const checks: [string, () => boolean | Promise<boolean>][] = [
+    ...(task.after
+      ? [
+          ["Smithable", async () => (await task.after?.()) === 0] as [
+            string,
+            () => Promise<boolean>,
+          ],
+        ]
+      : []),
     ["The type check", () => exec("pnpm", ["typecheck"], dir) === 0],
     ["The tests", () => exec("pnpm", ["test"], dir) === 0],
   ];
   for (const [what, check] of checks) {
-    if (!check()) {
+    if (!(await check())) {
       discardChanges(dir);
       io.err(`${what} failed with the new code, so everything was undone.\n`);
       return 1;

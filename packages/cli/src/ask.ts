@@ -120,12 +120,12 @@ export function usageLine(usage: Usage[]): string {
  * checked, regenerated, migrated and committed on its own, so each can be undone. The first
  * commit carries what the model used.
  */
-export function applyProposal(
+export async function applyProposal(
   dir: string,
   io: Io,
   request: string,
   proposal: Extract<Proposal, { kind: "change" }>,
-): number {
+): Promise<number> {
   const tokens = proposal.usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
   const cost = proposal.usage.reduce((sum, u) => sum + u.cost, 0);
   const last = proposal.usage.at(-1);
@@ -138,7 +138,7 @@ export function applyProposal(
       cost: i === 0 ? Number(cost.toFixed(6)) : 0,
       currency: last?.currency,
     })}`;
-    const code = runOperation(dir, io, op, args, { yes: true, trailer });
+    const code = await runOperation(dir, io, op, args, { yes: true, trailer });
     if (code !== 0) {
       if (i > 0)
         io.err(`The first ${i} operation(s) were applied; undo them with smithable undo.\n`);
@@ -201,7 +201,7 @@ export async function ask(
     io.out(`  ${i + 1}. ${o.description}${o.destructive ? " (loses data)" : ""}\n`);
   const confirmed = await confirm(io, "Apply it?", flags.yes);
   if (confirmed !== true) return confirmed;
-  const applied = applyProposal(dir, io, request, proposal);
+  const applied = await applyProposal(dir, io, request, proposal);
   if (applied !== 0) return applied;
   // A new query needs its code: a coder writes it when one is set up (ARCHITECTURE §9.2).
   for (const { op, args } of proposal.operations) {
