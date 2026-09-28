@@ -1,4 +1,5 @@
 import type { YamlEditor } from "../edit.js";
+import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 import { NAME_PATTERN } from "./names.js";
 
@@ -226,5 +227,95 @@ const removePage: Operation<{ page: string }> = {
   },
 };
 
-export const pageOperations: AnyOperation[] = [addPage, setSearch, addTile, removePage];
+/** A landing page's section kinds other than records, which any name can have. */
+const KINDS = SECTION_KINDS.filter((k) => k !== "records");
+
+const addSection: Operation<{
+  page: string;
+  section: string;
+  records?: string;
+  form?: string;
+  button?: string;
+}> = {
+  name: "addSection",
+  summary: `Add a section to a landing page: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards). Its texts go in smithable.content.yml.`,
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "The landing page, e.g. home." },
+      section: {
+        type: "string",
+        description: `A kind (${KINDS.join(", ")}) or, with records, any name.`,
+      },
+      records: { type: "string", description: "A model whose records the section shows as cards." },
+      form: { type: "string", description: "A contact section's form: the model visitors add." },
+      button: {
+        type: "string",
+        description: "The page a hero's or call to action's button opens.",
+      },
+    },
+  },
+  positional: ["page", "section"],
+  describe: ({ page, section }) => `Add a ${section} section to the ${page} page`,
+  destructive: () => false,
+  apply({ spec }, { page, section, records, form, button }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    if (!existing) throw new OperationError(`There is no page named "${page}".`);
+    if (existing.pattern.kind !== "landing")
+      throw new OperationError(
+        `Page "${page}" is a ${existing.pattern.kind} page, not a landing page.`,
+      );
+    if (existing.pattern.sections.some((s) => s.name === section))
+      throw new OperationError(`The ${page} page already has a section named "${section}".`);
+    if (!records && !(KINDS as readonly string[]).includes(section))
+      throw new OperationError(
+        `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records.`,
+      );
+    const options = {
+      ...(records ? { records } : {}),
+      ...(form ? { form } : {}),
+      ...(button ? { button } : {}),
+    };
+    spec.add(["pages", page, "landing"], section, options);
+    return [];
+  },
+};
+
+const removeSection: Operation<{ page: string; section: string }> = {
+  name: "removeSection",
+  summary: "Remove a section from a landing page, with its texts.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: { page: { type: "string" }, section: { type: "string" } },
+  },
+  positional: ["page", "section"],
+  describe: ({ page, section }) => `Remove the ${section} section from the ${page} page`,
+  destructive: () => false,
+  apply({ spec, content }, { page, section }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    if (
+      existing?.pattern.kind !== "landing" ||
+      !existing.pattern.sections.some((s) => s.name === section)
+    )
+      throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (existing.pattern.sections.length === 1)
+      throw new OperationError("A landing page needs at least one section.");
+    spec.remove(["pages", page, "landing", section]);
+    if (content?.has(["pages", page, section])) content.removeAndPrune(["pages", page, section], 0);
+    return [];
+  },
+};
+
+export const pageOperations: AnyOperation[] = [
+  addPage,
+  setSearch,
+  addTile,
+  removePage,
+  addSection,
+  removeSection,
+];
 export const navigationOperations: AnyOperation[] = [setNavigation];
