@@ -21,6 +21,9 @@ type Path = readonly string[];
  * everything an edit does not touch (comments, alignment, flow style, blank lines)
  * stays byte-for-byte identical. Re-parses after every edit.
  */
+/** An edit that does not fit the document (a path that is not a mapping, a missing item). */
+export class EditError extends Error {}
+
 export class YamlEditor {
   private source: string;
   private doc!: Document.Parsed;
@@ -72,9 +75,9 @@ export class YamlEditor {
   /** Replaces item `index` of the list at `path`, written on one line (e.g. { id: a, rule: … }). */
   setItem(path: Path, index: number, value: YamlValue): void {
     const list = this.doc.getIn(path, true) as ParsedNode | undefined;
-    if (!isSeq(list)) throw new Error(`${path.join(".")} is not a list.`);
+    if (!isSeq(list)) throw new EditError(`${path.join(".")} is not a list.`);
     const item = list.items[index] as ParsedNode | undefined;
-    if (!item) throw new Error(`${path.join(".")} has no item ${index + 1}.`);
+    if (!item) throw new EditError(`${path.join(".")} has no item ${index + 1}.`);
     this.splice(item.range[0], item.range[1], flow(value));
   }
 
@@ -123,12 +126,12 @@ export class YamlEditor {
   /** Adds `key: value` to the mapping at `path`, creating missing mappings on the way. */
   add(path: Path, key: string, value: YamlValue): void {
     if (!this.has(path)) {
-      if (path.length === 0) throw new Error("The document has no root mapping.");
+      if (path.length === 0) throw new EditError("The document has no root mapping.");
       this.add(path.slice(0, -1), path[path.length - 1] as string, { [key]: value });
       return;
     }
     const map = this.doc.getIn(path, true) as ParsedNode;
-    if (!isMap(map)) throw new Error(`${path.join(".")} is not a mapping.`);
+    if (!isMap(map)) throw new EditError(`${path.join(".")} is not a mapping.`);
     if (map.flow) {
       const close = this.source.lastIndexOf("}", map.range[1]);
       const inner = this.source.slice(map.range[0] + 1, close);
@@ -148,14 +151,14 @@ export class YamlEditor {
   private pair(path: Path): Pair<ParsedNode, ParsedNode | null> {
     const key = path[path.length - 1];
     const found = this.parentMap(path).items.find((p) => isScalar(p.key) && p.key.value === key);
-    if (!found || !isPair(found)) throw new Error(`Nothing at ${path.join(".")}.`);
+    if (!found || !isPair(found)) throw new EditError(`Nothing at ${path.join(".")}.`);
     return found as Pair<ParsedNode, ParsedNode | null>;
   }
 
   private parentMap(path: Path): YAMLMap.Parsed {
     const parent = path.length === 1 ? this.doc.contents : this.doc.getIn(path.slice(0, -1), true);
     if (!isMap(parent))
-      throw new Error(`${path.slice(0, -1).join(".") || "The document"} is not a mapping.`);
+      throw new EditError(`${path.slice(0, -1).join(".") || "The document"} is not a mapping.`);
     return parent as YAMLMap.Parsed;
   }
 
@@ -167,7 +170,7 @@ export class YamlEditor {
   private reparse(): void {
     this.doc = parseDocument(this.source);
     if (this.doc.errors.length > 0)
-      throw new Error(`Edit produced invalid YAML: ${this.doc.errors[0]?.message}`);
+      throw new EditError(`Edit produced invalid YAML: ${this.doc.errors[0]?.message}`);
   }
 
   private lineStart(offset: number): number {

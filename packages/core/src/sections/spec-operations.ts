@@ -3,9 +3,12 @@ import { type SpecIR, storageOf } from "../ir.js";
 import { type AnyOperation, type Effect, type Operation, OperationError } from "../operation.js";
 import { validateSpec } from "../spec.js";
 
-/** Stored fields the edited text no longer has: their data would be lost. */
-function removedFields(before: SpecIR, text: string): Effect[] {
-  const after = validateSpec({ path: "smithable.yml", text }).ir;
+/**
+ * Stored fields the edited text no longer has: their data would be lost. `validated` is the
+ * edited spec as read with the project's plugins, when the caller has it.
+ */
+function removedFields(before: SpecIR, text: string, validated?: SpecIR): Effect[] {
+  const after = validated ?? validateSpec({ path: "smithable.yml", text }).ir;
   if (!after) return [];
   return before.models.flatMap((model) =>
     model.fields
@@ -42,7 +45,7 @@ const editSpec: Operation<{ text: string }> = {
   },
   positional: ["text"],
   describe: () => "Edit smithable.yml",
-  destructive: ({ text }, ir) => removedFields(ir, text).length > 0,
+  destructive: ({ text }, ir, after) => removedFields(ir, text, after).length > 0,
   apply({ spec }, { text }, ir) {
     const doc = parseDocument(text);
     if (doc.errors.length)

@@ -455,3 +455,29 @@ test("addLandingPage makes a public landing page with a hero and a footer", () =
   const closed = applyOperation(files, "addLandingPage", { page: "intro", public: false });
   expect(closed.ok && closed.files.auth).not.toContain("intro");
 });
+
+test("an edit the files cannot take fails the operation instead of throwing", () => {
+  // "models:" with nothing under it: a label cannot be added below it.
+  const content = "smithableContent: 0.1\nmodels:\n";
+  const result = applyOperation({ ...files, content }, "setText", {
+    path: ["models", "Customer", "fields", "email", "label"],
+    text: "E-mail",
+  });
+  expect(result.ok).toBe(false);
+});
+
+test("an edited spec with a plugin's section still asks before it drops a field", () => {
+  const greeting = {
+    key: "greeting",
+    description: "A greeting.",
+    schema: { type: "string" },
+    expand: () => ({}),
+  };
+  const spec = `${files.spec}\ngreeting: Hello\n`;
+  const edited = spec.replace(/^ {6}phone: .*\n/m, "");
+  expect(edited).not.toBe(spec);
+  const result = applyOperation({ ...files, spec, plugins: [greeting] }, "editSpec", {
+    text: edited,
+  });
+  expect(result).toMatchObject({ ok: true, destructive: true });
+});
