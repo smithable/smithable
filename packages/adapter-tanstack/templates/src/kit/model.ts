@@ -61,6 +61,14 @@ export type Row = { id: number } & Record<string, unknown>;
 export type Options = Record<string, { value: number | string; label: string }[]>;
 
 /**
+ * Marks a visible text with where its wording is kept, e.g. "pages.customers.title", so the
+ * preview editor can change it in place. Only in development.
+ */
+export function textMarker(path: string) {
+  return import.meta.env.DEV ? { "data-sm-text": path } : {};
+}
+
+/**
  * Marks an element with the part of the app description it shows, for the preview editor
  * (select a field, drag a column). Only in development: production builds leave it out.
  */

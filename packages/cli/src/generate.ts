@@ -193,8 +193,10 @@ export function runTools(
   lap("install");
   if (schema && !migrate(dir, migration, run)) return 1;
   lap("drizzle-kit");
-  // Always: skipping it when no route file changed left the Studio preview blank after some
-  // changes (test:studio's "click the email field" step), for reasons not yet understood.
+  // Always: skipping it when no route file changed leaves a request to the Studio preview
+  // hanging after an Undo restarted the dev server (test:studio's "click the email field"
+  // step); running it touches the route tree and Vite recovers. Ruled out so far: the
+  // in-process migration, the preview warm-up, Undo not regenerating the route tree.
   if (!run(["exec", "tsr", "generate"])) return 1;
   lap("route generator");
   if (schema && migration?.apply) {

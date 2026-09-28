@@ -1400,6 +1400,7 @@ function ClassTypesPage() {
   return (
     <>
       <PageHeader
+        page="class-types"
         title="Class types"
         actions={newButton}
       />
@@ -1582,6 +1583,7 @@ function InstructorsPage() {
   return (
     <>
       <PageHeader
+        page="instructors"
         title="Instructors"
         actions={newButton}
       />
@@ -1723,6 +1725,7 @@ function SessionsPage() {
   return (
     <>
       <PageHeader
+        page="sessions"
         title="Sessions"
         actions={newButton}
       />
@@ -3414,6 +3417,7 @@ function CustomersPage() {
   return (
     <>
       <PageHeader
+        page="customers"
         title="Customers"
         actions={<>{mergeCustomersButton}{newButton}</>}
       />
@@ -3596,6 +3600,7 @@ function OrdersPage() {
   return (
     <>
       <PageHeader
+        page="orders"
         title="Orders"
         actions={newButton}
       />
@@ -5751,6 +5756,7 @@ function ClientsPage() {
   return (
     <>
       <PageHeader
+        page="clients"
         title="Clients"
         actions={newButton}
       />
@@ -5922,6 +5928,7 @@ function InvoiceLinesPage() {
   return (
     <>
       <PageHeader
+        page="invoice-lines"
         title="Invoice lines"
         actions={newButton}
       />
@@ -6077,6 +6084,7 @@ function InvoicesPage() {
   return (
     <>
       <PageHeader
+        page="invoices"
         title="Invoices"
         actions={newButton}
       />
@@ -6174,7 +6182,7 @@ function OverviewPage() {
   const navigate = useNavigate();
   return (
     <>
-      <PageHeader title="Overview" />
+      <PageHeader page="overview" title="Overview" />
       <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Outstanding" value={formatNumber("money", data.outstanding, app)} />
@@ -6234,7 +6242,7 @@ function SettingsPage() {
   const [saved, setSaved] = useState(false);
   return (
     <>
-      <PageHeader title="Settings" />
+      <PageHeader page="settings" title="Settings" />
       <ModelForm
         key={row?.id ?? "new"}
         ui={businessProfileUi}

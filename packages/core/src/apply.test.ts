@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { applyOperation, findOperation, OPERATIONS, parseOperationArgs } from "./apply.js";
+import {
+  applyOperation,
+  findOperation,
+  OPERATIONS,
+  type ProjectFiles,
+  parseOperationArgs,
+} from "./apply.js";
 
 const files = {
   spec: Object.values(
@@ -351,4 +357,22 @@ test("addQuery and addTile put a custom query on a new dashboard", () => {
   expect(second).toMatchObject({ ok: true });
   expect(apply("addTile", ["customers", "x", "count", "Customer"])).toMatchObject({ ok: false });
   expect(apply("addQuery", ["churnRisk", "Client"])).toMatchObject({ ok: false });
+});
+
+test("setText changes, adds and restores visible texts; the content file decides which exist", () => {
+  const set = (path: string[], text: string, from: ProjectFiles = files) =>
+    applyOperation(from, "setText", { path, text });
+  const changed = set(["pages", "customers", "subtitle"], "All our customers.");
+  expect(changed.ok && changed.files.content).toContain("subtitle: All our customers.");
+  const added = set(["models", "Customer", "fields", "email", "label"], "E-mail");
+  expect(added.ok && added.files.content).toMatch(/email:\n\s+label: E-mail/);
+  const restored = set(["pages", "orders", "subtitle"], "");
+  expect(restored.ok && restored.files.content).not.toContain("Every order and where it stands.");
+  expect(set(["pages", "nowhere", "title"], "Hi").ok).toBe(false);
+  // Without a content file, one is made only when a text is set.
+  const bare = { spec: files.spec, auth: files.auth };
+  const first = set(["pages", "customers", "title"], "Clients", bare);
+  expect(first.ok && first.files.content).toContain("title: Clients");
+  const other = applyOperation(bare, "setIcon", { page: "customers", icon: "users" });
+  expect(other.ok && other.files.content).toBeUndefined();
 });

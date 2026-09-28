@@ -8,7 +8,9 @@ export type PreviewMessage =
       page: string | null;
       columns: string[] | null;
     }
-  | { type: "columns"; page: string; columns: string[] };
+  | { type: "columns"; page: string; columns: string[] }
+  /** A text changed in place; `path` is its place in smithable.content.yml, dot-separated. */
+  | { type: "text"; path: string; text: string };
 
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
 
