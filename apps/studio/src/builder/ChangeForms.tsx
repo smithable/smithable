@@ -37,6 +37,135 @@ export function shorthandOf(field: FieldIR): string {
   return `${type}${required}${field.unique ? " unique" : ""}${field.default !== undefined && field.type.kind !== "choice" ? ` = ${field.default}` : ""}`;
 }
 
+/**
+ * A spec name from a friendly one: "Max credit" → maxCredit, "Förfallodatum" → forfallodatum.
+ * A name that already is one (creditLimit) stays as it is.
+ */
+export function identifier(label: string): string {
+  const words = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/æ/gi, "ae")
+    .replace(/ø/gi, "o")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+  const name = words
+    .map((w, i) => (i === 0 ? w[0]?.toLowerCase() + w.slice(1) : w[0]?.toUpperCase() + w.slice(1)))
+    .join("");
+  return /^[0-9]/.test(name) ? `field${name}` : name;
+}
+
+/** What a field form edits: the kind of value and its modifiers. */
+interface FieldShape {
+  kind: string;
+  values: string;
+  target: string;
+  required: boolean;
+  unique: boolean;
+}
+
+function shapeOf(field: FieldIR): FieldShape {
+  const t = field.type;
+  return {
+    kind: t.kind === "scalar" ? t.name : t.kind,
+    values: t.kind === "choice" ? t.values.join(", ") : "",
+    target: t.kind === "relation" ? t.model : "",
+    required: field.required,
+    unique: field.unique,
+  };
+}
+
+/** The spec's shorthand for a shape, e.g. "email! unique" or "draft | sent". */
+function shorthand(shape: FieldShape, keepDefault?: FieldIR): string {
+  if (shape.kind === "choice")
+    return shape.values
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .join(" | ");
+  const type = shape.kind === "relation" ? shape.target : shape.kind;
+  const kept =
+    keepDefault?.default !== undefined && shapeOf(keepDefault).kind === shape.kind
+      ? ` = ${keepDefault.default}`
+      : "";
+  return `${type}${shape.required ? "!" : ""}${shape.unique ? " unique" : ""}${kept}`;
+}
+
+/** The controls for a field's kind of value, its choices or link, and its modifiers. */
+function FieldShapeControls({
+  shape,
+  onChange,
+  models,
+}: {
+  shape: FieldShape;
+  onChange: (shape: FieldShape) => void;
+  models: string[];
+}) {
+  const set = (change: Partial<FieldShape>) => onChange({ ...shape, ...change });
+  return (
+    <>
+      <Label text="Holds">
+        <Select
+          aria-label="Holds"
+          value={shape.kind}
+          onChange={(e) => set({ kind: e.target.value, target: shape.target || (models[0] ?? "") })}
+          options={KINDS}
+        />
+      </Label>
+      {shape.kind === "choice" && (
+        <Label text="Values" hint="Separated by commas; the first is the default">
+          <Input
+            aria-label="Values"
+            value={shape.values}
+            onChange={(e) => set({ values: e.target.value })}
+            placeholder="draft, sent, paid"
+          />
+        </Label>
+      )}
+      {shape.kind === "relation" && (
+        <Label text="Links to">
+          <Select
+            aria-label="Links to"
+            value={shape.target}
+            onChange={(e) => set({ target: e.target.value })}
+            options={[...models, "User"]}
+          />
+        </Label>
+      )}
+      {shape.kind !== "choice" && (
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={shape.required}
+              onChange={(e) => set({ required: e.target.checked })}
+            />{" "}
+            Required
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={shape.unique}
+              onChange={(e) => set({ unique: e.target.checked })}
+            />{" "}
+            Unique
+          </label>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** A note under a form: the spec name or shorthand the form will write. */
+function SpecNote({ label, text }: { label: string; text: string }) {
+  return text ? (
+    <p className="text-xs text-neutral-500">
+      {label} <code className="rounded bg-neutral-100 px-1">{text}</code>
+    </p>
+  ) : null;
+}
+
 const CHANGES = [
   ["setTheme", "Look and feel"],
   ["addField", "Add a field"],
@@ -152,19 +281,16 @@ function Form({
 function AddField({ spec, run }: FormProps) {
   const models = spec.ir?.models ?? [];
   const [model, setModel] = useState(models[0]?.name ?? "");
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState("string");
-  const [values, setValues] = useState("");
-  const [target, setTarget] = useState(models[0]?.name ?? "");
-  const [required, setRequired] = useState(false);
-  const type =
-    kind === "choice"
-      ? values
-          .split(",")
-          .map((v) => v.trim())
-          .filter(Boolean)
-          .join(" | ")
-      : `${kind === "relation" ? target : kind}${required ? "!" : ""}`;
+  const [label, setLabel] = useState("");
+  const [shape, setShape] = useState<FieldShape>({
+    kind: "string",
+    values: "",
+    target: models[0]?.name ?? "",
+    required: false,
+    unique: false,
+  });
+  const name = identifier(label);
+  const type = shorthand(shape);
   return (
     <Form onSubmit={() => run("addField", { model, field: name, type })}>
       <Label text="Kind of record">
@@ -175,52 +301,16 @@ function AddField({ spec, run }: FormProps) {
           options={models.map((m) => m.name)}
         />
       </Label>
-      <Label text="Name" hint="In camelCase, e.g. phone or creditLimit">
+      <Label text="Name">
         <Input
           aria-label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="website"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Website"
         />
       </Label>
-      <Label text="Holds">
-        <Select
-          aria-label="Holds"
-          value={kind}
-          onChange={(e) => setKind(e.target.value)}
-          options={KINDS}
-        />
-      </Label>
-      {kind === "choice" && (
-        <Label text="Values" hint="Separated by commas; the first is the default">
-          <Input
-            aria-label="Values"
-            value={values}
-            onChange={(e) => setValues(e.target.value)}
-            placeholder="draft, sent, paid"
-          />
-        </Label>
-      )}
-      {kind === "relation" && (
-        <Label text="Links to">
-          <Select
-            aria-label="Links to"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            options={[...models.map((m) => m.name), "User"]}
-          />
-        </Label>
-      )}
-      {kind !== "choice" && (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={required}
-            onChange={(e) => setRequired(e.target.checked)}
-          />{" "}
-          Required
-        </label>
-      )}
+      <FieldShapeControls shape={shape} onChange={setShape} models={models.map((m) => m.name)} />
+      <SpecNote label="In the spec:" text={name && type ? `${name}: ${type}` : ""} />
       <Submit label="Add field" disabled={!name} />
     </Form>
   );
@@ -228,32 +318,65 @@ function AddField({ spec, run }: FormProps) {
 
 function ChangeField({ spec, run }: FormProps) {
   const { model, field, pickers } = useModelField(spec);
-  const [type, setType] = useState("");
-  const shown = type || (field ? shorthandOf(field) : "");
+  const models = (spec.ir?.models ?? []).map((m) => m.name);
   return (
-    <Form
-      onSubmit={() =>
-        run("changeField", { model, field: field?.name, type: shown }).then(() => setType(""))
-      }
-    >
+    <div className="space-y-3">
       {pickers}
-      <Label text="Type" hint='"!" makes it required, "unique" allows each value once'>
-        <Input aria-label="Type" value={shown} onChange={(e) => setType(e.target.value)} />
-      </Label>
-      <Submit label="Change field" disabled={!field} />
+      {field &&
+        (field.formula || (field.type.kind === "relation" && field.type.many) ? (
+          <p className="text-sm text-neutral-600">
+            {field.formula ? "This field is calculated" : "This field lists related records"}:
+            change it in Studio mode.
+          </p>
+        ) : (
+          // A new form for each field, starting from its current definition.
+          <FieldShapeForm
+            key={`${model}.${field.name}`}
+            field={field}
+            models={models}
+            run={(type) => run("changeField", { model, field: field.name, type })}
+          />
+        ))}
+    </div>
+  );
+}
+
+function FieldShapeForm({
+  field,
+  models,
+  run,
+}: {
+  field: FieldIR;
+  models: string[];
+  run: (type: string) => Promise<boolean>;
+}) {
+  const [shape, setShape] = useState(() => shapeOf(field));
+  const type = shorthand(shape, field);
+  return (
+    <Form onSubmit={() => run(type)}>
+      <FieldShapeControls shape={shape} onChange={setShape} models={models} />
+      <SpecNote label="In the spec:" text={`${field.name}: ${type}`} />
+      <Submit label="Change field" disabled={type === shorthandOf(field)} />
     </Form>
   );
 }
 
 function RenameField({ spec, run }: FormProps) {
   const { model, field, pickers } = useModelField(spec);
-  const [to, setTo] = useState("");
+  const [label, setLabel] = useState("");
+  const to = identifier(label);
   return (
     <Form onSubmit={() => run("renameField", { model, from: field?.name, to })}>
       {pickers}
       <Label text="New name" hint="The data is kept">
-        <Input aria-label="New name" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Input
+          aria-label="New name"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Max credit"
+        />
       </Label>
+      <SpecNote label="Will be named" text={to} />
       <Submit label="Rename field" disabled={!field || !to} />
     </Form>
   );

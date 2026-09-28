@@ -39,6 +39,7 @@ import { textSchema } from "./text-schema.js";
 const RESERVED_FIELDS = ["id", "owner", "createdAt", "updatedAt"];
 
 const NUMERIC_TYPES = ["int", "decimal", "money"];
+const TEXT_TYPES = ["string", "text"];
 
 const types = SCALAR_TYPES.join("|");
 const choice = "[a-z][A-Za-z0-9]*";
@@ -329,11 +330,15 @@ function readLongField(
     if (!entry) continue;
     const n = readNumber(ctx, entry.value, `"${bound}"`);
     if (n === undefined) continue;
-    if (field.type.kind !== "scalar" || !NUMERIC_TYPES.includes(field.type.name)) {
+    // Numbers are bounded in value, texts in length.
+    if (
+      field.type.kind !== "scalar" ||
+      ![...NUMERIC_TYPES, ...TEXT_TYPES].includes(field.type.name)
+    ) {
       ctx.error(
         entry.keyNode,
         "invalid-field",
-        `${capitalize(where)}: "${bound}" only applies to numbers (int, decimal, money).`,
+        `${capitalize(where)}: "${bound}" only applies to numbers (int, decimal, money) and texts (string, text: a length).`,
       );
       continue;
     }

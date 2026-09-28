@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { closestStarter, draftProject, parsePolicy, route } from "@smithable/ai";
 import { validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { aiProviders, confirm, usageLine } from "./ask.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { STARTERS } from "./starters.gen.js";
+import { STARTER_CODE, STARTERS } from "./starters.gen.js";
 
 /**
  * `smithable new <dir>`: a new project from a starter spec, with sample data. With
@@ -62,6 +62,13 @@ export async function create(
   }
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
+  // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
+  // drafted from a description may have changed what that code relies on, so it gets stubs.
+  if (!options.describe)
+    for (const [file, text] of Object.entries(STARTER_CODE[name] ?? {})) {
+      mkdirSync(dirname(join(dir, file)), { recursive: true });
+      writeFileSync(join(dir, file), text);
+    }
   const code = generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
   if (exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)

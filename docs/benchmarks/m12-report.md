@@ -54,3 +54,8 @@ The remaining errors are mostly one or two per app that repairs do not fix: sear
 
 - Draft first builds as operations (search by a related record and `NOW()` are in the spec now: Medium went from 4 to 7 of 10).
 - People review the first builds' quality (the summaries in the reports, and the apps themselves); the numbers above only say they are valid.
+
+## Addendum (2026-09-28): Mistral Large and Magistral Medium
+
+The same ten first builds with `mistral-large-latest` (Mistral Large 3, `mistral-large-2512`) and `magistral-medium-latest` (reasoning): **5/10** and **6/10** valid, against Medium's 7/10 and Claude Sonnet's 10/10 above ([Large](m12-first-builds-mistral-large-latest.md), [Magistral](m12-first-builds-magistral-medium-latest.md)). Neither is a step up for drafting specs. Their failures are varied grammar slips rather than one pattern: an unknown theme preset ("professional"), keys in the wrong place (a call to action's "subtitle", a form's "fields"), "owner" declared by hand, a choice value written "pieces!", values for a field that is not a choice. Several have deterministic repairs (the nearest preset, removing a stray "!"), like the quoting repair added for Medium; that, not a larger model, is the next step. Medium stays the model for first builds.
+
