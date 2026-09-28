@@ -85,11 +85,13 @@ export function runOperation(
   const contentPath = join(dir, CONTENT);
   const authPath = join(dir, AUTH);
   const uxPath = join(dir, UX);
+  const contextPath = join(dir, "smithable.context.yml");
   const files = {
     spec: readFileSync(join(dir, SPEC), "utf8"),
     ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
     ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
     ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
+    ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
     plugins: loadPlugins(dir),
   };
   const result = applyOperation(files, operation.name, args);
@@ -131,6 +133,7 @@ export function runOperation(
   if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
   if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
   if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
+  if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
   mkdirSync(join(dir, ".smithable"), { recursive: true });
   appendFileSync(
     join(dir, OPLOG),

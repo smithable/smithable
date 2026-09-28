@@ -11,6 +11,8 @@ export interface Editors {
   auth?: YamlEditor;
   /** smithable.ux.yml; created on first use. */
   ux?: YamlEditor;
+  /** smithable.context.yml (implementation choices); created on first use. */
+  context?: YamlEditor;
 }
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */

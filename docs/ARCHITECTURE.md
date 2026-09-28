@@ -318,7 +318,7 @@ ai:
   policy: eu-only          # local-only | eu-only | best-available | custom
 ```
 
-It has structured fields where possible and one free-text `guidance` field for implementation preferences. It never contains functional requirements.
+It has structured fields where possible and one free-text `guidance` field for implementation preferences. It never contains functional requirements. As built (M15), `packages` names libraries for custom code at exact versions (`packages: { chart.js: 4.4.1 }`, or the `setPackage` operation, so hosted projects and the AI coder can add one without a terminal); the generator adds them to `package.json`, and the stack profile's own packages are refused.
 
 ## 4. Semantic operations
 
