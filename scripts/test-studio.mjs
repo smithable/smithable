@@ -280,6 +280,28 @@ try {
     },
   );
 
+  await step(
+    "Your app is edited in its own words: a new item in the list of fields is added without AI",
+    async () => {
+      await page.getByRole("tab", { name: "Your app" }).click();
+      await page.getByRole("button", { name: "Edit Customers" }).click();
+      const box = page.getByLabel("Customers, in your words");
+      const [first, ...rest] = (await box.inputValue()).split("\n");
+      const edited = `${first.replace(/\.$/, "")}, a loyalty code (unique).`;
+      await box.fill([edited, ...rest].join("\n"));
+      await page.getByRole("button", { name: "Suggest" }).click();
+      const proposal = page.getByRole("region", { name: "Proposal" });
+      await proposal.getByText("Read without AI").waitFor();
+      await proposal.getByText("Add field loyaltyCode (string unique) to Customer").waitFor();
+      await proposal.getByRole("button", { name: "Apply" }).click();
+      await trace
+        .getByText("Add field loyaltyCode (string unique) to Customer")
+        .waitFor({ timeout: 60000 });
+      // The part keeps the user's wording.
+      await page.getByText(edited, { exact: true }).waitFor();
+    },
+  );
+
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {
     await page.locator("label", { hasText: /^Studio$/ }).click();

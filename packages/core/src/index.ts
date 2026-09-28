@@ -34,7 +34,7 @@ export {
 } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
-export { camel, humanize, kebab, pascal, plural, snake, words } from "./naming.js";
+export { camel, humanize, identifier, kebab, pascal, plural, snake, words } from "./naming.js";
 export type { AnyOperation, Effect, Operation, OperationArgs } from "./operation.js";
 export { OperationError } from "./operation.js";
 export type { SpecPlugin } from "./plugin.js";
