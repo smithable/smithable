@@ -1,7 +1,7 @@
 import { validateAuth } from "./auth.js";
 import { validateContent } from "./content.js";
 import type { Diagnostic } from "./diagnostics.js";
-import { YamlEditor } from "./edit.js";
+import { EditError, YamlEditor } from "./edit.js";
 import { type AnyOperation, type Effect, type OperationArgs, OperationError } from "./operation.js";
 import type { SpecPlugin } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
@@ -89,7 +89,8 @@ export function applyOperation(
   try {
     effects = op.apply(editors, args, before.ir);
   } catch (error) {
-    if (error instanceof OperationError) return fail(error.message);
+    // An edit the files cannot take is the operation failing too, not a crash.
+    if (error instanceof OperationError || error instanceof EditError) return fail(error.message);
     throw error;
   }
 
@@ -130,7 +131,7 @@ export function applyOperation(
         : {}),
     },
     description: op.describe(args, before.ir),
-    destructive: op.destructive(args, before.ir),
+    destructive: op.destructive(args, before.ir, after.ir),
     effects,
   };
 }

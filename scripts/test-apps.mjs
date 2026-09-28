@@ -5,7 +5,15 @@
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -698,6 +706,32 @@ function operationsFlow(dir) {
   const expectOk = (result) => {
     if (result.code !== 0) throw new Error(result.out);
   };
+  step("an operation that fails halfway (a file it cannot write) is rolled back", () => {
+    const content = join(dir, "smithable.content.yml");
+    chmodSync(content, 0o444);
+    try {
+      const result = smithable(dir, "op", "setText", "Clients", "pages", "customers", "title");
+      if (result.code === 0 || !result.out.includes("stopped halfway")) throw new Error(result.out);
+    } finally {
+      chmodSync(content, 0o644);
+    }
+    if (run("git", ["status", "--porcelain"], dir).trim())
+      throw new Error("changes were left behind");
+  });
+  step("snapshots undo can no longer reach are pruned after an operation", () => {
+    const folder = join(dir, "data/.smithable/snapshots");
+    writeFileSync(join(folder, "19990101-00000000.db"), "");
+    expectOk(smithable(dir, "op", "setText", "Clients", "pages", "customers", "title"));
+    if (existsSync(join(folder, "19990101-00000000.db")))
+      throw new Error("the old snapshot is still there");
+    const last = run(
+      "git",
+      ["log", "-1", "--format=%(trailers:key=Smithable-Snapshot,valueonly)"],
+      dir,
+    ).trim();
+    if (!existsSync(join(folder, `${last}.db`))) throw new Error("the latest snapshot was pruned");
+    expectOk(smithable(dir, "undo"));
+  });
   step("op addField keeps existing rows and adds the column", () => {
     const before = query(dir, "select count(*) n from customers")[0].n;
     expectOk(smithable(dir, "op", "addField", "Customer", "website", "url"));
