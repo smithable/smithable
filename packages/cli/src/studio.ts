@@ -42,6 +42,8 @@ export interface TraceEntry {
   ms?: number;
   undone: boolean;
   isUndo: boolean;
+  /** The operation, for the Builder to word it like its summary; an undo has the undone one. */
+  operation?: { op: string; args: Record<string, unknown> };
 }
 
 const ENGINES = {
@@ -57,12 +59,22 @@ function trace(dir: string): TraceEntry[] {
   const reverted = new Set(
     entries.flatMap((e) => [...e.matchAll(/This reverts commit ([0-9a-f]{40})/g)].map((m) => m[1])),
   );
+  const operations = new Map(
+    entries.flatMap((e) => {
+      const [sha = "", , , body = ""] = e.trim().split("\x1f");
+      const op = /^Smithable-Op: (.+)$/m.exec(body)?.[1];
+      return op ? [[sha, JSON.parse(op) as TraceEntry["operation"]]] : [];
+    }),
+  );
   return entries.flatMap((entry) => {
     const [sha = "", subject = "", at = "", body = ""] = entry.trim().split("\x1f");
     const isUndo = subject.startsWith('Revert "smithable: ');
     if (!(subject.startsWith("smithable: ") || isUndo) || subject === "smithable: start of history")
       return [];
     const ms = /^Smithable-Duration: (\d+) ms$/m.exec(body)?.[1];
+    const operation = operations.get(
+      isUndo ? (/This reverts commit ([0-9a-f]{40})/.exec(body)?.[1] ?? "") : sha,
+    );
     const ai = /^Smithable-AI: (.+)$/m.exec(body)?.[1];
     const model = ai
       ? (JSON.parse(ai) as {
@@ -85,6 +97,7 @@ function trace(dir: string): TraceEntry[] {
         ...(ms ? { ms: Number(ms) } : {}),
         undone: reverted.has(sha),
         isUndo,
+        ...(operation ? { operation } : {}),
       },
     ];
   });

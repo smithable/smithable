@@ -91,7 +91,8 @@ try {
   console.log("Builder mode");
   await step("the app is described in plain language", async () => {
     await page.goto(base);
-    await page.getByText("Customers have a name (required), an email (unique)").waitFor();
+    await page.getByText("Customers have:").waitFor();
+    await page.getByText("an email (unique)", { exact: true }).waitFor();
   });
   await step("the preview runs the app, with the development sign-in", async () => {
     for (let attempt = 1; ; attempt++) {
@@ -111,8 +112,10 @@ try {
     await page.getByLabel("Name", { exact: true }).fill("website");
     await page.getByLabel("Holds").selectOption({ label: "Web address" });
     await page.getByRole("button", { name: "Add field" }).click();
-    await status.getByText("Add field website (url) to Customer").waitFor({ timeout: 60000 });
-    await trace.getByText("Add field website (url) to Customer").waitFor();
+    await status
+      .getByText("Customers: added a website (a web address)")
+      .waitFor({ timeout: 60000 });
+    await trace.getByText("Customers: added a website (a web address)").waitFor();
     await page.getByRole("tab", { name: "Your app" }).click();
     await page.getByText("a web address").first().waitFor();
     await openPreview("/customers/new");
@@ -121,9 +124,11 @@ try {
     await change("Rename a field");
     await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
     await page.getByLabel("New name").fill("Web page");
-    await page.getByText("webPage", { exact: true }).waitFor();
+    await page.getByText("Customers: the website is now called web page").first().waitFor();
     await page.getByRole("button", { name: "Rename field" }).click();
-    await status.getByText("Rename Customer.website to webPage").waitFor({ timeout: 60000 });
+    await status
+      .getByText("Customers: the website is now called web page")
+      .waitFor({ timeout: 60000 });
   });
   await step(
     "removing a field asks first, with what data it loses; undo brings it back",
@@ -137,10 +142,10 @@ try {
         .getByText("this deletes the phone column")
         .waitFor({ timeout: 60000 });
       await page.getByRole("button", { name: "Apply anyway" }).click();
-      await trace.getByText("Remove field phone from Customer").waitFor({ timeout: 60000 });
+      await trace.getByText("Customers: removed the phone").waitFor({ timeout: 60000 });
       await page.getByRole("button", { name: "Undo" }).click();
-      await status.getByText("Undid: Remove field phone from Customer").waitFor({ timeout: 60000 });
-      await trace.getByText("Undid: Remove field phone from Customer").waitFor();
+      await status.getByText("Undid: Customers: removed the phone").waitFor({ timeout: 60000 });
+      await trace.getByText("Undid: Customers: removed the phone").waitFor();
     },
   );
   await step("access: only admins may create orders", async () => {
@@ -148,7 +153,9 @@ try {
     await page.getByLabel("Who can").selectOption({ label: "Create order records" });
     await page.getByRole("checkbox", { name: "admin" }).check();
     await page.getByRole("button", { name: "Set access" }).click();
-    await status.getByText("Only admin may create orders").waitFor({ timeout: 60000 });
+    await status
+      .getByText("Only admins can add orders", { exact: true })
+      .waitFor({ timeout: 60000 });
     await page.getByRole("tab", { name: "Your app" }).click();
     await page.getByText("Only admins can add orders.").waitFor();
   });
@@ -163,10 +170,12 @@ try {
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 });
       await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
-      await page.getByText("email: email unique", { exact: true }).waitFor();
+      await page.getByText("an email (unique)", { exact: true }).first().waitFor();
       await page.getByRole("checkbox", { name: "Required" }).click();
-      await status.getByText("Change Customer.email").waitFor({ timeout: 60000 });
-      await page.getByText("email: email! unique", { exact: true }).waitFor();
+      await status
+        .getByText("Customers: now an email (required, unique)")
+        .waitFor({ timeout: 60000 });
+      await page.getByText("an email (required, unique)", { exact: true }).first().waitFor();
       if (!(await project()).files.spec.includes("      email: email! unique\n"))
         throw new Error("spec not changed");
       await preview
@@ -204,9 +213,7 @@ try {
       await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
-      await status
-        .getByText('Change the text pages.customers.title to "Clients"')
-        .waitFor({ timeout: 60000 });
+      await status.getByText("Changed a text to “Clients”").waitFor({ timeout: 60000 });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();
@@ -272,10 +279,14 @@ try {
       await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
       await page.getByRole("button", { name: "Suggest" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
-      await proposal.getByText("Add field mobile (phone) to Customer").waitFor({ timeout: 30000 });
+      await proposal
+        .getByText("Customers: added a mobile (a phone number)")
+        .waitFor({ timeout: 30000 });
       await proposal.getByText(/Local model \(fake-model\) · [\d,]+ tokens/).waitFor();
       await proposal.getByRole("button", { name: "Apply" }).click();
-      await trace.getByText("Add field mobile (phone) to Customer").waitFor({ timeout: 60000 });
+      await trace
+        .getByText("Customers: added a mobile (a phone number)")
+        .waitFor({ timeout: 60000 });
       await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
     },
   );
@@ -286,19 +297,18 @@ try {
       await page.getByRole("tab", { name: "Your app" }).click();
       await page.getByRole("button", { name: "Edit Customers" }).click();
       const box = page.getByLabel("Customers, in your words");
-      const [first, ...rest] = (await box.inputValue()).split("\n");
-      const edited = `${first.replace(/\.$/, "")}, a loyalty code (unique).`;
-      await box.fill([edited, ...rest].join("\n"));
+      const lines = (await box.inputValue()).split("\n");
+      const last = lines.findLastIndex((l) => l.startsWith("- "));
+      lines.splice(last + 1, 0, "- a loyalty code (unique)");
+      await box.fill(lines.join("\n"));
       await page.getByRole("button", { name: "Suggest" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
       await proposal.getByText("Read without AI").waitFor();
-      await proposal.getByText("Add field loyaltyCode (string unique) to Customer").waitFor();
+      await proposal.getByText("Customers: added a loyalty code (unique)").waitFor();
       await proposal.getByRole("button", { name: "Apply" }).click();
-      await trace
-        .getByText("Add field loyaltyCode (string unique) to Customer")
-        .waitFor({ timeout: 60000 });
+      await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
       // The part keeps the user's wording.
-      await page.getByText(edited, { exact: true }).waitFor();
+      await page.getByText("a loyalty code (unique)", { exact: true }).first().waitFor();
     },
   );
 
