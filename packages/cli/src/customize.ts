@@ -15,7 +15,12 @@ import { loadSpec } from "./validate.js";
  * starting from the generated one, or from a hand edit of the generated route, which moves
  * there (ARCHITECTURE §6.5). The route stays generated. A checkpoint, like an operation.
  */
-export function customize(dir: string, io: Io, target: string | undefined, via = "cli"): number {
+export async function customize(
+  dir: string,
+  io: Io,
+  target: string | undefined,
+  via = "cli",
+): Promise<number> {
   const pageId = /^page:([\w-]+)$/.exec(target ?? "")?.[1];
   if (!pageId) {
     io.err("customize needs a page, like: smithable customize page:customers\n");
@@ -68,7 +73,7 @@ export function customize(dir: string, io: Io, target: string | undefined, via =
   }
   mkdirSync(dirname(join(dir, customPath)), { recursive: true });
   writeFileSync(join(dir, customPath), source);
-  const code = generate(dir, io, {
+  const code = await generate(dir, io, {
     tools: true,
     force: false,
     overwrite: [routePath],

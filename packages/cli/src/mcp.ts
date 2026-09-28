@@ -30,7 +30,7 @@ interface Tool {
   name: string;
   description: string;
   inputSchema: JsonSchema;
-  run(args: OperationArgs, io: Io): number;
+  run(args: OperationArgs, io: Io): number | Promise<number>;
 }
 
 const noInput = { type: "object", properties: {}, additionalProperties: false };
@@ -55,10 +55,10 @@ function tools(dir: string): Tool[] {
         },
       },
     },
-    run: ({ confirm, ...args }, io) => {
+    run: async ({ confirm, ...args }, io) => {
       // Looked up before the change: after a rename, custom code still uses the old name.
       const users = customUsers(dir, op.name, args);
-      const code = runOperation(dir, io, op.name, args, { yes: confirm === true, mcp: true });
+      const code = await runOperation(dir, io, op.name, args, { yes: confirm === true, mcp: true });
       if (code === 0) {
         io.out(
           users.length
@@ -215,7 +215,7 @@ export function mcpServer(dir: string, onChange: () => void = () => {}): Server 
       inputSchema: inputSchema as { type: "object" },
     })),
   }));
-  server.setRequestHandler(CallToolRequestSchema, (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const tool = available.find((t) => t.name === request.params.name);
     if (!tool) {
       return {
@@ -226,7 +226,7 @@ export function mcpServer(dir: string, onChange: () => void = () => {}): Server 
     let text = "";
     const io: Io = { out: (t) => (text += t), err: (t) => (text += t) };
     const args = (request.params.arguments ?? {}) as OperationArgs;
-    const code = tool.run(args, io);
+    const code = await tool.run(args, io);
     const output = text.trim() || (code === 0 ? "Done." : "Failed.");
     logTokens(dir, {
       source: "mcp",

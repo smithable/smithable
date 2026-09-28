@@ -80,7 +80,7 @@ ${specText}\`\`\``;
     request: `Teach Smithable "${key}"`,
     subject: `Teach Smithable the ${key} section`,
     // Smithable's own part: declare the plugin, then check and regenerate the app with it.
-    after: () => {
+    after: async () => {
       if (!existsSync(pluginPath(dir, key))) {
         io.err(`The coder did not write ${pluginPath(dir, key)}.\n`);
         return 1;
