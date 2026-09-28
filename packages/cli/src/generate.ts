@@ -8,7 +8,7 @@ import {
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
 import { YamlEditor } from "@smithable/core";
-import { exec, type Io } from "./io.js";
+import { exec, type Io, tool } from "./io.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -152,7 +152,9 @@ function applyOverrides(dir: string): void {
 /** Installs dependencies, then lets the app's own tools create migrations and the route tree. */
 export function runTools(dir: string, io: Io, migration?: MigrationPlan): number {
   const run = (args: string[]) => {
-    const code = exec("pnpm", args, dir);
+    const [command, rest] =
+      args[0] === "exec" ? tool(dir, args[1] as string, args.slice(2)) : ["pnpm", args];
+    const code = exec(command, rest, dir);
     if (code !== 0) io.err(`\`pnpm ${args.join(" ")}\` failed.\n`);
     return code === 0;
   };
