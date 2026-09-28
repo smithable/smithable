@@ -254,19 +254,17 @@ function friendly(field: FieldUi, issue: z.core.$ZodIssue, value: unknown): stri
   }
 }
 
-/** Explains server errors; a unique column shows which field is taken. */
+/** Explains server errors (see refusal in access.ts): a unique field taken, a record in use. */
 function failureMessage(ui: ModelUi, error: unknown): string {
   const message = error instanceof Error ? error.message : "";
-  // With several columns (unique per owner), the last one is the field.
-  const column = /UNIQUE constraint failed: (?:\w+\.\w+, )*\w+\.(\w+)/.exec(message)?.[1];
+  const column = /^taken:(\w+)$/.exec(message)?.[1];
   const field = ui.fields.find(
     (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
   );
   if (field)
     return `Another ${ui.label.toLowerCase()} already has this ${field.label.toLowerCase()}.`;
-  if (message.includes("FOREIGN KEY constraint failed")) {
+  if (message === "in-use")
     return `This ${ui.label.toLowerCase()} is still used by other records. Change or delete those first.`;
-  }
   return message || "Something went wrong. Please try again.";
 }
 
