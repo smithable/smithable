@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
@@ -101,6 +102,32 @@ function trace(dir: string): TraceEntry[] {
       },
     ];
   });
+}
+
+/**
+ * Why a request may not reach Studio, if it may not. On this machine only this machine's own
+ * addresses count, so a web page cannot reach the API through DNS rebinding. Behind a proxy
+ * (--host) with a token (SMITHABLE_STUDIO_TOKEN), only requests carrying it: the proxy adds it,
+ * so nothing else on the network can use Studio.
+ */
+export function refusal(
+  headers: IncomingMessage["headers"],
+  host: string | undefined,
+  token: string | undefined,
+): { status: number; message: string } | undefined {
+  if (!host) {
+    const name = (headers.host ?? "").replace(/:\d+$/, "");
+    return ["localhost", "127.0.0.1"].includes(name)
+      ? undefined
+      : { status: 403, message: "Unknown host." };
+  }
+  if (!token) return undefined;
+  const given = headers["x-smithable-studio-token"];
+  const ok =
+    typeof given === "string" &&
+    given.length === token.length &&
+    timingSafeEqual(Buffer.from(given), Buffer.from(token));
+  return ok ? undefined : { status: 401, message: "Studio needs its token." };
 }
 
 /**
@@ -243,13 +270,8 @@ export async function studio(
       return JSON.parse(text || "{}") as Record<string, unknown>;
     };
     try {
-      // On this machine only this machine's own addresses: a web page cannot reach the API
-      // through DNS rebinding. Behind a proxy (--host), the proxy decides who gets in.
-      if (
-        !options.host &&
-        !["localhost", "127.0.0.1"].includes((req.headers.host ?? "").replace(/:\d+$/, ""))
-      )
-        return json({ ok: false, output: "Unknown host." }, 403);
+      const refused = refusal(req.headers, options.host, process.env.SMITHABLE_STUDIO_TOKEN);
+      if (refused) return json({ ok: false, output: refused.message }, refused.status);
       // MCP over HTTP: an agent's changes show up in Studio right away.
       if (url.pathname === "/mcp") {
         const transport = new StreamableHTTPServerTransport({
@@ -371,6 +393,10 @@ export async function studio(
     }
   });
   server.listen(port, options.host ?? "127.0.0.1");
+  if (options.host && !process.env.SMITHABLE_STUDIO_TOKEN)
+    io.err(
+      `Studio listens on ${options.host} without a token: anyone who can reach it can change the project. Set SMITHABLE_STUDIO_TOKEN, and have the proxy send it as X-Smithable-Studio-Token.\n`,
+    );
   io.out(`Smithable Studio: http://localhost:${port} (the app's preview runs on ${preview})\n`);
   await new Promise<void>((resolve) => {
     for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => resolve());
