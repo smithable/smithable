@@ -9,7 +9,7 @@ import {
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
 import { YamlEditor } from "@smithable/core";
-import { exec, type Io, tool } from "./io.js";
+import { exec, type Io, lap, tool } from "./io.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -188,16 +188,21 @@ export function runTools(
     if (code !== 0) io.err(`\`pnpm ${args.join(" ")}\` failed.\n`);
     return code === 0;
   };
+  lap("generate");
   if (install && !run(["install", "--silent"])) return 1;
+  lap("install");
   if (schema && !migrate(dir, migration, run)) return 1;
+  lap("drizzle-kit");
   // Always: skipping it when no route file changed left the Studio preview blank after some
   // changes (test:studio's "click the email field" step), for reasons not yet understood.
   if (!run(["exec", "tsr", "generate"])) return 1;
+  lap("route generator");
   if (schema && migration?.apply) {
     const applied = applyMigrations(dir, io);
     if (applied === false) return 1;
     // Otherwise by the app's own database module, in a process of its own.
     if (applied === undefined && !run(["exec", "tsx", "src/db/index.ts"])) return 1;
+    lap("migration");
   }
   return 0;
 }
