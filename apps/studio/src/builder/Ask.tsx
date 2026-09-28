@@ -16,22 +16,33 @@ export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; wor
   const propose = async (text: string) => {
     setBusy(true);
     setOutput("");
-    const proposed = await api.ask(text);
-    if (proposed.kind === "change" && !proposed.operations.some((o) => o.destructive)) {
-      const result = await api.applyProposal();
-      const done = proposed.operations.map((o) => words?.(o.op, o.args) ?? o.description);
-      setOutput(result.ok ? `Done: ${done.join("; ")}. ${proposed.usage}` : result.output);
-      if (result.ok) setRequest("");
-    } else setProposal(proposed);
-    setBusy(false);
+    try {
+      const proposed = await api.ask(text);
+      if (proposed.kind === "change" && !proposed.operations.some((o) => o.destructive)) {
+        const result = await api.applyProposal(proposed.id);
+        const done = proposed.operations.map((o) => words?.(o.op, o.args) ?? o.description);
+        setOutput(result.ok ? `Done: ${done.join("; ")}. ${proposed.usage}` : result.output);
+        if (result.ok) setRequest("");
+      } else setProposal(proposed);
+    } catch (error) {
+      setOutput((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
   const apply = async () => {
+    if (!proposal) return;
     setBusy(true);
-    const result = await api.applyProposal();
-    setOutput(result.output);
-    setProposal(undefined);
-    if (result.ok) setRequest("");
-    setBusy(false);
+    try {
+      const result = await api.applyProposal(proposal.id);
+      setOutput(result.output);
+      setProposal(undefined);
+      if (result.ok) setRequest("");
+    } catch (error) {
+      setOutput((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -97,7 +108,11 @@ export function ProposalView({
   onOption?: (option: string) => void;
 }) {
   return (
-    <section aria-label="Proposal" className="space-y-3 rounded-md border border-neutral-200 p-3">
+    <section
+      aria-label="Proposal"
+      aria-live="polite"
+      className="space-y-3 rounded-md border border-neutral-200 p-3"
+    >
       {proposal.usage && <p className="text-xs text-neutral-500">{proposal.usage}</p>}
       {proposal.kind === "change" && (
         <>

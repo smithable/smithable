@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
@@ -238,7 +238,7 @@ export async function studio(
   void warmTools(dir);
 
   /** The last proposal a model made, waiting to be applied or dropped. */
-  let pending: { request: string; proposal: Proposal } | undefined;
+  let pending: { id: string; request: string; proposal: Proposal } | undefined;
 
   /** Runs a command with its output captured for the response. */
   const capture = async (fn: (io: Io) => number | Promise<number>) => {
@@ -274,6 +274,9 @@ export async function studio(
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", "http://localhost");
+    // Studio is never shown inside another site's page (clickjacking its buttons).
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+    res.setHeader("X-Content-Type-Options", "nosniff");
     const json = (data: unknown, status = 200) => {
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(data));
@@ -367,20 +370,28 @@ export async function studio(
         const { request } = await body();
         const quiet = { out: () => {}, err: (t: string) => log(t) };
         const proposal = await proposeFor(dir, quiet, String(request ?? ""));
-        pending = proposal ? { request: String(request), proposal } : undefined;
-        if (!proposal) return json({ kind: "failed", message: "The spec has errors.", usage: "" });
+        const id = randomUUID();
+        pending = proposal ? { id, request: String(request), proposal } : undefined;
+        if (!proposal)
+          return json({ kind: "failed", message: "The spec has errors.", usage: "", id });
         const { usage, ...rest } = proposal;
         return json({
           ...rest,
+          id,
           ...(rest.kind === "change" ? { files: undefined } : {}),
           usage: usageLine(usage),
         });
       }
       if (req.method === "POST" && url.pathname === "/api/ask/apply") {
-        const confirmed = pending;
-        pending = undefined;
+        // Only the proposal the page was shown: not a newer one made in another tab.
+        const { id } = await body();
+        const confirmed = pending?.id === id ? pending : undefined;
+        if (confirmed) pending = undefined;
         if (confirmed?.proposal.kind !== "change")
-          return json({ ok: false, output: "There is no proposed change to apply." });
+          return json({
+            ok: false,
+            output: "That proposal is no longer the latest one; describe the change again.",
+          });
         const proposal = confirmed.proposal;
         const result = await capture((io) => applyProposal(dir, io, confirmed.request, proposal));
         if (result.ok) changed({ description: result.output });

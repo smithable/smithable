@@ -29,7 +29,8 @@ export interface Project {
 }
 
 /** A model's proposal for a request; nothing is applied until it is confirmed. */
-export type Proposal = { usage: string } & (
+/** `id` names the proposal for applying it: only the one shown can be applied. */
+export type Proposal = { usage: string; id: string } & (
   | {
       kind: "change";
       operations: {
@@ -51,6 +52,10 @@ export interface Result {
   needsConfirm?: boolean;
 }
 
+/**
+ * Studio's own API. An answer that is not OK (a refusal, the workspace restarting, a proxy's
+ * plain-text error) throws an Error with a readable message; callers show it.
+ */
 async function call<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
     method: body === undefined ? "GET" : "POST",
@@ -62,7 +67,18 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
           body: JSON.stringify(body),
         }),
   });
-  return (await response.json()) as T;
+  const text = await response.text();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(text.trim() || `Studio answered ${response.status}.`);
+  }
+  if (!response.ok) {
+    const answer = parsed as { output?: string; message?: string };
+    throw new Error(answer.output ?? answer.message ?? `Studio answered ${response.status}.`);
+  }
+  return parsed as T;
 }
 
 export const api = {
@@ -74,10 +90,12 @@ export const api = {
   customize: (page: string) => call<Result>("/api/customize", { page }),
   undo: () => call<Result>("/api/undo", {}),
   ask: (request: string) => call<Proposal>("/api/ask", { request }),
-  applyProposal: () => call<Result>("/api/ask/apply", {}),
+  applyProposal: (id: string) => call<Result>("/api/ask/apply", { id }),
   /** Calls `onEvent` for every change and log line the daemon reports. */
-  events(onEvent: (event: "changed" | "log", data: unknown) => void): () => void {
+  events(onEvent: (event: "changed" | "log" | "open", data: unknown) => void): () => void {
     const source = new EventSource("/api/events");
+    // Also after a reconnect: whatever changed meanwhile is fetched again.
+    source.addEventListener("open", () => onEvent("open", null));
     source.addEventListener("changed", (e) =>
       onEvent("changed", JSON.parse((e as MessageEvent).data)),
     );

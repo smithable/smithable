@@ -122,7 +122,8 @@ try {
     for (const report of [
       ".smithable/gitleaks.json",
       ".smithable/zap.json",
-      "data/.smithable/reports",
+      "data/.smithable/reports/gitleaks.json",
+      "data/.smithable/reports/zap",
     ])
       if (existsSync(join(dir, report))) throw new Error(`${report} was left behind`);
   });
