@@ -102,6 +102,14 @@ pages:
   const list = withContent.find((f) => f.path === "src/routes/customers/index.tsx")?.content ?? "";
   expect(list).toContain('title="Our clients"');
   expect(list).toContain("New client");
+  // A text with quotes goes in braces: a JSX attribute string cannot escape them.
+  const quoted = generateApp(spec, {
+    ...options,
+    content: { models: {}, pages: { customers: { title: 'Our "best" clients' } }, menus: {} },
+  });
+  expect(quoted.find((f) => f.path === "src/routes/customers/index.tsx")?.content).toContain(
+    'title={"Our \\"best\\" clients"}',
+  );
 });
 
 test("an app without sign-in has no auth library, sign-in page or owners", () => {
