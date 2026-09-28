@@ -16,7 +16,7 @@ import {
 import { countValues, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
-import type { Io } from "./io.js";
+import { type Io, lap } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { recordRule } from "./rules.js";
 
@@ -70,8 +70,11 @@ export function runOperation(
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
+  lap("start");
   ensureRepository(dir);
+  lap("repository");
   const dirty = uncommitted(dir);
+  lap("uncommitted");
   if (dirty.length > 0) {
     io.err(
       `Commit or discard these changes first, so the operation can be undone on its own:\n${dirty.map((l) => `  ${l}\n`).join("")}`,
@@ -100,7 +103,9 @@ export function runOperation(
   const after = validateSpec({ path: SPEC, text: result.files.spec }, { plugins: files.plugins })
     .ir as SpecIR;
 
+  lap("apply and validate");
   const blocker = requiredButEmpty(dir, before, after, result.effects);
+  lap("required but empty");
   if (blocker) {
     io.err(`${blocker}\n`);
     return 1;
@@ -114,6 +119,7 @@ export function runOperation(
 
   const id = new Date().toISOString().replace(/[-:.]/g, "").replace("T", "-").slice(0, 17);
   const snapshot = snapshotDatabase(dir, id);
+  lap("database snapshot");
   const fail = (message: string) => {
     discardChanges(dir);
     if (snapshot) restoreDatabase(dir, id);
@@ -143,6 +149,7 @@ export function runOperation(
     migration: { name: migrationName(result.description), renames, apply: true },
   });
   if (code !== 0) return fail(`Regenerating the app failed.`);
+  lap("generate and tools");
 
   for (const effect of result.effects) {
     if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
@@ -153,6 +160,7 @@ export function runOperation(
   const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.trailer ? `${flags.trailer}\n` : ""}`;
   const commit = git(dir, ["commit", "-q", "-m", message]);
   if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
+  lap("commit");
   io.out(`${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`);
   return 0;
 }
