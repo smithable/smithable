@@ -147,6 +147,50 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         },
       ],
     },
+    {
+      "access": {
+        "delete": [
+          "admin",
+        ],
+        "read": [
+          "admin",
+        ],
+        "write": [
+          "admin",
+        ],
+      },
+      "description": "A question a visitor sends from the contact form on the home page.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "message",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Message",
+    },
   ],
   "navigation": [
     {
@@ -155,6 +199,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "sessions",
         "class-types",
         "instructors",
+        "messages",
       ],
     },
   ],
@@ -175,6 +220,10 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "name": "classes",
           },
           {
+            "kind": "gallery",
+            "name": "gallery",
+          },
+          {
             "kind": "faq",
             "name": "faq",
           },
@@ -182,6 +231,15 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "button": "sessions",
             "kind": "callToAction",
             "name": "callToAction",
+          },
+          {
+            "form": "Message",
+            "kind": "contact",
+            "name": "contact",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
           },
         ],
       },
@@ -216,6 +274,17 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Instructor",
       },
       "route": "/instructors",
+    },
+    {
+      "access": [
+        "admin",
+      ],
+      "id": "messages",
+      "pattern": {
+        "kind": "crud",
+        "model": "Message",
+      },
+      "route": "/messages",
     },
   ],
   "queries": [],

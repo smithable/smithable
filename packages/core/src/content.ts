@@ -28,8 +28,14 @@ export interface SectionContent {
   text?: string;
   button?: string;
   label?: string;
+  /** A contact section's details; hours one per line, thanks once the form is sent. */
+  address?: string;
+  phone?: string;
+  email?: string;
+  hours?: string;
+  thanks?: string;
   /** Features, plans, testimonials or questions, depending on the section. */
-  items?: Record<string, string | string[]>[];
+  items?: Record<string, string | string[] | ContentImage>[];
   /** A hero's picture: a file in the app's public/images/, and what it shows. */
   image?: ContentImage;
 }
@@ -40,7 +46,7 @@ export interface ContentImage {
 }
 
 /** A picture's file, relative to the app's public/ folder. */
-const IMAGE_SRC = /^images\/[\w.-]+\.(webp|avif|jpe?g|png)$/;
+const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
 
 /** The texts each kind of section takes, and the keys of its items. */
 const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[]; image?: true }> = {
@@ -54,6 +60,13 @@ const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[]; image?:
   testimonials: { texts: ["title"], items: ["quote", "name", "role"] },
   faq: { texts: ["title"], items: ["question", "answer"] },
   callToAction: { texts: ["title", "text", "button"] },
+  // Opening hours one per line; "thanks" is shown once a visitor has sent the form.
+  contact: {
+    texts: ["title", "text", "address", "phone", "email", "hours", "button", "thanks"],
+  },
+  gallery: { texts: ["title", "text"], items: ["image", "caption"] },
+  // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").
+  footer: { texts: ["text"], items: ["label", "link"] },
   tile: { texts: ["label"] },
   step: { texts: ["title", "text"] },
 };
@@ -314,21 +327,33 @@ function readItems(
   node: ParsedNode | null,
   where: string,
   allowed: string[],
-): Record<string, string | string[]>[] {
+): Record<string, string | string[] | ContentImage>[] {
   if (!isSeq(node)) {
     ctx.error(node, "invalid-value", `"items" of ${where} must be a list.`);
     return [];
   }
   return node.items.map((item, i) => {
     const itemWhere = `item ${i + 1} of ${where}`;
-    const texts: Record<string, string | string[]> = {};
+    const texts: Record<string, string | string[] | ContentImage> = {};
     for (const { key, value } of checkKeys(
       ctx,
       mapEntries(ctx, item as ParsedNode, itemWhere) ?? [],
       itemWhere,
       { allowed },
     )) {
-      if (key === "features" && isSeq(value)) {
+      if (key === "image") {
+        const image = readImage(ctx, value, `the image of ${itemWhere}`);
+        if (image) texts[key] = image;
+      } else if (key === "link") {
+        const link = readString(ctx, value, `"link" of ${itemWhere}`);
+        if (link !== undefined && !/^(\/|https?:\/\/|mailto:|tel:)/.test(link))
+          ctx.error(
+            value,
+            "invalid-value",
+            `"link" of ${itemWhere} must be a page's address like /pricing, or start with https://, mailto: or tel:.`,
+          );
+        else if (link !== undefined) texts[key] = link;
+      } else if (key === "features" && isSeq(value)) {
         texts[key] = value.items.flatMap((f) => {
           const text = readString(ctx, f as ParsedNode, `a feature of ${itemWhere}`);
           return text === undefined ? [] : [text];

@@ -216,6 +216,46 @@ test("rule mergeCustomers.move-orders: the duplicate's orders move to the kept c
 });
 `;
 
+/** A visitor opens a gallery picture and sends the contact form; an admin reads the message. */
+async function landingFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await open(page, base);
+    await page.getByRole("button", { name: /^Open A rolled-up yoga mat/ }).click();
+    const lightbox = page.getByRole("dialog");
+    await lightbox.getByRole("img", { name: /yoga mat/ }).waitFor({ timeout: 5000 });
+    await page.keyboard.press("ArrowRight");
+    await lightbox.getByRole("img", { name: /Three people stretching/ }).waitFor({ timeout: 5000 });
+    await page.keyboard.press("Escape");
+    await lightbox.waitFor({ state: "hidden", timeout: 5000 });
+    console.log(
+      "  ✓ browser: a gallery picture opens large; the arrow keys move on, Escape closes",
+    );
+
+    await page.getByRole("textbox", { name: "Name *" }).fill("Aino Visitor");
+    await page.getByRole("textbox", { name: "Email *" }).fill("aino@example.com");
+    await page.getByRole("textbox", { name: "Message *" }).fill("Do you have classes in Swedish?");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await page
+      .getByText("Thank you! We will get back to you within a day.")
+      .waitFor({ timeout: 10000 });
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/messages`);
+    await page.getByRole("cell", { name: "Aino Visitor" }).waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: a visitor sends the contact form without an account; an admin reads it",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("booking landing flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 /** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
@@ -1126,6 +1166,7 @@ for (const [index, example] of examples.entries()) {
       const base = `http://localhost:${port + 100}`;
       await visualChecks(dir, base);
       if (example === "crm") await browserFlow(base);
+      if (example === "booking") await landingFlow(base);
       if (example === "invoicing") {
         await formulaFlow(base);
         await onboardingFlow(base);
