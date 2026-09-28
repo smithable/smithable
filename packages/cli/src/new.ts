@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { closestStarter, draftProject, parsePolicy, route } from "@smithable/ai";
+import { closestStarter, draftProject } from "@smithable/ai";
 import { validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { summarize } from "@smithable/index";
-import { aiProviders, confirm, usageLine } from "./ask.js";
+import { confirm, providersFor, usageLine } from "./ask.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTERS } from "./starters.gen.js";
@@ -34,7 +34,7 @@ export async function create(
   }
   if (options.describe) {
     io.out(`Starting from the ${name} starter.\n`);
-    const providers = route(aiProviders(), parsePolicy(process.env.SMITHABLE_AI_POLICY));
+    const providers = providersFor();
     const draft = await draftProject({ description: options.describe, starter: files, providers });
     io.out(`${usageLine(draft.usage)}\n`);
     if (draft.kind === "failed") {

@@ -49,14 +49,17 @@ Some requests need code, not an operation: ranking customers by churn risk, a cu
 ```bash
 export SMITHABLE_CODER=claude-code         # Claude Code, headless in the project
 export SMITHABLE_CODER_MODEL=sonnet        # optional
+export SMITHABLE_AI_POLICY=allow:claude-code,smithable  # Claude runs outside the EU: allow it
 smithable code query:churnRisk "rank by days since the last order"
 ```
 
-`smithable ask` runs the coder by itself when its proposal adds a query. The coder may read only the project, edit only `src/custom/`, and run only the type check and the tests (Claude Code runs with `--permission-mode dontAsk` and path-scoped rules). Smithable then checks every changed file itself: a change anywhere else undoes everything, and so does a failing type check or test. The result is one commit that `smithable undo` reverts. Measured: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code for $0.45 with Sonnet.
+The coder is subject to the same AI policy as every model call: Claude Code counts as outside the EU, so the default `eu-only` refuses it until the policy allows it. A coder of your own (`SMITHABLE_CODER_COMMAND`) says where it runs with `SMITHABLE_CODER_LOCATION=local` or `eu`; unsaid, it counts as outside the EU too.
+
+`smithable ask` runs the coder by itself when its proposal adds a query. The coder is asked to read only the project, edit only `src/custom/`, and run only the type check (Claude Code runs with `--permission-mode dontAsk` and path-scoped rules). It never runs the tests: they execute the code it wrote, so Smithable runs them itself afterwards. Be clear about the boundary: the coder is a program running with your privileges, and those rules are its tool's settings, not a sandbox. What Smithable guarantees is what gets committed: every changed file, ignored file and Git hook is checked, a change anywhere else undoes everything, and so does a failing type check or test. The result is one commit that `smithable undo` reverts. Measured: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code for $0.45 with Sonnet.
 
 ## Teaching Smithable a section
 
-For a section of `smithable.yml` Smithable does not know, `smithable teach <section>` has the coder write a project plugin once (see the [spec reference](spec/v0.1.md)). The coder may write only in `smithable/plugins/<section>/`, read only the project, and run the type check, the tests and `smithable validate --plugin <section>` to check its own work. Smithable then declares the plugin, regenerates, type-checks and tests, or undoes everything. Measured: a `newsletter:` section was taught with Sonnet for about $0.60; regenerating afterwards used no AI.
+For a section of `smithable.yml` Smithable does not know, `smithable teach <section>` has the coder write a project plugin once (see the [spec reference](spec/v0.1.md)). The coder may write only in `smithable/plugins/<section>/`, read only the project, and run only the type check (validating the plugin would run its code). Smithable then declares the plugin, validates it by regenerating, type-checks and tests, or undoes everything. Measured: a `newsletter:` section was taught with Sonnet for about $0.60; regenerating afterwards used no AI.
 
 ## Policy
 
