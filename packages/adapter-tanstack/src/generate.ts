@@ -1461,7 +1461,8 @@ function landingRoute(
         imports.add("#/kit/Landing", "Contact");
         const props = (["title", "text", "address", "phone", "email", "hours", "thanks"] as const)
           .filter((k) => own[k])
-          .map((k) => `\n          ${k}=${JSON.stringify(own[k])}`)
+          // In braces: a JSX attribute string would keep "\n" as it is.
+          .map((k) => `\n          ${k}={${JSON.stringify(own[k])}}`)
           .join("");
         if (!section.form) return [`<Contact${props}\n        />`];
         // The model's own form; visitors send it, and the thanks replace it.
