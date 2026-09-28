@@ -71,6 +71,8 @@ export function describeChange(
       return `Added the ${humanize(str("page"))} page${model ? `, listing ${w.pluralLabel(model).toLowerCase()}` : ""}`;
     case "removePage":
       return `Removed the ${humanize(str("page"))} page`;
+    case "addLandingPage":
+      return `Added the ${humanize(str("page"))} page, a landing page for visitors`;
     case "addSection":
       return `Added a ${humanize(str("section")).toLowerCase()} section to the ${humanize(str("page"))} page`;
     case "removeSection":

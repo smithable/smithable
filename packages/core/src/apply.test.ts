@@ -443,3 +443,15 @@ test("addSection and removeSection change a landing page's sections, with their 
   expect(removed.ok && removed.files.spec).not.toMatch(/^\s+faq:/m);
   expect(removed.ok && removed.files.content).not.toContain("Can I use my own invoice numbers?");
 });
+
+test("addLandingPage makes a public landing page with a hero and a footer", () => {
+  const result = applyOperation(files, "addLandingPage", { page: "home" });
+  expect(result).toMatchObject({ ok: true });
+  if (!result.ok) return;
+  expect(result.files.spec).toMatch(/home:\n\s+route: \/\n\s+landing:\n\s+hero:\n\s+footer:/);
+  expect(result.files.auth).toMatch(/pages: \[.*home\]|pages:\n(\s+- .*\n)*\s+- home/);
+  const again = applyOperation({ ...files, ...result.files }, "addLandingPage", { page: "about" });
+  expect(again.ok && again.files.spec).toContain("route: /about");
+  const closed = applyOperation(files, "addLandingPage", { page: "intro", public: false });
+  expect(closed.ok && closed.files.auth).not.toContain("intro");
+});
