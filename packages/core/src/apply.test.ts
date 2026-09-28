@@ -421,3 +421,25 @@ test("setPackage adds a library at an exact version to smithable.context.yml, an
     false,
   );
 });
+
+test("addSection and removeSection change a landing page's sections, with their texts", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const file = (s: string) => raw[`../../../examples/invoicing/smithable${s}.yml`] as string;
+  const invoicing = { spec: file(""), auth: file(".auth"), content: file(".content") };
+  const gallery = applyOperation(invoicing, "addSection", { page: "home", section: "gallery" });
+  expect(gallery.ok && gallery.files.spec).toMatch(
+    /callToAction: \{ button: overview \}\n\s+gallery:\n/,
+  );
+  expect(applyOperation(invoicing, "addSection", { page: "home", section: "faq" }).ok).toBe(false);
+  expect(applyOperation(invoicing, "addSection", { page: "home", section: "news" }).ok).toBe(false);
+  expect(applyOperation(invoicing, "addSection", { page: "overview", section: "faq" }).ok).toBe(
+    false,
+  );
+  const removed = applyOperation(invoicing, "removeSection", { page: "home", section: "faq" });
+  expect(removed.ok && removed.files.spec).not.toMatch(/^\s+faq:/m);
+  expect(removed.ok && removed.files.content).not.toContain("Can I use my own invoice numbers?");
+});

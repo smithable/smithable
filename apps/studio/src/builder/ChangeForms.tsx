@@ -202,6 +202,8 @@ const CHANGES = [
   ["setBelow", "A second line in a list"],
   ["addTile", "A dashboard tile"],
   ["removePage", "Remove a page"],
+  ["addSection", "A section on a landing page"],
+  ["removeSection", "Remove a section"],
 ] as const;
 
 /** Operations whose form can hold everything a proposal gives them (Describe → Manual). */
@@ -245,6 +247,8 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         {change === "setBelow" && <SetBelow spec={spec} run={run} />}
         {change === "addTile" && <AddTile spec={spec} run={run} />}
         {change === "removePage" && <RemovePage spec={spec} run={run} />}
+        {change === "addSection" && <AddSection spec={spec} run={run} />}
+        {change === "removeSection" && <RemoveSection spec={spec} run={run} />}
       </div>
     </div>
   );
@@ -963,6 +967,128 @@ function RemovePage({ spec, run }: FormProps) {
         />
       </Label>
       <Submit label="Remove page" disabled={!page || pages.length < 2} />
+    </Form>
+  );
+}
+
+/** The kinds of landing section, as the form offers them. */
+const SECTIONS: [string, string][] = [
+  ["hero", "Hero: a heading, a text and a button"],
+  ["features", "Features"],
+  ["pricing", "Pricing"],
+  ["testimonials", "Testimonials"],
+  ["faq", "Questions and answers"],
+  ["callToAction", "Call to action"],
+  ["contact", "Contact details and a form"],
+  ["gallery", "Pictures (a gallery)"],
+  ["footer", "Footer"],
+  ["records", "Records as cards"],
+];
+
+function AddSection({ spec, run }: FormProps) {
+  const landings = (spec.ir?.pages ?? []).filter((p) => p.pattern.kind === "landing");
+  const models = spec.ir?.models ?? [];
+  const [page, setPage] = useState(landings[0]?.id ?? "");
+  const [kind, setKind] = useState("contact");
+  const [label, setLabel] = useState("");
+  const [model, setModel] = useState(models[0]?.name ?? "");
+  const [form, setForm] = useState("");
+  const records = kind === "records";
+  const section = records ? identifier(label) : kind;
+  if (!landings.length)
+    return <p className="text-sm text-neutral-600">The app has no landing page yet.</p>;
+  return (
+    <Form
+      onSubmit={() =>
+        run("addSection", {
+          page,
+          section,
+          ...(records ? { records: model } : {}),
+          ...(kind === "contact" && form ? { form } : {}),
+        })
+      }
+    >
+      <Label text="Landing page">
+        <Select
+          aria-label="Landing page"
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
+          options={landings.map((p) => [p.id, humanize(p.id)])}
+        />
+      </Label>
+      <Label text="Section" hint="Its texts are changed in place in the preview">
+        <Select
+          aria-label="Section"
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+          options={SECTIONS}
+        />
+      </Label>
+      {records && (
+        <>
+          <Label text="Name">
+            <Input
+              aria-label="Section name"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Our classes"
+            />
+          </Label>
+          <Label text="Shows">
+            <Select
+              aria-label="Shows"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              options={models.map((m) => m.name)}
+            />
+          </Label>
+        </>
+      )}
+      {kind === "contact" && (
+        <Label text="Form" hint="Visitors send it without an account: a record of this kind">
+          <Select
+            aria-label="Form"
+            value={form}
+            onChange={(e) => setForm(e.target.value)}
+            options={[
+              ["", "No form, only the details"],
+              ...models.map((m): [string, string] => [m.name, humanize(m.name)]),
+            ]}
+          />
+        </Label>
+      )}
+      {kind === "gallery" && (
+        <p className="text-xs text-neutral-500">
+          Its pictures are listed in smithable.content.yml for now (Studio mode).
+        </p>
+      )}
+      <Submit label="Add section" disabled={!page || !section} />
+    </Form>
+  );
+}
+
+function RemoveSection({ spec, run }: FormProps) {
+  const landings = (spec.ir?.pages ?? []).flatMap((p) =>
+    p.pattern.kind === "landing"
+      ? p.pattern.sections.map((s): [string, string] => [
+          `${p.id}/${s.name}`,
+          `${humanize(p.id)}: ${humanize(s.name)}`,
+        ])
+      : [],
+  );
+  const [choice, setChoice] = useState(landings[0]?.[0] ?? "");
+  const [page, section] = choice.split("/");
+  return (
+    <Form onSubmit={() => run("removeSection", { page, section })}>
+      <Label text="Section" hint="Its texts go too; Undo brings it back">
+        <Select
+          aria-label="Section"
+          value={choice}
+          onChange={(e) => setChoice(e.target.value)}
+          options={landings}
+        />
+      </Label>
+      <Submit label="Remove section" disabled={!choice} />
     </Form>
   );
 }
