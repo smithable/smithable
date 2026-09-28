@@ -289,7 +289,9 @@ function packageJson(
     dependencies: {
       ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
       [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts],
-      ...Object.fromEntries(Object.entries(packages).sort(([a], [b]) => a.localeCompare(b))),
+      ...Object.fromEntries(
+        Object.entries(packages).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+      ),
     },
     devDependencies: STACK_PROFILE.devDependencies,
   };

@@ -554,8 +554,8 @@ function SetSearch({ spec, run }: FormProps) {
           options={pages.map((p) => [p.id, humanize(p.id)])}
         />
       </Label>
-      <div className="space-y-1">
-        <span className="text-xs font-medium text-neutral-600">Search by</span>
+      <fieldset className="space-y-1">
+        <legend className="text-xs font-medium text-neutral-600">Search by</legend>
         {searchable.map((f) => (
           <label key={f.name} className="flex items-center gap-2 text-sm">
             <input
@@ -570,7 +570,7 @@ function SetSearch({ spec, run }: FormProps) {
             {humanize(f.name)}
           </label>
         ))}
-      </div>
+      </fieldset>
       <Submit label={fields.length ? "Set search" : "Remove search"} disabled={!page} />
     </Form>
   );
@@ -613,10 +613,10 @@ function SetAccess({ spec, run }: FormProps) {
           options={targets}
         />
       </Label>
-      <div className="space-y-1">
-        <span className="text-xs font-medium text-neutral-600">
+      <fieldset className="space-y-1">
+        <legend className="text-xs font-medium text-neutral-600">
           Only (none: back to the default)
-        </span>
+        </legend>
         {roles.map((r) => (
           <label key={r} className="flex items-center gap-2 text-sm">
             <input
@@ -629,7 +629,7 @@ function SetAccess({ spec, run }: FormProps) {
             {r === "owner" ? "the record's owner" : r}
           </label>
         ))}
-      </div>
+      </fieldset>
       <Submit label="Set access" disabled={!target} />
     </Form>
   );

@@ -157,8 +157,14 @@ function Part({
     else {
       setBusy(true);
       const request = `In the app's plain-language summary, the user rewrote the part "${section.title}" (${section.concept}).\nIt said:\n${section.sentences.join("\n")}\nIt should now say:\n${text}\nChange the app so that it matches the new text.`;
-      next = { kind: "model", proposal: await api.ask(request) };
-      setBusy(false);
+      try {
+        next = { kind: "model", proposal: await api.ask(request) };
+      } catch (error) {
+        setNote((error as Error).message);
+        return;
+      } finally {
+        setBusy(false);
+      }
     }
     // A change that loses no data happens at once (Undo takes it back); one that deletes
     // data is shown first.
@@ -172,18 +178,24 @@ function Part({
   const apply = async (suggestion: Suggestion, text: string) => {
     setBusy(true);
     let ok = true;
-    if (suggestion.kind === "local") {
-      // The proposal already said which changes lose data.
-      for (const { op, args } of suggestion.operations) {
-        ok = await run(op, args, true);
-        if (!ok) break;
+    try {
+      if (suggestion.kind === "local") {
+        // The proposal already said which changes lose data.
+        for (const { op, args } of suggestion.operations) {
+          ok = await run(op, args, true);
+          if (!ok) break;
+        }
+      } else {
+        const result = await api.applyProposal(suggestion.proposal.id);
+        ok = result.ok;
+        if (!ok) setNote(result.output);
       }
-    } else {
-      const result = await api.applyProposal();
-      ok = result.ok;
-      if (!ok) setNote(result.output);
+    } catch (error) {
+      ok = false;
+      setNote((error as Error).message);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
     if (ok) {
       onApplied(text);
       close();
@@ -194,6 +206,7 @@ function Part({
     suggestion?.kind === "local" && spec.ir
       ? {
           kind: "change",
+          id: "local",
           usage: "Read without AI",
           operations: suggestion.operations.map(({ op, args }) => {
             const operation = findOperation(op);
