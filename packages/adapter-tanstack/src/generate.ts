@@ -83,6 +83,8 @@ export interface GenerateOptions {
   ux?: UxIR;
   /** Project plugins: their extra files (ARCHITECTURE §5.1). */
   plugins?: SpecPlugin[];
+  /** Libraries for custom code, from smithable.context.yml: name → exact version. */
+  packages?: Record<string, string>;
 }
 
 const HEADER =
@@ -105,7 +107,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     }));
   const add = (path: string, content: string) => files.push({ path, content, zone: "generated" });
 
-  add("package.json", packageJson(ir, auth, ux));
+  add("package.json", packageJson(ir, auth, ux, options.packages));
   add("src/theme.css", themeCss(ux));
   add("smithable.lock", smithableLock(ir, options));
   add("README.md", readme(ir, false, auth));
@@ -257,7 +259,12 @@ export function names(model: ModelIR, t: Texts) {
   };
 }
 
-function packageJson(ir: SpecIR, auth: AuthIR, ux: UxIR): string {
+function packageJson(
+  ir: SpecIR,
+  auth: AuthIR,
+  ux: UxIR,
+  packages: Record<string, string> = {},
+): string {
   const fontPackage = FONT_PACKAGES[themeFont(ux)] as string;
   const { "better-auth": _, ...withoutAuth } = STACK_PROFILE.dependencies;
   const pkg = {
@@ -281,6 +288,7 @@ function packageJson(ir: SpecIR, auth: AuthIR, ux: UxIR): string {
     dependencies: {
       ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
       [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts],
+      ...Object.fromEntries(Object.entries(packages).sort(([a], [b]) => a.localeCompare(b))),
     },
     devDependencies: STACK_PROFILE.devDependencies,
   };

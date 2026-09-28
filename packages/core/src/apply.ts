@@ -20,6 +20,8 @@ export interface ProjectFiles {
   auth?: string;
   /** smithable.ux.yml, when the project has one. */
   ux?: string;
+  /** smithable.context.yml, when the project has one. */
+  context?: string;
   /** The project's plugins, for the sections of smithable.yml they handle. */
   plugins?: SpecPlugin[];
 }
@@ -81,6 +83,7 @@ export function applyOperation(
     content: new YamlEditor(files.content ?? `smithableContent: 0.1\n`),
     ...(files.auth === undefined ? {} : { auth: new YamlEditor(files.auth) }),
     ux: new YamlEditor(files.ux ?? `smithableUx: 0.1\n`),
+    context: new YamlEditor(files.context ?? `smithableContext: 0.1\n`),
   };
   let effects: Effect[];
   try {
@@ -120,6 +123,11 @@ export function applyOperation(
       ...(files.content !== undefined || contentChanged ? { content: editors.content.text } : {}),
       ...(editors.auth ? { auth: editors.auth.text } : {}),
       ...(files.ux !== undefined || uxChanged ? { ux: editors.ux.text } : {}),
+      // Like the ux file: written if the project has one or the operation changed it.
+      ...(files.context !== undefined ||
+      editors.context.text !== (files.context ?? `smithableContext: 0.1\n`)
+        ? { context: editors.context.text }
+        : {}),
     },
     description: op.describe(args, before.ir),
     destructive: op.destructive(args, before.ir),
