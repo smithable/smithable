@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
 import {
   generateApp,
   renameColumnSql,
@@ -30,6 +31,11 @@ export interface GenerateFlags {
   migration?: MigrationPlan;
   /** Move the app to this Smithable's stack profile (`smithable upgrade`, which checks it). */
   upgrade?: boolean;
+  /**
+   * Run only the tools whose inputs changed (an operation): each one starts a process, which
+   * costs 1 to 2 s in a sandboxed hosted workspace.
+   */
+  onlyChanged?: boolean;
 }
 
 /** The stack profile the project was last generated with, from smithable.lock. */
@@ -100,6 +106,7 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
 
   const next: FileRecord = { files: {} };
   let written = 0;
+  const changed: string[] = [];
   for (const file of files) {
     const path = join(dir, file.path);
     // Scaffold and custom files are created once and then belong to the project.
@@ -108,6 +115,7 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, file.content);
       written++;
+      changed.push(file.path);
       continue;
     }
     next.files[file.path] = hash(file.content);
@@ -115,6 +123,7 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, file.content);
     written++;
+    changed.push(file.path);
   }
   // Delete only what the generator no longer produces; scaffold files are never removed.
   const produced = new Set(files.map((f) => f.path));
@@ -122,20 +131,25 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   for (const path of removed) rmSync(join(dir, path), { force: true });
   mkdirSync(join(dir, ".smithable"), { recursive: true });
   writeFileSync(join(dir, RECORD), serializeRecord(next));
-  applyOverrides(dir);
+  if (applyOverrides(dir)) changed.push("pnpm-workspace.yaml");
   io.out(`Generated ${files.length} files (${written} changed, ${removed.length} removed).\n`);
 
   if (!flags.tools) return 0;
-  return runTools(dir, io, flags.migration);
+  return runTools(
+    dir,
+    io,
+    flags.migration,
+    flags.onlyChanged ? [...changed, ...removed] : undefined,
+  );
 }
 
 /**
  * Keeps the stack profile's security overrides in pnpm-workspace.yaml. The file belongs to
  * the project (pnpm edits it too): only these entries are Smithable's, the rest is left alone.
  */
-function applyOverrides(dir: string): void {
+function applyOverrides(dir: string): boolean {
   const path = join(dir, "pnpm-workspace.yaml");
-  if (!existsSync(path)) return;
+  if (!existsSync(path)) return false;
   const workspace = new YamlEditor(readFileSync(path, "utf8"));
   for (const retired of STACK_PROFILE.retiredOverrides)
     if (workspace.has(["overrides", retired])) workspace.removeAndPrune(["overrides", retired], 0);
@@ -146,11 +160,27 @@ function applyOverrides(dir: string): void {
     } else if (workspace.has(["overrides"])) workspace.add(["overrides"], dependency, version);
     else workspace.add([], "overrides", { [dependency]: version });
   }
-  if (workspace.text !== readFileSync(path, "utf8")) writeFileSync(path, workspace.text);
+  if (workspace.text === readFileSync(path, "utf8")) return false;
+  writeFileSync(path, workspace.text);
+  return true;
 }
 
-/** Installs dependencies, then lets the app's own tools create migrations and the route tree. */
-export function runTools(dir: string, io: Io, migration?: MigrationPlan): number {
+/**
+ * Installs dependencies, then lets the app's own tools create migrations and the route tree.
+ * Given the files a change wrote or removed, only the tools whose inputs changed run.
+ */
+export function runTools(
+  dir: string,
+  io: Io,
+  migration?: MigrationPlan,
+  changed?: string[],
+): number {
+  const needs = (test: (path: string) => boolean) => !changed || changed.some(test);
+  const install =
+    needs((p) => p === "package.json" || p === "pnpm-workspace.yaml") ||
+    !existsSync(join(dir, "node_modules"));
+  const schema = needs((p) => p === "src/db/schema.ts") || (migration?.renames.length ?? 0) > 0;
+
   const run = (args: string[]) => {
     const [command, rest] =
       args[0] === "exec" ? tool(dir, args[1] as string, args.slice(2)) : ["pnpm", args];
@@ -158,14 +188,67 @@ export function runTools(dir: string, io: Io, migration?: MigrationPlan): number
     if (code !== 0) io.err(`\`pnpm ${args.join(" ")}\` failed.\n`);
     return code === 0;
   };
-  if (!run(["install", "--silent"])) return 1;
+  if (install && !run(["install", "--silent"])) return 1;
+  if (schema && !migrate(dir, migration, run)) return 1;
+  // Always: skipping it when no route file changed left the Studio preview blank after some
+  // changes (test:studio's "click the email field" step), for reasons not yet understood.
+  if (!run(["exec", "tsr", "generate"])) return 1;
+  if (schema && migration?.apply) {
+    const applied = applyMigrations(dir, io);
+    if (applied === false) return 1;
+    // Otherwise by the app's own database module, in a process of its own.
+    if (applied === undefined && !run(["exec", "tsx", "src/db/index.ts"])) return 1;
+  }
+  return 0;
+}
+
+/**
+ * Applies pending migrations to the dev database in this process, with the app's own
+ * installed Drizzle and SQLite driver, exactly as the kit's src/db/index.ts does at startup
+ * (foreign keys off around it, every reference checked after). Starting a process for it
+ * costs about 2 s in a sandboxed hosted workspace. False if a migration left broken
+ * references; undefined if this didn't work here, so the caller falls back to that process.
+ */
+function applyMigrations(dir: string, io: Io): boolean | undefined {
+  let sqlite: { pragma(s: string): unknown; close(): void } | undefined;
+  try {
+    const load = createRequire(join(resolve(dir), "package.json"));
+    const Database = load("better-sqlite3");
+    const { drizzle } = load("drizzle-orm/better-sqlite3");
+    const { migrate } = load("drizzle-orm/better-sqlite3/migrator");
+    const data = join(resolve(dir), process.env.DATA_DIR ?? "data");
+    mkdirSync(join(data, "db"), { recursive: true });
+    sqlite = new Database(join(data, "db", "app.db"));
+    sqlite?.pragma("journal_mode = WAL");
+    sqlite?.pragma("foreign_keys = OFF");
+    migrate(drizzle(sqlite), { migrationsFolder: join(resolve(dir), "drizzle") });
+    const broken = sqlite?.pragma("foreign_key_check") as unknown[];
+    if (broken.length > 0) {
+      io.err(`A migration left ${broken.length} broken references.\n`);
+      return false;
+    }
+    return true;
+  } catch {
+    return undefined;
+  } finally {
+    sqlite?.pragma("foreign_keys = ON");
+    sqlite?.close();
+  }
+}
+
+/** Creates the migration for a schema change: drizzle-kit, with renames as custom SQL. */
+function migrate(
+  dir: string,
+  migration: MigrationPlan | undefined,
+  run: (args: string[]) => boolean,
+): boolean {
   // A rename becomes a custom migration with RENAME COLUMN, so drizzle-kit never sees a
   // drop plus an add (which it would ask about) and the data is kept.
   for (const rename of migration?.renames ?? []) {
     if (
       !run(["exec", "drizzle-kit", "generate", "--custom", "--name", migration?.name ?? "rename"])
     )
-      return 1;
+      return false;
     const tag = latestMigration(dir);
     writeFileSync(
       join(dir, "drizzle", `${tag}.sql`),
@@ -184,11 +267,7 @@ export function runTools(dir: string, io: Io, migration?: MigrationPlan): number
     );
   }
   const name = migration ? ["--name", migration.name] : [];
-  if (!run(["exec", "drizzle-kit", "generate", ...name])) return 1;
-  if (!run(["exec", "tsr", "generate"])) return 1;
-  // Applied by the app's own database module, which handles migrations that rebuild a table.
-  if (migration?.apply && !run(["exec", "tsx", "src/db/index.ts"])) return 1;
-  return 0;
+  return run(["exec", "drizzle-kit", "generate", ...name]);
 }
 
 /** The tag of the newest migration, e.g. "0003_rename_notes". */
