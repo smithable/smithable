@@ -220,7 +220,7 @@ export function texts(content: ContentIR) {
     /** The subtitle prop of a page's header, or nothing. */
     pageSubtitle: (id: string) => {
       const subtitle = content.pages[id]?.subtitle;
-      return subtitle ? `\n        subtitle=${JSON.stringify(subtitle)}` : "";
+      return subtitle ? `\n        subtitle=${attr(subtitle)}` : "";
     },
     /** A landing section's or dashboard tile's texts. */
     section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
@@ -1142,6 +1142,15 @@ const ${fn} = createServerFn()
 }
 
 /** Import lines collected per module, merged and in first-use order. */
+/**
+ * A text as a JSX attribute's value: a plain one as a string, as always; one with quotes, a
+ * backslash or a line break in braces, since an attribute string keeps escapes as written.
+ */
+function attr(value: string): string {
+  const json = JSON.stringify(value);
+  return json.includes("\\") ? `{${json}}` : json;
+}
+
 function importList() {
   const modules = new Map<string, Set<string>>();
   return {
@@ -1220,14 +1229,14 @@ function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR)
   const { rows, canCreate } = ${api}.useLoaderData();${search ? `\n  const { q } = ${api}.useSearch();` : ""}
 ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();
   const newButton = canCreate && (
-    <Link to=${JSON.stringify(join(page.route, "new"))} className={buttonVariants()}>
+    <Link to=${attr(join(page.route, "new"))} className={buttonVariants()}>
       New ${n.label.toLowerCase()}
     </Link>
   );${actions
     .map(
       (a) => `
   const ${a.name}Button = allows(${actionNames(a).access}, viewer) && (
-    <Link to=${JSON.stringify(join(page.route, `actions/${kebab(a.name)}`))} className={buttonVariants({ variant: "outline" })}>
+    <Link to=${attr(join(page.route, `actions/${kebab(a.name)}`))} className={buttonVariants({ variant: "outline" })}>
       ${humanize(a.name)}
     </Link>
   );`,
@@ -1236,22 +1245,22 @@ ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  con
   return (
     <>
       <PageHeader
-        page=${JSON.stringify(page.id)}
-        title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
+        page=${attr(page.id)}
+        title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
 ${
   search
     ? `      <SearchBox
         value={q ?? ""}
-        placeholder=${JSON.stringify(search.placeholder)}
+        placeholder=${attr(search.placeholder)}
         onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: { q: text || undefined }, replace: true })}
       />
 `
     : ""
 }      <ModelTable
         ui={${n.ui}}
-        page=${JSON.stringify(page.id)}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
+        page=${attr(page.id)}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
         rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
@@ -1399,10 +1408,10 @@ function landingRoute(
         imports.add("#/kit/Landing", "Hero");
         return [
           `<Hero
-          title=${JSON.stringify(own.title ?? ir.app.name)}${
+          title=${attr(own.title ?? ir.app.name)}${
             (own.subtitle ?? ir.app.description)
               ? `
-          subtitle=${JSON.stringify(own.subtitle ?? ir.app.description)}`
+          subtitle=${attr((own.subtitle ?? ir.app.description) as string)}`
               : ""
           }
           link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}${
@@ -1433,11 +1442,11 @@ function landingRoute(
             : undefined;
         return [
           `<RecordCards
-          id=${JSON.stringify(section.name)}
-          title=${JSON.stringify(own.title ?? n.pluralLabel)}${
+          id=${attr(section.name)}
+          title=${attr(own.title ?? n.pluralLabel)}${
             own.text
               ? `
-          text=${JSON.stringify(own.text)}`
+          text=${attr(own.text)}`
               : ""
           }
           cards={data.${camel(plural(model.name))}.slice(0, ${section.limit ?? 6}).map((row) => ({
@@ -1461,8 +1470,7 @@ function landingRoute(
         imports.add("#/kit/Landing", "Contact");
         const props = (["title", "text", "address", "phone", "email", "hours", "thanks"] as const)
           .filter((k) => own[k])
-          // In braces: a JSX attribute string would keep "\n" as it is.
-          .map((k) => `\n          ${k}={${JSON.stringify(own[k])}}`)
+          .map((k) => `\n          ${k}=${attr(own[k] as string)}`)
           .join("");
         if (!section.form) return [`<Contact${props}\n        />`];
         // The model's own form; visitors send it, and the thanks replace it.
@@ -1477,7 +1485,7 @@ function landingRoute(
               ui={${n.ui}}
               app={app}
               schema={${n.schema}}
-              submitLabel=${JSON.stringify(own.button ?? "Send")}
+              submitLabel=${attr(own.button ?? "Send")}
               onSubmit={async (values) => {
                 await ${n.create}({ data: values });
                 sent();
@@ -1497,7 +1505,7 @@ function landingRoute(
           return image ? { ...i, image: { ...image, src: `/${image.src}` } } : i;
         });
         return [
-          `<Gallery${own.title ? `\n          title=${JSON.stringify(own.title)}` : ""}${own.text ? `\n          text=${JSON.stringify(own.text)}` : ""}
+          `<Gallery${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
           items={${literal(withRoot)}}
         />`,
         ];
@@ -1509,10 +1517,10 @@ function landingRoute(
         imports.add("#/kit/Landing", "CallToAction");
         return [
           `<CallToAction
-          title=${JSON.stringify(own.title ?? "Ready to get started?")}${
+          title=${attr(own.title ?? "Ready to get started?")}${
             own.text
               ? `
-          text=${JSON.stringify(own.text)}`
+          text=${attr(own.text)}`
               : ""
           }
           link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}
@@ -1530,11 +1538,11 @@ function landingRoute(
         imports.add("#/kit/Landing", kit);
         const heading = own.title
           ? `
-          title=${JSON.stringify(own.title)}`
+          title=${attr(own.title)}`
           : "";
         const lead = own.text
           ? `
-          text=${JSON.stringify(own.text)}`
+          text=${attr(own.text)}`
           : "";
         return section.kind === "pricing"
           ? [
@@ -1556,7 +1564,7 @@ function landingRoute(
     sectionParts(section).map((part) =>
       part.replace(
         /^<(Hero|Features|RecordCards|Pricing|Testimonials|Faq|CallToAction|Contact|Gallery)\b/,
-        `$&\n          texts=${JSON.stringify(`pages.${page.id}.${section.name}`)}`,
+        `$&\n          texts=${attr(`pages.${page.id}.${section.name}`)}`,
       ),
     ),
   );
@@ -1579,7 +1587,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${loaders.length ? `  loader: 
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName=${JSON.stringify(ir.app.name)} link={${header}}${footer}>
+    <LandingLayout appName=${attr(ir.app.name)} link={${header}}${footer}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );
@@ -1663,7 +1671,7 @@ function ${component}() {
   const [saved, setSaved] = useState(false);
   return (
     <>
-      <PageHeader page=${JSON.stringify(page.id)} title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
       <ModelForm
         key={row?.id ?? "new"}
         ui={${n.ui}}
@@ -1728,12 +1736,12 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
   const current = steps[step] as (typeof steps)[number];
   return (
     <OnboardingLayout
-      title=${JSON.stringify(title)}${t.pageSubtitle(page.id).replace(/\n {8}/, "\n      ")}
+      title=${attr(title)}${t.pageSubtitle(page.id).replace(/\n {8}/, "\n      ")}
       step={step}
       count={steps.length}
       stepTitle={current.title}${steps.some((s) => s.includes("text:")) ? '\n      stepText={"text" in current ? current.text : undefined}' : ""}
       footer={
-        <Link to=${JSON.stringify(start)} className="font-semibold underline-offset-4 hover:underline">
+        <Link to=${attr(start)} className="font-semibold underline-offset-4 hover:underline">
           Do this later
         </Link>
       }
@@ -1831,8 +1839,8 @@ function dashboardRoute(
         );
       return {
         block: "list",
-        code: `<section aria-labelledby=${JSON.stringify(`${item.name}-title`)} className="space-y-3">
-        <h2 id=${JSON.stringify(`${item.name}-title`)} className="font-semibold">${label}</h2>
+        code: `<section aria-labelledby=${attr(`${item.name}-title`)} className="space-y-3">
+        <h2 id=${attr(`${item.name}-title`)} className="font-semibold">${label}</h2>
         <ModelTable
           ui={${n.ui}}
           app={app}${columns ? `\n          columns={${literal(columns)}}` : ""}
@@ -1854,7 +1862,7 @@ function dashboardRoute(
       values.push(`${item.name}: byMonth(${filtered}, (row) => row.${item.by}, ${amount})`);
       return {
         block: "chart",
-        code: `<BarChart label=${JSON.stringify(label)} kind="${kind}" app={app} bars={data.${item.name}} />`,
+        code: `<BarChart label=${attr(label)} kind="${kind}" app={app} bars={data.${item.name}} />`,
       };
     }
     view.add("#/kit/Dashboard", "StatCard", "formatNumber");
@@ -1867,7 +1875,7 @@ function dashboardRoute(
     }
     return {
       block: "stat",
-      code: `<StatCard label=${JSON.stringify(label)} value={formatNumber("${kind}", data.${item.name}, app)} />`,
+      code: `<StatCard label=${attr(label)} value={formatNumber("${kind}", data.${item.name}, app)} />`,
     };
   });
   // Numbers side by side; charts and lists each take the full width.
@@ -1902,7 +1910,7 @@ function ${component}() {
   const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
   return (
     <>
-      <PageHeader page=${JSON.stringify(page.id)} title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
       <div className="space-y-6">
       ${blocks.join("\n      ")}
       </div>
@@ -2044,12 +2052,12 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
-      <PageHeader title=${JSON.stringify(`New ${n.label.toLowerCase()}`)} />
+      <PageHeader title=${attr(`New ${n.label.toLowerCase()}`)} />
       <ModelForm
         ui={${n.ui}}
         app={app}
         schema={${n.schema}}${order}
-${options ? "        options={options}\n" : ""}        submitLabel=${JSON.stringify(`Create ${n.label.toLowerCase()}`)}
+${options ? "        options={options}\n" : ""}        submitLabel=${attr(`Create ${n.label.toLowerCase()}`)}
         onSubmit={async (values) => {
           await ${n.create}({ data: values });
           await back();
@@ -2388,12 +2396,12 @@ ${options.length ? "  const { options } = Route.useLoaderData();\n" : ""}  const
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
-      <PageHeader title=${JSON.stringify(humanize(action.name))} />
+      <PageHeader title=${attr(humanize(action.name))} />
       <ModelForm
         ui={${a.ui}}
         app={app}
         schema={${a.input}}
-${options.length ? "        options={options}\n" : ""}        submitLabel=${JSON.stringify(humanize(action.name))}
+${options.length ? "        options={options}\n" : ""}        submitLabel=${attr(humanize(action.name))}
         onSubmit={async (values) => {
           await ${action.name}({ data: values });
           await back();
