@@ -80,19 +80,27 @@ function Section({
   );
 }
 
+/** A picture from public/, e.g. { src: "/images/hero.webp", alt: "A yoga class" }. */
+export interface LandingImage {
+  src: string;
+  alt: string;
+}
+
 export function Hero({
   texts,
   title,
   subtitle,
   link,
+  image,
 }: {
   title: string;
   subtitle?: string;
   link?: LandingLink;
+  image?: LandingImage;
   texts?: string;
 }) {
-  return (
-    <section className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
+  const text = (
+    <div>
       <h1
         className="max-w-3xl text-4xl leading-tight font-bold sm:text-5xl"
         {...mark(texts, "title")}
@@ -109,6 +117,21 @@ export function Hero({
           <span {...mark(texts, "button")}>{link.label}</span>
         </Link>
       )}
+    </div>
+  );
+  if (!image) return <section className="mx-auto max-w-6xl px-5 py-20 sm:py-28">{text}</section>;
+  // Beside the text on wide screens, above it on narrow ones; the first thing loaded.
+  return (
+    <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2">
+      <img
+        src={image.src}
+        alt={image.alt}
+        width={1200}
+        height={800}
+        fetchPriority="high"
+        className="aspect-[3/2] w-full rounded-xl object-cover lg:order-2"
+      />
+      {text}
     </section>
   );
 }

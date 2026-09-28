@@ -6,7 +6,7 @@ import { summarize } from "@smithable/index";
 import { aiProviders, confirm, usageLine } from "./ask.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { STARTER_CODE, STARTERS } from "./starters.gen.js";
+import { STARTER_ASSETS, STARTER_CODE, STARTERS } from "./starters.gen.js";
 
 /**
  * `smithable new <dir>`: a new project from a starter spec, with sample data. With
@@ -69,6 +69,11 @@ export async function create(
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       writeFileSync(join(dir, file), text);
     }
+  // Its pictures, which a drafted app's texts may still use.
+  for (const [file, data] of Object.entries(STARTER_ASSETS[name] ?? {})) {
+    mkdirSync(dirname(join(dir, file)), { recursive: true });
+    writeFileSync(join(dir, file), Buffer.from(data, "base64"));
+  }
   const code = await generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
   if (exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)

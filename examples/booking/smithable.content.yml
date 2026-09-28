@@ -12,6 +12,9 @@ pages:
       title: Find your calm
       subtitle: Small yoga classes for every level, in the heart of Mariehamn.
       button: See the schedule
+      image:
+        src: images/hero.webp
+        alt: People stretching on yoga mats in a bright studio with large windows
     classes:
       title: Our classes
       text: Something for every level, from first steps to deep stretches.
