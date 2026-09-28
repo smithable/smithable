@@ -11,6 +11,8 @@ export class S3 {
   private readonly region: string;
   private readonly key: string;
   private readonly secret: string;
+  /** Temporary credentials (an assumed role, SSO) come with a session token. */
+  private readonly token: string | undefined;
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
     const key = env.AWS_ACCESS_KEY_ID;
@@ -21,6 +23,7 @@ export class S3 {
       );
     this.key = key;
     this.secret = secret;
+    this.token = env.AWS_SESSION_TOKEN || undefined;
     this.region = env.AWS_REGION ?? "us-east-1";
     this.endpoint = (env.AWS_ENDPOINT_URL ?? `https://s3.${this.region}.amazonaws.com`).replace(
       /\/$/,
@@ -84,6 +87,7 @@ export class S3 {
       host: url.host,
       "x-amz-content-sha256": payload,
       "x-amz-date": now,
+      ...(this.token ? { "x-amz-security-token": this.token } : {}),
     };
     const signed = Object.keys(headers).sort();
     const canonical = [

@@ -70,7 +70,7 @@ function target(spec: string): Target {
     },
     async load(name, local) {
       for (const key of await s3.list(bucket, at(`${name}/`))) {
-        const path = join(local, key.slice(at(`${name}/`).length));
+        const path = join(local, safeRelative(key.slice(at(`${name}/`).length)));
         mkdirSync(dirname(path), { recursive: true });
         writeFileSync(path, await s3.get(bucket, key));
       }
@@ -89,6 +89,17 @@ const SNAPSHOT = (from: string, to: string) =>
   `const D=require("better-sqlite3");new D(${JSON.stringify(from)},{readonly:true}).exec("VACUUM INTO '"+${JSON.stringify(to)}+"'")`;
 
 /** `smithable backup [dir] --to <folder|s3://…> [--container <name>]`. */
+/**
+ * A key from a bucket as a path under the restore folder: a bucket's listing is not trusted,
+ * so ".." or an absolute path, which would write elsewhere, is refused.
+ */
+export function safeRelative(key: string): string {
+  const parts = key.split(/[\\/]/);
+  if (key.startsWith("/") || parts.some((p) => p === ".." || p === ""))
+    throw new Error(`The backup has an unsafe file name: ${JSON.stringify(key)}.`);
+  return parts.join("/");
+}
+
 export async function backup(
   dir: string,
   io: Io,
