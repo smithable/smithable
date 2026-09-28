@@ -386,3 +386,18 @@ test("removePage takes a page out of the spec, the menus and its texts", () => {
   expect(result.files.content).not.toContain("Every order and where it stands.");
   expect(applyOperation(files, "removePage", { page: "nowhere" }).ok).toBe(false);
 });
+
+test("setPackage adds a library at an exact version to smithable.context.yml, and removes it", () => {
+  const added = applyOperation(files, "setPackage", { name: "chart.js", version: "4.4.1" });
+  expect(added.ok && added.files.context).toContain("chart.js: 4.4.1");
+  if (!added.ok) return;
+  const removed = applyOperation({ ...files, context: added.files.context }, "setPackage", {
+    name: "chart.js",
+    version: "none",
+  });
+  expect(removed.ok && removed.files.context).not.toContain("chart.js");
+  expect(applyOperation(files, "setPackage", { name: "chart.js", version: "^4" }).ok).toBe(false);
+  expect(applyOperation(files, "setPackage", { name: "Not A Name", version: "1.0.0" }).ok).toBe(
+    false,
+  );
+});
