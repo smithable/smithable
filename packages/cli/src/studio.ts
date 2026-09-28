@@ -15,7 +15,7 @@ import type { OperationArgs } from "@smithable/core";
 import { applyProposal, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { git } from "./git.js";
-import type { Io } from "./io.js";
+import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
 import { previewConfig } from "./preview-editor.js";
@@ -142,10 +142,7 @@ export async function studio(
   );
   const startApp = () => {
     app = spawn(
-      "pnpm",
-      [
-        "exec",
-        "vite",
+      ...tool(dir, "vite", [
         "dev",
         "--config",
         config,
@@ -153,7 +150,7 @@ export async function studio(
         String(previewPort),
         "--strictPort",
         ...(options.host ? ["--host", options.host] : []),
-      ],
+      ]),
       {
         cwd: dir,
         env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" },

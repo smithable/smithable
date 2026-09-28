@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 /** Where commands write their output; tests capture it. */
 export interface Io {
@@ -19,6 +21,19 @@ let childStdio: "inherit" | ["ignore", 2, 2] = "inherit";
 
 export function keepStdoutForProtocol(): void {
   childStdio = ["ignore", 2, 2];
+}
+
+/**
+ * The command for one of the app's own tools (drizzle-kit, tsr, tsx, vite): its binary in
+ * node_modules/.bin, run directly. `pnpm exec` would start pnpm and check the dependencies
+ * first, which costs about 1.5 s per call in a sandboxed hosted workspace. On Windows, and
+ * before the first install, through pnpm.
+ */
+export function tool(dir: string, name: string, args: string[]): [string, string[]] {
+  const bin = join(dir, "node_modules", ".bin", name);
+  return process.platform !== "win32" && existsSync(bin)
+    ? [bin, args]
+    : ["pnpm", ["exec", name, ...args]];
 }
 
 /** Runs a command with inherited output. Returns its exit code. */
