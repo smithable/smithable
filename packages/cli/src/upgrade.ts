@@ -14,7 +14,7 @@ import { VERSION } from "./version.js";
  * and the tests pass; a contract that no longer fits the app's own code is reported, with
  * the places it breaks, and never fixed silently.
  */
-export function upgrade(dir: string, io: Io): number {
+export async function upgrade(dir: string, io: Io): Promise<number> {
   ensureRepository(dir);
   if (uncommitted(dir).length > 0) {
     io.err("Commit or discard your changes first, so the upgrade can be undone on its own.\n");
@@ -30,7 +30,7 @@ export function upgrade(dir: string, io: Io): number {
     return 1;
   }
   if (migrated.applied.length) writeFileSync(specPath, migrated.text);
-  if (generate(dir, io, { tools: true, force: false, upgrade: true }) !== 0) {
+  if ((await generate(dir, io, { tools: true, force: false, upgrade: true })) !== 0) {
     discardChanges(dir);
     io.err("The upgrade was undone.\n");
     return 1;

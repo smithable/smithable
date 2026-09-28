@@ -174,9 +174,9 @@ export async function studio(
   let pending: { request: string; proposal: Proposal } | undefined;
 
   /** Runs a command with its output captured for the response. */
-  const capture = (fn: (io: Io) => number) => {
+  const capture = async (fn: (io: Io) => number | Promise<number>) => {
     let output = "";
-    const code = fn({ out: (t) => (output += t), err: (t) => (output += t) });
+    const code = await fn({ out: (t) => (output += t), err: (t) => (output += t) });
     log(output);
     return { ok: code === 0, output: output.trim() };
   };
@@ -274,7 +274,7 @@ export async function studio(
       }
       if (req.method === "POST" && url.pathname === "/api/op") {
         const { name, args, confirm } = await body();
-        const result = capture((io) =>
+        const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
           }),
@@ -304,18 +304,18 @@ export async function studio(
         if (confirmed?.proposal.kind !== "change")
           return json({ ok: false, output: "There is no proposed change to apply." });
         const proposal = confirmed.proposal;
-        const result = capture((io) => applyProposal(dir, io, confirmed.request, proposal));
+        const result = await capture((io) => applyProposal(dir, io, confirmed.request, proposal));
         if (result.ok) send("changed", { description: result.output });
         return json(result);
       }
       if (req.method === "POST" && url.pathname === "/api/customize") {
         const { page } = await body();
-        const result = capture((io) => customize(dir, io, `page:${String(page)}`));
+        const result = await capture((io) => customize(dir, io, `page:${String(page)}`));
         if (result.ok) send("changed", {});
         return json(result);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
-        const result = capture((io) => undo(dir, io));
+        const result = await capture((io) => undo(dir, io));
         if (result.ok) {
           // The database went back to its snapshot: the preview reopens it.
           stopApp();

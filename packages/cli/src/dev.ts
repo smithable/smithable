@@ -8,7 +8,10 @@ const URL = "http://localhost:3000";
 
 /** `smithable run [dir]`: regenerates if needed, starts the dev server and opens the app. */
 export async function runDev(dir: string, io: Io, open: boolean): Promise<number> {
-  const code = generate(dir, io, { tools: !existsSync(join(dir, "node_modules")), force: false });
+  const code = await generate(dir, io, {
+    tools: !existsSync(join(dir, "node_modules")),
+    force: false,
+  });
   if (code !== 0) return code;
   const server = spawn("pnpm", ["dev"], { cwd: dir, stdio: "inherit" });
   if (open) void waitThenOpen(io);

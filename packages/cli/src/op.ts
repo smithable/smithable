@@ -42,7 +42,7 @@ export function op(
   name: string | undefined,
   values: string[],
   flags: OpFlags,
-): number {
+): Promise<number> | number {
   const operation = name === undefined ? undefined : findOperation(name);
   if (!operation) {
     io.err(`${name ? `Unknown operation "${name}". ` : ""}Available operations:\n`);
@@ -57,13 +57,13 @@ export function op(
  * Applies an operation given its arguments, for the CLI and the MCP server alike: checks,
  * edits the spec, regenerates, migrates, and commits a checkpoint that `undo` reverts.
  */
-export function runOperation(
+export async function runOperation(
   dir: string,
   io: Io,
   name: string,
   args: OperationArgs,
   flags: OpFlags,
-): number {
+): Promise<number> {
   const started = Date.now();
   const operation = findOperation(name);
   if (!operation) {
@@ -145,7 +145,7 @@ export function runOperation(
       ? [{ model: e.model, from: e.from, to: e.to, reference: e.storage === "reference" }]
       : [],
   );
-  const code = generate(dir, io, {
+  const code = await generate(dir, io, {
     tools: true,
     onlyChanged: true,
     force: false,

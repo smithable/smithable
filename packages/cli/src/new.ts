@@ -69,7 +69,7 @@ export async function create(
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       writeFileSync(join(dir, file), text);
     }
-  const code = generate(dir, io, { tools: true, force: false });
+  const code = await generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
   if (exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
