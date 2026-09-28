@@ -13,7 +13,7 @@ import {
   storageOf,
   validateSpec,
 } from "@smithable/core";
-import { countValues, restoreDatabase, snapshotDatabase } from "./database.js";
+import { countValues, pruneSnapshots, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
 import { type Io, lap } from "./io.js";
@@ -129,43 +129,68 @@ export async function runOperation(
     return 1;
   };
 
-  writeFileSync(join(dir, SPEC), result.files.spec);
-  if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
-  if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
-  if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
-  if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
-  mkdirSync(join(dir, ".smithable"), { recursive: true });
-  appendFileSync(
-    join(dir, OPLOG),
-    `${JSON.stringify({ id, op: operation.name, args: operation.name === "editSpec" ? {} : args, description: result.description })}\n`,
-  );
-  // Only stored fields have a column to rename; a list of related records stores nothing.
-  const renames = result.effects.flatMap((e) =>
-    e.kind === "rename-field" && e.storage !== "none"
-      ? [{ model: e.model, from: e.from, to: e.to, reference: e.storage === "reference" }]
-      : [],
-  );
-  const code = await generate(dir, io, {
-    tools: true,
-    onlyChanged: true,
-    force: false,
-    migration: { name: migrationName(result.description), renames, apply: true },
-  });
-  if (code !== 0) return fail(`Regenerating the app failed.`);
-  lap("generate and tools");
+  // From the first write to the commit: whatever throws, the files and the database go back.
+  try {
+    writeFileSync(join(dir, SPEC), result.files.spec);
+    if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
+    if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
+    if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
+    if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
+    mkdirSync(join(dir, ".smithable"), { recursive: true });
+    appendFileSync(
+      join(dir, OPLOG),
+      `${JSON.stringify({ id, op: operation.name, args: operation.name === "editSpec" ? {} : args, description: result.description })}\n`,
+    );
+    // Only stored fields have a column to rename; a list of related records stores nothing.
+    const renames = result.effects.flatMap((e) =>
+      e.kind === "rename-field" && e.storage !== "none"
+        ? [{ model: e.model, from: e.from, to: e.to, reference: e.storage === "reference" }]
+        : [],
+    );
+    const code = await generate(dir, io, {
+      tools: true,
+      onlyChanged: true,
+      force: false,
+      migration: { name: migrationName(result.description), renames, apply: true },
+    });
+    if (code !== 0) return fail(`Regenerating the app failed.`);
+    lap("generate and tools");
 
-  for (const effect of result.effects) {
-    if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
+    for (const effect of result.effects) {
+      if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
+    }
+    git(dir, ["add", "-A"]);
+    // A whole edited spec is in the diff; the trailer stays short.
+    const recorded = operation.name === "editSpec" ? {} : args;
+    const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.trailer ? `${flags.trailer}\n` : ""}`;
+    const commit = git(dir, ["commit", "-q", "-m", message]);
+    if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
+    lap("commit");
+    // Undo goes back through recent changes: their snapshots stay, older ones go.
+    const recent = git(dir, [
+      "log",
+      "-50",
+      "--format=%(trailers:key=Smithable-Snapshot,valueonly)",
+    ]);
+    pruneSnapshots(
+      dir,
+      new Set(
+        recent.out
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean),
+      ),
+    );
+    io.out(
+      `${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
+    );
+    return 0;
+  } catch (error) {
+    const why = error instanceof Error ? error.message : String(error);
+    return fail(
+      `The change stopped halfway (${why}), so it was rolled back${snapshot ? ` to the database snapshot ${id}` : ""}.`,
+    );
   }
-  git(dir, ["add", "-A"]);
-  // A whole edited spec is in the diff; the trailer stays short.
-  const recorded = operation.name === "editSpec" ? {} : args;
-  const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.trailer ? `${flags.trailer}\n` : ""}`;
-  const commit = git(dir, ["commit", "-q", "-m", message]);
-  if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
-  lap("commit");
-  io.out(`${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`);
-  return 0;
 }
 
 /** "Add field phone (phone) to Customer" → "add_field_phone_phone_to_customer". */

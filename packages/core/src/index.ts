@@ -18,7 +18,7 @@ export { CONTENT_VERSION, emptyContent, validateContent } from "./content.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
-export { YamlEditor } from "./edit.js";
+export { EditError, YamlEditor } from "./edit.js";
 export type { Expr } from "./formula.js";
 export { formatFormula, parseFormula } from "./formula.js";
 export type * from "./ir.js";
