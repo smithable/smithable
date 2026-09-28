@@ -114,7 +114,21 @@ export function refusal(
   headers: IncomingMessage["headers"],
   host: string | undefined,
   token: string | undefined,
+  method = "GET",
+  path = "/",
 ): { status: number; message: string } | undefined {
+  // A change comes from Studio's own page: JSON with Studio's header (which a form or a simple
+  // request from another site cannot send), and no other site's origin. MCP clients are not
+  // pages, and MCP's own content rules keep simple requests out.
+  if (!["GET", "HEAD"].includes(method) && path !== "/mcp") {
+    const sameSite = !headers.origin || new URL(headers.origin).host === headers.host;
+    if (
+      headers["x-smithable"] !== "1" ||
+      !String(headers["content-type"] ?? "").startsWith("application/json") ||
+      !sameSite
+    )
+      return { status: 403, message: "Only Studio's own page can make changes." };
+  }
   if (!host) {
     const name = (headers.host ?? "").replace(/:\d+$/, "");
     return ["localhost", "127.0.0.1"].includes(name)
@@ -270,7 +284,13 @@ export async function studio(
       return JSON.parse(text || "{}") as Record<string, unknown>;
     };
     try {
-      const refused = refusal(req.headers, options.host, process.env.SMITHABLE_STUDIO_TOKEN);
+      const refused = refusal(
+        req.headers,
+        options.host,
+        process.env.SMITHABLE_STUDIO_TOKEN,
+        req.method,
+        url.pathname,
+      );
       if (refused) return json({ ok: false, output: refused.message }, refused.status);
       // MCP over HTTP: an agent's changes show up in Studio right away.
       if (url.pathname === "/mcp") {
@@ -385,11 +405,12 @@ export async function studio(
       // The Studio app itself; unknown paths get index.html (a single-page app).
       const path = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
       let file = join(STUDIO, path);
-      if (!existsSync(file) || path === "/") file = join(STUDIO, "index.html");
+      if (!existsSync(file) || !statSync(file).isFile()) file = join(STUDIO, "index.html");
       res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
       res.end(readFileSync(file));
     } catch (error) {
-      json({ ok: false, output: error instanceof Error ? error.message : String(error) }, 500);
+      if (res.headersSent) res.end();
+      else json({ ok: false, output: error instanceof Error ? error.message : String(error) }, 500);
     }
   });
   server.listen(port, options.host ?? "127.0.0.1");

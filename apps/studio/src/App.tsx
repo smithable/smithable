@@ -103,7 +103,7 @@ export function App() {
       }
     };
     const onMessage = (e: MessageEvent) => {
-      if (isPreviewMessage(e.data) && e.data.type === "undo") undoKey.current();
+      if (isPreviewMessage(e) && e.data.type === "undo") undoKey.current();
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("message", onMessage);

@@ -56,7 +56,11 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
     method: body === undefined ? "GET" : "POST",
     ...(body === undefined
       ? {}
-      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+      : {
+          // Studio's own header: the daemon takes changes only with it (a form elsewhere can't send it).
+          headers: { "Content-Type": "application/json", "X-Smithable": "1" },
+          body: JSON.stringify(body),
+        }),
   });
   return (await response.json()) as T;
 }

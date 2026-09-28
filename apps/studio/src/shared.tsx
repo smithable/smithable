@@ -1,7 +1,7 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
 import { useEffect, useRef, useState } from "react";
 import type { TraceEntry } from "./api";
-import { isPreviewMessage } from "./preview";
+import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { Button, cx, Input, Panel } from "./ui";
 
 export function Preview({
@@ -24,11 +24,11 @@ export function Preview({
     const send = () =>
       frame.current?.contentWindow?.postMessage(
         { type: "smithable:select-mode", on: Boolean(selecting) },
-        "*",
+        previewTarget(),
       );
     send();
     const onMessage = (e: MessageEvent) => {
-      if (isPreviewMessage(e.data) && e.data.type === "ready") send();
+      if (isPreviewMessage(e) && e.data.type === "ready") send();
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -71,7 +71,11 @@ export function Preview({
     >
       {/* Remounted after every change, so server code and data are fresh. */}
       <iframe
-        ref={frame}
+        ref={(el) => {
+          frame.current = el;
+          // The one window whose messages count, recorded as the frame is (re)made.
+          setPreview(el?.contentWindow ?? null, url);
+        }}
         key={`${version}-${path}`}
         title="App preview"
         src={`${url}${path}`}
