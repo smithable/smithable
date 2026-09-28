@@ -36,6 +36,17 @@ export function tool(dir: string, name: string, args: string[]): [string, string
     : ["pnpm", ["exec", name, ...args]];
 }
 
+/**
+ * With SMITHABLE_TIMINGS set, how long each step since the last took, on stderr: for finding
+ * where an operation spends its time (e.g. in a sandboxed hosted workspace).
+ */
+let lapStart = Date.now();
+export function lap(step: string): void {
+  if (!process.env.SMITHABLE_TIMINGS) return;
+  process.stderr.write(`[time] ${step}: ${Date.now() - lapStart} ms\n`);
+  lapStart = Date.now();
+}
+
 /** Runs a command with inherited output. Returns its exit code. */
 export function exec(command: string, args: string[], cwd: string): number {
   const result = spawnSync(command, args, {
