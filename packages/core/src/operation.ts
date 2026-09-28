@@ -5,14 +5,14 @@ import type { JsonSchema } from "./section.js";
 /** The files an operation may edit. */
 export interface Editors {
   spec: YamlEditor;
-  /** smithable.content.yml, when the project has one. */
-  content?: YamlEditor;
+  /** smithable.content.yml; written only when the project has one or it changed. */
+  content: YamlEditor;
   /** smithable.auth.yml, when given. */
   auth?: YamlEditor;
-  /** smithable.ux.yml; created on first use. */
-  ux?: YamlEditor;
-  /** smithable.context.yml (implementation choices); created on first use. */
-  context?: YamlEditor;
+  /** smithable.ux.yml; written only when the project has one or it changed. */
+  ux: YamlEditor;
+  /** smithable.context.yml (implementation choices); written only when it changed. */
+  context: YamlEditor;
 }
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */

@@ -6,7 +6,7 @@ import {
   implementationIndex,
 } from "@smithable/adapter-tanstack";
 import { generate, hashFile, readRecord } from "./generate.js";
-import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
+import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
 import { loadSpec } from "./validate.js";
 
@@ -39,11 +39,9 @@ export async function customize(
     return 1;
   }
   ensureRepository(dir);
-  const dirty = uncommitted(dir);
-  if (dirty.length > 0) {
-    io.err(
-      `Commit or discard these changes first, so this can be undone on its own:\n${dirty.map((l) => `  ${l}\n`).join("")}`,
-    );
+  const refused = uncommittedRefusal(dir, "so this can be undone on its own");
+  if (refused) {
+    io.err(refused);
     return 1;
   }
 

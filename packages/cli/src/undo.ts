@@ -1,5 +1,5 @@
 import { restoreDatabase } from "./database.js";
-import { git, uncommitted } from "./git.js";
+import { git, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 
 /**
@@ -12,9 +12,9 @@ export function undo(dir: string, io: Io): number {
     io.err("There is nothing to undo: this project has no history yet.\n");
     return 1;
   }
-  const dirty = uncommitted(dir);
-  if (dirty.length > 0) {
-    io.err(`Commit or discard these changes first:\n${dirty.map((l) => `  ${l}\n`).join("")}`);
+  const refused = uncommittedRefusal(dir);
+  if (refused) {
+    io.err(refused);
     return 1;
   }
   const log = git(dir, ["log", "--format=%H%x1f%s%x1f%b%x1e"])
@@ -28,7 +28,7 @@ export function undo(dir: string, io: Io): number {
       reverted.add(match[1] ?? "");
     if (!subject.startsWith("smithable: ") || subject === "smithable: start of history") continue;
     if (reverted.has(sha)) continue;
-    const snapshot = /^Smithable-Snapshot: (\S+)$/m.exec(body)?.[1];
+    const snapshot = trailer(body, "Smithable-Snapshot");
     target = { sha, subject, ...(snapshot && snapshot !== "none" ? { snapshot } : {}) };
     break;
   }

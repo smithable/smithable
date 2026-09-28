@@ -15,7 +15,7 @@ import {
 } from "@smithable/core";
 import { countValues, pruneSnapshots, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
-import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
+import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { type Io, lap } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { recordRule } from "./rules.js";
@@ -73,12 +73,10 @@ export async function runOperation(
   lap("start");
   ensureRepository(dir);
   lap("repository");
-  const dirty = uncommitted(dir);
+  const refused = uncommittedRefusal(dir, "so the operation can be undone on its own");
   lap("uncommitted");
-  if (dirty.length > 0) {
-    io.err(
-      `Commit or discard these changes first, so the operation can be undone on its own:\n${dirty.map((l) => `  ${l}\n`).join("")}`,
-    );
+  if (refused) {
+    io.err(refused);
     return 1;
   }
 

@@ -100,6 +100,17 @@ export function applyPlugins(
  * pattern, minItems, uniqueItems), enough for plugin sections, with messages that name the
  * path. Other keywords are not checked.
  */
+const TYPE_WORDS: Record<string, string> = {
+  array: "a list",
+  integer: "a whole number",
+  number: "a number",
+  string: "a string",
+  boolean: "true or false",
+  object: "an object",
+  null: "null",
+};
+
+/** Checks a value against a JSON Schema's common keywords; `path` names it in the problems. */
 export function checkJson(schema: JsonSchema, value: unknown, path: string): string[] {
   const s = schema as {
     type?: string | string[];
@@ -121,7 +132,7 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
         : typeof value;
   const types = s.type === undefined ? undefined : Array.isArray(s.type) ? s.type : [s.type];
   if (types && !types.some((t) => t === kind || (t === "number" && kind === "integer")))
-    return [`"${path}" must be ${types.join(" or ")}.`];
+    return [`"${path}" must be ${types.map((t) => TYPE_WORDS[t] ?? t).join(" or ")}.`];
   if (s.enum && !s.enum.includes(value))
     return [`"${path}" must be one of ${s.enum.map((v) => JSON.stringify(v)).join(", ")}.`];
   if (s.pattern && typeof value === "string" && !new RegExp(s.pattern).test(value))
@@ -132,12 +143,13 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     for (const key of s.required ?? [])
       if (object[key] === undefined) problems.push(`"${path}" needs "${key}".`);
     for (const [key, item] of Object.entries(object)) {
+      const at = path ? `${path}.${key}` : key;
       const property = s.properties?.[key];
-      if (property) problems.push(...checkJson(property, item, `${path}.${key}`));
+      if (property) problems.push(...checkJson(property, item, at));
       else if (s.additionalProperties === false)
         problems.push(`Unknown key "${key}" in "${path}".`);
       else if (typeof s.additionalProperties === "object")
-        problems.push(...checkJson(s.additionalProperties, item, `${path}.${key}`));
+        problems.push(...checkJson(s.additionalProperties, item, at));
     }
   }
   if (kind === "array") {

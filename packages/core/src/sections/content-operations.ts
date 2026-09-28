@@ -1,4 +1,3 @@
-import type { YamlEditor } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 
 /**
@@ -30,7 +29,7 @@ const setText: Operation<{ path: string[]; text: string }> = {
     text ? `Change the text ${path.join(".")} to "${text}"` : `Restore the text ${path.join(".")}`,
   destructive: () => false,
   apply(editors, { path, text }) {
-    const content = editors.content as YamlEditor;
+    const content = editors.content;
     const parent = path.slice(0, -1);
     // An item of a plain list, e.g. one of a plan's features.
     if (Array.isArray(content.get(parent)) && typeof content.get(path) === "string") {

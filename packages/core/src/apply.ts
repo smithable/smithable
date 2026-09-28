@@ -3,7 +3,7 @@ import { validateContent } from "./content.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
 import { type AnyOperation, type Effect, type OperationArgs, OperationError } from "./operation.js";
-import type { SpecPlugin } from "./plugin.js";
+import { checkJson, type SpecPlugin } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
@@ -165,25 +165,12 @@ export function parseOperationArgs(op: AnyOperation, values: string[]): Operatio
   return args;
 }
 
-/** Checks required keys, unknown keys and basic types against an operation's schema. */
+/** Checks required keys and unknown keys in the operation's words, then the values' types. */
 function checkArgs(schema: JsonSchema, args: OperationArgs): string | undefined {
   const properties = (schema.properties ?? {}) as Record<string, JsonSchema>;
   for (const key of (schema.required ?? []) as string[]) {
     if (args[key] === undefined || args[key] === "") return `"${key}" is missing.`;
   }
-  for (const [key, value] of Object.entries(args)) {
-    const property = properties[key];
-    if (!property) return `Unknown argument "${key}".`;
-    const ok =
-      property.type === "array"
-        ? Array.isArray(value) && value.every((v) => typeof v === "string")
-        : property.type === "object"
-          ? typeof value === "object" && value !== null && !Array.isArray(value)
-          : property.type === "integer"
-            ? Number.isInteger(value)
-            : typeof value === property.type;
-    if (!ok)
-      return `"${key}" must be ${property.type === "array" ? "a list" : property.type === "integer" ? "a whole number" : `a ${property.type}`}.`;
-  }
-  return undefined;
+  for (const key of Object.keys(args)) if (!properties[key]) return `Unknown argument "${key}".`;
+  return checkJson({ properties }, args, "")[0];
 }
