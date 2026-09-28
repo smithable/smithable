@@ -1,7 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Proposal } from "@smithable/ai";
 import type { OperationArgs } from "@smithable/core";
@@ -126,7 +133,13 @@ export async function studio(
   // which Git ignores: the app's own config and builds stay as they are.
   const config = join("data", ".smithable", "preview.vite.config.mjs");
   mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-  writeFileSync(join(dir, config), previewConfig(options.previewUrl));
+  // Packages in a shared pnpm store outside the project (hosted workspaces: pnpm's global
+  // virtual store) may be served too.
+  const store = process.env.pnpm_config_store_dir;
+  writeFileSync(
+    join(dir, config),
+    previewConfig(options.previewUrl, store ? [resolve(dir), resolve(store)] : undefined),
+  );
   const startApp = () => {
     app = spawn(
       "pnpm",
