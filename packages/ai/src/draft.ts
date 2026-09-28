@@ -137,6 +137,9 @@ export function quoteTexts(yaml: string): string {
     .join("\n");
 }
 
+/** Files a draft can do without: the app falls back to its default presentation and texts. */
+const OPTIONAL = ["smithable.ux.yml", "smithable.content.yml"];
+
 /** Every problem in the drafted files, as "file:line:column  error  message" lines. */
 export function checkSpecFiles(files: SpecFiles): Diagnostic[] {
   const auth = validateAuth({
@@ -209,6 +212,12 @@ export async function draftProject(options: {
           Object.assign(kept, quoted);
           errors = remaining;
         }
+      }
+      // Presentation and wording are optional: with mistakes only there, the app keeps its
+      // defaults for them rather than being thrown away.
+      if (errors.length && errors.every((e) => OPTIONAL.includes(e.file ?? ""))) {
+        for (const file of new Set(errors.map((e) => e.file ?? ""))) delete kept[file];
+        errors = checkSpecFiles(kept);
       }
       if (errors.length === 0) return { kind: "draft", files: kept, usage };
       problem = errors.map(formatDiagnostic).join("\n");

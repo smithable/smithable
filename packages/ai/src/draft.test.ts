@@ -99,6 +99,17 @@ describe("starting from a sentence", () => {
     expect(model.prompts).toHaveLength(1);
   });
 
+  test("mistakes only in presentation drop that file rather than the app", async () => {
+    const booking = starters.booking;
+    const slip = { ...booking, "smithable.ux.yml": "smithable: 0.1\ntheme:\n  preset: default\n" };
+    const model = scripted([slip]);
+    const draft = await draftProject({ description: "Yoga", starter: booking, providers: [model] });
+    expect(draft.kind).toBe("draft");
+    expect(draft.kind === "draft" && draft.files["smithable.ux.yml"]).toBeUndefined();
+    expect(draft.kind === "draft" && draft.files["smithable.yml"]).toBe(booking["smithable.yml"]);
+    expect(model.prompts).toHaveLength(1);
+  });
+
   test("quoting leaves quoted, flow and block values alone", () => {
     const yaml =
       'a: "x: y"\nb: { c: d }\ne: |\n  f: g\n- h: i: j\nk: plain  # note: kept\nl: m: n # o';
