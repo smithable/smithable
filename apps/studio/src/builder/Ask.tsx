@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { api, type Proposal } from "../api";
 import { Button, Label } from "../ui";
+import { PREFILLED, type Prefill } from "./ChangeForms";
 
-export function Ask() {
+/** `onEdit` opens a proposed operation in Manual, with its values filled in. */
+export function Ask({ onEdit }: { onEdit: (prefill: Prefill) => void }) {
   const [request, setRequest] = useState("");
   const [proposal, setProposal] = useState<Proposal>();
   const [busy, setBusy] = useState(false);
@@ -60,6 +62,15 @@ export function Ask() {
                   <li key={o.description}>
                     {o.description}
                     {o.destructive && <span className="text-red-700"> (loses data)</span>}
+                    {PREFILLED.includes(o.op) && o.args.route === undefined && (
+                      <button
+                        type="button"
+                        className="ml-2 text-xs text-accent underline"
+                        onClick={() => onEdit({ op: o.op, args: o.args })}
+                      >
+                        Edit in Manual
+                      </button>
+                    )}
                   </li>
                 ))}
               </ol>
