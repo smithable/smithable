@@ -1476,11 +1476,13 @@ function HomePage() {
   return (
     <LandingLayout appName="Stillwater Yoga" link={viewer ? { to: "/sessions", label: "Open Stillwater Yoga" } : { to: "/sign-in", label: "Sign in" }}>
       <Hero
+          texts="pages.home.hero"
           title="Stillwater Yoga"
           subtitle="Class schedule and online booking for a small yoga studio."
           link={{ to: "/sessions", label: "Get started" }}
         />
       <RecordCards
+          texts="pages.home.classes"
           id="classes"
           title="Class types"
           cards={data.classTypes.slice(0, 6).map((row) => ({
@@ -1491,6 +1493,7 @@ function HomePage() {
           }))}
         />
       <CallToAction
+          texts="pages.home.callToAction"
           title="Ready to get started?"
           link={{ to: "/sessions", label: "Get started" }}
         />
@@ -5829,11 +5832,13 @@ function HomePage() {
   return (
     <LandingLayout appName="Invoicely" link={viewer ? { to: "/overview", label: "Open Invoicely" } : { to: "/sign-in", label: "Sign in" }}>
       <Hero
+          texts="pages.home.hero"
           title="Invoicely"
           subtitle="Simple invoicing for freelancers. Each user manages their own clients and invoices."
           link={{ to: "/overview", label: "Get started" }}
         />
       <CallToAction
+          texts="pages.home.callToAction"
           title="Ready to get started?"
           link={{ to: "/overview", label: "Get started" }}
         />

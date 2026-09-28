@@ -1392,7 +1392,7 @@ function landingRoute(
     return `${camel(plural(name))}: (await ${n.list}()).rows`;
   });
   const items = (name: string) => literal(text(name).items ?? []);
-  const parts = sections.flatMap((section) => {
+  const sectionParts = (section: LandingSection): string[] => {
     const own = text(section.name);
     switch (section.kind) {
       case "hero":
@@ -1497,7 +1497,16 @@ function landingRoute(
             ];
       }
     }
-  });
+  };
+  // Each section knows where its texts are kept, so the preview can change them in place.
+  const parts = sections.flatMap((section) =>
+    sectionParts(section).map((part) =>
+      part.replace(
+        /^<(Hero|Features|RecordCards|Pricing|Testimonials|Faq|CallToAction)\b/,
+        `$&\n          texts=${JSON.stringify(`pages.${page.id}.${section.name}`)}`,
+      ),
+    ),
+  );
   const header = hasSignIn(auth)
     ? `viewer ? ${link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1)} : { to: "/sign-in", label: "Sign in" }`
     : link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1);
