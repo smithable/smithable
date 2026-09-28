@@ -152,6 +152,9 @@ export const SECTION_KINDS = [
   "testimonials",
   "faq",
   "callToAction",
+  "contact",
+  "gallery",
+  "footer",
 ] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
 
@@ -163,6 +166,8 @@ export interface LandingSection {
   button?: string;
   /** A records section shows this model's records as cards. */
   model?: string;
+  /** A contact section's form: visitors add a record of this model (e.g. Message). */
+  form?: string;
   limit?: number;
 }
 

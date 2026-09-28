@@ -1457,6 +1457,53 @@ function landingRoute(
         />`,
         ];
       }
+      case "contact": {
+        imports.add("#/kit/Landing", "Contact");
+        const props = (["title", "text", "address", "phone", "email", "hours", "thanks"] as const)
+          .filter((k) => own[k])
+          .map((k) => `\n          ${k}=${JSON.stringify(own[k])}`)
+          .join("");
+        if (!section.form) return [`<Contact${props}\n        />`];
+        // The model's own form; visitors send it, and the thanks replace it.
+        const model = modelNamed(ir, section.form);
+        const n = names(model, t);
+        imports.add(n.module, n.create).add(n.module, n.schema).add(n.module, n.ui);
+        imports.add("#/generated/app", "app").add("#/kit/ModelForm", "ModelForm");
+        return [
+          `<Contact${props}
+          form={(sent) => (
+            <ModelForm
+              ui={${n.ui}}
+              app={app}
+              schema={${n.schema}}
+              submitLabel=${JSON.stringify(own.button ?? "Send")}
+              onSubmit={async (values) => {
+                await ${n.create}({ data: values });
+                sent();
+              }}
+            />
+          )}
+        />`,
+        ];
+      }
+      case "gallery": {
+        const pictures = (own.items ?? []).filter((i) => i.image);
+        if (!pictures.length) return [];
+        imports.add("#/kit/Landing", "Gallery");
+        // Files in public/ are served from the site's root.
+        const withRoot = (own.items ?? []).map((i) => {
+          const image = i.image as { src: string; alt: string } | undefined;
+          return image ? { ...i, image: { ...image, src: `/${image.src}` } } : i;
+        });
+        return [
+          `<Gallery${own.title ? `\n          title=${JSON.stringify(own.title)}` : ""}${own.text ? `\n          text=${JSON.stringify(own.text)}` : ""}
+          items={${literal(withRoot)}}
+        />`,
+        ];
+      }
+      // The footer is the layout's, wherever the section is listed.
+      case "footer":
+        return [];
       case "callToAction":
         imports.add("#/kit/Landing", "CallToAction");
         return [
@@ -1507,11 +1554,20 @@ function landingRoute(
   const parts = sections.flatMap((section) =>
     sectionParts(section).map((part) =>
       part.replace(
-        /^<(Hero|Features|RecordCards|Pricing|Testimonials|Faq|CallToAction)\b/,
+        /^<(Hero|Features|RecordCards|Pricing|Testimonials|Faq|CallToAction|Contact|Gallery)\b/,
         `$&\n          texts=${JSON.stringify(`pages.${page.id}.${section.name}`)}`,
       ),
     ),
   );
+  const footerSection = sections.find((s) => s.kind === "footer");
+  const footerTexts = footerSection ? text(footerSection.name) : undefined;
+  const footer = footerSection
+    ? ` footer={${literal({
+        ...(footerTexts?.text ? { text: footerTexts.text } : {}),
+        links: footerTexts?.items ?? [],
+        texts: `pages.${page.id}.${footerSection.name}`,
+      })}}`
+    : "";
   const header = hasSignIn(auth)
     ? `viewer ? ${link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1)} : { to: "/sign-in", label: "Sign in" }`
     : link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1);
@@ -1522,7 +1578,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${loaders.length ? `  loader: 
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName=${JSON.stringify(ir.app.name)} link={${header}}>
+    <LandingLayout appName=${JSON.stringify(ir.app.name)} link={${header}}${footer}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );

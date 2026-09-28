@@ -2,7 +2,18 @@
 // props, and the generated page composes them. To change one, copy this file into
 // src/custom/components/ and edit the copy.
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { Check, ChevronDown } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Mail,
+  MapPin,
+  Phone,
+  X,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
@@ -13,14 +24,23 @@ export interface LandingLink {
   label: string;
 }
 
-/** The page frame: the app's name, a link into the app, and the sections. */
+/** A footer of its own: a line of text and links (a page's address, or a full one). */
+export interface LandingFooter {
+  text?: string;
+  links: { label?: string; link?: string }[];
+  texts?: string;
+}
+
+/** The page frame: the app's name, a link into the app, the sections and the footer. */
 export function LandingLayout({
   appName,
   link,
+  footer,
   children,
 }: {
   appName: string;
   link?: LandingLink;
+  footer?: LandingFooter;
   children: React.ReactNode;
 }) {
   return (
@@ -37,7 +57,26 @@ export function LandingLayout({
       </header>
       <main className="flex-1">{children}</main>
       <footer className="border-t">
-        <p className="mx-auto max-w-6xl px-5 py-8 text-sm text-muted-foreground">{appName}</p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
+          {footer && footer.links.length > 0 && (
+            <nav aria-label="Footer">
+              <ul className="flex flex-wrap gap-x-6 gap-y-2">
+                {footer.links.map((l, i) => (
+                  <li key={l.link ?? i}>
+                    <a
+                      href={l.link}
+                      className="underline-offset-4 hover:text-foreground hover:underline"
+                      {...mark(footer.texts, `items.${i}.label`)}
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </div>
       </footer>
     </div>
   );
@@ -383,5 +422,228 @@ export function CallToAction({
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Contact details (address with a map link, phone, email, opening hours one per line) and,
+ * when the app has one, a form visitors send; `thanks` replaces it once sent.
+ */
+export function Contact({
+  texts,
+  title,
+  text,
+  address,
+  phone,
+  email,
+  hours,
+  thanks,
+  form,
+}: {
+  title?: string;
+  text?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  hours?: string;
+  thanks?: string;
+  /** The form; it calls `sent` once the message is stored. */
+  form?: (sent: () => void) => React.ReactNode;
+  texts?: string;
+}) {
+  const [sent, setSent] = useState(false);
+  const details = (
+    <dl className="space-y-5">
+      {address && (
+        <div className="flex gap-3">
+          <dt>
+            <MapPin aria-hidden className="mt-0.5 size-5 text-primary" />
+            <span className="sr-only">Address</span>
+          </dt>
+          <dd>
+            <p className="whitespace-pre-line" {...mark(texts, "address")}>
+              {address}
+            </p>
+            {/* A link, not an embedded map: no third party is called when the page opens. */}
+            <a
+              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`}
+              className="text-sm text-primary underline-offset-4 hover:underline"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Show on map
+            </a>
+          </dd>
+        </div>
+      )}
+      {phone && (
+        <div className="flex gap-3">
+          <dt>
+            <Phone aria-hidden className="mt-0.5 size-5 text-primary" />
+            <span className="sr-only">Phone</span>
+          </dt>
+          <dd>
+            <a href={`tel:${phone.replace(/[^+\d]/g, "")}`} {...mark(texts, "phone")}>
+              {phone}
+            </a>
+          </dd>
+        </div>
+      )}
+      {email && (
+        <div className="flex gap-3">
+          <dt>
+            <Mail aria-hidden className="mt-0.5 size-5 text-primary" />
+            <span className="sr-only">Email</span>
+          </dt>
+          <dd>
+            <a href={`mailto:${email}`} {...mark(texts, "email")}>
+              {email}
+            </a>
+          </dd>
+        </div>
+      )}
+      {hours && (
+        <div className="flex gap-3">
+          <dt>
+            <Clock aria-hidden className="mt-0.5 size-5 text-primary" />
+            <span className="sr-only">Opening hours</span>
+          </dt>
+          <dd className="whitespace-pre-line" {...mark(texts, "hours")}>
+            {hours}
+          </dd>
+        </div>
+      )}
+    </dl>
+  );
+  return (
+    <Section id="contact" texts={texts} title={title} text={text}>
+      <div className={cn("grid gap-10", form && "lg:grid-cols-2")}>
+        {details}
+        {form && (
+          <Card className="p-card">
+            {sent ? (
+              <p role="status" className="text-lg" {...mark(texts, "thanks")}>
+                {thanks ?? "Thank you! We will get back to you soon."}
+              </p>
+            ) : (
+              form(() => setSent(true))
+            )}
+          </Card>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+/** Pictures in a grid; one opens large in a lightbox, with the arrow keys to move on. */
+export function Gallery({
+  texts,
+  title,
+  text,
+  items,
+}: {
+  title?: string;
+  text?: string;
+  items: { image?: LandingImage; caption?: string }[];
+  texts?: string;
+}) {
+  const pictures = items.filter((i): i is { image: LandingImage; caption?: string } =>
+    Boolean(i.image),
+  );
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(0);
+  const show = (i: number) => setOpen((i + pictures.length) % pictures.length);
+  const current = pictures[open];
+  return (
+    <Section id="gallery" texts={texts} title={title} text={text}>
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        {pictures.map((item, i) => (
+          <li key={item.image.src}>
+            <figure>
+              <button
+                type="button"
+                className="block w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                aria-label={`Open ${item.image.alt}`}
+                onClick={() => {
+                  show(i);
+                  dialog.current?.showModal();
+                }}
+              >
+                <img
+                  src={item.image.src}
+                  alt={item.image.alt}
+                  loading="lazy"
+                  width={600}
+                  height={400}
+                  className="aspect-[3/2] w-full object-cover transition-transform hover:scale-105"
+                />
+              </button>
+              {item.caption && (
+                <figcaption
+                  className="mt-2 text-sm text-muted-foreground"
+                  {...mark(texts, `items.${items.indexOf(item)}.caption`)}
+                >
+                  {item.caption}
+                </figcaption>
+              )}
+            </figure>
+          </li>
+        ))}
+      </ul>
+      {/* The browser's own dialog: Escape closes it, focus stays inside. */}
+      <dialog
+        ref={dialog}
+        aria-label={current?.image.alt}
+        className="m-auto max-h-[92vh] w-[min(1200px,94vw)] bg-transparent p-0 backdrop:bg-black/85"
+        onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight") show(open + 1);
+          if (e.key === "ArrowLeft") show(open - 1);
+        }}
+      >
+        {current && (
+          <figure className="relative">
+            <img
+              src={current.image.src}
+              alt={current.image.alt}
+              className="max-h-[80vh] w-full rounded-lg object-contain"
+            />
+            {current.caption && (
+              <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
+            )}
+            <div className="mt-3 flex justify-center gap-2">
+              {pictures.length > 1 && (
+                <button
+                  type="button"
+                  aria-label="Previous picture"
+                  className={buttonVariants({ variant: "secondary", size: "icon" })}
+                  onClick={() => show(open - 1)}
+                >
+                  <ChevronLeft aria-hidden />
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Close"
+                className={buttonVariants({ variant: "secondary", size: "icon" })}
+                onClick={() => dialog.current?.close()}
+              >
+                <X aria-hidden />
+              </button>
+              {pictures.length > 1 && (
+                <button
+                  type="button"
+                  aria-label="Next picture"
+                  className={buttonVariants({ variant: "secondary", size: "icon" })}
+                  onClick={() => show(open + 1)}
+                >
+                  <ChevronRight aria-hidden />
+                </button>
+              )}
+            </div>
+          </figure>
+        )}
+      </dialog>
+    </Section>
   );
 }

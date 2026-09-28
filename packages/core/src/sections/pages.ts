@@ -79,7 +79,7 @@ export const pagesSection: SpecSection<"pages"> = {
         landing: {
           type: "object",
           description:
-            "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction.",
+            "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer.",
           additionalProperties: {
             type: ["object", "null"],
             additionalProperties: false,
@@ -87,6 +87,10 @@ export const pagesSection: SpecSection<"pages"> = {
               records: { type: "string", description: "A model whose records the section shows." },
               button: { type: "string", description: "The page the section's button opens." },
               limit: { type: "integer", minimum: 1 },
+              form: {
+                type: "string",
+                description: "A contact section's form: the model visitors add a record of.",
+              },
             },
           },
         },
@@ -210,7 +214,7 @@ function readPage(
       model = readString(ctx, value, `"crud" in ${where}`);
       if (model !== undefined) ctx.reference("model", model, value);
     } else if (key === "landing") {
-      pattern = { kind: "landing", sections: readLanding(ctx, value, where) };
+      pattern = { kind: "landing", sections: readLanding(ctx, value, where, parsed) };
     } else if (key === "dashboard") {
       pattern = { kind: "dashboard", items: readDashboard(ctx, value, where, parsed) };
     } else if (key === "settings") {
@@ -274,7 +278,12 @@ function readPage(
 }
 
 /** Landing sections: a section named like its kind (hero, faq, …), or any name with `records`. */
-function readLanding(ctx: ParseContext, node: ParsedNode | null, where: string): LandingSection[] {
+function readLanding(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): LandingSection[] {
   const sections: LandingSection[] = [];
   for (const { key: name, keyNode, value } of mapEntries(ctx, node, `the landing of ${where}`) ??
     []) {
@@ -292,7 +301,7 @@ function readLanding(ctx: ParseContext, node: ParsedNode | null, where: string):
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
     const options = checkKeys(ctx, entries, sectionWhere, {
-      allowed: ["records", "button", "limit"],
+      allowed: ["records", "button", "limit", "form"],
       content: ["title", "subtitle", "text", "items"],
     });
     const section: LandingSection = { name, kind: "records" };
@@ -302,6 +311,25 @@ function readLanding(ctx: ParseContext, node: ParsedNode | null, where: string):
         if (model !== undefined) {
           ctx.reference("model", model, option);
           section.model = model;
+        }
+      } else if (key === "form") {
+        const model = readString(ctx, option, `"form" in ${sectionWhere}`);
+        if (name !== "contact")
+          ctx.error(optionKey, "invalid-key", `Only a contact section has a form.`);
+        else if (model !== undefined) {
+          ctx.reference("model", model, option);
+          section.form = model;
+          // Visitors fill it in: they cannot pick other records, which would show them.
+          const links = parsed.models
+            ?.find((m) => m.name === model)
+            ?.fields.filter((f) => f.type.kind === "relation" && !f.type.many && !f.formula);
+          if (links?.length)
+            ctx.error(
+              option,
+              "invalid-value",
+              `A contact form's model cannot link to other records (${model} has ${links.map((f) => f.name).join(", ")}): visitors would have to choose among them.`,
+              "Use a model of its own for messages, e.g. Message with name, email and message.",
+            );
         }
       } else if (key === "button") {
         const page = readString(ctx, option, `"button" in ${sectionWhere}`);
