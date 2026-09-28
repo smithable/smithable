@@ -7,7 +7,7 @@ import { isPreviewMessage, type Selection } from "../preview";
 import { Preview, Trace } from "../shared";
 import { Panel, Tabs } from "../ui";
 import { Ask } from "./Ask";
-import { ChangeForms, type Run } from "./ChangeForms";
+import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
 import { Selected } from "./Selected";
 
 /** Headings for the summary's groups of sections (models, actions, queries). */
@@ -28,6 +28,7 @@ export function Builder({
   const [tab, setTab] = useState<"app" | "change">("app");
   // A change is described in words (the default) or made with a form.
   const [how, setHow] = useState<"describe" | "manual">("describe");
+  const [prefill, setPrefill] = useState<Prefill>();
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<Selection>();
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
@@ -89,10 +90,22 @@ export function Builder({
                   ["manual", "Manual"],
                 ]}
                 value={how}
-                onChange={setHow}
+                onChange={(h) => {
+                  setPrefill(undefined);
+                  setHow(h);
+                }}
               />
             </div>
-            {how === "describe" ? <Ask /> : <ChangeForms spec={spec} run={run} />}
+            {how === "describe" ? (
+              <Ask
+                onEdit={(p) => {
+                  setPrefill(p);
+                  setHow("manual");
+                }}
+              />
+            ) : (
+              <ChangeForms spec={spec} run={run} prefill={prefill} />
+            )}
           </div>
         )}
       </Panel>

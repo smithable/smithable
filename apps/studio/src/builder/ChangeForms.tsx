@@ -63,6 +63,8 @@ interface FieldShape {
   target: string;
   required: boolean;
   unique: boolean;
+  /** The rest of a shorthand the form does not edit, e.g. " = 0". */
+  rest?: string;
 }
 
 function shapeOf(field: FieldIR): FieldShape {
@@ -73,6 +75,31 @@ function shapeOf(field: FieldIR): FieldShape {
     target: t.kind === "relation" ? t.model : "",
     required: field.required,
     unique: field.unique,
+  };
+}
+
+/** A shape from the spec's shorthand, e.g. a proposed field's type. */
+function parseShape(type: string, models: string[]): FieldShape {
+  if (type.includes("|"))
+    return {
+      kind: "choice",
+      values: type
+        .split("|")
+        .map((v) => v.trim().replace(/!$/, ""))
+        .join(", "),
+      target: "",
+      required: false,
+      unique: false,
+    };
+  const [, base = "string", bang, unique, rest] = /^\s*(\w+)(!?)(\s+unique)?(.*)$/.exec(type) ?? [];
+  const relation = models.includes(base) || base === "User";
+  return {
+    kind: relation ? "relation" : KINDS.some(([k]) => k === base) ? base : "string",
+    values: "",
+    target: relation ? base : (models[0] ?? ""),
+    required: bang === "!",
+    unique: Boolean(unique),
+    rest: rest?.trim() ? rest : undefined,
   };
 }
 
@@ -89,7 +116,7 @@ function shorthand(shape: FieldShape, keepDefault?: FieldIR): string {
     keepDefault?.default !== undefined && shapeOf(keepDefault).kind === shape.kind
       ? ` = ${keepDefault.default}`
       : "";
-  return `${type}${shape.required ? "!" : ""}${shape.unique ? " unique" : ""}${kept}`;
+  return `${type}${shape.required ? "!" : ""}${shape.unique ? " unique" : ""}${shape.rest ?? kept}`;
 }
 
 /** The controls for a field's kind of value, its choices or link, and its modifiers. */
@@ -184,8 +211,17 @@ const CHANGES = [
   ["removePage", "Remove a page"],
 ] as const;
 
-export function ChangeForms({ spec, run }: { spec: Spec; run: Run }) {
-  const [change, setChange] = useState<(typeof CHANGES)[number][0]>("addField");
+/** Operations whose form can hold everything a proposal gives them (Describe → Manual). */
+export const PREFILLED = ["addField", "changeField", "renameField", "removeField", "addPage"];
+
+export type Prefill = { op: string; args: Record<string, unknown> };
+
+export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; prefill?: Prefill }) {
+  const [change, setChange] = useState<(typeof CHANGES)[number][0]>(
+    () => CHANGES.find(([op]) => op === prefill?.op)?.[0] ?? "addField",
+  );
+  // A proposal's values, for its own form only.
+  const initial = change === prefill?.op ? prefill.args : undefined;
   if (!spec.ir)
     return (
       <p className="p-3 text-sm text-neutral-500">The spec has errors; fix them in Studio mode.</p>
@@ -202,12 +238,12 @@ export function ChangeForms({ spec, run }: { spec: Spec; run: Run }) {
       </Label>
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
         {change === "setTheme" && <SetTheme run={run} />}
-        {change === "addField" && <AddField spec={spec} run={run} />}
-        {change === "changeField" && <ChangeField spec={spec} run={run} />}
-        {change === "renameField" && <RenameField spec={spec} run={run} />}
-        {change === "removeField" && <RemoveField spec={spec} run={run} />}
+        {change === "addField" && <AddField spec={spec} run={run} initial={initial} />}
+        {change === "changeField" && <ChangeField spec={spec} run={run} initial={initial} />}
+        {change === "renameField" && <RenameField spec={spec} run={run} initial={initial} />}
+        {change === "removeField" && <RemoveField spec={spec} run={run} initial={initial} />}
         {change === "addModel" && <AddModel run={run} />}
-        {change === "addPage" && <AddPage spec={spec} run={run} />}
+        {change === "addPage" && <AddPage spec={spec} run={run} initial={initial} />}
         {change === "setSearch" && <SetSearch spec={spec} run={run} />}
         {change === "setAccess" && <SetAccess spec={spec} run={run} />}
         {change === "setNavigation" && <SetNavigation spec={spec} run={run} />}
@@ -221,13 +257,15 @@ export function ChangeForms({ spec, run }: { spec: Spec; run: Run }) {
   );
 }
 
-type FormProps = { spec: Spec; run: Run };
+type FormProps = { spec: Spec; run: Run; initial?: Record<string, unknown> };
 
-function useModelField(spec: Spec) {
+const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+
+function useModelField(spec: Spec, initial?: { model?: string; field?: string }) {
   const models = spec.ir?.models ?? [];
-  const [model, setModel] = useState(models[0]?.name ?? "");
+  const [model, setModel] = useState(initial?.model ?? models[0]?.name ?? "");
   const fields = models.find((m) => m.name === model)?.fields ?? [];
-  const [field, setField] = useState(fields[0]?.name ?? "");
+  const [field, setField] = useState(initial?.field ?? fields[0]?.name ?? "");
   const current = fields.find((f) => f.name === field) ?? fields[0];
   const pickers = (
     <>
@@ -288,17 +326,16 @@ function Form({
   );
 }
 
-function AddField({ spec, run }: FormProps) {
+function AddField({ spec, run, initial }: FormProps) {
   const models = spec.ir?.models ?? [];
-  const [model, setModel] = useState(models[0]?.name ?? "");
-  const [label, setLabel] = useState("");
-  const [shape, setShape] = useState<FieldShape>({
-    kind: "string",
-    values: "",
-    target: models[0]?.name ?? "",
-    required: false,
-    unique: false,
-  });
+  const [model, setModel] = useState(str(initial?.model) ?? models[0]?.name ?? "");
+  const [label, setLabel] = useState(str(initial?.field) ?? "");
+  const [shape, setShape] = useState(() =>
+    parseShape(
+      str(initial?.type) ?? "string",
+      models.map((m) => m.name),
+    ),
+  );
   const name = identifier(label);
   const type = shorthand(shape);
   return (
@@ -326,8 +363,11 @@ function AddField({ spec, run }: FormProps) {
   );
 }
 
-function ChangeField({ spec, run }: FormProps) {
-  const { model, field, pickers } = useModelField(spec);
+function ChangeField({ spec, run, initial }: FormProps) {
+  const { model, field, pickers } = useModelField(spec, {
+    model: str(initial?.model),
+    field: str(initial?.field),
+  });
   const models = (spec.ir?.models ?? []).map((m) => m.name);
   return (
     <div className="space-y-3">
@@ -344,6 +384,7 @@ function ChangeField({ spec, run }: FormProps) {
             key={`${model}.${field.name}`}
             field={field}
             models={models}
+            type={field.name === initial?.field ? str(initial?.type) : undefined}
             run={(type) => run("changeField", { model, field: field.name, type })}
           />
         ))}
@@ -354,13 +395,18 @@ function ChangeField({ spec, run }: FormProps) {
 export function FieldShapeForm({
   field,
   models,
+  type: proposed,
   run,
 }: {
   field: FieldIR;
   models: string[];
+  /** A proposed type to start from instead of the field's own. */
+  type?: string;
   run: (type: string) => Promise<boolean>;
 }) {
-  const [shape, setShape] = useState(() => shapeOf(field));
+  const [shape, setShape] = useState(() =>
+    proposed ? parseShape(proposed, models) : shapeOf(field),
+  );
   const type = shorthand(shape, field);
   return (
     <Form onSubmit={() => run(type)}>
@@ -371,9 +417,12 @@ export function FieldShapeForm({
   );
 }
 
-function RenameField({ spec, run }: FormProps) {
-  const { model, field, pickers } = useModelField(spec);
-  const [label, setLabel] = useState("");
+function RenameField({ spec, run, initial }: FormProps) {
+  const { model, field, pickers } = useModelField(spec, {
+    model: str(initial?.model),
+    field: str(initial?.from),
+  });
+  const [label, setLabel] = useState(str(initial?.to) ?? "");
   const to = identifier(label);
   return (
     <Form onSubmit={() => run("renameField", { model, from: field?.name, to })}>
@@ -392,8 +441,11 @@ function RenameField({ spec, run }: FormProps) {
   );
 }
 
-function RemoveField({ spec, run }: FormProps) {
-  const { model, field, pickers } = useModelField(spec);
+function RemoveField({ spec, run, initial }: FormProps) {
+  const { model, field, pickers } = useModelField(spec, {
+    model: str(initial?.model),
+    field: str(initial?.field),
+  });
   return (
     <Form onSubmit={() => run("removeField", { model, field: field?.name })}>
       {pickers}
@@ -418,10 +470,10 @@ function AddModel({ run }: { run: Run }) {
   );
 }
 
-function AddPage({ spec, run }: FormProps) {
+function AddPage({ spec, run, initial }: FormProps) {
   const models = spec.ir?.models ?? [];
-  const [page, setPage] = useState("");
-  const [model, setModel] = useState(models[0]?.name ?? "");
+  const [page, setPage] = useState(str(initial?.page) ?? "");
+  const [model, setModel] = useState(str(initial?.model) ?? models[0]?.name ?? "");
   return (
     <Form onSubmit={() => run("addPage", { page, model })}>
       <Label text="Page name" hint="Lowercase, e.g. products">

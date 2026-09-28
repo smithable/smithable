@@ -127,11 +127,19 @@ export function Features({
   return (
     <Section id="features" texts={texts} title={title} text={text}>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
+        {items.map((item, i) => (
           <li key={item.title ?? item.text}>
             <Card className="h-full space-y-2 p-card">
-              {item.title && <h3 className="text-lg font-semibold">{item.title}</h3>}
-              {item.text && <p className="text-muted-foreground">{item.text}</p>}
+              {item.title && (
+                <h3 className="text-lg font-semibold" {...mark(texts, `items.${i}.title`)}>
+                  {item.title}
+                </h3>
+              )}
+              {item.text && (
+                <p className="text-muted-foreground" {...mark(texts, `items.${i}.text`)}>
+                  {item.text}
+                </p>
+              )}
             </Card>
           </li>
         ))}
@@ -201,30 +209,45 @@ export function Pricing({
   return (
     <Section id="pricing" texts={texts} title={title} text={text}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {plans.map((plan) => (
+        {plans.map((plan, i) => (
           <li key={plan.name}>
             <Card className="flex h-full flex-col gap-4 p-card">
-              <h3 className="text-lg font-semibold">{plan.name}</h3>
+              <h3 className="text-lg font-semibold" {...mark(texts, `items.${i}.name`)}>
+                {plan.name}
+              </h3>
               {plan.price && (
                 <p>
-                  <span className="text-3xl font-bold tabular-nums">{plan.price}</span>
-                  {plan.period && <span className="text-muted-foreground"> {plan.period}</span>}
+                  <span
+                    className="text-3xl font-bold tabular-nums"
+                    {...mark(texts, `items.${i}.price`)}
+                  >
+                    {plan.price}
+                  </span>{" "}
+                  {plan.period && (
+                    <span className="text-muted-foreground" {...mark(texts, `items.${i}.period`)}>
+                      {plan.period}
+                    </span>
+                  )}
                 </p>
               )}
-              {plan.text && <p className="text-muted-foreground">{plan.text}</p>}
+              {plan.text && (
+                <p className="text-muted-foreground" {...mark(texts, `items.${i}.text`)}>
+                  {plan.text}
+                </p>
+              )}
               {plan.features && (
                 <ul className="flex-1 space-y-2">
-                  {plan.features.map((feature) => (
+                  {plan.features.map((feature, j) => (
                     <li key={feature} className="flex gap-2">
                       <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
-                      {feature}
+                      <span {...mark(texts, `items.${i}.features.${j}`)}>{feature}</span>
                     </li>
                   ))}
                 </ul>
               )}
               {link && (
                 <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
-                  {plan.button ?? link.label}
+                  <span {...mark(texts, `items.${i}.button`)}>{plan.button ?? link.label}</span>
                 </Link>
               )}
             </Card>
@@ -247,14 +270,22 @@ export function Testimonials({
   return (
     <Section id="testimonials" texts={texts} title={title}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
+        {items.map((item, i) => (
           <li key={item.quote}>
             <Card className="h-full p-card">
               <figure className="space-y-4">
-                <blockquote className="text-lg">“{item.quote}”</blockquote>
+                <blockquote className="text-lg">
+                  “<span {...mark(texts, `items.${i}.quote`)}>{item.quote}</span>”
+                </blockquote>
                 <figcaption className="text-sm">
-                  <span className="font-semibold">{item.name}</span>
-                  {item.role && <span className="text-muted-foreground">, {item.role}</span>}
+                  <span className="font-semibold" {...mark(texts, `items.${i}.name`)}>
+                    {item.name}
+                  </span>
+                  {item.role && (
+                    <span className="text-muted-foreground">
+                      , <span {...mark(texts, `items.${i}.role`)}>{item.role}</span>
+                    </span>
+                  )}
                 </figcaption>
               </figure>
             </Card>
@@ -278,16 +309,18 @@ export function Faq({
   return (
     <Section id="faq" texts={texts} title={title}>
       <div className="max-w-3xl divide-y border-y">
-        {items.map((item) => (
+        {items.map((item, i) => (
           <details key={item.question} className="group">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-              {item.question}
+              <span {...mark(texts, `items.${i}.question`)}>{item.question}</span>
               <ChevronDown
                 aria-hidden
                 className="size-5 shrink-0 transition-transform group-open:rotate-180"
               />
             </summary>
-            <p className="pb-4 text-muted-foreground">{item.answer}</p>
+            <p className="pb-4 text-muted-foreground" {...mark(texts, `items.${i}.answer`)}>
+              {item.answer}
+            </p>
           </details>
         ))}
       </div>

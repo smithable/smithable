@@ -377,6 +377,26 @@ test("setText changes, adds and restores visible texts; the content file decides
   expect(other.ok && other.files.content).toBeUndefined();
 });
 
+test("setText changes a landing section's list texts in place, by their position", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const [spec, auth, content] = ["", ".auth", ".content"].map(
+    (s) => raw[`../../../examples/invoicing/smithable${s}.yml`] as string,
+  );
+  const invoicing = { spec: spec as string, auth: auth as string, content };
+  const set = (path: string, text: string) =>
+    applyOperation(invoicing, "setText", { path: path.split("."), text });
+  const question = set("pages.home.faq.items.1.question", "Who sees my invoices?");
+  expect(question.ok && question.files.content).toContain("- question: Who sees my invoices?");
+  const feature = set("pages.home.pricing.items.1.features.0", "Any number of clients");
+  expect(feature.ok && feature.files.content).toContain("Any number of clients");
+  expect(feature.ok && feature.files.content).toContain("Reminders for overdue invoices");
+  expect(set("pages.home.faq.items.9.question", "Hi").ok).toBe(false);
+});
+
 test("removePage takes a page out of the spec, the menus and its texts", () => {
   const result = applyOperation(files, "removePage", { page: "orders" });
   expect(result.ok).toBe(true);
