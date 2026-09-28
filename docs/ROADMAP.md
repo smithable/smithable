@@ -240,7 +240,7 @@ Then: hand-over (a Git bundle with the whole history that a developer cloned and
 
 Then (2026-09-28): the remote MCP endpoint (a per-project token from the project's page; Studio serves MCP over HTTP at `/mcp`, and an agent's change appears in the open Studio), staging per app (publish to `st-<id>`, with its own data, then put exactly that build live), and the public demo (a sandbox from the front page without signing up, with the change trace; three at a time, three per visitor per hour, €0.05 of AI, no publishing, deleted after two hours with everything in it). The route tree no longer changes under a running preview (which blocked the next operation), and local Studio answers only `localhost`.
 
-**Status:** everything in M15 is built and tested on the hosted beta. The exit needs two things from outside: a real domain (the service's own, and a tester's for their app; a nip.io name stood in) and Google sign-in (an OAuth client). Invites work until then.
+**Status:** everything in M15 is built and tested on the hosted beta, which runs at https://smithable.ai (2026-09-28) with Google sign-in for invited testers next to invite links. What remains of the exit is the exit test itself: an invited tester publishing on their own domain and handing the project to a developer (each part was verified with a stand-in domain).
 
 **Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
