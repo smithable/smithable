@@ -12,6 +12,8 @@ export interface TraceEntry {
   ms?: number;
   undone: boolean;
   isUndo: boolean;
+  /** The operation, for the Builder to word it like its summary. */
+  operation?: { op: string; args: Record<string, unknown> };
 }
 
 export interface Project {

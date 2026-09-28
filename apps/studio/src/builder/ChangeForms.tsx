@@ -9,6 +9,7 @@ import {
   THEME_PRESETS,
   typeKey,
 } from "@smithable/core";
+import { describeChange } from "@smithable/index";
 import { useState } from "react";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
@@ -171,7 +172,12 @@ function FieldShapeControls({
   );
 }
 
-/** A note under a form: the spec name or shorthand the form will write. */
+/** The change a form will make, in the words of "Your app". */
+function changeText(spec: Spec, op: string, args: Record<string, unknown>) {
+  return spec.ir ? (describeChange(op, args, spec.ir, spec.content) ?? "") : "";
+}
+
+/** A note under a form: the change it will make, or (in Studio) what it writes in the spec. */
 function SpecNote({ label, text }: { label: string; text: string }) {
   return text ? (
     <p className="text-xs text-neutral-500">
@@ -344,7 +350,10 @@ function AddField({ spec, run, initial }: FormProps) {
         />
       </Label>
       <FieldShapeControls shape={shape} onChange={setShape} models={models.map((m) => m.name)} />
-      <SpecNote label="In the spec:" text={name && type ? `${name}: ${type}` : ""} />
+      <SpecNote
+        label="Will read:"
+        text={name && type ? changeText(spec, "addField", { model, field: name, type }) : ""}
+      />
       <Submit label="Add field" disabled={!name} />
     </Form>
   );
@@ -372,6 +381,7 @@ function ChangeField({ spec, run, initial }: FormProps) {
             field={field}
             models={models}
             type={field.name === initial?.field ? str(initial?.type) : undefined}
+            describe={(type) => changeText(spec, "changeField", { model, field: field.name, type })}
             run={(type) => run("changeField", { model, field: field.name, type })}
           />
         ))}
@@ -383,12 +393,15 @@ export function FieldShapeForm({
   field,
   models,
   type: proposed,
+  describe,
   run,
 }: {
   field: FieldIR;
   models: string[];
   /** A proposed type to start from instead of the field's own. */
   type?: string;
+  /** The change in plain words (Builder); without it, the spec's shorthand (Studio). */
+  describe?: (type: string) => string;
   run: (type: string) => Promise<boolean>;
 }) {
   const [shape, setShape] = useState(() =>
@@ -398,7 +411,11 @@ export function FieldShapeForm({
   return (
     <Form onSubmit={() => run(type)}>
       <FieldShapeControls shape={shape} onChange={setShape} models={models} />
-      <SpecNote label="In the spec:" text={`${field.name}: ${type}`} />
+      {describe ? (
+        <SpecNote label="Will read:" text={type === shorthandOf(field) ? "" : describe(type)} />
+      ) : (
+        <SpecNote label="In the spec:" text={`${field.name}: ${type}`} />
+      )}
       <Submit label="Change field" disabled={type === shorthandOf(field)} />
     </Form>
   );
@@ -422,7 +439,10 @@ function RenameField({ spec, run, initial }: FormProps) {
           placeholder="Max credit"
         />
       </Label>
-      <SpecNote label="Will be named" text={to} />
+      <SpecNote
+        label="Will read:"
+        text={field && to ? changeText(spec, "renameField", { model, from: field.name, to }) : ""}
+      />
       <Submit label="Rename field" disabled={!field || !to} />
     </Form>
   );

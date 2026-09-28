@@ -3,7 +3,6 @@ import {
   type ContentIR,
   emptyContent,
   type FieldIR,
-  formatFormula,
   humanize,
   type ModelIR,
   pageModel,
@@ -11,6 +10,7 @@ import {
   type SpecIR,
   USER_MODEL,
 } from "@smithable/core";
+import { formulaInWords } from "./formula-words.js";
 
 /** One part of the plain-language summary, e.g. a model or the pages. */
 export interface SummarySection {
@@ -18,7 +18,7 @@ export interface SummarySection {
   concept: string;
   title: string;
   sentences: string[];
-  /** A model's first sentence, item by item ("a phone (a phone number)"), and their fields. */
+  /** A model's list of fields, item by item ("a phone (a phone number)"), and their fields. */
   fields?: { field: string; label: string; text: string }[];
 }
 
@@ -46,16 +46,7 @@ export function summarize(
   auth?: AuthIR,
   content: ContentIR = emptyContent(),
 ): SummarySection[] {
-  const label = (m: ModelIR) => content.models[m.name]?.label ?? humanize(m.name);
-  const pluralLabel = (m: ModelIR) => {
-    const own = content.models[m.name];
-    return own?.pluralLabel ?? (own?.label ? plural(own.label) : humanize(plural(m.name)));
-  };
-  const fieldLabel = (m: ModelIR, f: FieldIR) =>
-    (content.models[m.name]?.fields[f.name]?.label ?? humanize(f.name)).toLowerCase();
-  const choice = (m: ModelIR, f: FieldIR, value: string) =>
-    (content.models[m.name]?.fields[f.name]?.values?.[value] ?? humanize(value)).toLowerCase();
-  const modelNamed = (name: string) => ir.models.find((m) => m.name === name);
+  const { label, pluralLabel, fieldLabel, modelNamed, words, item } = wordsFor(ir, content);
 
   const sections: SummarySection[] = [];
   if (ir.app.description) {
@@ -66,34 +57,12 @@ export function summarize(
     const isOwnValue = (f: FieldIR) =>
       !f.formula && !(f.type.kind === "relation" && (f.type.many || f.type.model === USER_MODEL));
     const own = model.fields.filter(isOwnValue);
-    const parts = own.map((f) => {
-      const name = fieldLabel(model, f);
-      const notes: string[] = [];
-      if (f.type.kind === "choice") {
-        notes.push(
-          list(
-            f.type.values.map((v) => choice(model, f, v)),
-            "or",
-          ),
-        );
-        if (f.default !== undefined)
-          notes.push(`${choice(model, f, String(f.default))} by default`);
-      } else if (f.type.kind === "relation") {
-        const target = modelNamed(f.type.model);
-        if (target) notes.push(article(label(target).toLowerCase()));
-      } else if (KINDS[f.type.name] && !name.includes(f.type.name)) {
-        notes.push(KINDS[f.type.name] as string);
-      }
-      if (f.required && f.type.kind !== "choice") notes.push("required");
-      if (f.unique) notes.push("unique");
-      if (f.default !== undefined && f.type.kind !== "choice")
-        notes.push(`${f.default} by default`);
-      if (f.defaultFormula) notes.push(`${formatFormula(f.defaultFormula)} by default`);
-      const named = name.endsWith("s") ? name : article(name);
-      return notes.length ? `${named} (${notes.join(", ")})` : named;
-    });
+    const parts = own.map((f) => item(model, f));
     const one = label(model).toLowerCase();
-    const sentences = [`${pluralLabel(model)} have ${list(parts)}.`];
+    // The fields as a list, one per line, which is also how they are edited.
+    const sentences = parts.length
+      ? [`${pluralLabel(model)} have:`, ...parts.map((p) => `- ${p}`)]
+      : [];
     for (const f of model.fields) {
       if (f.type.kind === "relation" && f.type.model === USER_MODEL) {
         sentences.push(`Each ${one} can have ${article(fieldLabel(model, f))} (a user).`);
@@ -101,7 +70,7 @@ export function summarize(
         const target = modelNamed(f.type.model);
         if (target) sentences.push(`Each ${one} lists its ${pluralLabel(target).toLowerCase()}.`);
       } else if (f.formula) {
-        sentences.push(`The ${fieldLabel(model, f)} is calculated: ${formatFormula(f.formula)}.`);
+        sentences.push(`The ${fieldLabel(model, f)} is calculated as ${words(model, f.formula)}.`);
       }
     }
     const owner = model.fields.find((f) => f.name === model.ownedBy);
@@ -152,7 +121,7 @@ export function summarize(
       ].filter(Boolean);
       return `${title} (${notes.join("; ")})`;
     });
-    sections.push({ concept: "pages", title: "Pages", sentences: [`${list(pages)}.`] });
+    sections.push({ concept: "pages", title: "Pages", sentences: pages.map((p) => `- ${p}`) });
   }
 
   for (const action of ir.actions) {
@@ -184,6 +153,57 @@ export function summarize(
   return sections;
 }
 
+/** The summary's words for models and fields, with the labels from the content file. */
+export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
+  const label = (m: ModelIR) => content.models[m.name]?.label ?? humanize(m.name);
+  const pluralLabel = (m: ModelIR) => {
+    const own = content.models[m.name];
+    return own?.pluralLabel ?? (own?.label ? plural(own.label) : humanize(plural(m.name)));
+  };
+  const fieldLabel = (m: ModelIR, f: FieldIR) =>
+    (content.models[m.name]?.fields[f.name]?.label ?? humanize(f.name)).toLowerCase();
+  const choice = (m: ModelIR, f: FieldIR, value: string) =>
+    (content.models[m.name]?.fields[f.name]?.values?.[value] ?? humanize(value)).toLowerCase();
+  const modelNamed = (name: string) => ir.models.find((m) => m.name === name);
+  // A formula's field in words: this model's own, or one of a related model's.
+  const words = (model: ModelIR, expr: Parameters<typeof formulaInWords>[0]) =>
+    formulaInWords(expr, (name) => {
+      const own = model.fields.find((f) => f.name === name);
+      if (own) return fieldLabel(model, own);
+      for (const m of ir.models) {
+        const f = m.fields.find((x) => x.name === name);
+        if (f) return fieldLabel(m, f);
+      }
+      return humanize(name).toLowerCase();
+    });
+  /** A field as one line of its model's list, e.g. "a phone (a phone number, required)". */
+  const item = (model: ModelIR, f: FieldIR) => {
+    const name = fieldLabel(model, f);
+    const notes: string[] = [];
+    if (f.type.kind === "choice") {
+      notes.push(
+        list(
+          f.type.values.map((v) => choice(model, f, v)),
+          "or",
+        ),
+      );
+      if (f.default !== undefined) notes.push(`${choice(model, f, String(f.default))} by default`);
+    } else if (f.type.kind === "relation") {
+      const target = modelNamed(f.type.model);
+      if (target) notes.push(article(label(target).toLowerCase()));
+    } else if (KINDS[f.type.name] && !name.includes(f.type.name)) {
+      notes.push(KINDS[f.type.name] as string);
+    }
+    if (f.required && f.type.kind !== "choice") notes.push("required");
+    if (f.unique) notes.push("unique");
+    if (f.default !== undefined && f.type.kind !== "choice") notes.push(`${f.default} by default`);
+    if (f.defaultFormula) notes.push(`${words(model, f.defaultFormula)} by default`);
+    const named = name.endsWith("s") ? name : article(name);
+    return notes.length ? `${named} (${notes.join(", ")})` : named;
+  };
+  return { label, pluralLabel, fieldLabel, modelNamed, words, item };
+}
+
 function access(auth: AuthIR): string[] {
   const sentences: string[] = [];
   if (auth.signIn === "none") {
@@ -198,10 +218,12 @@ function access(auth: AuthIR): string[] {
         ? "Everyone who signs in sees all records, and changes and deletes the ones they own."
         : "Everyone sees and changes only their own records.",
     );
-    const roles = auth.roles.map((r) =>
-      r.description ? `${r.name} (${r.description.replace(/\.$/, "")})` : r.name,
-    );
-    sentences.push(`Roles: ${roles.join("; ")}. New users get the ${auth.defaultRole} role.`);
+    sentences.push("Roles:");
+    for (const r of auth.roles)
+      sentences.push(
+        `- ${r.description ? `${r.name} (${r.description.replace(/\.$/, "")})` : r.name}`,
+      );
+    sentences.push(`New users get the ${auth.defaultRole} role.`);
   }
   const open = [
     ...auth.public.pages.map((p) => `the ${humanize(p).toLowerCase()} page`),
@@ -213,7 +235,7 @@ function access(auth: AuthIR): string[] {
 }
 
 /** Who a list of roles means; admins can always do everything, so they come last. */
-function who(roles: string[]): string {
+export function who(roles: string[]): string {
   const others = roles
     .filter((r) => r !== "admin")
     .map((r) => (r === "owner" ? "the owner" : `${r} users`));
@@ -226,5 +248,6 @@ function list(items: string[], last = "and"): string {
 }
 
 function article(word: string): string {
-  return `${/^[aeiou]/i.test(word) ? "an" : "a"} ${word}`;
+  // "a unit price", "a user": a "u" that sounds like "you" takes "a".
+  return `${/^[aeiou]/i.test(word) && !/^u(ni|s[eu])/i.test(word) ? "an" : "a"} ${word}`;
 }

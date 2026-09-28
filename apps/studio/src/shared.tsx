@@ -81,7 +81,18 @@ export function Preview({
   );
 }
 
-export function Trace({ entries }: { entries: TraceEntry[] }) {
+/** `words` words an entry the Builder's way ("Customers: added a website"), where it can. */
+export function Trace({
+  entries,
+  words,
+}: {
+  entries: TraceEntry[];
+  words?: (op: string, args: Record<string, unknown>) => string | undefined;
+}) {
+  const text = (e: TraceEntry) => {
+    const plain = e.operation && words?.(e.operation.op, e.operation.args);
+    return plain ? (e.isUndo ? `Undid: ${plain}` : plain) : e.description;
+  };
   return (
     <Panel title="Changes" className="h-full">
       {entries.length === 0 ? (
@@ -93,7 +104,7 @@ export function Trace({ entries }: { entries: TraceEntry[] }) {
               key={`${e.at}-${e.description}`}
               className={cx("px-3 py-2", e.undone && "opacity-50")}
             >
-              <p className={cx("text-sm", e.undone && "line-through")}>{e.description}</p>
+              <p className={cx("text-sm", e.undone && "line-through")}>{text(e)}</p>
               <p className="mt-0.5 text-xs text-neutral-500">
                 {e.isUndo ? "undo" : e.engine}
                 {e.model ? ` (${e.model})` : ""} · {e.tokens.toLocaleString("en")} tokens

@@ -1,3 +1,4 @@
+import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useState } from "react";
 import { api, type Project } from "./api";
 import { Builder } from "./builder/Builder";
@@ -59,15 +60,29 @@ export function App() {
     const summary = result.ok
       ? (lines.at(-1) ?? "Done.").replace(/ Undo with: smithable undo$/, "")
       : result.output;
-    setMessage({ ok: result.ok, text: summary });
+    // Builder says it in the words of its summary.
+    const plain =
+      result.ok && mode === "builder" && spec.ir
+        ? describeChange(name, args, spec.ir, spec.content)
+        : undefined;
+    setMessage({ ok: result.ok, text: plain ?? summary });
     return result.ok;
   };
 
   const undo = async () => {
+    // What is undone: the newest change that is still in place.
+    const last = project?.trace.find((e) => !e.undone && !e.isUndo)?.operation;
+    const plain =
+      mode === "builder" && last && spec.ir
+        ? describeChange(last.op, last.args, spec.ir, spec.content)
+        : undefined;
     setBusy(true);
     const result = await api.undo();
     setBusy(false);
-    setMessage({ ok: result.ok, text: result.output.split("\n")[0] ?? "" });
+    setMessage({
+      ok: result.ok,
+      text: result.ok && plain ? `Undid: ${plain}` : (result.output.split("\n")[0] ?? ""),
+    });
   };
 
   const customize = async (page: string) => {
