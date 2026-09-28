@@ -256,34 +256,35 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
 
-  await step("a proposed change opens in Manual with its values filled in", async () => {
-    await page.getByRole("tab", { name: "Change" }).click();
-    await page.getByRole("tab", { name: "Describe" }).click();
-    await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
-    await page.getByRole("button", { name: "Suggest" }).click();
-    const proposal = page.getByRole("region", { name: "Proposal" });
-    await proposal.getByRole("button", { name: "Edit in Manual" }).click({ timeout: 30000 });
-    const values = [
-      await page.getByLabel("What do you want to change?").inputValue(),
-      await page.getByLabel("Kind of record").inputValue(),
-      await page.getByLabel("Name", { exact: true }).inputValue(),
-      await page.getByLabel("Holds").inputValue(),
-    ];
-    if (values.join() !== "addField,Customer,mobile,phone") throw new Error(values.join());
-  });
   await step(
-    "describe a change: the model's proposal is shown, applied on confirmation, and traced",
+    "a change that deletes data is proposed first, and opens in Manual with its values filled in",
     async () => {
       await page.getByRole("tab", { name: "Change" }).click();
       await page.getByRole("tab", { name: "Describe" }).click();
-      await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
-      await page.getByRole("button", { name: "Suggest" }).click();
+      await page.getByLabel("Describe a change").fill("Customers without notes");
+      await page.getByRole("button", { name: "Make the change" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
-      await proposal
-        .getByText("Customers: added a mobile (a phone number)")
-        .waitFor({ timeout: 30000 });
-      await proposal.getByText(/Local model \(fake-model\) · [\d,]+ tokens/).waitFor();
-      await proposal.getByRole("button", { name: "Apply" }).click();
+      await proposal.getByText("(loses data)").waitFor({ timeout: 30000 });
+      await proposal.getByRole("button", { name: "Edit in Manual" }).click();
+      const values = [
+        await page.getByLabel("What do you want to change?").inputValue(),
+        await page.getByLabel("Kind of record").inputValue(),
+        await page.getByLabel("Field", { exact: true }).inputValue(),
+      ];
+      if (values.join() !== "removeField,Customer,notes") throw new Error(values.join());
+    },
+  );
+  await step(
+    "describe a change: one that loses no data is made at once, and traced with its model",
+    async () => {
+      await page.getByRole("tab", { name: "Describe" }).click();
+      await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
+      await page.getByRole("button", { name: "Make the change" }).click();
+      await page
+        .getByText(
+          /^Done: Customers: added a mobile \(a phone number\)\. Local model \(fake-model\)/,
+        )
+        .waitFor({ timeout: 60000 });
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 });
@@ -301,11 +302,7 @@ try {
       const last = lines.findLastIndex((l) => l.startsWith("- "));
       lines.splice(last + 1, 0, "- a loyalty code (unique)");
       await box.fill(lines.join("\n"));
-      await page.getByRole("button", { name: "Suggest" }).click();
-      const proposal = page.getByRole("region", { name: "Proposal" });
-      await proposal.getByText("Read without AI").waitFor();
-      await proposal.getByText("Customers: added a loyalty code (unique)").waitFor();
-      await proposal.getByRole("button", { name: "Apply" }).click();
+      await page.getByRole("button", { name: "Make the change" }).click();
       await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
       // The part keeps the user's wording.
       await page.getByText("a loyalty code (unique)", { exact: true }).first().waitFor();

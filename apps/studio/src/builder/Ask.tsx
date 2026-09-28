@@ -1,5 +1,6 @@
-// Describe a change in your own words: a model proposes operations, shown in plain language,
-// and nothing changes until you apply them (ARCHITECTURE §9.4).
+// Describe a change in your own words: a model proposes operations, which apply at once when
+// they lose no data (Undo takes them back); one that deletes data is shown first and waits
+// for Apply (ARCHITECTURE §9.4).
 import { useState } from "react";
 import { api, type Proposal } from "../api";
 import { Button, Label } from "../ui";
@@ -15,7 +16,13 @@ export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; wor
   const propose = async (text: string) => {
     setBusy(true);
     setOutput("");
-    setProposal(await api.ask(text));
+    const proposed = await api.ask(text);
+    if (proposed.kind === "change" && !proposed.operations.some((o) => o.destructive)) {
+      const result = await api.applyProposal();
+      const done = proposed.operations.map((o) => words?.(o.op, o.args) ?? o.description);
+      setOutput(result.ok ? `Done: ${done.join("; ")}. ${proposed.usage}` : result.output);
+      if (result.ok) setRequest("");
+    } else setProposal(proposed);
     setBusy(false);
   };
   const apply = async () => {
@@ -45,7 +52,7 @@ export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; wor
           />
         </Label>
         <Button type="submit" disabled={busy || !request.trim()}>
-          {busy && !proposal ? "Thinking…" : "Suggest"}
+          {busy && !proposal ? "Working…" : "Make the change"}
         </Button>
       </form>
       {proposal && (
