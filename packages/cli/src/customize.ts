@@ -68,7 +68,12 @@ export function customize(dir: string, io: Io, target: string | undefined, via =
   }
   mkdirSync(dirname(join(dir, customPath)), { recursive: true });
   writeFileSync(join(dir, customPath), source);
-  const code = generate(dir, io, { tools: true, force: false, overwrite: [routePath] });
+  const code = generate(dir, io, {
+    tools: true,
+    force: false,
+    overwrite: [routePath],
+    onlyChanged: true,
+  });
   if (code !== 0) {
     discardChanges(dir);
     io.err("Regenerating the app failed. Nothing was changed.\n");

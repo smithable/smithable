@@ -138,6 +138,7 @@ export function runOperation(
   );
   const code = generate(dir, io, {
     tools: true,
+    onlyChanged: true,
     force: false,
     migration: { name: migrationName(result.description), renames, apply: true },
   });
