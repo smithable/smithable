@@ -14,7 +14,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-hover]{outline:2px dashed #3b5bdb!important;outline-offset:2px;cursor:pointer!important}" +
     "[data-sm-selected]{outline:2px solid #3b5bdb!important;outline-offset:2px}" +
     "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
-    "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}";
+    "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}" +
+    "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
+    "[data-sm-text][contenteditable=true]{outline:2px solid #e8590c!important;outline-offset:2px;background:#fff4e6}";
   document.head.append(style);
   const post = (message) => window.parent.postMessage({ source: "smithable-preview", ...message }, "*");
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
@@ -36,6 +38,34 @@ if (typeof window !== "undefined" && window.parent !== window) {
     hovered = markedAt(event.target);
     hovered?.setAttribute("data-sm-hover", "");
     if (hovered?.dataset.smPart === "column") hovered.draggable = true;
+  }, true);
+  // A text marked with its place in smithable.content.yml is changed in place: Enter or
+  // leaving it saves, Escape cancels.
+  document.addEventListener("click", (event) => {
+    if (!selecting) return;
+    const text = event.target instanceof Element ? event.target.closest("[data-sm-text]") : null;
+    if (!text || text.isContentEditable) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const before = text.textContent;
+    text.contentEditable = "true";
+    text.focus();
+    document.getSelection().selectAllChildren(text);
+    const done = (save) => {
+      text.contentEditable = "false";
+      text.removeEventListener("keydown", keys);
+      text.removeEventListener("blur", blur);
+      const after = text.textContent.trim();
+      if (save && after && after !== before.trim()) post({ type: "text", path: text.dataset.smText, text: after });
+      else text.textContent = before;
+    };
+    const keys = (e) => {
+      if (e.key === "Enter") { e.preventDefault(); done(true); }
+      if (e.key === "Escape") done(false);
+    };
+    const blur = () => done(true);
+    text.addEventListener("keydown", keys);
+    text.addEventListener("blur", blur);
   }, true);
   document.addEventListener("click", (event) => {
     if (!selecting) return;

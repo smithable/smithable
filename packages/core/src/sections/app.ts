@@ -2,6 +2,7 @@ import { checkKeys, mapEntries, readString } from "../context.js";
 import type { AppIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { accessOperations } from "./access-operations.js";
+import { contentOperations } from "./content-operations.js";
 import { ruleOperations } from "./rule-operations.js";
 import { specOperations } from "./spec-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -12,7 +13,13 @@ export const appSection: SpecSection<"app"> = {
   key: "app",
   required: true,
   // Rules and access can belong to any concept; their operations live with the app as a whole.
-  operations: [...ruleOperations, ...accessOperations, ...specOperations, ...uxOperations],
+  operations: [
+    ...ruleOperations,
+    ...accessOperations,
+    ...specOperations,
+    ...uxOperations,
+    ...contentOperations,
+  ],
   schema: {
     type: "object",
     description: "The application as a whole.",
