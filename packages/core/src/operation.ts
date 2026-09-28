@@ -42,8 +42,11 @@ export interface Operation<A extends OperationArgs = OperationArgs> {
   /** Plain-language description, used in commit messages and the change trace. */
   /** Plain language, e.g. "Add field phone (phone) to Customer"; `ir` is the app before it. */
   describe(args: A, ir: SpecIR): string;
-  /** True when the change can lose data and needs confirmation. */
-  destructive(args: A, ir: SpecIR): boolean;
+  /**
+   * True when the change can lose data and needs confirmation. `after` is the spec as the
+   * change leaves it, validated with the project's plugins.
+   */
+  destructive(args: A, ir: SpecIR, after?: SpecIR): boolean;
   /** Edits the files, or throws an OperationError explaining why it cannot. */
   apply(editors: Editors, args: A, ir: SpecIR): Effect[];
 }

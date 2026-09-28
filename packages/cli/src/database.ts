@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -34,6 +34,18 @@ export function restoreDatabase(dir: string, id: string): boolean {
   for (const suffix of ["-wal", "-shm"]) rmSync(`${target}${suffix}`, { force: true });
   copyFileSync(source, target);
   return true;
+}
+
+/**
+ * Deletes the snapshots undo can no longer reach: all but those `keep` names (the snapshots of
+ * the latest changes). Returns how many it deleted.
+ */
+export function pruneSnapshots(dir: string, keep: Set<string>): number {
+  const folder = join(dir, "data", ".smithable", "snapshots");
+  if (!existsSync(folder)) return 0;
+  const old = readdirSync(folder).filter((f) => f.endsWith(".db") && !keep.has(f.slice(0, -3)));
+  for (const f of old) rmSync(join(folder, f), { force: true });
+  return old.length;
 }
 
 /** How many rows of a table have a value (or no value) in a column; undefined without a database. */
