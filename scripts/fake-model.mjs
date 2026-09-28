@@ -29,6 +29,13 @@ const ANSWERS = [
     },
   ],
   [
+    /without notes/i,
+    {
+      kind: "operations",
+      operations: [{ op: "removeField", args: { model: "Customer", field: "notes" } }],
+    },
+  ],
+  [
     /add a date/i,
     { kind: "question", question: "A date on what?", options: ["Orders", "Customers"] },
   ],
