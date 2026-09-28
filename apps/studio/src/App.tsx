@@ -1,8 +1,9 @@
 import { describeChange } from "@smithable/index";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
+import { isPreviewMessage } from "./preview";
 import { Studio } from "./studio/Studio";
 import { Button, cx } from "./ui";
 
@@ -84,6 +85,33 @@ export function App() {
       text: result.ok && plain ? `Undid: ${plain}` : (result.output.split("\n")[0] ?? ""),
     });
   };
+
+  // Ctrl+Z (Cmd+Z) undoes the last change, outside text fields, here and in the preview.
+  const undoKey = useRef(() => {});
+  undoKey.current = () => {
+    if (!busy) void undo();
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target;
+      const typing =
+        t instanceof HTMLElement &&
+        (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !typing) {
+        e.preventDefault();
+        undoKey.current();
+      }
+    };
+    const onMessage = (e: MessageEvent) => {
+      if (isPreviewMessage(e.data) && e.data.type === "undo") undoKey.current();
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("message", onMessage);
+    };
+  }, []);
 
   const customize = async (page: string) => {
     setBusy(true);
