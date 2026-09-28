@@ -20,6 +20,31 @@ export function camel(name: string): string {
     .join("");
 }
 
+/**
+ * A spec name from a friendly one: "Max credit" → maxCredit, "Förfallodatum" → forfallodatum.
+ * A name that already is one (creditLimit) stays as it is.
+ */
+export function identifier(label: string): string {
+  const words = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/æ/gi, "ae")
+    .replace(/ø/gi, "o")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+  const name = words
+    .map((w, i) =>
+      i > 0
+        ? w[0]?.toUpperCase() + w.slice(1)
+        : /^[A-Z0-9]+$/.test(w)
+          ? w.toLowerCase() // "VAT number" → vatNumber
+          : w[0]?.toLowerCase() + w.slice(1),
+    )
+    .join("");
+  return /^[0-9]/.test(name) ? `field${name}` : name;
+}
+
 export function pascal(name: string): string {
   const c = camel(name);
   return c.charAt(0).toUpperCase() + c.slice(1);

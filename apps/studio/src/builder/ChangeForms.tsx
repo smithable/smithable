@@ -4,6 +4,7 @@ import {
   type FieldIR,
   FONTS,
   humanize,
+  identifier,
   pageModel,
   THEME_PRESETS,
   typeKey,
@@ -12,7 +13,12 @@ import { useState } from "react";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
 
-export type Run = (name: string, args: Record<string, unknown>) => Promise<boolean>;
+/** Applies an operation; `confirm` accepts a loss of data the user has already seen. */
+export type Run = (
+  name: string,
+  args: Record<string, unknown>,
+  confirm?: boolean,
+) => Promise<boolean>;
 
 const KINDS: [string, string][] = [
   ["string", "Text"],
@@ -35,25 +41,6 @@ export function shorthandOf(field: FieldIR): string {
   const type = field.type.kind === "choice" ? field.type.values.join(" | ") : typeKey(field.type);
   const required = field.required && field.type.kind !== "choice" ? "!" : "";
   return `${type}${required}${field.unique ? " unique" : ""}${field.default !== undefined && field.type.kind !== "choice" ? ` = ${field.default}` : ""}`;
-}
-
-/**
- * A spec name from a friendly one: "Max credit" → maxCredit, "Förfallodatum" → forfallodatum.
- * A name that already is one (creditLimit) stays as it is.
- */
-export function identifier(label: string): string {
-  const words = label
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ß/g, "ss")
-    .replace(/æ/gi, "ae")
-    .replace(/ø/gi, "o")
-    .split(/[^A-Za-z0-9]+/)
-    .filter(Boolean);
-  const name = words
-    .map((w, i) => (i === 0 ? w[0]?.toLowerCase() + w.slice(1) : w[0]?.toUpperCase() + w.slice(1)))
-    .join("");
-  return /^[0-9]/.test(name) ? `field${name}` : name;
 }
 
 /** What a field form edits: the kind of value and its modifiers. */

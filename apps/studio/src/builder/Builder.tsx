@@ -6,13 +6,10 @@ import type { Spec } from "../engine";
 import { isPreviewMessage, type Selection } from "../preview";
 import { Preview, Trace } from "../shared";
 import { Panel, Tabs } from "../ui";
+import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
 import { Selected } from "./Selected";
-
-/** Headings for the summary's groups of sections (models, actions, queries). */
-const GROUPS: Record<string, string> = { model: "Records", action: "Actions", query: "Queries" };
-const kind = (concept: string) => concept.split(":")[0] ?? "";
 
 export function Builder({
   project,
@@ -63,24 +60,7 @@ export function Builder({
         }
       >
         {tab === "app" ? (
-          <div className="space-y-5 p-4">
-            {sections.map((s, i) => (
-              <section key={s.concept} aria-label={s.title}>
-                {GROUPS[kind(s.concept)] &&
-                  kind(sections[i - 1]?.concept ?? "") !== kind(s.concept) && (
-                    <h2 className="mb-3 border-b border-neutral-200 pb-1 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-                      {GROUPS[kind(s.concept)]}
-                    </h2>
-                  )}
-                <h3 className="mb-1 text-sm font-semibold">{s.title}</h3>
-                {s.sentences.map((sentence) => (
-                  <p key={sentence} className="text-sm leading-relaxed text-neutral-700">
-                    {sentence}
-                  </p>
-                ))}
-              </section>
-            ))}
-          </div>
+          <AppSummary app={project.name} sections={sections} spec={spec} run={run} />
         ) : (
           <div>
             <div className="border-b border-neutral-200 px-3 py-2">
