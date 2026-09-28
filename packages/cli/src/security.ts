@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted } from "./git.js";
@@ -127,10 +127,14 @@ function dependencies(dir: string): Result {
   return { what: TOOLS.osv.what, by: r.by, ok: findings.length === 0, findings };
 }
 
+/** Where scan reports go while they are read: ignored by Git, since they can quote secrets. */
+const REPORTS = "data/.smithable/reports";
+
 /** Secrets committed to the project's history. */
 function secrets(dir: string): Result {
-  // The report goes to a file: the tool's log lines share its output.
-  mkdirSync(join(dir, ".smithable"), { recursive: true });
+  // The report goes to a file: the tool's log lines share its output. It holds the secrets it
+  // found, so it lives in the ignored data folder, and only until it is read.
+  mkdirSync(join(dir, REPORTS), { recursive: true });
   const r = runTool(TOOLS.gitleaks, dir, (src) => [
     "git",
     src,
@@ -138,15 +142,16 @@ function secrets(dir: string): Result {
     "--report-format",
     "json",
     "--report-path",
-    `${src}/.smithable/gitleaks.json`,
+    `${src}/${REPORTS}/gitleaks.json`,
     "--exit-code",
     "0",
   ]);
   if (!r) return notRun(TOOLS.gitleaks);
-  const path = join(dir, ".smithable", "gitleaks.json");
+  const path = join(dir, REPORTS, "gitleaks.json");
   const leaks = existsSync(path)
     ? parse<{ File: string; StartLine: number; RuleID: string }[]>(readFileSync(path, "utf8"))
     : undefined;
+  rmSync(path, { force: true });
   if (!leaks)
     return { what: TOOLS.gitleaks.what, by: r.by, ok: false, findings: ["The scan failed."] };
   const findings = leaks.map((l) => `${l.File}:${l.StartLine}  ${l.RuleID}`);
@@ -217,16 +222,19 @@ function image(dir: string, name: string): Result {
 
 /** The running app, probed passively for common web weaknesses (ZAP's baseline scan). */
 function running(dir: string, url: string): Result {
+  // ZAP writes only into a folder of its own, as this user rather than root.
+  const work = join(dir, REPORTS, "zap");
+  mkdirSync(work, { recursive: true });
   const r = runTool(TOOLS.zap, dir, () => ["zap-baseline.py", "-t", url, "-J", "zap.json", "-I"], [
     "--network",
     "host",
     "-v",
-    `${resolve(dir)}/.smithable:/zap/wrk:rw`,
+    `${resolve(work)}:/zap/wrk:rw`,
     "--user",
-    "root",
+    String(process.getuid?.() ?? 1000),
   ]);
   if (!r) return notRun(TOOLS.zap);
-  const path = join(dir, ".smithable", "zap.json");
+  const path = join(work, "zap.json");
   const report = existsSync(path)
     ? parse<{
         site?: {
@@ -234,6 +242,7 @@ function running(dir: string, url: string): Result {
         }[];
       }>(readFileSync(path, "utf8"))
     : undefined;
+  rmSync(work, { recursive: true, force: true });
   if (!report) return { what: TOOLS.zap.what, by: r.by, ok: false, findings: ["The scan failed."] };
   // Informational alerts are not findings; low and above are. "ZAP is Out of Date" (10116)
   // is about the scanner, pinned on purpose, not about the app.
