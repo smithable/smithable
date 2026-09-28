@@ -5,7 +5,7 @@
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -696,6 +696,25 @@ function operationsFlow(dir) {
     if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("website"))
       throw new Error("website still in the spec");
     run("pnpm", ["typecheck"], dir);
+  });
+  step("op setPackage adds a library custom code can use; undo removes it again", () => {
+    expectOk(smithable(dir, "op", "setPackage", "dayjs", "1.11.13"));
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    if (pkg.dependencies.dayjs !== "1.11.13") throw new Error(JSON.stringify(pkg.dependencies));
+    if (!existsSync(join(dir, "node_modules", "dayjs"))) throw new Error("not installed");
+    const custom = join(dir, "src/custom/when.ts");
+    writeFileSync(
+      custom,
+      'import dayjs from "dayjs";\nexport const today = (): string => dayjs().format("YYYY-MM-DD");\n',
+    );
+    run("pnpm", ["typecheck"], dir);
+    rmSync(custom);
+    expectOk(smithable(dir, "undo"));
+    if (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies.dayjs)
+      throw new Error("undo kept the package");
+    // The stack profile's own packages stay Smithable's.
+    const refused = smithable(dir, "op", "setPackage", "react", "19.0.0");
+    if (refused.code === 0) throw new Error("setPackage react was accepted");
   });
   step("op setAccess changes who may do what; the access tests follow; undo reverts it", () => {
     const data = join(dir, "src/generated/customer.server.ts");

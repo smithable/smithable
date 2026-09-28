@@ -71,8 +71,14 @@ export function generate(dir: string, io: Io, flags: GenerateFlags): number {
   }
   const { ir, auth, content, ux, plugins } = loadSpec(dir, io);
   if (!ir || !auth) return 1;
+  const packages = declaredPackages(dir);
+  if (typeof packages === "string") {
+    io.err(`${packages}\n`);
+    return 1;
+  }
   const files = generateApp(ir, {
     smithableVersion: VERSION,
+    ...(Object.keys(packages).length ? { packages } : {}),
     auth,
     ...(plugins?.length ? { plugins } : {}),
     customPages: customPages(dir),
@@ -275,6 +281,28 @@ function migrate(
   }
   const name = migration ? ["--name", migration.name] : [];
   return run(["exec", "drizzle-kit", "generate", ...name]);
+}
+
+/**
+ * The libraries smithable.context.yml adds for custom code ("packages: { chart.js: 4.4.1 }"),
+ * or why they can't be used: the stack profile's own packages are Smithable's to keep in step.
+ */
+function declaredPackages(dir: string): Record<string, string> | string {
+  const path = join(dir, "smithable.context.yml");
+  if (!existsSync(path)) return {};
+  const packages = new YamlEditor(readFileSync(path, "utf8")).get(["packages"]);
+  if (packages === undefined) return {};
+  if (typeof packages !== "object" || packages === null || Array.isArray(packages))
+    return 'smithable.context.yml: "packages" must map package names to versions.';
+  const managed = new Set([
+    ...Object.keys(STACK_PROFILE.dependencies),
+    ...Object.keys(STACK_PROFILE.devDependencies),
+    ...Object.keys(STACK_PROFILE.fonts),
+  ]);
+  for (const name of Object.keys(packages))
+    if (managed.has(name))
+      return `smithable.context.yml: "${name}" is part of the stack profile; Smithable keeps its version.`;
+  return Object.fromEntries(Object.entries(packages).map(([k, v]) => [k, String(v)]));
 }
 
 /** The tag of the newest migration, e.g. "0003_rename_notes". */

@@ -3,6 +3,7 @@ import type { AppIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { accessOperations } from "./access-operations.js";
 import { contentOperations } from "./content-operations.js";
+import { contextOperations } from "./context-operations.js";
 import { ruleOperations } from "./rule-operations.js";
 import { specOperations } from "./spec-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -19,6 +20,7 @@ export const appSection: SpecSection<"app"> = {
     ...specOperations,
     ...uxOperations,
     ...contentOperations,
+    ...contextOperations,
   ],
   schema: {
     type: "object",
