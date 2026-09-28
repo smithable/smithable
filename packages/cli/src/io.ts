@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 /** Where commands write their output; tests capture it. */
 export interface Io {
@@ -30,7 +30,7 @@ export function keepStdoutForProtocol(): void {
  * before the first install, through pnpm.
  */
 export function tool(dir: string, name: string, args: string[]): [string, string[]] {
-  const bin = join(dir, "node_modules", ".bin", name);
+  const bin = join(resolve(dir), "node_modules", ".bin", name);
   return process.platform !== "win32" && existsSync(bin)
     ? [bin, args]
     : ["pnpm", ["exec", name, ...args]];
