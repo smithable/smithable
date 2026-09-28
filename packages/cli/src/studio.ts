@@ -1,12 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -18,6 +11,7 @@ import { git } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
+import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
@@ -209,6 +203,11 @@ export async function studio(
         auth: read("smithable.auth.yml"),
         content: read("smithable.content.yml"),
       },
+      // For the engine in the tab, which imports them from /api/plugins/; the version is for
+      // its module cache.
+      plugins: declaredPlugins(dir)
+        .filter((name) => existsSync(pluginPath(dir, name)))
+        .map((name) => ({ name, version: statSync(pluginPath(dir, name)).mtimeMs })),
       concepts: ir && auth ? projectIndex(dir, ir, auth).concepts : [],
       trace: trace(dir),
       preview,
@@ -251,6 +250,11 @@ export async function studio(
       }
       if (url.pathname === "/api/project") return json(state());
       if (url.pathname === "/api/logs") return json(logs);
+      const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
+      if (plugin && declaredPlugins(dir).includes(plugin)) {
+        res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
+        return res.end(readFileSync(pluginPath(dir, plugin)));
+      }
       if (url.pathname === "/api/diff") {
         // The last change Smithable made, as a patch without its bookkeeping files.
         const last = git(dir, [

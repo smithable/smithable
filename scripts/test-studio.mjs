@@ -2,7 +2,15 @@
 // preview and the Studio app; a real browser makes the M3-M5 changes in both modes.
 // Run after `pnpm build`: `pnpm test:studio`.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,6 +45,21 @@ async function step(name, fn) {
 
 const created = spawnSync("node", [cli, "new", dir], { encoding: "utf8" });
 if (created.status !== 0) throw new Error(created.stdout + created.stderr);
+// A project plugin with a section of its own: the engine in the tab must load it, or it
+// reports the section as unknown and the app cannot be described.
+mkdirSync(join(dir, "smithable/plugins/greeting"), { recursive: true });
+writeFileSync(
+  join(dir, "smithable/plugins/greeting/plugin.mjs"),
+  `export default {
+  key: "greeting",
+  description: "A greeting.",
+  schema: { type: "string" },
+  expand() { return {}; },
+};
+`,
+);
+writeFileSync(join(dir, "smithable.context.yml"), "plugins: [greeting]\n");
+appendFileSync(join(dir, "smithable.yml"), "\ngreeting: Hello\n");
 // A stand-in model, so describing a change works without a real one.
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
@@ -226,6 +249,21 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
 
+  await step("a proposed change opens in Manual with its values filled in", async () => {
+    await page.getByRole("tab", { name: "Change" }).click();
+    await page.getByRole("tab", { name: "Describe" }).click();
+    await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
+    await page.getByRole("button", { name: "Suggest" }).click();
+    const proposal = page.getByRole("region", { name: "Proposal" });
+    await proposal.getByRole("button", { name: "Edit in Manual" }).click({ timeout: 30000 });
+    const values = [
+      await page.getByLabel("What do you want to change?").inputValue(),
+      await page.getByLabel("Kind of record").inputValue(),
+      await page.getByLabel("Name", { exact: true }).inputValue(),
+      await page.getByLabel("Holds").inputValue(),
+    ];
+    if (values.join() !== "addField,Customer,mobile,phone") throw new Error(values.join());
+  });
   await step(
     "describe a change: the model's proposal is shown, applied on confirmation, and traced",
     async () => {

@@ -17,6 +17,8 @@ export interface TraceEntry {
 export interface Project {
   name: string;
   files: { spec?: string; auth?: string; content?: string };
+  /** The project's plugins, which the engine imports from /api/plugins/<name>.mjs. */
+  plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
   trace: TraceEntry[];
   preview: string;
@@ -28,7 +30,12 @@ export interface Project {
 export type Proposal = { usage: string } & (
   | {
       kind: "change";
-      operations: { op: string; description: string; destructive: boolean }[];
+      operations: {
+        op: string;
+        args: Record<string, unknown>;
+        description: string;
+        destructive: boolean;
+      }[];
     }
   | { kind: "question"; question: string; options: string[] }
   | { kind: "none"; reason: string }

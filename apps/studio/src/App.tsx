@@ -37,7 +37,7 @@ export function App() {
     });
   }, [refresh]);
 
-  const spec = useSpec(project?.files ?? {});
+  const spec = useSpec(project);
 
   /** Applies an operation; a change that loses data first asks for confirmation. */
   const run = async (name: string, args: Record<string, unknown>, confirm = false) => {
