@@ -311,6 +311,13 @@ try {
       await page.getByText("a loyalty code (unique)", { exact: true }).first().waitFor();
     },
   );
+  await step("Ctrl+Z outside a text field undoes the last change", async () => {
+    await page.locator("header").first().click();
+    await page.keyboard.press("Control+z");
+    await trace
+      .getByText("Undid: Customers: added a loyalty code (unique)")
+      .waitFor({ timeout: 60000 });
+  });
 
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {

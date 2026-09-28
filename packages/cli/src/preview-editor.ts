@@ -99,6 +99,15 @@ if (typeof window !== "undefined" && window.parent !== window) {
     post({ type: "columns", page: target.dataset.smPage, columns: order.map(fieldOf) });
     dragged = null;
   });
+  // Ctrl+Z (Cmd+Z) outside a text field undoes the last change, as it does in Studio.
+  document.addEventListener("keydown", (event) => {
+    const t = event.target;
+    const typing = t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {
+      event.preventDefault();
+      post({ type: "undo" });
+    }
+  });
   post({ type: "ready" });
 }
 `;

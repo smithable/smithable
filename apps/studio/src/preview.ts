@@ -10,7 +10,9 @@ export type PreviewMessage =
     }
   | { type: "columns"; page: string; columns: string[] }
   /** A text changed in place; `path` is its place in smithable.content.yml, dot-separated. */
-  | { type: "text"; path: string; text: string };
+  | { type: "text"; path: string; text: string }
+  /** Ctrl+Z in the preview, outside a text field. */
+  | { type: "undo" };
 
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
 
