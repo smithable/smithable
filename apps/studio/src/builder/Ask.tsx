@@ -49,69 +49,95 @@ export function Ask({ onEdit }: { onEdit: (prefill: Prefill) => void }) {
         </Button>
       </form>
       {proposal && (
-        <section
-          aria-label="Proposal"
-          className="space-y-3 rounded-md border border-neutral-200 p-3"
-        >
-          <p className="text-xs text-neutral-500">{proposal.usage}</p>
-          {proposal.kind === "change" && (
-            <>
-              <p className="text-sm font-medium">Proposed change</p>
-              <ol className="list-decimal space-y-1 pl-5 text-sm">
-                {proposal.operations.map((o) => (
-                  <li key={o.description}>
-                    {o.description}
-                    {o.destructive && <span className="text-red-700"> (loses data)</span>}
-                    {PREFILLED.includes(o.op) && o.args.route === undefined && (
-                      <button
-                        type="button"
-                        className="ml-2 text-xs text-accent underline"
-                        onClick={() => onEdit({ op: o.op, args: o.args })}
-                      >
-                        Edit in Manual
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ol>
-              <div className="flex gap-2">
-                <Button onClick={apply} disabled={busy}>
-                  Apply
-                </Button>
-                <Button variant="ghost" onClick={() => setProposal(undefined)} disabled={busy}>
-                  Cancel
-                </Button>
-              </div>
-            </>
-          )}
-          {proposal.kind === "question" && (
-            <>
-              <p className="text-sm">{proposal.question}</p>
-              <div className="flex flex-wrap gap-2">
-                {proposal.options.map((option) => (
-                  <Button
-                    key={option}
-                    variant="ghost"
-                    className="border border-neutral-200"
-                    onClick={() => {
-                      const detailed = `${request.trim()} (${option})`;
-                      setRequest(detailed);
-                      void propose(detailed);
-                    }}
-                  >
-                    {option}
-                  </Button>
-                ))}
-              </div>
-            </>
-          )}
-          {proposal.kind === "none" && (
-            <p className="text-sm">No operation can do this: {proposal.reason}</p>
-          )}
-          {proposal.kind === "failed" && <p className="text-sm text-red-700">{proposal.message}</p>}
-        </section>
+        <ProposalView
+          proposal={proposal}
+          busy={busy}
+          onApply={apply}
+          onCancel={() => setProposal(undefined)}
+          onEdit={onEdit}
+          onOption={(option) => {
+            const detailed = `${request.trim()} (${option})`;
+            setRequest(detailed);
+            void propose(detailed);
+          }}
+        />
       )}
       {output && <p className="text-sm text-neutral-600">{output}</p>}
     </div>
+  );
+}
+
+/** A proposed change in plain language, with Apply; or the model's question or refusal. */
+export function ProposalView({
+  proposal,
+  busy,
+  onApply,
+  onCancel,
+  onEdit,
+  onOption,
+}: {
+  proposal: Proposal;
+  busy: boolean;
+  onApply: () => void;
+  onCancel: () => void;
+  onEdit?: (prefill: Prefill) => void;
+  onOption?: (option: string) => void;
+}) {
+  return (
+    <section aria-label="Proposal" className="space-y-3 rounded-md border border-neutral-200 p-3">
+      {proposal.usage && <p className="text-xs text-neutral-500">{proposal.usage}</p>}
+      {proposal.kind === "change" && (
+        <>
+          <p className="text-sm font-medium">Proposed change</p>
+          <ol className="list-decimal space-y-1 pl-5 text-sm">
+            {proposal.operations.map((o) => (
+              <li key={o.description}>
+                {o.description}
+                {o.destructive && <span className="text-red-700"> (loses data)</span>}
+                {onEdit && PREFILLED.includes(o.op) && o.args.route === undefined && (
+                  <button
+                    type="button"
+                    className="ml-2 text-xs text-accent underline"
+                    onClick={() => onEdit({ op: o.op, args: o.args })}
+                  >
+                    Edit in Manual
+                  </button>
+                )}
+              </li>
+            ))}
+          </ol>
+          <div className="flex gap-2">
+            <Button onClick={onApply} disabled={busy}>
+              Apply
+            </Button>
+            <Button variant="ghost" onClick={onCancel} disabled={busy}>
+              Cancel
+            </Button>
+          </div>
+        </>
+      )}
+      {proposal.kind === "question" && (
+        <>
+          <p className="text-sm">{proposal.question}</p>
+          <div className="flex flex-wrap gap-2">
+            {proposal.options.map((option) => (
+              <Button
+                key={option}
+                variant="ghost"
+                className="border border-neutral-200"
+                disabled={!onOption}
+                onClick={() => onOption?.(option)}
+              >
+                {option}
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
+      {proposal.kind === "none" && (
+        <p className="text-sm">No operation can do this: {proposal.reason}</p>
+      )}
+      {proposal.kind === "failed" && <p className="text-sm text-red-700">{proposal.message}</p>}
+    </section>
   );
 }

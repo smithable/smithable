@@ -1,9 +1,9 @@
 // Studio mode: the spec as YAML, every operation, the last change's diff, logs and concepts.
-import { humanize, type JsonSchema, OPERATIONS } from "@smithable/core";
+import { humanize, identifier, type JsonSchema, OPERATIONS } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
-import { FieldShapeForm, identifier, type Run } from "../builder/ChangeForms";
+import { FieldShapeForm, type Run } from "../builder/ChangeForms";
 import { readSpec, type Spec } from "../engine";
 import { Preview, Trace } from "../shared";
 import { Button, cx, Input, Label, Panel, Select, Tabs } from "../ui";
