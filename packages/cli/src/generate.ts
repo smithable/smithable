@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   generateApp,
   renameColumnSql,
@@ -59,7 +60,7 @@ export interface MigrationPlan {
 }
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
-export function generate(dir: string, io: Io, flags: GenerateFlags): number {
+export async function generate(dir: string, io: Io, flags: GenerateFlags): Promise<number> {
   // A new stack profile changes libraries and the kit under custom code: only through
   // `smithable upgrade`, which checks the app and can be undone as one change.
   const profile = projectProfile(dir);
@@ -175,12 +176,12 @@ function applyOverrides(dir: string): boolean {
  * Installs dependencies, then lets the app's own tools create migrations and the route tree.
  * Given the files a change wrote or removed, only the tools whose inputs changed run.
  */
-export function runTools(
+export async function runTools(
   dir: string,
   io: Io,
   migration?: MigrationPlan,
   changed?: string[],
-): number {
+): Promise<number> {
   const needs = (test: (path: string) => boolean) => !changed || changed.some(test);
   const install =
     needs((p) => p === "package.json" || p === "pnpm-workspace.yaml") ||
@@ -197,7 +198,10 @@ export function runTools(
   lap("generate");
   if (install && !run(["install", "--silent"])) return 1;
   lap("install");
-  if (schema && !migrate(dir, migration, run)) return 1;
+  if (schema) {
+    const made = await createMigration(dir, migration);
+    if (made === undefined && !migrate(dir, migration, run)) return 1;
+  }
   lap("drizzle-kit");
   // Always: skipping it when no route file changed leaves a request to the Studio preview
   // hanging after an Undo restarted the dev server (test:studio's "click the email field"
@@ -213,6 +217,94 @@ export function runTools(
     lap("migration");
   }
   return 0;
+}
+
+/**
+ * Creates the migration for an operation's schema change in this process, with the app's own
+ * drizzle-kit: its programmatic API gives the same SQL and snapshot as its command line,
+ * which costs about 2 s to start in a sandboxed hosted workspace. The files are the ones the
+ * command line writes (SQL, snapshot, journal), so drizzle-kit carries on after detach.
+ * Renames are the same custom SQL as on the command line. Undefined when this doesn't apply
+ * (a project's first migration, a full generate) or didn't work here: the caller then runs
+ * the command line.
+ */
+async function createMigration(
+  dir: string,
+  migration?: MigrationPlan,
+): Promise<boolean | undefined> {
+  const root = resolve(dir);
+  const meta = join(root, "drizzle", "meta");
+  if (!migration || !existsSync(join(meta, "_journal.json"))) return undefined;
+  try {
+    const load = createRequire(join(root, "package.json"));
+    const api = load("drizzle-kit/api") as {
+      generateSQLiteDrizzleJson(
+        imports: unknown,
+        prevId: string,
+        casing: string,
+      ): Promise<Snapshot>;
+      generateSQLiteMigration(prev: Snapshot, cur: Snapshot): Promise<string[]>;
+    };
+    const { tsImport } = (await import(pathToFileURL(load.resolve("tsx/esm/api")).href)) as {
+      tsImport(url: string, parent: string): Promise<unknown>;
+    };
+    const journal = JSON.parse(readFileSync(join(meta, "_journal.json"), "utf8")) as {
+      entries: { idx: number; version: string; when: number; tag: string; breakpoints: boolean }[];
+    };
+    const last = journal.entries.at(-1);
+    if (!last) return undefined;
+    const numbered = (idx: number) => String(idx).padStart(4, "0");
+    const prev = JSON.parse(
+      readFileSync(join(meta, `${numbered(last.idx)}_snapshot.json`), "utf8"),
+    ) as Snapshot;
+    // A fresh import each time: the schema file has just changed.
+    const schema = await tsImport(
+      pathToFileURL(join(root, "src/db/schema.ts")).href,
+      import.meta.url,
+    );
+    const current = await api.generateSQLiteDrizzleJson(schema, prev.id, "snake_case");
+    const statements = migration.renames.length
+      ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
+      : await api.generateSQLiteMigration(prev, current);
+    if (statements.length === 0) return true;
+    const idx = last.idx + 1;
+    const tag = `${numbered(idx)}_${migration.name}`;
+    // Keys in the order the command line writes them.
+    const snapshot = {
+      version: current.version,
+      dialect: current.dialect,
+      id: current.id,
+      prevId: current.prevId,
+      tables: current.tables,
+      views: current.views,
+      enums: current.enums,
+      _meta: { schemas: {}, tables: current._meta.tables, columns: current._meta.columns },
+      internal: current.internal,
+    };
+    writeFileSync(
+      join(root, "drizzle", `${tag}.sql`),
+      statements.join("--> statement-breakpoint\n"),
+    );
+    writeFileSync(join(meta, `${numbered(idx)}_snapshot.json`), JSON.stringify(snapshot, null, 2));
+    journal.entries.push({ idx, version: last.version, when: Date.now(), tag, breakpoints: true });
+    writeFileSync(join(meta, "_journal.json"), JSON.stringify(journal, null, 2));
+    return true;
+  } catch {
+    return undefined;
+  }
+}
+
+/** A drizzle-kit SQLite snapshot, as far as Smithable reads it. */
+interface Snapshot {
+  version: string;
+  dialect: string;
+  id: string;
+  prevId: string;
+  tables: unknown;
+  views: unknown;
+  enums: unknown;
+  _meta: { tables: unknown; columns: unknown };
+  internal: unknown;
 }
 
 /**

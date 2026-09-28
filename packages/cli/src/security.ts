@@ -361,7 +361,7 @@ export async function updateSecurity(dir: string, io: Io): Promise<number> {
     io.err("Commit or discard your changes first, so the update can be undone on its own.\n");
     return 1;
   }
-  if (generate(dir, io, { tools: true, force: false }) !== 0) {
+  if ((await generate(dir, io, { tools: true, force: false })) !== 0) {
     discardChanges(dir);
     return 1;
   }
