@@ -351,7 +351,7 @@ function ChangeField({ spec, run }: FormProps) {
   );
 }
 
-function FieldShapeForm({
+export function FieldShapeForm({
   field,
   models,
   run,

@@ -1,10 +1,10 @@
 // Studio mode: the spec as YAML, every operation, the last change's diff, logs and concepts.
-import { type JsonSchema, OPERATIONS } from "@smithable/core";
+import { humanize, type JsonSchema, OPERATIONS } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
-import type { Run } from "../builder/ChangeForms";
-import { readSpec } from "../engine";
+import { FieldShapeForm, identifier, type Run } from "../builder/ChangeForms";
+import { readSpec, type Spec } from "../engine";
 import { Preview, Trace } from "../shared";
 import { Button, cx, Input, Label, Panel, Select, Tabs } from "../ui";
 
@@ -21,12 +21,14 @@ const STATUS: Record<string, string> = {
 
 export function Studio({
   project,
+  spec,
   run,
   version,
   logs,
   onCustomize,
 }: {
   project: Project;
+  spec: Spec;
   run: Run;
   version: number;
   logs: string[];
@@ -34,6 +36,8 @@ export function Studio({
 }) {
   const [tab, setTab] = useState<Tab>("spec");
   const [selected, setSelected] = useState<string>();
+  // "Show in smithable.yml": the editor selects the concept's lines.
+  const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
   return (
     <div className="grid h-full min-h-0 grid-cols-[240px_1fr_300px] divide-x divide-neutral-200">
@@ -55,7 +59,7 @@ export function Studio({
           />
         }
       >
-        {tab === "spec" && <SpecEditor project={project} run={run} />}
+        {tab === "spec" && <SpecEditor project={project} run={run} jump={jump} />}
         {tab === "operation" && <OperationForm run={run} />}
         {/* Remounted for every new change. */}
         {tab === "diff" && <Diff key={version} />}
@@ -71,7 +75,17 @@ export function Studio({
       <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200">
         <Panel title="Details">
           {concept ? (
-            <ConceptDetails info={concept} onCustomize={onCustomize} />
+            <>
+              <Properties key={concept.concept} concept={concept.concept} spec={spec} run={run} />
+              <ConceptDetails
+                info={concept}
+                onCustomize={onCustomize}
+                onShow={() => {
+                  setTab("spec");
+                  setJump({ concept: concept.concept, at: Date.now() });
+                }}
+              />
+            </>
           ) : (
             <p className="p-3 text-sm text-neutral-500">Choose a concept.</p>
           )}
@@ -91,8 +105,18 @@ function ConceptTree({
   selected?: string;
   onSelect: (c: string) => void;
 }) {
-  const item = (c: ConceptInfo, label: string, nested = false) => (
-    <li key={c.concept}>
+  // Models open to show their fields, like a properties panel.
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (name: string) =>
+    setOpen((o) => {
+      const next = new Set(o);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  const item = (c: ConceptInfo, label: string, nested = false, expander?: React.ReactNode) => (
+    <li key={c.concept} className="flex items-center">
+      {expander}
       <button
         type="button"
         onClick={() => onSelect(c.concept)}
@@ -128,9 +152,26 @@ function ConceptTree({
                 const fields = c.concept.startsWith("model:")
                   ? concepts.filter((f) => f.concept.startsWith(`field:${name}.`))
                   : [];
+                const expanded = open.has(name) || selected?.startsWith(`field:${name}.`);
+                const expander = fields.length ? (
+                  <button
+                    key="expander"
+                    type="button"
+                    aria-label={`${expanded ? "Close" : "Open"} ${name}`}
+                    aria-expanded={Boolean(expanded)}
+                    onClick={() => toggle(name)}
+                    className="w-5 shrink-0 text-xs text-neutral-500"
+                  >
+                    {expanded ? "▾" : "▸"}
+                  </button>
+                ) : (
+                  <span key="expander" className="w-5 shrink-0" />
+                );
                 return [
-                  item(c, name),
-                  ...fields.map((f) => item(f, f.concept.split(".")[1] ?? "", true)),
+                  item(c, name, false, expander),
+                  ...(expanded
+                    ? fields.map((f) => item(f, f.concept.split(".")[1] ?? "", true))
+                    : []),
                 ];
               })}
             </ul>
@@ -144,15 +185,22 @@ function ConceptTree({
 function ConceptDetails({
   info,
   onCustomize,
+  onShow,
 }: {
   info: ConceptInfo;
   onCustomize: (page: string) => void;
+  onShow: () => void;
 }) {
   const page = info.concept.startsWith("page:") ? info.concept.slice(5) : undefined;
   const customized = info.files.some((f) => f.path.startsWith("src/custom/pages/"));
   return (
     <div className="space-y-3 p-3 text-sm">
-      <p className="font-mono text-xs text-neutral-500">{info.concept}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-mono text-xs text-neutral-500">{info.concept}</p>
+        <button type="button" onClick={onShow} className="text-xs text-accent hover:underline">
+          Show in smithable.yml
+        </button>
+      </div>
       <p>{info.summary}</p>
       {page &&
         (customized ? (
@@ -208,16 +256,37 @@ function ConceptDetails({
   );
 }
 
-function SpecEditor({ project, run }: { project: Project; run: Run }) {
+function SpecEditor({
+  project,
+  run,
+  jump,
+}: {
+  project: Project;
+  run: Run;
+  jump?: { concept: string; at: number };
+}) {
   const saved = project.files.spec ?? "";
   const [text, setText] = useState(saved);
   useEffect(() => setText(saved), [saved]);
+  const area = useRef<HTMLTextAreaElement>(null);
+  // Selects the lines a concept is declared on, and scrolls to them (when asked, not as the
+  // text changes; the editor's own value is the text).
+  useEffect(() => {
+    const editor = area.current;
+    const range = jump && editor && specRange(editor.value, jump.concept);
+    if (!range || !editor) return;
+    editor.focus();
+    editor.setSelectionRange(range[0], range[1]);
+    const line = editor.value.slice(0, range[0]).split("\n").length - 1;
+    editor.scrollTop = Math.max(0, (line - 3) * 20);
+  }, [jump]);
   // Checked in the tab, as you type: the same validator the CLI uses.
   const { diagnostics } = useMemo(() => readSpec(project.files, text), [project.files, text]);
   const errors = diagnostics.filter((d) => d.severity === "error");
   return (
     <div className="flex h-full flex-col">
       <textarea
+        ref={area}
         aria-label="smithable.yml"
         spellCheck={false}
         value={text}
@@ -249,6 +318,25 @@ function SpecEditor({ project, run }: { project: Project; run: Run }) {
     </div>
   );
 }
+
+/** What common arguments mean, for operations whose schema doesn't say. */
+const ARGUMENT_HINTS: Record<string, string> = {
+  model: "A kind of record, e.g. Customer.",
+  field: "A field of that kind of record, e.g. email.",
+  page: "A page's name, e.g. customers.",
+  type: `The field's kind, e.g. string!, email unique or "draft | sent".`,
+  value: "One of the choice field's values.",
+  column: "A field shown as a column of the page's table.",
+  columns: "Fields, in the order to show them.",
+  fields: "Fields, e.g. name email.",
+  from: "The current name.",
+  to: "The new name (letters and digits, starting lowercase).",
+  roles: "Roles from smithable.auth.yml, e.g. admin sales.",
+  target: "What the rule is for, e.g. model:Order.create.",
+  menu: 'Usually "main".',
+  pages: "Pages' names, in order.",
+  name: "A name, letters and digits, starting lowercase.",
+};
 
 /** Any operation, with a form built from its JSON Schema: the same definition MCP tools use. */
 function OperationForm({ run }: { run: Run }) {
@@ -285,7 +373,7 @@ function OperationForm({ run }: { run: Run }) {
         if (await run(name, args())) setValues({});
       }}
     >
-      <Label text="Operation" hint={op?.summary}>
+      <Label text="Operation">
         <Select
           aria-label="Operation"
           value={name}
@@ -296,12 +384,24 @@ function OperationForm({ run }: { run: Run }) {
           options={operations.map((o) => o.name)}
         />
       </Label>
+      {op && (
+        <section aria-label="What it does" className="rounded-md bg-neutral-50 p-2 text-xs">
+          <p className="text-neutral-700">{op.summary}</p>
+          <p className="mt-1 text-neutral-500">
+            On the command line:{" "}
+            <code className="font-mono">
+              smithable op {name} {op.positional.map((p) => `<${p.replace("...", "")}…>`).join(" ")}
+            </code>
+          </p>
+        </section>
+      )}
       {Object.entries(properties).map(([key, schema]) => (
         <Label
           key={key}
           text={`${key}${(op?.schema.required as string[] | undefined)?.includes(key) ? " *" : ""}`}
           hint={[
-            schema.description,
+            schema.description ?? ARGUMENT_HINTS[key],
+            Array.isArray(schema.enum) ? `One of: ${schema.enum.join(", ")}.` : "",
             schema.type === "array" ? "Separate with spaces or commas." : "",
             schema.type === "object" ? "name=value pairs, separated by commas." : "",
           ]
@@ -348,4 +448,241 @@ function Diff() {
       </pre>
     </section>
   );
+}
+
+/**
+ * Where a concept is declared in smithable.yml, as character offsets: a model, page, action or
+ * query's name line under its section, or a field's line inside its model.
+ */
+export function specRange(text: string, concept: string): [number, number] | undefined {
+  const [kind = "", rest = ""] = concept.split(":");
+  const [name = "", field] = rest.split(".");
+  const section = {
+    model: "models",
+    field: "models",
+    page: "pages",
+    action: "actions",
+    query: "queries",
+  }[kind];
+  if (!section) return;
+  const lines = text.split("\n");
+  const offset = (i: number) => lines.slice(0, i).reduce((n, l) => n + l.length + 1, 0);
+  const start = lines.indexOf(`${section}:`);
+  if (start < 0) return;
+  const at = lines.findIndex((l, i) => i > start && new RegExp(`^ {2}${name}:`).test(l));
+  if (at < 0) return;
+  let end = at + 1;
+  while (end < lines.length && /^( {3,}|\s*$)/.test(lines[end] ?? "")) end++;
+  if (!field) return [offset(at), offset(at) + (lines[at]?.length ?? 0)];
+  const line = lines.findIndex(
+    (l, i) => i > at && i < end && new RegExp(`^ {4,}${field}:`).test(l),
+  );
+  return line < 0 ? undefined : [offset(line), offset(line) + (lines[line]?.length ?? 0)];
+}
+
+/** One visible text, saved with setText; empty restores the text Smithable derives. */
+function TextSetting({
+  label,
+  path,
+  current,
+  fallback,
+  run,
+}: {
+  label: string;
+  path: string[];
+  current?: string;
+  fallback: string;
+  run: Run;
+}) {
+  const [text, setText] = useState(current ?? "");
+  return (
+    <form
+      className="flex items-end gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void run("setText", { path, text: text.trim() });
+      }}
+    >
+      <Label text={label}>
+        <Input
+          aria-label={label}
+          value={text}
+          placeholder={fallback}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </Label>
+      <Button
+        type="submit"
+        variant="ghost"
+        aria-label={`Save ${label.toLowerCase()}`}
+        className="border border-neutral-200"
+        disabled={text.trim() === (current ?? "")}
+      >
+        Save
+      </Button>
+    </form>
+  );
+}
+
+const PAGE_ICONS = [
+  "auto",
+  "users",
+  "user",
+  "file",
+  "receipt",
+  "cart",
+  "package",
+  "calendar",
+  "layers",
+  "book",
+  "briefcase",
+  "building",
+  "chart",
+  "clipboard",
+  "home",
+  "mail",
+  "settings",
+  "star",
+  "tag",
+  "truck",
+  "list",
+];
+
+/** The selected concept's properties, changed with operations (the Photoshop-like panel). */
+function Properties({ concept, spec, run }: { concept: string; spec: Spec; run: Run }) {
+  const ir = spec.ir;
+  const [kind = "", rest = ""] = concept.split(":");
+  const [name = "", fieldName] = rest.split(".");
+  const [rename, setRename] = useState("");
+  if (!ir) return null;
+  const heading = <h3 className="text-xs font-semibold text-neutral-500">Properties</h3>;
+  if (kind === "field" && fieldName) {
+    const field = ir.models.find((m) => m.name === name)?.fields.find((f) => f.name === fieldName);
+    if (!field) return null;
+    const models = ir.models.map((m) => m.name);
+    const to = identifier(rename);
+    return (
+      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
+        {heading}
+        {field.formula || (field.type.kind === "relation" && field.type.many) ? (
+          <p className="text-neutral-600">
+            {field.formula ? "Calculated" : "Lists related records"}: change it in smithable.yml.
+          </p>
+        ) : (
+          <FieldShapeForm
+            field={field}
+            models={models}
+            run={(type) => run("changeField", { model: name, field: fieldName, type })}
+          />
+        )}
+        <TextSetting
+          label="Label"
+          path={["models", name, "fields", fieldName, "label"]}
+          current={spec.content?.models[name]?.fields[fieldName]?.label}
+          fallback={humanize(fieldName)}
+          run={run}
+        />
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (to) void run("renameField", { model: name, from: fieldName, to });
+          }}
+        >
+          <Label
+            text="Rename"
+            hint={to ? `Will be named ${to}; the data is kept` : "The data is kept"}
+          >
+            <Input aria-label="Rename" value={rename} onChange={(e) => setRename(e.target.value)} />
+          </Label>
+          <Button
+            type="submit"
+            variant="ghost"
+            className="border border-neutral-200"
+            disabled={!to}
+          >
+            Rename
+          </Button>
+        </form>
+        <Button
+          variant="ghost"
+          className="border border-red-200 text-red-700"
+          onClick={() => void run("removeField", { model: name, field: fieldName })}
+        >
+          Remove field
+        </Button>
+      </div>
+    );
+  }
+  if (kind === "page") {
+    const page = ir.pages.find((p) => p.id === name);
+    if (!page) return null;
+    const texts = spec.content?.pages[name];
+    return (
+      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
+        {heading}
+        <TextSetting
+          label="Title"
+          path={["pages", name, "title"]}
+          current={texts?.title}
+          fallback={humanize(name)}
+          run={run}
+        />
+        <TextSetting
+          label="Subtitle"
+          path={["pages", name, "subtitle"]}
+          current={texts?.subtitle}
+          fallback="None"
+          run={run}
+        />
+        <Label text="Icon in the menu">
+          <Select
+            aria-label="Icon in the menu"
+            value=""
+            onChange={(e) =>
+              e.target.value && void run("setIcon", { page: name, icon: e.target.value })
+            }
+            options={[
+              ["", "Choose…"],
+              ...PAGE_ICONS.map((i): [string, string] => [
+                i,
+                i === "auto" ? "Automatic" : humanize(i),
+              ]),
+            ]}
+          />
+        </Label>
+        <Button
+          variant="ghost"
+          className="border border-red-200 text-red-700"
+          disabled={ir.pages.length < 2}
+          onClick={() => void run("removePage", { page: name })}
+        >
+          Remove page
+        </Button>
+      </div>
+    );
+  }
+  if (kind === "model") {
+    const texts = spec.content?.models[name];
+    return (
+      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
+        {heading}
+        <TextSetting
+          label="Name for one"
+          path={["models", name, "label"]}
+          current={texts?.label}
+          fallback={humanize(name)}
+          run={run}
+        />
+        <TextSetting
+          label="Name for several"
+          path={["models", name, "pluralLabel"]}
+          current={texts?.pluralLabel}
+          fallback={`${humanize(name)}s`}
+          run={run}
+        />
+      </div>
+    );
+  }
+  return null;
 }
