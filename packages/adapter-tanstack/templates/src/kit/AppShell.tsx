@@ -3,6 +3,7 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
 import { useRef } from "react";
 import { allows, type Rule, type Viewer } from "./access";
+import { textMarker } from "./model";
 
 export interface MenuUi {
   name: string;
@@ -143,18 +144,31 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  page,
 }: {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  /** The page's name in the spec: its texts can then be changed in the preview. */
+  page?: string;
 }) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <h1 className="break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10">
+        <h1
+          className="break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"
+          {...(page ? textMarker(`pages.${page}.title`) : {})}
+        >
           {title}
         </h1>
-        {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
+        {subtitle && (
+          <p
+            className="mt-1 text-muted-foreground"
+            {...(page ? textMarker(`pages.${page}.subtitle`) : {})}
+          >
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions && (
         <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:flex-1">{actions}</div>

@@ -78,7 +78,7 @@ export function applyOperation(
 
   const editors = {
     spec: new YamlEditor(files.spec),
-    ...(files.content === undefined ? {} : { content: new YamlEditor(files.content) }),
+    content: new YamlEditor(files.content ?? `smithableContent: 0.1\n`),
     ...(files.auth === undefined ? {} : { auth: new YamlEditor(files.auth) }),
     ux: new YamlEditor(files.ux ?? `smithableUx: 0.1\n`),
   };
@@ -92,7 +92,9 @@ export function applyOperation(
 
   const after = validateSpec({ path: "smithable.yml", text: editors.spec.text }, options);
   if (!after.ir) return fail(`${name} would make smithable.yml invalid.`, after.diagnostics);
-  if (editors.content) {
+  // The content file, like the ux file, is written only if the project has one or it changed.
+  const contentChanged = editors.content.text !== (files.content ?? `smithableContent: 0.1\n`);
+  if (files.content !== undefined || contentChanged) {
     const content = validateContent(
       { path: "smithable.content.yml", text: editors.content.text },
       after.ir,
@@ -115,7 +117,7 @@ export function applyOperation(
     ok: true,
     files: {
       spec: editors.spec.text,
-      ...(editors.content ? { content: editors.content.text } : {}),
+      ...(files.content !== undefined || contentChanged ? { content: editors.content.text } : {}),
       ...(editors.auth ? { auth: editors.auth.text } : {}),
       ...(files.ux !== undefined || uxChanged ? { ux: editors.ux.text } : {}),
     },

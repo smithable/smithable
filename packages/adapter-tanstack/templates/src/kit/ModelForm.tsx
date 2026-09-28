@@ -8,7 +8,14 @@ import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { FieldInput } from "./FieldInput";
 import { formatValue, fromInput, toInput } from "./format";
-import { type AppUi, editorMarker, type FieldUi, type ModelUi, type Options } from "./model";
+import {
+  type AppUi,
+  editorMarker,
+  type FieldUi,
+  type ModelUi,
+  type Options,
+  textMarker,
+} from "./model";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
@@ -108,7 +115,9 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               >
                 {!inline && (
                   <Label htmlFor={id}>
-                    {field.label}
+                    <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
+                      {field.label}
+                    </span>
                     {field.required && <span className="text-destructive"> *</span>}
                   </Label>
                 )}
