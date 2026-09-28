@@ -491,7 +491,7 @@
           },
           "landing": {
             "type": "object",
-            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction.",
+            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer.",
             "additionalProperties": {
               "type": [
                 "object",
@@ -510,6 +510,10 @@
                 "limit": {
                   "type": "integer",
                   "minimum": 1
+                },
+                "form": {
+                  "type": "string",
+                  "description": "A contact section's form: the model visitors add a record of."
                 }
               }
             }

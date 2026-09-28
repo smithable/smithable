@@ -143,3 +143,65 @@ pages:
   );
   expect(hero("{ src: https://x.test/a.jpg, alt: x }").content).toBeUndefined();
 });
+
+test("contact, gallery and footer sections: their texts, pictures and links", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Message:
+    fields: { name: string!, email: email!, message: text! }
+  Visit:
+    fields: { message: Message!, at: datetime }
+pages:
+  home:
+    route: /
+    landing: { contact: { form: Message }, gallery: {}, footer: {} }
+  messages: { crud: Message }
+`,
+  });
+  expect(spec.ir?.pages[0]?.pattern).toMatchObject({
+    sections: [{ kind: "contact", form: "Message" }, { kind: "gallery" }, { kind: "footer" }],
+  });
+  const ir = spec.ir as SpecIR;
+  const read = (text: string) => validateContent({ path: "smithable.content.yml", text }, ir);
+  const { content } = read(`smithableContent: 0.1
+pages:
+  home:
+    contact: { title: Write to us, address: "Storagatan 1", hours: "Mon–Fri 9–17", thanks: Thanks! }
+    gallery:
+      items:
+        - { image: { src: images/gallery/a.webp, alt: A mat }, caption: The studio }
+    footer:
+      text: Studio
+      items: [{ label: Schedule, link: /sessions }, { label: Email, link: "mailto:a@b.ax" }]
+`);
+  expect(content?.pages.home?.sections?.gallery?.items?.[0]).toEqual({
+    image: { src: "images/gallery/a.webp", alt: "A mat" },
+    caption: "The studio",
+  });
+  expect(content?.pages.home?.sections?.contact?.hours).toBe("Mon–Fri 9–17");
+  const bad = read(`smithableContent: 0.1
+pages:
+  home:
+    gallery: { items: [{ image: { src: images/../secret.webp, alt: x } }] }
+    footer: { items: [{ label: Evil, link: "javascript:alert(1)" }] }
+`);
+  expect(bad.diagnostics.map((d) => d.code)).toEqual(["invalid-value", "invalid-value"]);
+  // A contact form's model may not link to other records: visitors would pick among them.
+  const linked = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Message:
+    fields: { name: string! }
+  Visit:
+    fields: { message: Message!, at: datetime }
+pages:
+  home: { route: /, landing: { contact: { form: Visit } } }
+`,
+  });
+  expect(linked.diagnostics.map((d) => d.message).join()).toContain("cannot link to other records");
+});
