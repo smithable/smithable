@@ -417,6 +417,11 @@ try {
       throw new Error("no logs");
   });
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
+    // An unsaved edit in the spec editor is kept when the file changes under it.
+    await page.getByRole("tab", { name: "smithable.yml" }).click();
+    const editor = page.getByLabel("smithable.yml");
+    const typed = `${await editor.inputValue()}# unsaved\n`;
+    await editor.fill(typed);
     const client = new Client({ name: "test", version: "1" });
     await client.connect(
       new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`)),
@@ -431,7 +436,30 @@ try {
       .getByText("Add field vatNumber (text) to Customer")
       .first()
       .waitFor({ timeout: 30000 });
+    await page.getByText("smithable.yml changed on disk while you were editing.").waitFor();
+    if ((await editor.inputValue()) !== typed) throw new Error("the unsaved edit was replaced");
+    await page.getByRole("button", { name: "Use the file on disk" }).click();
+    if (!(await editor.inputValue()).includes("vatNumber")) throw new Error("not the file on disk");
   });
+  await step(
+    "Studio is not framed by other sites, and applies only the proposal it showed",
+    async () => {
+      const answer = await fetch(`${base}/`);
+      if (answer.headers.get("content-security-policy") !== "frame-ancestors 'none'")
+        throw new Error(`CSP: ${answer.headers.get("content-security-policy")}`);
+      const post = (path, body) =>
+        fetch(`${base}${path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: JSON.stringify(body),
+        }).then((r) => r.json());
+      const proposal = await post("/api/ask", { request: "Add a phone field to customers" });
+      if (!proposal.id) throw new Error(JSON.stringify(proposal));
+      const stale = await post("/api/ask/apply", { id: "another" });
+      if (stale.ok || !/no longer the latest/.test(stale.output))
+        throw new Error(JSON.stringify(stale));
+    },
+  );
   await step("a web page cannot reach Studio through another host name", async () => {
     const status = await new Promise((resolve, reject) =>
       request({ port, path: "/api/project", headers: { host: "evil.example" } }, (r) => {

@@ -271,7 +271,16 @@ function SpecEditor({
 }) {
   const saved = project.files.spec ?? "";
   const [text, setText] = useState(saved);
-  useEffect(() => setText(saved), [saved]);
+  // The file as it was when editing began: a change on disk replaces the text only when it has
+  // not been edited, and is otherwise offered, so typing is never lost.
+  const [base, setBase] = useState(saved);
+  const edited = text !== base;
+  useEffect(() => {
+    // A save of this text lands here too.
+    if (edited && saved !== text) return;
+    setText(saved);
+    setBase(saved);
+  }, [saved, edited, text]);
   const area = useRef<HTMLTextAreaElement>(null);
   // Selects the lines a concept is declared on, and scrolls to them (when asked, not as the
   // text changes; the editor's own value is the text).
@@ -300,8 +309,25 @@ function SpecEditor({
         onChange={(e) => setText(e.target.value)}
         className="min-h-0 flex-1 resize-none p-3 font-mono text-[13px] leading-5 outline-none"
       />
+      {edited && saved !== base && saved !== text && (
+        <p
+          role="status"
+          className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 p-2 text-xs"
+        >
+          smithable.yml changed on disk while you were editing.
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setText(saved);
+              setBase(saved);
+            }}
+          >
+            Use the file on disk
+          </Button>
+        </p>
+      )}
       <div className="flex items-center justify-between gap-3 border-t border-neutral-200 p-2">
-        <ul aria-label="Problems" className="min-w-0 space-y-0.5 text-xs">
+        <ul aria-label="Problems" aria-live="polite" className="min-w-0 space-y-0.5 text-xs">
           {diagnostics.length === 0 ? (
             <li className="text-green-700">No problems.</li>
           ) : (
