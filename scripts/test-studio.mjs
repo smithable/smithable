@@ -316,6 +316,26 @@ try {
       .waitFor({ timeout: 60000 });
   });
 
+  await step(
+    "a landing page and a contact section, made in Builder, show in the preview",
+    async () => {
+      await change("Add a page");
+      await page.getByLabel("Page name").fill("home");
+      await page.getByLabel("Kind of page").selectOption({ label: "A landing page for visitors" });
+      await page.getByRole("button", { name: "Add page" }).click();
+      await trace
+        .getByText("Added the Home page, a landing page for visitors")
+        .waitFor({ timeout: 60000 });
+      await change("A section on a landing page");
+      await page.getByRole("button", { name: "Add section" }).click();
+      await trace.getByText("Added a contact section to the Home page").waitFor({ timeout: 60000 });
+      await openPreview("/");
+      await preview
+        .getByRole("heading", { name: "Acme CRM", level: 1 })
+        .waitFor({ timeout: 60000 });
+    },
+  );
+
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {
     await page.locator("label", { hasText: /^Studio$/ }).click();

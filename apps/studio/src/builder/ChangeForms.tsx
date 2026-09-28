@@ -485,19 +485,42 @@ function AddPage({ spec, run, initial }: FormProps) {
   const models = spec.ir?.models ?? [];
   const [page, setPage] = useState(str(initial?.page) ?? "");
   const [model, setModel] = useState(str(initial?.model) ?? models[0]?.name ?? "");
+  const [kind, setKind] = useState("list");
   return (
-    <Form onSubmit={() => run("addPage", { page, model })}>
+    <Form
+      onSubmit={() =>
+        kind === "landing" ? run("addLandingPage", { page }) : run("addPage", { page, model })
+      }
+    >
       <Label text="Page name" hint="Lowercase, e.g. products">
         <Input aria-label="Page name" value={page} onChange={(e) => setPage(e.target.value)} />
       </Label>
-      <Label text="Lists">
+      <Label text="Kind of page">
         <Select
-          aria-label="Lists"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          options={models.map((m) => m.name)}
+          aria-label="Kind of page"
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+          options={[
+            ["list", "A list of records"],
+            ["landing", "A landing page for visitors"],
+          ]}
         />
       </Label>
+      {kind === "landing" ? (
+        <p className="text-xs text-neutral-500">
+          It starts with a heading and a footer, opens without sign-in, and gets more sections from
+          “A section on a landing page”.
+        </p>
+      ) : (
+        <Label text="Lists">
+          <Select
+            aria-label="Lists"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            options={models.map((m) => m.name)}
+          />
+        </Label>
+      )}
       <Submit label="Add page" disabled={!page} />
     </Form>
   );
