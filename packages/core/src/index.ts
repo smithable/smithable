@@ -20,7 +20,7 @@ export { formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
 export { YamlEditor } from "./edit.js";
 export type { Expr } from "./formula.js";
-export { formatFormula } from "./formula.js";
+export { formatFormula, parseFormula } from "./formula.js";
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
@@ -41,6 +41,7 @@ export type { SpecPlugin } from "./plugin.js";
 export { checkJson } from "./plugin.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
+export { parseFieldShorthand } from "./sections/field-type.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
 export type { Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";

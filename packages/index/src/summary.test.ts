@@ -27,7 +27,13 @@ test("the CRM in plain language, with labels from the content file", () => {
     "auth",
   ]);
   expect(sections[1]?.sentences).toEqual([
-    "Customers have a name (required), an email (unique), a phone, a segment (small business, enterprise or government, small business by default), a credit limit (an amount) and notes.",
+    "Customers have:",
+    "- a name (required)",
+    "- an email (unique)",
+    "- a phone",
+    "- a segment (small business, enterprise or government, small business by default)",
+    "- a credit limit (an amount)",
+    "- notes",
     "Each customer can have an account manager (a user).",
     "Each customer lists its orders.",
     "The account manager owns the customer.",
@@ -35,6 +41,7 @@ test("the CRM in plain language, with labels from the content file", () => {
     "Only admins can delete customers.",
   ]);
   expect(sections[3]?.sentences).toEqual([
-    "Customers (lists customers; search by name or email; “Merge customers”) and Orders (lists orders; search by number or customer).",
+    "- Customers (lists customers; search by name or email; “Merge customers”)",
+    "- Orders (lists orders; search by number or customer)",
   ]);
 });
