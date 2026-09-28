@@ -129,6 +129,22 @@ export async function studio(
   };
 
   let app: ChildProcess | undefined;
+  /**
+   * Tells Studio to reload the preview once the dev server has taken in a change: a moment
+   * first (TanStack Start is still rebuilding after its watcher goes quiet), then the editor
+   * plugin's /__smithable/settled. Reloading earlier can leave the preview's request hanging;
+   * an operation that finished quickly made that likely. The operation's own answer does not
+   * wait for this.
+   */
+  const changed = (data: unknown) =>
+    void new Promise((r) => setTimeout(r, 800))
+      .then(() =>
+        fetch(`http://127.0.0.1:${previewPort}/__smithable/settled`, {
+          signal: AbortSignal.timeout(5000),
+        }),
+      )
+      .catch(() => undefined)
+      .then(() => send("changed", data));
   // The preview runs with the editor (select, drag columns) through a wrapper config in data/,
   // which Git ignores: the app's own config and builds stay as they are.
   const config = join("data", ".smithable", "preview.vite.config.mjs");
@@ -281,7 +297,7 @@ export async function studio(
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
         const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
-        if (result.ok) send("changed", { description: result.output });
+        if (result.ok) changed({ description: result.output });
         return json({ ...result, needsConfirm });
       }
       if (req.method === "POST" && url.pathname === "/api/ask") {
@@ -305,13 +321,13 @@ export async function studio(
           return json({ ok: false, output: "There is no proposed change to apply." });
         const proposal = confirmed.proposal;
         const result = await capture((io) => applyProposal(dir, io, confirmed.request, proposal));
-        if (result.ok) send("changed", { description: result.output });
+        if (result.ok) changed({ description: result.output });
         return json(result);
       }
       if (req.method === "POST" && url.pathname === "/api/customize") {
         const { page } = await body();
         const result = await capture((io) => customize(dir, io, `page:${String(page)}`));
-        if (result.ok) send("changed", {});
+        if (result.ok) changed({});
         return json(result);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
