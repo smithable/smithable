@@ -132,20 +132,6 @@ function write(dir, sql) {
   run("node", ["-e", code], dir);
 }
 
-/** What a developer (or AI) writes for the CRM's mergeCustomers action: ordinary Drizzle code. */
-const MERGE_CUSTOMERS = `import { eq } from "drizzle-orm";
-import { db } from "#/db";
-import { customers, orders } from "#/db/schema";
-import type { MergeCustomersInput, MergeCustomersOutput } from "#/generated/actions/merge-customers";
-
-export async function mergeCustomers(input: MergeCustomersInput): Promise<MergeCustomersOutput> {
-  db.transaction((tx) => {
-    tx.update(orders).set({ customerId: input.keep }).where(eq(orders.customerId, input.duplicate)).run();
-    tx.delete(customers).where(eq(customers.id, input.duplicate)).run();
-  });
-}
-`;
-
 /**
  * After `smithable detach`, a developer who knows only Drizzle and TanStack adds a column and
  * a page; migrations continue from the existing ones.
@@ -1006,8 +992,10 @@ for (const [index, example] of examples.entries()) {
   try {
     step("smithable new", () => run("node", [cli, "new", dir, "--starter", example], repo));
     if (example === "crm") {
-      step("a developer implements the custom action in src/custom", () => {
-        writeFileSync(join(dir, "src/custom/actions/merge-customers.ts"), MERGE_CUSTOMERS);
+      step("the starter comes with its custom action implemented", () => {
+        const code = readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8");
+        if (code.includes("not implemented yet"))
+          throw new Error("the stub, not the starter's code");
       });
     }
     step("no dependency on Smithable", () => {

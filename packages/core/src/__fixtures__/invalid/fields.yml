@@ -14,7 +14,7 @@ models:
         type: beginner | allLevels
         default: expert            # expect: invalid-default
       score:
-        type: string
+        type: bool
         min: 1                     # expect: invalid-field
       nickname:
         type: string

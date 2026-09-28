@@ -2,7 +2,7 @@
 // preview and the Studio app; a real browser makes the M3-M5 changes in both modes.
 // Run after `pnpm build`: `pnpm test:studio`.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -57,6 +57,7 @@ try {
   const trace = page.getByRole("list", { name: "Change trace" });
   const change = async (label) => {
     await page.getByRole("tab", { name: "Change" }).click();
+    await page.getByRole("tab", { name: "Manual" }).click();
     await page.getByLabel("What do you want to change?").selectOption({ label });
   };
   const openPreview = async (path) => {
@@ -93,6 +94,13 @@ try {
     await page.getByText("a web address").first().waitFor();
     await openPreview("/customers/new");
     await preview.getByLabel("Website").waitFor({ timeout: 60000 });
+    // Friendly names become spec names.
+    await change("Rename a field");
+    await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
+    await page.getByLabel("New name").fill("Web page");
+    await page.getByText("webPage", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Rename field" }).click();
+    await status.getByText("Rename Customer.website to webPage").waitFor({ timeout: 60000 });
   });
   await step(
     "removing a field asks first, with what data it loses; undo brings it back",
@@ -169,10 +177,21 @@ try {
     await page.getByRole("button", { name: "Apply" }).click();
     await status.getByText("Set the theme: preset playful").waitFor({ timeout: 60000 });
   });
+  await step("undoing a theme puts back the packages it swapped (its font)", async () => {
+    const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
+    await page.getByRole("button", { name: "Undo" }).click();
+    await status.getByText(/Undid: Set the theme/).waitFor({ timeout: 60000 });
+    const after = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
+    if (JSON.stringify(before) === JSON.stringify(after))
+      throw new Error("the theme changed no package");
+    for (const name of Object.keys(after))
+      if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
+  });
 
   await step(
     "describe a change: the model's proposal is shown, applied on confirmation, and traced",
     async () => {
+      await page.getByRole("tab", { name: "Change" }).click();
       await page.getByRole("tab", { name: "Describe" }).click();
       await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
       await page.getByRole("button", { name: "Suggest" }).click();

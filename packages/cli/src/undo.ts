@@ -1,6 +1,6 @@
 import { restoreDatabase } from "./database.js";
 import { git, uncommitted } from "./git.js";
-import type { Io } from "./io.js";
+import { exec, type Io } from "./io.js";
 
 /**
  * `smithable undo`: reverts the most recent operation that is not undone yet. The revert is
@@ -43,6 +43,13 @@ export function undo(dir: string, io: Io): number {
       `Could not undo "${target.subject.slice(11)}": later changes touch the same files.\n${revert.out}\n`,
     );
     return 1;
+  }
+  // A change that swapped packages (e.g. a theme's font) removed some from node_modules: the
+  // restored package.json needs them back.
+  const touched = git(dir, ["show", "--name-only", "--format=", target.sha]).out.split("\n");
+  if (touched.some((f) => f === "package.json" || f === "pnpm-lock.yaml")) {
+    if (exec("pnpm", ["install", "--silent"], dir) !== 0)
+      io.err("Reinstalling the packages failed: run pnpm install.\n");
   }
   const restored = target.snapshot ? restoreDatabase(dir, target.snapshot) : false;
   io.out(
