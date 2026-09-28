@@ -25,7 +25,10 @@ export async function create(
     io.err(`Unknown starter "${name}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
     return 2;
   }
-  if (existsSync(dir) && readdirSync(dir).length > 0) {
+  // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
+  // from, as hosted workspaces provide) do not count: the install then has little to do.
+  const PREPARED = ["node_modules", "pnpm-lock.yaml"];
+  if (existsSync(dir) && readdirSync(dir).some((f) => !PREPARED.includes(f))) {
     io.err(`${dir} already exists and is not empty.\n`);
     return 1;
   }
