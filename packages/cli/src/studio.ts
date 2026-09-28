@@ -133,7 +133,13 @@ export async function studio(
   // which Git ignores: the app's own config and builds stay as they are.
   const config = join("data", ".smithable", "preview.vite.config.mjs");
   mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-  writeFileSync(join(dir, config), previewConfig(options.previewUrl));
+  // Packages in a pnpm virtual store outside the project (hosted workspaces with a prepared
+  // dependency set) may be served too.
+  const store = process.env.pnpm_config_virtual_store_dir;
+  writeFileSync(
+    join(dir, config),
+    previewConfig(options.previewUrl, store ? [resolve(dir), resolve(store)] : undefined),
+  );
   const startApp = () => {
     app = spawn(
       ...tool(dir, "vite", [
