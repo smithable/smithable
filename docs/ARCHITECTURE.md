@@ -591,7 +591,7 @@ Builder and Studio are two modes of **one web app** (`apps/studio`), working on 
 | Change descriptions | "Added a phone number to customers" | Operations plus diff |
 | Setup tasks (sign-in providers, domains, backups) | Guided wizards | Config files and environment variables |
 
-Both modes show the **change trace** (§9.7) and **rule status** (§2.3), and support undo. The **handoff** from a non-developer to a developer is just switching mode, or cloning the repository.
+Both modes show the **change trace** (§9.7) and **rule status** (§2.3), and support undo. In Studio mode (M15) the concept tree works like a properties panel: models open to show their fields, and a selected field, page or model shows its properties, changed with operations (a field's kind, Required and Unique, label, rename and removal; a page's title, subtitle, icon and removal; a model's names), and "Show in smithable.yml" selects its lines in the spec editor. The Operation tab explains each operation: what it does, what each argument means, and the same change on the command line. The **handoff** from a non-developer to a developer is just switching mode, or cloning the repository.
 
 ### 10.2 Preview runtimes
 
