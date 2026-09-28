@@ -30,11 +30,21 @@ export interface SectionContent {
   label?: string;
   /** Features, plans, testimonials or questions, depending on the section. */
   items?: Record<string, string | string[]>[];
+  /** A hero's picture: a file in the app's public/images/, and what it shows. */
+  image?: ContentImage;
 }
 
+export interface ContentImage {
+  src: string;
+  alt: string;
+}
+
+/** A picture's file, relative to the app's public/ folder. */
+const IMAGE_SRC = /^images\/[\w.-]+\.(webp|avif|jpe?g|png)$/;
+
 /** The texts each kind of section takes, and the keys of its items. */
-const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[] }> = {
-  hero: { texts: ["title", "subtitle", "button"] },
+const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[]; image?: true }> = {
+  hero: { texts: ["title", "subtitle", "button"], image: true },
   features: { texts: ["title", "text"], items: ["title", "text"] },
   records: { texts: ["title", "text"] },
   pricing: {
@@ -247,20 +257,55 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
     }
     const partWhere = `"${entry.key}" of ${where}`;
     const known = checkKeys(ctx, mapEntries(ctx, entry.value, partWhere) ?? [], partWhere, {
-      allowed: [...rules.texts, ...(rules.items ? ["items"] : [])],
+      allowed: [
+        ...rules.texts,
+        ...(rules.items ? ["items"] : []),
+        ...(rules.image ? ["image"] : []),
+      ],
     });
     const section: SectionContent = readTexts(
       ctx,
       null,
       partWhere,
       [],
-      known.filter((e) => e.key !== "items"),
+      known.filter((e) => e.key !== "items" && e.key !== "image"),
     );
     const items = known.find((e) => e.key === "items");
     if (items && rules.items) section.items = readItems(ctx, items.value, partWhere, rules.items);
+    const image = known.find((e) => e.key === "image");
+    if (image) {
+      const read = readImage(ctx, image.value, `the image of ${partWhere}`);
+      if (read) section.image = read;
+    }
     result.sections = { ...result.sections, [entry.key]: section };
   }
   return result;
+}
+
+/** A picture: `{ src: images/<file>, alt: <what it shows> }`. */
+function readImage(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+): ContentImage | undefined {
+  const { src, alt } = readTexts(ctx, node, where, ["src", "alt"]);
+  if (!src || !IMAGE_SRC.test(src)) {
+    ctx.error(
+      node,
+      "invalid-value",
+      `"src" of ${where} must be a file in the app's public/images/ folder, e.g. images/hero.webp (webp, avif, jpg or png).`,
+    );
+    return undefined;
+  }
+  if (!alt) {
+    ctx.error(
+      node,
+      "invalid-value",
+      `${capitalize(where)} needs "alt": what it shows, for people who cannot see it.`,
+    );
+    return undefined;
+  }
+  return { src, alt };
 }
 
 /** A list of items, each a mapping of texts; a pricing plan's features are a list of texts. */

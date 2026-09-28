@@ -131,4 +131,15 @@ pages:
     faq: { items: [{ question: Q, reply: A }] }
 `).diagnostics.map((d) => d.code),
   ).toEqual(["unknown-key", "unknown-key"]);
+  // A hero's picture: a file in public/images/, with what it shows.
+  const hero = (image: string) =>
+    read(`smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: ${image}\n`);
+  expect(hero("{ src: images/hero.webp, alt: A yoga class }").content?.pages.home).toEqual({
+    sections: { hero: { image: { src: "images/hero.webp", alt: "A yoga class" } } },
+  });
+  expect(hero("{ src: images/hero.webp }").diagnostics[0]?.message).toContain('needs "alt"');
+  expect(hero("{ src: ../secret.webp, alt: x }").diagnostics[0]?.message).toContain(
+    "public/images/",
+  );
+  expect(hero("{ src: https://x.test/a.jpg, alt: x }").content).toBeUndefined();
 });

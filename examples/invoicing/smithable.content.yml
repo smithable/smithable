@@ -17,6 +17,9 @@ pages:
       title: Get paid for your work, without the paperwork
       subtitle: Invoicely keeps your clients, invoices and payments in one place, so you always know who owes you what.
       button: Start invoicing
+      image:
+        src: images/hero.webp
+        alt: A calculator, receipts and a laptop on a wooden desk
     features:
       title: Everything a freelancer needs
       items:
