@@ -1228,6 +1228,7 @@ ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  con
   return (
     <>
       <PageHeader
+        page=${JSON.stringify(page.id)}
         title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
@@ -1583,7 +1584,7 @@ function ${component}() {
   const [saved, setSaved] = useState(false);
   return (
     <>
-      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${JSON.stringify(page.id)} title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
       <ModelForm
         key={row?.id ?? "new"}
         ui={${n.ui}}
@@ -1822,7 +1823,7 @@ function ${component}() {
   const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
   return (
     <>
-      <PageHeader title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${JSON.stringify(page.id)} title=${JSON.stringify(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
       <div className="space-y-6">
       ${blocks.join("\n      ")}
       </div>

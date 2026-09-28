@@ -37,6 +37,8 @@ export function Builder({
       if (e.data.type === "select") setSelection(e.data);
       if (e.data.type === "columns")
         run("setColumns", { page: e.data.page, columns: e.data.columns });
+      if (e.data.type === "text")
+        run("setText", { path: e.data.path.split("."), text: e.data.text });
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

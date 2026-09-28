@@ -170,6 +170,26 @@ try {
       await page.getByRole("button", { name: "Select" }).click();
     },
   );
+  await step(
+    "a page title is changed in place in the preview: smithable.content.yml follows",
+    async () => {
+      await openPreview("/customers");
+      await page.getByRole("button", { name: "Select" }).click();
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 60000 });
+      await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
+      await page.keyboard.type("Clients");
+      await page.keyboard.press("Enter");
+      await status
+        .getByText('Change the text pages.customers.title to "Clients"')
+        .waitFor({ timeout: 60000 });
+      if (!(await project()).files.content.includes("title: Clients"))
+        throw new Error("content not changed");
+      await page.getByRole("button", { name: "Select" }).click();
+      await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
+    },
+  );
   await step("look and feel: a theme and density are chosen without touching code", async () => {
     await change("Look and feel");
     await page.getByLabel("Theme").selectOption("playful");
