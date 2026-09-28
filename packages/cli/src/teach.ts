@@ -4,7 +4,7 @@ import { REFERENCE } from "@smithable/ai";
 import { SECTIONS, YamlEditor } from "@smithable/core";
 import { type Coder, coderFromEnv, runCoder } from "./code.js";
 import { generate } from "./generate.js";
-import { exec, type Io } from "./io.js";
+import { exec, type Io, tool } from "./io.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 
 /**
@@ -95,7 +95,7 @@ ${specText}\`\`\``;
   });
   if (code !== 0) return code;
   // Committed: now the development database gets the new tables.
-  return exec("pnpm", ["exec", "tsx", "src/db/index.ts"], dir);
+  return exec(...tool(dir, "tsx", ["src/db/index.ts"]), dir);
 }
 
 /** Adds the plugin to smithable.context.yml, creating the file when there is none. */

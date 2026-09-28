@@ -5,7 +5,7 @@ import { validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { aiProviders, confirm, usageLine } from "./ask.js";
 import { generate } from "./generate.js";
-import { exec, type Io } from "./io.js";
+import { exec, type Io, tool } from "./io.js";
 import { STARTERS } from "./starters.gen.js";
 
 /**
@@ -61,7 +61,7 @@ export async function create(
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   const code = generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
-  if (exec("pnpm", ["db:seed"], dir) !== 0)
+  if (exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
   io.out(`\nCreated ${dir}. Start it with:\n\n  cd ${dir}\n  smithable run\n`);
   return 0;
