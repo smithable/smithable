@@ -152,14 +152,24 @@ function Part({
     setNote("");
     const operations = readSummaryEdit(section, text, spec.ir);
     if (operations?.length === 0) return setNote("Nothing changed.");
-    if (operations) return setSuggestion({ kind: "local", operations });
-    setBusy(true);
-    const request = `In the app's plain-language summary, the user rewrote the part "${section.title}" (${section.concept}).\nIt said:\n${section.sentences.join("\n")}\nIt should now say:\n${text}\nChange the app so that it matches the new text.`;
-    setSuggestion({ kind: "model", proposal: await api.ask(request) });
-    setBusy(false);
+    let next: Suggestion;
+    if (operations) next = { kind: "local", operations };
+    else {
+      setBusy(true);
+      const request = `In the app's plain-language summary, the user rewrote the part "${section.title}" (${section.concept}).\nIt said:\n${section.sentences.join("\n")}\nIt should now say:\n${text}\nChange the app so that it matches the new text.`;
+      next = { kind: "model", proposal: await api.ask(request) };
+      setBusy(false);
+    }
+    // A change that loses no data happens at once (Undo takes it back); one that deletes
+    // data is shown first.
+    const safe =
+      next.kind === "local"
+        ? next.operations.every((o) => o.op !== "removeField")
+        : next.proposal.kind === "change" && !next.proposal.operations.some((o) => o.destructive);
+    if (safe) await apply(next, text);
+    else setSuggestion(next);
   };
-  const apply = async () => {
-    if (!suggestion || draft === undefined) return;
+  const apply = async (suggestion: Suggestion, text: string) => {
     setBusy(true);
     let ok = true;
     if (suggestion.kind === "local") {
@@ -175,7 +185,7 @@ function Part({
     }
     setBusy(false);
     if (ok) {
-      onApplied(draft);
+      onApplied(text);
       close();
     }
   };
@@ -234,7 +244,7 @@ function Part({
           {!proposal && (
             <div className="flex gap-2">
               <Button onClick={() => void suggest(draft)} disabled={busy || draft === shown}>
-                {busy ? "Thinking…" : "Suggest"}
+                {busy ? "Working…" : "Make the change"}
               </Button>
               <Button variant="ghost" onClick={close} disabled={busy}>
                 Cancel
@@ -246,7 +256,7 @@ function Part({
               proposal={proposal}
               words={words}
               busy={busy}
-              onApply={() => void apply()}
+              onApply={() => suggestion && draft !== undefined && void apply(suggestion, draft)}
               onCancel={() => setSuggestion(undefined)}
             />
           )}
