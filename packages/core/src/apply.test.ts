@@ -376,3 +376,13 @@ test("setText changes, adds and restores visible texts; the content file decides
   const other = applyOperation(bare, "setIcon", { page: "customers", icon: "users" });
   expect(other.ok && other.files.content).toBeUndefined();
 });
+
+test("removePage takes a page out of the spec, the menus and its texts", () => {
+  const result = applyOperation(files, "removePage", { page: "orders" });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.files.spec).not.toMatch(/^ {2}orders:/m);
+  expect(result.files.spec).toContain("navigation: [customers]");
+  expect(result.files.content).not.toContain("Every order and where it stands.");
+  expect(applyOperation(files, "removePage", { page: "nowhere" }).ok).toBe(false);
+});

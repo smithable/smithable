@@ -188,5 +188,43 @@ const setSearch: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
-export const pageOperations: AnyOperation[] = [addPage, setSearch, addTile];
+const removePage: Operation<{ page: string }> = {
+  name: "removePage",
+  summary: "Remove a page, from the menus too. Its records and their data stay.",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: { page: { type: "string" } },
+  },
+  positional: ["page"],
+  describe: ({ page }) => `Remove page ${page}`,
+  destructive: () => false,
+  apply({ spec, content, ux }, { page }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    if (ir.pages.length === 1) throw new OperationError("An app needs at least one page.");
+    spec.removeAndPrune(["pages", page], 0);
+    // Out of every menu: a list (the main menu) or named menus.
+    const navigation = spec.get(["navigation"]);
+    if (Array.isArray(navigation))
+      spec.set(
+        ["navigation"],
+        (navigation as string[]).filter((p) => p !== page),
+      );
+    else if (navigation && typeof navigation === "object")
+      for (const [menu, pages] of Object.entries(navigation as Record<string, string[]>))
+        if (pages.includes(page))
+          spec.set(
+            ["navigation", menu],
+            pages.filter((p) => p !== page),
+          );
+    // Its texts and presentation go with it.
+    for (const editor of [content, ux])
+      if (editor?.has(["pages", page])) editor.removeAndPrune(["pages", page], 0);
+    return [];
+  },
+};
+
+export const pageOperations: AnyOperation[] = [addPage, setSearch, addTile, removePage];
 export const navigationOperations: AnyOperation[] = [setNavigation];

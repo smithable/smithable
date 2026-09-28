@@ -177,6 +177,11 @@ const CHANGES = [
   ["setSearch", "Search on a page"],
   ["setAccess", "Who can do what"],
   ["setNavigation", "Menu order"],
+  ["setIcon", "A page's icon"],
+  ["setTone", "Colours of a choice"],
+  ["setBelow", "A second line in a list"],
+  ["addTile", "A dashboard tile"],
+  ["removePage", "Remove a page"],
 ] as const;
 
 export function ChangeForms({ spec, run }: { spec: Spec; run: Run }) {
@@ -206,6 +211,11 @@ export function ChangeForms({ spec, run }: { spec: Spec; run: Run }) {
         {change === "setSearch" && <SetSearch spec={spec} run={run} />}
         {change === "setAccess" && <SetAccess spec={spec} run={run} />}
         {change === "setNavigation" && <SetNavigation spec={spec} run={run} />}
+        {change === "setIcon" && <SetIcon spec={spec} run={run} />}
+        {change === "setTone" && <SetTone spec={spec} run={run} />}
+        {change === "setBelow" && <SetBelow spec={spec} run={run} />}
+        {change === "addTile" && <AddTile spec={spec} run={run} />}
+        {change === "removePage" && <RemovePage spec={spec} run={run} />}
       </div>
     </div>
   );
@@ -638,6 +648,262 @@ function SetTheme({ run }: { run: Run }) {
         />
       </Label>
       <Submit label="Apply" />
+    </Form>
+  );
+}
+
+const ICON_CHOICES = [
+  "auto",
+  "users",
+  "user",
+  "file",
+  "receipt",
+  "cart",
+  "package",
+  "calendar",
+  "layers",
+  "book",
+  "briefcase",
+  "building",
+  "chart",
+  "clipboard",
+  "home",
+  "mail",
+  "settings",
+  "star",
+  "tag",
+  "truck",
+  "list",
+];
+
+function SetIcon({ spec, run }: FormProps) {
+  const pages = spec.ir?.pages ?? [];
+  const [page, setPage] = useState(pages[0]?.id ?? "");
+  const [icon, setIcon] = useState("auto");
+  return (
+    <Form onSubmit={() => run("setIcon", { page, icon })}>
+      <Label text="Page">
+        <Select
+          aria-label="Page"
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
+          options={pages.map((p) => [p.id, humanize(p.id)])}
+        />
+      </Label>
+      <Label text="Icon in the menu" hint='"Automatic" picks one from the page’s records'>
+        <Select
+          aria-label="Icon"
+          value={icon}
+          onChange={(e) => setIcon(e.target.value)}
+          options={ICON_CHOICES.map((i) => [i, i === "auto" ? "Automatic" : humanize(i)])}
+        />
+      </Label>
+      <Submit label="Set icon" disabled={!page} />
+    </Form>
+  );
+}
+
+const TONE_CHOICES: [string, string][] = [
+  ["neutral", "Grey (neutral)"],
+  ["success", "Green (good)"],
+  ["warning", "Amber (needs attention)"],
+  ["danger", "Red (a problem)"],
+];
+
+function SetTone({ spec, run }: FormProps) {
+  const choices = (spec.ir?.models ?? []).flatMap((m) =>
+    m.fields.flatMap((f) =>
+      f.type.kind === "choice" ? [{ model: m.name, field: f.name, values: f.type.values }] : [],
+    ),
+  );
+  const [key, setKey] = useState(choices[0] ? `${choices[0].model}.${choices[0].field}` : "");
+  const current = choices.find((c) => `${c.model}.${c.field}` === key);
+  const [value, setValue] = useState("");
+  const [tone, setTone] = useState("success");
+  const shown = current?.values.includes(value) ? value : (current?.values[0] ?? "");
+  if (!choices.length) return <p className="text-sm text-neutral-600">No field is a choice yet.</p>;
+  return (
+    <Form
+      onSubmit={() =>
+        run("setTone", { model: current?.model, field: current?.field, value: shown, tone })
+      }
+    >
+      <Label text="Choice field">
+        <Select
+          aria-label="Choice field"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          options={choices.map((c) => [
+            `${c.model}.${c.field}`,
+            `${humanize(c.field)} of ${c.model}`,
+          ])}
+        />
+      </Label>
+      <Label text="Value">
+        <Select
+          aria-label="Value"
+          value={shown}
+          onChange={(e) => setValue(e.target.value)}
+          options={(current?.values ?? []).map((v) => [v, humanize(v)])}
+        />
+      </Label>
+      <Label text="Colour">
+        <Select
+          aria-label="Colour"
+          value={tone}
+          onChange={(e) => setTone(e.target.value)}
+          options={TONE_CHOICES}
+        />
+      </Label>
+      <Submit label="Set colour" disabled={!current} />
+    </Form>
+  );
+}
+
+function SetBelow({ spec, run }: FormProps) {
+  const pages = (spec.ir?.pages ?? []).filter((p) => pageModel(p) !== undefined);
+  const [page, setPage] = useState(pages[0]?.id ?? "");
+  const model = spec.ir?.models.find(
+    (m) => m.name === pageModel(pages.find((p) => p.id === page) ?? pages[0]!),
+  );
+  const fields = (model?.fields ?? []).filter((f) => !(f.type.kind === "relation" && f.type.many));
+  const [column, setColumn] = useState("");
+  const [field, setField] = useState("none");
+  const shownColumn = fields.some((f) => f.name === column) ? column : (fields[0]?.name ?? "");
+  return (
+    <Form onSubmit={() => run("setBelow", { page, column: shownColumn, field })}>
+      <Label text="Page">
+        <Select
+          aria-label="Page"
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
+          options={pages.map((p) => [p.id, humanize(p.id)])}
+        />
+      </Label>
+      <Label text="Under the column">
+        <Select
+          aria-label="Under the column"
+          value={shownColumn}
+          onChange={(e) => setColumn(e.target.value)}
+          options={fields.map((f) => [f.name, humanize(f.name)])}
+        />
+      </Label>
+      <Label text="Show" hint="e.g. the phone number under the email">
+        <Select
+          aria-label="Show"
+          value={field}
+          onChange={(e) => setField(e.target.value)}
+          options={[
+            ["none", "Nothing"],
+            ...fields
+              .filter((f) => f.name !== shownColumn)
+              .map((f): [string, string] => [f.name, humanize(f.name)]),
+          ]}
+        />
+      </Label>
+      <Submit label="Set second line" disabled={!page || !shownColumn} />
+    </Form>
+  );
+}
+
+const MEASURES: [string, string][] = [
+  ["count", "How many records"],
+  ["sum", "The total of a number"],
+  ["average", "The average of a number"],
+  ["list", "The latest records"],
+  ["query", "A custom query's records"],
+];
+
+function AddTile({ spec, run }: FormProps) {
+  const ir = spec.ir;
+  const dashboards = (ir?.pages ?? [])
+    .filter((p) => p.pattern.kind === "dashboard")
+    .map((p) => p.id);
+  const [page, setPage] = useState(dashboards[0] ?? "overview");
+  const [label, setLabel] = useState("");
+  const [measure, setMeasure] = useState("count");
+  const models = (ir?.models ?? []).map((m) => m.name);
+  const numbers = (ir?.models ?? []).flatMap((m) =>
+    m.fields.flatMap((f) =>
+      f.type.kind === "scalar" && ["int", "decimal", "money"].includes(f.type.name)
+        ? [`${m.name}.${f.name}`]
+        : [],
+    ),
+  );
+  const queries = (ir?.queries ?? []).map((q) => q.name);
+  const options =
+    measure === "sum" || measure === "average" ? numbers : measure === "query" ? queries : models;
+  const [of, setOf] = useState("");
+  const shownOf = options.includes(of) ? of : (options[0] ?? "");
+  const tile = identifier(label);
+  return (
+    <Form
+      onSubmit={() =>
+        run("addTile", {
+          page,
+          tile,
+          measure,
+          of: shownOf,
+          ...(measure === "list" || measure === "query" ? { limit: 5 } : {}),
+        })
+      }
+    >
+      <Label text="Dashboard page" hint="A new name makes a new dashboard in the menu">
+        <Input
+          aria-label="Dashboard page"
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
+          list="dashboards"
+        />
+      </Label>
+      <datalist id="dashboards">
+        {dashboards.map((d) => (
+          <option key={d} value={d} />
+        ))}
+      </datalist>
+      <Label text="Tile name">
+        <Input
+          aria-label="Tile name"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Open orders"
+        />
+      </Label>
+      <Label text="Shows">
+        <Select
+          aria-label="Shows"
+          value={measure}
+          onChange={(e) => setMeasure(e.target.value)}
+          options={MEASURES}
+        />
+      </Label>
+      <Label text="Of">
+        <Select
+          aria-label="Of"
+          value={shownOf}
+          onChange={(e) => setOf(e.target.value)}
+          options={options.map((o) => [o, o])}
+        />
+      </Label>
+      <Submit label="Add tile" disabled={!page || !tile || !shownOf} />
+    </Form>
+  );
+}
+
+function RemovePage({ spec, run }: FormProps) {
+  const pages = spec.ir?.pages ?? [];
+  const [page, setPage] = useState(pages[0]?.id ?? "");
+  return (
+    <Form onSubmit={() => run("removePage", { page })}>
+      <Label text="Page" hint="Its records and their data stay; Undo brings the page back">
+        <Select
+          aria-label="Page"
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
+          options={pages.map((p) => [p.id, humanize(p.id)])}
+        />
+      </Label>
+      <Submit label="Remove page" disabled={!page || pages.length < 2} />
     </Form>
   );
 }
