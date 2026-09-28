@@ -71,6 +71,10 @@ export function describeChange(
       return `Added the ${humanize(str("page"))} page${model ? `, listing ${w.pluralLabel(model).toLowerCase()}` : ""}`;
     case "removePage":
       return `Removed the ${humanize(str("page"))} page`;
+    case "addSection":
+      return `Added a ${humanize(str("section")).toLowerCase()} section to the ${humanize(str("page"))} page`;
+    case "removeSection":
+      return `Removed the ${humanize(str("section")).toLowerCase()} section from the ${humanize(str("page"))} page`;
     case "setAccess": {
       const [kind, name = ""] = str("target").split(":");
       const [modelName = "", verb = ""] = name.split(".");
