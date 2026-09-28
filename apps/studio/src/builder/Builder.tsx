@@ -31,7 +31,7 @@ export function Builder({
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (!isPreviewMessage(e.data)) return;
+      if (!isPreviewMessage(e)) return;
       if (e.data.type === "select") setSelection(e.data);
       if (e.data.type === "columns")
         run("setColumns", { page: e.data.page, columns: e.data.columns });
