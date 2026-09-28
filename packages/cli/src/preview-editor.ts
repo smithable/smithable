@@ -18,13 +18,21 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
     "[data-sm-text][contenteditable=true]{outline:2px solid #e8590c!important;outline-offset:2px;background:#fff4e6}";
   document.head.append(style);
-  const post = (message) => window.parent.postMessage({ source: "smithable-preview", ...message }, "*");
+  // Studio's origin, learned from its first message; until then only "ready" (which carries
+  // nothing) goes out, to any origin.
+  let studio = null;
+  const post = (message) => {
+    const target = studio ?? (message.type === "ready" ? "*" : null);
+    if (target) window.parent.postMessage({ source: "smithable-preview", ...message }, target);
+  };
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
   const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
 
   window.addEventListener("message", (event) => {
-    if (event.data?.type !== "smithable:select-mode") return;
+    // Only the page this preview is in: Studio.
+    if (event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
+    studio = event.origin;
     selecting = Boolean(event.data.on);
     // Visible to people (a cursor) and to tests: the page is in select mode.
     document.documentElement.toggleAttribute("data-sm-selecting", selecting);

@@ -16,10 +16,23 @@ export type PreviewMessage =
 
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
 
-export function isPreviewMessage(data: unknown): data is PreviewMessage {
+/** The preview's window and origin, set by the Preview panel: only they are listened to. */
+let previewWindow: Window | null = null;
+let previewOrigin = "";
+export function setPreview(window: Window | null, url: string) {
+  previewWindow = window;
+  previewOrigin = new URL(url, location.href).origin;
+}
+export const previewTarget = () => previewOrigin || "*";
+
+/** A message from the preview's own frame and origin, not from any other window. */
+export function isPreviewMessage(e: MessageEvent): e is MessageEvent<PreviewMessage> {
   return (
-    typeof data === "object" &&
-    data !== null &&
-    (data as { source?: string }).source === "smithable-preview"
+    e.source !== null &&
+    e.source === previewWindow &&
+    e.origin === previewOrigin &&
+    typeof e.data === "object" &&
+    e.data !== null &&
+    (e.data as { source?: string }).source === "smithable-preview"
   );
 }
