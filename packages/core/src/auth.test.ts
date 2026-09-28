@@ -150,3 +150,27 @@ public: { pages: [customer], read: [Customers], write: [Note] }
     ]);
   });
 });
+
+test("a public page's contact form needs visitors to be allowed to add its records", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Message:
+    fields: { name: string!, message: text! }
+pages:
+  home: { route: /, landing: { contact: { form: Message } } }
+`,
+  }).ir;
+  const auth = (create: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\nroles: { admin: {} }\npublic: { pages: [home]${create} }\n`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.code);
+  expect(auth("")).toContain("contact-form-closed");
+  expect(auth(", create: [Message]")).not.toContain("contact-form-closed");
+});

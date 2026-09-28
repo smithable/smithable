@@ -8,7 +8,9 @@ exports[`the examples > booking is valid with its auth file 1`] = `
   "defaultAccess": "private",
   "defaultRole": "member",
   "public": {
-    "create": [],
+    "create": [
+      "Message",
+    ],
     "pages": [
       "home",
       "sessions",

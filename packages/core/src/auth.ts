@@ -328,6 +328,20 @@ function checkAgainstSpec(
       }
     }
   }
+  // A public page's contact form is sent by visitors: they must be allowed to add its records.
+  for (const { name, at } of publicNodes.pages ?? []) {
+    const page = ir.pages.find((p) => p.id === name);
+    const sections = page?.pattern.kind === "landing" ? page.pattern.sections : [];
+    for (const form of sections.flatMap((s) => (s.form ? [s.form] : []))) {
+      if (!auth.public.create.includes(form))
+        ctx.warning(
+          at,
+          "contact-form-closed",
+          `The contact form on the ${name} page adds a ${form}, but visitors may not add one, so nobody without an account can send it.`,
+          `Add ${form} to "create" under "public".`,
+        );
+    }
+  }
   if (auth.signIn !== "none") return;
   const usesUsers = ir.models.flatMap((m) =>
     m.fields

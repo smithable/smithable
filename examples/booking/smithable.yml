@@ -36,14 +36,25 @@ models:
     rules:
       - A session never has more confirmed bookings than its capacity.
 
+  Message:
+    description: A question a visitor sends from the contact form on the home page.
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access: { read: [admin], write: [admin], delete: [admin] }
+
 pages:
   home:
     route: /
     landing:
       hero: { button: sessions }
       classes: { records: ClassType }
+      gallery:
       faq:
       callToAction: { button: sessions }
+      contact: { form: Message }
+      footer:
   sessions:
     crud: Session
   class-types:
@@ -51,4 +62,7 @@ pages:
     access: [admin]
   instructors:
     crud: Instructor
+    access: [admin]
+  messages:
+    crud: Message
     access: [admin]

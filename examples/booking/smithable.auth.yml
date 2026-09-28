@@ -19,3 +19,4 @@ admins: [owner@stillwater.ax]
 public:
   pages: [home, sessions]          # the landing page and the schedule
   read: [ClassType, Instructor, Session]
+  create: [Message]                # the contact form; only admins read the messages

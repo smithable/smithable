@@ -30,6 +30,33 @@ pages:
     callToAction:
       title: Your first class is waiting
       button: Book a class
+    gallery:
+      title: Inside the studio
+      items:
+        - image: { src: images/gallery/studio.webp, alt: A rolled-up yoga mat and a water bottle on a wooden floor by a window }
+          caption: Morning light in the studio
+        - image: { src: images/gallery/class.webp, alt: Three people stretching sideways in a bright room }
+          caption: Our Tuesday evening class
+        - image: { src: images/gallery/coast.webp, alt: A runner on a path by the sea at sunset }
+          caption: Summer sessions by the sea
+    contact:
+      title: Questions? Write to us
+      text: We answer within a day.
+      address: |
+        Storagatan 1
+        22100 Mariehamn
+      phone: +358 18 123 456
+      email: hello@stillwater.ax
+      hours: |
+        Monday to Friday 7–21
+        Saturday and Sunday 9–17
+      button: Send message
+      thanks: Thank you! We will get back to you within a day.
+    footer:
+      text: Stillwater Yoga · Storagatan 1, Mariehamn
+      items:
+        - { label: Class schedule, link: /sessions }
+        - { label: Email us, link: "mailto:hello@stillwater.ax" }
   sessions:
     title: Class schedule
     subtitle: A little time, just for you.
