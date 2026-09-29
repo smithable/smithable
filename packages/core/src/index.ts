@@ -48,7 +48,7 @@ export {
   snake,
   words,
 } from "./naming.js";
-export type { AnyOperation, Effect, Operation, OperationArgs } from "./operation.js";
+export type { AnyOperation, ArgRef, Effect, Operation, OperationArgs } from "./operation.js";
 export { OperationError } from "./operation.js";
 export type { SpecPlugin } from "./plugin.js";
 export { checkJson } from "./plugin.js";

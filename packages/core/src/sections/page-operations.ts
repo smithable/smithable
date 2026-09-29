@@ -1,6 +1,6 @@
 import type { YamlEditor } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
-import { type AnyOperation, type Operation, OperationError } from "../operation.js";
+import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { NAME_PATTERN } from "./names.js";
 
 const addPage: Operation<{ page: string; model: string; route?: string }> = {
@@ -13,7 +13,7 @@ const addPage: Operation<{ page: string; model: string; route?: string }> = {
     additionalProperties: false,
     properties: {
       page: { type: "string", description: "Page name, e.g. invoices." },
-      model: { type: "string" },
+      model: refTo({ ref: "model", label: "Kind of record" }),
       route: { type: "string", description: "Defaults to / plus the page name." },
     },
   },
@@ -99,7 +99,10 @@ const addTile: Operation<{
     required: ["page", "tile", "measure", "of"],
     additionalProperties: false,
     properties: {
-      page: { type: "string", description: "The dashboard page, e.g. overview." },
+      page: refTo(
+        { ref: "page", label: "Page" },
+        { description: "The dashboard page, e.g. overview." },
+      ),
       tile: { type: "string", description: "The tile's name, e.g. outstanding." },
       measure: { type: "string", enum: ["count", "sum", "average", "list", "query"] },
       of: {
@@ -157,7 +160,7 @@ const setNavigation: Operation<{ menu: string; pages: string[] }> = {
     additionalProperties: false,
     properties: {
       menu: { type: "string", description: 'Usually "main".' },
-      pages: { type: "array", items: { type: "string" } },
+      pages: refTo({ ref: "page", label: "Pages" }, {}, true),
     },
   },
   positional: ["menu", "...pages"],
@@ -201,12 +204,12 @@ const setSearch: Operation<{ page: string; fields?: string[] }> = {
     required: ["page"],
     additionalProperties: false,
     properties: {
-      page: { type: "string" },
-      fields: {
-        type: "array",
-        items: { type: "string" },
-        description: "Text, email, phone, web address or choice fields of the page's model.",
-      },
+      page: refTo({ ref: "page", label: "Page" }),
+      fields: refTo(
+        { ref: "field", page: "page", label: "Search by" },
+        { description: "Text, email, phone, web address or choice fields of the page's model." },
+        true,
+      ),
     },
   },
   positional: ["page", "...fields"],
@@ -232,7 +235,7 @@ const removePage: Operation<{ page: string }> = {
     type: "object",
     required: ["page"],
     additionalProperties: false,
-    properties: { page: { type: "string" } },
+    properties: { page: refTo({ ref: "page", label: "Page" }) },
   },
   positional: ["page"],
   describe: ({ page }) => `Remove page ${page}`,
@@ -278,17 +281,23 @@ const addSection: Operation<{
     required: ["page", "section"],
     additionalProperties: false,
     properties: {
-      page: { type: "string", description: "The landing page, e.g. home." },
+      page: refTo({ ref: "page", label: "Page" }, { description: "The landing page, e.g. home." }),
       section: {
         type: "string",
         description: `A kind (${KINDS.join(", ")}) or, with records, any name.`,
       },
-      records: { type: "string", description: "A model whose records the section shows as cards." },
-      form: { type: "string", description: "A contact section's form: the model visitors add." },
-      button: {
-        type: "string",
-        description: "The page a hero's or call to action's button opens.",
-      },
+      records: refTo(
+        { ref: "model", label: "Records of" },
+        { description: "A model whose records the section shows as cards." },
+      ),
+      form: refTo(
+        { ref: "model", label: "Form for" },
+        { description: "A contact section's form: the model visitors add." },
+      ),
+      button: refTo(
+        { ref: "page", label: "Button opens" },
+        { description: "The page a hero's or call to action's button opens." },
+      ),
     },
   },
   positional: ["page", "section"],
@@ -324,7 +333,10 @@ const removeSection: Operation<{ page: string; section: string }> = {
     type: "object",
     required: ["page", "section"],
     additionalProperties: false,
-    properties: { page: { type: "string" }, section: { type: "string" } },
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: refTo({ ref: "section", page: "page", label: "Section" }),
+    },
   },
   positional: ["page", "section"],
   describe: ({ page, section }) => `Remove the ${section} section from the ${page} page`,

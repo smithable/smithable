@@ -1,5 +1,5 @@
 import type { YamlEditor } from "../edit.js";
-import { type AnyOperation, type Operation, OperationError } from "../operation.js";
+import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { FONTS, ICONS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
@@ -56,7 +56,10 @@ const setColumns: Operation<{ page: string; columns?: string[] }> = {
     type: "object",
     required: ["page"],
     additionalProperties: false,
-    properties: { page: { type: "string" }, columns: { type: "array", items: { type: "string" } } },
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      columns: refTo({ ref: "field", page: "page", label: "Columns" }, {}, true),
+    },
   },
   positional: ["page", "...columns"],
   describe: ({ page, columns }) =>
@@ -79,7 +82,10 @@ const setFieldOrder: Operation<{ page: string; fields?: string[] }> = {
     type: "object",
     required: ["page"],
     additionalProperties: false,
-    properties: { page: { type: "string" }, fields: { type: "array", items: { type: "string" } } },
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      fields: refTo({ ref: "field", page: "page", label: "Fields" }, {}, true),
+    },
   },
   positional: ["page", "...fields"],
   describe: ({ page, fields }) =>
@@ -104,9 +110,9 @@ const setTone: Operation<{ model: string; field: string; value: string; tone: st
     required: ["model", "field", "value", "tone"],
     additionalProperties: false,
     properties: {
-      model: { type: "string" },
-      field: { type: "string" },
-      value: { type: "string" },
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      field: refTo({ ref: "field", model: "model", label: "Field" }),
+      value: refTo({ ref: "choiceValue", model: "model", field: "field", label: "Value" }),
       tone: { type: "string", enum: [...TONES] },
     },
   },
@@ -133,7 +139,10 @@ const setIcon: Operation<{ page: string; icon: string }> = {
     type: "object",
     required: ["page", "icon"],
     additionalProperties: false,
-    properties: { page: { type: "string" }, icon: { type: "string", enum: [...ICONS, "auto"] } },
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      icon: { type: "string", enum: [...ICONS, "auto"] },
+    },
   },
   positional: ["page", "icon"],
   describe: ({ page, icon }) => `Show the ${page} page with the ${icon} icon`,
@@ -154,7 +163,11 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
     type: "object",
     required: ["page", "column", "field"],
     additionalProperties: false,
-    properties: { page: { type: "string" }, column: { type: "string" }, field: { type: "string" } },
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      column: refTo({ ref: "field", page: "page", label: "Column" }),
+      field: refTo({ ref: "field", page: "page", label: "Under it" }),
+    },
   },
   positional: ["page", "column", "field"],
   describe: ({ page, column, field }) =>

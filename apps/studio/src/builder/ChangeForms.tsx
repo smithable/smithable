@@ -1,16 +1,20 @@
 // The Builder's forms for the most common changes. Each one becomes an operation.
 import {
   ACCESS_OPERATIONS,
+  type ArgRef,
   type FieldIR,
   FONTS,
   humanize,
   identifier,
+  type JsonSchema,
+  OPERATIONS,
   pageModel,
   THEME_PRESETS,
   typeKey,
 } from "@smithable/core";
 import { describeChange } from "@smithable/index";
 import { useState } from "react";
+import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
 
@@ -236,7 +240,15 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         {change === "addField" && <AddField spec={spec} run={run} initial={initial} />}
         {change === "changeField" && <ChangeField spec={spec} run={run} initial={initial} />}
         {change === "renameField" && <RenameField spec={spec} run={run} initial={initial} />}
-        {change === "removeField" && <RemoveField spec={spec} run={run} initial={initial} />}
+        {change === "removeField" && (
+          <FromSchema
+            op="removeField"
+            spec={spec}
+            run={run}
+            initial={initial}
+            submit="Remove field"
+          />
+        )}
         {change === "addModel" && <AddModel run={run} />}
         {change === "addPage" && <AddPage spec={spec} run={run} initial={initial} />}
         {change === "setSearch" && <SetSearch spec={spec} run={run} />}
@@ -246,9 +258,26 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         {change === "setTone" && <SetTone spec={spec} run={run} />}
         {change === "setBelow" && <SetBelow spec={spec} run={run} />}
         {change === "addTile" && <AddTile spec={spec} run={run} />}
-        {change === "removePage" && <RemovePage spec={spec} run={run} />}
+        {change === "removePage" && (
+          <FromSchema
+            op="removePage"
+            spec={spec}
+            run={run}
+            submit="Remove page"
+            hint="Its records and their data stay; Undo brings the page back."
+            disabled={(spec.ir?.pages.length ?? 0) < 2}
+          />
+        )}
         {change === "addSection" && <AddSection spec={spec} run={run} />}
-        {change === "removeSection" && <RemoveSection spec={spec} run={run} />}
+        {change === "removeSection" && (
+          <FromSchema
+            op="removeSection"
+            spec={spec}
+            run={run}
+            submit="Remove section"
+            hint="Its texts go too; Undo brings it back."
+          />
+        )}
       </div>
     </div>
   );
@@ -448,19 +477,6 @@ function RenameField({ spec, run, initial }: FormProps) {
         text={field && to ? changeText(spec, "renameField", { model, from: field.name, to }) : ""}
       />
       <Submit label="Rename field" disabled={!field || !to} />
-    </Form>
-  );
-}
-
-function RemoveField({ spec, run, initial }: FormProps) {
-  const { model, field, pickers } = useModelField(spec, {
-    model: str(initial?.model),
-    field: str(initial?.field),
-  });
-  return (
-    <Form onSubmit={() => run("removeField", { model, field: field?.name })}>
-      {pickers}
-      <Submit label="Remove field" disabled={!field} />
     </Form>
   );
 }
@@ -975,24 +991,6 @@ function AddTile({ spec, run }: FormProps) {
   );
 }
 
-function RemovePage({ spec, run }: FormProps) {
-  const pages = spec.ir?.pages ?? [];
-  const [page, setPage] = useState(pages[0]?.id ?? "");
-  return (
-    <Form onSubmit={() => run("removePage", { page })}>
-      <Label text="Page" hint="Its records and their data stay; Undo brings the page back">
-        <Select
-          aria-label="Page"
-          value={page}
-          onChange={(e) => setPage(e.target.value)}
-          options={pages.map((p) => [p.id, humanize(p.id)])}
-        />
-      </Label>
-      <Submit label="Remove page" disabled={!page || pages.length < 2} />
-    </Form>
-  );
-}
-
 /** The kinds of landing section, as the form offers them. */
 const SECTIONS: [string, string][] = [
   ["hero", "Hero: a heading, a text and a button"],
@@ -1089,28 +1087,50 @@ function AddSection({ spec, run }: FormProps) {
   );
 }
 
-function RemoveSection({ spec, run }: FormProps) {
-  const landings = (spec.ir?.pages ?? []).flatMap((p) =>
-    p.pattern.kind === "landing"
-      ? p.pattern.sections.map((s): [string, string] => [
-          `${p.id}/${s.name}`,
-          `${humanize(p.id)}: ${humanize(s.name)}`,
-        ])
-      : [],
+/**
+ * A change whose form is its operation's schema (C8): each argument that names something in the
+ * spec is chosen from the names there are, asked for in the annotation's words.
+ */
+function FromSchema({
+  op,
+  spec,
+  run,
+  initial,
+  submit,
+  hint,
+  disabled,
+}: FormProps & { op: string; submit: string; hint?: string; disabled?: boolean }) {
+  const operation = OPERATIONS.find((o) => o.name === op);
+  const [values, setValues] = useState<ArgValues>(
+    () =>
+      Object.fromEntries(
+        Object.entries(initial ?? {}).filter(([, v]) => typeof v === "string" || Array.isArray(v)),
+      ) as ArgValues,
   );
-  const [choice, setChoice] = useState(landings[0]?.[0] ?? "");
-  const [page, section] = choice.split("/");
+  if (!operation) return null;
+  const properties = (operation.schema.properties ?? {}) as Record<string, JsonSchema>;
+  const required = (operation.schema.required as string[] | undefined) ?? [];
+  const effective = argumentsOf(operation.schema, values, spec);
   return (
-    <Form onSubmit={() => run("removeSection", { page, section })}>
-      <Label text="Section" hint="Its texts go too; Undo brings it back">
-        <Select
-          aria-label="Section"
-          value={choice}
-          onChange={(e) => setChoice(e.target.value)}
-          options={landings}
+    <Form onSubmit={() => run(op, effective)}>
+      {Object.entries(properties).map(([key, schema]) => (
+        <ArgumentField
+          key={key}
+          name={key}
+          schema={schema}
+          required={required.includes(key)}
+          values={values}
+          effective={effective}
+          setValue={(v) => setValues({ ...values, [key]: v })}
+          spec={spec}
+          label={(schema["x-smithable"] as ArgRef | undefined)?.label ?? humanize(key)}
         />
-      </Label>
-      <Submit label="Remove section" disabled={!choice} />
+      ))}
+      {hint && <p className="text-xs text-neutral-500">{hint}</p>}
+      <Submit
+        label={submit}
+        disabled={disabled || required.some((k) => effective[k] === undefined)}
+      />
     </Form>
   );
 }

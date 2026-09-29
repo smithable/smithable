@@ -1,6 +1,6 @@
 import { checkKeys, mapEntries, readBoolean, readString } from "../context.js";
 import type { QueryIR } from "../ir.js";
-import { type Operation, OperationError } from "../operation.js";
+import { type Operation, OperationError, refTo } from "../operation.js";
 import type { SpecSection } from "../section.js";
 import { FIELD_NAME_PATTERN } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -21,10 +21,10 @@ const addQuery: Operation<{ query: string; returns: string; intent?: string }> =
     additionalProperties: false,
     properties: {
       query: { type: "string", description: "camelCase name, e.g. churnRisk." },
-      returns: {
-        type: "string",
-        description: "The model whose records it returns, e.g. Customer.",
-      },
+      returns: refTo(
+        { ref: "model", label: "Kind of record" },
+        { description: "The model whose records it returns, e.g. Customer." },
+      ),
       intent: { type: "string", description: "What it finds and in which order, in one sentence." },
     },
   },
