@@ -151,6 +151,7 @@ function customFile(concept: string): string | undefined {
   if (kind === "query") return `src/custom/queries/${file}.ts`;
   if (kind === "action") return `src/custom/actions/${file}.ts`;
   if (kind === "page") return `src/custom/pages/${name}.tsx`;
+  if (concept === "hooks") return "src/custom/hooks.ts";
   return undefined;
 }
 
@@ -388,14 +389,20 @@ export async function writeCode(
   if (!ir || !auth) return 1;
   const file = customFile(concept);
   if (!file || !existsSync(join(dir, file))) {
-    io.err(`${concept} has no custom code to write. Queries, actions and customized pages do.\n`);
+    io.err(
+      `${concept} has no custom code to write. Queries, actions, customized pages and hooks do.\n`,
+    );
     return 1;
   }
   const index = projectIndex(dir, ir, auth);
   const info = index.concepts.find((c) => c.concept === concept);
-  const code = (info?.files ?? [])
-    .filter((f) => f.role !== "generated" || f.path.startsWith("src/generated/queries/"))
-    .map((f) => f.path)
+  const paths =
+    concept === "hooks"
+      ? [file, "src/generated/hooks.ts"]
+      : (info?.files ?? [])
+          .filter((f) => f.role !== "generated" || f.path.startsWith("src/generated/queries/"))
+          .map((f) => f.path);
+  const code = paths
     .filter((path) => existsSync(join(dir, path)))
     .map((path) => ({ path, text: readFileSync(join(dir, path), "utf8") }));
   const context = buildContext(index, `${instructions} (${concept})`, { implementation: code });
@@ -403,7 +410,12 @@ export async function writeCode(
 
 Task: ${instructions}
 Part: ${concept}, implemented in ${file}.
-
+${
+  concept === "hooks"
+    ? `Hooks run on the server after a record is created, changed or deleted (afterCreate, afterUpdate, afterDelete, by model) and once a day (daily); their types are in src/generated/hooks.ts. Add to the exported hooks object and keep the other hooks. Put a Vitest test in src/custom/hooks.test.ts that calls the data function and checks what the hook did.
+`
+    : ""
+}
 Rules:
 - Change only files in src/custom/. Everything else is generated or owned by Smithable, and changes there are undone.
 - Read and write data only through the functions in src/generated/*.server.ts: they apply the access rules for the viewer.
