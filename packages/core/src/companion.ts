@@ -9,6 +9,7 @@ import type { YamlEditor } from "./edit.js";
 import type { SpecIR } from "./ir.js";
 import type { AnyOperation, Editors, Effect, Refusal } from "./operation.js";
 import { pageModel } from "./patterns.js";
+import { authOperations } from "./sections/auth-operations.js";
 import { contentOperations } from "./sections/content-operations.js";
 import { contextOperations } from "./sections/context-operations.js";
 import { uxOperations } from "./sections/ux-operations.js";
@@ -108,7 +109,7 @@ const auth: Companion = {
   key: "auth",
   file: "smithable.auth.yml",
   check: (text, ir) => validateAuth({ path: "smithable.auth.yml", text }, ir).diagnostics,
-  operations: [],
+  operations: authOperations,
 };
 
 const context: Companion = {

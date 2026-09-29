@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { actionAccess, modelAccess, pageAccess } from "./access.js";
+import type { AuthIR } from "./auth.js";
 import { validateAuth } from "./auth.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
@@ -90,7 +91,7 @@ describe("smithable.auth.yml", () => {
       "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\n",
     );
     expect(auth.auth).toEqual({
-      signIn: { providers: ["google"] },
+      signIn: { providers: ["google"], selfSignUp: true },
       defaultAccess: "private",
       roles: [{ name: "admin" }, { name: "member" }],
       defaultRole: "member",
@@ -130,6 +131,34 @@ public: { pages: [customer], read: [Customers], write: [Note] }
         "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { read: [Customer, Note] }\n",
       ),
     ).toEqual(["warning open-shared-access", "warning public-personal-data"]);
+  });
+
+  test("closed sign-up needs a users page, and a users page needs sign-in", () => {
+    const team = `${SPEC}  team: { users: manage }\n`;
+    const closed =
+      "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: false }\ndefaultAccess: shared\n";
+    expect(codes(closed)).toEqual(["error no-users-page"]);
+    const { auth, ir } = load(team, closed);
+    expect(auth.diagnostics).toEqual([]);
+    expect(auth.auth?.signIn).toEqual({ providers: ["google"], selfSignUp: false });
+    const teamPage = ir?.pages.find((p) => p.id === "team");
+    expect(teamPage && pageAccess(teamPage, auth.auth as AuthIR)).toEqual({
+      public: false,
+      roles: ["admin"],
+      owner: false,
+    });
+    // The team page and the User field both need sign-in.
+    expect(
+      codes(
+        "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [customers, notes, team] }\n",
+        team,
+      ),
+    ).toEqual(["error no-sign-in", "error no-sign-in"]);
+    expect(
+      codes(
+        "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: maybe }\ndefaultAccess: private\n",
+      ),
+    ).toEqual(["error expected-boolean"]);
   });
 
   test("without sign-in, users cannot be referred to and only public pages open", () => {

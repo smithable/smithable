@@ -72,6 +72,38 @@ const addLandingPage: Operation<{ page: string; route?: string; public?: boolean
   },
 };
 
+const addUsersPage: Operation<{ page?: string; route?: string }> = {
+  name: "addUsersPage",
+  summary:
+    "Add a page where administrators invite people by email address with a role, change roles and remove users; it goes in the main menu. An app has one.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name; team when left out." },
+      route: { type: "string", description: "Defaults to / plus the page name." },
+    },
+  },
+  positional: ["page", "route"],
+  describe: ({ page = "team" }) => `Add users page ${page}`,
+  destructive: () => false,
+  apply({ spec, auth }, { page = "team", route }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    const existing = ir.pages.find((p) => p.pattern.kind === "users");
+    if (existing) throw new OperationError(`The ${existing.id} page already manages users.`);
+    if (auth?.get(["signIn"]) === "none")
+      throw new OperationError("A users page needs sign-in, and this app has none.");
+    spec.add(["pages"], page, route ? { route, users: "manage" } : { users: "manage" });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
@@ -363,4 +395,6 @@ export const crudOperations: AnyOperation[] = [addPage, setSearch];
 export const landingOperations: AnyOperation[] = [addLandingPage, addSection, removeSection];
 /** Operations of the dashboard pattern. */
 export const dashboardOperations: AnyOperation[] = [addTile];
+/** Operations of the users pattern. */
+export const usersOperations: AnyOperation[] = [addUsersPage];
 export const navigationOperations: AnyOperation[] = [setNavigation];

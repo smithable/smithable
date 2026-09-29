@@ -11,7 +11,7 @@ test("validate accepts a directory and summarises a valid spec", async () => {
   const io = captureIo();
   const path = join(examples, "crm");
   expect(await run(["validate", path], io)).toBe(0);
-  expect(io.stdout).toBe(`${join(path, "smithable.yml")} is valid: 2 models, 2 pages.\n`);
+  expect(io.stdout).toBe(`${join(path, "smithable.yml")} is valid: 2 models, 3 pages.\n`);
 });
 
 test("validate reports errors with file, line and column, and exits with 1", async () => {
