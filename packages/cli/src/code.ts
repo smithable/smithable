@@ -404,7 +404,7 @@ Task: ${instructions}
 Part: ${concept}, implemented in ${file}.
 ${
   concept === "hooks"
-    ? `Hooks run on the server after a record is created, changed or deleted (afterCreate, afterUpdate, afterDelete, by model) and once a day (daily); their types are in src/generated/hooks.ts. Add to the exported hooks object and keep the other hooks. Put a Vitest test in src/custom/hooks.test.ts that calls the data function and checks what the hook did.
+    ? `Hooks run on the server after a record is created, changed or deleted (afterCreate, afterUpdate, afterDelete, by model) and once a day (daily); their types are in src/generated/hooks.ts. Add to the exported hooks object and keep the other hooks. To send mail, import { sendMail } from "#/kit/mail" ({ to, subject, text, html? }); in tests, outbox() from the same module lists what was sent. Put a Vitest test in src/custom/hooks.test.ts that calls the data function and checks what the hook did.
 `
     : ""
 }
