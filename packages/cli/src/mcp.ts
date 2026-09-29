@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { plainSchema } from "@smithable/ai";
 import { type JsonSchema, type OperationArgs, operationsFor } from "@smithable/core";
 import { buildContext, estimateTokens } from "@smithable/index";
 import { logTokens } from "./context.js";
@@ -47,10 +48,11 @@ function tools(dir: string): Tool[] {
     .map((op) => ({
       name: toolName(op.name),
       description: `${op.summary} ${OPERATION_NOTE}`,
+      // Without Smithable's own annotations (x-smithable), which strict clients may refuse.
       inputSchema: {
-        ...op.schema,
+        ...(plainSchema(op.schema) as JsonSchema),
         properties: {
-          ...(op.schema.properties as JsonSchema),
+          ...(plainSchema(op.schema.properties) as JsonSchema),
           confirm: {
             type: "boolean",
             description:
