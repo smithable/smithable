@@ -4,10 +4,10 @@ import {
   type ArgRef,
   type FieldIR,
   FONTS,
+  findOperation,
   humanize,
   identifier,
   type JsonSchema,
-  OPERATIONS,
   pageModel,
   THEME_PRESETS,
   typeKey,
@@ -1100,7 +1100,7 @@ function FromSchema({
   hint,
   disabled,
 }: FormProps & { op: string; submit: string; hint?: string; disabled?: boolean }) {
-  const operation = OPERATIONS.find((o) => o.name === op);
+  const operation = findOperation(op, spec.plugins);
   const [values, setValues] = useState<ArgValues>(
     () =>
       Object.fromEntries(

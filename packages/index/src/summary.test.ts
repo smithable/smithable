@@ -45,3 +45,31 @@ test("the CRM in plain language, with labels from the content file", () => {
     "- Orders (lists orders; search by number or customer)",
   ]);
 });
+
+test("a plugin's section is summarised in its own words", () => {
+  const text = `smithable: 0.1
+app: { name: Studio }
+models:
+  Class:
+    fields: { name: string! }
+newsletter:
+  from: hi@example.com
+`;
+  const plugin = {
+    key: "newsletter",
+    description: "A newsletter.",
+    schema: { type: "object" },
+    summarize: (value: unknown) => [
+      `The newsletter is sent from ${(value as { from: string }).from}.`,
+    ],
+  };
+  const ir = validateSpec({ path: "smithable.yml", text }, { plugins: [plugin] }).ir;
+  if (!ir) throw new Error("invalid");
+  const section = summarize(ir, undefined, undefined, [plugin]).find(
+    (s) => s.concept === "plugin:newsletter",
+  );
+  expect(section).toMatchObject({
+    title: "Newsletter",
+    sentences: ["The newsletter is sent from hi@example.com."],
+  });
+});
