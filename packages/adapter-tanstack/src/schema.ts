@@ -1,6 +1,6 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import { type AuthIR, type FieldIR, type ModelIR, type SpecIR, USER_MODEL } from "@smithable/core";
-import { authTables, hasSignIn } from "./auth.js";
+import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { sampleRows } from "./sample-data.js";
 import {
   dataKey,
@@ -88,7 +88,7 @@ export const ${n.table} = sqliteTable(
       `export const ${n.table}Relations = relations(${n.table}, ({ ${helpers.join(", ")} }) => ({\n${entries.join("\n")}\n}));`,
     ];
   });
-  const authBlock = hasSignIn(auth) ? [authTables(auth)] : [];
+  const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 
 ${[...authBlock, ...tables, ...relationBlocks].join("\n\n")}

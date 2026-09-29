@@ -272,13 +272,11 @@ function phraseTier(files: ProjectFiles, request: string) {
   const options = files.plugins ? { plugins: files.plugins } : {};
   const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
   if (!ir) return undefined;
-  const roles =
+  const auth =
     files.auth === undefined
-      ? []
-      : (validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth?.roles.map(
-          (r) => r.name,
-        ) ?? []);
-  return matchRequest(ir, request, roles);
+      ? undefined
+      : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
+  return matchRequest(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
 }
 
 /** Applies the operations one after the other to copies of the files. */

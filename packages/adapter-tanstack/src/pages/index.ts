@@ -6,6 +6,7 @@ import { dashboardRoute } from "./dashboard.js";
 import { landingRoute } from "./landing.js";
 import { listRoute } from "./list.js";
 import { detailRoute, newRoute, recordPageRoute } from "./record.js";
+import { usersRoute } from "./users.js";
 
 type PageOf<K extends PatternKind> = PageIR & { pattern: PatternOf<K> };
 
@@ -51,6 +52,10 @@ export const PAGE_GENERATORS: {
     routes: (page, { ir, t, auth }) => ({
       "index.tsx": recordPageRoute(page, page.pattern, ir, t, auth),
     }),
+  },
+  users: {
+    kit: ["src/kit/Users.tsx"],
+    routes: (page, { ir, t, auth }) => ({ "index.tsx": usersRoute(page, ir, t, auth) }),
   },
 };
 

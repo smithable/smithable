@@ -30,6 +30,7 @@ import {
   crudOperations,
   dashboardOperations,
   landingOperations,
+  usersOperations,
 } from "./sections/page-operations.js";
 import { didYouMean } from "./suggest.js";
 
@@ -53,6 +54,8 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
   icon?: string;
   /** In the main menu when the spec names no menus; landing and onboarding pages are ways in. */
   inMenu: boolean;
+  /** The roles that may open its pages when a page says nothing; every role without it. */
+  access?: string[];
   /** Its named parts with texts in smithable.content.yml: name → kind of text. */
   parts?(pattern: PatternOf<K>): Record<string, string>;
   /** Custom queries its pages show. */
@@ -286,12 +289,38 @@ const onboarding: PagePattern<"onboarding"> = {
 };
 
 /** Every page pattern, by kind. TypeScript insists on one entry per kind of the IR. */
+const users: PagePattern<"users"> = {
+  kind: "users",
+  schema: {
+    type: "string",
+    enum: ["manage"],
+    description:
+      "Who has access: invite people by email with a role, change roles and remove users. For admins, unless the page's access says otherwise.",
+  },
+  example: "users: manage",
+  parse(ctx, value, where) {
+    const mode = readString(ctx, value, `"users" in ${where}`);
+    if (mode === undefined) return undefined;
+    if (mode !== "manage") {
+      ctx.error(value, "invalid-value", `"users" in ${where} must be "manage".`);
+      return undefined;
+    }
+    return { kind: "users", mode };
+  },
+  models: () => [],
+  icon: "users",
+  inMenu: true,
+  access: ["admin"],
+  operations: usersOperations,
+};
+
 export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   crud,
   landing,
   dashboard,
   settings,
   onboarding,
+  users,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -305,6 +334,7 @@ export function patternInfo(page: PageIR) {
     manages: () => info.manages?.(pattern),
     icon: info.icon,
     inMenu: info.inMenu,
+    access: info.access,
     parts: () => info.parts?.(pattern) ?? {},
     queries: () => info.queries?.(pattern) ?? [],
     forms: () => info.forms?.(pattern) ?? [],
