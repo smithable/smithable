@@ -6,12 +6,18 @@ import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { security } from "./security.js";
 
-/** Sign-in provider keys passed to the app from the environment when set; never stored. */
+/** Sign-in provider keys and mail settings passed to the app from the environment when set; never stored. */
 const PROVIDER_KEYS = [
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
   "FACEBOOK_CLIENT_ID",
   "FACEBOOK_CLIENT_SECRET",
+  "SMTP_URL",
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "SMTP_USER",
+  "SMTP_PASSWORD",
+  "MAIL_FROM",
 ];
 
 /**
@@ -141,7 +147,7 @@ volumes:
   if (!existsSync(envPath))
     writeFileSync(
       envPath,
-      `# Secrets for compose.yaml; not committed (.gitignore).\nBETTER_AUTH_SECRET=${authSecret(dir)}\nBETTER_AUTH_URL=http://localhost:${port}\n`,
+      `# Secrets for compose.yaml; not committed (.gitignore).\nBETTER_AUTH_SECRET=${authSecret(dir)}\nBETTER_AUTH_URL=http://localhost:${port}\n# Mail (see README): SMTP_URL=smtp://user:password@host:587 and MAIL_FROM=\n`,
       { mode: 0o600 },
     );
   io.out(

@@ -105,13 +105,15 @@ export function hooksStub(): string {
 // src/generated/hooks.ts, so a renamed model or field shows up here as a type error.
 // A hook runs on the server after the change is saved, with the viewer who made it. Use the
 // data functions in src/generated/*.server.ts to read and write other records with the same
-// access checks; a hook that throws fails the request that made the change.
+// access checks, and sendMail from src/kit/mail.ts to send mail (SMTP settings from the
+// environment; without them mails go to data/mail/outbox). A hook that throws fails the
+// request that made the change.
 import type { Hooks } from "#/generated/hooks";
 
 export const hooks: Hooks = {
   // afterCreate: {
   //   Order: async (order, viewer) => {
-  //     // e.g. send a confirmation, or update the customer's last order date
+  //     await sendMail({ to: "sales@example.com", subject: "New order " + order.id, text: "…" });
   //   },
   // },
   // daily: [async () => { /* e.g. remind about overdue invoices */ }],
