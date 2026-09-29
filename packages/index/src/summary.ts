@@ -5,6 +5,9 @@ import {
   type FieldIR,
   humanize,
   type ModelIR,
+  type PageIR,
+  type PatternKind,
+  type PatternOf,
   pageModel,
   plural,
   type SpecIR,
@@ -103,18 +106,7 @@ export function summarize(
       });
       const notes = [
         model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
-        p.pattern.kind === "landing"
-          ? `a landing page: ${list(p.pattern.sections.map((s) => humanize(s.name).toLowerCase()))}`
-          : "",
-        p.pattern.kind === "dashboard"
-          ? `a dashboard: ${list(p.pattern.items.map((i) => humanize(i.name).toLowerCase()))}`
-          : "",
-        p.pattern.kind === "settings"
-          ? `settings: edits your ${humanize(p.pattern.model).toLowerCase()}`
-          : "",
-        p.pattern.kind === "onboarding"
-          ? `a first-time setup of your ${humanize(p.pattern.model).toLowerCase()} in ${p.pattern.steps.length} steps`
-          : "",
+        (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
         searched.length ? `search by ${list(searched, "or")}` : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         p.access ? `only for ${who(p.access)}` : "",
@@ -278,3 +270,13 @@ function article(word: string): string {
   // "a unit price", "a user": a "u" that sounds like "you" takes "a".
   return `${/^[aeiou]/i.test(word) && !/^u(ni|s[eu])/i.test(word) ? "an" : "a"} ${word}`;
 }
+
+/** What each page pattern is, in the summary's words (a crud page says what it lists instead). */
+const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
+  crud: () => "",
+  landing: (p) => `a landing page: ${list(p.sections.map((s) => humanize(s.name).toLowerCase()))}`,
+  dashboard: (p) => `a dashboard: ${list(p.items.map((i) => humanize(i.name).toLowerCase()))}`,
+  settings: (p) => `settings: edits your ${humanize(p.model).toLowerCase()}`,
+  onboarding: (p) =>
+    `a first-time setup of your ${humanize(p.model).toLowerCase()} in ${p.steps.length} steps`,
+};
