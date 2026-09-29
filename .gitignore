@@ -5,3 +5,6 @@ coverage/
 .DS_Store
 .claude/settings.local.json
 .playwright-mcp/
+
+# An example run leaves its data (token log, databases) here; it is never part of the example.
+examples/*/data/

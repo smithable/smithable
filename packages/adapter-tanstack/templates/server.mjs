@@ -20,11 +20,16 @@ const HEADERS = {
  * for anyone using the app, and a brake on a script filling a public form.
  */
 const BURST = 60;
+const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 const buckets = new Map();
 function allowed(request) {
   if (request.method === "GET" || request.method === "HEAD") return true;
-  // Behind a proxy (the hosted service, Caddy) the first forwarded address is the visitor's.
-  const address = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.ip || "";
+  // Only behind a proxy that says who the visitor is (TRUST_PROXY=1, e.g. the hosted service)
+  // is X-Forwarded-For believed, and then only its last hop, the one that proxy added; anyone
+  // else could send a new address with every request.
+  const forwarded =
+    TRUST_PROXY && request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+  const address = forwarded || request.ip || "";
   const now = Date.now() / 1000;
   const bucket = buckets.get(address) ?? { tokens: BURST, at: now };
   bucket.tokens = Math.min(BURST, bucket.tokens + (now - bucket.at));
