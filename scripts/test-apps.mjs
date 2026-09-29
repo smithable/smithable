@@ -84,6 +84,32 @@ const authEnv = (port) => ({
   BETTER_AUTH_URL: `http://localhost:${port}`,
 });
 
+/**
+ * Every process this run started and has not stopped, so that a run that is stopped or fails
+ * leaves no server behind on the ports the next run needs.
+ */
+const live = new Set();
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
+  process.on(signal, () => {
+    for (const pid of live) killTree(pid);
+    process.exit(130);
+  });
+process.on("exit", () => {
+  for (const pid of live) killTree(pid);
+});
+
+/** Kills a process and everything it started (pnpm, then node, then Vite), children first. */
+export function killTree(pid, signal = "SIGTERM") {
+  const children = spawnSync("ps", ["-o", "pid=", "--ppid", String(pid)], { encoding: "utf8" })
+    .stdout.split("\n")
+    .map((s) => Number(s.trim()))
+    .filter(Boolean);
+  for (const child of children) killTree(child, signal);
+  try {
+    process.kill(pid, signal);
+  } catch {}
+}
+
 /** Starts `pnpm start` (production) or the Vite dev server; returns a stop function. */
 async function serve(dir, port, mode) {
   // A fixed port: Vite would otherwise move to another one while the old server is stopping.
@@ -92,10 +118,22 @@ async function serve(dir, port, mode) {
   const server = spawn("pnpm", args, {
     cwd: dir,
     env: { ...process.env, PORT: String(port), ...authEnv(port) },
-    detached: true,
   });
-  await waitFor(`http://localhost:${port}/health`);
-  return () => process.kill(-server.pid);
+  let output = "";
+  server.stdout.on("data", (d) => (output += d));
+  server.stderr.on("data", (d) => (output += d));
+  live.add(server.pid);
+  const stop = () => {
+    live.delete(server.pid);
+    killTree(server.pid);
+  };
+  try {
+    await waitFor(`http://localhost:${port}/health`);
+  } catch (error) {
+    stop();
+    throw new Error(`${error.message}. The server said:\n${output.slice(-2000)}`);
+  }
+  return stop;
 }
 
 /** Saves what the page shows, for a failed browser check. */
@@ -1181,7 +1219,8 @@ for (const [index, example] of examples.entries()) {
           const env = { ...process.env, PORT: String(port + 300) };
           delete env.BETTER_AUTH_SECRET;
           delete env.BETTER_AUTH_URL;
-          const server = spawn("pnpm", ["start"], { cwd: dir, env, detached: true });
+          const server = spawn("pnpm", ["start"], { cwd: dir, env });
+          live.add(server.pid);
           const exited = new Promise((r) => server.on("exit", (code) => r(code)));
           try {
             // Either it does not start, or its sign-in fails instead of using a default secret.
@@ -1201,9 +1240,8 @@ for (const [index, example] of examples.entries()) {
             ]);
             if (/exited 0|answered 200/.test(outcome)) throw new Error(outcome);
           } finally {
-            try {
-              process.kill(-server.pid);
-            } catch {}
+            live.delete(server.pid);
+            killTree(server.pid);
           }
         },
       ).catch(() => {});
