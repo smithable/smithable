@@ -13,10 +13,10 @@ import {
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
 import { displayValue, formatValue } from "./format";
-import { type AppUi, editorMarker, type FieldUi, type ModelUi, type Row } from "./model";
+import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
 
 interface ModelTableProps<R extends Row> {
-  ui: ModelUi;
+  ui: RecordUi<R>;
   app: AppUi;
   rows: R[];
   /** Opens a row; without it rows are not clickable. */
@@ -66,9 +66,9 @@ export function ModelTable<R extends Row>({
       </Card>
     );
   }
-  const second = (field: FieldUi) => ui.fields.find((f) => f.name === below[field.name]);
+  const second = (field: RecordFieldUi<R>) => ui.fields.find((f) => f.name === below[field.name]);
   // A column with a second field below its value: both on their own line.
-  const stacked = (field: FieldUi, row: R) => {
+  const stacked = (field: RecordFieldUi<R>, row: R) => {
     const other = second(field);
     return other ? (
       <>
@@ -85,7 +85,7 @@ export function ModelTable<R extends Row>({
   const amount = others.find((f) => numeric(f.kind));
   const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
-  const cell = (field: FieldUi, row: R) => {
+  const cell = (field: RecordFieldUi<R>, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
     if (field.kind !== "choice" || text === "—") return text;
     const tone = field.choices?.find((c) => c.value === displayValue(field, row))?.tone;
