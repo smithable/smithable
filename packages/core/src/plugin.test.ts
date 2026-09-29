@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { applyOperation } from "./apply.js";
-import { checkJson, type SpecPlugin } from "./plugin.js";
+import { applyOperation, operationsFor } from "./apply.js";
+import { checkJson, type PluginApi, resolvePlugin, type SpecPlugin } from "./plugin.js";
 import { validateSpec } from "./spec.js";
 
 /** A newsletter section: who it is from, and its lists; it stands for a Subscriber model. */
@@ -118,4 +118,128 @@ test("the schema check covers patterns, minimum items and repeated items", () =>
   expect(checkJson({ type: "array", minItems: 1 }, [], "lists")).toEqual([
     `"lists" needs at least 1 item.`,
   ]);
+});
+
+const subscribeSpec = `smithable: 0.1
+app: { name: Studio }
+models:
+  Customer:
+    fields: { name: string! }
+pages:
+  home:
+    landing:
+      hero:
+      footer:
+  customers: { crud: Customer }
+navigation: [home, customers]
+newsletter:
+  from: hi@example.com
+`;
+
+/** A plugin that also patches what the spec has, has an operation and a summary. */
+const newsletterV2: SpecPlugin = {
+  ...newsletter,
+  patch: () => [
+    { add: "field", model: "Customer", field: "subscribed", type: "bool" },
+    { add: "section", page: "home", section: "subscribe", value: { records: "Customer" } },
+    { add: "menu", page: "subscribers", position: 1 },
+  ],
+  operations: [
+    {
+      name: "addList",
+      summary: "Add a newsletter list.",
+      schema: {
+        type: "object",
+        required: ["list"],
+        additionalProperties: false,
+        properties: { list: { type: "string" } },
+      },
+      positional: ["list"],
+      describe: ({ list }) => `Add the ${list} list`,
+      destructive: () => false,
+      apply({ spec }, { list }) {
+        const lists = (
+          spec.has(["newsletter", "lists"]) ? spec.get(["newsletter", "lists"]) : []
+        ) as string[];
+        if (spec.has(["newsletter", "lists"])) spec.set(["newsletter", "lists"], [...lists, list]);
+        else spec.add(["newsletter"], "lists", [list]);
+        return [];
+      },
+    },
+    {
+      name: "addField",
+      summary: "clashes with a built-in",
+      schema: { type: "object" },
+      positional: [],
+      describe: () => "",
+      destructive: () => false,
+      apply: () => [],
+    },
+  ],
+  summarize: (value) => [`The newsletter is sent from ${(value as { from: string }).from}.`],
+};
+
+test("a plugin patches what the spec has: a field, a landing section, a menu entry", () => {
+  const { ir, diagnostics } = validateSpec(
+    { path: "smithable.yml", text: subscribeSpec },
+    { plugins: [newsletterV2] },
+  );
+  expect(diagnostics).toEqual([]);
+  expect(ir?.models[0]?.fields.map((f) => f.name)).toEqual(["name", "subscribed"]);
+  const home = ir?.pages.find((p) => p.id === "home");
+  expect(home?.pattern.kind === "landing" && home.pattern.sections.map((s) => s.name)).toEqual([
+    "hero",
+    "footer",
+    "subscribe",
+  ]);
+  expect(ir?.navigation[0]?.pages).toEqual(["home", "subscribers", "customers"]);
+
+  // A patch that clashes or misses its target is an error at the plugin's section.
+  const clashing: SpecPlugin = {
+    ...newsletter,
+    patch: () => [
+      { add: "field", model: "Customer", field: "name", type: "string" },
+      { add: "section", page: "customers", section: "hero" },
+    ],
+  };
+  const { diagnostics: problems } = validateSpec(
+    { path: "smithable.yml", text: subscribeSpec },
+    { plugins: [clashing] },
+  );
+  expect(problems.map((d) => d.message)).toEqual([
+    "The newsletter plugin adds Customer.name, which smithable.yml already has.",
+    "The newsletter plugin adds a section to the customers page, which is not a landing page in smithable.yml.",
+  ]);
+  expect(problems.every((d) => d.line === 13)).toBe(true);
+});
+
+test("a plugin's operations join the project's, prefixed when a name is taken", () => {
+  const names = operationsFor([newsletterV2]).map((o) => o.name);
+  expect(names).toContain("addList");
+  expect(names).toContain("newsletter:addField");
+  expect(names.filter((n) => n === "addField")).toHaveLength(1);
+  const result = applyOperation({ spec: subscribeSpec, plugins: [newsletterV2] }, "addList", {
+    list: "offers",
+  });
+  expect(result.ok).toBe(true);
+  if (result.ok) {
+    expect(result.description).toBe("Add the offers list");
+    expect(result.files.spec).toContain("lists: [offers]");
+  }
+  expect(applyOperation({ spec: subscribeSpec }, "addList", { list: "offers" }).ok).toBe(false);
+});
+
+test("a plugin module is the plugin, or a function of the plugin API returning it", () => {
+  expect(resolvePlugin(newsletter).key).toBe("newsletter");
+  const made = resolvePlugin((api: PluginApi) => ({
+    ...newsletter,
+    description: `uses ${api.kebab("didYouMean")}`,
+  }));
+  expect(made.description).toBe("uses did-you-mean");
+  expect(() => resolvePlugin({ description: "no key" }, "x.mjs")).toThrow(
+    "x.mjs must export default",
+  );
+  expect(() => resolvePlugin({ ...newsletter, operations: [{ name: "a" }] } as never)).toThrow(
+    "needs a name, a schema and apply()",
+  );
 });

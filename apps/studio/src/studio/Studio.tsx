@@ -1,5 +1,5 @@
 // Studio mode: the spec as YAML, every operation, the last change's diff, logs and concepts.
-import { humanize, identifier, type JsonSchema, OPERATIONS } from "@smithable/core";
+import { humanize, identifier, type JsonSchema, operationsFor } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
@@ -374,7 +374,7 @@ const ARGUMENT_HINTS: Record<string, string> = {
 
 /** Any operation, with a form built from its JSON Schema: the same definition MCP tools use. */
 function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
-  const operations = OPERATIONS.filter((o) => o.name !== "editSpec");
+  const operations = operationsFor(spec.plugins).filter((o) => o.name !== "editSpec");
   const [name, setName] = useState(operations[0]?.name ?? "");
   const [values, setValues] = useState<ArgValues>({});
   const op = operations.find((o) => o.name === name);
