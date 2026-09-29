@@ -369,6 +369,13 @@ function checkAgainstSpec(
       "no-sign-in",
       `The ${usersPage.id} page manages users, but "signIn" is "none".`,
     );
+  // A data page shows and changes everyone's records: it is for signed-in administrators.
+  for (const page of ir.pages.filter((p) => p.pattern.kind === "data"))
+    ctx.error(
+      null,
+      "no-sign-in",
+      `The ${page.id} page shows the app's data to administrators, but "signIn" is "none".`,
+    );
   const usesUsers = ir.models.flatMap((m) =>
     m.fields
       .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL)

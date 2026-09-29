@@ -418,7 +418,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding or users.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users or data.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -453,6 +453,11 @@
           {
             "required": [
               "users"
+            ]
+          },
+          {
+            "required": [
+              "data"
             ]
           }
         ],
@@ -571,6 +576,24 @@
               "manage"
             ],
             "description": "Who has access: invite people by email with a role, change roles and remove users. For admins, unless the page's access says otherwise."
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "all"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ],
+            "description": "An administrator's view of the app's data: all (every model) or a list of models, each with its records to find, open, change and delete. For admins, unless the page's access says otherwise."
           },
           "actions": {
             "type": "array",

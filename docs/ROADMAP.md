@@ -256,7 +256,8 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - The review's A, B and C sections are fixed, released and verified on the beta. So are its decisions: D1 (published apps on smithable.app; previews stay on smithable.ai), D2 (the service's state in its database, usage sampled), D3 (the typed kit), D4 (referenced titles) and D5 (companions, pattern registries, C7, C8).
 - Fable's re-review fixes are done.
 - AI routing phases 1–5 are merged.
-- Plugins v2 is in review (PR #5).
+- Plugins v2 is merged (PR #5), with hook points, mail and invitations (users pages).
+- The data page (an admin view of every model's records) is built.
 - Hook points, the mail kit, and invitations with a users page (`users: manage`, `selfSignUp: false`; [design/users.md](design/users.md)) are built (2026-09-29).
 
 **Exit:** a new page pattern or landing section kind touches one module in core and one in the adapter; a project plugin can add operations and a summary; `smithable ask` answers everyday changes without a model and says so; nothing from the review is open except the Spot host.

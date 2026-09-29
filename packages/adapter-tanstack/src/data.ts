@@ -167,6 +167,10 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const formulas = hasFormulas(model);
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
+  // A data page lists the model's newest records only: its list takes a limit.
+  const capped = ir.pages.some(
+    (p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name),
+  );
   const title = (m: ModelIR) => {
     const f = titleField(m);
     return f === "id" ? "{ id: true }" : `{ id: true, ${f}: true }`;
@@ -208,7 +212,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     "eq",
     "sql",
     ...(referenced && titleColumn !== "id" ? ["asc"] : []),
-    ...(access.create.public ? ["count"] : []),
+    ...(access.create.public || capped ? ["count"] : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
   ];
   const ownerOf = signedIn ? `row.${owner}` : "undefined";
@@ -275,12 +279,12 @@ export const ${self} = {
     return found !== undefined;
   },
 
-  /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search. */
-  async list(viewer: Viewer | null, where?: SQL) {
+  /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}. */
+  async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const rows = await db.query.${n.table}.findMany({
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [desc(t.id)],${capped ? "\n      limit," : ""}
     });
     ${
       aggregatedLists(model).length
@@ -293,7 +297,17 @@ export const ${self} = {
     }
   },
 
-  async get(viewer: Viewer | null, id: number) {
+${
+  capped
+    ? `  /** How many ${n.pluralLabel.toLowerCase()} the viewer may read, for a data page's overview; none to read: null. */
+  count(viewer: Viewer | null): number | null {
+    if (readScope(${n.access}.read, viewer) === "none") return null;
+    return db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
+  },
+
+`
+    : ""
+}  async get(viewer: Viewer | null, id: number) {
     const row = await db.query.${n.table}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
     });
