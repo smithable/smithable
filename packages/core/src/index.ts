@@ -1,7 +1,13 @@
 export type { Allowed, ModelAllowed } from "./access.js";
 export { actionAccess, modelAccess, pageAccess } from "./access.js";
 export type { OperationResult, ProjectFiles } from "./apply.js";
-export { applyOperation, findOperation, OPERATIONS, parseOperationArgs } from "./apply.js";
+export {
+  applyOperation,
+  findOperation,
+  OPERATIONS,
+  operationsFor,
+  parseOperationArgs,
+} from "./apply.js";
 export type { AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
 export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
 export type { ConceptRules } from "./concepts.js";
@@ -25,10 +31,6 @@ export { formatFormula, parseFormula } from "./formula.js";
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
-  PAGE_PATTERNS,
-  pageModel,
-  pageModels,
-  patternInfo,
   SCALAR_TYPES,
   SECTION_KINDS,
   storageOf,
@@ -48,10 +50,26 @@ export {
   snake,
   words,
 } from "./naming.js";
-export type { AnyOperation, ArgRef, Effect, Operation, OperationArgs } from "./operation.js";
+export type {
+  AnyOperation,
+  ArgRef,
+  Effect,
+  Operation,
+  OperationArgs,
+  Refusal,
+} from "./operation.js";
 export { OperationError } from "./operation.js";
-export type { SpecPlugin } from "./plugin.js";
-export { checkJson } from "./plugin.js";
+export type { PagePattern } from "./patterns.js";
+export {
+  LANDING_SECTIONS,
+  PAGE_PATTERNS,
+  PATTERN_KINDS,
+  pageModel,
+  pageModels,
+  patternInfo,
+} from "./patterns.js";
+export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
+export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export { parseFieldShorthand } from "./sections/field-type.js";

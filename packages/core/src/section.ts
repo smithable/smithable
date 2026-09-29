@@ -1,7 +1,8 @@
 import type { ParsedNode } from "yaml";
 import type { ParseContext } from "./context.js";
+import type { YamlEditor } from "./edit.js";
 import type { SpecIR } from "./ir.js";
-import type { AnyOperation } from "./operation.js";
+import type { AnyOperation, Effect, Refusal } from "./operation.js";
 
 export type JsonSchema = { [key: string]: unknown };
 
@@ -24,4 +25,9 @@ export interface SpecSection<K extends SectionKey = SectionKey> {
   parse(ctx: ParseContext, node: ParsedNode | null | undefined, parsed: Partial<SpecIR>): SpecIR[K];
   /** Operations that change this section (ARCHITECTURE §4). */
   operations?: AnyOperation[];
+  /**
+   * Keeps this section in step with what an operation did elsewhere (a field renamed or
+   * removed), or refuses the change when something here still needs what went away.
+   */
+  follow?(spec: YamlEditor, effect: Effect, ir: SpecIR): Refusal | undefined;
 }
