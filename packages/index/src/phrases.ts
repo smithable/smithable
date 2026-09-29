@@ -1,0 +1,657 @@
+// Tier 0 of the AI routing (ARCHITECTURE §9.2): requests worded like the everyday changes
+// ("Customers should have a phone number", "Only admins may delete customers", "Show orders
+// first in the menu") become operations without a model, in milliseconds and offline. The
+// grammar is deliberately narrow: it answers only when every name in the request resolves
+// to exactly one concept, and returns undefined for anything else, which a model then reads.
+// Like every proposal, what it returns is dry-run and confirmed before it applies.
+import {
+  type FieldIR,
+  identifier,
+  kebab,
+  type ModelIR,
+  type PageIR,
+  type SpecIR,
+  USER_MODEL,
+} from "@smithable/core";
+import { KINDS } from "./summary.js";
+
+export interface PhraseOperation {
+  op: string;
+  args: Record<string, unknown>;
+}
+
+export interface PhraseMatch {
+  operations: PhraseOperation[];
+  /** Which wording matched, for the change trace and for tests. */
+  rule: string;
+}
+
+/**
+ * The operations a request means when it is worded like one of the common changes, or
+ * undefined when it is not, or when a name in it does not resolve to exactly one concept.
+ * `roles` are the roles of smithable.auth.yml (needed for access requests).
+ */
+export function matchRequest(
+  ir: SpecIR,
+  request: string,
+  roles: string[] = [],
+): PhraseMatch | undefined {
+  const text = normalize(request);
+  if (!text) return undefined;
+  for (const rule of RULES) {
+    const result = rule.match(text, { ir, roles });
+    if (result) return { operations: result, rule: rule.name };
+    // The wording was this rule's, but a name in it did not resolve: a model should read it,
+    // not a looser rule below.
+    if (result === null) return undefined;
+  }
+  return undefined;
+}
+
+interface Scope {
+  ir: SpecIR;
+  roles: string[];
+}
+
+interface Rule {
+  name: string;
+  /** Operations; undefined when the wording is not this rule's; null when it is, but a name in it does not resolve. */
+  match(text: string, scope: Scope): PhraseOperation[] | undefined | null;
+}
+
+/** Lowercase, one space between words, no final punctuation, and the polite openers gone. */
+function normalize(request: string): string {
+  let text = request
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?]+$/, "")
+    .replace(/\s+/g, " ");
+  for (;;) {
+    const shorter = text.replace(OPENERS, "").trim();
+    if (shorter === text) break;
+    text = shorter;
+  }
+  return text.replace(/^(?:please|also|and) /, "").trim();
+}
+
+const OPENERS =
+  /^(?:please|can you|could you|would you|i want to|i want|i would like to|i'd like to|we want to|we need to|we want|we need|let's|lets|make it possible to|it should be possible to|make sure that|make sure) /;
+
+const ARTICLE = /^(?:a|an|the|each|every|all|our|its|their|any) /;
+const dropArticles = (s: string) => {
+  let out = s.trim();
+  for (;;) {
+    const next = out.replace(ARTICLE, "");
+    if (next === out) return out;
+    out = next;
+  }
+};
+
+const singular = (w: string) =>
+  w.endsWith("ies") && w.length > 4
+    ? `${w.slice(0, -3)}y`
+    : /(?:ses|xes|ches|shes)$/.test(w)
+      ? w.slice(0, -2)
+      : w.endsWith("s") && !w.endsWith("ss")
+        ? w.slice(0, -1)
+        : w;
+
+const plural = (w: string) =>
+  /[^aeiou]y$/.test(w) ? `${w.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(w) ? `${w}es` : `${w}s`;
+
+/** The words of a name or phrase, lowercased and singular: "ClassTypes" → "class type". */
+const key = (s: string) =>
+  kebab(dropArticles(s)).split("-").filter(Boolean).map(singular).join(" ");
+
+/** The one model a phrase names ("customers", "each class type"), or undefined. */
+function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
+  const wanted = key(phrase.replace(/\b(?:record|records|entry|entries|model)$/, ""));
+  if (!wanted) return undefined;
+  const found = ir.models.filter((m) => key(m.name) === wanted);
+  return found.length === 1 ? found[0] : undefined;
+}
+
+/** A field of `model` by name or by the words of its label: "phone number" finds `phone`. */
+function fieldFor(model: ModelIR, phrase: string): FieldIR | undefined {
+  const wanted = key(phrase.replace(/ field$/, ""));
+  if (!wanted) return undefined;
+  const exact = model.fields.filter((f) => key(f.name) === wanted);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return undefined;
+  // "phone number" is the phone field, "email address" the email; only when that is unique.
+  const trimmed = wanted.replace(/ (?:number|address|field)$/, "");
+  const loose = model.fields.filter(
+    (f) =>
+      key(f.name) === trimmed ||
+      (f.type.kind === "scalar" && key(KINDS[f.type.name] ?? "") === wanted),
+  );
+  return loose.length === 1 ? loose[0] : undefined;
+}
+
+/** A field named without its model: the one field of that name across all models. */
+function fieldAnywhere(ir: SpecIR, phrase: string): { model: ModelIR; field: FieldIR } | undefined {
+  const found = ir.models.flatMap((model) => {
+    const field = fieldFor(model, phrase);
+    return field ? [{ model, field }] : [];
+  });
+  return found.length === 1 ? found[0] : undefined;
+}
+
+/** A page by its name ("customers", "the class types page") or as the list of a model. */
+function pageFor(ir: SpecIR, phrase: string): PageIR | undefined {
+  const wanted = key(phrase.replace(/ (?:page|list|screen)$/, ""));
+  if (!wanted) return undefined;
+  const byName = ir.pages.filter((p) => key(p.id) === wanted);
+  if (byName.length === 1) return byName[0];
+  if (byName.length > 1) return undefined;
+  const model = modelFor(ir, phrase.replace(/ (?:page|list|screen)$/, ""));
+  const byModel = model
+    ? ir.pages.filter((p) => p.pattern.kind === "crud" && p.pattern.model === model.name)
+    : [];
+  return byModel.length === 1 ? byModel[0] : undefined;
+}
+
+/** The field's type as the spec writes it, or undefined for a field shorthand cannot express. */
+function shorthand(
+  field: FieldIR,
+  changes: Partial<Pick<FieldIR, "required" | "unique">> = {},
+): string | undefined {
+  if (field.formula || field.defaultFormula) return undefined;
+  const required = changes.required ?? field.required;
+  const unique = changes.unique ?? field.unique;
+  let type: string;
+  // A choice is required by its default and a list of records is never required: a model
+  // should read what "required" means for them.
+  if (field.type.kind === "scalar") type = field.type.name;
+  else if (field.type.kind === "relation" && !field.type.many) type = field.type.model;
+  else return undefined;
+  const value = field.default;
+  const suffix =
+    value === undefined
+      ? ""
+      : typeof value === "string" && !/^[\w-]+$/.test(value)
+        ? undefined
+        : ` = ${String(value)}`;
+  if (suffix === undefined) return undefined;
+  return `${type}${required ? "!" : ""}${unique ? " unique" : ""}${suffix}`;
+}
+
+interface NewField {
+  name: string;
+  type: string;
+}
+
+/** What "a phone number", "a delivery date" or "a total amount" means as a new field. */
+function newField(phrase: string, scope: Scope, requiredByDefault = false): NewField | undefined {
+  let text = dropArticles(phrase.replace(/\((.*?)\)/g, " $1 ").replace(/\s+/g, " "));
+  let required = requiredByDefault;
+  const flag = (re: RegExp, value: boolean) => {
+    if (re.test(text)) {
+      text = text.replace(re, " ").replace(/\s+/g, " ").trim();
+      required = value;
+    }
+  };
+  flag(/\b(?:required|mandatory|which must be filled in|that must be filled in)\b/, true);
+  flag(/\b(?:optional|not required)\b/, false);
+  text = dropArticles(text);
+  if (!text) return undefined;
+  // "belongs to a customer", "linked to a customer", "for a customer": a reference.
+  const reference = /^(?:belongs to|linked to|refers to|references|assigned to|for|of) (.+)$/.exec(
+    text,
+  );
+  if (reference?.[1]) {
+    const target = modelFor(scope.ir, reference[1]);
+    if (!target) return undefined;
+    const name = identifier(key(reference[1]).replace(/ /g, " "));
+    return { name, type: `${target.name}${required ? "!" : ""}` };
+  }
+  const list = /^(?:a list of|many|several|its) (.+)$/.exec(text);
+  if (list?.[1]) {
+    const target = modelFor(scope.ir, list[1]);
+    if (!target) return undefined;
+    return { name: identifier(plural(key(list[1]))), type: `${target.name}[]` };
+  }
+  const kind = inferKind(text);
+  if (!kind) return undefined;
+  const name = identifier(kind.name);
+  if (!name) return undefined;
+  return { name, type: `${kind.type}${required ? "!" : ""}` };
+}
+
+/** The scalar type a phrase implies and the words that name the field. */
+function inferKind(text: string): { type: string; name: string } | undefined {
+  const exact = Object.entries(KINDS).find(
+    ([type, phrase]) => type !== "decimal" && key(phrase) === key(text),
+  );
+  if (exact) {
+    const [type] = exact;
+    return { type, name: KIND_NAMES[type] ?? type };
+  }
+  const rules: [RegExp, string, (m: RegExpExecArray) => string][] = [
+    [/^(.*?)\s*\b(?:e-?mail(?: address)?)$/, "email", (m) => (m[1] ? `${m[1]} email` : "email")],
+    [
+      /^(.*?)\s*\b(?:phone(?: number)?|telephone(?: number)?|mobile(?: number)?)$/,
+      "phone",
+      (m) => (m[1] ? `${m[1]} phone` : "phone"),
+    ],
+    [
+      /^(.*?)\s*\b(?:website|web address|url|homepage|home page|link)$/,
+      "url",
+      (m) => (m[1] ? `${m[1]} url` : "website"),
+    ],
+    [/^(.*?)\s*\b(?:date|day|deadline|birthday)$/, "date", (m) => m[0]],
+    [
+      /^(.*?)\s*\b(?:time|timestamp|date and time)$/,
+      "datetime",
+      (m) => m[0].replace("date and time", "at"),
+    ],
+    [
+      /^(.*?)\s*\b(?:amount|price|cost|total|fee|salary|budget|balance|sum)$/,
+      "money",
+      (m) => (m[1] ? m[1] : m[0]),
+    ],
+    [/^(?:number of|count of|how many) (.+)$/, "int", (m) => `${m[1]} count`],
+    // "number" alone ("an order number", "a VAT number") is an identifier, so a string below.
+    [/^(.*?)\s*\b(?:count|quantity|age|capacity|year)$/, "int", (m) => m[0]],
+    [
+      /^(.*?)\s*\b(?:percentage|percent|rate|weight|height|length|width|score|rating)$/,
+      "decimal",
+      (m) => m[0],
+    ],
+    [
+      /^(.*?)\s*\b(?:notes?|description|comments?|remarks?|summary|bio|details|text)$/,
+      "text",
+      (m) => m[0],
+    ],
+    [/^(?:whether|if) (.+)$/, "bool", (m) => m[1] ?? m[0]],
+    [/^(?:is|has) (.+)$/, "bool", (m) => m[0]],
+    [/^(.*?)\s*\b(?:flag|yes or no)$/, "bool", (m) => m[1] || m[0] || ""],
+  ];
+  for (const [re, type, name] of rules) {
+    const m = re.exec(text);
+    if (m) {
+      const n = name(m).trim();
+      // "a total amount" is the money field `total`; "an amount" alone is `amount`.
+      return { type, name: n || text };
+    }
+  }
+  // A plain noun phrase is a short text: "a nickname", "a reference".
+  return /^[a-z][a-z' -]*$/.test(text) && text.split(" ").length <= 3
+    ? { type: "string", name: text }
+    : undefined;
+}
+
+const KIND_NAMES: Record<string, string> = {
+  int: "number",
+  decimal: "value",
+  money: "amount",
+  bool: "flag",
+  date: "date",
+  datetime: "dateTime",
+  email: "email",
+  phone: "phone",
+  url: "website",
+};
+
+const ROLE_VERBS: Record<string, "read" | "create" | "write" | "delete"> = {
+  delete: "delete",
+  remove: "delete",
+  change: "write",
+  edit: "write",
+  update: "write",
+  modify: "write",
+  add: "create",
+  create: "create",
+  see: "read",
+  view: "read",
+  read: "read",
+};
+
+/** "delete", "deleting" and "deletion" are the same access operation. */
+function verbOf(word: string): "read" | "create" | "write" | "delete" | undefined {
+  for (const form of [
+    word,
+    word.replace(/ing$/, ""),
+    word.replace(/ing$/, "e"),
+    word.replace(/ion$/, "e"),
+  ]) {
+    const verb = ROLE_VERBS[form];
+    if (verb) return verb;
+  }
+  return undefined;
+}
+
+/** "admins", "admins and sales", "the owner" → role names, or undefined if one is unknown. */
+function rolesFor(phrase: string, scope: Scope): string[] | undefined {
+  const names = dropArticles(phrase)
+    .split(/,| and | or /)
+    .map((r) =>
+      dropArticles(r)
+        .replace(/ users?$| roles?$/, "")
+        .trim(),
+    )
+    .filter(Boolean);
+  if (names.length === 0) return undefined;
+  const out: string[] = [];
+  for (const n of names) {
+    if (n === "owner" || n === "owners" || n === "record owner") {
+      out.push("owner");
+      continue;
+    }
+    const role = scope.roles.find((r) => r.toLowerCase() === n || r.toLowerCase() === singular(n));
+    if (!role) return undefined;
+    out.push(role);
+  }
+  return out;
+}
+
+const list = (s: string) =>
+  s
+    .split(/,| and /)
+    .map((x) => dropArticles(x))
+    .filter(Boolean);
+
+const menuFor = (scope: Scope, name?: string) => {
+  const menus = scope.ir.navigation;
+  if (name) return menus.find((m) => m.name === key(name).replace(/ /g, ""));
+  return menus.length === 1 ? menus[0] : menus.find((m) => m.name === "main");
+};
+
+const RULES: Rule[] = [
+  {
+    // "the customer email should be required", "make email unique", "phone is optional"
+    name: "field flag",
+    match(text, scope) {
+      const flags: Record<string, Partial<Pick<FieldIR, "required" | "unique">>> = {
+        required: { required: true },
+        mandatory: { required: true },
+        "always filled in": { required: true },
+        optional: { required: false },
+        "not required": { required: false },
+        unique: { unique: true },
+        "not unique": { unique: false },
+      };
+      const flagRe =
+        "(required|mandatory|always filled in|optional|not required|unique|not unique)";
+      const m =
+        new RegExp(`^(?:make |set )(?:the )?(?<subject>.+?) (?:be )?${flagRe}$`).exec(text) ??
+        new RegExp(
+          `^(?:the )?(?<subject>.+?) (?:should be|must be|has to be|needs to be|is|becomes|should become|should always be|must always be) ${flagRe}$`,
+        ).exec(text);
+      if (!m?.groups) return undefined;
+      const change = flags[m[2] ?? ""];
+      if (!change) return null;
+      const found = subjectField(m.groups.subject ?? "", scope);
+      if (!found) return null;
+      const type = shorthand(found.field, change);
+      if (!type) return null;
+      return [
+        { op: "changeField", args: { model: found.model.name, field: found.field.name, type } },
+      ];
+    },
+  },
+  {
+    // "rename the customer's phone to mobile", "rename phone to mobile on customers"
+    name: "rename field",
+    match(text, scope) {
+      const m =
+        /^rename (?:the )?(?<subject>.+?) (?:to|as|into) (?<to>[a-z][a-z0-9 ]*)$/.exec(text) ??
+        /^call (?:the )?(?<subject>.+?) (?<to>[a-z][a-z0-9 ]*) (?:instead|from now on)$/.exec(text);
+      if (!m?.groups) return undefined;
+      const found = subjectField(m.groups.subject ?? "", scope);
+      if (!found) return null;
+      const to = identifier(dropArticles(m.groups.to ?? ""));
+      if (!to || found.model.fields.some((f) => f.name === to)) return null;
+      return [{ op: "renameField", args: { model: found.model.name, from: found.field.name, to } }];
+    },
+  },
+  {
+    // "remove the phone from customers", "customers no longer need a fax number"
+    name: "remove field",
+    match(text, scope) {
+      const m =
+        /^(?:remove|delete|drop) (?:the )?(?<subject>.+?)(?: field)?$/.exec(text) ??
+        /^(?:the )?(?<model>.+?) (?:no longer|don't|do not|doesn't|does not) (?:need|have|want)(?: a| an| the)? (?<field>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const found = m.groups.subject
+        ? subjectField(m.groups.subject, scope)
+        : (() => {
+            const model = modelFor(scope.ir, m.groups?.model ?? "");
+            const field = model && fieldFor(model, m.groups?.field ?? "");
+            return model && field ? { model, field } : undefined;
+          })();
+      if (!found) return null;
+      return [{ op: "removeField", args: { model: found.model.name, field: found.field.name } }];
+    },
+  },
+  {
+    // "only admins may open the settings page"
+    name: "page access",
+    match(text, scope) {
+      const m =
+        /^only (?<roles>.+?) (?:may|can|should be able to|are allowed to) (?:open|see|view|use|access) (?<page>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const roles = rolesFor(m.groups.roles ?? "", scope);
+      const page = pageFor(scope.ir, m.groups.page ?? "");
+      if (!page) return undefined;
+      if (!roles || roles.includes("owner")) return null;
+      return [{ op: "setAccess", args: { target: `page:${page.id}`, roles } }];
+    },
+  },
+  {
+    // "only admins may delete customers", "deleting customers is only for admins"
+    name: "access",
+    match(text, scope) {
+      const m =
+        /^only (?<roles>.+?) (?:may|can|should|should be able to|are allowed to|is allowed to|are able to) (?<verb>[a-z]+) (?<target>.+)$/.exec(
+          text,
+        ) ??
+        /^(?<verb>[a-z]+) (?:of )?(?<target>.+?) (?:is|should be) (?:only for|restricted to|limited to|reserved for) (?<roles>.+)$/.exec(
+          text,
+        ) ??
+        /^(?<roles>.+?) (?:only|alone) (?:may|can|should) (?<verb>[a-z]+) (?<target>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const roles = rolesFor(m.groups.roles ?? "", scope);
+      const verb = verbOf(m.groups.verb ?? "");
+      if (!roles || !verb) return null;
+      const target = dropArticles(m.groups.target ?? "").replace(
+        /^(?:records? of |entries of )/,
+        "",
+      );
+      const model = modelFor(scope.ir, target);
+      if (!model || model.name === USER_MODEL) return null;
+      return [{ op: "setAccess", args: { target: `model:${model.name}.${verb}`, roles } }];
+    },
+  },
+  {
+    // "search customers by name on the customers page", "customers should be searchable by name and email"
+    name: "search",
+    match(text, scope) {
+      const m =
+        /^(?:allow (?:users |people )?to |let (?:users |people )?)?search(?:ing)? (?:for |through |in )?(?<target>.+?) by (?<fields>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        ) ??
+        /^(?:the )?(?<target>.+?) (?:should be|must be|are|is) searchable by (?<fields>.+)$/.exec(
+          text,
+        ) ??
+        /^add (?:a )?search (?:by|on|for) (?<fields>.+?) (?:to|on) (?:the )?(?<page>.+?)(?: page)?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const page = pageFor(scope.ir, m.groups.page ?? m.groups.target ?? "");
+      if (!page || page.pattern.kind !== "crud") return null;
+      const model = scope.ir.models.find(
+        (x) => page.pattern.kind === "crud" && x.name === page.pattern.model,
+      );
+      if (!model) return null;
+      const fields: string[] = [];
+      for (const phrase of list(m.groups.fields ?? "")) {
+        const field = fieldFor(model, phrase);
+        if (!field || !searchable(field)) return null;
+        fields.push(field.name);
+      }
+      const added = fields.filter((f) => !page.search?.includes(f));
+      // Nothing new: a model says "already done"; the grammar never proposes a change that changes nothing.
+      if (added.length === 0) return null;
+      return [
+        { op: "setSearch", args: { page: page.id, fields: [...(page.search ?? []), ...added] } },
+      ];
+    },
+  },
+  {
+    // "add a page for orders, and show it in the menu"
+    name: "add page",
+    match(text, scope) {
+      const m =
+        /^add (?:a |an )?(?:page|list|screen|view) (?:for|of|listing|showing) (?<model>.+?)(?:,? (?:and )?(?:show|put|add|list) it (?:in|to|on) the (?:main )?menu)?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const model = modelFor(scope.ir, m.groups.model ?? "");
+      if (!model || model.name === USER_MODEL) return null;
+      if (scope.ir.pages.some((p) => p.pattern.kind === "crud" && p.pattern.model === model.name))
+        return null;
+      const words = kebab(model.name).split("-");
+      const page = [...words.slice(0, -1), plural(words.at(-1) ?? "")].join("-");
+      if (scope.ir.pages.some((p) => p.id === page)) return null;
+      return [{ op: "addPage", args: { page, model: model.name } }];
+    },
+  },
+  {
+    // "show orders first in the menu", "move customers before orders", "put orders last"
+    name: "menu order",
+    match(text, scope) {
+      const m =
+        /^(?:show|put|move|place|list) (?:the )?(?<page>.+?)(?: page)? (?<where>first|at the top|to the top|on top|last|at the bottom|to the bottom)(?: (?:in|of) the (?<menu>[a-z]+ )?menu)?$/.exec(
+          text,
+        ) ??
+        /^(?:show|put|move|place|list) (?:the )?(?<page>.+?)(?: page)? (?<where>before|above|after|below) (?:the )?(?<other>.+?)(?: page)?(?: (?:in|of) the (?<menu>[a-z]+ )?menu)?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const menu = menuFor(scope, m.groups.menu?.trim());
+      const page = pageFor(scope.ir, m.groups.page ?? "");
+      if (!menu || !page || !menu.pages.includes(page.id)) return null;
+      const rest = menu.pages.filter((p) => p !== page.id);
+      const where = m.groups.where ?? "";
+      let pages: string[];
+      if (["first", "at the top", "to the top", "on top"].includes(where))
+        pages = [page.id, ...rest];
+      else if (["last", "at the bottom", "to the bottom"].includes(where))
+        pages = [...rest, page.id];
+      else {
+        const other = pageFor(scope.ir, m.groups.other ?? "");
+        if (!other || other.id === page.id) return null;
+        const at = rest.indexOf(other.id);
+        if (at < 0) return null;
+        const offset = where === "before" || where === "above" ? 0 : 1;
+        pages = [...rest.slice(0, at + offset), page.id, ...rest.slice(at + offset)];
+      }
+      if (pages.join() === menu.pages.join()) return null;
+      return [{ op: "setNavigation", args: { menu: menu.name, pages } }];
+    },
+  },
+  {
+    // "the menu should be: orders, customers, dashboard"
+    name: "menu list",
+    match(text, scope) {
+      const m =
+        /^(?:the )?(?<menu>[a-z]+ )?menu (?:order )?(?:should be|is|becomes|should show|shows):? (?<pages>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const menu = menuFor(scope, m.groups.menu?.trim());
+      if (!menu) return null;
+      const pages: string[] = [];
+      for (const phrase of list((m.groups.pages ?? "").replace(/ then /g, ", "))) {
+        const page = pageFor(scope.ir, phrase);
+        if (!page || pages.includes(page.id)) return null;
+        pages.push(page.id);
+      }
+      if (pages.length === 0 || pages.join() === menu.pages.join()) return null;
+      return [{ op: "setNavigation", args: { menu: menu.name, pages } }];
+    },
+  },
+  {
+    // "add orders: each order has a number, belongs to a customer and has a total amount"
+    name: "add model",
+    match(text, scope) {
+      const m =
+        /^(?:add|create|introduce|we (?:also )?have) (?<plural>[a-z][a-z ]*?)(?::|,|;| -| where| which| that) (?:each|every|an?|one) (?<singular>[a-z][a-z ]*?) (?:has|have|with|contains|holds|stores) (?<fields>.+)$/.exec(
+          text,
+        ) ??
+        /^(?:add|create) (?:a |an )?(?<singular>[a-z][a-z ]*?) (?:model|record|table|entity) (?:with|having|that has) (?<fields>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const name = identifier(dropArticles(m.groups.singular ?? ""));
+      if (!name) return null;
+      const model = name[0]?.toUpperCase() + name.slice(1);
+      if (scope.ir.models.some((x) => x.name === model || key(x.name) === key(model))) return null;
+      const fields: Record<string, string> = {};
+      for (let item of list(m.groups.fields ?? "")) {
+        item = item.replace(/^(?:has|have|with|and) /, "").trim();
+        const field = newField(item, scope, true);
+        if (!field || fields[field.name]) return null;
+        fields[field.name] = field.type;
+      }
+      if (Object.keys(fields).length === 0) return null;
+      return [{ op: "addModel", args: { model, fields } }];
+    },
+  },
+  {
+    // "customers should have a phone number", "add a website to customers", "give each order a due date"
+    name: "add field",
+    match(text, scope) {
+      const m =
+        /^(?<model>.+?) (?:should|must|need to|needs to|ought to|will) (?:also )?(?:have|get|carry|store|record|include) (?<field>.+)$/.exec(
+          text,
+        ) ??
+        /^(?<model>.+?) (?:need|needs|get|gets|have|has) (?:a |an )(?<field>.+)$/.exec(text) ??
+        /^(?:add|store|record|track) (?<field>.+?) (?:to|on|for|in) (?<model>.+)$/.exec(text) ??
+        /^give (?<model>.+?) (?<field>(?:a|an) .+)$/.exec(text);
+      if (!m?.groups) return undefined;
+      const model = modelFor(scope.ir, m.groups.model ?? "");
+      if (!model) return null;
+      const required =
+        /\b(?:must|required|mandatory)\b/.test(text) && !/\b(?:optional|not required)\b/.test(text);
+      const field = newField(m.groups.field ?? "", scope, required);
+      if (!field) return null;
+      if (model.fields.some((f) => f.name === field.name || key(f.name) === key(field.name)))
+        return null;
+      return [{ op: "addField", args: { model: model.name, field: field.name, type: field.type } }];
+    },
+  },
+];
+
+/** "the customer email", "email of customers", "customers' phone", or a field named alone. */
+function subjectField(
+  subject: string,
+  scope: Scope,
+): { model: ModelIR; field: FieldIR } | undefined {
+  const s = dropArticles(subject).replace(/ field$/, "");
+  const forms = [
+    /^(?<model>.+?)'s? (?<field>.+)$/.exec(s),
+    /^(?<field>.+?) (?:of|on|in|for|from) (?<model>.+)$/.exec(s),
+    /^(?<model>\S+) (?<field>.+)$/.exec(s),
+    /^(?<model>.+) (?<field>\S+)$/.exec(s),
+  ];
+  for (const m of forms) {
+    if (!m?.groups) continue;
+    const model = modelFor(scope.ir, m.groups.model ?? "");
+    const field = model && fieldFor(model, m.groups.field ?? "");
+    if (model && field) return { model, field };
+  }
+  return fieldAnywhere(scope.ir, s);
+}
+
+const searchable = (field: FieldIR) =>
+  (field.type.kind === "scalar" &&
+    ["string", "text", "email", "phone", "url"].includes(field.type.name)) ||
+  field.type.kind === "choice";
