@@ -8,8 +8,10 @@ import {
   OPERATIONS,
   type OperationArgs,
   type ProjectFiles,
+  validateAuth,
+  validateSpec,
 } from "@smithable/core";
-import type { ContextSlice } from "@smithable/index";
+import { type ContextSlice, matchRequest } from "@smithable/index";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export interface ProposedOperation {
@@ -21,7 +23,14 @@ export interface ProposedOperation {
 }
 
 export type Proposal =
-  | { kind: "change"; operations: ProposedOperation[]; files: ProjectFiles; usage: Usage[] }
+  | {
+      kind: "change";
+      operations: ProposedOperation[];
+      files: ProjectFiles;
+      usage: Usage[];
+      /** Set when no model was needed: the wording rule that read the request (tier 0). */
+      generator?: string;
+    }
   | { kind: "question"; question: string; options: string[]; usage: Usage[] }
   | { kind: "none"; reason: string; usage: Usage[] }
   | { kind: "failed"; message: string; usage: Usage[] };
@@ -106,6 +115,21 @@ export async function proposeChange(options: {
 }): Promise<Proposal> {
   const { files, context, providers } = options;
   const usage: Usage[] = [];
+  // Tier 0: a request worded like one of the everyday changes needs no model at all. Its
+  // operations get the same dry run and host check; when they do not apply, a model reads it.
+  const phrased = phraseTier(files, options.request);
+  if (phrased) {
+    const checked = dryRun(files, phrased.operations);
+    const refused = checked.ok ? options.check?.(files, checked.files, checked.effects) : undefined;
+    if (checked.ok && !refused)
+      return {
+        kind: "change",
+        operations: checked.operations,
+        files: checked.files,
+        usage,
+        generator: phrased.rule,
+      };
+  }
   if (providers.length === 0)
     return {
       kind: "failed",
@@ -154,6 +178,20 @@ export async function proposeChange(options: {
     }
   }
   return { kind: "failed", message: `No model found a change that applies. ${problem}`, usage };
+}
+
+/** The operations a request's wording means without a model (ARCHITECTURE §9.2, tier 0). */
+function phraseTier(files: ProjectFiles, request: string) {
+  const options = files.plugins ? { plugins: files.plugins } : {};
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
+  if (!ir) return undefined;
+  const roles =
+    files.auth === undefined
+      ? []
+      : (validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth?.roles.map(
+          (r) => r.name,
+        ) ?? []);
+  return matchRequest(ir, request, roles);
 }
 
 /** Applies the operations one after the other to copies of the files. */
