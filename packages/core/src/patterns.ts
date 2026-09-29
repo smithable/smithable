@@ -357,6 +357,40 @@ const calendar: PagePattern<"calendar"> = {
   icon: "calendar",
   inMenu: true,
   operations: calendarOperations,
+  follow(spec, page, effect, ir) {
+    // A renamed field is renamed where the calendar names it; a removal it relies on is refused.
+    const f = fieldEffect(effect);
+    if (!f) return undefined;
+    const p = page.pattern;
+    const path = (key: string) => ["pages", page.id, "calendar", key];
+    // Where the calendar uses the field: its own keys, or a duration one reference away.
+    const own = f.model === p.model;
+    const uses: [string, string][] = [];
+    if (own)
+      for (const key of ["starts", "ends", "title"] as const)
+        if (p[key] === f.from) uses.push([key, f.to ?? ""]);
+    if (p.duration) {
+      const [first, second] = p.duration.split(".");
+      if (second === undefined) {
+        if (own && first === f.from) uses.push(["duration", f.to ?? ""]);
+      } else {
+        const ref = ir.models.find((m) => m.name === p.model)?.fields.find((x) => x.name === first);
+        const target = ref?.type.kind === "relation" ? ref.type.model : undefined;
+        if (own && first === f.from) uses.push(["duration", f.to ? `${f.to}.${second}` : ""]);
+        else if (target === f.model && second === f.from)
+          uses.push(["duration", f.to ? `${first}.${f.to}` : ""]);
+      }
+    }
+    if (!uses.length) return undefined;
+    if (!f.to)
+      return {
+        refusal: `The ${page.id} calendar uses ${f.model}.${f.from}; change or remove the calendar first.`,
+      };
+    // The short form (\`calendar: Session\`) names no field: an inferred start follows by itself.
+    if (!spec.has(path("model"))) return undefined;
+    for (const [key, value] of uses) if (spec.has(path(key))) spec.set(path(key), value);
+    return undefined;
+  },
 };
 
 /** An admin view of every model (or some): each one's records, found, opened, changed. */
