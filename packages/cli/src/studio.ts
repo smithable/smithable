@@ -6,7 +6,7 @@ import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Proposal } from "@smithable/ai";
 import type { OperationArgs } from "@smithable/core";
-import { applyProposal, proposeFor, usageLine } from "./ask.js";
+import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
 import { git, trailer } from "./git.js";
@@ -48,6 +48,7 @@ export interface TraceEntry {
 }
 
 const ENGINES = {
+  generator: "generator",
   local: "local model",
   smithable: "Smithable model",
   frontier: "frontier model",
@@ -90,7 +91,8 @@ function trace(dir: string): TraceEntry[] {
       {
         description: isUndo ? `Undid: ${subject.slice(19, -1)}` : subject.slice(11),
         at,
-        engine: model ? ENGINES[model.tier] : ("generator" as const),
+        // A change a wording rule read, or none a model made: the generator's (tier 0).
+        engine: model?.tier ? ENGINES[model.tier] : ("generator" as const),
         tokens: model?.tokens ?? 0,
         ...(model
           ? { model: model.model, cost: model.cost, currency: model.currency ?? "EUR" }
@@ -377,8 +379,10 @@ export async function studio(
         // A model proposes; nothing changes until the proposal is applied.
         const { request } = await body();
         const quiet = { out: () => {}, err: (t: string) => log(t) };
-        const proposal = await proposeFor(dir, quiet, String(request ?? ""));
+        // A proposal shown and never applied was declined.
+        if (pending) proposalOutcome(dir, pending.id, "declined");
         const id = randomUUID();
+        const proposal = await proposeFor(dir, quiet, String(request ?? ""), id);
         pending = proposal ? { id, request: String(request), proposal } : undefined;
         if (!proposal)
           return json({ kind: "failed", message: "The spec has errors.", usage: "", id });
@@ -387,7 +391,7 @@ export async function studio(
           ...rest,
           id,
           ...(rest.kind === "change" ? { files: undefined } : {}),
-          usage: usageLine(usage),
+          usage: usageLine(usage, rest.kind === "change" ? rest.generator : undefined),
         });
       }
       if (req.method === "POST" && url.pathname === "/api/ask/apply") {
@@ -402,6 +406,7 @@ export async function studio(
           });
         const proposal = confirmed.proposal;
         const result = await capture((io) => applyProposal(dir, io, confirmed.request, proposal));
+        proposalOutcome(dir, confirmed.id, result.ok ? "applied" : "failed");
         if (result.ok) changed({ description: result.output });
         return json(result);
       }

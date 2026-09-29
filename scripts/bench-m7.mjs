@@ -403,10 +403,12 @@ for (const variant of variants) {
     } else if (variant === "M") {
       const started = Date.now();
       const asked = sh("node", [cli, "ask", task.prompt, "--yes", "--dir", dir], repo);
-      const used = /\(([^)]+)\) · ([\d,]+) tokens · ([€$])([\d.]+)/.exec(asked.out);
+      const used = /\(([^)]+)\) · ([\d,]+) tokens(?: · ([€$])([\d.]+))?/.exec(asked.out);
       run = {
         ms: Date.now() - started,
         model: used?.[1] ?? "none",
+        // A wording rule read the request: no model was used (tier 0).
+        generator: /^Generator /m.test(asked.out),
         tokens: Number((used?.[2] ?? "0").replaceAll(",", "")),
         costEur: used?.[3] === "€" ? Number(used[4]) : 0,
         costUsd: used?.[3] === "$" ? Number(used[4]) : 0,
@@ -464,7 +466,8 @@ const rows = TASKS.flatMap((task, i) =>
         : v === "M"
           ? r.outcome
           : `${r.turns} turns, ${r.smithableCalls} Smithable calls, ${r.fileTools} file tools`;
-    return `| ${task.prompt} | ${NAMES[v]} | ${r.tokens.toLocaleString("en")} | ${money(v, r)} | ${(r.ms / 1000).toFixed(0)} s | ${how} | ${r.files} / ${r.lines} | ${yes(r.typecheck && r.build && r.tests)} | ${yes(r.done)} | ${r.regressions.length ? `**${r.regressions.join(", ")}**` : "none"} | ${yes(r.regenerates)} |`;
+    const by = v === "M" && r.generator ? `generator (${r.model}), no model` : NAMES[v];
+    return `| ${task.prompt} | ${by} | ${r.tokens.toLocaleString("en")} | ${money(v, r)} | ${(r.ms / 1000).toFixed(0)} s | ${how} | ${r.files} / ${r.lines} | ${yes(r.typecheck && r.build && r.tests)} | ${yes(r.done)} | ${r.regressions.length ? `**${r.regressions.join(", ")}**` : "none"} | ${yes(r.regenerates)} |`;
   }),
 );
 const totals = variants.map((v) => {
