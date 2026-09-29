@@ -244,6 +244,22 @@ Then (2026-09-28): the remote MCP endpoint (a per-project token from the project
 
 **Exit:** an invited tester with nothing installed goes from one sentence to a published app on their own domain, and can hand the project to a developer, who continues in Studio or via Git.
 
+## M15.5 — Hardening and pluggability
+
+Between the beta and the launch: what the 2026-09-28 review found, fixed, and the core made pluggable before more features pile onto it (the review's D5: before M16).
+
+- **Review fixes.** Security first (sessions, isolation, cookies, the Docker guard, the AI gateway, limits), then the open-source product (Studio's API, the generated access layer, the coder's confinement, deploy details), then structure, tests and operations (CI, reproducible releases and rollback, backups of running workspaces, alarms, Session Manager logging, S3 Object Lock). Only the Spot host (with per-workspace disk quotas and a host-rebuild drill) is left for later.
+- **Pluggability** ([design/plugin-interface.md](design/plugin-interface.md)): companion files, page patterns and landing sections register once; the generator is split behind one `SectionGenerator` with a byte-identity guard; forms come from annotated schemas; plugins get operations, summaries and patches; hook points for plugins' behaviour.
+- **AI routing:** tier 0 (everyday wording becomes operations without a model), a model is offered only the operations that can be about its concepts, answers are constrained to each operation's schema, and a cheaper tier's "none" escalates. Every proposal and its outcome are logged, the start of a training set for the Smithable model.
+
+**Progress (2026-09-29):**
+- The review's A, B and C sections are fixed, released and verified on the beta. So are its decisions: D1 (published apps on smithable.app; previews stay on smithable.ai), D2 (the service's state in its database, usage sampled), D3 (the typed kit), D4 (referenced titles) and D5 (companions, pattern registries, C7, C8).
+- Fable's re-review fixes are done.
+- AI routing phases 1–5 are merged.
+- Plugins v2 is in review (PR #5).
+
+**Exit:** a new page pattern or landing section kind touches one module in core and one in the adapter; a project plugin can add operations and a summary; `smithable ask` answers everyday changes without a model and says so; nothing from the review is open except the Spot host.
+
 ## M16 — Public launch
 
 - Open-source preparation: license decision with legal review, trademark registration, documentation, published spec and JSON Schema, contributor guide (DCO), security policy, public CI, release process.
