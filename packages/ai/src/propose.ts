@@ -8,8 +8,10 @@ import {
   OPERATIONS,
   type OperationArgs,
   type ProjectFiles,
+  validateAuth,
+  validateSpec,
 } from "@smithable/core";
-import type { ContextSlice } from "@smithable/index";
+import { type ContextSlice, matchRequest } from "@smithable/index";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export interface ProposedOperation {
@@ -21,7 +23,14 @@ export interface ProposedOperation {
 }
 
 export type Proposal =
-  | { kind: "change"; operations: ProposedOperation[]; files: ProjectFiles; usage: Usage[] }
+  | {
+      kind: "change";
+      operations: ProposedOperation[];
+      files: ProjectFiles;
+      usage: Usage[];
+      /** Set when no model was needed: the wording rule that read the request (tier 0). */
+      generator?: string;
+    }
   | { kind: "question"; question: string; options: string[]; usage: Usage[] }
   | { kind: "none"; reason: string; usage: Usage[] }
   | { kind: "failed"; message: string; usage: Usage[] };
@@ -36,8 +45,11 @@ If the app already does what is asked, answer {"kind":"none","reason":"Already d
 Use the exact names of models, fields and pages from the app. New names are camelCase (fields) or PascalCase (models).
 Field types (shorthand): string, text, email, phone, url, int, decimal, money, bool, date, datetime; choices as "a | b | c"; a reference to another model as "Customer"; a list of related records as "Order[]". Append ! for required, add "unique", and "= value" for a default: "email! unique", "int = 60".`;
 
+/** The operations a model may propose: every operation but the whole-file edit. */
+const PROPOSABLE = OPERATIONS.filter((o) => o.name !== "editSpec");
+
 /** The operation's arguments, compactly: names, types, allowed values and hints. */
-function signature(op: AnyOperation): string {
+export function signature(op: AnyOperation): string {
   const schema = op.schema as {
     properties?: Record<
       string,
@@ -57,25 +69,86 @@ function signature(op: AnyOperation): string {
   return `- ${op.name} { ${args.join(", ")} }: ${op.summary}`;
 }
 
-/** The answer's shape, for constrained decoding. */
-function answerSchema(): object {
+/**
+ * The operations that can be about the request's concepts (ARCHITECTURE §9.3): one that
+ * changes an existing model, field or page is offered only when the context has one. Operations
+ * that create something, or work on the app as a whole, are always offered. Fewer choices make
+ * a small model choose better and cost fewer tokens.
+ */
+export function relevantOperations(concepts: string[]): AnyOperation[] {
+  const has = (kind: string) => concepts.some((c) => c.startsWith(`${kind}:`));
+  const models = has("model") || has("field");
+  const pages = has("page");
+  return PROPOSABLE.filter((op) => {
+    const properties = Object.keys((op.schema as { properties?: object }).properties ?? {});
+    // What the operation works on: an existing model (or a field of one), an existing page or
+    // menu. The ones that make a model or a page from nothing need neither.
+    const needsModel =
+      op.name !== "addModel" && (properties.includes("model") || properties.includes("field"));
+    const needsPage =
+      !["addLandingPage", "addTile"].includes(op.name) &&
+      ["page", "pages", "menu"].some((p) => properties.includes(p));
+    if (!needsModel && !needsPage) return true;
+    return (needsModel && models) || (needsPage && pages);
+  });
+}
+
+/**
+ * The answer's shape for constrained decoding. Strict: each operation's own argument schema,
+ * so a constrained model cannot name an argument wrong or leave a required one out, which
+ * saves the repair round. Loose: only the operation names, for servers whose JSON Schema
+ * support stops at that (the provider falls back to it).
+ */
+export function answerSchema(operations: AnyOperation[], strict = true): object {
+  const item = strict
+    ? {
+        anyOf: operations.map((op) => ({
+          type: "object",
+          required: ["op", "args"],
+          additionalProperties: false,
+          properties: { op: { const: op.name }, args: op.schema },
+        })),
+      }
+    : {
+        type: "object",
+        required: ["op", "args"],
+        properties: { op: { enum: operations.map((o) => o.name) }, args: { type: "object" } },
+      };
   return {
     type: "object",
     required: ["kind"],
     properties: {
       kind: { enum: ["operations", "question", "none"] },
-      operations: {
-        type: "array",
-        items: {
-          type: "object",
-          required: ["op", "args"],
-          properties: { op: { enum: OPERATIONS.map((o) => o.name) }, args: { type: "object" } },
-        },
-      },
+      operations: { type: "array", items: item },
       question: { type: "string" },
       options: { type: "array", items: { type: "string" } },
       reason: { type: "string" },
     },
+  };
+}
+
+/**
+ * What a provider is asked. A local model pays no tokens but prefills slowly, so it gets the
+ * same system text and the whole operation list every time: a stable prefix its server keeps
+ * in its cache, with only the request's context after it. A hosted model pays per token, so
+ * it gets only the operations that fit the request, after the context.
+ */
+export function promptFor(
+  provider: Pick<Provider, "location">,
+  context: ContextSlice,
+): { system: string; user: string; operations: AnyOperation[] } {
+  const operations = relevantOperations(context.concepts);
+  if (provider.location === "local") {
+    return {
+      system: `${SYSTEM}\n\nOperation arguments:\n${PROPOSABLE.map(signature).join("\n")}`,
+      user: `${context.text}\n\nOperations that fit this request: ${operations.map((o) => o.name).join(", ")}.`,
+      operations,
+    };
+  }
+  return {
+    system: SYSTEM,
+    user: `${context.text}\n\nOperation arguments:\n${operations.map(signature).join("\n")}`,
+    operations,
   };
 }
 
@@ -89,8 +162,9 @@ interface Answer {
 
 /**
  * Asks the allowed models, cheapest tier first, for the operations a request means. A model
- * gets two chances to repair an answer that does not apply; after that the request goes to
- * the next tier. The same semantic context goes to every tier.
+ * gets two chances to repair an answer that does not apply; after that, or when it says no
+ * operation can do it while a stronger model is allowed, the request goes to the next tier.
+ * Every tier gets the same semantic context.
  */
 export async function proposeChange(options: {
   request: string;
@@ -106,6 +180,21 @@ export async function proposeChange(options: {
 }): Promise<Proposal> {
   const { files, context, providers } = options;
   const usage: Usage[] = [];
+  // Tier 0: a request worded like one of the everyday changes needs no model at all. Its
+  // operations get the same dry run and host check; when they do not apply, a model reads it.
+  const phrased = phraseTier(files, options.request);
+  if (phrased) {
+    const checked = dryRun(files, phrased.operations);
+    const refused = checked.ok ? options.check?.(files, checked.files, checked.effects) : undefined;
+    if (checked.ok && !refused)
+      return {
+        kind: "change",
+        operations: checked.operations,
+        files: checked.files,
+        usage,
+        generator: phrased.rule,
+      };
+  }
   if (providers.length === 0)
     return {
       kind: "failed",
@@ -113,20 +202,19 @@ export async function proposeChange(options: {
         "No model is available under the AI policy. Set up a local model or the Smithable model, or change the policy.",
       usage,
     };
-  const user = `${context.text}\n\nOperation arguments:\n${OPERATIONS.filter(
-    (o) => o.name !== "editSpec",
-  )
-    .map(signature)
-    .join("\n")}`;
   let problem = "";
-  for (const provider of providers) {
+  let none: string | undefined;
+  for (const [index, provider] of providers.entries()) {
+    const { system, user, operations } = promptFor(provider, context);
+    const schema = answerSchema(operations);
+    const fallbackSchema = answerSchema(operations, false);
     let prompt = user;
     for (let attempt = 0; attempt < 3; attempt++) {
       let answer: Answer;
       try {
         answer = (await completeJson(
           provider,
-          { system: SYSTEM, user: prompt, schema: answerSchema() },
+          { system, user: prompt, schema, fallbackSchema },
           usage,
         )) as Answer;
       } catch (error) {
@@ -141,8 +229,12 @@ export async function proposeChange(options: {
           options: answer.options ?? [],
           usage,
         };
-      if (answer.kind === "none")
-        return { kind: "none", reason: answer.reason ?? "No operation can do this.", usage };
+      if (answer.kind === "none") {
+        // A small model's "cannot" is not the last word while a stronger one is allowed.
+        none = answer.reason ?? "No operation can do this.";
+        if (index === providers.length - 1) return { kind: "none", reason: none, usage };
+        break;
+      }
       const checked = dryRun(files, answer.operations ?? []);
       const refused = checked.ok
         ? options.check?.(files, checked.files, checked.effects)
@@ -153,7 +245,22 @@ export async function proposeChange(options: {
       prompt = `${user}\n\nYour previous answer was:\n${JSON.stringify(answer)}\nIt cannot be applied: ${problem}\nAnswer again.`;
     }
   }
+  if (none !== undefined && !problem) return { kind: "none", reason: none, usage };
   return { kind: "failed", message: `No model found a change that applies. ${problem}`, usage };
+}
+
+/** The operations a request's wording means without a model (ARCHITECTURE §9.2, tier 0). */
+function phraseTier(files: ProjectFiles, request: string) {
+  const options = files.plugins ? { plugins: files.plugins } : {};
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
+  if (!ir) return undefined;
+  const roles =
+    files.auth === undefined
+      ? []
+      : (validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth?.roles.map(
+          (r) => r.name,
+        ) ?? []);
+  return matchRequest(ir, request, roles);
 }
 
 /** Applies the operations one after the other to copies of the files. */
