@@ -55,12 +55,16 @@ export function landingRoute(
   });
   const items = (name: string) => literal(text(name).items ?? []);
   const sectionParts = (section: LandingSection): string[] => {
+    // A section's component, opened with where its texts are kept, so the preview can change
+    // them in place.
+    const open = (component: string) =>
+      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}`;
     const own = text(section.name);
     switch (section.kind) {
       case "hero":
         imports.add("#/kit/Landing", "Hero");
         return [
-          `<Hero
+          `${open("Hero")}
           title=${attr(own.title ?? ir.app.name)}${
             (own.subtitle ?? ir.app.description)
               ? `
@@ -94,7 +98,7 @@ export function landingRoute(
               )
             : undefined;
         return [
-          `<RecordCards
+          `${open("RecordCards")}
           id=${attr(section.name)}
           title=${attr(own.title ?? n.pluralLabel)}${
             own.text
@@ -125,14 +129,14 @@ export function landingRoute(
           .filter((k) => own[k])
           .map((k) => `\n          ${k}=${attr(own[k] as string)}`)
           .join("");
-        if (!section.form) return [`<Contact${props}\n        />`];
+        if (!section.form) return [`${open("Contact")}${props}\n        />`];
         // The model's own form; visitors send it, and the thanks replace it.
         const model = modelNamed(ir, section.form);
         const n = names(model, t);
         imports.add(n.module, n.create).add(n.module, n.schema).add(n.module, n.ui);
         imports.add("#/generated/app", "app").add("#/kit/ModelForm", "ModelForm");
         return [
-          `<Contact${props}
+          `${open("Contact")}${props}
           form={(sent, human) => (
             <ModelForm
               ui={${n.ui}}
@@ -158,7 +162,7 @@ export function landingRoute(
           return image ? { ...i, image: { ...image, src: `/${image.src}` } } : i;
         });
         return [
-          `<Gallery${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
+          `${open("Gallery")}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
           items={${literal(withRoot)}}
         />`,
         ];
@@ -169,7 +173,7 @@ export function landingRoute(
       case "callToAction":
         imports.add("#/kit/Landing", "CallToAction");
         return [
-          `<CallToAction
+          `${open("CallToAction")}
           title=${attr(own.title ?? "Ready to get started?")}${
             own.text
               ? `
@@ -199,28 +203,20 @@ export function landingRoute(
           : "";
         return section.kind === "pricing"
           ? [
-              `<Pricing${heading}${lead}
+              `${open("Pricing")}${heading}${lead}
           plans={${items(section.name)}}
           link=${link(start, "Get started")}
         />`,
             ]
           : [
-              `<${kit}${heading}${section.kind === "features" ? lead : ""}
+              `${open(kit)}${heading}${section.kind === "features" ? lead : ""}
           items={${items(section.name)}}
         />`,
             ];
       }
     }
   };
-  // Each section knows where its texts are kept, so the preview can change them in place.
-  const parts = sections.flatMap((section) =>
-    sectionParts(section).map((part) =>
-      part.replace(
-        /^<(Hero|Features|RecordCards|Pricing|Testimonials|Faq|CallToAction|Contact|Gallery)\b/,
-        `$&\n          texts=${attr(`pages.${page.id}.${section.name}`)}`,
-      ),
-    ),
-  );
+  const parts = sections.flatMap(sectionParts);
   const footerSection = sections.find((s) => s.kind === "footer");
   const footerTexts = footerSection ? text(footerSection.name) : undefined;
   const footer = footerSection
