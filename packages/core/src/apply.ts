@@ -1,17 +1,33 @@
 import { validateAuth } from "./auth.js";
-import { validateContent } from "./content.js";
-import { validateContext } from "./context-file.js";
-import type { Diagnostic } from "./diagnostics.js";
+import { COMPANIONS } from "./companion.js";
+import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
-import { type AnyOperation, type Effect, type OperationArgs, OperationError } from "./operation.js";
+import {
+  type AnyOperation,
+  type Editors,
+  type Effect,
+  type OperationArgs,
+  OperationError,
+} from "./operation.js";
 import { checkJson, type SpecPlugin } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
+import { accessOperations } from "./sections/access-operations.js";
+import { ruleOperations } from "./sections/rule-operations.js";
+import { specOperations } from "./sections/spec-operations.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
-import { validateUx } from "./ux.js";
 
-/** Every operation, from all sections. */
-export const OPERATIONS: readonly AnyOperation[] = SECTIONS.flatMap((s) => s.operations ?? []);
+/**
+ * Every operation: those about the spec as a whole (rules and access belong to any concept),
+ * then the companions', then each section's.
+ */
+export const OPERATIONS: readonly AnyOperation[] = [
+  ...ruleOperations,
+  ...accessOperations,
+  ...specOperations,
+  ...COMPANIONS.flatMap((c) => c.operations),
+  ...SECTIONS.flatMap((s) => s.operations ?? []),
+];
 
 export interface ProjectFiles {
   spec: string;
@@ -79,16 +95,26 @@ export function applyOperation(
       before.diagnostics,
     );
 
+  // Each companion gets an editor: its file, or a new one if it may be created.
+  const start = (key: (typeof COMPANIONS)[number]["key"], empty?: string) => files[key] ?? empty;
   const editors = {
     spec: new YamlEditor(files.spec),
-    content: new YamlEditor(files.content ?? `smithableContent: 0.1\n`),
-    ...(files.auth === undefined ? {} : { auth: new YamlEditor(files.auth) }),
-    ux: new YamlEditor(files.ux ?? `smithableUx: 0.1\n`),
-    context: new YamlEditor(files.context ?? `smithableContext: 0.1\n`),
-  };
+    ...Object.fromEntries(
+      COMPANIONS.flatMap((c) => {
+        const text = start(c.key, c.empty);
+        return text === undefined ? [] : [[c.key, new YamlEditor(text)]];
+      }),
+    ),
+  } as Editors;
   let effects: Effect[];
   try {
     effects = op.apply(editors, args, before.ir);
+    // The companions follow what the operation did elsewhere (a field renamed, a page removed).
+    for (const effect of effects)
+      for (const c of COMPANIONS) {
+        const editor = editors[c.key];
+        if (editor) c.follow?.(editor, effect, before.ir);
+      }
   } catch (error) {
     // An edit the files cannot take is the operation failing too, not a crash.
     if (error instanceof OperationError || error instanceof EditError) return fail(error.message);
@@ -97,42 +123,19 @@ export function applyOperation(
 
   const after = validateSpec({ path: "smithable.yml", text: editors.spec.text }, options);
   if (!after.ir) return fail(`${name} would make smithable.yml invalid.`, after.diagnostics);
-  // The content file, like the ux file, is written only if the project has one or it changed.
-  const contentChanged = editors.content.text !== (files.content ?? `smithableContent: 0.1\n`);
-  if (files.content !== undefined || contentChanged) {
-    const content = validateContent(
-      { path: "smithable.content.yml", text: editors.content.text },
-      after.ir,
-    );
-    if (!content.content)
-      return fail(`${name} would make smithable.content.yml invalid.`, content.diagnostics);
-  }
-  // The ux file is written only if the project has one or the operation changed it.
-  const uxChanged = editors.ux.text !== (files.ux ?? `smithableUx: 0.1\n`);
-  if (files.ux !== undefined || uxChanged) {
-    const result = validateUx({ path: "smithable.ux.yml", text: editors.ux.text }, after.ir);
-    if (!result.ux) return fail(`${name} would make smithable.ux.yml invalid.`, result.diagnostics);
-  }
-  if (editors.auth) {
-    const result = validateAuth({ path: "smithable.auth.yml", text: editors.auth.text }, after.ir);
-    if (!result.auth)
-      return fail(`${name} would make smithable.auth.yml invalid.`, result.diagnostics);
-  }
-  const contextChanged = editors.context.text !== (files.context ?? `smithableContext: 0.1\n`);
-  if (contextChanged) {
-    const problems = validateContext({ path: "smithable.context.yml", text: editors.context.text });
-    if (problems.length) return fail(`${name} would make smithable.context.yml invalid.`, problems);
+  // A companion file is written (and so checked) if the project has one or the operation
+  // changed it.
+  const written: Partial<Record<(typeof COMPANIONS)[number]["key"], string>> = {};
+  for (const c of COMPANIONS) {
+    const editor = editors[c.key];
+    if (!editor || (files[c.key] === undefined && editor.text === c.empty)) continue;
+    const problems = c.check(editor.text, after.ir);
+    if (hasErrors(problems)) return fail(`${name} would make ${c.file} invalid.`, problems);
+    written[c.key] = editor.text;
   }
   return {
     ok: true,
-    files: {
-      spec: editors.spec.text,
-      ...(files.content !== undefined || contentChanged ? { content: editors.content.text } : {}),
-      ...(editors.auth ? { auth: editors.auth.text } : {}),
-      ...(files.ux !== undefined || uxChanged ? { ux: editors.ux.text } : {}),
-      // Like the ux file: written if the project has one or the operation changed it.
-      ...(files.context !== undefined || contextChanged ? { context: editors.context.text } : {}),
-    },
+    files: { spec: editors.spec.text, ...written },
     description: op.describe(args, before.ir),
     destructive: op.destructive(args, before.ir, after.ir),
     effects,
