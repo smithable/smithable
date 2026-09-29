@@ -104,6 +104,48 @@ const addUsersPage: Operation<{ page?: string; route?: string }> = {
   },
 };
 
+const addDataPage: Operation<{ page?: string; route?: string; models?: string[] }> = {
+  name: "addDataPage",
+  summary:
+    "Add an administrators' page with every model's records (or the models named) to find, open, change and delete; it goes in the main menu.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name; admin when left out." },
+      route: { type: "string", description: "Defaults to / plus the page name." },
+      models: refTo(
+        { ref: "model", label: "Models" },
+        { description: "Leave out for every model." },
+        true,
+      ),
+    },
+  },
+  positional: ["page", "route", "...models"],
+  describe: ({ page = "admin", models }) =>
+    `Add data page ${page} (${models?.length ? models.join(", ") : "every model"})`,
+  destructive: () => false,
+  apply({ spec, auth }, { page = "admin", route, models }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    if (auth?.get(["signIn"]) === "none")
+      throw new OperationError(
+        "A data page is for administrators: it needs sign-in, and this app has none.",
+      );
+    for (const m of models ?? [])
+      if (!ir.models.some((x) => x.name === m))
+        throw new OperationError(`There is no model named "${m}".`);
+    const data = models?.length ? models : "all";
+    spec.add(["pages"], page, route ? { route, data } : { data });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
@@ -395,6 +437,8 @@ export const crudOperations: AnyOperation[] = [addPage, setSearch];
 export const landingOperations: AnyOperation[] = [addLandingPage, addSection, removeSection];
 /** Operations of the dashboard pattern. */
 export const dashboardOperations: AnyOperation[] = [addTile];
+/** Operations of the data pattern. */
+export const dataOperations: AnyOperation[] = [addDataPage];
 /** Operations of the users pattern. */
 export const usersOperations: AnyOperation[] = [addUsersPage];
 export const navigationOperations: AnyOperation[] = [setNavigation];

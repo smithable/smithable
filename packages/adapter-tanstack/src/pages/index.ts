@@ -3,6 +3,7 @@
 import type { PageIR, PatternKind, PatternOf } from "@smithable/core";
 import type { GenContext } from "../shared.js";
 import { dashboardRoute } from "./dashboard.js";
+import { dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
 import { listRoute } from "./list.js";
 import { detailRoute, newRoute, recordPageRoute } from "./record.js";
@@ -52,6 +53,10 @@ export const PAGE_GENERATORS: {
     routes: (page, { ir, t, auth }) => ({
       "index.tsx": recordPageRoute(page, page.pattern, ir, t, auth),
     }),
+  },
+  data: {
+    // An overview and each model's crud routes inside the page; no kit of its own.
+    routes: (page, ctx) => dataRoutes(page, ctx),
   },
   users: {
     kit: ["src/kit/Users.tsx"],

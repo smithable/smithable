@@ -29,6 +29,7 @@ import type { JsonSchema } from "./section.js";
 import {
   crudOperations,
   dashboardOperations,
+  dataOperations,
   landingOperations,
   usersOperations,
 } from "./sections/page-operations.js";
@@ -314,6 +315,38 @@ const users: PagePattern<"users"> = {
   operations: usersOperations,
 };
 
+/** An admin view of every model (or some): each one's records, found, opened, changed. */
+const data: PagePattern<"data"> = {
+  kind: "data",
+  schema: {
+    oneOf: [
+      { type: "string", enum: ["all"] },
+      { type: "array", items: { type: "string" }, minItems: 1 },
+    ],
+    description:
+      "An administrator's view of the app's data: all (every model) or a list of models, each with its records to find, open, change and delete. For admins, unless the page's access says otherwise.",
+  },
+  example: "data: all",
+  parse(ctx, value, where, parsed) {
+    if (isScalarNode(value)) {
+      if (readString(ctx, value, `"data" in ${where}`) !== "all") {
+        ctx.error(value, "invalid-value", `"data" in ${where} is "all" or a list of models.`);
+        return undefined;
+      }
+      return { kind: "data", models: (parsed.models ?? []).map((m) => m.name), all: true };
+    }
+    const models = readNameList(ctx, value, `"data" in ${where}`);
+    if (!models.length) return undefined;
+    for (const { name, at } of models) ctx.reference("model", name, at);
+    return { kind: "data", models: models.map((m) => m.name), all: false };
+  },
+  models: (p) => p.models,
+  icon: "layers",
+  inMenu: true,
+  access: ["admin"],
+  operations: dataOperations,
+};
+
 export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   crud,
   landing,
@@ -321,6 +354,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   settings,
   onboarding,
   users,
+  data,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
