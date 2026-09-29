@@ -12,6 +12,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
@@ -34,6 +35,14 @@ const examples = process.argv.slice(2).length
 const failures = [];
 /** Apps under test; removed when everything passes, kept for inspection otherwise. */
 const dirs = [];
+// Apps kept by failed runs, once a day old: each failure keeps its app to look at, and they add up.
+for (const entry of readdirSync(tmpdir()).filter((e) => /^smithable-/.test(e))) {
+  const path = join(tmpdir(), entry);
+  try {
+    if (Date.now() - statSync(path).mtimeMs > 86400_000)
+      rmSync(path, { recursive: true, force: true });
+  } catch {}
+}
 
 function step(name, fn) {
   try {
@@ -71,7 +80,9 @@ function run(command, args, cwd, env) {
 async function waitFor(url) {
   for (let i = 0; i < 60; i++) {
     try {
-      if ((await fetch(url)).ok) return;
+      // Each try is bounded: a server that takes the connection and never answers would
+      // otherwise hold the run forever.
+      if ((await fetch(url, { signal: AbortSignal.timeout(2000) })).ok) return;
     } catch {}
     await new Promise((r) => setTimeout(r, 250));
   }

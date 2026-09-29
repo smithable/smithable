@@ -5,6 +5,7 @@ import { sampleRows } from "./sample-data.js";
 import {
   dataKey,
   HEADER,
+  indent,
   literal,
   modelNamed,
   ownerKey,
@@ -62,7 +63,7 @@ ${columns.join("\n")}
       ? `// Records are private to their owner, so unique values are unique per owner.
 export const ${n.table} = sqliteTable(
   ${JSON.stringify(n.sqlTable)},
-  ${body.replace(/\n/g, "\n  ")},
+  ${indent(body, 2)},
   (t) => [${uniques.join(", ")}],
 );`
       : `export const ${n.table} = sqliteTable(${JSON.stringify(n.sqlTable)}, ${body});`;
