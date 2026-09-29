@@ -19,6 +19,10 @@ export interface Editors {
 export type Effect =
   | { kind: "rename-field"; model: string; from: string; to: string; storage: Storage }
   | { kind: "remove-field"; model: string; field: string; storage: Storage }
+  /** A field's type changed; `choices` are its choice values now (none if not a choice). */
+  | { kind: "change-field"; model: string; field: string; choices: string[] }
+  | { kind: "remove-page"; page: string }
+  | { kind: "remove-section"; page: string; section: string }
   /** A rule got an id: its text is the baseline for noticing later edits. */
   | { kind: "rule-identified"; rule: string; text: string };
 

@@ -365,6 +365,8 @@ Plugins are declared in `smithable.context.yml`, since they are an implementatio
 
 **Built-in features are internal plugins.** Models, fields, pages, access, formulas and jobs each register their schema, operations and generator through the same internal interface from the start (M1). That keeps the core honest, and makes the eventual public plugin API "publish what we already use" rather than a retrofit.
 
+The companion files register the same way (`COMPANIONS` in core): each owns its file, its check against the spec, its operations, and a `follow` hook that keeps it in step with what an operation did elsewhere. Operations report what they did as effects (a field renamed, removed or retyped, a page or section removed), and `applyOperation` hands each effect to every companion, so a model operation never edits the presentation or text files itself. Operations about the spec as a whole (rules, access, editing the spec) are listed on their own; none hang off the `app` section.
+
 **"Teach Smithable".** When the spec contains something Smithable does not understand, it does not guess. The validator reports it and offers: *"Smithable doesn't know `newsletter` — create a handler?"* AI then writes a **project plugin** (schema, operations and generator) **once**, reviewed like any other change. From then on the construct is handled deterministically and costs 0 tokens, like every built-in feature. AI is used to create a generator once, instead of writing code on every request. A useful project plugin can later be published for others.
 
 **Guardrails:**

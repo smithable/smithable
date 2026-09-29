@@ -119,21 +119,16 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
   destructive: ({ model: m, field: f, type }, ir) => {
     return typeKey(field(ir, m, f).type) !== baseType(type);
   },
-  apply({ spec, ux }, { model: m, field: f, type }, ir) {
+  apply({ spec }, { model: m, field: f, type }, ir) {
     checkType(type);
     field(ir, m, f);
-    // Tones of choice values the new type no longer has go with them.
     const parsed = parseFieldShorthand(type);
-    const values = parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
-    const tones = ["tones", `${m}.${f}`];
-    if (ux?.has(tones))
-      for (const value of Object.keys(ux.get(tones) as object))
-        if (!values.includes(value)) ux.removeAndPrune([...tones, value], 0);
+    const choices =
+      parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
     const path = fieldPath(m, f);
     const current = spec.get(path);
     if (typeof current === "object" && current !== null) {
       // Long form: replace only the type and keep description, bounds and the rest.
-      const parsed = parseFieldShorthand(type);
       if (parsed.ok && parsed.value.defaultText !== undefined) {
         throw new OperationError(
           `${m}.${f} uses the long form; set its default with the "default:" key instead of "=".`,
@@ -143,7 +138,7 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
     } else {
       spec.set(path, type);
     }
-    return [];
+    return [{ kind: "change-field", model: m, field: f, choices }];
   },
 };
 
@@ -159,14 +154,13 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
   positional: ["model", "from", "to"],
   describe: ({ model, from, to }) => `Rename ${model}.${from} to ${to}`,
   destructive: () => false,
-  apply({ spec, content, ux }, { model: m, from, to }, ir) {
+  apply({ spec }, { model: m, from, to }, ir) {
     field(ir, m, from);
     checkFieldName(to);
     if (model(ir, m).fields.some((x) => x.name === to))
       throw new OperationError(`${m} already has a field named "${to}".`);
     spec.renameKey(fieldPath(m, from), to);
-    if (content.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
-    updateFieldLists({ spec, ux }, ir, m, from, to);
+    updateSearch(spec, ir, m, from, to);
     renameInFormulas(spec, ir, m, from, to);
     followInPages(spec, ir, m, from, to);
     if (model(ir, m).ownedBy === from) spec.set(["models", m, "ownedBy"], to);
@@ -192,8 +186,7 @@ const removeField: Operation<{ model: string; field: string }> = {
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
     followInPages(editors.spec, ir, m, f, undefined);
     editors.spec.remove(fieldPath(m, f));
-    if (editors.content.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
-    updateFieldLists(editors, ir, m, f, undefined);
+    updateSearch(editors.spec, ir, m, f, undefined);
     return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f)) }];
   },
 };
@@ -206,45 +199,21 @@ export const modelOperations: AnyOperation[] = [
   removeField,
 ];
 
-/**
- * Keeps the lists that name a model's fields in step with a rename (or a removal): a page's
- * search in smithable.yml, its table columns and form order in smithable.ux.yml, and the
- * field's tones.
- */
-function updateFieldLists(
-  editors: Pick<Editors, "spec" | "ux">,
+/** A page's search follows a rename (or loses the field); the companions follow on their own. */
+function updateSearch(
+  spec: YamlEditor,
   ir: SpecIR,
   m: string,
   from: string,
   to: string | undefined,
 ): void {
-  const tones = ["tones", `${m}.${from}`];
-  if (editors.ux.has(tones)) {
-    if (to) editors.ux.renameKey(tones, `${m}.${to}`);
-    else editors.ux.removeAndPrune(tones, 0);
-  }
   for (const page of ir.pages.filter((p) => pageModel(p) === m)) {
-    const lists: [YamlEditor | undefined, string[]][] = [
-      [editors.spec, ["pages", page.id, "search"]],
-      [editors.ux, ["pages", page.id, "table", "columns"]],
-      [editors.ux, ["pages", page.id, "form", "fieldOrder"]],
-    ];
-    // A second line under a column: the pair goes with either field, and follows a rename.
-    const below = ["pages", page.id, "table", "below"];
-    const pairs = editors.ux.has(below) ? (editors.ux.get(below) as Record<string, string>) : {};
-    for (const [column, second] of Object.entries(pairs)) {
-      if (column !== from && second !== from) continue;
-      if (!to) editors.ux.removeAndPrune([...below, column], 0);
-      else if (column === from) editors.ux.renameKey([...below, column], to);
-      else editors.ux.set([...below, column], to);
-    }
-    for (const [editor, path] of lists) {
-      const list = editor?.has(path) ? (editor.get(path) as string[]) : undefined;
-      if (!editor || !list?.includes(from)) continue;
-      const next = to ? list.map((f) => (f === from ? to : f)) : list.filter((f) => f !== from);
-      if (next.length) editor.set(path, next);
-      else editor.removeAndPrune(path, editor === editors.spec ? 3 : 0);
-    }
+    const path = ["pages", page.id, "search"];
+    const list = spec.has(path) ? (spec.get(path) as string[]) : undefined;
+    if (!list?.includes(from)) continue;
+    const next = to ? list.map((f) => (f === from ? to : f)) : list.filter((f) => f !== from);
+    if (next.length) spec.set(path, next);
+    else spec.removeAndPrune(path, 3);
   }
 }
 
