@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -69,6 +70,7 @@ export async function proposeFor(
   dir: string,
   io: Io,
   request: string,
+  id: string = randomUUID(),
 ): Promise<Proposal | undefined> {
   const { ir, auth } = loadSpec(dir, io);
   if (!ir || !auth) return undefined;
@@ -96,8 +98,31 @@ export async function proposeFor(
       return was && will ? requiredButEmpty(dir, was, will, effects) : undefined;
     },
   });
-  logTokens(dir, { source: "ask", request, concepts: context.concepts, usage: proposal.usage });
+  // With the outcome logged under the same id (proposalOutcome), a request, its context, the
+  // answer and whether it was applied: the start of a training set (ARCHITECTURE §9.2).
+  logTokens(dir, {
+    source: "ask",
+    id,
+    request,
+    concepts: context.concepts,
+    usage: proposal.usage,
+    answered:
+      proposal.kind === "change" && proposal.generator ? "generator" : proposal.usage.at(-1)?.tier,
+    kind: proposal.kind,
+    ...(proposal.kind === "change"
+      ? { operations: proposal.operations.map(({ op, args }) => ({ op, args })) }
+      : {}),
+  });
   return proposal;
+}
+
+/** What became of a proposal: applied, declined, or its apply failed. */
+export function proposalOutcome(
+  dir: string,
+  id: string,
+  outcome: "applied" | "declined" | "failed",
+) {
+  logTokens(dir, { source: "ask-outcome", id, outcome });
 }
 
 const TIER_NAMES = {
@@ -106,10 +131,14 @@ const TIER_NAMES = {
   frontier: "Frontier model",
 };
 
-/** "Smithable model (mistral-small) · 1,234 tokens · €0.0003", for what a request used. */
+/**
+ * "Smithable model (mistral-small) · 1,234 tokens · €0.0003", for what a request used, or
+ * "Generator (rule) · 0 tokens" when a wording rule read it and no model was needed (tier 0).
+ */
 export function usageLine(usage: Usage[], generator?: string): string {
   const last = usage.at(-1);
-  if (!last) return generator ? `Generator (${generator}) · 0 tokens` : "No model was used";
+  if (generator && !last) return `Generator (${generator}) · 0 tokens`;
+  if (!last) return "No model was used";
   const tokens = usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
   // Mistral's prices are in euros, Claude Code reports dollars: each is totalled on its own.
   const costs = (["EUR", "USD"] as const).flatMap((currency) => {
@@ -135,11 +164,11 @@ export async function applyProposal(
   const cost = proposal.usage.reduce((sum, u) => sum + u.cost, 0);
   const last = proposal.usage.at(-1);
   for (const [i, { op, args }] of proposal.operations.entries()) {
+    // A change a wording rule read (no model) is recorded as the generator's, with the rule.
     const trailer = `Smithable-AI: ${JSON.stringify({
       request,
-      ...(proposal.generator ? { generator: proposal.generator } : {}),
-      tier: last?.tier,
-      model: last?.model,
+      tier: last?.tier ?? (proposal.generator ? "generator" : undefined),
+      model: last?.model ?? proposal.generator,
       tokens: i === 0 ? tokens : 0,
       cost: i === 0 ? Number(cost.toFixed(6)) : 0,
       currency: last?.currency,
@@ -186,7 +215,8 @@ export async function ask(
     io.err('ask needs a request, like: smithable ask "Customers should have a website"\n');
     return 2;
   }
-  const proposal = await proposeFor(dir, io, request);
+  const id = randomUUID();
+  const proposal = await proposeFor(dir, io, request, id);
   if (!proposal) return 1;
   io.out(
     `${usageLine(proposal.usage, proposal.kind === "change" ? proposal.generator : undefined)}\n`,
@@ -217,16 +247,13 @@ export async function ask(
   for (const [i, o] of proposal.operations.entries())
     io.out(`  ${i + 1}. ${o.description}${o.destructive ? " (loses data)" : ""}\n`);
   const confirmed = await confirm(io, "Apply it?", flags.yes);
-  if (confirmed !== true) return confirmed;
+  if (confirmed !== true) {
+    proposalOutcome(dir, id, "declined");
+    return confirmed;
+  }
   const applied = await applyProposal(dir, io, request, proposal);
+  proposalOutcome(dir, id, applied === 0 ? "applied" : "failed");
   if (applied !== 0) return applied;
-  // What was accepted, and what answered it: the start of a training set (ARCHITECTURE §9.5).
-  logTokens(dir, {
-    source: "ask-accepted",
-    request,
-    tier: proposal.generator ? "generator" : proposal.usage.at(-1)?.tier,
-    operations: proposal.operations.map(({ op, args }) => ({ op, args })),
-  });
   // A new query needs its code: a coder writes it when one is set up (ARCHITECTURE §9.2).
   for (const { op, args } of proposal.operations) {
     if (op !== "addQuery") continue;
