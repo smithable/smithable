@@ -90,7 +90,7 @@ function trace(dir: string): TraceEntry[] {
       {
         description: isUndo ? `Undid: ${subject.slice(19, -1)}` : subject.slice(11),
         at,
-        engine: model ? ENGINES[model.tier] : ("generator" as const),
+        engine: model?.tier ? ENGINES[model.tier] : ("generator" as const),
         tokens: model?.tokens ?? 0,
         ...(model
           ? { model: model.model, cost: model.cost, currency: model.currency ?? "EUR" }
