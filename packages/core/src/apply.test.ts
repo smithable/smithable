@@ -485,3 +485,66 @@ test("an edited spec with a plugin's section still asks before it drops a field"
   });
   expect(result).toMatchObject({ ok: true, destructive: true });
 });
+
+const specs = import.meta.glob("../../../examples/*/smithable.yml", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+const example = (name: string) => ({
+  spec: specs[`../../../examples/${name}/smithable.yml`] as string,
+});
+
+test("a rename follows into formulas, their examples, dashboard tiles and onboarding steps", () => {
+  const crm = applyOperation(example("crm"), "renameField", {
+    model: "Order",
+    from: "shippingMethod",
+    to: "shipping",
+  });
+  if (!crm.ok) throw new Error(crm.message);
+  expect(crm.files.spec).toContain('formula: IF(AND(shipping = "standard", total > 100), 0,');
+  expect(crm.files.spec).toContain("- input: { total: 150, shipping: standard }");
+  expect(crm.files.spec).not.toContain("shippingMethod");
+
+  const invoicing = example("invoicing");
+  const lines = applyOperation(invoicing, "renameField", {
+    model: "InvoiceLine",
+    from: "amount",
+    to: "lineTotal",
+  });
+  if (!lines.ok) throw new Error(lines.message);
+  expect(lines.files.spec).toContain("formula: SUM(lines.lineTotal)");
+  const total = applyOperation(invoicing, "renameField", {
+    model: "Invoice",
+    from: "total",
+    to: "amount",
+  });
+  if (!total.ok) throw new Error(total.message);
+  expect(total.files.spec).toContain(
+    "outstanding: { sum: Invoice.amount, where: { status: sent } }",
+  );
+  const vat = applyOperation(invoicing, "renameField", {
+    model: "BusinessProfile",
+    from: "vatNumber",
+    to: "vat",
+  });
+  if (!vat.ok) throw new Error(vat.message);
+  expect(vat.files.spec).toContain("business: [businessName, vat]");
+});
+
+test("a removal leaves onboarding steps without the field, and is refused while a tile uses it", () => {
+  const invoicing = example("invoicing");
+  const iban = applyOperation(invoicing, "removeField", {
+    model: "BusinessProfile",
+    field: "iban",
+  });
+  if (!iban.ok) throw new Error(iban.message);
+  expect(iban.files.spec).toContain("payment: [paymentTermDays]");
+  expect(
+    applyOperation(invoicing, "removeField", { model: "Invoice", field: "status" }),
+  ).toMatchObject({
+    ok: false,
+    message:
+      'The "outstanding" tile of the overview page uses Invoice.status; change or remove the tile first.',
+  });
+});
