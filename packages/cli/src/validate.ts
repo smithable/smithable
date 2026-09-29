@@ -11,6 +11,7 @@ import {
   type UxIR,
   validateAuth,
   validateContent,
+  validateContext,
   validateSpec,
   validateUx,
 } from "@smithable/core";
@@ -99,6 +100,15 @@ export function loadSpec(
     print(result.diagnostics);
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;
+  }
+  const contextPath = join(dirname(path), "smithable.context.yml");
+  if (existsSync(contextPath)) {
+    const problems = validateContext({
+      path: contextPath,
+      text: readFileSync(contextPath, "utf8"),
+    });
+    print(problems);
+    if (problems.length) return failed(contextPath, problems);
   }
   return { ir, auth, path, plugins, ...(content ? { content } : {}), ...(ux ? { ux } : {}) };
 }

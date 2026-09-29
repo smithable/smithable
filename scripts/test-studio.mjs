@@ -58,7 +58,7 @@ writeFileSync(
 };
 `,
 );
-writeFileSync(join(dir, "smithable.context.yml"), "plugins: [greeting]\n");
+writeFileSync(join(dir, "smithable.context.yml"), "smithableContext: 0.1\nplugins: [greeting]\n");
 appendFileSync(join(dir, "smithable.yml"), "\ngreeting: Hello\n");
 // A stand-in model, so describing a change works without a real one.
 const model = await startFakeModel();
