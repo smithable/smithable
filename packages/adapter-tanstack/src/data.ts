@@ -13,6 +13,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import {
+  code,
   dataKey,
   HEADER,
   lists,
@@ -45,15 +46,35 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
       .filter((f) => !(f.type.kind === "scalar" && f.type.name === "text"))
       .slice(0, 5)
       .map(dataKey),
-    fields: shown.map((field) => fieldUi(model, field, t, ir, ux)),
+    fields: shown.map((field) => ({
+      ...fieldUi(model, field, t, ir, ux),
+      get: code(accessor(field)),
+    })),
   };
-  // Functions cannot be written as a data literal: add them after it.
-  const uiSource = formulas
-    ? literal(ui).replace(
-        /\n}$/,
-        `\n  compute: ${withFormulasName(model)},\n  defaults: ${defaultsName(model)},\n}`,
-      )
-    : literal(ui);
+  // A record as the kit reads it: its columns, and the references and computed values it may
+  // carry (a list's rows have them, a record's own list of related records does not).
+  const extras = shown.flatMap((f) => {
+    if (f.type.kind === "relation") {
+      const title = relatedTitle(ir, f.type.model);
+      const id = f.type.model === USER_MODEL ? "string" : "number";
+      return [`${f.name}?: { id: ${id}${title === "id" ? "" : `; ${title}: unknown`} } | null`];
+    }
+    return f.formula ? [`${f.name}?: unknown`] : [];
+  });
+  const rowType = `typeof ${n.table}.$inferSelect${extras.length ? ` & {\n  ${extras.join(";\n  ")};\n}` : ""}`;
+  function accessor(f: FieldIR): string {
+    if (f.type.kind !== "relation") return `(row) => row.${f.name}`;
+    const title = relatedTitle(ir, f.type.model);
+    return title === "id"
+      ? `(row) => (row.${f.name} ? \`#\${row.${f.name}.id}\` : null)`
+      : `(row) => row.${f.name}?.${title} ?? null`;
+  }
+  const uiSource = literal({
+    ...ui,
+    ...(formulas
+      ? { compute: code(withFormulasName(model)), defaults: code(defaultsName(model)) }
+      : {}),
+  });
   // Records visitors add, without an account (e.g. a contact form's messages).
   const visitors = modelAccess(model, auth).create.public;
   const refinements = stored.flatMap((f) => {
@@ -84,11 +105,14 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 ${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const ${n.ui}: ModelUi = ${uiSource};
+/** ${model.name} records as the kit reads them. */
+export type ${model.name}Row = ${rowType};
+
+export const ${n.ui}: RecordUi<${model.name}Row> = ${uiSource};
 
 export const ${n.schema} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
 
