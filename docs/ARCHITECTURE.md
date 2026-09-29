@@ -431,13 +431,15 @@ Generated pages are short, explicit compositions:
 |---|---|---|---|
 | **Generated** | `src/db/schema.ts`, `src/generated/**`, generated routes, nav | Compiler | Overwritten freely. Files carry a one-line header marking them as generated |
 | **Kit** | `src/kit/**` | Compiler | Updated when the Smithable version changes |
-| **Custom** | `src/custom/**` (actions, queries, pages, jobs, components, auth) | User / AI | **Never overwritten.** The compiler creates a typed stub once, then leaves the file alone |
+| **Custom** | `src/custom/**` (actions, queries, pages, hooks, components, auth) | User / AI | **Never overwritten.** The compiler creates a typed stub once, then leaves the file alone |
 | **Migrations** | `drizzle/**` | Compiler writes them, then history owns them | Never rewritten after creation |
 | **Scaffold** | `pnpm-workspace.yaml`, `.gitignore`, `.dockerignore`, `CLAUDE.md`, `.mcp.json` | Created once, then the project and its tools | Never rewritten; tools like pnpm legitimately edit them |
 
 Custom code is linked to the manifest by convention: `actions.calculateShipping` with `custom: true` corresponds to `src/custom/actions/calculateShipping.ts`, and a page with its own component (`smithable customize page:customers`) to `src/custom/pages/customers.tsx`. A custom page replaces only the page's component: the generated route keeps loading data, search and access checks, and the component reads the route's data through TanStack's `getRouteApi`, so the loader's types are its contract. The compiler generates the typed input/output contract into `src/generated/`, so if the manifest's signature changes, the custom file fails typechecking. That turns drift into a compile error instead of a silent bug.
 
 Custom files may import anything from `generated/` and `kit/`. Generated code imports custom code only at the declared hook points.
+
+**Hook points.** Behaviour that follows a change ("when an order is placed, send a confirmation") needs no construct in the spec: the generated `src/generated/hooks.ts` types, per model, what may run after a record is created, changed or deleted, plus daily jobs, and calls what `src/custom/hooks.ts` (created once) and a plugin's own hooks file put there. A hook runs on the server in the request that made the change, after it is saved, with the viewer who made it; it may use the data functions, so it keeps the access rules; a hook that throws fails the request. Daily jobs run in production a day after the server started. Jobs and integrations, when they become constructs, generate onto these points.
 
 ### 6.5 Drift detection
 
