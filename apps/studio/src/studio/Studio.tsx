@@ -3,6 +3,7 @@ import { humanize, identifier, type JsonSchema, OPERATIONS } from "@smithable/co
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
+import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import { FieldShapeForm, type Run } from "../builder/ChangeForms";
 import { readSpec, type Spec } from "../engine";
 import { Preview, Trace } from "../shared";
@@ -62,7 +63,7 @@ export function Studio({
         {tab === "spec" && (
           <SpecEditor project={project} plugins={spec.plugins} run={run} jump={jump} />
         )}
-        {tab === "operation" && <OperationForm run={run} />}
+        {tab === "operation" && <OperationForm run={run} spec={spec} />}
         {/* Remounted for every new change. */}
         {tab === "diff" && <Diff key={version} />}
         {tab === "logs" && (
@@ -372,31 +373,33 @@ const ARGUMENT_HINTS: Record<string, string> = {
 };
 
 /** Any operation, with a form built from its JSON Schema: the same definition MCP tools use. */
-function OperationForm({ run }: { run: Run }) {
+function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
   const operations = OPERATIONS.filter((o) => o.name !== "editSpec");
   const [name, setName] = useState(operations[0]?.name ?? "");
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<ArgValues>({});
   const op = operations.find((o) => o.name === name);
   const properties = (op?.schema.properties ?? {}) as Record<string, JsonSchema>;
+  const required = (op?.schema.required as string[] | undefined) ?? [];
+  const effective = op ? argumentsOf(op.schema, values, spec) : {};
+  // Typed text for a list or name=value pairs becomes what the operation takes.
   const args = () =>
     Object.fromEntries(
-      Object.entries(values)
-        .filter(([, v]) => v.trim())
-        .map(([key, v]) => {
-          const type = properties[key]?.type;
-          if (type === "array") return [key, v.split(/[\s,]+/).filter(Boolean)];
-          if (type === "object")
-            return [
-              key,
-              Object.fromEntries(
-                v
-                  .split(/[\n,]+/)
-                  .filter(Boolean)
-                  .map((pair) => pair.split("=").map((s) => s.trim())),
-              ),
-            ];
-          return [key, v];
-        }),
+      Object.entries(effective).map(([key, v]) => {
+        if (typeof v !== "string") return [key, v];
+        const type = properties[key]?.type;
+        if (type === "array") return [key, v.split(/[\s,]+/).filter(Boolean)];
+        if (type === "object")
+          return [
+            key,
+            Object.fromEntries(
+              v
+                .split(/[\n,]+/)
+                .filter(Boolean)
+                .map((pair) => pair.split("=").map((s) => s.trim())),
+            ),
+          ];
+        return [key, v];
+      }),
     );
   return (
     <form
@@ -429,24 +432,27 @@ function OperationForm({ run }: { run: Run }) {
         </section>
       )}
       {Object.entries(properties).map(([key, schema]) => (
-        <Label
+        <ArgumentField
           key={key}
-          text={`${key}${(op?.schema.required as string[] | undefined)?.includes(key) ? " *" : ""}`}
+          name={key}
+          schema={schema}
+          required={required.includes(key)}
+          values={values}
+          effective={effective}
+          setValue={(v) => setValues({ ...values, [key]: v })}
+          spec={spec}
+          label={key}
           hint={[
-            schema.description ?? ARGUMENT_HINTS[key],
+            (schema.description as string | undefined) ?? ARGUMENT_HINTS[key],
             Array.isArray(schema.enum) ? `One of: ${schema.enum.join(", ")}.` : "",
-            schema.type === "array" ? "Separate with spaces or commas." : "",
+            schema.type === "array" && !schema["x-smithable"]
+              ? "Separate with spaces or commas."
+              : "",
             schema.type === "object" ? "name=value pairs, separated by commas." : "",
           ]
             .filter(Boolean)
             .join(" ")}
-        >
-          <Input
-            aria-label={key}
-            value={values[key] ?? ""}
-            onChange={(e) => setValues({ ...values, [key]: e.target.value })}
-          />
-        </Label>
+        />
       ))}
       <Button type="submit">Apply {name}</Button>
     </form>
