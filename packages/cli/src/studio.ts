@@ -153,8 +153,16 @@ export async function studio(
   dir: string,
   io: Io,
   port: number,
-  options: { host?: string; previewUrl?: string; home?: string } = {},
+  options: { host?: string; previewUrl?: string; home?: string; insecure?: boolean } = {},
 ): Promise<number> {
+  // On the network, Studio without a token would let anyone who reaches it change the project:
+  // a workspace image started without one refuses to run rather than run open.
+  if (options.host && !process.env.SMITHABLE_STUDIO_TOKEN && !options.insecure) {
+    io.err(
+      `Studio would listen on ${options.host} without a token. Set SMITHABLE_STUDIO_TOKEN (the proxy sends it as X-Smithable-Studio-Token), or pass --insecure to allow anyone who can reach it to change the project.\n`,
+    );
+    return 1;
+  }
   const { ir } = loadSpec(dir, io);
   if (!ir) return 1;
   if (!existsSync(join(STUDIO, "index.html"))) {
@@ -426,9 +434,7 @@ export async function studio(
   });
   server.listen(port, options.host ?? "127.0.0.1");
   if (options.host && !process.env.SMITHABLE_STUDIO_TOKEN)
-    io.err(
-      `Studio listens on ${options.host} without a token: anyone who can reach it can change the project. Set SMITHABLE_STUDIO_TOKEN, and have the proxy send it as X-Smithable-Studio-Token.\n`,
-    );
+    io.err(`Studio listens on ${options.host} without a token (--insecure).\n`);
   io.out(`Smithable Studio: http://localhost:${port} (the app's preview runs on ${preview})\n`);
   await new Promise<void>((resolve) => {
     for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => resolve());

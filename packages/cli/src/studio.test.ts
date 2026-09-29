@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { refusal } from "./studio.js";
+import { refusal, studio } from "./studio.js";
+import { captureIo } from "./test-io.js";
 
 test("locally, only this machine's own host names reach Studio", () => {
   expect(refusal({ host: "localhost:4321" }, undefined, undefined)).toBeUndefined();
@@ -24,4 +25,16 @@ test("a change needs Studio's header, JSON and no other site's origin", () => {
   expect(post({ "content-type": "application/json" })?.status).toBe(403);
   // MCP clients are not pages.
   expect(post({ "content-type": "application/json" }, "/mcp")).toBeUndefined();
+});
+
+test("on the network, Studio does not start without a token unless told to run open", async () => {
+  const saved = process.env.SMITHABLE_STUDIO_TOKEN;
+  delete process.env.SMITHABLE_STUDIO_TOKEN;
+  try {
+    const io = captureIo();
+    expect(await studio("/nonexistent", io, 4999, { host: "0.0.0.0" })).toBe(1);
+    expect(io.stderr).toMatch(/without a token.*--insecure/s);
+  } finally {
+    if (saved !== undefined) process.env.SMITHABLE_STUDIO_TOKEN = saved;
+  }
 });
