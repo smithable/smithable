@@ -1,7 +1,6 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
   type AuthIR,
-  type FieldIR,
   humanize,
   kebab,
   type ModelIR,
@@ -24,6 +23,7 @@ import {
   importList,
   indexPath,
   join,
+  keyOf,
   lists,
   literal,
   modelNamed,
@@ -126,9 +126,7 @@ function ${component}() {
   }
   const steps = (pattern.steps ?? []).map((step) => {
     const own = t.section(page.id, step.name);
-    const keys = step.fields.map((name) =>
-      dataKey(model.fields.find((f) => f.name === name) as FieldIR),
-    );
+    const keys = step.fields.map((name) => keyOf(model, name));
     return `  {
     title: ${JSON.stringify(own.title ?? humanize(step.name))},${own.text ? `\n    text: ${JSON.stringify(own.text)},` : ""}
     fields: ${literal(keys)},

@@ -41,67 +41,23 @@ const SCAFFOLD = new Set([
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  const { auth } = options;
-  const ux = options.ux ?? emptyUx();
-  const t = texts(options.content ?? emptyContent());
+  const ctx: GenContext = {
+    ir,
+    t: texts(options.content ?? emptyContent()),
+    auth: options.auth,
+    ux: options.ux ?? emptyUx(),
+    options,
+  };
+  const kits = SECTION_GENERATORS.flatMap((g) => g.kit ?? []);
+  // The kit: every file, but a part's own only when the app uses that part.
   const files: GeneratedFile[] = Object.entries(TEMPLATES)
-    .filter(([path]) => hasSignIn(auth) || !SIGN_IN_KIT.includes(path))
-    .filter(([path]) => {
-      // A pattern's kit files, only when a page uses the pattern.
-      const owner = Object.entries(PAGE_GENERATORS).find(([, g]) => g.kit?.includes(path));
-      return !owner || ir.pages.some((p) => p.pattern.kind === owner[0]);
-    })
+    .filter(([path]) => kits.every((k) => !k.files.includes(path) || k.used(ctx)))
     .map(([path, content]) => ({
       path,
       content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
-  const add = (path: string, content: string) => files.push({ path, content, zone: "generated" });
-
-  add("package.json", packageJson(ir, auth, ux, options.packages));
-  add("src/theme.css", themeCss(ux));
-  add("smithable.lock", smithableLock(ir, options));
-  add("README.md", readme(ir, false, auth));
-  add("public/favicon.svg", favicon(ir));
-  add("src/generated/app.ts", appModule(ir));
-  add("src/generated/pages.ts", pagesModule(ir, auth));
-  add("src/lib/viewer.server.ts", viewerModule(auth));
-  add("src/db/schema.ts", schemaModule(ir, auth));
-  add("src/db/seed.ts", seedModule(ir));
-  add("src/routes/__root.tsx", rootRoute(ir, t, auth, ux));
-  add("tests/smoke.spec.ts", smokeTests(ir, t, auth));
-  if (hasSignIn(auth)) {
-    add("src/lib/auth.ts", authModule(auth));
-    const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");
-    add("src/routes/sign-in.tsx", signInRoute(auth, onboarding?.route));
-    if (
-      ir.models.some((m) => userFields(m).length) ||
-      ir.actions.some((a) => userFields(a.input).length)
-    )
-      add("src/generated/users.ts", usersModule());
-  }
-  if (!ir.pages.some((p) => p.route === "/")) add("src/routes/index.tsx", indexRoute(ir));
-  if (ir.models.length) {
-    add("src/generated/access.test.ts", accessTestSource(ir, auth));
-    // The hook points: after a record changes, and daily (see hooks.ts).
-    add("src/generated/hooks.ts", hooksModule(ir, t, options.plugins));
-    files.push(custom("src/custom/hooks.ts", hooksStub()));
-  }
-  const ctx: GenContext = { ir, t, auth, ux, options };
   for (const generator of SECTION_GENERATORS) files.push(...generator.files(ctx));
-  // A plugin's own files, only in its folder: everything else is built from its expansion.
-  for (const plugin of options.plugins ?? []) {
-    const value = ir.extensions?.[plugin.key];
-    if (value === undefined || !plugin.generate) continue;
-    const folder = `src/generated/plugins/${plugin.key}/`;
-    for (const file of plugin.generate(value, ir)) {
-      if (!file.path.startsWith(folder) || file.path.includes(".."))
-        throw new Error(
-          `The ${plugin.key} plugin may only write files in ${folder}, not ${file.path}.`,
-        );
-      add(file.path, file.content);
-    }
-  }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
@@ -253,9 +209,55 @@ const custom = (path: string, content: string): GeneratedFile => ({
 /** Each part of the spec's files, in the order of the spec's sections. */
 const SECTION_GENERATORS: SectionGenerator[] = [
   {
+    // The app as a whole: its package, theme, lock, README, root route, pages and smoke tests.
+    key: "app",
+    files: ({ ir, t, auth, ux, options }) => [
+      generated("package.json", packageJson(ir, auth, ux, options.packages)),
+      generated("src/theme.css", themeCss(ux)),
+      generated("smithable.lock", smithableLock(ir, options)),
+      generated("README.md", readme(ir, false, auth)),
+      generated("public/favicon.svg", favicon(ir)),
+      generated("src/generated/app.ts", appModule(ir)),
+      generated("src/generated/pages.ts", pagesModule(ir, auth)),
+      generated("src/lib/viewer.server.ts", viewerModule(auth)),
+      generated("src/routes/__root.tsx", rootRoute(ir, t, auth, ux)),
+      generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
+      ...(ir.pages.some((p) => p.route === "/")
+        ? []
+        : [generated("src/routes/index.tsx", indexRoute(ir))]),
+    ],
+  },
+  {
+    // Sign-in (smithable.auth.yml): its kit and files only when the app has sign-in.
+    key: "auth",
+    kit: [{ files: SIGN_IN_KIT, used: ({ auth }) => hasSignIn(auth) }],
+    files: ({ ir, auth }) => {
+      if (!hasSignIn(auth)) return [];
+      const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");
+      const users =
+        ir.models.some((m) => userFields(m).length) ||
+        ir.actions.some((a) => userFields(a.input).length);
+      return [
+        generated("src/lib/auth.ts", authModule(auth)),
+        generated("src/routes/sign-in.tsx", signInRoute(auth, onboarding?.route)),
+        ...(users ? [generated("src/generated/users.ts", usersModule())] : []),
+      ];
+    },
+  },
+  {
     key: "models",
-    files: ({ ir, t, auth, ux }) =>
-      ir.models.flatMap((model) => {
+    files: ({ ir, t, auth, ux, options }) => [
+      generated("src/db/schema.ts", schemaModule(ir, auth)),
+      generated("src/db/seed.ts", seedModule(ir)),
+      ...(ir.models.length
+        ? [
+            generated("src/generated/access.test.ts", accessTestSource(ir, auth)),
+            // The hook points: after a record changes, and daily (see hooks.ts).
+            generated("src/generated/hooks.ts", hooksModule(ir, t, options.plugins)),
+            custom("src/custom/hooks.ts", hooksStub()),
+          ]
+        : []),
+      ...ir.models.flatMap((model) => {
         const base = `src/generated/${kebab(model.name)}`;
         const test = hasFormulas(model) ? formulasTestSource(model) : undefined;
         return [
@@ -267,6 +269,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ...(test ? [generated(`${base}.formulas.test.ts`, test)] : []),
         ];
       }),
+    ],
   },
   {
     key: "actions",
@@ -289,6 +292,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   },
   {
     key: "pages",
+    // A page pattern's kit files, only when a page uses the pattern.
+    kit: Object.entries(PAGE_GENERATORS).flatMap(([kind, g]) =>
+      g.kit
+        ? [{ files: g.kit, used: ({ ir }) => ir.pages.some((p) => p.pattern.kind === kind) }]
+        : [],
+    ),
     files: (ctx) =>
       ctx.ir.pages.flatMap((page) => {
         const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
@@ -308,6 +317,23 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           generated(`${dir}/${file}`, content),
         );
         return [...actions, ...routes];
+      }),
+  },
+  {
+    // A plugin's own files, only in its folder: everything else is built from its expansion.
+    key: "plugins",
+    files: ({ ir, options }) =>
+      (options.plugins ?? []).flatMap((plugin) => {
+        const value = ir.extensions?.[plugin.key];
+        if (value === undefined || !plugin.generate) return [];
+        const folder = `src/generated/plugins/${plugin.key}/`;
+        return plugin.generate(value, ir).map((file) => {
+          if (!file.path.startsWith(folder) || file.path.includes(".."))
+            throw new Error(
+              `The ${plugin.key} plugin may only write files in ${folder}, not ${file.path}.`,
+            );
+          return generated(file.path, file.content);
+        });
       }),
   },
 ];

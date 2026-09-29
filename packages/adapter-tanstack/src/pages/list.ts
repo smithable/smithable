@@ -20,6 +20,7 @@ import {
   importList,
   indexPath,
   join,
+  keyOf,
   literal,
   modelNamed,
   names,
@@ -109,10 +110,8 @@ export function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
   const search = page.search?.length ? searchCode(page, model, t, ir) : undefined;
-  const columns = ux.pages[page.id]?.columns?.map((name) =>
-    dataKey(model.fields.find((f) => f.name === name) as FieldIR),
-  );
-  const key = (name: string) => dataKey(model.fields.find((f) => f.name === name) as FieldIR);
+  const columns = ux.pages[page.id]?.columns?.map((name) => keyOf(model, name));
+  const key = (name: string) => keyOf(model, name);
   const below = Object.entries(ux.pages[page.id]?.below ?? {}).map(([c, f]) => [key(c), key(f)]);
 
   const route = importList()

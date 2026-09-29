@@ -410,7 +410,7 @@ Next to it, each model's module in `src/generated/` describes what the database 
 
 ### 6.3 The app kit
 
-The **app kit** is a set of generic, reusable source files that the adapter writes into generated apps, in `src/kit/`. It contains data components (`ModelTable`, `ModelForm`, `ModelDetail`), generic CRUD server functions, access checks, page-pattern sections and the theme (§10.4). The pattern is the same as shadcn/ui, where components are copied into your repo instead of installed. The kit lets pages stay short without a Smithable package.
+The **app kit** is a set of generic, reusable source files that the adapter writes into generated apps, in `src/kit/`. It contains data components (`ModelTable`, `ModelForm` with `FieldInput`, `Combobox` and `SearchBox`), the shell (`AppShell`), the page patterns' sections (`Landing`, `Dashboard`, `Onboarding`), sign-in (`SignIn`), access checks, formatting, formulas, search and the theme (§10.4); a record's own page is a `ModelForm` with its related lists, not a component of its own. The pattern is the same as shadcn/ui, where components are copied into your repo instead of installed. The kit lets pages stay short without a Smithable package.
 
 Rules that keep the kit "normal":
 
@@ -455,7 +455,7 @@ Migrations are written in **drizzle-kit's own format, including its snapshot met
 
 Concrete choices the v1 adapter makes; they are ordinary, documented practice for the stack.
 
-The generator itself is split by concern (`shared`, `schema`, `data`, `actions`, `smoke`, and one module per page pattern under `pages/`). `generateApp` writes the app-wide files and runs one `SectionGenerator` per part of the spec (models, actions, queries, pages); pages ask `PAGE_GENERATORS`, which gives each pattern its route files and the kit files only its pages need. Generated code is assembled from parts, never patched afterwards by pattern matching. A refactor of the generator must leave every example's output byte-identical.
+The generator itself is split by concern (`shared`, `schema`, `data`, `actions`, `smoke`, and one module per page pattern under `pages/`). `generateApp` only copies the kit and runs one `SectionGenerator` per part: the app as a whole, sign-in, models, actions, queries, pages and project plugins. A generator declares the kit files only apps using its part need (sign-in's, each page pattern's through `PAGE_GENERATORS`), and a kit file is left out unless the part that owns it is used. Generated code is assembled from parts, never patched afterwards by pattern matching. A refactor of the generator must leave every example's output byte-identical.
 
 - **SQLite through `better-sqlite3` 12.x** on stable Drizzle. It ships prebuilt binaries, so neither developers nor the container build need a compiler; 13.x dropped them and always compiles from source. Switching to Node's built-in `node:sqlite` is planned once Drizzle 1.0 (which supports it) is stable.
 - **Money is stored as whole cents** in integer columns, so amounts never suffer floating-point rounding; the kit converts for display and input. Datetimes are millisecond timestamps, dates are `YYYY-MM-DD` text, choices are text columns with an enum.
