@@ -1,7 +1,13 @@
 import { type SpecIR, validateSpec } from "@smithable/core";
 import { buildContext, buildIndex } from "@smithable/index";
 import { describe, expect, test } from "vitest";
-import { answerSchema, promptFor, proposeChange, relevantOperations } from "./propose.js";
+import {
+  answerSchema,
+  plainSchema,
+  promptFor,
+  proposeChange,
+  relevantOperations,
+} from "./propose.js";
 import { allowedBy, type Provider, parsePolicy, route } from "./provider.js";
 
 const spec = Object.values(
@@ -184,6 +190,19 @@ describe("what a model is offered", () => {
     expect(names(["model:Customer"])).not.toContain("setNavigation");
     expect(names([])).not.toContain("removeField");
     expect(names([])).toContain("addModel");
+  });
+
+  test("the schemas sent to a model carry none of Smithable's own annotations", () => {
+    expect(JSON.stringify(answerSchema(relevantOperations(["model:Customer"])))).not.toContain(
+      "x-smithable",
+    );
+    expect(
+      plainSchema({
+        type: "object",
+        "x-smithable": { ref: "model" },
+        properties: { a: { "x-y": 1, type: "string" } },
+      }),
+    ).toEqual({ type: "object", properties: { a: { type: "string" } } });
   });
 
   test("the strict schema holds each operation's own arguments; the loose one only the names", () => {

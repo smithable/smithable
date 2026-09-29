@@ -1,7 +1,7 @@
 export type { Draft, SpecFiles } from "./draft.js";
 export { checkSpecFiles, closestStarter, draftProject, REFERENCE } from "./draft.js";
 export type { Proposal, ProposedOperation } from "./propose.js";
-export { proposeChange } from "./propose.js";
+export { plainSchema, proposeChange } from "./propose.js";
 export type {
   Completion,
   CompletionRequest,
