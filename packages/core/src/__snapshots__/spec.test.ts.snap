@@ -200,6 +200,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "class-types",
         "instructors",
         "messages",
+        "admin",
       ],
     },
   ],
@@ -285,6 +286,20 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Message",
       },
       "route": "/messages",
+    },
+    {
+      "id": "admin",
+      "pattern": {
+        "all": true,
+        "kind": "data",
+        "models": [
+          "ClassType",
+          "Instructor",
+          "Session",
+          "Message",
+        ],
+      },
+      "route": "/admin",
     },
   ],
   "queries": [],

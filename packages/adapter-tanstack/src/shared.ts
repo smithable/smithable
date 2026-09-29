@@ -198,6 +198,26 @@ export function keyOf(model: ModelIR, name: string): string {
   return dataKey(model.fields.find((f) => f.name === name) as FieldIR);
 }
 
+/**
+ * A crud page's routes drawn inside a data page (an admin view of every model): the list's
+ * heading is the model's, its links stay inside the page, and its list shows the newest
+ * `LIMIT` records. Absent for ordinary crud pages, whose files do not change.
+ */
+export interface Within {
+  /** The data page's route, e.g. /admin. */
+  base: string;
+  /** The models the data page shows. */
+  models: string[];
+}
+
+/** How many records a data page's list shows: the newest; a note says when there are more. */
+export const DATA_LIMIT = 500;
+
+/** Where a model's records live inside a data page, e.g. /admin/order-lines. */
+export function dataRoute(within: Within, model: string): string {
+  return join(within.base, kebab(plural(model)));
+}
+
 /** Text placed deeper in generated code: every line after the first gets `spaces` more. */
 export function indent(text: string, spaces: number): string {
   return text.split("\n").join(`\n${" ".repeat(spaces)}`);
