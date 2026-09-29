@@ -220,9 +220,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
 import { db } from "#/db";
 import { ${n.table} } from "#/db/schema";
 import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
-${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${[
-  ...others,
-]
+${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}import { afterChange, afterDelete } from "./hooks";
+${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}
@@ -293,7 +292,7 @@ export const ${self} = {
     return row ? ${compute("row")} : null;
   },
 
-  create(viewer: Viewer | null, values: ${n.values}) {
+  async create(viewer: Viewer | null, values: ${n.values}) {
     check(${n.access}.create, viewer);
 ${
   access.create.public
@@ -302,14 +301,17 @@ ${
     if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
 `
     : ""
-}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    try {
-      return db.insert(${n.table}).values(${createValues}).returning().get();
+}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let row: typeof ${n.table}.$inferSelect;
+    try {
+      row = db.insert(${n.table}).values(${createValues}).returning().get();
     } catch (error) {
       throw refusal(error);
     }
+    await afterChange("afterCreate", "${model.name}", row, viewer);
+    return row;
   },
 
-  update(viewer: Viewer | null, id: number, values: ${n.values}) {
+  async update(viewer: Viewer | null, id: number, values: ${n.values}) {
     const row = db
       .select(${selectOwner})
       .from(${n.table})
@@ -317,14 +319,17 @@ ${
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.write, viewer, ${ownerOf});
-${refs.length ? "    checkReferences(viewer, values);\n" : ""}    try {
-      return db.update(${n.table}).set(${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"}).where(eq(${n.table}.id, id)).returning().get();
+${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: typeof ${n.table}.$inferSelect;
+    try {
+      changed = db.update(${n.table}).set(${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"}).where(eq(${n.table}.id, id)).returning().get();
     } catch (error) {
       throw refusal(error);
     }
+    await afterChange("afterUpdate", "${model.name}", changed, viewer);
+    return changed;
   },
 
-  remove(viewer: Viewer | null, id: number): void {
+  async remove(viewer: Viewer | null, id: number): Promise<void> {
     const row = db
       .select(${selectOwner})
       .from(${n.table})
@@ -337,6 +342,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    try {
     } catch (error) {
       throw refusal(error);
     }
+    await afterDelete("${model.name}", id, viewer);
   },
 ${
   referenced
