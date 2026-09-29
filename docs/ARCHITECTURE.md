@@ -451,6 +451,8 @@ Migrations are written in **drizzle-kit's own format, including its snapshot met
 
 Concrete choices the v1 adapter makes; they are ordinary, documented practice for the stack.
 
+The generator itself is split by concern (`shared`, `schema`, `data`, `actions`, `smoke`, and one module per page pattern under `pages/`). `generateApp` writes the app-wide files and runs one `SectionGenerator` per part of the spec (models, actions, queries, pages); pages ask `PAGE_GENERATORS`, which gives each pattern its route files and the kit files only its pages need. Generated code is assembled from parts, never patched afterwards by pattern matching. A refactor of the generator must leave every example's output byte-identical.
+
 - **SQLite through `better-sqlite3` 12.x** on stable Drizzle. It ships prebuilt binaries, so neither developers nor the container build need a compiler; 13.x dropped them and always compiles from source. Switching to Node's built-in `node:sqlite` is planned once Drizzle 1.0 (which supports it) is stable.
 - **Money is stored as whole cents** in integer columns, so amounts never suffer floating-point rounding; the kit converts for display and input. Datetimes are millisecond timestamps, dates are `YYYY-MM-DD` text, choices are text columns with an enum.
 - **Migrations are created by the app's own `drizzle-kit generate`** after the schema file is written, and **applied at startup**, which suits a single SQLite instance. Data lives under `DATA_DIR` (`data/` in development, `/data` in the container).

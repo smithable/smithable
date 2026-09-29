@@ -1,0 +1,283 @@
+// Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+import {
+  type ActionIR,
+  type AuthIR,
+  actionAccess,
+  type FieldIR,
+  humanize,
+  kebab,
+  type PageIR,
+  pascal,
+  type QueryIR,
+  type SpecIR,
+  USER_MODEL,
+} from "@smithable/core";
+import { textBounds } from "./data.js";
+import {
+  attr,
+  guard,
+  HEADER,
+  join,
+  literal,
+  modelNamed,
+  names,
+  relatedTitle,
+  type Texts,
+} from "./shared.js";
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+
+/** The Zod schema of one input field of an action. */
+export function zodFor(field: FieldIR): string {
+  let schema: string;
+  if (field.type.kind === "choice") schema = `z.enum(${literal(field.type.values)})`;
+  else if (field.type.kind === "relation")
+    schema = field.type.model === USER_MODEL ? "z.string()" : "z.number().int()";
+  else {
+    switch (field.type.name) {
+      case "int":
+      case "money":
+        schema = "z.number().int()";
+        break;
+      case "decimal":
+        schema = "z.number()";
+        break;
+      case "bool":
+        schema = "z.boolean()";
+        break;
+      case "datetime":
+        schema = "z.date()";
+        break;
+      case "email":
+        schema = 'z.email("Enter a valid email address")';
+        break;
+      case "url":
+        schema = 'z.url("Enter a valid web address")';
+        break;
+      case "date":
+        schema = 'z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")';
+        break;
+      default:
+        schema = `z.string()${field.type.name === "string" || field.type.name === "text" ? textBounds(field) : field.required ? '.trim().min(1, "Required")' : ""}`;
+    }
+  }
+  return field.required ? schema : `${schema}.nullish()`;
+}
+
+/** The TypeScript type of one output field of an action. */
+export function outputType(field: FieldIR): string {
+  const base =
+    field.type.kind === "choice"
+      ? field.type.values.map((v) => JSON.stringify(v)).join(" | ")
+      : field.type.kind === "relation"
+        ? field.type.model === USER_MODEL
+          ? "string"
+          : "number"
+        : ["int", "decimal", "money"].includes(field.type.name)
+          ? "number"
+          : field.type.name === "bool"
+            ? "boolean"
+            : field.type.name === "datetime"
+              ? "Date"
+              : "string";
+  return field.required ? base : `${base} | null`;
+}
+
+export function actionNames(action: ActionIR) {
+  const type = pascal(action.name);
+  return {
+    input: `${action.name}Input`,
+    inputType: `${type}Input`,
+    outputType: `${type}Output`,
+    ui: `${action.name}Ui`,
+    access: `${action.name}Access`,
+    module: `#/generated/actions/${kebab(action.name)}`,
+    custom: `#/custom/actions/${kebab(action.name)}`,
+  };
+}
+
+export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Texts): string {
+  const a = actionNames(action);
+  const input = action.input.map((f) => `  ${f.name}: ${zodFor(f)},`);
+  const output = action.output?.length
+    ? `{ ${action.output.map((f) => `${f.name}: ${outputType(f)}`).join("; ")} }`
+    : "void";
+  const ui = {
+    label: humanize(action.name),
+    pluralLabel: humanize(action.name),
+    titleField: "id",
+    columns: [],
+    fields: action.input.map((field) => ({
+      name: field.name,
+      label: humanize(field.name),
+      kind:
+        field.type.kind === "scalar"
+          ? field.type.name
+          : field.type.kind === "relation" && field.type.model === USER_MODEL
+            ? "user"
+            : field.type.kind,
+      required: field.required,
+      ...(field.type.kind === "choice"
+        ? { choices: field.type.values.map((value) => ({ value, label: humanize(value) })) }
+        : {}),
+      ...(field.type.kind === "relation"
+        ? { relation: { key: field.name, titleField: relatedTitle(ir, field.type.model) } }
+        : {}),
+    })),
+  };
+  // Records the input refers to: the viewer must be able to read each (not users).
+  const records = action.input.filter(
+    (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
+  );
+  const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { ${action.name} as implementation } from "${a.custom}";
+${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
+import type { ModelUi } from "#/kit/model";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** Who may run the "${action.name}" action. */
+export const ${a.access}: Rule = ${literal(actionAccess(action, auth))};
+
+/** What the "${action.name}" action needs. */
+export const ${a.input} = z.object({
+${input.join("\n")}
+});
+
+export type ${a.inputType} = z.infer<typeof ${a.input}>;
+
+/** What the "${action.name}" action returns. */
+export type ${a.outputType} = ${output};
+
+export const ${a.ui}: ModelUi = ${literal(ui)};
+
+export const ${action.name} = createServerFn({ method: "POST" })
+  .validator(${a.input})
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    check(${a.access}, viewer);
+${records
+  .map(
+    (f, i) =>
+      `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
+  )
+  .join(
+    "",
+  )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
+    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;
+    return run(data, viewer);
+  });
+`;
+}
+
+/** The type of a query's result: records as the returned model's data functions give them. */
+export function queryContract(query: QueryIR, ir: SpecIR, t: Texts): string {
+  const n = names(modelNamed(ir, query.returns), t);
+  return `${HEADER}import type { ${n.data} } from "#/generated/${kebab(query.returns)}.server";
+
+/** What the "${query.name}" query returns: ${n.pluralLabel.toLowerCase()}, in its order. */
+export type ${pascal(query.name)}Rows = Awaited<ReturnType<typeof ${n.data}.list>>;
+`;
+}
+
+/**
+ * The one-time stub of a query: it returns every record the viewer may read, so pages using
+ * it work at once, with the query's intent and rules as the guide for the real code.
+ */
+export function queryStub(query: QueryIR, ir: SpecIR, t: Texts): string {
+  const n = names(modelNamed(ir, query.returns), t);
+  const doc = [
+    ...(query.intent ? [query.intent] : query.description ? [query.description] : []),
+    ...(query.rules?.length
+      ? ["", "Rules (from smithable.yml):", ...query.rules.map((rule) => `- ${rule.text}`)]
+      : []),
+  ];
+  return `// Your implementation of the "${query.name}" query in smithable.yml. Smithable created this file
+// once and never changes it. Start from the records the viewer may read (the data functions in
+// src/generated/*.server.ts check access), then choose and order them.
+import { ${n.data} } from "#/generated/${kebab(query.returns)}.server";
+import type { ${pascal(query.name)}Rows } from "#/generated/queries/${kebab(query.name)}";
+import type { Viewer } from "#/kit/access";
+
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${query.name}(viewer: Viewer | null): Promise<${pascal(query.name)}Rows> {
+  // Not written yet: every ${n.label.toLowerCase()} the viewer may read, newest first.
+  return ${n.data}.list(viewer);
+}
+`;
+}
+
+/** The one-time stub of an action's implementation, with its intent and rules as a guide. */
+export function actionStub(action: ActionIR): string {
+  const a = actionNames(action);
+  const doc = [
+    ...(action.intent ? [action.intent] : action.description ? [action.description] : []),
+    ...(action.rules?.length
+      ? ["", "Rules (from smithable.yml):", ...action.rules.map((rule) => `- ${rule.text}`)]
+      : []),
+  ];
+  return `// Your implementation of the "${action.name}" action in smithable.yml. Smithable created this file
+// once and never changes it. The input and output types are generated from the spec, so a change
+// to the action's input or output shows up here as a type error.
+// \`viewer\` is the signed-in user (null for a visitor). The records the input refers to are ones
+// they may read; the data functions in src/generated/*.server.ts check access for them.
+import type { ${a.inputType}, ${a.outputType} } from "${a.module}";
+import type { Viewer } from "#/kit/access";
+
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null): Promise<${a.outputType}> {
+  throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
+}
+`;
+}
+
+/** A page with a form for an action's input. */
+export function actionRoute(page: PageIR, action: ActionIR, ir: SpecIR, t: Texts): string {
+  const a = actionNames(action);
+  const component = `${pascal(action.name)}Page`;
+  const relations = action.input.filter((f) => f.type.kind === "relation");
+  const optionFns = new Map<string, string>();
+  const optionsFn = (f: FieldIR) => {
+    const model = (f.type as { model: string }).model;
+    if (model === USER_MODEL) return ["userOptions", "#/generated/users"];
+    const target = names(modelNamed(ir, model), t);
+    return [target.options, target.module];
+  };
+  for (const f of relations) {
+    const [fn, module] = optionsFn(f) as [string, string];
+    optionFns.set(fn, module);
+  }
+  const options = relations.map((f) => `${f.name}: await ${optionsFn(f)[0]}()`);
+  const route = join(page.route, `actions/${kebab(action.name)}`);
+  return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { ${action.name}, ${a.access}, ${a.input}, ${a.ui} } from "${a.module}";
+${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { ModelForm } from "#/kit/ModelForm";
+
+export const Route = createFileRoute(${JSON.stringify(route)})({
+${guard(a.access)}${options.length ? `  loader: async () => ({ options: { ${options.join(", ")} } }),\n` : ""}  component: ${component},
+});
+
+function ${component}() {
+${options.length ? "  const { options } = Route.useLoaderData();\n" : ""}  const navigate = useNavigate();
+  const back = () => navigate({ to: ${JSON.stringify(page.route)} });
+  return (
+    <>
+      <PageHeader title=${attr(humanize(action.name))} />
+      <ModelForm
+        ui={${a.ui}}
+        app={app}
+        schema={${a.input}}
+${options.length ? "        options={options}\n" : ""}        submitLabel=${attr(humanize(action.name))}
+        onSubmit={async (values) => {
+          await ${action.name}({ data: values });
+          await back();
+        }}
+        onCancel={back}
+      />
+    </>
+  );
+}
+`;
+}

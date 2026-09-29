@@ -38,6 +38,14 @@ describe.each(Object.entries(examples))("%s", (path, text) => {
     expect(generateApp(ir(path, text), { ...options, auth })).toEqual(files);
   });
 
+  // The guard for refactoring the generator (C7): every file's hash, so a change to the output
+  // is always a reviewed snapshot update (`vitest -u`), never a side effect.
+  test("the generated files are as reviewed", () => {
+    expect(
+      Object.fromEntries(files.map((f) => [f.path, `${hash(f.content)} ${f.zone}`])),
+    ).toMatchSnapshot();
+  });
+
   test("the app does not depend on Smithable", () => {
     const pkg = files.find((f) => f.path === "package.json")?.content ?? "";
     expect(pkg).not.toMatch(/smithable/i);
@@ -197,3 +205,10 @@ test("an action checks that the viewer may read every record its input names", (
   expect(action).toContain("customerData.canRead(viewer, data.duplicate)");
   expect(action).toContain("return run(data, viewer);");
 });
+
+/** FNV-1a over the text: enough to notice any change, and runs anywhere. */
+function hash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
