@@ -1,6 +1,8 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+
 import { type AuthIR, type FieldIR, type ModelIR, type SpecIR, USER_MODEL } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
+import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
   dataKey,
@@ -156,10 +158,16 @@ export function seedModule(ir: SpecIR): string {
   const tables = ordered.map((m) => tableNames(m).table);
   const blocks = ordered.map((model) => {
     const n = tableNames(model);
-    const rows = sampleRows(model).map((row) => {
-      const entries = storedFields(model).map(
-        (field) => `${dataKey(field)}: ${sampleLiteral(field, row[field.name])}`,
-      );
+    // A calendar's records are placed around the day the samples are loaded, never an empty week.
+    const start = calendarStart(model, ir);
+    const rows = sampleRows(model).map((row, i) => {
+      const entries = storedFields(model).map((field) => {
+        const value = sampleLiteral(field, row[field.name]);
+        if (field !== start || value === "null") return `${dataKey(field)}: ${value}`;
+        return field.type.kind === "scalar" && field.type.name === "date"
+          ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).toISOString().slice(0, 10)`
+          : `${dataKey(field)}: aroundToday(${value}, ${i % 2})`;
+      });
       return `    { ${entries.join(", ")} },`;
     });
     return `if (db.select().from(${n.table}).limit(1).all().length === 0) {
@@ -172,7 +180,21 @@ ${rows.join("\n")}
   });
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 import { db } from "./index";
-${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}
+${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${
+  ir.pages.some((p) => p.pattern.kind === "calendar")
+    ? `
+/** A sample's moment moved to this week (0) or the next (1), on the same weekday at the same time. */
+function aroundToday(sample: Date, week: number): Date {
+  const now = new Date();
+  const monday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7));
+  const day = (sample.getUTCDay() + 6) % 7;
+  const moved = new Date(monday + (week * 7 + day) * 86_400_000);
+  moved.setUTCHours(sample.getUTCHours(), sample.getUTCMinutes(), 0, 0);
+  return moved;
+}
+`
+    : ""
+}
 ${blocks.join("\n\n")}
 `;
 }

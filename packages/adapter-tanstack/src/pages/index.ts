@@ -2,6 +2,7 @@
 // the files a page of that pattern gets, and the kit files only such pages need.
 import type { PageIR, PatternKind, PatternOf } from "@smithable/core";
 import type { GenContext } from "../shared.js";
+import { calendarRoute } from "./calendar.js";
 import { dashboardRoute } from "./dashboard.js";
 import { dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
@@ -53,6 +54,10 @@ export const PAGE_GENERATORS: {
     routes: (page, { ir, t, auth }) => ({
       "index.tsx": recordPageRoute(page, page.pattern, ir, t, auth),
     }),
+  },
+  calendar: {
+    kit: ["src/kit/Calendar.tsx"],
+    routes: (page, ctx) => ({ "index.tsx": calendarRoute(page, ctx) }),
   },
   data: {
     // An overview and each model's crud routes inside the page; no kit of its own.
