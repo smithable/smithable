@@ -1,6 +1,6 @@
 # Invitations and user management (design)
 
-Status: 2026-09-29, proposed. Decided over a calendar pattern as the next feature, because every app with sign-in needs a way to get colleagues in, and the current answer ("everyone with a Google account in your domain, or nobody") only fits internal tools. ARCHITECTURE §3.1 foresaw `selfSignUp: false` and said it needs user management; this is that.
+Status: 2026-09-29, implemented as written (the `users` pattern, `selfSignUp`, `addUsersPage` and `setSignUp`, the phrases, the generated `users.server.ts`, `Users.tsx`, the sign-up hook, the app's `users.test.ts` and the CRM example's team page). Decided over a calendar pattern as the next feature, because every app with sign-in needs a way to get colleagues in, and the current answer ("everyone with a Google account in your domain, or nobody") only fits internal tools. ARCHITECTURE §3.1 foresaw `selfSignUp: false` and said it needs user management; this is that.
 
 ## 1. What people get
 

@@ -15,3 +15,4 @@ models:
 pages:
   customers: { subtitle: Keep every relationship in view. }
   orders: { subtitle: Every order and where it stands. }
+  team: { subtitle: Who has access and who is invited. }

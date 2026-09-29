@@ -289,4 +289,5 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
   settings: (p) => `settings: edits your ${humanize(p.model).toLowerCase()}`,
   onboarding: (p) =>
     `a first-time setup of your ${humanize(p.model).toLowerCase()} in ${p.steps.length} steps`,
+  users: () => "who has access: invite people, change roles, remove users",
 };

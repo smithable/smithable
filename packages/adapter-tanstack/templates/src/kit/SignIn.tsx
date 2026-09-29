@@ -10,6 +10,7 @@ export function SignIn({
   appName,
   providers,
   missing,
+  invitation,
   devRoles,
   onProvider,
   onDevRole,
@@ -19,6 +20,8 @@ export function SignIn({
   providers: string[];
   /** Providers in the spec whose keys are not configured yet. */
   missing: string[];
+  /** Whom the invitation link that opened the page is for; the address must sign in itself. */
+  invitation?: { email: string; role: string } | null;
   /** Roles to sign in as; only given in development. */
   devRoles?: string[];
   onProvider: (provider: string) => Promise<unknown>;
@@ -39,6 +42,12 @@ export function SignIn({
   return (
     <Card className="mx-auto mt-10 max-w-sm space-y-5 p-card">
       <h1 className="text-2xl font-bold">Sign in to {appName}</h1>
+      {invitation && (
+        <p className="rounded-md bg-accent p-3 text-sm">
+          You were invited to {appName} as {invitation.role}. Sign in with{" "}
+          <strong>{invitation.email}</strong>.
+        </p>
+      )}
       {providers.map((provider) => (
         <Button
           key={provider}

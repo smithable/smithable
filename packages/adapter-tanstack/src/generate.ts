@@ -3,6 +3,7 @@ import { accessTestSource } from "./access-test.js";
 import { actionModule, actionRoute, actionStub, queryContract, queryStub } from "./actions.js";
 import {
   authModule,
+  hasInvitations,
   hasSignIn,
   SIGN_IN_KIT,
   signInReadme,
@@ -30,6 +31,7 @@ import { smokeTests } from "./smoke.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
 import { FONT_PACKAGES, themeCss, themeFont } from "./themes.js";
+import { usersReadme, usersServerModule, usersTestSource } from "./users.js";
 
 const SCAFFOLD = new Set([
   "pnpm-workspace.yaml",
@@ -183,7 +185,7 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${mailReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}
 ## Project structure
 
 ${structure}`;
@@ -247,9 +249,19 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         ir.models.some((m) => userFields(m).length) ||
         ir.actions.some((a) => userFields(a.input).length);
       return [
-        generated("src/lib/auth.ts", authModule(auth)),
-        generated("src/routes/sign-in.tsx", signInRoute(auth, onboarding?.route)),
+        generated("src/lib/auth.ts", authModule(auth, ir)),
+        generated(
+          "src/routes/sign-in.tsx",
+          signInRoute(auth, onboarding?.route, hasInvitations(ir, auth)),
+        ),
         ...(users ? [generated("src/generated/users.ts", usersModule())] : []),
+        // Invitations and user management, for the users page (see users.ts).
+        ...(hasInvitations(ir, auth)
+          ? [
+              generated("src/generated/users.server.ts", usersServerModule(ir, auth)),
+              generated("src/generated/users.test.ts", usersTestSource(ir, auth)),
+            ]
+          : []),
       ];
     },
   },
