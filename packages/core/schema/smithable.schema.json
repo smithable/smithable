@@ -418,7 +418,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users or data.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data or calendar.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -458,6 +458,11 @@
           {
             "required": [
               "data"
+            ]
+          },
+          {
+            "required": [
+              "calendar"
             ]
           }
         ],
@@ -594,6 +599,43 @@
               }
             ],
             "description": "An administrator's view of the app's data: all (every model) or a list of models, each with its records to find, open, change and delete. For admins, unless the page's access says otherwise."
+          },
+          "calendar": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "A model whose records have one date or date-time field."
+              },
+              {
+                "type": "object",
+                "required": [
+                  "model"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "starts": {
+                    "type": "string",
+                    "description": "The date or date-time field that places a record."
+                  },
+                  "ends": {
+                    "type": "string",
+                    "description": "An end field of the same kind."
+                  },
+                  "duration": {
+                    "type": "string",
+                    "description": "Minutes: a whole-number field, here or one reference away (classType.durationMinutes)."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "What a block says: a field, or a reference's title."
+                  }
+                }
+              }
+            ],
+            "description": "A model's records in a week or month calendar."
           },
           "actions": {
             "type": "array",

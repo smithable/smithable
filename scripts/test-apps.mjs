@@ -274,6 +274,69 @@ test("rule mergeCustomers.move-orders: the duplicate's orders move to the kept c
 `;
 
 /** A visitor opens a gallery picture and sends the contact form; an admin reads the message. */
+/**
+ * The booking starter's public schedule: a visitor sees this week's sessions and opens one; Next
+ * and Previous change the week and the address; an admin clicks an empty hour and the new
+ * session starts then.
+ */
+async function calendarFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await open(page, `${base}/schedule`);
+    const week = page.getByRole("heading", { level: 2 }).first();
+    const shown = await week.innerText();
+    const session = page.locator("section ol button").first();
+    await session.waitFor({ timeout: 10000 });
+    if (process.env.CALENDAR_SHOTS)
+      await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/week.png`, fullPage: true });
+    // A visitor gets the session's details in a panel.
+    const title = (await session.locator("span").first().innerText()).trim();
+    await session.click();
+    await page.getByRole("dialog").getByRole("heading", { name: title }).waitFor({ timeout: 5000 });
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+    // Next and Previous: another week, in the address too.
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.waitForURL(/\?week=\d{4}-W\d{2}/);
+    await page.waitForFunction(
+      (text) => [...document.querySelectorAll("h2")].every((h) => h.textContent !== text),
+      shown,
+      { timeout: 10000 },
+    );
+    await page.getByRole("button", { name: "Previous" }).click();
+    await page.waitForFunction(
+      (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
+      shown,
+      { timeout: 10000 },
+    );
+    await page.getByRole("button", { name: "Month" }).click();
+    await page.waitForURL(/\?month=\d{4}-\d{2}/);
+    if (process.env.CALENDAR_SHOTS)
+      await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/month.png`, fullPage: true });
+    await page.getByRole("button", { name: "Week" }).click();
+    // An admin clicks an empty hour: the new session's start is that hour.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/schedule`);
+    const slot = page.getByRole("button", { name: /^New session, .* at 07:00$/ }).first();
+    const label = await slot.getAttribute("aria-label");
+    await slot.click();
+    await page.waitForURL(/\/sessions\/new\?startsAt=/);
+    const starts = await page.getByLabel("Starts at").inputValue();
+    if (!starts.endsWith("T07:00"))
+      throw new Error(`the new session starts at ${starts}, from ${label}`);
+    console.log(
+      "  ✓ browser: the schedule shows this week's sessions to a visitor, who opens one; Next and Previous change the week and the address; an admin's click on an empty hour starts a new session then",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("booking calendar flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function landingFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -1301,13 +1364,17 @@ for (const [index, example] of examples.entries()) {
           ? response.status === 200 &&
             (landing
               ? html.includes("<h1")
-              : html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html))
+              : page.pattern.kind === "calendar"
+                ? html.includes("<ol") && !/aria-label="New [a-z ]+, /.test(html)
+                : html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
         const what = !isPublic
           ? "needs sign-in"
           : landing
             ? "is public: the landing page opens without sign-in"
-            : "is public: lists sample data without sign-in, read-only";
+            : page.pattern.kind === "calendar"
+              ? "is public: this week's sample records without sign-in, and no way to add one"
+              : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
         // A starter's pictures (its hero) are in the app and served.
@@ -1382,7 +1449,10 @@ for (const [index, example] of examples.entries()) {
       const base = `http://localhost:${port + 100}`;
       await visualChecks(dir, base);
       if (example === "crm") await browserFlow(base);
-      if (example === "booking") await landingFlow(base);
+      if (example === "booking") {
+        await landingFlow(base);
+        await calendarFlow(base);
+      }
       if (example === "invoicing") {
         await formulaFlow(base);
         await onboardingFlow(base);

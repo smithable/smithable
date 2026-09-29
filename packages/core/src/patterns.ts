@@ -4,6 +4,7 @@
 // removed). A new pattern is one entry here; menus, icons, texts, access and the index ask it.
 import { isMap, isScalar as isScalarNode, isSeq, type ParsedNode } from "yaml";
 import {
+  type At,
   checkKeys,
   mapEntries,
   type ParseContext,
@@ -14,6 +15,7 @@ import {
 import type { YamlEditor } from "./edit.js";
 import {
   type DashboardItem,
+  type FieldIR,
   type LandingSection,
   type OnboardingStep,
   type PageIR,
@@ -27,6 +29,7 @@ import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
 import {
+  calendarOperations,
   crudOperations,
   dashboardOperations,
   dataOperations,
@@ -317,6 +320,45 @@ const users: PagePattern<"users"> = {
   operations: usersOperations,
 };
 
+/** A model's records on a week or month grid, by the date or date-time that places them. */
+const calendar: PagePattern<"calendar"> = {
+  kind: "calendar",
+  schema: {
+    oneOf: [
+      { type: "string", description: "A model whose records have one date or date-time field." },
+      {
+        type: "object",
+        required: ["model"],
+        additionalProperties: false,
+        properties: {
+          model: { type: "string" },
+          starts: {
+            type: "string",
+            description: "The date or date-time field that places a record.",
+          },
+          ends: { type: "string", description: "An end field of the same kind." },
+          duration: {
+            type: "string",
+            description:
+              "Minutes: a whole-number field, here or one reference away (classType.durationMinutes).",
+          },
+          title: {
+            type: "string",
+            description: "What a block says: a field, or a reference's title.",
+          },
+        },
+      },
+    ],
+    description: "A model's records in a week or month calendar.",
+  },
+  example: "calendar: <Model>",
+  parse: (ctx, value, where, parsed) => readCalendar(ctx, value, where, parsed),
+  models: (p) => [p.model],
+  icon: "calendar",
+  inMenu: true,
+  operations: calendarOperations,
+};
+
 /** An admin view of every model (or some): each one's records, found, opened, changed. */
 const data: PagePattern<"data"> = {
   kind: "data",
@@ -368,6 +410,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   onboarding,
   users,
   data,
+  calendar,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -721,4 +764,146 @@ function readDashboard(
     items.push(item);
   }
   return items;
+}
+
+const DATES = ["date", "datetime"];
+const scalarKind = (f: FieldIR | undefined) =>
+  f?.type.kind === "scalar" ? f.type.name : undefined;
+
+/** A calendar, short (`calendar: Session`) or long (`{ model, starts, ends, duration, title }`). */
+function readCalendar(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): PatternOf<"calendar"> | undefined {
+  const calendarWhere = `the calendar of ${where}`;
+  let modelName: string | undefined;
+  let modelAt: At = node;
+  const given: Record<string, { value: string; at: At }> = {};
+  if (isMap(node)) {
+    for (const { key, value } of checkKeys(
+      ctx,
+      mapEntries(ctx, node, calendarWhere) ?? [],
+      calendarWhere,
+      {
+        allowed: ["model", "starts", "ends", "duration", "title"],
+      },
+    )) {
+      const text = readString(ctx, value, `"${key}" in ${calendarWhere}`);
+      if (text === undefined) continue;
+      if (key === "model") {
+        modelName = text;
+        modelAt = value;
+      } else given[key] = { value: text, at: value };
+    }
+    if (modelName === undefined) {
+      ctx.error(node, "missing-key", `${capitalize(calendarWhere)} needs "model".`);
+      return undefined;
+    }
+  } else modelName = readString(ctx, node, `"calendar" in ${where}`);
+  if (modelName === undefined) return undefined;
+  ctx.reference("model", modelName, modelAt);
+  const model = parsed.models?.find((m) => m.name === modelName);
+  if (!model) return { kind: "calendar", model: modelName, starts: given.starts?.value ?? "" };
+  const field = (name: string) => model.fields.find((f) => f.name === name);
+  const unknown = (at: At, name: string) =>
+    ctx.error(
+      at,
+      "unknown-field",
+      `${modelName} has no field named "${name}".`,
+      didYouMean(
+        name,
+        model.fields.map((f) => f.name),
+      ),
+    );
+
+  // Starts: given, or the model's one stored date or date-time field.
+  let starts = given.starts?.value;
+  if (starts !== undefined) {
+    const f = field(starts);
+    if (!f) unknown(given.starts?.at ?? null, starts);
+    else if (!DATES.includes(scalarKind(f) ?? ""))
+      ctx.error(
+        given.starts?.at ?? null,
+        "invalid-value",
+        `"${starts}" places records in ${calendarWhere}: it must be a date or date-time field.`,
+      );
+  } else {
+    const dates = model.fields.filter((f) => !f.formula && DATES.includes(scalarKind(f) ?? ""));
+    if (dates.length !== 1) {
+      ctx.error(
+        modelAt,
+        "missing-key",
+        dates.length
+          ? `${modelName} has several date fields (${dates.map((f) => f.name).join(", ")}): name the one that places a record with "starts".`
+          : `${modelName} has no date or date-time field to place its records in a calendar.`,
+        dates.length
+          ? `Write "calendar: { model: ${modelName}, starts: ${dates[0]?.name} }".`
+          : undefined,
+      );
+      return undefined;
+    }
+    starts = dates[0]?.name as string;
+  }
+  const startKind = scalarKind(field(starts));
+
+  const ends = given.ends;
+  if (ends) {
+    const f = field(ends.value);
+    if (!f) unknown(ends.at, ends.value);
+    else if (scalarKind(f) !== startKind)
+      ctx.error(
+        ends.at,
+        "invalid-value",
+        `"${ends.value}" ends records that "${starts}" starts: it must be the same kind of field.`,
+      );
+    if (given.duration)
+      ctx.error(
+        given.duration.at,
+        "invalid-key",
+        `${capitalize(calendarWhere)} has "ends" or "duration", not both.`,
+      );
+  }
+
+  // Duration: minutes, on the record or one reference away.
+  const duration = given.duration;
+  if (duration && !ends) {
+    const [first, second] = duration.value.split(".");
+    const own = field(first ?? "");
+    const target =
+      second === undefined
+        ? own
+        : own?.type.kind === "relation" && !own.type.many
+          ? parsed.models
+              ?.find((m) => own.type.kind === "relation" && m.name === own.type.model)
+              ?.fields.find((f) => f.name === second)
+          : undefined;
+    if (!target || scalarKind(target) !== "int")
+      ctx.error(
+        duration.at,
+        "invalid-value",
+        `"${duration.value}" is a calendar's duration: a whole-number field of ${modelName}, or of a record it refers to (reference.field).`,
+      );
+  }
+
+  // Title: a field, or a reference (its record's title).
+  const title = given.title;
+  if (title && !field(title.value)) unknown(title.at, title.value);
+
+  if (!parsed.app?.timezone)
+    ctx.warning(
+      modelAt,
+      "no-timezone",
+      `${capitalize(where)} is a calendar, but the app has no time zone: records are placed in UTC.`,
+      `Set "timezone" under "app", e.g. "Europe/Mariehamn".`,
+    );
+  return {
+    kind: "calendar",
+    model: modelName,
+    starts,
+    ...(ends ? { ends: ends.value } : {}),
+    ...(duration && !ends ? { duration: duration.value } : {}),
+    ...(title ? { title: title.value } : {}),
+  };
 }
