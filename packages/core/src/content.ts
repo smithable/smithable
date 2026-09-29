@@ -1,8 +1,9 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { checkKeys, type Entry, mapEntries, ParseContext, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import { patternInfo, type SpecIR } from "./ir.js";
+import type { SpecIR } from "./ir.js";
 import { capitalize } from "./naming.js";
+import { patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
 
 /**

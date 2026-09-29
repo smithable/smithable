@@ -1,6 +1,6 @@
 # The plugin and companion interface (design)
 
-Status: proposal, 2026-09-29, for the pluggability phase of M15.5 (roadmap). Nothing here is implemented yet except where marked *exists*. The decision it prepares: how built-in features, companion files, page patterns and project plugins register through one interface, so that the public plugin API is "publish what we already use" (ARCHITECTURE §5.1) and a new page pattern or section kind touches one module in core and one in the adapter instead of about eight places.
+Status: 2026-09-29. Steps 1–4 and 7 of §4 are implemented (companion registration, `follow` on sections, companions and patterns with refusals, one object per page pattern in `packages/core/src/patterns.ts` with a table of landing section kinds, the adapter split, schema-annotated Builder forms). Open: registry-driven `Editors`, plugins v2 (§3.5) and hook points (§3.6). The decision it prepares: how built-in features, companion files, page patterns and project plugins register through one interface, so that the public plugin API is "publish what we already use" (ARCHITECTURE §5.1) and a new page pattern or section kind touches one module in core and one in the adapter instead of about eight places.
 
 ## 1. Where we are
 
