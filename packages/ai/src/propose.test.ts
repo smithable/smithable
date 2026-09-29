@@ -1,7 +1,7 @@
 import { type SpecIR, validateSpec } from "@smithable/core";
 import { buildContext, buildIndex } from "@smithable/index";
 import { describe, expect, test } from "vitest";
-import { proposeChange } from "./propose.js";
+import { answerSchema, promptFor, proposeChange, relevantOperations } from "./propose.js";
 import { allowedBy, type Provider, parsePolicy, route } from "./provider.js";
 
 const spec = Object.values(
@@ -18,16 +18,19 @@ const index = buildIndex({ ir, generated: {}, custom: [] });
 function scripted(
   answers: unknown[],
   over: Partial<Provider> = {},
-): Provider & { prompts: string[] } {
+): Provider & { prompts: string[]; systems: string[] } {
   const prompts: string[] = [];
+  const systems: string[] = [];
   return {
     name: "scripted",
     tier: "local",
     location: "local",
     price: { input: 0, output: 0 },
     prompts,
-    async complete({ user }) {
+    systems,
+    async complete({ system, user }) {
       prompts.push(user);
+      systems.push(system);
       const answer = answers.shift();
       if (answer === undefined) throw new Error("no more answers");
       return {
@@ -63,9 +66,11 @@ describe("proposeChange", () => {
       ],
     });
     expect(proposal.kind === "change" && proposal.files.spec).toContain("mobile: phone");
-    // The model got the relevant part of the app and the operations' arguments.
+    // The model got the relevant part of the app; a local model has every operation's arguments
+    // in its stable system prefix, and the ones that fit named after the context.
     expect(model.prompts[0]).toContain("model:Customer");
-    expect(model.prompts[0]).toContain("- addField { model: string, field: string (camelCase name");
+    expect(model.systems[0]).toContain("- addField { model: string, field: string (camelCase name");
+    expect(model.prompts[0]).toMatch(/Operations that fit this request: .*addField/);
   });
 
   test("an answer that does not apply gets one repair, with the reason", async () => {
@@ -92,7 +97,31 @@ describe("proposeChange", () => {
     expect(proposal.kind).toBe("change");
     expect(proposal.usage.map((u) => u.provider)).toEqual(["scripted", "smithable"]);
     expect(proposal.usage[1]?.cost).toBeCloseTo((1000 * 0.2 + 50 * 0.6) / 1e6);
-    expect(hosted.prompts[0]).toBe(local.prompts[0]);
+    // The same context for both; the hosted model gets only the operations that fit, after it.
+    const context = (p: string) => p.slice(0, p.indexOf("\n\nOperation"));
+    expect(context(hosted.prompts[0] ?? "")).toBe(context(local.prompts[0] ?? ""));
+    expect(hosted.prompts[0]).toContain("- addField {");
+  });
+
+  test("a cheaper tier's \"none\" goes to the next tier; the last tier's stands", async () => {
+    const local = scripted([{ kind: "none", reason: "Cannot." }]);
+    const hosted = scripted([addPhone], { name: "smithable", tier: "smithable", location: "eu" });
+    expect((await propose("Customers should have a mobile number", [local, hosted])).kind).toBe(
+      "change",
+    );
+    const alone = scripted([{ kind: "none", reason: "Cannot." }]);
+    expect(await propose("Customers should have a mobile number", [alone])).toMatchObject({
+      kind: "none",
+      reason: "Cannot.",
+    });
+    const both = [
+      scripted([{ kind: "none", reason: "A" }]),
+      scripted([{ kind: "none", reason: "B" }], { name: "b", tier: "smithable", location: "eu" }),
+    ];
+    expect(await propose("Customers should have a mobile number", both)).toMatchObject({
+      kind: "none",
+      reason: "B",
+    });
   });
 
   test("an ambiguous request becomes a question, not a guess", async () => {
@@ -139,6 +168,61 @@ describe("proposeChange", () => {
     expect(await propose("Customers should have a mobile number", [])).toMatchObject({
       kind: "failed",
     });
+  });
+});
+
+describe("what a model is offered", () => {
+  test("operations narrow to the request's concepts; creating ones and app-wide ones stay", () => {
+    const names = (concepts: string[]) => relevantOperations(concepts).map((o) => o.name);
+    expect(names(["page:orders"])).not.toContain("addField");
+    expect(names(["page:orders"])).toEqual(
+      expect.arrayContaining(["setNavigation", "setSearch", "addPage", "addModel", "setTheme"]),
+    );
+    expect(names(["model:Customer", "field:Customer.email"])).toEqual(
+      expect.arrayContaining(["addField", "changeField", "setAccess"]),
+    );
+    expect(names(["model:Customer"])).not.toContain("setNavigation");
+    expect(names([])).not.toContain("removeField");
+    expect(names([])).toContain("addModel");
+  });
+
+  test("the strict schema holds each operation's own arguments; the loose one only the names", () => {
+    const ops = relevantOperations(["model:Customer"]);
+    const strict = answerSchema(ops) as {
+      properties: {
+        operations: {
+          items: {
+            anyOf: { properties: { op: { const: string }; args: { required?: string[] } } }[];
+          };
+        };
+      };
+    };
+    const addField = strict.properties.operations.items.anyOf.find(
+      (a) => a.properties.op.const === "addField",
+    );
+    expect(addField?.properties.args.required).toEqual(["model", "field", "type"]);
+    const loose = answerSchema(ops, false) as {
+      properties: { operations: { items: { properties: { op: { enum: string[] } } } } };
+    };
+    expect(loose.properties.operations.items.properties.op.enum).toContain("addField");
+  });
+
+  test("a hosted model's prompt is the shortest; a local model's has a stable prefix", () => {
+    const slice = (concepts: string[], request: string) => ({
+      request,
+      concepts,
+      text: `Request: ${request}`,
+      tokens: { semantic: 5, implementation: 0, total: 5 },
+    });
+    const hosted = promptFor({ location: "eu" }, slice(["page:orders"], "Show orders first"));
+    const local = promptFor({ location: "local" }, slice(["page:orders"], "Show orders first"));
+    expect(hosted.user).toContain("- setNavigation {");
+    expect(hosted.user).not.toContain("- addField {");
+    expect(local.system).toContain("- addField {");
+    expect(local.user).not.toContain("- addField {");
+    expect(local.system).toBe(
+      promptFor({ location: "local" }, slice(["model:Customer"], "Customers need a fax")).system,
+    );
   });
 });
 
