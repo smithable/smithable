@@ -56,8 +56,16 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
   const extras = shown.flatMap((f) => {
     if (f.type.kind === "relation") {
       const title = relatedTitle(ir, f.type.model);
-      const id = f.type.model === USER_MODEL ? "string" : "number";
-      return [`${f.name}?: { id: ${id}${title === "id" ? "" : `; ${title}: unknown`} } | null`];
+      const user = f.type.model === USER_MODEL;
+      // The title as Drizzle gives it: a user's name always, another model's title field
+      // when it is required, else possibly null.
+      const titleType =
+        user || modelNamed(ir, f.type.model).fields.find((x) => x.name === title)?.required
+          ? "string"
+          : "string | null";
+      return [
+        `${f.name}?: { id: ${user ? "string" : "number"}${title === "id" ? "" : `; ${title}: ${titleType}`} } | null`,
+      ];
     }
     return f.formula ? [`${f.name}?: unknown`] : [];
   });

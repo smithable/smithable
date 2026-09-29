@@ -1,6 +1,6 @@
 // An operation's arguments as form controls, from its JSON Schema (C8): an argument that names
 // something in the spec (its `x-smithable` annotation) is chosen from the names there are.
-import { type ArgRef, humanize, type JsonSchema, pageModel } from "@smithable/core";
+import { type ArgRef, type JsonSchema, namesFor } from "@smithable/core";
 import type { Spec } from "./engine";
 import { Input, Label, Select } from "./ui";
 
@@ -8,37 +8,7 @@ export type ArgValues = Record<string, string | string[]>;
 
 /** The names an annotated argument can take in this spec, as [value, label]. */
 export function choicesFor(ref: ArgRef, values: ArgValues, spec: Spec): [string, string][] {
-  const ir = spec.ir;
-  if (!ir) return [];
-  const one = (key: string) => {
-    const v = values[key];
-    return typeof v === "string" ? v : undefined;
-  };
-  const modelOf = (r: { model: string } | { page: string }) => {
-    if ("model" in r) return ir.models.find((m) => m.name === one(r.model));
-    const page = ir.pages.find((p) => p.id === one(r.page));
-    return page && ir.models.find((m) => m.name === pageModel(page));
-  };
-  switch (ref.ref) {
-    case "model":
-      return ir.models.map((m) => [m.name, m.name]);
-    case "page":
-      return ir.pages.map((p) => [p.id, humanize(p.id)]);
-    case "role":
-      return (spec.auth?.roles ?? []).map((r) => [r.name, r.name]);
-    case "field":
-      return (modelOf(ref)?.fields ?? []).map((f) => [f.name, humanize(f.name)]);
-    case "choiceValue": {
-      const field = modelOf(ref)?.fields.find((f) => f.name === one(ref.field));
-      return field?.type.kind === "choice" ? field.type.values.map((v) => [v, humanize(v)]) : [];
-    }
-    case "section": {
-      const page = ir.pages.find((p) => p.id === one(ref.page));
-      return page?.pattern.kind === "landing"
-        ? page.pattern.sections.map((s) => [s.name, humanize(s.name)])
-        : [];
-    }
-  }
+  return spec.ir ? namesFor(ref, values, spec.ir, spec.auth?.roles.map((r) => r.name) ?? []) : [];
 }
 
 /**
@@ -59,6 +29,8 @@ export function argumentsOf(schema: JsonSchema, values: ArgValues, spec: Spec): 
       const pick = chosen ?? (required.includes(key) ? choices[0] : undefined);
       if (pick) out[key] = pick;
     } else if (Array.isArray(value) ? value.length : value?.trim()) out[key] = value as never;
+    else if (Array.isArray(property.enum) && required.includes(key))
+      out[key] = String(property.enum[0]);
   }
   return out;
 }
@@ -110,6 +82,21 @@ export function ArgumentField({
       </fieldset>
     );
   }
+  // A fixed set of values (a tone, an icon) is a choice too.
+  if (!ref && Array.isArray(schema.enum))
+    return (
+      <Label text={text} hint={hint}>
+        <Select
+          aria-label={label}
+          value={(values[name] as string | undefined) ?? (required ? String(schema.enum[0]) : "")}
+          onChange={(e) => setValue(e.target.value)}
+          options={[
+            ...(required ? [] : [["", "—"] as [string, string]]),
+            ...schema.enum.map((v) => String(v)),
+          ]}
+        />
+      </Label>
+    );
   if (ref && choices.length)
     return (
       <Label text={text} hint={hint}>
