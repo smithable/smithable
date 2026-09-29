@@ -36,14 +36,16 @@ export function wallTime(instant: Date, timeZone?: string): string {
 }
 
 /**
- * The instant a wall time ("2026-09-30T09:00") is in `timeZone`. The offset is found in at most
- * two steps, so the hours around a change to or from summer time come out right; a wall time the
- * change skips (02:30 on the spring-forward night) is read with the offset before it.
+ * The instant a wall time ("2026-09-30T09:00") is in `timeZone`. Around a change to or from summer
+ * time both offsets are tried: a wall time that happens twice (03:30 on the autumn night) is its
+ * first occurrence, and one the change skips (03:30 in spring) is read with the offset before it.
  */
 export function instantOf(wall: string, timeZone?: string): Date {
   if (!timeZone) return new Date(wall);
   const asUtc = Date.parse(`${wall.slice(0, 16)}:00Z`);
-  const first = offsetAt(asUtc, timeZone);
-  const second = offsetAt(asUtc - first, timeZone);
-  return new Date(asUtc - (first === second ? first : second));
+  const before = asUtc - offsetAt(asUtc - 86_400_000, timeZone);
+  const after = asUtc - offsetAt(asUtc + 86_400_000, timeZone);
+  const shows = (t: number) => wallTime(new Date(t), timeZone) === wall.slice(0, 16);
+  const fits = [before, after].filter(shows).sort((a, b) => a - b);
+  return new Date(fits[0] ?? before);
 }

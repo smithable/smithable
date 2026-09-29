@@ -24,6 +24,8 @@ test("around the change to summer time (29 March 2026) and back (25 October 2026
   expect(kit.wallTime(new Date("2026-10-25T00:30:00Z"), ZONE)).toBe("2026-10-25T03:30");
   expect(kit.wallTime(new Date("2026-10-25T01:30:00Z"), ZONE)).toBe("2026-10-25T03:30");
   expect(kit.instantOf("2026-10-25T05:00", ZONE).toISOString()).toBe("2026-10-25T03:00:00.000Z");
+  // The first occurrence of the wall time that happens twice (review).
+  expect(kit.instantOf("2026-10-25T03:30", ZONE).toISOString()).toBe("2026-10-25T00:30:00.000Z");
   // Every hour of both change days goes there and back.
   for (const day of ["2026-03-29", "2026-10-25"])
     for (let h = 0; h < 24; h++) {
