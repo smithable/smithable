@@ -462,33 +462,6 @@
             "type": "string",
             "description": "A model to list, view, create, edit and delete."
           },
-          "settings": {
-            "type": "string",
-            "description": "A model with one record per user (private data) or per app (shared): the page edits it."
-          },
-          "onboarding": {
-            "type": "object",
-            "required": [
-              "model",
-              "steps"
-            ],
-            "additionalProperties": false,
-            "description": "Fills the settings record in steps after the first sign-in.",
-            "properties": {
-              "model": {
-                "type": "string"
-              },
-              "steps": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          },
           "landing": {
             "type": "object",
             "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer.",
@@ -556,6 +529,33 @@
                 "limit": {
                   "type": "integer",
                   "minimum": 1
+                }
+              }
+            }
+          },
+          "settings": {
+            "type": "string",
+            "description": "A model with one record per user (private data) or per app (shared): the page edits it."
+          },
+          "onboarding": {
+            "type": "object",
+            "required": [
+              "model",
+              "steps"
+            ],
+            "additionalProperties": false,
+            "description": "Fills the settings record in steps after the first sign-in.",
+            "properties": {
+              "model": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
