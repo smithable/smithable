@@ -66,3 +66,36 @@ test("addDataPage adds one for every model, or for the models named, to the main
   );
   expect(noSignIn).toMatchObject({ ok: false, message: expect.stringContaining("sign-in") });
 });
+
+test("a data page's model lists are in the duplicate-route check, in either order (review)", () => {
+  const pages = (lines: string) => `smithable: 0.1
+app: { name: Acme }
+models:
+  Customer:
+    fields: { name: string! }
+pages:
+${lines}`;
+  const codes = (text: string) =>
+    validateSpec({ path: "smithable.yml", text }).diagnostics.map((d) => [d.code, d.message]);
+  // A data page at / puts its customers list at /customers, where the crud page is.
+  for (const lines of [
+    "  customers: { crud: Customer }\n  admin: { route: /, data: all }\n",
+    "  admin: { route: /, data: all }\n  customers: { crud: Customer }\n",
+    "  admin: { data: all }\n  mine: { crud: Customer, route: /admin/customers }\n",
+    "  mine: { crud: Customer, route: /admin/customers }\n  admin: { data: all }\n",
+  ])
+    expect(codes(pages(lines))).toContainEqual([
+      "duplicate-route",
+      expect.stringMatching(
+        /^Pages "(customers|admin|mine)" and "(customers|admin|mine)" both use the route/,
+      ),
+    ]);
+});
+
+test("data: [] is an error, not a page that silently disappears (review)", () => {
+  const empty = read("[]");
+  expect(empty.ir).toBeUndefined();
+  expect(empty.diagnostics.map((d) => d.message)).toContain(
+    '"data" in page "admin" is "all" or a list of at least one model.',
+  );
+});
