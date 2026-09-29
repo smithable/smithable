@@ -88,15 +88,17 @@ export const pagesSection: SpecSection<"pages"> = {
       ctx.define("page", id);
       const page = readPage(ctx, id, keyNode, value, parsed);
       if (!page) continue;
-      const other = routes.get(page.route);
-      if (other !== undefined) {
-        ctx.error(
-          keyNode,
-          "duplicate-route",
-          `Pages "${other}" and "${id}" both use the route ${page.route}.`,
-        );
+      // The page's own route and any its pattern takes besides (a data page's model lists).
+      for (const route of [page.route, ...patternInfo(page).routes(page.route)]) {
+        const other = routes.get(route);
+        if (other !== undefined && other !== id)
+          ctx.error(
+            keyNode,
+            "duplicate-route",
+            `Pages "${other}" and "${id}" both use the route ${route}.`,
+          );
+        routes.set(route, id);
       }
-      routes.set(page.route, id);
       pages.push(page);
     }
     return pages;
