@@ -1,13 +1,5 @@
 import { spawn } from "node:child_process";
-import {
-  existsSync,
-  lstatSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { allowedBy, type Location, parsePolicy, type Usage } from "@smithable/ai";
 import { buildContext } from "@smithable/index";

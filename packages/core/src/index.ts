@@ -8,6 +8,7 @@ export {
   operationsFor,
   parseOperationArgs,
 } from "./apply.js";
+export { namesFor } from "./arguments.js";
 export type { AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
 export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
 export type { ConceptRules } from "./concepts.js";
@@ -58,7 +59,7 @@ export type {
   OperationArgs,
   Refusal,
 } from "./operation.js";
-export { OperationError } from "./operation.js";
+export { OperationError, refHint } from "./operation.js";
 export type { PagePattern } from "./patterns.js";
 export {
   LANDING_SECTIONS,

@@ -27,12 +27,15 @@ const setAccess: Operation<{ target: string; roles?: string[] }> = {
     required: ["target"],
     additionalProperties: false,
     properties: {
-      target: {
-        type: "string",
-        description: 'e.g. "model:Customer.delete", "page:class-types" or "action:mergeCustomers".',
-      },
+      target: refTo(
+        { ref: "accessTarget", label: "Who can" },
+        {
+          description:
+            'e.g. "model:Customer.delete", "page:class-types" or "action:mergeCustomers".',
+        },
+      ),
       roles: refTo(
-        { ref: "role", label: "Roles" },
+        { ref: "role", target: "target", label: "Only" },
         {
           description:
             'Roles from smithable.auth.yml; for models also "owner". None returns to the default.',
