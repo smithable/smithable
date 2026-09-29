@@ -413,16 +413,14 @@ The **app kit** is a set of generic, reusable source files that the adapter writ
 Rules that keep the kit "normal":
 
 - **Only what is used.** The adapter copies in only the kit parts the spec actually uses, so a simple app gets a small kit. Each part has a size budget, and growth needs a justification.
-- **No magic.** Typed props only. No string-based lookups, no global registries, no runtime code generation.
+- **No magic**, which means three things: no global registries (a page imports the description and components it uses), no runtime code generation, and no string lookups from outside the kit. The kit's components are generic over a model's record type: each model's description (`src/generated/<model>.ts`) is a `RecordUi<Row>` whose fields read a record through typed accessors (`get: (row) => row.customer?.name ?? null`), so a table and the rows given to it are checked against each other at the route. Inside the kit, a form keeps its values by field name; that is the kit's own business, not a lookup anyone else depends on. (Decided 2026-09-29, rather than generating typed components per model: the same checks with far less generated code.)
 - **Readable.** Each file opens with a short comment explaining what it does and how to customise it.
 - **Copyable.** When a generic component is not enough, copy it into `src/custom/components/` and edit the copy.
 
 Generated pages are short, explicit compositions:
 
 ```tsx
-function CustomersPage() {
-  return <ModelTable table={customers} ui={ui.Customer} search={["name", "email"]} />
-}
+<ModelTable ui={customerUi} app={app} rows={rows} onOpen={(row) => open(row.id)} />
 ```
 
 ### 6.4 Ownership zones

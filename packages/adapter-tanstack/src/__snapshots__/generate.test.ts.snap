@@ -865,19 +865,34 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { classTypes } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { classTypeAccess, classTypeData } from "./class-type.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const classTypeUi: ModelUi = {
+/** ClassType records as the kit reads them. */
+export type ClassTypeRow = typeof classTypes.$inferSelect;
+
+export const classTypeUi: RecordUi<ClassTypeRow> = {
   model: "ClassType",
   label: "Class type",
   pluralLabel: "Class types",
   titleField: "name",
   columns: ["name", "level", "durationMinutes"],
   fields: [
-    { name: "name", label: "Name", kind: "string", required: true },
-    { name: "summary", label: "Summary", kind: "text", required: false },
+    {
+      name: "name",
+      label: "Name",
+      kind: "string",
+      required: true,
+      get: (row) => row.name,
+    },
+    {
+      name: "summary",
+      label: "Summary",
+      kind: "text",
+      required: false,
+      get: (row) => row.summary,
+    },
     {
       name: "level",
       label: "Level",
@@ -889,6 +904,7 @@ export const classTypeUi: ModelUi = {
         { value: "advanced", label: "Advanced" },
       ],
       default: "allLevels",
+      get: (row) => row.level,
     },
     {
       name: "durationMinutes",
@@ -896,6 +912,7 @@ export const classTypeUi: ModelUi = {
       kind: "int",
       required: true,
       default: 60,
+      get: (row) => row.durationMinutes,
     },
   ],
 };
@@ -1068,19 +1085,34 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { instructors } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { instructorAccess, instructorData } from "./instructor.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const instructorUi: ModelUi = {
+/** Instructor records as the kit reads them. */
+export type InstructorRow = typeof instructors.$inferSelect;
+
+export const instructorUi: RecordUi<InstructorRow> = {
   model: "Instructor",
   label: "Instructor",
   pluralLabel: "Instructors",
   titleField: "name",
   columns: ["name"],
   fields: [
-    { name: "name", label: "Name", kind: "string", required: true },
-    { name: "bio", label: "Bio", kind: "text", required: false },
+    {
+      name: "name",
+      label: "Name",
+      kind: "string",
+      required: true,
+      get: (row) => row.name,
+    },
+    {
+      name: "bio",
+      label: "Bio",
+      kind: "text",
+      required: false,
+      get: (row) => row.bio,
+    },
   ],
 };
 
@@ -1230,20 +1262,41 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { messages } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { messageAccess, messageData } from "./message.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const messageUi: ModelUi = {
+/** Message records as the kit reads them. */
+export type MessageRow = typeof messages.$inferSelect;
+
+export const messageUi: RecordUi<MessageRow> = {
   model: "Message",
   label: "Message",
   pluralLabel: "Messages",
   titleField: "name",
   columns: ["name", "email"],
   fields: [
-    { name: "name", label: "Name", kind: "string", required: true },
-    { name: "email", label: "Email", kind: "email", required: true },
-    { name: "message", label: "Message", kind: "text", required: true },
+    {
+      name: "name",
+      label: "Name",
+      kind: "string",
+      required: true,
+      get: (row) => row.name,
+    },
+    {
+      name: "email",
+      label: "Email",
+      kind: "email",
+      required: true,
+      get: (row) => row.email,
+    },
+    {
+      name: "message",
+      label: "Message",
+      kind: "text",
+      required: true,
+      get: (row) => row.message,
+    },
   ],
 };
 
@@ -1415,11 +1468,17 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sessions } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { sessionAccess, sessionData } from "./session.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const sessionUi: ModelUi = {
+/** Session records as the kit reads them. */
+export type SessionRow = typeof sessions.$inferSelect & {
+  classType?: { id: number; name: unknown } | null;
+  instructor?: { id: number; name: unknown } | null;
+};
+
+export const sessionUi: RecordUi<SessionRow> = {
   model: "Session",
   label: "Session",
   pluralLabel: "Sessions",
@@ -1432,6 +1491,7 @@ export const sessionUi: ModelUi = {
       kind: "relation",
       required: true,
       relation: { key: "classType", titleField: "name" },
+      get: (row) => row.classType?.name ?? null,
     },
     {
       name: "instructorId",
@@ -1439,14 +1499,22 @@ export const sessionUi: ModelUi = {
       kind: "relation",
       required: true,
       relation: { key: "instructor", titleField: "name" },
+      get: (row) => row.instructor?.name ?? null,
     },
-    { name: "startsAt", label: "Starts at", kind: "datetime", required: true },
+    {
+      name: "startsAt",
+      label: "Starts at",
+      kind: "datetime",
+      required: true,
+      get: (row) => row.startsAt,
+    },
     {
       name: "capacity",
       label: "Capacity",
       kind: "int",
       required: true,
       default: 12,
+      get: (row) => row.capacity,
     },
   ],
 };
@@ -2618,26 +2686,26 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "9788d47b generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/class-type.server.ts": "c383dc9a generated",
-  "src/generated/class-type.ts": "d1abe89b generated",
+  "src/generated/class-type.ts": "c491e3fb generated",
   "src/generated/instructor.server.ts": "bc132487 generated",
-  "src/generated/instructor.ts": "7704c23c generated",
+  "src/generated/instructor.ts": "6fb56a61 generated",
   "src/generated/message.server.ts": "55bab0a2 generated",
-  "src/generated/message.ts": "f1ed9a8b generated",
+  "src/generated/message.ts": "c03e792b generated",
   "src/generated/pages.ts": "0b99e203 generated",
   "src/generated/session.server.ts": "2e5dea42 generated",
-  "src/generated/session.ts": "9f21e201 generated",
+  "src/generated/session.ts": "c50ccb81 generated",
   "src/kit/AppShell.tsx": "0a27222c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/Landing.tsx": "be72b7ac kit",
   "src/kit/ModelForm.tsx": "ffda492a kit",
-  "src/kit/ModelTable.tsx": "f81dd97a kit",
+  "src/kit/ModelTable.tsx": "d107e528 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "fa304b7e kit",
   "src/kit/access.ts": "c46c2136 kit",
-  "src/kit/format.ts": "7e680cd5 kit",
+  "src/kit/format.ts": "1519dc45 kit",
   "src/kit/formula.ts": "d94102ce kit",
-  "src/kit/model.ts": "0202c558 kit",
+  "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
@@ -3385,20 +3453,43 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { customers } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { customerAccess, customerData } from "./customer.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const customerUi: ModelUi = {
+/** Customer records as the kit reads them. */
+export type CustomerRow = typeof customers.$inferSelect & {
+  accountManager?: { id: string; name: unknown } | null;
+};
+
+export const customerUi: RecordUi<CustomerRow> = {
   model: "Customer",
   label: "Customer",
   pluralLabel: "Customers",
   titleField: "name",
   columns: ["name", "email", "phone", "segment", "creditLimit"],
   fields: [
-    { name: "name", label: "Name", kind: "string", required: true },
-    { name: "email", label: "Email", kind: "email", required: false },
-    { name: "phone", label: "Phone", kind: "phone", required: false },
+    {
+      name: "name",
+      label: "Name",
+      kind: "string",
+      required: true,
+      get: (row) => row.name,
+    },
+    {
+      name: "email",
+      label: "Email",
+      kind: "email",
+      required: false,
+      get: (row) => row.email,
+    },
+    {
+      name: "phone",
+      label: "Phone",
+      kind: "phone",
+      required: false,
+      get: (row) => row.phone,
+    },
     {
       name: "segment",
       label: "Segment",
@@ -3410,15 +3501,29 @@ export const customerUi: ModelUi = {
         { value: "government", label: "Government" },
       ],
       default: "smb",
+      get: (row) => row.segment,
     },
-    { name: "creditLimit", label: "Credit limit", kind: "money", required: false },
-    { name: "notes", label: "Notes", kind: "text", required: false },
+    {
+      name: "creditLimit",
+      label: "Credit limit",
+      kind: "money",
+      required: false,
+      get: (row) => row.creditLimit,
+    },
+    {
+      name: "notes",
+      label: "Notes",
+      kind: "text",
+      required: false,
+      get: (row) => row.notes,
+    },
     {
       name: "accountManagerId",
       label: "Account manager",
       kind: "user",
       required: false,
       relation: { key: "accountManager", titleField: "name" },
+      get: (row) => row.accountManager?.name ?? null,
     },
   ],
 };
@@ -3626,25 +3731,38 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orders } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { orderDefaults, withOrderFormulas } from "./order.formulas";
 import { orderAccess, orderData } from "./order.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const orderUi: ModelUi = {
+/** Order records as the kit reads them. */
+export type OrderRow = typeof orders.$inferSelect & {
+  customer?: { id: number; name: unknown } | null;
+  shippingCost?: unknown;
+};
+
+export const orderUi: RecordUi<OrderRow> = {
   model: "Order",
   label: "Order",
   pluralLabel: "Orders",
   titleField: "number",
   columns: ["number", "customerId", "status", "total", "shippingMethod"],
   fields: [
-    { name: "number", label: "Number", kind: "string", required: true },
+    {
+      name: "number",
+      label: "Number",
+      kind: "string",
+      required: true,
+      get: (row) => row.number,
+    },
     {
       name: "customerId",
       label: "Customer",
       kind: "relation",
       required: true,
       relation: { key: "customer", titleField: "name" },
+      get: (row) => row.customer?.name ?? null,
     },
     {
       name: "status",
@@ -3658,8 +3776,15 @@ export const orderUi: ModelUi = {
         { value: "cancelled", label: "Cancelled" },
       ],
       default: "draft",
+      get: (row) => row.status,
     },
-    { name: "total", label: "Total", kind: "money", required: true },
+    {
+      name: "total",
+      label: "Total",
+      kind: "money",
+      required: true,
+      get: (row) => row.total,
+    },
     {
       name: "shippingMethod",
       label: "Shipping method",
@@ -3670,6 +3795,7 @@ export const orderUi: ModelUi = {
         { value: "express", label: "Express" },
       ],
       default: "standard",
+      get: (row) => row.shippingMethod,
     },
     {
       name: "shippingCost",
@@ -3677,8 +3803,15 @@ export const orderUi: ModelUi = {
       kind: "money",
       required: false,
       computed: true,
+      get: (row) => row.shippingCost,
     },
-    { name: "placedAt", label: "Placed at", kind: "datetime", required: false },
+    {
+      name: "placedAt",
+      label: "Placed at",
+      kind: "datetime",
+      required: false,
+      get: (row) => row.placedAt,
+    },
   ],
   compute: withOrderFormulas,
   defaults: orderDefaults,
@@ -4640,24 +4773,24 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/customer.server.ts": "7fb04b7a generated",
-  "src/generated/customer.ts": "b1a7213b generated",
+  "src/generated/customer.ts": "7c02f974 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.server.ts": "a5bb4517 generated",
-  "src/generated/order.ts": "e6c406d7 generated",
+  "src/generated/order.ts": "653f41c7 generated",
   "src/generated/pages.ts": "96440a55 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/AppShell.tsx": "0a27222c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/ModelForm.tsx": "ffda492a kit",
-  "src/kit/ModelTable.tsx": "f81dd97a kit",
+  "src/kit/ModelTable.tsx": "d107e528 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "fa304b7e kit",
   "src/kit/access.ts": "c46c2136 kit",
-  "src/kit/format.ts": "7e680cd5 kit",
+  "src/kit/format.ts": "1519dc45 kit",
   "src/kit/formula.ts": "d94102ce kit",
-  "src/kit/model.ts": "0202c558 kit",
+  "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
@@ -5542,32 +5675,55 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { businessProfiles } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { businessProfileAccess, businessProfileData } from "./business-profile.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const businessProfileUi: ModelUi = {
+/** BusinessProfile records as the kit reads them. */
+export type BusinessProfileRow = typeof businessProfiles.$inferSelect;
+
+export const businessProfileUi: RecordUi<BusinessProfileRow> = {
   model: "BusinessProfile",
   label: "Business profile",
   pluralLabel: "Business profiles",
   titleField: "businessName",
   columns: ["businessName", "vatNumber", "iban", "paymentTermDays"],
   fields: [
-    { name: "businessName", label: "Business name", kind: "string", required: true },
-    { name: "vatNumber", label: "Vat number", kind: "string", required: false },
-    { name: "iban", label: "Iban", kind: "string", required: false },
+    {
+      name: "businessName",
+      label: "Business name",
+      kind: "string",
+      required: true,
+      get: (row) => row.businessName,
+    },
+    {
+      name: "vatNumber",
+      label: "Vat number",
+      kind: "string",
+      required: false,
+      get: (row) => row.vatNumber,
+    },
+    {
+      name: "iban",
+      label: "Iban",
+      kind: "string",
+      required: false,
+      get: (row) => row.iban,
+    },
     {
       name: "paymentTermDays",
       label: "Payment term days",
       kind: "int",
       required: true,
       default: 30,
+      get: (row) => row.paymentTermDays,
     },
     {
       name: "invoiceFooter",
       label: "Invoice footer",
       kind: "text",
       required: false,
+      get: (row) => row.invoiceFooter,
     },
   ],
 };
@@ -5739,21 +5895,48 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { clients } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { clientAccess, clientData } from "./client.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const clientUi: ModelUi = {
+/** Client records as the kit reads them. */
+export type ClientRow = typeof clients.$inferSelect;
+
+export const clientUi: RecordUi<ClientRow> = {
   model: "Client",
   label: "Client",
   pluralLabel: "Clients",
   titleField: "name",
   columns: ["name", "email", "vatNumber"],
   fields: [
-    { name: "name", label: "Name", kind: "string", required: true },
-    { name: "email", label: "Email", kind: "email", required: true },
-    { name: "address", label: "Address", kind: "text", required: false },
-    { name: "vatNumber", label: "Vat number", kind: "string", required: false },
+    {
+      name: "name",
+      label: "Name",
+      kind: "string",
+      required: true,
+      get: (row) => row.name,
+    },
+    {
+      name: "email",
+      label: "Email",
+      kind: "email",
+      required: true,
+      get: (row) => row.email,
+    },
+    {
+      name: "address",
+      label: "Address",
+      kind: "text",
+      required: false,
+      get: (row) => row.address,
+    },
+    {
+      name: "vatNumber",
+      label: "Vat number",
+      kind: "string",
+      required: false,
+      get: (row) => row.vatNumber,
+    },
   ],
 };
 
@@ -5969,28 +6152,53 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { invoices } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { invoiceDefaults, withInvoiceFormulas } from "./invoice.formulas";
 import { invoiceAccess, invoiceData } from "./invoice.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const invoiceUi: ModelUi = {
+/** Invoice records as the kit reads them. */
+export type InvoiceRow = typeof invoices.$inferSelect & {
+  client?: { id: number; name: unknown } | null;
+  total?: unknown;
+};
+
+export const invoiceUi: RecordUi<InvoiceRow> = {
   model: "Invoice",
   label: "Invoice",
   pluralLabel: "Invoices",
   titleField: "number",
   columns: ["number", "clientId", "issuedOn", "dueOn", "status"],
   fields: [
-    { name: "number", label: "Number", kind: "string", required: true },
+    {
+      name: "number",
+      label: "Number",
+      kind: "string",
+      required: true,
+      get: (row) => row.number,
+    },
     {
       name: "clientId",
       label: "Client",
       kind: "relation",
       required: true,
       relation: { key: "client", titleField: "name" },
+      get: (row) => row.client?.name ?? null,
     },
-    { name: "issuedOn", label: "Issued on", kind: "date", required: true },
-    { name: "dueOn", label: "Due on", kind: "date", required: true },
+    {
+      name: "issuedOn",
+      label: "Issued on",
+      kind: "date",
+      required: true,
+      get: (row) => row.issuedOn,
+    },
+    {
+      name: "dueOn",
+      label: "Due on",
+      kind: "date",
+      required: true,
+      get: (row) => row.dueOn,
+    },
     {
       name: "status",
       label: "Status",
@@ -6003,6 +6211,7 @@ export const invoiceUi: ModelUi = {
         { value: "overdue", label: "Overdue" },
       ],
       default: "draft",
+      get: (row) => row.status,
     },
     {
       name: "total",
@@ -6010,6 +6219,7 @@ export const invoiceUi: ModelUi = {
       kind: "money",
       required: false,
       computed: true,
+      get: (row) => row.total,
     },
   ],
   compute: withInvoiceFormulas,
@@ -6213,12 +6423,18 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { invoiceLines } from "#/db/schema";
 import { allows } from "#/kit/access";
-import type { ModelUi } from "#/kit/model";
+import type { RecordUi } from "#/kit/model";
 import { invoiceLineDefaults, withInvoiceLineFormulas } from "./invoice-line.formulas";
 import { invoiceLineAccess, invoiceLineData } from "./invoice-line.server";
 import { currentViewer } from "#/lib/viewer.server";
 
-export const invoiceLineUi: ModelUi = {
+/** InvoiceLine records as the kit reads them. */
+export type InvoiceLineRow = typeof invoiceLines.$inferSelect & {
+  invoice?: { id: number; number: unknown } | null;
+  amount?: unknown;
+};
+
+export const invoiceLineUi: RecordUi<InvoiceLineRow> = {
   model: "InvoiceLine",
   label: "Invoice line",
   pluralLabel: "Invoice lines",
@@ -6231,22 +6447,37 @@ export const invoiceLineUi: ModelUi = {
       kind: "relation",
       required: true,
       relation: { key: "invoice", titleField: "number" },
+      get: (row) => row.invoice?.number ?? null,
     },
-    { name: "description", label: "Description", kind: "string", required: true },
+    {
+      name: "description",
+      label: "Description",
+      kind: "string",
+      required: true,
+      get: (row) => row.description,
+    },
     {
       name: "quantity",
       label: "Quantity",
       kind: "decimal",
       required: true,
       default: 1,
+      get: (row) => row.quantity,
     },
-    { name: "unitPrice", label: "Unit price", kind: "money", required: true },
+    {
+      name: "unitPrice",
+      label: "Unit price",
+      kind: "money",
+      required: true,
+      get: (row) => row.unitPrice,
+    },
     {
       name: "amount",
       label: "Amount",
       kind: "money",
       required: false,
       computed: true,
+      get: (row) => row.amount,
     },
   ],
   compute: withInvoiceLineFormulas,
@@ -7555,16 +7786,16 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/access.test.ts": "68e71381 generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/business-profile.server.ts": "06049f39 generated",
-  "src/generated/business-profile.ts": "6df9a27c generated",
+  "src/generated/business-profile.ts": "605d6bc6 generated",
   "src/generated/client.server.ts": "d8fb5205 generated",
-  "src/generated/client.ts": "a0b7df97 generated",
+  "src/generated/client.ts": "d082ff8a generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.server.ts": "8f87b1ca generated",
-  "src/generated/invoice-line.ts": "9ef2caee generated",
+  "src/generated/invoice-line.ts": "9d00599e generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.server.ts": "70c90a06 generated",
-  "src/generated/invoice.ts": "2ce63dc6 generated",
+  "src/generated/invoice.ts": "ee30e1f4 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/kit/AppShell.tsx": "0a27222c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
@@ -7572,15 +7803,15 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/Landing.tsx": "be72b7ac kit",
   "src/kit/ModelForm.tsx": "ffda492a kit",
-  "src/kit/ModelTable.tsx": "f81dd97a kit",
+  "src/kit/ModelTable.tsx": "d107e528 kit",
   "src/kit/Onboarding.tsx": "6e7938a3 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "fa304b7e kit",
   "src/kit/access.ts": "c46c2136 kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/format.ts": "7e680cd5 kit",
+  "src/kit/format.ts": "1519dc45 kit",
   "src/kit/formula.ts": "d94102ce kit",
-  "src/kit/model.ts": "0202c558 kit",
+  "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/lib/auth-client.ts": "de9c8331 kit",

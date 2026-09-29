@@ -49,6 +49,18 @@ export interface ModelUi {
   defaults?: Record<string, (row: Record<string, unknown>) => unknown>;
 }
 
+/** A stored field: also how to read it from a record, typed where its model is generated. */
+export interface RecordFieldUi<R> extends FieldUi {
+  /** Its value in a record; for a reference, the related record's title. */
+  get: (row: R) => unknown;
+}
+
+/** A stored model's description (src/generated/<model>.ts): its fields read records of type R. */
+export interface RecordUi<R> extends ModelUi {
+  model: string;
+  fields: RecordFieldUi<R>[];
+}
+
 export interface AppUi {
   name: string;
   currency: string;

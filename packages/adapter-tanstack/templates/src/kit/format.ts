@@ -1,14 +1,9 @@
 // Smithable app kit: converts stored values to display text and to form input text, and back.
-import type { AppUi, FieldUi } from "./model";
+import type { AppUi, FieldUi, RecordFieldUi } from "./model";
 
-/** The value to show for a field of a row: for a reference, the related record's title. */
-export function displayValue(field: FieldUi, row: Record<string, unknown>): unknown {
-  if (!field.relation) return row[field.name];
-  const related = row[field.relation.key] as Record<string, unknown> | null | undefined;
-  if (!related) return null;
-  return field.relation.titleField === "id"
-    ? `#${String(related.id)}`
-    : related[field.relation.titleField];
+/** The value to show for a field of a record: for a reference, the related record's title. */
+export function displayValue<R>(field: RecordFieldUi<R>, row: R): unknown {
+  return field.get(row);
 }
 
 /** Text for showing a stored value in tables and headings. */

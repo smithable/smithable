@@ -304,7 +304,14 @@ export function join(route: string, segment: string): string {
 }
 
 /** A TypeScript literal for plain data, formatted like Biome would. */
+/** Code written as is inside a literal (a function, a reference), not as data. */
+class Code {
+  constructor(readonly text: string) {}
+}
+export const code = (text: string) => new Code(text);
+
 export function literal(value: unknown, indent = ""): string {
+  if (value instanceof Code) return value.text;
   if (Array.isArray(value)) {
     const inline = `[${value.map((v) => literal(v)).join(", ")}]`;
     if (inline.length <= 80 && !inline.includes("\n")) return inline;
