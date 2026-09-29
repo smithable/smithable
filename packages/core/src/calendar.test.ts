@@ -79,3 +79,46 @@ test("addCalendarPage adds one to the main menu, naming the start when asked", (
     "calendar:\n      model: Session\n      starts: startsAt",
   );
 });
+
+test("a renamed field follows into the calendar; removing one it uses is refused, naming it (review)", () => {
+  const long = spec(
+    "{ model: Session, starts: startsAt, duration: classType.durationMinutes, title: classType }",
+  );
+  const renamed = applyOperation({ spec: long }, "renameField", {
+    model: "ClassType",
+    from: "durationMinutes",
+    to: "minutes",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toContain("duration: classType.minutes");
+  const start = applyOperation({ spec: long }, "renameField", {
+    model: "Session",
+    from: "startsAt",
+    to: "beginsAt",
+  });
+  if (!start.ok) throw new Error(start.message);
+  expect(start.files.spec).toContain("starts: beginsAt");
+  const ref = applyOperation({ spec: long }, "renameField", {
+    model: "Session",
+    from: "classType",
+    to: "kind",
+  });
+  if (!ref.ok) throw new Error(ref.message);
+  expect(ref.files.spec).toContain("duration: kind.durationMinutes");
+  expect(ref.files.spec).toContain("title: kind");
+  // The short form names no field: a renamed start is inferred again.
+  const short = applyOperation({ spec: spec("Session") }, "renameField", {
+    model: "Session",
+    from: "startsAt",
+    to: "at",
+  });
+  expect(short.ok).toBe(true);
+  for (const [model, field] of [
+    ["ClassType", "durationMinutes"],
+    ["Session", "startsAt"],
+  ] as const)
+    expect(applyOperation({ spec: long }, "removeField", { model, field })).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("schedule calendar uses"),
+    });
+});
