@@ -53,8 +53,25 @@ export type OperationResult =
     }
   | { ok: false; message: string; diagnostics: Diagnostic[] };
 
-export function findOperation(name: string): AnyOperation | undefined {
-  return OPERATIONS.find((op) => op.name === name);
+/**
+ * The operations of a project: the built-in ones and its plugins'. A plugin operation whose name
+ * a built-in (or an earlier plugin) already uses is offered as "<key>:<name>".
+ */
+export function operationsFor(plugins: readonly SpecPlugin[] = []): AnyOperation[] {
+  const all = [...OPERATIONS];
+  for (const plugin of plugins)
+    for (const op of plugin.operations ?? [])
+      all.push(
+        all.some((o) => o.name === op.name) ? { ...op, name: `${plugin.key}:${op.name}` } : op,
+      );
+  return all;
+}
+
+export function findOperation(
+  name: string,
+  plugins?: readonly SpecPlugin[],
+): AnyOperation | undefined {
+  return operationsFor(plugins).find((op) => op.name === name);
 }
 
 /**
@@ -71,9 +88,9 @@ export function applyOperation(
     message,
     diagnostics,
   });
-  const op = findOperation(name);
+  const op = findOperation(name, files.plugins);
   if (!op) {
-    const names = OPERATIONS.map((o) => o.name);
+    const names = operationsFor(files.plugins).map((o) => o.name);
     return fail(
       `Unknown operation "${name}". ${didYouMean(name, names) ?? `Available: ${names.join(", ")}.`}`,
     );

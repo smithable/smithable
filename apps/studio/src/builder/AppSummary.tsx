@@ -209,7 +209,7 @@ function Part({
           id: "local",
           usage: "Read without AI",
           operations: suggestion.operations.map(({ op, args }) => {
-            const operation = findOperation(op);
+            const operation = findOperation(op, spec.plugins);
             return {
               op,
               args,

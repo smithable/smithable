@@ -4,6 +4,7 @@ import {
   type AuthIR,
   type ContentIR,
   type Diagnostic,
+  resolvePlugin,
   type SpecIR,
   type SpecPlugin,
   validateAuth,
@@ -58,13 +59,15 @@ function usePlugins(declared: Project["plugins"] = []): SpecPlugin[] | undefined
   useEffect(() => {
     let current = true;
     void Promise.all(
-      (JSON.parse(key) as Project["plugins"]).map(
-        async (p) =>
+      (JSON.parse(key) as Project["plugins"]).map(async (p) =>
+        resolvePlugin(
           (
             (await import(/* @vite-ignore */ `/api/plugins/${p.name}.mjs?v=${p.version}`)) as {
-              default: SpecPlugin;
+              default: unknown;
             }
           ).default,
+          p.name,
+        ),
       ),
     ).then((plugins) => current && setLoaded({ key, plugins }));
     return () => {

@@ -6,8 +6,8 @@ import {
   type Effect,
   findOperation,
   formatDiagnostic,
-  OPERATIONS,
   type OperationArgs,
+  operationsFor,
   parseOperationArgs,
   type SpecIR,
   storageOf,
@@ -43,10 +43,11 @@ export function op(
   values: string[],
   flags: OpFlags,
 ): Promise<number> | number {
-  const operation = name === undefined ? undefined : findOperation(name);
+  const plugins = loadPlugins(dir);
+  const operation = name === undefined ? undefined : findOperation(name, plugins);
   if (!operation) {
     io.err(`${name ? `Unknown operation "${name}". ` : ""}Available operations:\n`);
-    for (const o of OPERATIONS)
+    for (const o of operationsFor(plugins))
       io.err(`  ${o.name} ${o.positional.map((p) => `<${p}>`).join(" ")}  ${o.summary}\n`);
     return 2;
   }
@@ -65,7 +66,8 @@ export async function runOperation(
   flags: OpFlags,
 ): Promise<number> {
   const started = Date.now();
-  const operation = findOperation(name);
+  const plugins = loadPlugins(dir);
+  const operation = findOperation(name, plugins);
   if (!operation) {
     io.err(`Unknown operation "${name}".\n`);
     return 2;
@@ -90,7 +92,7 @@ export async function runOperation(
     ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
     ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
     ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
-    plugins: loadPlugins(dir),
+    plugins,
   };
   const result = applyOperation(files, operation.name, args);
   if (!result.ok) {
