@@ -109,12 +109,19 @@ export function applyOperation(
   let effects: Effect[];
   try {
     effects = op.apply(editors, args, before.ir);
-    // The companions follow what the operation did elsewhere (a field renamed, a page removed).
-    for (const effect of effects)
+    // The other sections and the companions follow what the operation did (a field renamed, a
+    // page removed); one of them may refuse, when something it owns still needs what went away.
+    for (const effect of effects) {
+      for (const s of SECTIONS) {
+        const refused = s.follow?.(editors.spec, effect, before.ir);
+        if (refused) return fail(refused.refusal);
+      }
       for (const c of COMPANIONS) {
         const editor = editors[c.key];
-        if (editor) c.follow?.(editor, effect, before.ir);
+        const refused = editor && c.follow?.(editor, effect, before.ir);
+        if (refused) return fail(refused.refusal);
       }
+    }
   } catch (error) {
     // An edit the files cannot take is the operation failing too, not a crash.
     if (error instanceof OperationError || error instanceof EditError) return fail(error.message);
