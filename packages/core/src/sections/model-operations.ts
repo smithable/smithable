@@ -1,7 +1,13 @@
 import type { YamlEditor } from "../edit.js";
 import { renameInFormula } from "../formula.js";
 import { type FieldIR, type ModelIR, pageModel, type SpecIR, storageOf, typeKey } from "../ir.js";
-import { type AnyOperation, type Editors, type Operation, OperationError } from "../operation.js";
+import {
+  type AnyOperation,
+  type Editors,
+  type Operation,
+  OperationError,
+  refTo,
+} from "../operation.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
 
@@ -83,7 +89,7 @@ const addField: Operation<{ model: string; field: string; type: string }> = {
     required: ["model", "field", "type"],
     additionalProperties: false,
     properties: {
-      model: name,
+      model: refTo({ ref: "model", label: "Kind of record" }, name),
       field: { ...name, description: "camelCase name, e.g. phone." },
       type: { ...name, description: 'Field shorthand, e.g. "phone", "string!", "draft | sent".' },
     },
@@ -109,8 +115,8 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
     required: ["model", "field", "type"],
     additionalProperties: false,
     properties: {
-      model: name,
-      field: name,
+      model: refTo({ ref: "model", label: "Kind of record" }, name),
+      field: refTo({ ref: "field", model: "model", label: "Field" }, name),
       type: { ...name, description: 'Field shorthand, e.g. "email! unique".' },
     },
   },
@@ -149,7 +155,11 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
     type: "object",
     required: ["model", "from", "to"],
     additionalProperties: false,
-    properties: { model: name, from: name, to: name },
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }, name),
+      from: refTo({ ref: "field", model: "model", label: "Field" }, name),
+      to: name,
+    },
   },
   positional: ["model", "from", "to"],
   describe: ({ model, from, to }) => `Rename ${model}.${from} to ${to}`,
@@ -175,7 +185,10 @@ const removeField: Operation<{ model: string; field: string }> = {
     type: "object",
     required: ["model", "field"],
     additionalProperties: false,
-    properties: { model: name, field: name },
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }, name),
+      field: refTo({ ref: "field", model: "model", label: "Field" }, name),
+    },
   },
   positional: ["model", "field"],
   describe: ({ model, field }) => `Remove field ${field} from ${model}`,

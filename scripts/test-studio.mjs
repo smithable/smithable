@@ -391,8 +391,9 @@ try {
   await step("any operation can be applied from a form built from its schema", async () => {
     await page.getByRole("tab", { name: "Operation" }).click();
     await page.getByLabel("Operation").selectOption("setSearch");
-    await page.getByLabel("page", { exact: true }).fill("orders");
-    await page.getByLabel("fields", { exact: true }).fill("number");
+    // Names in the spec are chosen, not typed: the page, then its model's fields.
+    await page.getByLabel("page", { exact: true }).selectOption("orders");
+    await page.getByRole("group", { name: "fields" }).getByLabel("Number").check();
     await page.getByRole("button", { name: "Apply setSearch" }).click();
     await status.getByText("Search orders by number").waitFor({ timeout: 60000 });
   });

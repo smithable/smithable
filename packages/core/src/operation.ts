@@ -29,6 +29,26 @@ export type Effect =
 export type OperationArgs = { [key: string]: unknown };
 
 /**
+ * What an argument names in the spec, as its schema's `x-smithable` annotation, so forms can
+ * offer the names there are: a field of the model (or the page's model) another argument names,
+ * a choice value of a field, a landing section of a page. `label` is how Builder asks for it.
+ */
+export type ArgRef = { label?: string } & (
+  | { ref: "model" | "page" | "role" }
+  | { ref: "field"; model: string }
+  | { ref: "field"; page: string }
+  | { ref: "choiceValue"; model: string; field: string }
+  | { ref: "section"; page: string }
+);
+
+/** A string argument (or, with `list`, a list of them) that names something in the spec. */
+export function refTo(ref: ArgRef, schema: JsonSchema = {}, list = false): JsonSchema {
+  return list
+    ? { type: "array", items: { type: "string" }, ...schema, "x-smithable": ref }
+    : { type: "string", ...schema, "x-smithable": ref };
+}
+
+/**
  * A semantic operation: the only way to change the spec programmatically (ARCHITECTURE §4).
  * Registered by the spec section it belongs to. Its schema drives the CLI, MCP tools and
  * constrained AI output alike.

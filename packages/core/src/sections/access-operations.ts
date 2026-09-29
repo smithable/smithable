@@ -1,6 +1,6 @@
 import { ACCESS_OPERATIONS } from "../ir.js";
 import { humanize, plural } from "../naming.js";
-import { type AnyOperation, type Operation, OperationError } from "../operation.js";
+import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { didYouMean } from "../suggest.js";
 
 const VERBS: Record<string, string> = {
@@ -31,12 +31,14 @@ const setAccess: Operation<{ target: string; roles?: string[] }> = {
         type: "string",
         description: 'e.g. "model:Customer.delete", "page:class-types" or "action:mergeCustomers".',
       },
-      roles: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          'Roles from smithable.auth.yml; for models also "owner". None returns to the default.',
-      },
+      roles: refTo(
+        { ref: "role", label: "Roles" },
+        {
+          description:
+            'Roles from smithable.auth.yml; for models also "owner". None returns to the default.',
+        },
+        true,
+      ),
     },
   },
   positional: ["target", "...roles"],
