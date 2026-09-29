@@ -12,6 +12,12 @@ export interface CompletionRequest {
   user: string;
   /** The answer must be JSON matching this schema (constrained decoding where supported). */
   schema: object;
+  /**
+   * A simpler schema for a server that refuses `schema` (JSON Schema support differs: some
+   * take a full argument schema per operation, some only an enum of names). A provider that
+   * had to fall back keeps using the simpler form.
+   */
+  fallbackSchema?: object;
 }
 
 export interface Completion {
@@ -50,13 +56,15 @@ export interface OpenAICompatibleOptions {
  * and most EU hosts. The answer is constrained to the JSON schema where the server supports it.
  */
 export function openAICompatible(options: OpenAICompatibleOptions): Provider {
+  // Whether this server took the strict answer schema; unknown until the first call.
+  let strict: boolean | undefined;
   return {
     name: options.name,
     tier: options.tier,
     location: options.location,
     price: options.price ?? { input: 0, output: 0 },
-    async complete({ system, user, schema }) {
-      const post = () =>
+    async complete({ system, user, schema, fallbackSchema }) {
+      const post = (answerSchema: object) =>
         fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
           method: "POST",
           headers: {
@@ -70,15 +78,26 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
               { role: "system", content: system },
               { role: "user", content: user },
             ],
-            response_format: { type: "json_schema", json_schema: { name: "answer", schema } },
+            response_format: {
+              type: "json_schema",
+              json_schema: { name: "answer", schema: answerSchema },
+            },
           }),
         });
+      let current = strict === false && fallbackSchema ? fallbackSchema : schema;
+      let response = await post(current);
+      // A 400 for the strict schema: the server's JSON Schema support stops short of it. The
+      // simpler schema is tried once, and kept for this server.
+      if (response.status === 400 && fallbackSchema && current !== fallbackSchema) {
+        strict = false;
+        current = fallbackSchema;
+        response = await post(current);
+      } else if (response.ok && strict === undefined) strict = true;
       // Hosted APIs limit requests per second: wait as long as they ask (or 1, 2, 4 s), then retry.
-      let response = await post();
       for (let retry = 0; response.status === 429 && retry < 3; retry++) {
         const after = Number(response.headers.get("retry-after"));
         await new Promise((r) => setTimeout(r, after > 0 ? after * 1000 : 1000 * 2 ** retry));
-        response = await post();
+        response = await post(current);
       }
       if (!response.ok)
         throw new Error(`${options.name} answered ${response.status}: ${await response.text()}`);
