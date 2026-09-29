@@ -165,8 +165,8 @@ export function seedModule(ir: SpecIR): string {
         const value = sampleLiteral(field, row[field.name]);
         if (field !== start || value === "null") return `${dataKey(field)}: ${value}`;
         return field.type.kind === "scalar" && field.type.name === "date"
-          ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).toISOString().slice(0, 10)`
-          : `${dataKey(field)}: aroundToday(${value}, ${i % 2})`;
+          ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).slice(0, 10)`
+          : `${dataKey(field)}: instantOf(aroundToday(${value}, ${i % 2}), app.timeZone)`;
       });
       return `    { ${entries.join(", ")} },`;
     });
@@ -182,15 +182,19 @@ ${rows.join("\n")}
 import { db } from "./index";
 ${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${
   ir.pages.some((p) => p.pattern.kind === "calendar")
-    ? `
-/** A sample's moment moved to this week (0) or the next (1), on the same weekday at the same time. */
-function aroundToday(sample: Date, week: number): Date {
-  const now = new Date();
-  const monday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7));
+    ? `import { app } from "#/generated/app";
+import { instantOf, wallTime } from "#/kit/zoned";
+
+/**
+ * A sample moved to this week (0) or the next (1) in the app's time zone, as a wall time
+ * ("2026-09-30T09:00"): the same weekday, and the clock time the sample is written with.
+ */
+function aroundToday(sample: Date, week: number): string {
+  const today = Date.parse(\`\${wallTime(new Date(), app.timeZone).slice(0, 10)}T00:00:00Z\`);
+  const monday = today - ((new Date(today).getUTCDay() + 6) % 7) * 86_400_000;
   const day = (sample.getUTCDay() + 6) % 7;
-  const moved = new Date(monday + (week * 7 + day) * 86_400_000);
-  moved.setUTCHours(sample.getUTCHours(), sample.getUTCMinutes(), 0, 0);
-  return moved;
+  const moved = new Date(monday + (week * 7 + day) * 86_400_000).toISOString().slice(0, 10);
+  return \`\${moved}T\${sample.toISOString().slice(11, 16)}\`;
 }
 `
     : ""

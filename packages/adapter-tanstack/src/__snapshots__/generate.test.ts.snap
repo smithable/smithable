@@ -288,15 +288,19 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 // Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 import { db } from "./index";
 import { classTypes, instructors, sessions, messages } from "./schema";
+import { app } from "#/generated/app";
+import { instantOf, wallTime } from "#/kit/zoned";
 
-/** A sample's moment moved to this week (0) or the next (1), on the same weekday at the same time. */
-function aroundToday(sample: Date, week: number): Date {
-  const now = new Date();
-  const monday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7));
+/**
+ * A sample moved to this week (0) or the next (1) in the app's time zone, as a wall time
+ * ("2026-09-30T09:00"): the same weekday, and the clock time the sample is written with.
+ */
+function aroundToday(sample: Date, week: number): string {
+  const today = Date.parse(\`\${wallTime(new Date(), app.timeZone).slice(0, 10)}T00:00:00Z\`);
+  const monday = today - ((new Date(today).getUTCDay() + 6) % 7) * 86_400_000;
   const day = (sample.getUTCDay() + 6) % 7;
-  const moved = new Date(monday + (week * 7 + day) * 86_400_000);
-  moved.setUTCHours(sample.getUTCHours(), sample.getUTCMinutes(), 0, 0);
-  return moved;
+  const moved = new Date(monday + (week * 7 + day) * 86_400_000).toISOString().slice(0, 10);
+  return \`\${moved}T\${sample.toISOString().slice(11, 16)}\`;
 }
 
 if (db.select().from(classTypes).limit(1).all().length === 0) {
@@ -332,14 +336,14 @@ if (db.select().from(instructors).limit(1).all().length === 0) {
 if (db.select().from(sessions).limit(1).all().length === 0) {
   db.insert(sessions)
     .values([
-    { classTypeId: 1, instructorId: 1, startsAt: aroundToday(new Date("2026-09-01T08:00:00.000Z"), 0), capacity: 8 },
-    { classTypeId: 2, instructorId: 2, startsAt: aroundToday(new Date("2026-09-02T10:00:00.000Z"), 1), capacity: 12 },
-    { classTypeId: 3, instructorId: 3, startsAt: aroundToday(new Date("2026-09-03T12:00:00.000Z"), 0), capacity: 16 },
-    { classTypeId: 4, instructorId: 4, startsAt: aroundToday(new Date("2026-09-04T08:00:00.000Z"), 1), capacity: 8 },
-    { classTypeId: 5, instructorId: 5, startsAt: aroundToday(new Date("2026-09-05T10:00:00.000Z"), 0), capacity: 12 },
-    { classTypeId: 6, instructorId: 6, startsAt: aroundToday(new Date("2026-09-06T12:00:00.000Z"), 1), capacity: 16 },
-    { classTypeId: 7, instructorId: 7, startsAt: aroundToday(new Date("2026-09-07T08:00:00.000Z"), 0), capacity: 8 },
-    { classTypeId: 8, instructorId: 8, startsAt: aroundToday(new Date("2026-09-08T10:00:00.000Z"), 1), capacity: 12 },
+    { classTypeId: 1, instructorId: 1, startsAt: instantOf(aroundToday(new Date("2026-09-01T08:00:00.000Z"), 0), app.timeZone), capacity: 8 },
+    { classTypeId: 2, instructorId: 2, startsAt: instantOf(aroundToday(new Date("2026-09-02T10:00:00.000Z"), 1), app.timeZone), capacity: 12 },
+    { classTypeId: 3, instructorId: 3, startsAt: instantOf(aroundToday(new Date("2026-09-03T12:00:00.000Z"), 0), app.timeZone), capacity: 16 },
+    { classTypeId: 4, instructorId: 4, startsAt: instantOf(aroundToday(new Date("2026-09-04T08:00:00.000Z"), 1), app.timeZone), capacity: 8 },
+    { classTypeId: 5, instructorId: 5, startsAt: instantOf(aroundToday(new Date("2026-09-05T10:00:00.000Z"), 0), app.timeZone), capacity: 12 },
+    { classTypeId: 6, instructorId: 6, startsAt: instantOf(aroundToday(new Date("2026-09-06T12:00:00.000Z"), 1), app.timeZone), capacity: 16 },
+    { classTypeId: 7, instructorId: 7, startsAt: instantOf(aroundToday(new Date("2026-09-07T08:00:00.000Z"), 0), app.timeZone), capacity: 8 },
+    { classTypeId: 8, instructorId: 8, startsAt: instantOf(aroundToday(new Date("2026-09-08T10:00:00.000Z"), 1), app.timeZone), capacity: 12 },
     ])
     .run();
 }
@@ -3139,7 +3143,12 @@ import { classTypeData } from "#/generated/class-type.server";
 
 /** The sessions whose start falls in the range shown, among those the viewer may read. */
 const getRange = createServerFn()
-  .validator(z.object({ from: z.string().max(40), to: z.string().max(40) }))
+  // A real range, and no longer than a month view needs (six weeks and a day on each side).
+  .validator(
+    z
+      .object({ from: z.iso.datetime(), to: z.iso.datetime() })
+      .refine((r) => Date.parse(r.from) < Date.parse(r.to) && Date.parse(r.to) - Date.parse(r.from) <= 44 * 86_400_000, "The range is not a week or a month."),
+  )
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const rows = await sessionData.list(viewer, and(gte(sessions.startsAt, new Date(data.from)), lt(sessions.startsAt, new Date(data.to))));
@@ -3152,7 +3161,8 @@ const getRange = createServerFn()
         end: new Date(row.startsAt.getTime() + (minutes.get(row.classTypeId) ?? 60) * 60_000),
         title: String(row.classType?.name ?? ""),
       })),
-      canCreate: allows(sessionAccess.create, viewer),
+      // Records are made on their page: the viewer must be able to open it, too.
+      canCreate: allows(sessionAccess.create, viewer) && allows(pageAccess["sessions"], viewer),
       canOpen: allows(pageAccess["sessions"], viewer),
     };
   });
@@ -3707,7 +3717,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "b01c7331 generated",
-  "src/db/seed.ts": "603e15e6 generated",
+  "src/db/seed.ts": "acdd5f60 generated",
   "src/generated/access.test.ts": "9788d47b generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/class-type.server.ts": "80c04ae4 generated",
@@ -3736,7 +3746,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/zoned.ts": "4779726d kit",
+  "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
   "src/lib/auth.ts": "01e86383 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -3768,7 +3778,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/messages/$id.tsx": "a7acfa05 generated",
   "src/routes/messages/index.tsx": "ad1eba19 generated",
   "src/routes/messages/new.tsx": "d2439c64 generated",
-  "src/routes/schedule/index.tsx": "fbbb68d6 generated",
+  "src/routes/schedule/index.tsx": "f2afe719 generated",
   "src/routes/sessions/$id.tsx": "242ccb73 generated",
   "src/routes/sessions/index.tsx": "66e83ebc generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
@@ -6369,7 +6379,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/zoned.ts": "4779726d kit",
+  "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
   "src/lib/auth.ts": "b166d3d9 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -9521,7 +9531,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/zoned.ts": "4779726d kit",
+  "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
   "src/lib/auth.ts": "65f51832 generated",
   "src/lib/utils.ts": "3e9dc081 kit",

@@ -110,7 +110,12 @@ export function calendarRoute(page: CalendarPage, { ir, t }: GenContext): string
   return `${HEADER}${imports.render()}
 /** The ${n.pluralLabel.toLowerCase()} whose start falls in the range shown, among those the viewer may read. */
 const getRange = createServerFn()
-  .validator(z.object({ from: z.string().max(40), to: z.string().max(40) }))
+  // A real range, and no longer than a month view needs (six weeks and a day on each side).
+  .validator(
+    z
+      .object({ from: z.iso.datetime(), to: z.iso.datetime() })
+      .refine((r) => Date.parse(r.from) < Date.parse(r.to) && Date.parse(r.to) - Date.parse(r.from) <= 44 * 86_400_000, "The range is not a week or a month."),
+  )
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const rows = await ${n.data}.list(viewer, ${range});${lengths}
@@ -121,7 +126,8 @@ const getRange = createServerFn()
         end: ${itemEnd},
         title: ${title},
       })),
-      canCreate: ${opens ? `allows(${n.access}.create, viewer)` : "false"},
+      // Records are made on their page: the viewer must be able to open it, too.
+      canCreate: ${opens && opensId ? `allows(${n.access}.create, viewer) && allows(pageAccess[${JSON.stringify(opensId)}], viewer)` : "false"},
       canOpen: ${opensId ? `allows(pageAccess[${JSON.stringify(opensId)}], viewer)` : "false"},
     };
   });
