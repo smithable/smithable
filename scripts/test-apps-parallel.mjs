@@ -1,6 +1,7 @@
 // Runs `pnpm test:apps` for every example at the same time, one process each with its own
-// ports, and prints each example's output as a whole when it is done. Same checks as
-// scripts/test-apps.mjs, which this runs; about as long as the slowest example.
+// ports, and prints each example's lines as they come, prefixed with its name, so a run that
+// stops shows where. Same checks as scripts/test-apps.mjs, which this runs; about as long as
+// the slowest example. Stopping this stops them, and they stop their servers.
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -10,6 +11,13 @@ const examples = readdirSync(join(repo, "examples"), { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => e.name);
 
+const children = new Set();
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
+  process.on(signal, () => {
+    for (const child of children) child.kill(signal);
+    process.exit(130);
+  });
+const width = Math.max(...examples.map((e) => e.length));
 const results = await Promise.all(
   examples.map(
     (example, i) =>
@@ -18,11 +26,21 @@ const results = await Promise.all(
           cwd: repo,
           env: { ...process.env, TEST_APPS_PORT: String(4400 + i * 10) },
         });
-        let output = "";
-        child.stdout.on("data", (d) => (output += d));
-        child.stderr.on("data", (d) => (output += d));
+        children.add(child);
+        // Each line as it comes, so a stuck run shows which step it is in.
+        const prefix = `${example.padEnd(width)} | `;
+        let pending = "";
+        const write = (chunk) => {
+          pending += chunk;
+          const lines = pending.split("\n");
+          pending = lines.pop() ?? "";
+          for (const line of lines) process.stdout.write(`${prefix}${line}\n`);
+        };
+        child.stdout.on("data", write);
+        child.stderr.on("data", write);
         child.on("close", (code) => {
-          process.stdout.write(output);
+          if (pending) process.stdout.write(`${prefix}${pending}\n`);
+          children.delete(child);
           resolve({ example, code });
         });
       }),
