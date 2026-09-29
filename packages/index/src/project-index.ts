@@ -438,6 +438,8 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
   onboarding: (p) =>
     `onboarding: fills the viewer's ${p.model} record in steps ${p.steps.map((s) => s.name).join(", ")}`,
   users: () => "users: invite people by email with a role, change roles, remove users",
+  calendar: (p) =>
+    `calendar of ${p.model} placed by ${p.starts}${p.ends ? ` to ${p.ends}` : p.duration ? ` for ${p.duration} minutes` : ""}`,
   data: (p) =>
     `data: ${p.all ? "every model" : p.models.join(", ")}, their records to find, open, change and delete`,
 };

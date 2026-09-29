@@ -131,6 +131,18 @@ export interface PageIR extends SemanticText {
     | { kind: "settings"; model: string }
     | { kind: "onboarding"; model: string; steps: OnboardingStep[] }
     | { kind: "users"; mode: "manage" }
+    /**
+     * A model's records by date: `starts` places them; `ends` (a field) or `duration` (minutes, a
+     * field or "reference.field") sizes them; `title` (a field or a reference) names the blocks.
+     */
+    | {
+        kind: "calendar";
+        model: string;
+        starts: string;
+        ends?: string;
+        duration?: string;
+        title?: string;
+      }
     /** An admin view of models: `data: all` (every model, in spec order) or a list of them. */
     | { kind: "data"; models: string[]; all: boolean };
   /** Actions offered on the page, e.g. a "Merge customers" button. */

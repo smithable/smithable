@@ -89,6 +89,12 @@ describe("the seven benchmark tasks", () => {
       matchRequest(spec, "Add a page for orders, and show it in the menu.", ROLES)?.operations,
     ).toEqual([{ op: "addPage", args: { page: "orders", model: "Order" } }]);
   });
+  test("Add a calendar for a model", () => {
+    const calendar = [{ op: "addCalendarPage", args: { page: "calendar", model: "Customer" } }];
+    expect(ops("Add a calendar for customers")).toEqual(calendar);
+    expect(ops("Show customers in a calendar")).toEqual(calendar);
+  });
+
   test("Add an admin page, for every model or some", () => {
     expect(ops("Add an admin page")).toEqual([{ op: "addDataPage", args: {} }]);
     expect(ops("Add a page to manage all data")).toEqual([{ op: "addDataPage", args: {} }]);
