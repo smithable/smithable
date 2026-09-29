@@ -6,6 +6,7 @@ import {
   type ModelIR,
   type PageIR,
 } from "./ir.js";
+import { patternInfo } from "./patterns.js";
 
 /**
  * Who may do something: anyone (public), signed-in users with one of `roles`, and, for a
@@ -50,12 +51,16 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
   return result;
 }
 
-/** Pages need sign-in unless public; `access` narrows them to roles. */
+/**
+ * Pages need sign-in unless public; `access` narrows them to roles, and a pattern may have its
+ * own default (a users page is for admins).
+ */
 export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
   const everyone = auth.roles.map((r) => r.name);
+  const roles = page.access ?? patternInfo(page).access ?? everyone;
   return {
     public: auth.public.pages.includes(page.id),
-    roles: auth.signIn === "none" ? [] : withAdmin(page.access ?? everyone, everyone),
+    roles: auth.signIn === "none" ? [] : withAdmin(roles, everyone),
     owner: false,
   };
 }
