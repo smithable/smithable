@@ -1,0 +1,51 @@
+# Smithable
+
+Smithable is an app builder for people who have never written code and for developers who want to move faster. You describe a web application in plain language or through a visual editor. Smithable turns it into a compact, technology-neutral specification, `smithable.yml`, and generates an ordinary full-stack web application from it.
+
+The difference from prompt-to-code builders: **Smithable understands the application.** Routine changes are made by deterministic generators, not by an AI rewriting code. Adding a phone number to customers is one operation, in milliseconds, for no tokens; a request that needs interpretation goes to the cheapest capable model with a small slice of the spec. Changes don't break the app, most of them cost nothing, and the generated code stays clean enough for a developer to take over. Why this matters and who it is for: [docs/VISION.md](docs/VISION.md).
+
+**Status:** private beta. The open-source engine, CLI, Studio and MCP server in this repository work on their own; the hosted service lives in a separate repository and builds on them. The licence (Apache-2.0 for the engine, 0BSD for the app kit) is pending legal review before the public release.
+
+## What a generated app is
+
+A [TanStack Start](https://tanstack.com/start) app with React, Tailwind, shadcn/ui, [Drizzle](https://orm.drizzle.team) and SQLite, written the way a developer who knows that stack would write it. It has no dependency on Smithable at build time or run time, ships as a container with a `/data` volume, carries its own tests, and can be detached at any time.
+
+## Try it
+
+Node 24 and pnpm (the version pinned in `package.json`), then:
+
+```sh
+pnpm install
+pnpm build
+node packages/cli/dist/bin.js new my-crm        # a CRM from the starter, with sample data
+cd my-crm && node ../packages/cli/dist/bin.js studio   # Builder and Studio in the browser
+```
+
+From inside a project, the everyday commands:
+
+```sh
+smithable op addField Customer phone phone     # a deterministic change: spec, migration, forms, tables
+smithable ask "Customers should have a website" # in your own words; confirmed before it applies
+smithable undo                                  # takes back the last change, database included
+smithable mcp                                   # the same operations as tools for Claude Code, Cursor, …
+smithable deploy --target docker                # release checks, then the container
+```
+
+`smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md).
+
+## The repository
+
+| Path | What it is |
+|---|---|
+| `packages/core` | The engine: spec schema, parser, validator, IR, operations, plugin interface. Runs in the browser and Node |
+| `packages/adapter-tanstack` | The generator for the TanStack stack, and the app kit it copies into apps |
+| `packages/index` | The implementation index, the context builder for AI, the plain-language summary |
+| `packages/ai` | Model providers, the AI policy, requests to operations |
+| `packages/cli` | The `smithable` command, the Studio server, the MCP server, deploy and backup targets |
+| `apps/studio` | Builder and Studio, one web app served by `smithable studio` |
+| `examples/` | The starters: a CRM, a booking site, an invoicing app |
+| `docs/` | [Vision](docs/VISION.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), the [spec reference](docs/spec/v0.1.md), [AI setup](docs/ai.md), [how things were built and measured](docs/as-built.md), benchmarks and research |
+
+## Working on it
+
+`pnpm check` is the gate before every commit: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change is undoable.
