@@ -1,5 +1,13 @@
 import { spawn } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { allowedBy, type Location, parsePolicy, type Usage } from "@smithable/ai";
 import { buildContext } from "@smithable/index";
@@ -192,23 +200,25 @@ export async function runCoder(
   }
   const started = Date.now();
   let usage: Usage;
+  // Git's undo does not reach its hooks: on any failure they are put back as they were.
+  const hooks = saveHooks(dir);
   try {
     const before = watched(dir);
-    const hooks = saveHooks(dir);
     usage = await coder.run(dir, task.prompt, task.area);
     const after = watched(dir);
-    // Ignored files and Git's hooks are not in the diff: they must not change either.
+    // Ignored files, installed packages, build output, the dev database and Git's hooks are not
+    // in the diff: they must not change either.
     const touched = [...after]
       .filter(([path, stamp]) => before.get(path) !== stamp)
       .map(([p]) => p);
     touched.push(...[...before.keys()].filter((path) => !after.has(path)));
     const strays = touched.filter((path) => !path.startsWith(`${task.area}/`));
     if (strays.length) {
-      // Git's undo does not reach its hooks: they are put back as they were.
-      hooks();
-      throw new Error(`it changed ${strays.slice(0, 5).join(", ")}`);
+      const repaired = repair(dir, strays);
+      throw new Error(`it changed ${strays.slice(0, 5).join(", ")}${repaired}`);
     }
   } catch (error) {
+    hooks();
     discard();
     io.err(
       `The coder failed: ${error instanceof Error ? error.message : String(error)}\nNothing was changed.\n`,
@@ -270,11 +280,12 @@ export async function runCoder(
 }
 
 /**
- * What the diff does not show: ignored files (such as .env), and Git's hooks, each with its
- * modification time.
+ * What the diff does not show, each with its modification time and size: ignored files (such
+ * as .env), Git's hooks, and the installed packages, build output and dev database, which the
+ * host's own type check and tests would run. Not the caches the preview's dev server writes
+ * while the coder works, nor Smithable's snapshots and token log.
  */
-function watched(dir: string): Map<string, number> {
-  // Not the installed packages, databases and build output (large, and changed by tools).
+function watched(dir: string): Map<string, string> {
   const ignored = git(dir, [
     "status",
     "--porcelain",
@@ -290,16 +301,49 @@ function watched(dir: string): Map<string, number> {
     .out.split("\n")
     .filter((line) => line.startsWith("!! "))
     .map((line) => line.slice(3));
+  const stamp = (path: string) => {
+    if (!existsSync(path)) return "gone";
+    const s = lstatSync(path);
+    return `${s.mtimeMs}:${s.size}`;
+  };
+  const out = new Map(ignored.map((p) => [p, stamp(join(dir, p))]));
   const hooks = join(dir, ".git", "hooks");
-  const paths = [
-    ...ignored.map((p) => [p, join(dir, p)] as const),
-    ...(existsSync(hooks)
-      ? readdirSync(hooks).map((h) => [`.git/hooks/${h}`, join(hooks, h)] as const)
-      : []),
-  ];
-  return new Map(
-    paths.map(([name, path]) => [name, existsSync(path) ? statSync(path).mtimeMs : 0]),
-  );
+  if (existsSync(hooks))
+    for (const h of readdirSync(hooks)) out.set(`.git/hooks/${h}`, stamp(join(hooks, h)));
+  const skip =
+    /^(node_modules\/\.(vite|cache)|data\/\.smithable\/(snapshots|token-log\.jsonl))(\/|$)/;
+  const walk = (rel: string) => {
+    if (!existsSync(join(dir, rel))) return;
+    for (const entry of readdirSync(join(dir, rel), { withFileTypes: true })) {
+      const path = `${rel}/${entry.name}`;
+      if (skip.test(path)) continue;
+      if (entry.isDirectory()) walk(path);
+      else out.set(path, stamp(join(dir, path)));
+    }
+  };
+  for (const folder of ["node_modules", "dist", "data"]) walk(folder);
+  return out;
+}
+
+/**
+ * Puts back what Git cannot: build output goes (it is rebuilt), packages are installed again;
+ * a changed dev database is only named. Returns what it did, for the message.
+ */
+function repair(dir: string, changed: string[]): string {
+  const done: string[] = [];
+  if (changed.some((p) => p.startsWith("dist/"))) {
+    rmSync(join(dir, "dist"), { recursive: true, force: true });
+    done.push("the build output was removed");
+  }
+  if (changed.some((p) => p.startsWith("node_modules/")))
+    done.push(
+      exec("pnpm", ["install", "--force", "--frozen-lockfile"], dir) === 0
+        ? "the packages were installed again"
+        : "reinstall the packages with pnpm install --force",
+    );
+  if (changed.some((p) => p.startsWith("data/")))
+    done.push("check the dev database, or restore it from data/.smithable/snapshots");
+  return done.length ? `; ${done.join("; ")}` : "";
 }
 
 /** Git's hooks as they are now; the function returned puts them back exactly so. */
