@@ -48,15 +48,18 @@ pages:
   home:
     route: /
     landing:
-      hero: { button: sessions }
+      hero: { button: schedule }
       classes: { records: ClassType }
       gallery:
       faq:
-      callToAction: { button: sessions }
+      callToAction: { button: schedule }
       contact: { form: Message }
       footer:
-  sessions:
+  schedule:                           # the week's classes, for visitors too
+    calendar: { model: Session, duration: classType.durationMinutes }
+  sessions:                           # the staff's list of sessions
     crud: Session
+    access: [admin]
   class-types:
     crud: ClassType
     access: [admin]

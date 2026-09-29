@@ -146,6 +146,41 @@ const addDataPage: Operation<{ page?: string; route?: string; models?: string[] 
   },
 };
 
+const addCalendarPage: Operation<{ page: string; model: string; starts?: string }> = {
+  name: "addCalendarPage",
+  summary:
+    "Add a page showing a model's records in a week or month calendar, placed by a date or date-time field; it goes in the main menu.",
+  schema: {
+    type: "object",
+    required: ["page", "model"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. schedule." },
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      starts: refTo(
+        { ref: "field", model: "model", label: "Placed by" },
+        { description: "Needed when the model has more than one date field." },
+      ),
+    },
+  },
+  positional: ["page", "model", "starts"],
+  describe: ({ page, model }) => `Add calendar page ${page} for ${model}`,
+  destructive: () => false,
+  apply({ spec }, { page, model, starts }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    if (!ir.models.some((m) => m.name === model))
+      throw new OperationError(`There is no model named "${model}".`);
+    spec.add(["pages"], page, { calendar: starts ? { model, starts } : model });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
@@ -437,6 +472,8 @@ export const crudOperations: AnyOperation[] = [addPage, setSearch];
 export const landingOperations: AnyOperation[] = [addLandingPage, addSection, removeSection];
 /** Operations of the dashboard pattern. */
 export const dashboardOperations: AnyOperation[] = [addTile];
+/** Operations of the calendar pattern. */
+export const calendarOperations: AnyOperation[] = [addCalendarPage];
 /** Operations of the data pattern. */
 export const dataOperations: AnyOperation[] = [addDataPage];
 /** Operations of the users pattern. */
