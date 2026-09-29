@@ -107,9 +107,9 @@ const TIER_NAMES = {
 };
 
 /** "Smithable model (mistral-small) · 1,234 tokens · €0.0003", for what a request used. */
-export function usageLine(usage: Usage[]): string {
+export function usageLine(usage: Usage[], generator?: string): string {
   const last = usage.at(-1);
-  if (!last) return "No model was used";
+  if (!last) return generator ? `Generator (${generator}) · 0 tokens` : "No model was used";
   const tokens = usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
   // Mistral's prices are in euros, Claude Code reports dollars: each is totalled on its own.
   const costs = (["EUR", "USD"] as const).flatMap((currency) => {
@@ -137,6 +137,7 @@ export async function applyProposal(
   for (const [i, { op, args }] of proposal.operations.entries()) {
     const trailer = `Smithable-AI: ${JSON.stringify({
       request,
+      ...(proposal.generator ? { generator: proposal.generator } : {}),
       tier: last?.tier,
       model: last?.model,
       tokens: i === 0 ? tokens : 0,
@@ -187,13 +188,24 @@ export async function ask(
   }
   const proposal = await proposeFor(dir, io, request);
   if (!proposal) return 1;
-  io.out(`${usageLine(proposal.usage)}\n`);
+  io.out(
+    `${usageLine(proposal.usage, proposal.kind === "change" ? proposal.generator : undefined)}\n`,
+  );
   switch (proposal.kind) {
     case "failed":
       io.err(`${proposal.message}\n`);
       return 1;
     case "none":
       io.out(`No operation can do this: ${proposal.reason}\n`);
+      // Behaviour that follows a change is a hook, which a coder can write (ARCHITECTURE §6.4).
+      if (
+        /\b(e-?mail|message|notif|remind|schedule|daily|when |after |whenever|send)/i.test(
+          `${request} ${proposal.reason}`,
+        )
+      )
+        io.out(
+          `If it should happen after a record changes, or daily, that is a hook: smithable code hooks ${JSON.stringify(request)}\n`,
+        );
       return 0;
     case "question":
       io.out(
@@ -208,6 +220,13 @@ export async function ask(
   if (confirmed !== true) return confirmed;
   const applied = await applyProposal(dir, io, request, proposal);
   if (applied !== 0) return applied;
+  // What was accepted, and what answered it: the start of a training set (ARCHITECTURE §9.5).
+  logTokens(dir, {
+    source: "ask-accepted",
+    request,
+    tier: proposal.generator ? "generator" : proposal.usage.at(-1)?.tier,
+    operations: proposal.operations.map(({ op, args }) => ({ op, args })),
+  });
   // A new query needs its code: a coder writes it when one is set up (ARCHITECTURE §9.2).
   for (const { op, args } of proposal.operations) {
     if (op !== "addQuery") continue;

@@ -111,7 +111,7 @@ export function answerSchema(operations: AnyOperation[], strict = true): object 
           type: "object",
           required: ["op", "args"],
           additionalProperties: false,
-          properties: { op: { const: op.name }, args: op.schema },
+          properties: { op: { const: op.name }, args: plainSchema(op.schema) },
         })),
       }
     : {
@@ -156,6 +156,18 @@ export function promptFor(
     user: `${context.text}\n\nOperation arguments:\n${operations.map(signature).join("\n")}`,
     operations,
   };
+}
+
+/** A schema without Smithable's own annotations (x-smithable), which a strict server may refuse. */
+export function plainSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(plainSchema);
+  if (schema && typeof schema === "object")
+    return Object.fromEntries(
+      Object.entries(schema as Record<string, unknown>)
+        .filter(([key]) => !key.startsWith("x-"))
+        .map(([key, value]) => [key, plainSchema(value)]),
+    );
+  return schema;
 }
 
 interface Answer {
