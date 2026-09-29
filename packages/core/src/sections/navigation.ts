@@ -1,6 +1,6 @@
 import { isSeq } from "yaml";
 import { mapEntries, type ParseContext, readNameList } from "../context.js";
-import type { MenuIR } from "../ir.js";
+import { type MenuIR, patternInfo } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { NAME_PATTERN } from "./names.js";
 import { navigationOperations } from "./page-operations.js";
@@ -29,9 +29,7 @@ export const navigationSection: SpecSection<"navigation"> = {
       return [
         {
           name: "main",
-          pages: (parsed.pages ?? [])
-            .filter((p) => p.pattern.kind !== "landing" && p.pattern.kind !== "onboarding")
-            .map((p) => p.id),
+          pages: (parsed.pages ?? []).filter((p) => patternInfo(p).inMenu).map((p) => p.id),
         },
       ];
     if (isSeq(node)) return [readMenu(ctx, "main", node)];

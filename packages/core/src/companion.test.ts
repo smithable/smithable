@@ -1,7 +1,9 @@
 import { expect, test } from "vitest";
 import { applyOperation, OPERATIONS } from "./apply.js";
 import { COMPANIONS } from "./companion.js";
+import { PAGE_PATTERNS } from "./ir.js";
 import { appSection } from "./sections/app.js";
+import { pagesSection } from "./sections/pages.js";
 
 const read = (name: string) =>
   Object.values(
@@ -45,4 +47,9 @@ test("the companions follow a removed page and a retyped field", () => {
   });
   if (!retyped.ok) throw new Error(retyped.message);
   expect(retyped.files.ux).toContain("Order.status: { shipped: success }");
+});
+
+test("each page pattern is registered for the IR and for the parser alike", () => {
+  const pages = pagesSection.schema.additionalProperties as { oneOf: { required: string[] }[] };
+  expect(pages.oneOf.map((o) => o.required[0]).sort()).toEqual(Object.keys(PAGE_PATTERNS).sort());
 });

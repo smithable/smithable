@@ -1,7 +1,7 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { checkKeys, type Entry, mapEntries, ParseContext, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { SpecIR } from "./ir.js";
+import { patternInfo, type SpecIR } from "./ir.js";
 import { capitalize } from "./naming.js";
 import { didYouMean } from "./suggest.js";
 
@@ -242,15 +242,8 @@ function readModels(
 /** A page's title, and the texts of its landing sections or dashboard tiles. */
 function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: SpecIR): PageContent {
   const where = `page "${id}"`;
-  const pattern = ir.pages.find((p) => p.id === id)?.pattern;
-  const parts: Record<string, string> =
-    pattern?.kind === "landing"
-      ? Object.fromEntries(pattern.sections.map((s) => [s.name, s.kind]))
-      : pattern?.kind === "dashboard"
-        ? Object.fromEntries(pattern.items.map((i) => [i.name, "tile"]))
-        : pattern?.kind === "onboarding"
-          ? Object.fromEntries(pattern.steps.map((step) => [step.name, "step"]))
-          : {};
+  const page = ir.pages.find((p) => p.id === id);
+  const parts = page ? patternInfo(page).parts() : {};
   const result: PageContent = {};
   for (const entry of mapEntries(ctx, node, where) ?? []) {
     if (entry.key === "title" || entry.key === "subtitle") {

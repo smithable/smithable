@@ -19,7 +19,7 @@ import {
   type SpecIR,
 } from "../ir.js";
 import { capitalize, kebab } from "../naming.js";
-import type { SpecSection } from "../section.js";
+import type { JsonSchema, SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { NAME_PATTERN } from "./names.js";
 import { pageOperations } from "./page-operations.js";
@@ -28,10 +28,136 @@ import { textSchema } from "./text-schema.js";
 
 const ROUTE_PATTERN = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/;
 
-const PATTERNS = ["crud", "landing", "dashboard", "settings", "onboarding"] as const;
-
 /** Routes the generated app uses itself (see the deployment contract). */
 const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/];
+
+/** The schema of each pattern's key in a page. */
+const PATTERN_SCHEMAS: Record<PageIR["pattern"]["kind"], JsonSchema> = {
+  crud: { type: "string", description: "A model to list, view, create, edit and delete." },
+  settings: {
+    type: "string",
+    description:
+      "A model with one record per user (private data) or per app (shared): the page edits it.",
+  },
+  onboarding: {
+    type: "object",
+    required: ["model", "steps"],
+    additionalProperties: false,
+    description: "Fills the settings record in steps after the first sign-in.",
+    properties: {
+      model: { type: "string" },
+      steps: {
+        type: "object",
+        additionalProperties: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+  landing: {
+    type: "object",
+    description:
+      "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer.",
+    additionalProperties: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      properties: {
+        records: { type: "string", description: "A model whose records the section shows." },
+        button: { type: "string", description: "The page the section's button opens." },
+        limit: { type: "integer", minimum: 1 },
+        form: {
+          type: "string",
+          description: "A contact section's form: the model visitors add a record of.",
+        },
+      },
+    },
+  },
+  dashboard: {
+    type: "object",
+    description: "Tiles of a dashboard, in order: numbers, charts by month, latest records.",
+    additionalProperties: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        count: { type: "string", description: "Count a model's records, e.g. Invoice." },
+        sum: { type: "string", description: "Sum a number field, e.g. Invoice.total." },
+        average: { type: "string", description: "Average a number field." },
+        list: { type: "string", description: "Show a model's latest records." },
+        query: { type: "string", description: "Show a custom query's records." },
+        where: {
+          type: "object",
+          description: "Only records with these choice values or yes/no values.",
+        },
+        by: { type: "string", description: "A date field: one bar per month." },
+        limit: { type: "integer", minimum: 1 },
+      },
+    },
+  },
+};
+
+type PatternKind = PageIR["pattern"]["kind"];
+
+/**
+ * How each page pattern is written in smithable.yml: its key's schema and parser (what the IR
+ * knows about a pattern is in PAGE_PATTERNS, ir.ts). A new pattern registers here and there.
+ */
+const PAGE_PATTERN_PARSERS: {
+  [K in PatternKind]: {
+    schema: JsonSchema;
+    /** How it is written, for the message when a page has no pattern. */
+    example: string;
+    parse(
+      ctx: ParseContext,
+      value: ParsedNode | null,
+      where: string,
+      parsed: Partial<SpecIR>,
+    ): Extract<PageIR["pattern"], { kind: K }> | undefined;
+  };
+} = {
+  crud: {
+    schema: PATTERN_SCHEMAS.crud,
+    example: "crud: <Model>",
+    parse(ctx, value, where) {
+      const model = readString(ctx, value, `"crud" in ${where}`);
+      if (model === undefined) return undefined;
+      ctx.reference("model", model, value);
+      return { kind: "crud", model };
+    },
+  },
+  landing: {
+    schema: PATTERN_SCHEMAS.landing,
+    example: "landing",
+    parse: (ctx, value, where, parsed) => ({
+      kind: "landing",
+      sections: readLanding(ctx, value, where, parsed),
+    }),
+  },
+  dashboard: {
+    schema: PATTERN_SCHEMAS.dashboard,
+    example: "dashboard",
+    parse: (ctx, value, where, parsed) => ({
+      kind: "dashboard",
+      items: readDashboard(ctx, value, where, parsed),
+    }),
+  },
+  settings: {
+    schema: PATTERN_SCHEMAS.settings,
+    example: "settings: <Model>",
+    parse(ctx, value, where) {
+      const model = readString(ctx, value, `"settings" in ${where}`);
+      if (model === undefined) return undefined;
+      ctx.reference("model", model, value);
+      return { kind: "settings", model };
+    },
+  },
+  onboarding: {
+    schema: PATTERN_SCHEMAS.onboarding,
+    example: "onboarding",
+    parse(ctx, value, where, parsed) {
+      const onboarding = readOnboarding(ctx, value, where, parsed);
+      return onboarding && { kind: "onboarding", ...onboarding };
+    },
+  },
+};
+const PATTERNS = Object.keys(PAGE_PATTERN_PARSERS) as PatternKind[];
 
 export const pagesSection: SpecSection<"pages"> = {
   key: "pages",
@@ -39,18 +165,11 @@ export const pagesSection: SpecSection<"pages"> = {
   operations: pageOperations,
   schema: {
     type: "object",
-    description:
-      "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings or onboarding.",
+    description: `The application's pages. Each page uses one pattern: ${PATTERNS.slice(0, -1).join(", ")} or ${PATTERNS.at(-1)}.`,
     propertyNames: { pattern: NAME_PATTERN.source },
     additionalProperties: {
       type: "object",
-      oneOf: [
-        { required: ["crud"] },
-        { required: ["landing"] },
-        { required: ["dashboard"] },
-        { required: ["settings"] },
-        { required: ["onboarding"] },
-      ],
+      oneOf: PATTERNS.map((k) => ({ required: [k] })),
       additionalProperties: false,
       properties: {
         route: {
@@ -58,64 +177,7 @@ export const pagesSection: SpecSection<"pages"> = {
           pattern: ROUTE_PATTERN.source,
           description: "Defaults to / plus the page name.",
         },
-        crud: { type: "string", description: "A model to list, view, create, edit and delete." },
-        settings: {
-          type: "string",
-          description:
-            "A model with one record per user (private data) or per app (shared): the page edits it.",
-        },
-        onboarding: {
-          type: "object",
-          required: ["model", "steps"],
-          additionalProperties: false,
-          description: "Fills the settings record in steps after the first sign-in.",
-          properties: {
-            model: { type: "string" },
-            steps: {
-              type: "object",
-              additionalProperties: { type: "array", items: { type: "string" } },
-            },
-          },
-        },
-        landing: {
-          type: "object",
-          description:
-            "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer.",
-          additionalProperties: {
-            type: ["object", "null"],
-            additionalProperties: false,
-            properties: {
-              records: { type: "string", description: "A model whose records the section shows." },
-              button: { type: "string", description: "The page the section's button opens." },
-              limit: { type: "integer", minimum: 1 },
-              form: {
-                type: "string",
-                description: "A contact section's form: the model visitors add a record of.",
-              },
-            },
-          },
-        },
-        dashboard: {
-          type: "object",
-          description: "Tiles of a dashboard, in order: numbers, charts by month, latest records.",
-          additionalProperties: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              count: { type: "string", description: "Count a model's records, e.g. Invoice." },
-              sum: { type: "string", description: "Sum a number field, e.g. Invoice.total." },
-              average: { type: "string", description: "Average a number field." },
-              list: { type: "string", description: "Show a model's latest records." },
-              query: { type: "string", description: "Show a custom query's records." },
-              where: {
-                type: "object",
-                description: "Only records with these choice values or yes/no values.",
-              },
-              by: { type: "string", description: "A date field: one bar per month." },
-              limit: { type: "integer", minimum: 1 },
-            },
-          },
-        },
+        ...Object.fromEntries(Object.entries(PAGE_PATTERN_PARSERS).map(([k, p]) => [k, p.schema])),
         actions: {
           type: "array",
           items: { type: "string" },
@@ -182,7 +244,6 @@ function readPage(
     content: ["title", "label", "heading"],
   });
   let route = `/${kebab(id)}`;
-  let model: string | undefined;
   let pattern: PageIR["pattern"] | undefined;
   let actions: string[] | undefined;
   let access: string[] | undefined;
@@ -211,22 +272,8 @@ function readPage(
       search = readNameList(ctx, value, `the search of ${where}`);
     } else if (key === "access") {
       access = readRoleList(ctx, value, `the access of ${where}`, false);
-    } else if (key === "crud") {
-      model = readString(ctx, value, `"crud" in ${where}`);
-      if (model !== undefined) ctx.reference("model", model, value);
-    } else if (key === "landing") {
-      pattern = { kind: "landing", sections: readLanding(ctx, value, where, parsed) };
-    } else if (key === "dashboard") {
-      pattern = { kind: "dashboard", items: readDashboard(ctx, value, where, parsed) };
-    } else if (key === "settings") {
-      const settings = readString(ctx, value, `"settings" in ${where}`);
-      if (settings !== undefined) {
-        ctx.reference("model", settings, value);
-        pattern = { kind: "settings", model: settings };
-      }
-    } else if (key === "onboarding") {
-      const onboarding = readOnboarding(ctx, value, where, parsed);
-      if (onboarding) pattern = { kind: "onboarding", ...onboarding };
+    } else if (key in PAGE_PATTERN_PARSERS) {
+      pattern = PAGE_PATTERN_PARSERS[key as PatternKind].parse(ctx, value, where, parsed);
     }
   }
   const patterns = known.filter((e) => (PATTERNS as readonly string[]).includes(e.key));
@@ -238,17 +285,21 @@ function readPage(
     );
     return undefined;
   }
-  if (pattern) {
+  if (!pattern) {
+    if (patterns.length === 0) {
+      const examples = PATTERNS.map((k) => `"${PAGE_PATTERN_PARSERS[k].example}"`);
+      ctx.error(
+        keyNode,
+        "missing-pattern",
+        `${capitalize(where)} needs a pattern: ${examples.slice(0, -1).join(", ")} or ${examples.at(-1)}.`,
+      );
+    }
+    return undefined;
+  }
+  const model = pattern.kind === "crud" ? pattern.model : undefined;
+  if (!model)
     for (const e of known.filter((e) => e.key === "actions" || e.key === "search"))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
-    return {
-      id,
-      route,
-      pattern,
-      ...(access ? { access } : {}),
-      ...readSemanticText(ctx, known),
-    };
-  }
   if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
     ctx.error(
       keyNode,
@@ -257,23 +308,13 @@ function readPage(
       `Give it another name, or a "route".`,
     );
   }
-  if (model === undefined) {
-    if (patterns.length === 0) {
-      ctx.error(
-        keyNode,
-        "missing-pattern",
-        `${capitalize(where)} needs a pattern: "crud: <Model>", "landing", "dashboard", "settings: <Model>" or "onboarding".`,
-      );
-    }
-    return undefined;
-  }
   return {
     id,
     route,
-    pattern: { kind: "crud", model },
-    ...(actions?.length ? { actions } : {}),
+    pattern,
+    ...(model && actions?.length ? { actions } : {}),
     ...(access ? { access } : {}),
-    ...(search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
+    ...(model && search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
     ...readSemanticText(ctx, known),
   };
 }

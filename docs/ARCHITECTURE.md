@@ -367,6 +367,8 @@ Plugins are declared in `smithable.context.yml`, since they are an implementatio
 
 The companion files register the same way (`COMPANIONS` in core): each owns its file, its check against the spec, its operations, and a `follow` hook that keeps it in step with what an operation did elsewhere. Operations report what they did as effects (a field renamed, removed or retyped, a page or section removed), and `applyOperation` hands each effect to every companion, so a model operation never edits the presentation or text files itself. Operations about the spec as a whole (rules, access, editing the spec) are listed on their own; none hang off the `app` section.
 
+Page patterns (crud, landing, dashboard, settings, onboarding) register twice, once per layer: how the key is written (its schema and parser, in the pages section) and what the IR knows about it (`PAGE_PATTERNS`: the models its pages show, the model a page manages, its default icon, whether it is in the main menu by default, its parts with texts). Menus, icons, texts and the index ask the registry; wording tables in the index are typed over every pattern, so a new one does not compile until it is described.
+
 **"Teach Smithable".** When the spec contains something Smithable does not understand, it does not guess. The validator reports it and offers: *"Smithable doesn't know `newsletter` — create a handler?"* AI then writes a **project plugin** (schema, operations and generator) **once**, reviewed like any other change. From then on the construct is handled deterministically and costs 0 tokens, like every built-in feature. AI is used to create a generator once, instead of writing code on every request. A useful project plugin can later be published for others.
 
 **Guardrails:**
