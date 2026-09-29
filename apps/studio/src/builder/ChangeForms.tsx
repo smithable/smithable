@@ -1,6 +1,5 @@
 // The Builder's forms for the most common changes. Each one becomes an operation.
 import {
-  ACCESS_OPERATIONS,
   type ArgRef,
   type FieldIR,
   FONTS,
@@ -593,61 +592,14 @@ function SetSearch({ spec, run }: FormProps) {
 }
 
 function SetAccess({ spec, run }: FormProps) {
-  const targets: [string, string][] = [
-    ...(spec.ir?.models ?? []).flatMap((m) =>
-      ACCESS_OPERATIONS.map(
-        (op) =>
-          [
-            `model:${m.name}.${op}`,
-            `${humanize(op)} ${humanize(m.name).toLowerCase()} records`,
-          ] as [string, string],
-      ),
-    ),
-    ...(spec.ir?.pages ?? []).map(
-      (p) => [`page:${p.id}`, `Open the ${humanize(p.id).toLowerCase()} page`] as [string, string],
-    ),
-    ...(spec.ir?.actions ?? []).map(
-      (a) => [`action:${a.name}`, humanize(a.name)] as [string, string],
-    ),
-  ];
-  const [target, setTarget] = useState(targets[0]?.[0] ?? "");
-  const roles = [
-    ...(spec.auth?.roles.map((r) => r.name) ?? []),
-    ...(target.startsWith("model:") && !target.endsWith(".create") ? ["owner"] : []),
-  ];
-  const [chosen, setChosen] = useState<string[]>([]);
   return (
-    <Form onSubmit={() => run("setAccess", { target, roles: chosen })}>
-      <Label text="Who can…">
-        <Select
-          aria-label="Who can"
-          value={target}
-          onChange={(e) => {
-            setTarget(e.target.value);
-            setChosen([]);
-          }}
-          options={targets}
-        />
-      </Label>
-      <fieldset className="space-y-1">
-        <legend className="text-xs font-medium text-neutral-600">
-          Only (none: back to the default)
-        </legend>
-        {roles.map((r) => (
-          <label key={r} className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={chosen.includes(r)}
-              onChange={(e) =>
-                setChosen(e.target.checked ? [...chosen, r] : chosen.filter((x) => x !== r))
-              }
-            />
-            {r === "owner" ? "the record's owner" : r}
-          </label>
-        ))}
-      </fieldset>
-      <Submit label="Set access" disabled={!target} />
-    </Form>
+    <FromSchema
+      op="setAccess"
+      spec={spec}
+      run={run}
+      submit="Set access"
+      hints={{ roles: "None: back to the default." }}
+    />
   );
 }
 
@@ -779,29 +731,26 @@ const ICON_CHOICES = [
 ];
 
 function SetIcon({ spec, run }: FormProps) {
-  const pages = spec.ir?.pages ?? [];
-  const [page, setPage] = useState(pages[0]?.id ?? "");
-  const [icon, setIcon] = useState("auto");
   return (
-    <Form onSubmit={() => run("setIcon", { page, icon })}>
-      <Label text="Page">
-        <Select
-          aria-label="Page"
-          value={page}
-          onChange={(e) => setPage(e.target.value)}
-          options={pages.map((p) => [p.id, humanize(p.id)])}
-        />
-      </Label>
-      <Label text="Icon in the menu" hint='"Automatic" picks one from the page’s records'>
-        <Select
-          aria-label="Icon"
-          value={icon}
-          onChange={(e) => setIcon(e.target.value)}
-          options={ICON_CHOICES.map((i) => [i, i === "auto" ? "Automatic" : humanize(i)])}
-        />
-      </Label>
-      <Submit label="Set icon" disabled={!page} />
-    </Form>
+    <FromSchema
+      op="setIcon"
+      spec={spec}
+      run={run}
+      initial={{ icon: "auto" }}
+      submit="Set icon"
+      controls={{
+        icon: (icon, set) => (
+          <Label text="Icon in the menu" hint='"Automatic" picks one from the page’s records'>
+            <Select
+              aria-label="Icon"
+              value={icon || "auto"}
+              onChange={(e) => set(e.target.value)}
+              options={ICON_CHOICES.map((i) => [i, i === "auto" ? "Automatic" : humanize(i)])}
+            />
+          </Label>
+        ),
+      }}
+    />
   );
 }
 
@@ -1099,7 +1048,18 @@ function FromSchema({
   submit,
   hint,
   disabled,
-}: FormProps & { op: string; submit: string; hint?: string; disabled?: boolean }) {
+  controls,
+  hints,
+}: FormProps & {
+  op: string;
+  submit: string;
+  hint?: string;
+  disabled?: boolean;
+  /** An argument whose control the change words its own way (an icon, a tone). */
+  controls?: Record<string, (value: string, set: (value: string) => void) => React.ReactNode>;
+  /** A word under an argument's control. */
+  hints?: Record<string, string>;
+}) {
   const operation = findOperation(op, spec.plugins);
   const [values, setValues] = useState<ArgValues>(
     () =>
@@ -1113,19 +1073,26 @@ function FromSchema({
   const effective = argumentsOf(operation.schema, values, spec);
   return (
     <Form onSubmit={() => run(op, effective)}>
-      {Object.entries(properties).map(([key, schema]) => (
-        <ArgumentField
-          key={key}
-          name={key}
-          schema={schema}
-          required={required.includes(key)}
-          values={values}
-          effective={effective}
-          setValue={(v) => setValues({ ...values, [key]: v })}
-          spec={spec}
-          label={(schema["x-smithable"] as ArgRef | undefined)?.label ?? humanize(key)}
-        />
-      ))}
+      {Object.entries(properties).map(([key, schema]) =>
+        controls?.[key] ? (
+          <div key={key}>
+            {controls[key](String(effective[key] ?? ""), (v) => setValues({ ...values, [key]: v }))}
+          </div>
+        ) : (
+          <ArgumentField
+            key={key}
+            name={key}
+            schema={schema}
+            required={required.includes(key)}
+            values={values}
+            effective={effective}
+            setValue={(v) => setValues({ ...values, [key]: v })}
+            spec={spec}
+            label={(schema["x-smithable"] as ArgRef | undefined)?.label ?? humanize(key)}
+            {...(hints?.[key] ? { hint: hints[key] } : {})}
+          />
+        ),
+      )}
       {hint && <p className="text-xs text-neutral-500">{hint}</p>}
       <Submit
         label={submit}

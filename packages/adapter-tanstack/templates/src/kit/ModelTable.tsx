@@ -22,15 +22,15 @@ interface ModelTableProps<R extends Row> {
   /** Opens a row; without it rows are not clickable. */
   onOpen?: (row: R) => void;
   /** Columns to leave out, e.g. the reference back to the record a list belongs to. */
-  hide?: string[];
+  hide?: (keyof R & string)[];
   /** Shown when there are no records, e.g. a "New …" button. */
   emptyAction?: React.ReactNode;
   /** Replaces "No … yet", e.g. when a search matches nothing. */
   emptyMessage?: string;
   /** The columns to show, in order, instead of the model's default ones. */
-  columns?: string[];
+  columns?: (keyof R & string)[];
   /** A second field shown under a column's value, e.g. { email: "phone" }. */
-  below?: Record<string, string>;
+  below?: Partial<Record<keyof R & string, keyof R & string>>;
   /** The page showing the table, so the preview editor can change its columns. */
   page?: string;
 }
@@ -49,7 +49,7 @@ export function ModelTable<R extends Row>({
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
-    .filter((name) => !hide.includes(name))
+    .filter((name) => !(hide as string[]).includes(name))
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
   if (rows.length === 0) {
     return (
@@ -66,7 +66,8 @@ export function ModelTable<R extends Row>({
       </Card>
     );
   }
-  const second = (field: RecordFieldUi<R>) => ui.fields.find((f) => f.name === below[field.name]);
+  const second = (field: RecordFieldUi<R>) =>
+    ui.fields.find((f) => f.name === (below as Record<string, string>)[field.name]);
   // A column with a second field below its value: both on their own line.
   const stacked = (field: RecordFieldUi<R>, row: R) => {
     const other = second(field);

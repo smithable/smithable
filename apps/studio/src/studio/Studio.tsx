@@ -1,5 +1,12 @@
 // Studio mode: the spec as YAML, every operation, the last change's diff, logs and concepts.
-import { humanize, identifier, type JsonSchema, operationsFor } from "@smithable/core";
+import {
+  type ArgRef,
+  humanize,
+  identifier,
+  type JsonSchema,
+  operationsFor,
+  refHint,
+} from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
@@ -354,23 +361,6 @@ function SpecEditor({
 }
 
 /** What common arguments mean, for operations whose schema doesn't say. */
-const ARGUMENT_HINTS: Record<string, string> = {
-  model: "A kind of record, e.g. Customer.",
-  field: "A field of that kind of record, e.g. email.",
-  page: "A page's name, e.g. customers.",
-  type: `The field's kind, e.g. string!, email unique or "draft | sent".`,
-  value: "One of the choice field's values.",
-  column: "A field shown as a column of the page's table.",
-  columns: "Fields, in the order to show them.",
-  fields: "Fields, e.g. name email.",
-  from: "The current name.",
-  to: "The new name (letters and digits, starting lowercase).",
-  roles: "Roles from smithable.auth.yml, e.g. admin sales.",
-  target: "What the rule is for, e.g. model:Order.create.",
-  menu: 'Usually "main".',
-  pages: "Pages' names, in order.",
-  name: "A name, letters and digits, starting lowercase.",
-};
 
 /** Any operation, with a form built from its JSON Schema: the same definition MCP tools use. */
 function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
@@ -443,8 +433,8 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
           spec={spec}
           label={key}
           hint={[
-            (schema.description as string | undefined) ?? ARGUMENT_HINTS[key],
-            Array.isArray(schema.enum) ? `One of: ${schema.enum.join(", ")}.` : "",
+            (schema.description as string | undefined) ??
+              (schema["x-smithable"] ? refHint(schema["x-smithable"] as ArgRef) : undefined),
             schema.type === "array" && !schema["x-smithable"]
               ? "Separate with spaces or commas."
               : "",

@@ -5,8 +5,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   type AnyOperation,
+  type ArgRef,
   type JsonSchema,
+  namesFor,
   operationsFor,
+  type SpecIR,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -61,6 +64,8 @@ export function complete(words: string[], current: string, dir = "."): string[] 
 }
 
 interface Names {
+  /** The spec, for what an argument names (namesFor); absent outside a project. */
+  ir?: SpecIR;
   models: string[];
   fields: Record<string, string[]>;
   pages: string[];
@@ -89,6 +94,7 @@ function readProject(dir: string): Names {
   ).ir;
   if (!ir) return none;
   return {
+    ir,
     models: ir.models.map((m) => m.name),
     fields: Object.fromEntries(ir.models.map((m) => [m.name, m.fields.map((f) => f.name)])),
     pages: ir.pages.map((p) => p.id),
@@ -113,25 +119,14 @@ function named(
   project: Names,
   current: string,
 ): string[] {
-  const ref =
-    (property?.["x-smithable"] as { ref?: string; model?: string; page?: string } | undefined) ??
-    {};
-  const argument = (name: string) => given[op.positional.indexOf(name)];
-  let candidates: string[] = [];
-  if (property?.enum) candidates = (property.enum as unknown[]).map(String);
-  else if (ref.ref === "model") candidates = project.models;
-  else if (ref.ref === "page") candidates = project.pages;
-  else if (ref.ref === "role") candidates = [...project.roles, "owner"];
-  else if (ref.ref === "field") {
-    const model = ref.model ? argument(ref.model) : undefined;
-    candidates = model ? (project.fields[model] ?? []) : Object.values(project.fields).flat();
-  } else if (op.name === "setAccess" && op.positional[given.length] === "target")
-    candidates = [
-      ...project.models.flatMap((m) =>
-        ["read", "create", "write", "delete"].map((v) => `model:${m}.${v}`),
-      ),
-      ...project.pages.map((p) => `page:${p}`),
-    ];
+  const ref = property?.["x-smithable"] as ArgRef | undefined;
+  // The arguments given so far, by name, for a field's model or a value's field.
+  const args = Object.fromEntries(op.positional.map((p, i) => [p.replace("...", ""), given[i]]));
+  const candidates = property?.enum
+    ? (property.enum as unknown[]).map(String)
+    : ref && project.ir
+      ? namesFor(ref, args, project.ir, project.roles).map(([value]) => value)
+      : [];
   return [...new Set(candidates)].filter((c) => c.startsWith(current));
 }
 

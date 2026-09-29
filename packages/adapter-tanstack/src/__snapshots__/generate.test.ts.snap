@@ -1588,8 +1588,8 @@ import { currentViewer } from "#/lib/viewer.server";
 
 /** Session records as the kit reads them. */
 export type SessionRow = typeof sessions.$inferSelect & {
-  classType?: { id: number; name: unknown } | null;
-  instructor?: { id: number; name: unknown } | null;
+  classType?: { id: number; name: string } | null;
+  instructor?: { id: number; name: string } | null;
 };
 
 export const sessionUi: RecordUi<SessionRow> = {
@@ -2811,13 +2811,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.ts": "c03e792b generated",
   "src/generated/pages.ts": "0b99e203 generated",
   "src/generated/session.server.ts": "75e7b722 generated",
-  "src/generated/session.ts": "c50ccb81 generated",
+  "src/generated/session.ts": "557d8225 generated",
   "src/kit/AppShell.tsx": "0a27222c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/Landing.tsx": "be72b7ac kit",
   "src/kit/ModelForm.tsx": "ffda492a kit",
-  "src/kit/ModelTable.tsx": "d107e528 kit",
+  "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "fa304b7e kit",
   "src/kit/access.ts": "c46c2136 kit",
@@ -3585,7 +3585,7 @@ import { currentViewer } from "#/lib/viewer.server";
 
 /** Customer records as the kit reads them. */
 export type CustomerRow = typeof customers.$inferSelect & {
-  accountManager?: { id: string; name: unknown } | null;
+  accountManager?: { id: string; name: string } | null;
 };
 
 export const customerUi: RecordUi<CustomerRow> = {
@@ -3952,7 +3952,7 @@ import { currentViewer } from "#/lib/viewer.server";
 
 /** Order records as the kit reads them. */
 export type OrderRow = typeof orders.$inferSelect & {
-  customer?: { id: number; name: unknown } | null;
+  customer?: { id: number; name: string } | null;
   shippingCost?: unknown;
 };
 
@@ -4990,19 +4990,19 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/customer.server.ts": "6eda6fa2 generated",
-  "src/generated/customer.ts": "7c02f974 generated",
+  "src/generated/customer.ts": "180ef139 generated",
   "src/generated/hooks.ts": "88a49c58 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.server.ts": "ca2f5675 generated",
-  "src/generated/order.ts": "653f41c7 generated",
+  "src/generated/order.ts": "9666ef02 generated",
   "src/generated/pages.ts": "96440a55 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/AppShell.tsx": "0a27222c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/ModelForm.tsx": "ffda492a kit",
-  "src/kit/ModelTable.tsx": "d107e528 kit",
+  "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "fa304b7e kit",
   "src/kit/access.ts": "c46c2136 kit",
@@ -6483,7 +6483,7 @@ import { currentViewer } from "#/lib/viewer.server";
 
 /** Invoice records as the kit reads them. */
 export type InvoiceRow = typeof invoices.$inferSelect & {
-  client?: { id: number; name: unknown } | null;
+  client?: { id: number; name: string } | null;
   total?: unknown;
 };
 
@@ -6762,7 +6762,7 @@ import { currentViewer } from "#/lib/viewer.server";
 
 /** InvoiceLine records as the kit reads them. */
 export type InvoiceLineRow = typeof invoiceLines.$inferSelect & {
-  invoice?: { id: number; number: unknown } | null;
+  invoice?: { id: number; number: string } | null;
   amount?: unknown;
 };
 
@@ -8128,10 +8128,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.server.ts": "8c49f575 generated",
-  "src/generated/invoice-line.ts": "9d00599e generated",
+  "src/generated/invoice-line.ts": "b823c24d generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.server.ts": "8183c565 generated",
-  "src/generated/invoice.ts": "ee30e1f4 generated",
+  "src/generated/invoice.ts": "ce1888cd generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/kit/AppShell.tsx": "0a27222c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
@@ -8139,7 +8139,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/Landing.tsx": "be72b7ac kit",
   "src/kit/ModelForm.tsx": "ffda492a kit",
-  "src/kit/ModelTable.tsx": "d107e528 kit",
+  "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/Onboarding.tsx": "6e7938a3 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "fa304b7e kit",
