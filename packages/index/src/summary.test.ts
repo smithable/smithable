@@ -43,6 +43,7 @@ test("the CRM in plain language, with labels from the content file", () => {
   expect(sections[3]?.sentences).toEqual([
     "- Customers (lists customers; search by name or email; “Merge customers”)",
     "- Orders (lists orders; search by number or customer)",
+    "- Team (who has access: invite people, change roles, remove users)",
   ]);
 });
 

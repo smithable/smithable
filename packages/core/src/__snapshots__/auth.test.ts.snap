@@ -36,6 +36,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
       "google",
       "facebook",
     ],
+    "selfSignUp": true,
   },
 }
 `;
@@ -69,6 +70,7 @@ exports[`the examples > crm is valid with its auth file 1`] = `
     "providers": [
       "google",
     ],
+    "selfSignUp": false,
   },
 }
 `;
@@ -101,6 +103,7 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
     "providers": [
       "google",
     ],
+    "selfSignUp": true,
   },
 }
 `;

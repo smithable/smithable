@@ -630,6 +630,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       "pages": [
         "customers",
         "orders",
+        "team",
       ],
     },
   ],
@@ -661,6 +662,15 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         "number",
         "customer",
       ],
+    },
+    {
+      "id": "team",
+      "intent": "Invite colleagues and manage who has access.",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
     },
   ],
   "queries": [],
