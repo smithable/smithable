@@ -8,7 +8,7 @@ import {
   readRoleList,
   readString,
 } from "../context.js";
-import type { PageIR, PatternKind, SpecIR } from "../ir.js";
+import type { FieldIR, ModelIR, PageIR, PatternKind, SpecIR } from "../ir.js";
 import { capitalize, kebab } from "../naming.js";
 import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
@@ -88,15 +88,17 @@ export const pagesSection: SpecSection<"pages"> = {
       ctx.define("page", id);
       const page = readPage(ctx, id, keyNode, value, parsed);
       if (!page) continue;
-      const other = routes.get(page.route);
-      if (other !== undefined) {
-        ctx.error(
-          keyNode,
-          "duplicate-route",
-          `Pages "${other}" and "${id}" both use the route ${page.route}.`,
-        );
+      // The page's own route and any its pattern takes besides (a data page's model lists).
+      for (const route of [page.route, ...patternInfo(page).routes(page.route)]) {
+        const other = routes.get(route);
+        if (other !== undefined && other !== id)
+          ctx.error(
+            keyNode,
+            "duplicate-route",
+            `Pages "${other}" and "${id}" both use the route ${route}.`,
+          );
+        routes.set(route, id);
       }
-      routes.set(page.route, id);
       pages.push(page);
     }
     return pages;
@@ -197,6 +199,17 @@ function readPage(
 /** Text you can type into a search box: strings, text, emails, phone numbers, web addresses, choices; and references, by the related record's name. */
 const SEARCHABLE = ["string", "text", "email", "phone", "url"];
 
+/** Whether a field's own value can be searched (references are searched by their record's name). */
+const searchable = (field: FieldIR) =>
+  !field.formula &&
+  (field.type.kind === "choice" ||
+    (field.type.kind === "scalar" && SEARCHABLE.includes(field.type.name)));
+
+/** A model's fields a list can be searched by without naming them: its own text and choices. */
+export function searchableFields(model: ModelIR): string[] {
+  return model.fields.filter(searchable).map((f) => f.name);
+}
+
 function checkSearch(
   ctx: ParseContext,
   fields: { name: string; at: At }[],
@@ -234,13 +247,7 @@ function checkSearch(
             ? `"${name}" is a list of records; search the other page instead.`
             : `"${name}" cannot be searched: ${field.type.model} has no text field to search by.`,
         );
-    } else if (
-      field.formula ||
-      !(
-        field.type.kind === "choice" ||
-        (field.type.kind === "scalar" && SEARCHABLE.includes(field.type.name))
-      )
-    ) {
+    } else if (!searchable(field)) {
       ctx.error(
         at,
         "invalid-search",

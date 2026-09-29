@@ -14,6 +14,7 @@ import {
 import { actionNames } from "../actions.js";
 import {
   attr,
+  DATA_LIMIT,
   dataKey,
   guard,
   HEADER,
@@ -27,10 +28,11 @@ import {
   relatedTitle,
   type Texts,
   tableNames,
+  type Within,
 } from "../shared.js";
 
 /** A searchable list's server function and route options: the search text is in the URL. */
-export function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
+export function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, within?: Within) {
   const n = names(model, t);
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -81,7 +83,7 @@ const ${fn} = createServerFn()
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined;
-    return { rows: await ${n.data}.list(viewer, where), canCreate: allows(${n.access}.create, viewer) };
+    ${listed(n, "where", within)}
   });
 `,
     options: `  validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
@@ -104,15 +106,27 @@ const ${fn} = createServerFn()
  * both go in one route file; customized (ARCHITECTURE §6.4), the component moves to
  * src/custom/pages/ and reads the route's data with getRouteApi.
  */
-export function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR) {
+export function listParts(
+  page: PageIR,
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  ux: UxIR,
+  within?: Within,
+) {
   const n = names(model, t);
-  const component = `${pascal(page.id)}Page`;
+  // Inside a data page, one of many lists: named after its model too.
+  const component = `${pascal(page.id)}${within ? pascal(plural(model.name)) : ""}Page`;
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
-  const search = page.search?.length ? searchCode(page, model, t, ir) : undefined;
-  const columns = ux.pages[page.id]?.columns?.map((name) => keyOf(model, name));
+  const search = page.search?.length ? searchCode(page, model, t, ir, within) : undefined;
+  // A data page shows each model as it is: the presentation belongs to the model's own page.
+  const presentation = within ? undefined : ux.pages[page.id];
+  const columns = presentation?.columns?.map((name) => keyOf(model, name));
   const key = (name: string) => keyOf(model, name);
-  const below = Object.entries(ux.pages[page.id]?.below ?? {}).map(([c, f]) => [key(c), key(f)]);
+  const below = Object.entries(presentation?.below ?? {}).map(([c, f]) => [key(c), key(f)]);
+  // Inside a data page without a search, the list still loads the newest records only.
+  const capped = within && !search;
 
   const route = importList()
     .add("@tanstack/react-router", "createFileRoute")
@@ -131,6 +145,12 @@ export function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux
     if (search.imports.titled.length) route.add("drizzle-orm", "inArray");
     for (const t of search.imports.titled) route.add(t.module, t.data);
     route.add("#/lib/viewer.server", "currentViewer");
+  } else if (capped) {
+    route
+      .add("@tanstack/react-start", "createServerFn")
+      .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
+      .add("#/kit/access", "allows")
+      .add("#/lib/viewer.server", "currentViewer");
   } else {
     route.add(n.module, n.list);
   }
@@ -143,10 +163,11 @@ export function listParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
   if (search) view.add("#/kit/SearchBox", "SearchBox");
 
-  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${n.list}(),\n`}`;
+  const newest = `list${pascal(plural(model.name))}`;
+  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${capped ? newest : n.list}(),\n`}`;
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
   const body = (api: string) => `function ${component}() {
-  const { rows, canCreate } = ${api}.useLoaderData();${search ? `\n  const { q } = ${api}.useSearch();` : ""}
+  const { rows, canCreate${within ? ", more" : ""} } = ${api}.useLoaderData();${search ? `\n  const { q } = ${api}.useSearch();` : ""}
 ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to=${attr(join(page.route, "new"))} className={buttonVariants()}>
@@ -164,9 +185,8 @@ ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  con
     .join("")}
   return (
     <>
-      <PageHeader
-        page=${attr(page.id)}
-        title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
+      <PageHeader${within ? "" : `\n        page=${attr(page.id)}`}
+        title=${attr(within ? n.pluralLabel : t.pageTitle(page.id))}${within ? "" : t.pageSubtitle(page.id)}
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
 ${
@@ -178,9 +198,8 @@ ${
       />
 `
     : ""
-}      <ModelTable
-        ui={${n.ui}}
-        page=${attr(page.id)}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
+}${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
+        ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
         rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
@@ -190,7 +209,18 @@ ${
   );
 }
 `;
-  return { component, path, route, view, serverFn: search?.fn ?? "", options, body };
+  const serverFn =
+    search?.fn ??
+    (capped
+      ? `
+/** The newest ${n.pluralLabel.toLowerCase()} the viewer may read. */
+const ${newest} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  ${listed(n, "undefined", within)}
+});
+`
+      : "");
+  return { component, path, route, view, serverFn, options, body };
 }
 
 /** The route file of a list page; with a custom page, it renders that instead. */
@@ -201,8 +231,9 @@ export function listRoute(
   ir: SpecIR,
   custom: boolean,
   ux: UxIR,
+  within?: Within,
 ): string {
-  const p = listParts(page, model, t, ir, ux);
+  const p = listParts(page, model, t, ir, ux, within);
   const head = `export const Route = createFileRoute(${JSON.stringify(p.path)})({
 ${p.options}  component: ${p.component},
 });
@@ -216,4 +247,19 @@ ${head}`;
   return `${HEADER}${p.route.merge(p.view).render()}${p.serverFn}
 ${head}
 ${p.body("Route")}`;
+}
+
+/**
+ * The statement that returns a list's rows: all of them, or inside a data page the newest
+ * DATA_LIMIT, one more fetched to know whether there are others.
+ */
+function listed(n: ReturnType<typeof names>, where: string, within?: Within): string {
+  if (!within)
+    return `return { rows: await ${n.data}.list(viewer, ${where}), canCreate: allows(${n.access}.create, viewer) };`;
+  return `const rows = await ${n.data}.list(viewer, ${where}, ${DATA_LIMIT + 1});
+    return {
+      rows: rows.slice(0, ${DATA_LIMIT}),
+      more: rows.length > ${DATA_LIMIT},
+      canCreate: allows(${n.access}.create, viewer),
+    };`;
 }

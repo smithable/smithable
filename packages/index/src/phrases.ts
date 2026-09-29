@@ -464,6 +464,29 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "add an admin page", "add a page to manage all data", "add a data page for orders and customers"
+    name: "data page",
+    match(text, scope) {
+      const every =
+        /^add (?:a |an )?(?:admin|administration|data|database) page$/.test(text) ||
+        /^add (?:a |an )?page (?:to|for|where (?:i|we|admins?) (?:can|may)) (?:manage|see|edit|browse|correct) (?:all )?(?:the |our )?(?:data|records)$/.test(
+          text,
+        );
+      const some = /^add (?:a |an )?(?:admin|data) page for (?<list>.+)$/.exec(text)?.groups?.list;
+      if (!every && !some) return undefined;
+      if (scope.auth?.signIn === "none") return null;
+      if (every) {
+        if (scope.ir.pages.some((p) => p.pattern.kind === "data" && p.pattern.all)) return null;
+        return [{ op: "addDataPage", args: {} }];
+      }
+      // Each named model must be one: anything else is for a model to read.
+      const names = (some ?? "").split(/,\s*|\s+and\s+/).filter(Boolean);
+      const models = names.map((n) => modelFor(scope.ir, n)?.name);
+      if (!models.length || models.some((m) => !m)) return undefined;
+      return [{ op: "addDataPage", args: { models } }];
+    },
+  },
+  {
     // "only admins may open the settings page"
     name: "page access",
     match(text, scope) {

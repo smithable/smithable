@@ -303,6 +303,28 @@ async function landingFlow(base) {
     console.log(
       "  ✓ browser: a visitor sends the contact form without an account; an admin reads it",
     );
+    // The data page: the admin finds the message there too, opens it and deletes it.
+    await open(page, `${base}/admin`);
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: /^Messages/ })
+      .click();
+    await page.waitForURL(/\/admin\/messages\/?$/);
+    await page.getByRole("cell", { name: "Aino Visitor" }).click();
+    await page.waitForURL(/\/admin\/messages\/\d+$/);
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete message" }).click();
+    await page.waitForURL(/\/admin\/messages\/?$/);
+    await page
+      .getByRole("cell", { name: "Aino Visitor" })
+      .waitFor({ state: "detached", timeout: 10000 });
+    // A member may not open it.
+    await signInAs(page, base, "member");
+    await open(page, `${base}/admin`);
+    await page.getByText("You are not allowed to do this.").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: the data page lists every model; an admin opens a message and deletes it; a member is refused",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,

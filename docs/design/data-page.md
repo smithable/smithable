@@ -1,6 +1,6 @@
 # The data page: an admin view of every model (design and plan)
 
-Status: 2026-09-29, proposed by Fable; to be built by Opus after PR #11 (invitations) is merged, because it uses the pattern-level default access (`PagePattern.access`) that #11 adds. Fable reviews.
+Status: built 2026-09-29 (Opus, branch `opus/data-page`), as planned below; Fable reviews. Differences from the plan are noted in section 6.
 
 ## 1. Why
 
@@ -51,3 +51,12 @@ Commit only with `pnpm check` green, on a branch, as a PR.
 - CSV export of a model (data ownership; small once the data page exists).
 - A data view in Studio for the preview's sample data (browse, edit, reset to the samples); local developers have `pnpm db:studio`.
 - Bulk edits, raw queries, and anything that bypasses the access layer: never.
+
+## 6. As built: differences from the plan
+
+- **Newest first was already there.** `list()` orders by `id` descending for every model, so it only gained an optional `limit` (not an options object). It is generated only for models a data page shows, with a `count(viewer)` for the overview: the counts follow access without loading every record. Apps without a data page are byte-identical (the adapter's snapshots for crm and invoicing did not change).
+- **`Within`, not a heading parameter.** The crud generators take one optional `within: { base, models }`. Inside a data page, the list's heading is the model's plural label with no text or editor marker, it takes no ux columns, it loads the newest 500 (with a note when there are more), and a related record opens in the data page when the page shows its model. `newRoute` needed no change.
+- **Search** uses `searchableFields(model)`, exported from core. `checkSearch` now uses the same predicate, so the two cannot drift.
+- **No follow for renamed or removed models.** No operation renames or removes a model yet, so there is no effect to follow. `data: all` needs none, and a list naming a model that no longer exists is a validation error with a suggestion.
+- **Booking already had a messages page.** The data page still gives the admin one view of every model, and the browser step deletes the visitor's message from there.
+
