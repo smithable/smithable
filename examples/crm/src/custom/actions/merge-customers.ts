@@ -1,8 +1,8 @@
 // Your implementation of the "mergeCustomers" action in smithable.yml. Smithable created this file
 // once and never changes it. The input and output types are generated from the spec, so a change
 // to the action's input or output shows up here as a type error.
-// The signed-in user is `await currentViewer()` from "#/lib/viewer.server"; the data functions
-// in src/generated/*.server.ts check access for them.
+// `viewer` is the signed-in user (null for a visitor). The records the input refers to are ones
+// they may read; the data functions in src/generated/*.server.ts check access for them.
 import { eq, getTableColumns } from "drizzle-orm";
 import { db } from "#/db";
 import { customers, orders } from "#/db/schema";
@@ -10,6 +10,7 @@ import type {
   MergeCustomersInput,
   MergeCustomersOutput,
 } from "#/generated/actions/merge-customers";
+import type { Viewer } from "#/kit/access";
 
 type Customer = typeof customers.$inferSelect;
 
@@ -21,10 +22,10 @@ type Customer = typeof customers.$inferSelect;
  * - Empty fields on the kept customer are filled from the duplicate.
  * - The duplicate is deleted afterwards.
  */
-export async function mergeCustomers({
-  keep,
-  duplicate,
-}: MergeCustomersInput): Promise<MergeCustomersOutput> {
+export async function mergeCustomers(
+  { keep, duplicate }: MergeCustomersInput,
+  _viewer: Viewer | null,
+): Promise<MergeCustomersOutput> {
   if (keep === duplicate) throw new Error("Choose two different customers.");
   // Only admins may run this action (smithable.yml); the generated action checks that first.
   const kept = db.select().from(customers).where(eq(customers.id, keep)).get();

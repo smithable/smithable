@@ -1,6 +1,7 @@
 // A stand-in coder for tests: it gets the prompt on stdin and writes the churn query's code.
-// With FAKE_CODER=trespass it also edits a generated file, and with FAKE_CODER=hook it plants a
-// Git hook: Smithable must undo both.
+// With FAKE_CODER=trespass it also edits a generated file, with FAKE_CODER=hook it plants a Git
+// hook (and with hook-fail then exits with an error), and with FAKE_CODER=package it edits an
+// installed package the host's tests would run: Smithable must undo or refuse each.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const prompt = readFileSync(0, "utf8");
@@ -62,5 +63,11 @@ export async function churnRisk(viewer: Viewer | null): Promise<ChurnRiskRows> {
 if (process.env.FAKE_CODER === "trespass")
   writeFileSync("src/generated/app.ts", "// edited by a coder that should not\n", { flag: "a" });
 // A hook runs on the user's next commit, and is not in Git's diff.
-if (process.env.FAKE_CODER === "hook")
+if (process.env.FAKE_CODER?.startsWith("hook"))
   writeFileSync(".git/hooks/pre-commit", "#!/bin/sh\necho planted\n", { mode: 0o755 });
+if (process.env.FAKE_CODER === "hook-fail") process.exit(3);
+if (process.env.FAKE_CODER === "package")
+  writeFileSync(
+    "node_modules/zod/package.json",
+    readFileSync("node_modules/zod/package.json", "utf8") + "\n",
+  );
