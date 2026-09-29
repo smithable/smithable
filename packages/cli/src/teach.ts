@@ -53,9 +53,17 @@ export default {
     // The ordinary spec the section stands for, as the JavaScript form of its YAML:
     return { models: { ... }, pages: { ... }, queries: { ... }, actions: { ... } };
   },
+  // Optional: additions to entries smithable.yml already has (never changes or removals).
+  patch(value) { return [{ add: "field", model: "Customer", field: "newsletter", type: "bool" }, { add: "section", page: "home", section: "subscribe" }, { add: "menu", page: "subscribers" }]; },
+  // Optional: operations on the section, like Smithable's own (they appear in the CLI, MCP and Studio):
+  // { name, summary, schema, positional, describe(args, ir), destructive(args, ir), apply(editors, args, ir) }, editing editors.spec (a YamlEditor: get, set, add, remove, renameKey, has) and returning [].
+  operations: [],
+  // Optional: the section in plain language for the Builder, one sentence per item.
+  summarize(value) { return ["..."]; },
   // Optional, only for what the spec cannot say: files in src/generated/plugins/${key}/, the same output for the same input.
   generate(value, ir) { return [{ path: "src/generated/plugins/${key}/...", content: "..." }]; },
 };
+// Or, to use OperationError, didYouMean, identifier, kebab or refTo: export default (api) => ({ ... });
 
 Rules:
 - Prefer expand: models, fields, pages, access, queries and actions in the spec's own grammar, so Smithable builds the database, pages, forms and access checks itself. Names must not clash with the rest of smithable.yml.

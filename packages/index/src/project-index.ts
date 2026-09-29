@@ -7,6 +7,7 @@ import {
   type PatternKind,
   type PatternOf,
   pageModels,
+  patternInfo,
   ruleId,
   type SemanticText,
   type SpecIR,
@@ -410,9 +411,7 @@ function related(ir: SpecIR, concept: string): string[] {
     case "query": {
       const query = ir.queries.find((q) => q.name === name);
       const pages = ir.pages
-        .filter(
-          (p) => p.pattern.kind === "dashboard" && p.pattern.items.some((i) => i.query === name),
-        )
+        .filter((p) => patternInfo(p).queries().includes(name))
         .map((p) => `page:${p.id}`);
       return [...(query ? [`model:${query.returns}`] : []), ...pages];
     }

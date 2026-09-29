@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
-import { type SpecPlugin, YamlEditor } from "@smithable/core";
+import { resolvePlugin, type SpecPlugin, YamlEditor } from "@smithable/core";
 
 const require = createRequire(import.meta.url);
 
@@ -31,11 +31,6 @@ export function loadPlugins(dir: string, extra: string[] = []): SpecPlugin[] {
   return names.flatMap((name) => {
     const path = pluginPath(dir, name);
     if (!existsSync(path)) throw new Error(`Plugin "${name}" is declared but ${path} is missing.`);
-    const plugin = (require(path) as { default?: SpecPlugin }).default;
-    if (!plugin?.key || !plugin.schema)
-      throw new Error(
-        `${path} must export default { key, description, schema, expand?, generate? }.`,
-      );
-    return [plugin];
+    return [resolvePlugin((require(path) as { default?: unknown }).default, path)];
   });
 }

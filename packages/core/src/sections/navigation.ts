@@ -1,6 +1,7 @@
 import { isSeq } from "yaml";
 import { mapEntries, type ParseContext, readNameList } from "../context.js";
-import { type MenuIR, patternInfo } from "../ir.js";
+import type { MenuIR } from "../ir.js";
+import { patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { NAME_PATTERN } from "./names.js";
 import { navigationOperations } from "./page-operations.js";
