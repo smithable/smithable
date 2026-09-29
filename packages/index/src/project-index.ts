@@ -3,6 +3,9 @@ import {
   type FieldIR,
   formatFormula,
   kebab,
+  type PageIR,
+  type PatternKind,
+  type PatternOf,
   pageModels,
   ruleId,
   type SemanticText,
@@ -373,16 +376,9 @@ function summary(ir: SpecIR, concept: string): string {
     case "page": {
       const page = ir.pages.find((p) => p.id === name);
       if (!page) return "";
-      const pattern =
-        page.pattern.kind === "crud"
-          ? `list, view, create, edit and delete ${page.pattern.model}`
-          : page.pattern.kind === "landing"
-            ? `landing page with ${page.pattern.sections.map((s) => s.name).join(", ")}`
-            : page.pattern.kind === "dashboard"
-              ? `dashboard with ${page.pattern.items.map((i) => i.name).join(", ")}`
-              : page.pattern.kind === "settings"
-                ? `settings: the viewer's ${page.pattern.model} record`
-                : `onboarding: fills the viewer's ${page.pattern.model} record in steps ${page.pattern.steps.map((s) => s.name).join(", ")}`;
+      const pattern = (PAGE_WORDS[page.pattern.kind] as (p: PageIR["pattern"]) => string)(
+        page.pattern,
+      );
       return `Page ${name} at ${page.route}: ${pattern}${page.actions ? `; actions ${page.actions.join(", ")}` : ""}${page.access ? `; for ${page.access.join(", ")}` : ""}`;
     }
     default:
@@ -433,3 +429,13 @@ function related(ir: SpecIR, concept: string): string[] {
       return [];
   }
 }
+
+/** Each page pattern in the index's words. */
+const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
+  crud: (p) => `list, view, create, edit and delete ${p.model}`,
+  landing: (p) => `landing page with ${p.sections.map((s) => s.name).join(", ")}`,
+  dashboard: (p) => `dashboard with ${p.items.map((i) => i.name).join(", ")}`,
+  settings: (p) => `settings: the viewer's ${p.model} record`,
+  onboarding: (p) =>
+    `onboarding: fills the viewer's ${p.model} record in steps ${p.steps.map((s) => s.name).join(", ")}`,
+};

@@ -1,7 +1,7 @@
 import { isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { checkKeys, mapEntries, ParseContext, readNameList, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import { type PageIR, pageModel, type SpecIR } from "./ir.js";
+import { type PageIR, pageModel, patternInfo, type SpecIR } from "./ir.js";
 import { didYouMean } from "./suggest.js";
 
 /**
@@ -87,11 +87,9 @@ const ICON_WORDS: [RegExp, Icon][] = [
 export function pageIcon(ux: UxIR, page: PageIR): Icon {
   const set = ux.pages[page.id]?.icon;
   if (set) return set;
-  if (page.pattern.kind === "landing") return "home";
-  if (page.pattern.kind === "dashboard") return "chart";
-  if (page.pattern.kind === "settings") return "settings";
-  if (page.pattern.kind === "onboarding") return "home";
-  const model = page.pattern.model;
+  const { icon, manages } = patternInfo(page);
+  if (icon) return icon as Icon;
+  const model = manages() ?? "";
   return ICON_WORDS.find(([words]) => words.test(model))?.[1] ?? "list";
 }
 export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
