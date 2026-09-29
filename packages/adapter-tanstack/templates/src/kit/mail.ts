@@ -1,0 +1,78 @@
+// Smithable app kit: sending mail from hooks and custom code (see src/custom/hooks.ts).
+// The settings come from the environment, never from the code: SMTP_URL, like
+// smtp://user:password@smtp.example.eu:587 (smtps:// for TLS from the first byte), or SMTP_HOST,
+// SMTP_PORT, SMTP_USER and SMTP_PASSWORD; and MAIL_FROM, the sender, like
+// "Stillwater Yoga <hello@stillwater.ax>". Without SMTP settings nothing leaves the machine: each
+// mail is written to DATA_DIR/mail/outbox as a .eml file, which is how development and the tests
+// see what would have been sent. In production that also happens, with a warning, so a hook
+// never fails a request over a missing mail setting.
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { createTransport } from "nodemailer";
+
+export interface Mail {
+  to: string | string[];
+  subject: string;
+  /** The plain-text body; `html` is optional and shown by clients that render it. */
+  text: string;
+  html?: string;
+  replyTo?: string;
+}
+
+/** Where mails go without SMTP settings. */
+export const OUTBOX = join(process.env.DATA_DIR ?? "data", "mail", "outbox");
+
+function smtp() {
+  const env = process.env;
+  if (env.SMTP_URL) return env.SMTP_URL;
+  if (env.SMTP_HOST)
+    return {
+      host: env.SMTP_HOST,
+      port: Number(env.SMTP_PORT ?? 587),
+      secure: env.SMTP_PORT === "465",
+      ...(env.SMTP_USER ? { auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD ?? "" } } : {}),
+    };
+  return undefined;
+}
+
+/** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */
+export async function sendMail(mail: Mail): Promise<void> {
+  const message = { from: process.env.MAIL_FROM ?? "app@localhost", ...mail };
+  const settings = smtp();
+  if (settings) {
+    await createTransport(settings).sendMail(message);
+    return;
+  }
+  const transport = createTransport({ streamTransport: true, buffer: true, newline: "unix" });
+  const info = await transport.sendMail(message);
+  mkdirSync(OUTBOX, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const id = String(info.messageId)
+    .replace(/[^\w.-]/g, "")
+    .slice(0, 40);
+  writeFileSync(join(OUTBOX, `${stamp}-${id}.eml`), info.message as Buffer);
+  if (process.env.NODE_ENV === "production")
+    console.warn(
+      `Mail to ${[mail.to].flat().join(", ")} was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others). It is kept in ${OUTBOX}.`,
+    );
+}
+
+/** The mails in the outbox, oldest first, as tests read them: the headers and the text body. */
+export function outbox(): { file: string; to: string; subject: string; text: string }[] {
+  let files: string[];
+  try {
+    files = readdirSync(OUTBOX)
+      .filter((f) => f.endsWith(".eml"))
+      .sort();
+  } catch {
+    return [];
+  }
+  return files.map((file) => {
+    const raw = readFileSync(join(OUTBOX, file), "utf8");
+    const at = raw.indexOf("\n\n");
+    const headers = raw.slice(0, at);
+    const header = (name: string) =>
+      new RegExp(`^${name}: (.*)$`, "im").exec(headers)?.[1]?.trim() ?? "";
+    return { file, to: header("To"), subject: header("Subject"), text: raw.slice(at + 2).trim() };
+  });
+}
