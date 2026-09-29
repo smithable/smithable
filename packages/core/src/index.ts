@@ -74,6 +74,7 @@ export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export { parseFieldShorthand } from "./sections/field-type.js";
+export { searchableFields } from "./sections/pages.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
 export type { Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";

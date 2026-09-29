@@ -66,3 +66,5 @@ pages:
   messages:
     crud: Message
     access: [admin]
+  admin:
+    data: all                      # every model, for administrators

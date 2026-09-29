@@ -2,7 +2,7 @@
 // smithable.yml (schema, parser), what the IR knows about it (models, icon, menu, texted parts),
 // its own operations, and how its pages follow a change made elsewhere (a field renamed or
 // removed). A new pattern is one entry here; menus, icons, texts, access and the index ask it.
-import { isMap, isScalar as isScalarNode, type ParsedNode } from "yaml";
+import { isMap, isScalar as isScalarNode, isSeq, type ParsedNode } from "yaml";
 import {
   checkKeys,
   mapEntries,
@@ -23,12 +23,13 @@ import {
   type SectionKind,
   type SpecIR,
 } from "./ir.js";
-import { capitalize } from "./naming.js";
+import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
 import {
   crudOperations,
   dashboardOperations,
+  dataOperations,
   landingOperations,
   usersOperations,
 } from "./sections/page-operations.js";
@@ -54,6 +55,8 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
   icon?: string;
   /** In the main menu when the spec names no menus; landing and onboarding pages are ways in. */
   inMenu: boolean;
+  /** Routes its pages take besides their own (a data page's model lists), for the duplicate check. */
+  routes?(route: string, pattern: PatternOf<K>): string[];
   /** The roles that may open its pages when a page says nothing; every role without it. */
   access?: string[];
   /** Its named parts with texts in smithable.content.yml: name → kind of text. */
@@ -314,6 +317,49 @@ const users: PagePattern<"users"> = {
   operations: usersOperations,
 };
 
+/** An admin view of every model (or some): each one's records, found, opened, changed. */
+const data: PagePattern<"data"> = {
+  kind: "data",
+  schema: {
+    oneOf: [
+      { type: "string", enum: ["all"] },
+      { type: "array", items: { type: "string" }, minItems: 1 },
+    ],
+    description:
+      "An administrator's view of the app's data: all (every model) or a list of models, each with its records to find, open, change and delete. For admins, unless the page's access says otherwise.",
+  },
+  example: "data: all",
+  parse(ctx, value, where, parsed) {
+    if (isScalarNode(value)) {
+      if (readString(ctx, value, `"data" in ${where}`) !== "all") {
+        ctx.error(value, "invalid-value", `"data" in ${where} is "all" or a list of models.`);
+        return undefined;
+      }
+      return { kind: "data", models: (parsed.models ?? []).map((m) => m.name), all: true };
+    }
+    const models = readNameList(ctx, value, `"data" in ${where}`);
+    // An empty list would make the page vanish without a word.
+    if (!models.length) {
+      if (isSeq(value))
+        ctx.error(
+          value,
+          "invalid-value",
+          `"data" in ${where} is "all" or a list of at least one model.`,
+        );
+      return undefined;
+    }
+    for (const { name, at } of models) ctx.reference("model", name, at);
+    return { kind: "data", models: models.map((m) => m.name), all: false };
+  },
+  models: (p) => p.models,
+  // Each model's list lives under the page, e.g. /admin/order-lines.
+  routes: (route, p) => p.models.map((m) => `${route === "/" ? "" : route}/${kebab(plural(m))}`),
+  icon: "layers",
+  inMenu: true,
+  access: ["admin"],
+  operations: dataOperations,
+};
+
 export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   crud,
   landing,
@@ -321,6 +367,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   settings,
   onboarding,
   users,
+  data,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -335,6 +382,7 @@ export function patternInfo(page: PageIR) {
     icon: info.icon,
     inMenu: info.inMenu,
     access: info.access,
+    routes: (route: string) => info.routes?.(route, pattern) ?? [],
     parts: () => info.parts?.(pattern) ?? {},
     queries: () => info.queries?.(pattern) ?? [],
     forms: () => info.forms?.(pattern) ?? [],

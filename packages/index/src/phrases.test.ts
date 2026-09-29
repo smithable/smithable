@@ -89,6 +89,16 @@ describe("the seven benchmark tasks", () => {
       matchRequest(spec, "Add a page for orders, and show it in the menu.", ROLES)?.operations,
     ).toEqual([{ op: "addPage", args: { page: "orders", model: "Order" } }]);
   });
+  test("Add an admin page, for every model or some", () => {
+    expect(ops("Add an admin page")).toEqual([{ op: "addDataPage", args: {} }]);
+    expect(ops("Add a page to manage all data")).toEqual([{ op: "addDataPage", args: {} }]);
+    expect(ops("Add a data page for products and customers")).toEqual([
+      { op: "addDataPage", args: { models: ["Product", "Customer"] } },
+    ]);
+    // A name that is not a model is for a model to read.
+    expect(ops("Add a data page for invoices")).toBeUndefined();
+  });
+
   test("Add a users page; only invited people may sign in", () => {
     expect(ops("Add a page to invite colleagues.")).toEqual([{ op: "addUsersPage", args: {} }]);
     expect(ops("Add a team page")).toEqual([{ op: "addUsersPage", args: {} }]);

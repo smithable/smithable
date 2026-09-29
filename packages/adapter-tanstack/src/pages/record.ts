@@ -16,6 +16,7 @@ import {
   appStart,
   attr,
   dataKey,
+  dataRoute,
   fieldOrder,
   guard,
   HEADER,
@@ -33,6 +34,7 @@ import {
   references,
   type Texts,
   titleField,
+  type Within,
 } from "../shared.js";
 
 /**
@@ -237,7 +239,14 @@ ${options ? "        options={options}\n" : ""}        submitLabel=${attr(`Creat
 `;
 }
 
-export function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR): string {
+export function detailRoute(
+  page: PageIR,
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  ux: UxIR,
+  within?: Within,
+): string {
   const n = names(model, t);
   const order = fieldOrder(page, model, ux);
   const component = `${model.name}Page`;
@@ -255,9 +264,14 @@ export function detailRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, 
     const back = references(target)
       .filter((f) => f.type.model === model.name)
       .map(dataKey);
-    const targetPage = ir.pages.find((p) => pageModel(p) === target.name);
-    const open = targetPage
-      ? `\n          onOpen={(item) => navigate({ to: ${JSON.stringify(join(targetPage.route, "$id"))}, params: { id: String(item.id) } })}`
+    // A related record opens on its own page; inside a data page, in the data page.
+    const targetRoute = within
+      ? within.models.includes(target.name)
+        ? dataRoute(within, target.name)
+        : undefined
+      : ir.pages.find((p) => pageModel(p) === target.name)?.route;
+    const open = targetRoute
+      ? `\n          onOpen={(item) => navigate({ to: ${JSON.stringify(join(targetRoute, "$id"))}, params: { id: String(item.id) } })}`
       : "";
     const label = t.field(model, field).label ?? humanize(field.name);
     return `      <section className="mt-10">
