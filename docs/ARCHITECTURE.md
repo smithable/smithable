@@ -318,7 +318,7 @@ ai:
   policy: eu-only          # local-only | eu-only | best-available | custom
 ```
 
-It has structured fields where possible and one free-text `guidance` field for implementation preferences. It never contains functional requirements. As built (M15), `packages` names libraries for custom code at exact versions (`packages: { chart.js: 4.4.1 }`, or the `setPackage` operation, so hosted projects and the AI coder can add one without a terminal); the generator adds them to `package.json`, and the stack profile's own packages are refused.
+It is checked against a JSON Schema like the other companions. It has structured fields where possible and one free-text `guidance` field for implementation preferences. It never contains functional requirements. As built (M15), `packages` names libraries for custom code at exact versions (`packages: { chart.js: 4.4.1 }`, or the `setPackage` operation, so hosted projects and the AI coder can add one without a terminal); the generator adds them to `package.json`, and the stack profile's own packages are refused.
 
 ## 4. Semantic operations
 
@@ -328,6 +328,7 @@ The **only** way to change application semantics programmatically.
 - An operation is a pure function `manifest → manifest` plus validation. Side effects (regeneration, migration) follow from the changed manifest, not from the operation itself.
 - Applied operations are appended to an **operation log** (`.smithable/oplog.jsonl`, committed). Operations also report **effects**, such as a rename, so the migration step can rename a column instead of dropping and re-adding it.
 - **Edits preserve formatting.** Operations never re-serialize a file: a source editor splices text at the positions the YAML parser reports, so comments, alignment, flow style and blank lines outside the edited entry stay byte-for-byte identical. After every edit the result is re-parsed, and the operation is refused if the spec or content file would become invalid.
+- **A rename follows the name everywhere it is used:** the field's texts, tones, table columns and form order, a page's search, the model's formulas and their examples, aggregates over it from other models (`SUM(lines.amount)`), dashboard tiles and onboarding steps. A removal leaves onboarding steps and lists without the field, and is refused, naming the tile, while a dashboard tile counts on it.
 - Each operation is registered by the spec section it belongs to (models, pages, navigation), as part of the internal plugin interface (§5.1).
 - Batches of operations are atomic: they all apply, or none do.
 

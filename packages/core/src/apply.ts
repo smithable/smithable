@@ -1,5 +1,6 @@
 import { validateAuth } from "./auth.js";
 import { validateContent } from "./content.js";
+import { validateContext } from "./context-file.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
 import { type AnyOperation, type Effect, type OperationArgs, OperationError } from "./operation.js";
@@ -117,6 +118,11 @@ export function applyOperation(
     if (!result.auth)
       return fail(`${name} would make smithable.auth.yml invalid.`, result.diagnostics);
   }
+  const contextChanged = editors.context.text !== (files.context ?? `smithableContext: 0.1\n`);
+  if (contextChanged) {
+    const problems = validateContext({ path: "smithable.context.yml", text: editors.context.text });
+    if (problems.length) return fail(`${name} would make smithable.context.yml invalid.`, problems);
+  }
   return {
     ok: true,
     files: {
@@ -125,10 +131,7 @@ export function applyOperation(
       ...(editors.auth ? { auth: editors.auth.text } : {}),
       ...(files.ux !== undefined || uxChanged ? { ux: editors.ux.text } : {}),
       // Like the ux file: written if the project has one or the operation changed it.
-      ...(files.context !== undefined ||
-      editors.context.text !== (files.context ?? `smithableContext: 0.1\n`)
-        ? { context: editors.context.text }
-        : {}),
+      ...(files.context !== undefined || contextChanged ? { context: editors.context.text } : {}),
     },
     description: op.describe(args, before.ir),
     destructive: op.destructive(args, before.ir, after.ir),
