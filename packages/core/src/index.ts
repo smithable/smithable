@@ -1,7 +1,13 @@
 export type { Allowed, ModelAllowed } from "./access.js";
 export { actionAccess, modelAccess, pageAccess } from "./access.js";
 export type { OperationResult, ProjectFiles } from "./apply.js";
-export { applyOperation, findOperation, OPERATIONS, parseOperationArgs } from "./apply.js";
+export {
+  applyOperation,
+  findOperation,
+  OPERATIONS,
+  operationsFor,
+  parseOperationArgs,
+} from "./apply.js";
 export type { AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
 export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
 export type { ConceptRules } from "./concepts.js";
@@ -62,8 +68,8 @@ export {
   pageModels,
   patternInfo,
 } from "./patterns.js";
-export type { SpecPlugin } from "./plugin.js";
-export { checkJson } from "./plugin.js";
+export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
+export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export { parseFieldShorthand } from "./sections/field-type.js";

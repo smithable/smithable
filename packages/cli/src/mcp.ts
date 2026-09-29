@@ -4,13 +4,14 @@ import { spawnSync } from "node:child_process";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { type JsonSchema, OPERATIONS, type OperationArgs } from "@smithable/core";
+import { type JsonSchema, type OperationArgs, operationsFor } from "@smithable/core";
 import { buildContext, estimateTokens } from "@smithable/index";
 import { logTokens } from "./context.js";
 import { customize } from "./customize.js";
 import { describe, TEST_ARGS } from "./inspect.js";
 import { type Io, keepStdoutForProtocol } from "./io.js";
 import { runOperation } from "./op.js";
+import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
@@ -41,34 +42,39 @@ const toolName = (name: string) =>
 
 function tools(dir: string): Tool[] {
   // Replacing the whole spec is for people in Studio's editor; agents use the specific operations.
-  const operations: Tool[] = OPERATIONS.filter((op) => op.name !== "editSpec").map((op) => ({
-    name: toolName(op.name),
-    description: `${op.summary} ${OPERATION_NOTE}`,
-    inputSchema: {
-      ...op.schema,
-      properties: {
-        ...(op.schema.properties as JsonSchema),
-        confirm: {
-          type: "boolean",
-          description:
-            "Only after the user agreed: confirms a change that loses data, when a first call said so.",
+  const operations: Tool[] = operationsFor(loadPlugins(dir))
+    .filter((op) => op.name !== "editSpec")
+    .map((op) => ({
+      name: toolName(op.name),
+      description: `${op.summary} ${OPERATION_NOTE}`,
+      inputSchema: {
+        ...op.schema,
+        properties: {
+          ...(op.schema.properties as JsonSchema),
+          confirm: {
+            type: "boolean",
+            description:
+              "Only after the user agreed: confirms a change that loses data, when a first call said so.",
+          },
         },
       },
-    },
-    run: async ({ confirm, ...args }, io) => {
-      // Looked up before the change: after a rename, custom code still uses the old name.
-      const users = customUsers(dir, op.name, args);
-      const code = await runOperation(dir, io, op.name, args, { yes: confirm === true, mcp: true });
-      if (code === 0) {
-        io.out(
-          users.length
-            ? `Custom code that uses the changed field may need updating: ${users.join(", ")}. Run smithable_test.\n`
-            : "No custom code is affected.\n",
-        );
-      }
-      return code;
-    },
-  }));
+      run: async ({ confirm, ...args }, io) => {
+        // Looked up before the change: after a rename, custom code still uses the old name.
+        const users = customUsers(dir, op.name, args);
+        const code = await runOperation(dir, io, op.name, args, {
+          yes: confirm === true,
+          mcp: true,
+        });
+        if (code === 0) {
+          io.out(
+            users.length
+              ? `Custom code that uses the changed field may need updating: ${users.join(", ")}. Run smithable_test.\n`
+              : "No custom code is affected.\n",
+          );
+        }
+        return code;
+      },
+    }));
   return [
     ...operations,
     {

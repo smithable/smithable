@@ -11,6 +11,7 @@ import {
   pageModel,
   plural,
   type SpecIR,
+  type SpecPlugin,
   USER_MODEL,
 } from "@smithable/core";
 import { formulaInWords } from "./formula-words.js";
@@ -48,6 +49,7 @@ export function summarize(
   ir: SpecIR,
   auth?: AuthIR,
   content: ContentIR = emptyContent(),
+  plugins: readonly SpecPlugin[] = [],
 ): SummarySection[] {
   const { label, pluralLabel, fieldLabel, modelNamed, words, item } = wordsFor(ir, content);
 
@@ -138,6 +140,14 @@ export function summarize(
         ...(query.rules ?? []).map((r) => `Rule: ${r.text}`),
       ],
     });
+  }
+
+  // A plugin's section, in its own words.
+  for (const plugin of plugins) {
+    const value = ir.extensions?.[plugin.key];
+    const sentences = value === undefined ? [] : (plugin.summarize?.(value) ?? []);
+    if (sentences.length)
+      sections.push({ concept: `plugin:${plugin.key}`, title: humanize(plugin.key), sentences });
   }
 
   if (auth)
