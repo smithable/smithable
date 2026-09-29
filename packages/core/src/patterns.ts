@@ -1,0 +1,646 @@
+// Page patterns (ARCHITECTURE §10.4), each registered as one object: how it is written in
+// smithable.yml (schema, parser), what the IR knows about it (models, icon, menu, texted parts),
+// its own operations, and how its pages follow a change made elsewhere (a field renamed or
+// removed). A new pattern is one entry here; menus, icons, texts, access and the index ask it.
+import { isMap, isScalar as isScalarNode, type ParsedNode } from "yaml";
+import {
+  checkKeys,
+  mapEntries,
+  type ParseContext,
+  readNameList,
+  readNumber,
+  readString,
+} from "./context.js";
+import type { YamlEditor } from "./edit.js";
+import {
+  type DashboardItem,
+  type LandingSection,
+  type OnboardingStep,
+  type PageIR,
+  type PatternKind,
+  type PatternOf,
+  SECTION_KINDS,
+  type SectionKind,
+  type SpecIR,
+} from "./ir.js";
+import { capitalize } from "./naming.js";
+import type { AnyOperation, Effect, Refusal } from "./operation.js";
+import type { JsonSchema } from "./section.js";
+import {
+  crudOperations,
+  dashboardOperations,
+  landingOperations,
+} from "./sections/page-operations.js";
+import { didYouMean } from "./suggest.js";
+
+export interface PagePattern<K extends PatternKind = PatternKind> {
+  kind: K;
+  /** The schema of the page key that selects the pattern (`crud: Model`, `landing: …`). */
+  schema: JsonSchema;
+  /** How it is written, for the message when a page has no pattern. */
+  example: string;
+  parse(
+    ctx: ParseContext,
+    value: ParsedNode | null,
+    where: string,
+    parsed: Partial<SpecIR>,
+  ): PatternOf<K> | undefined;
+  /** Every model its pages show. */
+  models(pattern: PatternOf<K>): string[];
+  /** The model its pages list and edit record by record (crud), if any. */
+  manages?(pattern: PatternOf<K>): string;
+  /** Its navigation icon when none is set; without one it is suggested by the model's name. */
+  icon?: string;
+  /** In the main menu when the spec names no menus; landing and onboarding pages are ways in. */
+  inMenu: boolean;
+  /** Its named parts with texts in smithable.content.yml: name → kind of text. */
+  parts?(pattern: PatternOf<K>): Record<string, string>;
+  /** Custom queries its pages show. */
+  queries?(pattern: PatternOf<K>): string[];
+  /** Models visitors add records of from its pages without an account (contact forms). */
+  forms?(pattern: PatternOf<K>): string[];
+  /** Operations that make or change pages of this pattern. */
+  operations?: AnyOperation[];
+  /** Keeps a page of this pattern in step with an effect elsewhere, or refuses the change. */
+  follow?(
+    spec: YamlEditor,
+    page: PageIR & { pattern: PatternOf<K> },
+    effect: Effect,
+    ir: SpecIR,
+  ): Refusal | undefined;
+}
+
+/**
+ * What each landing section kind may be given: a button (the page it opens), a form (the model
+ * visitors add a record of). `records: <Model>` makes a section of any name a records section.
+ */
+export const LANDING_SECTIONS: Record<SectionKind, { button?: true; form?: true }> = {
+  hero: { button: true },
+  features: {},
+  records: {},
+  pricing: {},
+  testimonials: {},
+  faq: {},
+  callToAction: { button: true },
+  contact: { form: true },
+  gallery: {},
+  footer: {},
+};
+
+const NUMBER_TYPES = ["int", "decimal", "money"];
+
+/** A rename or removal of a field in a list at `path`: the list follows, or goes when empty. */
+function followInList(
+  spec: YamlEditor,
+  path: string[],
+  from: string,
+  to: string | undefined,
+  keepDepth: number,
+): void {
+  const list = spec.has(path) ? (spec.get(path) as string[]) : undefined;
+  if (!list?.includes(from)) return;
+  const next = to ? list.map((f) => (f === from ? to : f)) : list.filter((f) => f !== from);
+  if (next.length) spec.set(path, next);
+  else spec.removeAndPrune(path, keepDepth);
+}
+
+/** The field an effect renames or removes, if it is one of those. */
+function fieldEffect(effect: Effect): { model: string; from: string; to?: string } | undefined {
+  if (effect.kind === "rename-field")
+    return { model: effect.model, from: effect.from, to: effect.to };
+  if (effect.kind === "remove-field") return { model: effect.model, from: effect.field };
+  return undefined;
+}
+
+const crud: PagePattern<"crud"> = {
+  kind: "crud",
+  schema: { type: "string", description: "A model to list, view, create, edit and delete." },
+  example: "crud: <Model>",
+  parse(ctx, value, where) {
+    const model = readString(ctx, value, `"crud" in ${where}`);
+    if (model === undefined) return undefined;
+    ctx.reference("model", model, value);
+    return { kind: "crud", model };
+  },
+  models: (p) => [p.model],
+  manages: (p) => p.model,
+  inMenu: true,
+  operations: crudOperations,
+  follow(spec, page, effect) {
+    // The page's search follows a renamed field, or loses a removed one.
+    const f = fieldEffect(effect);
+    if (f && page.pattern.model === f.model)
+      followInList(spec, ["pages", page.id, "search"], f.from, f.to, 3);
+    return undefined;
+  },
+};
+
+const landing: PagePattern<"landing"> = {
+  kind: "landing",
+  schema: {
+    type: "object",
+    description: `Sections of a landing page, in order: ${SECTION_KINDS.join(", ")}.`,
+    additionalProperties: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      properties: {
+        records: { type: "string", description: "A model whose records the section shows." },
+        button: { type: "string", description: "The page the section's button opens." },
+        limit: { type: "integer", minimum: 1 },
+        form: {
+          type: "string",
+          description: "A contact section's form: the model visitors add a record of.",
+        },
+      },
+    },
+  },
+  example: "landing",
+  parse: (ctx, value, where, parsed) => ({
+    kind: "landing",
+    sections: readLanding(ctx, value, where, parsed),
+  }),
+  models: (p) => p.sections.flatMap((s) => (s.model ? [s.model] : [])),
+  icon: "home",
+  inMenu: false,
+  parts: (p) => Object.fromEntries(p.sections.map((s) => [s.name, s.kind])),
+  forms: (p) => p.sections.flatMap((s) => (s.form ? [s.form] : [])),
+  operations: landingOperations,
+};
+
+const dashboard: PagePattern<"dashboard"> = {
+  kind: "dashboard",
+  schema: {
+    type: "object",
+    description: "Tiles of a dashboard, in order: numbers, charts by month, latest records.",
+    additionalProperties: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        count: { type: "string", description: "Count a model's records, e.g. Invoice." },
+        sum: { type: "string", description: "Sum a number field, e.g. Invoice.total." },
+        average: { type: "string", description: "Average a number field." },
+        list: { type: "string", description: "Show a model's latest records." },
+        query: { type: "string", description: "Show a custom query's records." },
+        where: {
+          type: "object",
+          description: "Only records with these choice values or yes/no values.",
+        },
+        by: { type: "string", description: "A date field: one bar per month." },
+        limit: { type: "integer", minimum: 1 },
+      },
+    },
+  },
+  example: "dashboard",
+  parse: (ctx, value, where, parsed) => ({
+    kind: "dashboard",
+    items: readDashboard(ctx, value, where, parsed),
+  }),
+  models: (p) => p.items.map((i) => i.model),
+  icon: "chart",
+  inMenu: true,
+  parts: (p) => Object.fromEntries(p.items.map((i) => [i.name, "tile"])),
+  queries: (p) => p.items.flatMap((i) => (i.query ? [i.query] : [])),
+  operations: dashboardOperations,
+  follow(spec, page, effect) {
+    // A tile follows a renamed field; a removal is refused while a tile counts on the field.
+    const f = fieldEffect(effect);
+    if (!f) return undefined;
+    for (const item of page.pattern.items) {
+      if (item.model !== f.model) continue;
+      const uses =
+        item.field === f.from || item.by === f.from || (item.where && f.from in item.where);
+      if (!uses) continue;
+      if (!f.to)
+        return {
+          refusal: `The "${item.name}" tile of the ${page.id} page uses ${f.model}.${f.from}; change or remove the tile first.`,
+        };
+      const tile = ["pages", page.id, "dashboard", item.name];
+      if (item.field === f.from && item.measure)
+        spec.set([...tile, item.measure], `${f.model}.${f.to}`);
+      if (item.by === f.from) spec.set([...tile, "by"], f.to);
+      if (item.where && f.from in item.where) spec.renameKey([...tile, "where", f.from], f.to);
+    }
+    return undefined;
+  },
+};
+
+const settings: PagePattern<"settings"> = {
+  kind: "settings",
+  schema: {
+    type: "string",
+    description:
+      "A model with one record per user (private data) or per app (shared): the page edits it.",
+  },
+  example: "settings: <Model>",
+  parse(ctx, value, where) {
+    const model = readString(ctx, value, `"settings" in ${where}`);
+    if (model === undefined) return undefined;
+    ctx.reference("model", model, value);
+    return { kind: "settings", model };
+  },
+  models: (p) => [p.model],
+  icon: "settings",
+  inMenu: true,
+};
+
+const onboarding: PagePattern<"onboarding"> = {
+  kind: "onboarding",
+  schema: {
+    type: "object",
+    required: ["model", "steps"],
+    additionalProperties: false,
+    description: "Fills the settings record in steps after the first sign-in.",
+    properties: {
+      model: { type: "string" },
+      steps: {
+        type: "object",
+        additionalProperties: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+  example: "onboarding",
+  parse(ctx, value, where, parsed) {
+    const result = readOnboarding(ctx, value, where, parsed);
+    return result && { kind: "onboarding", ...result };
+  },
+  models: (p) => [p.model],
+  icon: "home",
+  inMenu: false,
+  parts: (p) => Object.fromEntries(p.steps.map((step) => [step.name, "step"])),
+  follow(spec, page, effect) {
+    // A step follows a renamed field and loses a removed one; an emptied step goes.
+    const f = fieldEffect(effect);
+    if (!f || page.pattern.model !== f.model) return undefined;
+    const { from, to } = f;
+    for (const step of page.pattern.steps) {
+      if (!step.fields.includes(from)) continue;
+      const path = ["pages", page.id, "onboarding", "steps", step.name];
+      const next = to
+        ? step.fields.map((x) => (x === from ? to : x))
+        : step.fields.filter((x) => x !== from);
+      if (next.length) spec.set(path, next);
+      else spec.remove(path);
+    }
+    return undefined;
+  },
+};
+
+/** Every page pattern, by kind. TypeScript insists on one entry per kind of the IR. */
+export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
+  crud,
+  landing,
+  dashboard,
+  settings,
+  onboarding,
+};
+
+export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
+
+/** A page's pattern with what is known about it (the lookup TypeScript cannot type). */
+export function patternInfo(page: PageIR) {
+  const info = PAGE_PATTERNS[page.pattern.kind] as unknown as PagePattern<"crud">;
+  const pattern = page.pattern as PatternOf<"crud">;
+  return {
+    models: () => info.models(pattern),
+    manages: () => info.manages?.(pattern),
+    icon: info.icon,
+    inMenu: info.inMenu,
+    parts: () => info.parts?.(pattern) ?? {},
+    queries: () => info.queries?.(pattern) ?? [],
+    forms: () => info.forms?.(pattern) ?? [],
+    follow: (spec: YamlEditor, effect: Effect, ir: SpecIR) =>
+      info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir),
+  };
+}
+
+/** The model a crud page manages; other pages have none. */
+export function pageModel(page: PageIR): string | undefined {
+  return patternInfo(page).manages();
+}
+
+/** Every model a page shows: a crud page's, a landing page's records, a dashboard's tiles. */
+export function pageModels(page: PageIR): string[] {
+  return [...new Set(patternInfo(page).models())];
+}
+
+/** Landing sections: a section named like its kind (hero, faq, …), or any name with `records`. */
+function readLanding(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): LandingSection[] {
+  const sections: LandingSection[] = [];
+  const named = SECTION_KINDS.filter((k) => k !== "records");
+  for (const { key: name, keyNode, value } of mapEntries(ctx, node, `the landing of ${where}`) ??
+    []) {
+    const sectionWhere = `section "${name}" of ${where}`;
+    // "faq:" with nothing after it is a section with no options.
+    const empty = value === null || (isScalarNode(value) && value.value === null);
+    if (!empty && !isMap(value)) {
+      ctx.error(
+        value,
+        "expected-mapping",
+        `${capitalize(sectionWhere)} takes options or nothing.`,
+        `Write "${name}:" with nothing after it, or options like "hero: { button: <page> }" or "classes: { records: <Model> }". Its texts go in smithable.content.yml.`,
+      );
+      continue;
+    }
+    const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
+    const options = checkKeys(ctx, entries, sectionWhere, {
+      allowed: ["records", "button", "limit", "form"],
+      content: ["title", "subtitle", "text", "items"],
+    });
+    const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
+    const allows = kindOf ? LANDING_SECTIONS[kindOf] : {};
+    const section: LandingSection = { name, kind: "records" };
+    for (const { key, value: option, keyNode: optionKey } of options) {
+      if (key === "records") {
+        const model = readString(ctx, option, `"records" in ${sectionWhere}`);
+        if (model !== undefined) {
+          ctx.reference("model", model, option);
+          section.model = model;
+        }
+      } else if (key === "form") {
+        const model = readString(ctx, option, `"form" in ${sectionWhere}`);
+        if (!allows.form) {
+          const kinds = named.filter((k) => LANDING_SECTIONS[k].form);
+          ctx.error(optionKey, "invalid-key", `Only a ${kinds.join(" or ")} section has a form.`);
+        } else if (model !== undefined) {
+          ctx.reference("model", model, option);
+          section.form = model;
+          // Visitors fill it in: they cannot pick other records, which would show them.
+          const links = parsed.models
+            ?.find((m) => m.name === model)
+            ?.fields.filter((f) => f.type.kind === "relation" && !f.type.many && !f.formula);
+          if (links?.length)
+            ctx.error(
+              option,
+              "invalid-value",
+              `A contact form's model cannot link to other records (${model} has ${links.map((f) => f.name).join(", ")}): visitors would have to choose among them.`,
+              "Use a model of its own for messages, e.g. Message with name, email and message.",
+            );
+        }
+      } else if (key === "button") {
+        const page = readString(ctx, option, `"button" in ${sectionWhere}`);
+        if (page !== undefined) {
+          ctx.reference("page", page, option);
+          section.button = page;
+        }
+        if (!allows.button) {
+          const kinds = named.filter((k) => LANDING_SECTIONS[k].button);
+          ctx.error(
+            optionKey,
+            "invalid-key",
+            `Only a ${kinds.slice(0, -1).join(", ")} or ${kinds.at(-1)} section has a button.`,
+          );
+        }
+      } else {
+        const limit = readNumber(ctx, option, `"limit" in ${sectionWhere}`);
+        if (limit !== undefined && (!Number.isInteger(limit) || limit < 1))
+          ctx.error(option, "invalid-value", `"limit" must be a whole number above 0.`);
+        else if (limit !== undefined) section.limit = limit;
+      }
+    }
+    if (!section.model) {
+      if (!kindOf) {
+        ctx.error(
+          keyNode,
+          "unknown-section",
+          `There is no section kind "${name}". Name a section after its kind, or give it "records: <Model>".`,
+          didYouMean(name, named) ?? `Kinds: ${named.join(", ")}.`,
+        );
+        continue;
+      }
+      section.kind = kindOf;
+    }
+    sections.push(section);
+  }
+  return sections;
+}
+
+/** Steps of an onboarding; together they must ask for every required field without a default. */
+function readOnboarding(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): { model: string; steps: OnboardingStep[] } | undefined {
+  const onboardingWhere = `the onboarding of ${where}`;
+  const options = checkKeys(ctx, mapEntries(ctx, node, onboardingWhere) ?? [], onboardingWhere, {
+    allowed: ["model", "steps"],
+    content: ["title", "subtitle"],
+  });
+  const modelEntry = options.find((o) => o.key === "model");
+  const stepsEntry = options.find((o) => o.key === "steps");
+  if (!modelEntry || !stepsEntry) {
+    ctx.error(node, "missing-key", `${capitalize(onboardingWhere)} needs "model" and "steps".`);
+    return undefined;
+  }
+  const modelName = readString(ctx, modelEntry.value, `"model" in ${onboardingWhere}`);
+  if (modelName === undefined) return undefined;
+  ctx.reference("model", modelName, modelEntry.value);
+  const model = parsed.models?.find((m) => m.name === modelName);
+  const steps: OnboardingStep[] = [];
+  for (const step of mapEntries(ctx, stepsEntry.value, `the steps of ${onboardingWhere}`) ?? []) {
+    const fields = readNameList(
+      ctx,
+      step.value,
+      `step "${step.key}" of ${onboardingWhere}`,
+    ).flatMap(({ name, at }) => {
+      const field = model?.fields.find((f) => f.name === name);
+      if (model && !field) {
+        ctx.error(
+          at,
+          "unknown-field",
+          `${modelName} has no field named "${name}".`,
+          didYouMean(
+            name,
+            model.fields.map((f) => f.name),
+          ),
+        );
+        return [];
+      }
+      if (field && (field.formula || (field.type.kind === "relation" && field.type.many))) {
+        ctx.error(
+          at,
+          "invalid-field",
+          `"${name}" is not entered in a form, so no step can ask for it.`,
+        );
+        return [];
+      }
+      return [name];
+    });
+    steps.push({ name: step.key, fields });
+  }
+  const asked = new Set(steps.flatMap((s) => s.fields));
+  const missing = (model?.fields ?? []).filter(
+    (f) => f.required && f.default === undefined && !f.formula && !asked.has(f.name),
+  );
+  if (missing.length)
+    ctx.error(
+      stepsEntry.keyNode,
+      "missing-field",
+      `The steps never ask for ${missing.map((f) => f.name).join(", ")}, which ${modelName} requires.`,
+    );
+  return { model: modelName, steps };
+}
+
+/** Dashboard tiles; every model, field and value they name is checked against the models. */
+function readDashboard(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): DashboardItem[] {
+  const items: DashboardItem[] = [];
+  for (const { key: name, keyNode, value } of mapEntries(ctx, node, `the dashboard of ${where}`) ??
+    []) {
+    const itemWhere = `"${name}" in the dashboard of ${where}`;
+    const options = checkKeys(ctx, mapEntries(ctx, value, itemWhere) ?? [], itemWhere, {
+      allowed: ["count", "sum", "average", "list", "query", "where", "by", "limit"],
+      content: ["label", "title"],
+    });
+    const measures = options.filter((o) =>
+      ["count", "sum", "average", "list", "query"].includes(o.key),
+    );
+    const measure = measures[0];
+    if (measures.length !== 1 || !measure) {
+      ctx.error(
+        keyNode,
+        "invalid-dashboard",
+        `${capitalize(itemWhere)} needs one of count, sum, average, list or query.`,
+      );
+      continue;
+    }
+    const target = readString(ctx, measure.value, `"${measure.key}" in ${itemWhere}`);
+    if (target === undefined) continue;
+    if (measure.key === "query") {
+      // The records of a custom query, e.g. the customers most likely to churn.
+      ctx.reference("query", target, measure.value);
+      const query = parsed.queries?.find((q) => q.name === target);
+      const item: DashboardItem = {
+        name,
+        kind: "list",
+        model: query?.returns ?? "",
+        query: target,
+      };
+      const limit = options.find((o) => o.key === "limit");
+      const n = limit ? readNumber(ctx, limit.value, `"limit" in ${itemWhere}`) : undefined;
+      if (n !== undefined && (!Number.isInteger(n) || n < 1))
+        ctx.error(limit?.value ?? null, "invalid-value", `"limit" must be a whole number above 0.`);
+      else if (n !== undefined) item.limit = n;
+      for (const o of options.filter((o) => o.key === "where" || o.key === "by"))
+        ctx.error(
+          o.keyNode,
+          "invalid-key",
+          `"${o.key}" does not apply to a query: its code chooses the records.`,
+        );
+      if (query) items.push(item);
+      continue;
+    }
+    const [modelName = "", fieldName] = target.split(".");
+    const model = parsed.models?.find((m) => m.name === modelName);
+    ctx.reference("model", modelName, measure.value);
+    const item: DashboardItem = {
+      name,
+      kind: measure.key === "list" ? "list" : "stat",
+      model: modelName,
+      ...(measure.key === "list" ? {} : { measure: measure.key as "count" | "sum" | "average" }),
+    };
+    const fieldOf = (field: string, at: ParsedNode | null) => {
+      const found = model?.fields.find((f) => f.name === field);
+      if (model && !found)
+        ctx.error(
+          at,
+          "unknown-field",
+          `${modelName} has no field named "${field}".`,
+          didYouMean(
+            field,
+            model.fields.map((f) => f.name),
+          ),
+        );
+      return found;
+    };
+    if (measure.key === "sum" || measure.key === "average") {
+      const field = fieldName === undefined ? undefined : fieldOf(fieldName, measure.value);
+      if (fieldName === undefined)
+        ctx.error(
+          measure.value,
+          "invalid-dashboard",
+          `Name the field to ${measure.key}, as in Invoice.total.`,
+        );
+      else if (field && !(field.type.kind === "scalar" && NUMBER_TYPES.includes(field.type.name)))
+        ctx.error(
+          measure.value,
+          "invalid-dashboard",
+          `${target} is not a number, so it cannot be added up.`,
+        );
+      else item.field = fieldName;
+    } else if (fieldName !== undefined) {
+      ctx.error(
+        measure.value,
+        "invalid-dashboard",
+        `"${measure.key}" takes a model, as in Invoice.`,
+      );
+    }
+    for (const { key, value: option, keyNode: optionKey } of options) {
+      if (key === "where") {
+        item.where = {};
+        for (const condition of mapEntries(ctx, option, `"where" in ${itemWhere}`) ?? []) {
+          const field = fieldOf(condition.key, condition.keyNode);
+          if (!field || !isScalarNode(condition.value)) continue;
+          const wanted = condition.value.value;
+          if (field.type.kind === "choice" && typeof wanted === "string") {
+            if (field.type.values.includes(wanted)) item.where[condition.key] = wanted;
+            else
+              ctx.error(
+                condition.value,
+                "unknown-value",
+                `${modelName}.${condition.key} has no value "${wanted}".`,
+                didYouMean(wanted, field.type.values),
+              );
+          } else if (
+            field.type.kind === "scalar" &&
+            field.type.name === "bool" &&
+            typeof wanted === "boolean"
+          ) {
+            item.where[condition.key] = wanted;
+          } else {
+            ctx.error(
+              condition.value,
+              "invalid-dashboard",
+              `"where" compares choice fields with one of their values, and yes/no fields with true or false.`,
+            );
+          }
+        }
+      } else if (key === "by") {
+        const by = readString(ctx, option, `"by" in ${itemWhere}`);
+        const field = by === undefined ? undefined : fieldOf(by, option);
+        if (item.kind === "list")
+          ctx.error(optionKey, "invalid-key", `"by" makes a chart; a list has no bars.`);
+        else if (
+          field &&
+          !(field.type.kind === "scalar" && ["date", "datetime"].includes(field.type.name))
+        )
+          ctx.error(
+            option,
+            "invalid-dashboard",
+            `"by" needs a date field: the chart has a bar per month.`,
+          );
+        else if (by !== undefined) {
+          item.by = by;
+          item.kind = "chart";
+        }
+      } else if (key === "limit") {
+        const limit = readNumber(ctx, option, `"limit" in ${itemWhere}`);
+        if (item.kind !== "list") ctx.error(optionKey, "invalid-key", `"limit" belongs to a list.`);
+        else if (limit !== undefined && (!Number.isInteger(limit) || limit < 1))
+          ctx.error(option, "invalid-value", `"limit" must be a whole number above 0.`);
+        else if (limit !== undefined) item.limit = limit;
+      }
+    }
+    items.push(item);
+  }
+  return items;
+}

@@ -1,7 +1,8 @@
 import { isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { checkKeys, mapEntries, ParseContext, readNameList, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import { type PageIR, pageModel, patternInfo, type SpecIR } from "./ir.js";
+import type { PageIR, SpecIR } from "./ir.js";
+import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
 
 /**

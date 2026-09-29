@@ -5,9 +5,10 @@ import {
   type AnyOperation,
   applyOperation,
   type Effect,
-  OPERATIONS,
   type OperationArgs,
+  operationsFor,
   type ProjectFiles,
+  type SpecPlugin,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -45,8 +46,9 @@ If the app already does what is asked, answer {"kind":"none","reason":"Already d
 Use the exact names of models, fields and pages from the app. New names are camelCase (fields) or PascalCase (models).
 Field types (shorthand): string, text, email, phone, url, int, decimal, money, bool, date, datetime; choices as "a | b | c"; a reference to another model as "Customer"; a list of related records as "Order[]". Append ! for required, add "unique", and "= value" for a default: "email! unique", "int = 60".`;
 
-/** The operations a model may propose: every operation but the whole-file edit. */
-const PROPOSABLE = OPERATIONS.filter((o) => o.name !== "editSpec");
+/** The operations a model may propose: the project's, its plugins' included, but the whole-file edit. */
+const proposable = (plugins?: readonly SpecPlugin[]) =>
+  operationsFor(plugins).filter((o) => o.name !== "editSpec");
 
 /** The operation's arguments, compactly: names, types, allowed values and hints. */
 export function signature(op: AnyOperation): string {
@@ -75,11 +77,14 @@ export function signature(op: AnyOperation): string {
  * that create something, or work on the app as a whole, are always offered. Fewer choices make
  * a small model choose better and cost fewer tokens.
  */
-export function relevantOperations(concepts: string[]): AnyOperation[] {
+export function relevantOperations(
+  concepts: string[],
+  plugins?: readonly SpecPlugin[],
+): AnyOperation[] {
   const has = (kind: string) => concepts.some((c) => c.startsWith(`${kind}:`));
   const models = has("model") || has("field");
   const pages = has("page");
-  return PROPOSABLE.filter((op) => {
+  return proposable(plugins).filter((op) => {
     const properties = Object.keys((op.schema as { properties?: object }).properties ?? {});
     // What the operation works on: an existing model (or a field of one), an existing page or
     // menu. The ones that make a model or a page from nothing need neither.
@@ -136,11 +141,12 @@ export function answerSchema(operations: AnyOperation[], strict = true): object 
 export function promptFor(
   provider: Pick<Provider, "location">,
   context: ContextSlice,
+  plugins?: readonly SpecPlugin[],
 ): { system: string; user: string; operations: AnyOperation[] } {
-  const operations = relevantOperations(context.concepts);
+  const operations = relevantOperations(context.concepts, plugins);
   if (provider.location === "local") {
     return {
-      system: `${SYSTEM}\n\nOperation arguments:\n${PROPOSABLE.map(signature).join("\n")}`,
+      system: `${SYSTEM}\n\nOperation arguments:\n${proposable(plugins).map(signature).join("\n")}`,
       user: `${context.text}\n\nOperations that fit this request: ${operations.map((o) => o.name).join(", ")}.`,
       operations,
     };
@@ -205,7 +211,7 @@ export async function proposeChange(options: {
   let problem = "";
   let none: string | undefined;
   for (const [index, provider] of providers.entries()) {
-    const { system, user, operations } = promptFor(provider, context);
+    const { system, user, operations } = promptFor(provider, context, files.plugins);
     const schema = answerSchema(operations);
     const fallbackSchema = answerSchema(operations, false);
     let prompt = user;

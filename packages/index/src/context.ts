@@ -1,4 +1,4 @@
-import { OPERATIONS } from "@smithable/core";
+import { type AnyOperation, OPERATIONS } from "@smithable/core";
 import type { ConceptInfo, ProjectIndex, SourceFile } from "./project-index.js";
 
 export interface ContextOptions {
@@ -6,6 +6,8 @@ export interface ContextOptions {
   implementation?: SourceFile[];
   /** At most this many concepts (default 6). */
   limit?: number;
+  /** The project's operations, its plugins' included (default: the built-in ones). */
+  operations?: readonly AnyOperation[];
 }
 
 export interface ContextSlice {
@@ -49,7 +51,7 @@ export function buildContext(
     `Menus: ${index.menus.map((m) => `${m.name}: [${m.pages.join(", ")}]`).join("; ")}`,
     "",
     "Operations (change the app only through these):",
-    ...OPERATIONS.map(
+    ...(options.operations ?? OPERATIONS).map(
       (op) =>
         `- ${op.name} ${op.positional.map((p) => `<${p.replace("...", "")}>`).join(" ")}: ${op.summary}`,
     ),

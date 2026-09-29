@@ -44,7 +44,7 @@ export function Builder({
   const words = (op: string, args: Record<string, unknown>) =>
     spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
   const sections = useMemo(
-    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content) : []),
+    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins) : []),
     [spec],
   );
   return (
