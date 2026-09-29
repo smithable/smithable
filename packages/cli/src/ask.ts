@@ -227,6 +227,15 @@ export async function ask(
       return 1;
     case "none":
       io.out(`No operation can do this: ${proposal.reason}\n`);
+      // Behaviour that follows a change is a hook, which a coder can write (ARCHITECTURE §6.4).
+      if (
+        /\b(e-?mail|message|notif|remind|schedule|daily|when |after |whenever|send)/i.test(
+          `${request} ${proposal.reason}`,
+        )
+      )
+        io.out(
+          `If it should happen after a record changes, or daily, that is a hook: smithable code hooks ${JSON.stringify(request)}\n`,
+        );
       return 0;
     case "question":
       io.out(
