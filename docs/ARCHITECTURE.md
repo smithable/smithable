@@ -511,20 +511,22 @@ AI never edits generated or kit files.
 
 | Tier | Handler | Example |
 |---|---|---|
-| 0 | Generators: explicit operations (UI controls, CLI) and simple pattern rules | The "required" toggle |
+| 0 | Generators: explicit operations (UI controls, CLI) and a phrase grammar over the request (`matchRequest` in `@smithable/index`: a request worded like an everyday change becomes operations when every name in it resolves to exactly one concept, else it goes on to a model) | The "required" toggle; "Customers should have a phone number" |
 | 1 | Local model, where available (CLI, self-hosted; possibly in-browser later) → operations | "Customers need a mobile number" |
 | 2 | **Smithable model**: a small open model hosted in the EU → operations, pattern and theme choices | The same, for hosted users; "make it feel friendlier" |
 | 3 | Frontier model (via EU providers where possible, or the user's own API or Claude Code) | Custom action logic, new custom components |
 
 For hosted users, who have no local model, tier 2 is the main AI tier. It starts as an off-the-shelf open model on an EU provider's hosted endpoint (for example Mistral, Scaleway or OVH), and is fine-tuned later once curated and consented data exists. Because every tier speaks the same operation schemas, swapping the model behind a tier never changes the product.
 
-The system escalates only when the lower tier is unavailable, fails validation, returns no valid operation, or the task needs custom code.
+The system escalates only when the lower tier is unavailable, fails validation, returns no valid operation, answers that no operation can do it while a stronger tier is allowed (a small model's "cannot" is not the last word), or the task needs custom code. A question from any tier goes to the user as it is: asking is cheap and never a guess.
 
 ### 9.3 Context construction
 
 Before any model runs, simple fuzzy and embedding matching over the manifest shortlists the likely concepts, so even a 1–3B local model only chooses among a few candidates. A **context builder** then assembles the smallest useful slice from the manifest, the index and (only for custom code) the relevant source files: the request, the relevant concepts with their free text, available operations, and the implementation slice needed for that tier. Every tier gets the same semantic slice; escalating a tier never means adding unrelated project data.
 
 The context builder is `buildContext` in `@smithable/index`; `smithable context "<request>"` shows the slice a model would get. Shortlisting is deterministic word matching for now (names weigh most, weak matches are cut); embeddings come with Smithable's own AI (M12). Token counts are estimates (about four characters per token), good enough to compare contexts and budgets; each context and MCP call is logged to `data/.smithable/token-log.jsonl`.
+
+What a model is offered depends on where it runs (`promptFor` in `@smithable/ai`). A hosted model pays per token, so it gets the context and only the operations that can be about the request's concepts (one that changes an existing model, field or page is offered only when the context has one; operations that create something or work on the app as a whole always are). A local model pays no tokens but prefills slowly, so it gets the same system text and the whole operation list every time, a stable prefix its server keeps in its cache, and only the context after it. Either way the answer is constrained to a strict JSON Schema built from the offered operations' own argument schemas, so a constrained model cannot misname an argument or leave a required one out; a server whose JSON Schema support stops short of it gets a simpler schema of operation names, once, and keeps it.
 
 For each AI call, record (locally) the semantic-context tokens, implementation-context tokens, model, tier, operation type and whether escalation happened. Project content is never collected for analytics without explicit permission.
 
