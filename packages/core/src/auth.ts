@@ -4,6 +4,7 @@ import {
   checkKeys,
   mapEntries,
   ParseContext,
+  readBoolean,
   readNameList,
   readString,
 } from "./context.js";
@@ -35,6 +36,8 @@ export interface SignInIR {
   providers: Provider[];
   /** Only email addresses in these domains may sign in. */
   allowedDomains?: string[];
+  /** False: only invited addresses and the admins may sign in (needs a users page). */
+  selfSignUp: boolean;
 }
 
 export interface RoleIR {
@@ -66,7 +69,7 @@ export function validateAuth(
   });
   const ctx = new ParseContext(file.path, lines);
   const auth: AuthIR = {
-    signIn: { providers: ["google"] },
+    signIn: { providers: ["google"], selfSignUp: true },
     defaultAccess: "private",
     roles: [{ name: "admin" }],
     defaultRole: "admin",
@@ -228,12 +231,17 @@ export function validateAuth(
     }
   }
 
-  if (auth.signIn !== "none" && auth.defaultAccess === "shared" && !auth.signIn.allowedDomains) {
+  if (
+    auth.signIn !== "none" &&
+    auth.defaultAccess === "shared" &&
+    !auth.signIn.allowedDomains &&
+    auth.signIn.selfSignUp
+  ) {
     ctx.warning(
       defaultAccess?.value,
       "open-shared-access",
       "With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.",
-      `Restrict sign-in with "allowedDomains" under "signIn", or use "defaultAccess: private".`,
+      `Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".`,
     );
   }
   if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes);
@@ -241,7 +249,7 @@ export function validateAuth(
 }
 
 function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
-  const signIn: SignInIR = { providers: ["google"] };
+  const signIn: SignInIR = { providers: ["google"], selfSignUp: true };
   if (!isMap(node)) {
     ctx.error(
       node,
@@ -252,8 +260,7 @@ function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
   }
   const where = `"signIn"`;
   for (const { key, value } of checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["providers", "allowedDomains"],
-    later: ["selfSignUp"],
+    allowed: ["providers", "allowedDomains", "selfSignUp"],
   })) {
     if (key === "providers") {
       const providers = readNameList(ctx, value, `"providers"`).flatMap(({ name, at }) => {
@@ -280,6 +287,9 @@ function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
           `"providers" needs at least one sign-in method, like [google].`,
         );
       else signIn.providers = [...new Set(providers)];
+    } else if (key === "selfSignUp") {
+      const allowed = readBoolean(ctx, value, `"selfSignUp"`);
+      if (allowed !== undefined) signIn.selfSignUp = allowed;
     } else {
       signIn.allowedDomains = readNameList(ctx, value, `"allowedDomains"`).flatMap(
         ({ name, at }) => {
@@ -342,7 +352,23 @@ function checkAgainstSpec(
         );
     }
   }
-  if (auth.signIn !== "none") return;
+  const usersPage = ir.pages.find((p) => p.pattern.kind === "users");
+  if (auth.signIn !== "none") {
+    if (!auth.signIn.selfSignUp && !usersPage)
+      ctx.error(
+        null,
+        "no-users-page",
+        `With "selfSignUp: false" only invited people can sign in, but no page invites them.`,
+        `Add a page with "users: manage" to smithable.yml.`,
+      );
+    return;
+  }
+  if (usersPage)
+    ctx.error(
+      null,
+      "no-sign-in",
+      `The ${usersPage.id} page manages users, but "signIn" is "none".`,
+    );
   const usesUsers = ir.models.flatMap((m) =>
     m.fields
       .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL)

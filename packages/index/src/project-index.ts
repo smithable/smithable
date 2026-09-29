@@ -437,4 +437,5 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
   settings: (p) => `settings: the viewer's ${p.model} record`,
   onboarding: (p) =>
     `onboarding: fills the viewer's ${p.model} record in steps ${p.steps.map((s) => s.name).join(", ")}`,
+  users: () => "users: invite people by email with a role, change roles, remove users",
 };
