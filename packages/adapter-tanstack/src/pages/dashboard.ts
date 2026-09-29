@@ -2,7 +2,6 @@
 import {
   camel,
   type DashboardItem,
-  type FieldIR,
   humanize,
   kebab,
   type PageIR,
@@ -14,12 +13,12 @@ import {
 } from "@smithable/core";
 import {
   attr,
-  dataKey,
   guard,
   HEADER,
   importList,
   indexPath,
   join,
+  keyOf,
   literal,
   modelNamed,
   names,
@@ -87,11 +86,7 @@ export function dashboardRoute(
       );
       const target = ir.pages.find((p) => pageModel(p) === model.name);
       // The same columns as the model's own list page.
-      const columns =
-        target &&
-        ux.pages[target.id]?.columns?.map((name) =>
-          dataKey(model.fields.find((f) => f.name === name) as FieldIR),
-        );
+      const columns = target && ux.pages[target.id]?.columns?.map((name) => keyOf(model, name));
       return {
         block: "list",
         code: `<section aria-labelledby=${attr(`${item.name}-title`)} className="space-y-3">

@@ -47,6 +47,8 @@ export interface GenContext {
  */
 export interface SectionGenerator {
   key: string;
+  /** Kit files only apps that use this part need (sign-in, a page pattern), and whether this one does. */
+  kit?: { files: string[]; used(ctx: GenContext): boolean }[];
   files(ctx: GenContext): GeneratedFile[];
 }
 
@@ -191,6 +193,16 @@ export function dataKey(field: FieldIR): string {
   return field.type.kind === "relation" ? `${field.name}Id` : field.name;
 }
 
+/** A field's column key by the field's name in the spec (the spec has already checked it). */
+export function keyOf(model: ModelIR, name: string): string {
+  return dataKey(model.fields.find((f) => f.name === name) as FieldIR);
+}
+
+/** Text placed deeper in generated code: every line after the first gets `spaces` more. */
+export function indent(text: string, spaces: number): string {
+  return text.split("\n").join(`\n${" ".repeat(spaces)}`);
+}
+
 /** The field that names a related record; users are named by their name. */
 export function relatedTitle(ir: SpecIR, model: string): string {
   return model === USER_MODEL ? "name" : titleField(modelNamed(ir, model));
@@ -260,7 +272,7 @@ export function appStart(ir: SpecIR): PageIR | undefined {
 export function fieldOrder(page: PageIR, model: ModelIR, ux: UxIR): string {
   const order = ux.pages[page.id]?.fieldOrder;
   if (!order) return "";
-  const keys = order.map((name) => dataKey(model.fields.find((f) => f.name === name) as FieldIR));
+  const keys = order.map((name) => keyOf(model, name));
   return `\n        fieldOrder={${literal(keys)}}`;
 }
 
