@@ -23,10 +23,28 @@ function devDomain(auth: AuthIR): string {
   return (auth.signIn === "none" ? undefined : auth.signIn.allowedDomains?.[0]) ?? "example.com";
 }
 
+/** The app invites people when it has a users page (which closed sign-up requires). */
+export function hasInvitations(ir: SpecIR, auth: AuthIR): boolean {
+  return hasSignIn(auth) && ir.pages.some((p) => p.pattern.kind === "users");
+}
+
+/** The roles as the app names them. */
+export function roleLabels(auth: AuthIR): Record<string, string> {
+  return Object.fromEntries(auth.roles.map((r) => [r.name, humanize(r.name)]));
+}
+
+/** A record of role names (identifiers) to texts, as code. */
+const record = (o: Record<string, string>) =>
+  `{ ${Object.entries(o)
+    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+    .join(", ")} }`;
+
 /** Better Auth's configuration: providers, the Drizzle tables, roles and sign-up rules. */
-export function authModule(auth: AuthIR): string {
+export function authModule(auth: AuthIR, ir: SpecIR): string {
   if (auth.signIn === "none") throw new Error("No sign-in");
-  const { providers, allowedDomains } = auth.signIn;
+  const { providers, allowedDomains, selfSignUp } = auth.signIn;
+  const invitations = hasInvitations(ir, auth);
+  const defaultRole = JSON.stringify(auth.defaultRole);
   const provider = (name: string) => {
     const [id, secret] = ENV[name] as [string, string];
     const hd =
@@ -45,17 +63,46 @@ export function authModule(auth: AuthIR): string {
         });
       }`
     : "";
+  // Who gets in: an invitation gives its role; closed sign-up refuses everyone else but the
+  // admins (and, in development, the development users).
+  const invitationCheck = invitations
+    ? `
+          const invited = db.select().from(invitation).where(eq(invitation.email, email)).get();
+          const open = invited && invited.expiresAt.getTime() > Date.now() ? invited : undefined;${
+            selfSignUp
+              ? ""
+              : `
+          if (!open && !ADMINS.includes(email) && !(import.meta.env.DEV && email.startsWith("dev-"))) {
+            throw new APIError("FORBIDDEN", {
+              message: invited
+                ? "Your invitation has expired. Ask an administrator for a new one."
+                : \`Only invited people can sign in to \${APP_NAME}. Ask an administrator for an invitation.\`,
+            });
+          }`
+          }`
+    : "";
+  const role = invitations ? `open?.role ?? ${defaultRole}` : defaultRole;
+  const afterCreate = invitations
+    ? `
+        after: async (created) => {
+          // The invitation is used up: the user is the record from now on.
+          db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
+        },`
+    : "";
+  const tables = invitations
+    ? "account, invitation, session, user, verification"
+    : "account, session, user, verification";
   return `${HEADER}import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-${allowedDomains ? 'import { APIError } from "better-auth/api";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { db } from "#/db";
-import { account, session, user, verification } from "#/db/schema";
+${allowedDomains || (invitations && !selfSignUp) ? 'import { APIError } from "better-auth/api";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
+${invitations ? 'import { eq } from "drizzle-orm";\n' : ""}import { db } from "#/db";
+import { ${tables} } from "#/db/schema";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ${JSON.stringify(providers)};
 ${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n` : ""}/** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ${JSON.stringify(auth.admins)};
-
+${invitations && !selfSignUp ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
 const socialProviders = {
 ${providers.map(provider).join("\n")}
 };
@@ -84,9 +131,9 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (newUser) => {
-          const email = newUser.email.toLowerCase();${domainCheck}
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${JSON.stringify(auth.defaultRole)} } };
-        },
+          const email = newUser.email.toLowerCase();${domainCheck}${invitationCheck}
+          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${role} } };
+        },${afterCreate}
       },
     },
   },
@@ -141,27 +188,50 @@ export const userOptions = createServerFn().handler(async () => {
  * The sign-in page, with a development-only sign-in as any role. Without a page to return
  * to, signing in goes to `start` (the onboarding, when the app has one).
  */
-export function signInRoute(auth: AuthIR, start = "/"): string {
+export function signInRoute(auth: AuthIR, start = "/", invitations = false): string {
   const roles = auth.roles.map((r) => r.name);
+  const options = invitations
+    ? `
+/** The sign-in choices, and whom an invitation link is for (by its token; never signs anyone in). */
+const signInOptions = createServerFn()
+  .validator(z.object({ invite: z.string().max(100).optional() }))
+  .handler(({ data }) => {
+    const providers = configuredProviders();
+    const invited = data.invite
+      ? db
+          .select({ email: invitation.email, role: invitation.role, expiresAt: invitation.expiresAt })
+          .from(invitation)
+          .where(eq(invitation.token, data.invite))
+          .get()
+      : undefined;
+    const open = invited && invited.expiresAt.getTime() > Date.now() ? invited : undefined;
+    return {
+      providers,
+      missing: PROVIDERS.filter((p) => !providers.includes(p)),
+      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null,
+    };
+  });
+`
+    : `
+const signInOptions = createServerFn().handler(() => {
+  const providers = configuredProviders();
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)) };
+});
+`;
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "#/db";
-import { user } from "#/db/schema";
+import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { auth, configuredProviders, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
-
-const signInOptions = createServerFn().handler(() => {
-  const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)) };
-});
-
+${invitations ? `const ROLE_LABELS: Record<string, string> = ${record(roleLabels(auth))};\n` : ""}${options}
 /** Development only: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
@@ -178,20 +248,33 @@ const devSignIn = createServerFn({ method: "POST" })
 
 export const Route = createFileRoute("/sign-in")({
   // Only paths within the app, so the page cannot send anyone elsewhere.
-  validateSearch: z.object({ redirect: z.string().regex(/^\\/(?!\\/)/).optional().catch(undefined) }),
-  loader: () => signInOptions(),
+  validateSearch: z.object({
+    redirect: z.string().regex(/^\\/(?!\\/)/).optional().catch(undefined),${
+      invitations
+        ? `
+    invite: z.string().max(100).optional().catch(undefined),`
+        : ""
+    }
+  }),${
+    invitations
+      ? `
+  loaderDeps: ({ search }) => ({ invite: search.invite }),
+  loader: ({ deps }) => signInOptions({ data: { invite: deps.invite } }),`
+      : `
+  loader: () => signInOptions(),`
+  }
   component: SignInPage,
 });
 
 function SignInPage() {
-  const { providers, missing } = Route.useLoaderData();
+  const { providers, missing${invitations ? ", invitation" : ""} } = Route.useLoaderData();
   const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
   const router = useRouter();
   return (
     <SignIn
       appName={app.name}
       providers={providers}
-      missing={missing}
+      missing={missing}${invitations ? "\n      invitation={invitation}" : ""}
       devRoles={import.meta.env.DEV ? [...ROLES] : undefined}
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
@@ -208,8 +291,24 @@ function SignInPage() {
 `;
 }
 
+/** Who is invited, with which role, until when; accepted invitations are deleted. */
+const INVITATION_TABLE = `
+export const invitation = sqliteTable("invitation", {
+  id: text().primaryKey(),
+  email: text().notNull().unique(),
+  role: text().notNull(),
+  token: text().notNull().unique(),
+  invitedById: text().references(() => user.id, { onDelete: "set null" }),
+  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  expiresAt: integer({ mode: "timestamp_ms" }).notNull(),
+});`;
+
 /** Better Auth's tables, as its CLI would generate them, plus each user's role. */
-export function authTables(auth: AuthIR): string {
+export function authTables(auth: AuthIR, invitations = false): string {
+  return `${betterAuthTables(auth)}${invitations ? `\n${INVITATION_TABLE}` : ""}`;
+}
+
+function betterAuthTables(auth: AuthIR): string {
   return `export const user = sqliteTable("user", {
   id: text().primaryKey(),
   name: text().notNull(),

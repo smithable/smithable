@@ -146,7 +146,7 @@ describe("operations", () => {
     const result = applyOperation(withModel, "addPage", { page: "products", model: "Product" });
     if (!result.ok) throw new Error(result.message);
     expect(result.files.spec).toContain("  products:\n    crud: Product\n");
-    expect(result.files.spec).toContain("navigation: [customers, orders, products]");
+    expect(result.files.spec).toContain("navigation: [customers, orders, team, products]");
   });
 
   test("setNavigation reorders, and a named menu turns the list into menus", () => {
@@ -155,11 +155,11 @@ describe("operations", () => {
     );
     // A page leaving the menu is named, so it is not missed when confirming.
     expect(ok("setNavigation", ["main", "orders"]).description).toBe(
-      "Set the main menu to orders (no longer in it: customers)",
+      "Set the main menu to orders (no longer in it: customers, team)",
     );
     const admin = ok("setNavigation", ["admin", "orders"]);
     expect(admin.files.spec).toContain(
-      "navigation:\n  main: [customers, orders]\n  admin: [orders]\n",
+      "navigation:\n  main: [customers, orders, team]\n  admin: [orders]\n",
     );
   });
 
@@ -406,7 +406,7 @@ test("removePage takes a page out of the spec, the menus and its texts", () => {
   expect(result.ok).toBe(true);
   if (!result.ok) return;
   expect(result.files.spec).not.toMatch(/^ {2}orders:/m);
-  expect(result.files.spec).toContain("navigation: [customers]");
+  expect(result.files.spec).toContain("navigation: [customers, team]");
   expect(result.files.content).not.toContain("Every order and where it stands.");
   expect(applyOperation(files, "removePage", { page: "nowhere" }).ok).toBe(false);
 });
@@ -458,6 +458,31 @@ test("addLandingPage makes a public landing page with a hero and a footer", () =
   expect(again.ok && again.files.spec).toContain("route: /about");
   const closed = applyOperation(files, "addLandingPage", { page: "intro", public: false });
   expect(closed.ok && closed.files.auth).not.toContain("intro");
+});
+
+test("addUsersPage adds one users page to the menu; setSignUp closes and reopens sign-up", () => {
+  // The CRM already has its team page and closed sign-up: start from one without them.
+  const open = applyOperation(files, "setSignUp", { who: "anyone" });
+  expect(open.ok && open.files.auth).not.toContain("selfSignUp");
+  const plain = applyOperation({ ...files, ...(open.ok ? open.files : {}) }, "removePage", {
+    page: "team",
+  });
+  if (!plain.ok) throw new Error(plain.message);
+  const without = { ...files, ...plain.files };
+  expect(applyOperation(without, "addUsersPage", { page: "people" }).ok && "").toBe("");
+  const result = applyOperation(without, "addUsersPage", {});
+  expect(result).toMatchObject({ ok: true });
+  if (!result.ok) return;
+  expect(result.files.spec).toContain("team:\n    users: manage");
+  expect(result.files.spec).toContain("navigation: [customers, orders, team]");
+  const again = applyOperation({ ...without, ...result.files }, "addUsersPage", { page: "people" });
+  expect(again).toMatchObject({ ok: false, message: expect.stringContaining("team page") });
+  const closed = applyOperation({ ...without, ...result.files }, "setSignUp", { who: "invited" });
+  expect(closed.ok && closed.files.auth).toMatch(
+    /signIn:\n {2}providers: \[google\]\n {2}allowedDomains: .*\n {2}selfSignUp: false\n/,
+  );
+  // Closing sign-up without a users page is refused by the auth file's check.
+  expect(applyOperation(without, "setSignUp", { who: "invited" })).toMatchObject({ ok: false });
 });
 
 test("an edit the files cannot take fails the operation instead of throwing", () => {

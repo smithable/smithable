@@ -4,6 +4,7 @@ smithableAuth: 0.1
 signIn:
   providers: [google]
   allowedDomains: [acme.com]       # only Acme's Google Workspace accounts
+  selfSignUp: false                # and only colleagues invited from the team page
 
 defaultAccess: shared              # an internal tool: colleagues see each other's data
 

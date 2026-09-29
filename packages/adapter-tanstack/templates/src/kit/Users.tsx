@@ -1,0 +1,349 @@
+// Smithable app kit: who has access. Users with their role, open invitations, and what an
+// administrator does with them: invite by email address, change a role, resend or withdraw an
+// invitation, remove a user. The rules (not yourself, the last administrator stays) are checked
+// on the server; this only shows their answers. A table from tablet width, cards on a phone.
+// To customise it, copy this file into src/custom/components/ and edit the copy.
+import { useRef, useState } from "react";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import { Card } from "#/components/ui/card";
+import { Input, Label, NativeSelect } from "#/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "#/components/ui/table";
+
+export interface RoleOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface InvitationRow {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: Date | string;
+  /** The link the invitation mail carries; shown so it can be sent by hand too. */
+  link: string;
+}
+
+interface UsersProps {
+  /** The signed-in user: their own role and account are not theirs to change here. */
+  viewerId?: string;
+  roles: RoleOption[];
+  users: UserRow[];
+  invitations: InvitationRow[];
+  onInvite: (email: string, role: string) => Promise<unknown>;
+  onSetRole: (userId: string, role: string) => Promise<unknown>;
+  onRemove: (userId: string) => Promise<unknown>;
+  onResend: (invitationId: string) => Promise<unknown>;
+  onWithdraw: (invitationId: string) => Promise<unknown>;
+}
+
+const date = (value: Date | string) =>
+  new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+
+export function Users({
+  viewerId,
+  roles,
+  users,
+  invitations,
+  onInvite,
+  onSetRole,
+  onRemove,
+  onResend,
+  onWithdraw,
+}: UsersProps) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState(roles.find((r) => r.value !== "admin")?.value ?? "admin");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [removing, setRemoving] = useState<UserRow>();
+  const confirmRemove = useRef<HTMLDialogElement>(null);
+  const label = (value: string) => roles.find((r) => r.value === value)?.label ?? value;
+  const chosen = roles.find((r) => r.value === role);
+
+  async function run(action: () => Promise<unknown>, done?: string) {
+    setBusy(true);
+    setFailure(undefined);
+    setNotice(undefined);
+    try {
+      await action();
+      if (done) setNotice(done);
+    } catch (error) {
+      setFailure(
+        error instanceof Error ? error.message : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function invite(event: React.FormEvent) {
+    event.preventDefault();
+    const address = email.trim();
+    if (!address) return;
+    await run(async () => {
+      await onInvite(address, role);
+      setEmail("");
+    }, `Invitation sent to ${address}.`);
+  }
+
+  async function copy(link: string) {
+    try {
+      await navigator.clipboard.writeText(link);
+      setNotice("Invitation link copied.");
+    } catch {
+      setNotice(link);
+    }
+  }
+
+  // The same controls in the table and in the phone cards.
+  const roleControl = (u: UserRow) =>
+    u.id === viewerId ? (
+      <span>{label(u.role)}</span>
+    ) : (
+      <NativeSelect
+        aria-label={`Role of ${u.name}`}
+        className="h-9 w-auto"
+        value={u.role}
+        disabled={busy}
+        onChange={(e) => run(() => onSetRole(u.id, e.target.value))}
+      >
+        {roles.map((r) => (
+          <option key={r.value} value={r.value}>
+            {r.label}
+          </option>
+        ))}
+      </NativeSelect>
+    );
+  const removeButton = (u: UserRow) =>
+    u.id !== viewerId && (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-destructive text-destructive"
+        disabled={busy}
+        onClick={() => {
+          setRemoving(u);
+          confirmRemove.current?.showModal();
+        }}
+      >
+        Remove
+      </Button>
+    );
+  const expired = (i: InvitationRow) => new Date(i.expiresAt).getTime() < Date.now();
+  const invitationStatus = (i: InvitationRow) =>
+    expired(i) ? (
+      <Badge variant="danger">Invitation expired</Badge>
+    ) : (
+      <Badge variant="warning">Invited, valid until {date(i.expiresAt)}</Badge>
+    );
+  const invitationActions = (i: InvitationRow) => (
+    <div className="flex flex-wrap gap-2 md:justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy || expired(i)}
+        onClick={() => copy(i.link)}
+      >
+        Copy link
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        onClick={() => run(() => onResend(i.id), `Invitation sent again to ${i.email}.`)}
+      >
+        Resend
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        onClick={() => run(() => onWithdraw(i.id))}
+      >
+        Withdraw
+      </Button>
+    </div>
+  );
+  const you = (u: UserRow) =>
+    u.id === viewerId && <span className="text-muted-foreground"> (you)</span>;
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-card">
+        <form onSubmit={invite} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-1.5">
+            <Label htmlFor="invite-email">Email address</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              required
+              value={email}
+              placeholder="name@example.com"
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <div className="space-y-1.5 sm:w-56">
+            <Label htmlFor="invite-role">Role</Label>
+            <NativeSelect
+              id="invite-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              disabled={busy}
+            >
+              {roles.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+          <Button type="submit" disabled={busy}>
+            Send invitation
+          </Button>
+        </form>
+        {chosen?.description && (
+          <p className="mt-2 text-sm text-muted-foreground">{chosen.description}</p>
+        )}
+      </Card>
+      {failure && (
+        <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          {failure}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="break-all rounded-md bg-accent p-3 text-sm">
+          {notice}
+        </p>
+      )}
+      {users.length + invitations.length === 0 && (
+        <Card className="px-6 py-16 text-center text-muted-foreground">
+          Nobody yet. Invite the first person above.
+        </Card>
+      )}
+      <ul className="space-y-3 md:hidden">
+        {users.map((u) => (
+          <li key={u.id}>
+            <Card className="space-y-3 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {u.name}
+                    {you(u)}
+                  </p>
+                  <p className="truncate text-sm text-muted-foreground">{u.email}</p>
+                </div>
+                <Badge variant="success">Active</Badge>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {roleControl(u)}
+                {removeButton(u)}
+              </div>
+            </Card>
+          </li>
+        ))}
+        {invitations.map((i) => (
+          <li key={i.id}>
+            <Card className="space-y-3 p-5">
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{i.email}</p>
+                <p className="text-sm text-muted-foreground">{label(i.role)}</p>
+              </div>
+              {invitationStatus(i)}
+              {invitationActions(i)}
+            </Card>
+          </li>
+        ))}
+      </ul>
+      {users.length + invitations.length > 0 && (
+        <Card className="hidden overflow-hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium">
+                    {u.name}
+                    {you(u)}
+                  </TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>{roleControl(u)}</TableCell>
+                  <TableCell>
+                    <Badge variant="success">Active</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{removeButton(u)}</TableCell>
+                </TableRow>
+              ))}
+              {invitations.map((i) => (
+                <TableRow key={i.id}>
+                  <TableCell className="text-muted-foreground">—</TableCell>
+                  <TableCell>{i.email}</TableCell>
+                  <TableCell>{label(i.role)}</TableCell>
+                  <TableCell>{invitationStatus(i)}</TableCell>
+                  <TableCell className="text-right">{invitationActions(i)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+      {/* Opening it focuses Cancel, the first button; Escape closes it. */}
+      <dialog
+        ref={confirmRemove}
+        aria-labelledby="remove-title"
+        className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+      >
+        <h2 id="remove-title" className="text-lg font-semibold">
+          Remove {removing?.name ?? "this user"}?
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          They can no longer sign in. What they created stays, without an owner. They can be invited
+          again.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => confirmRemove.current?.close()}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              confirmRemove.current?.close();
+              if (removing) run(() => onRemove(removing.id));
+            }}
+          >
+            Remove user
+          </Button>
+        </div>
+      </dialog>
+    </div>
+  );
+}

@@ -129,7 +129,8 @@ export interface PageIR extends SemanticText {
     | { kind: "landing"; sections: LandingSection[] }
     | { kind: "dashboard"; items: DashboardItem[] }
     | { kind: "settings"; model: string }
-    | { kind: "onboarding"; model: string; steps: OnboardingStep[] };
+    | { kind: "onboarding"; model: string; steps: OnboardingStep[] }
+    | { kind: "users"; mode: "manage" };
   /** Actions offered on the page, e.g. a "Merge customers" button. */
   actions?: string[];
   /** Only these roles may open the page (admins always can). */

@@ -72,7 +72,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 
 ## M5 — Auth and access
 
-- `smithable.auth.yml` v0.1: sign-in methods, `defaultAccess` (shared or private), roles, and the `public` section. Implemented with Better Auth ([ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-smithableauthyml-users-roles-and-exposure)). Extra user fields and `selfSignUp: false` (which needs invitations) move to a later milestone; `allowedDomains` covers internal tools until then.
+- `smithable.auth.yml` v0.1: sign-in methods, `defaultAccess` (shared or private), roles, and the `public` section. Implemented with Better Auth ([ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-smithableauthyml-users-roles-and-exposure)). Extra user fields move to a later milestone; `selfSignUp: false` with invitations came in M15.5.
 - Google sign-in by default, Facebook as a secondary provider, via the chosen auth library. Includes admin bootstrap, domain restriction, a dev-only sign-in-as-role, and a provider setup checklist.
 - Automatic owner field on every model, `ownedBy`, and `access` exceptions on models, actions and pages, validated against the defined roles.
 - One generated access layer in the kit that filters every query and write, including row-level filtering by owner. Generated tests prove the effective access per model and role.
@@ -257,6 +257,7 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Fable's re-review fixes are done.
 - AI routing phases 1–5 are merged.
 - Plugins v2 is in review (PR #5).
+- Hook points, the mail kit, and invitations with a users page (`users: manage`, `selfSignUp: false`; [design/users.md](design/users.md)) are built (2026-09-29).
 
 **Exit:** a new page pattern or landing section kind touches one module in core and one in the adapter; a project plugin can add operations and a summary; `smithable ask` answers everyday changes without a model and says so; nothing from the review is open except the Spot host.
 

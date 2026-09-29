@@ -70,5 +70,8 @@ pages:
   orders:
     crud: Order
     search: [number, customer]
+  team:
+    intent: Invite colleagues and manage who has access.
+    users: manage
 
-navigation: [customers, orders]
+navigation: [customers, orders, team]

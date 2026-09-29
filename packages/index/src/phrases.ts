@@ -5,6 +5,7 @@
 // to exactly one concept, and returns undefined for anything else, which a model then reads.
 // Like every proposal, what it returns is dry-run and confirmed before it applies.
 import {
+  type AuthIR,
   type FieldIR,
   identifier,
   kebab,
@@ -35,11 +36,12 @@ export function matchRequest(
   ir: SpecIR,
   request: string,
   roles: string[] = [],
+  auth?: AuthIR,
 ): PhraseMatch | undefined {
   const text = normalize(request);
   if (!text) return undefined;
   for (const rule of RULES) {
-    const result = rule.match(text, { ir, roles });
+    const result = rule.match(text, { ir, roles, auth });
     if (result) return { operations: result, rule: rule.name };
     // The wording was this rule's, but a name in it did not resolve: a model should read it,
     // not a looser rule below.
@@ -51,6 +53,8 @@ export function matchRequest(
 interface Scope {
   ir: SpecIR;
   roles: string[];
+  /** smithable.auth.yml, when the caller has it (sign-up requests need it). */
+  auth?: AuthIR;
 }
 
 interface Rule {
@@ -424,6 +428,39 @@ const RULES: Rule[] = [
           })();
       if (!found) return null;
       return [{ op: "removeField", args: { model: found.model.name, field: found.field.name } }];
+    },
+  },
+  {
+    // "only invited people may sign in", "anyone can sign up"
+    name: "sign-up",
+    match(text, scope) {
+      const invited =
+        /^only invited (?:people|users|members|persons|colleagues|addresses) (?:may|can|should be able to|are allowed to) (?:sign in|sign up|log in|use (?:the app|it)|get in)$/.test(
+          text,
+        );
+      const anyone =
+        /^(?:let |allow )?(?:anyone|anybody|everyone) (?:with an account )?(?:may |can |should be able to |to )?(?:sign up|sign in|log in|create an account)$/.test(
+          text,
+        );
+      if (!invited && !anyone) return undefined;
+      const signIn = scope.auth?.signIn;
+      if (!signIn || signIn === "none") return null;
+      if (signIn.selfSignUp === anyone) return null;
+      return [{ op: "setSignUp", args: { who: invited ? "invited" : "anyone" } }];
+    },
+  },
+  {
+    // "add a users page", "add a page to invite people"
+    name: "users page",
+    match(text, scope) {
+      const m =
+        /^add (?:a |an )?(?:users?|team|members?|people|staff|colleagues) page$/.test(text) ||
+        /^add (?:a |an )?page (?:to|for|where (?:i|we|admins?) (?:can|may)) (?:invite|inviting|manage|managing) (?:people|users|colleagues|team members|members|staff|the team)$/.test(
+          text,
+        );
+      if (!m) return undefined;
+      if (scope.ir.pages.some((p) => p.pattern.kind === "users")) return null;
+      return [{ op: "addUsersPage", args: {} }];
     },
   },
   {

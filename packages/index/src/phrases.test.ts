@@ -89,6 +89,19 @@ describe("the seven benchmark tasks", () => {
       matchRequest(spec, "Add a page for orders, and show it in the menu.", ROLES)?.operations,
     ).toEqual([{ op: "addPage", args: { page: "orders", model: "Order" } }]);
   });
+  test("Add a users page; only invited people may sign in", () => {
+    expect(ops("Add a page to invite colleagues.")).toEqual([{ op: "addUsersPage", args: {} }]);
+    expect(ops("Add a team page")).toEqual([{ op: "addUsersPage", args: {} }]);
+    const auth = { signIn: { providers: ["google"], selfSignUp: true } } as unknown as Parameters<
+      typeof matchRequest
+    >[3];
+    expect(matchRequest(ir(), "Only invited people may sign in.", ROLES, auth)?.operations).toEqual(
+      [{ op: "setSignUp", args: { who: "invited" } }],
+    );
+    // Already so: nothing to propose, and without the auth file nothing is guessed.
+    expect(matchRequest(ir(), "Anyone can sign up", ROLES, auth)).toBeUndefined();
+    expect(matchRequest(ir(), "Only invited people may sign in", ROLES)).toBeUndefined();
+  });
   test("Only admins may delete customers", () => {
     const o = ops("Only admins may delete customers.");
     expect(o).toEqual([
