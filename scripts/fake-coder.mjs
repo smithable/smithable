@@ -2,7 +2,7 @@
 // With FAKE_CODER=trespass it also edits a generated file, with FAKE_CODER=hook it plants a Git
 // hook (and with hook-fail then exits with an error), and with FAKE_CODER=package it edits an
 // installed package the host's tests would run: Smithable must undo or refuse each.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const prompt = readFileSync(0, "utf8");
 
@@ -66,8 +66,11 @@ if (process.env.FAKE_CODER === "trespass")
 if (process.env.FAKE_CODER?.startsWith("hook"))
   writeFileSync(".git/hooks/pre-commit", "#!/bin/sh\necho planted\n", { mode: 0o755 });
 if (process.env.FAKE_CODER === "hook-fail") process.exit(3);
-if (process.env.FAKE_CODER === "package")
-  writeFileSync(
-    "node_modules/zod/package.json",
-    readFileSync("node_modules/zod/package.json", "utf8") + "\n",
-  );
+if (process.env.FAKE_CODER === "package") {
+  // A new file in place of the package's (not a write through pnpm's hard link, which would
+  // change the machine's package store for every project).
+  const file = "node_modules/zod/package.json";
+  const text = readFileSync(file, "utf8");
+  rmSync(file);
+  writeFileSync(file, `${text}\n`);
+}
