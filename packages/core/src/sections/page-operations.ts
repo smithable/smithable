@@ -237,7 +237,7 @@ const removePage: Operation<{ page: string }> = {
   positional: ["page"],
   describe: ({ page }) => `Remove page ${page}`,
   destructive: () => false,
-  apply({ spec, content, ux }, { page }, ir) {
+  apply({ spec }, { page }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
     if (ir.pages.length === 1) throw new OperationError("An app needs at least one page.");
@@ -256,10 +256,8 @@ const removePage: Operation<{ page: string }> = {
             ["navigation", menu],
             pages.filter((p) => p !== page),
           );
-    // Its texts and presentation go with it.
-    for (const editor of [content, ux])
-      if (editor?.has(["pages", page])) editor.removeAndPrune(["pages", page], 0);
-    return [];
+    // Its texts and presentation go with it (the companions follow the effect).
+    return [{ kind: "remove-page", page }];
   },
 };
 
@@ -331,7 +329,7 @@ const removeSection: Operation<{ page: string; section: string }> = {
   positional: ["page", "section"],
   describe: ({ page, section }) => `Remove the ${section} section from the ${page} page`,
   destructive: () => false,
-  apply({ spec, content }, { page, section }, ir) {
+  apply({ spec }, { page, section }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
     if (
       existing?.pattern.kind !== "landing" ||
@@ -341,8 +339,7 @@ const removeSection: Operation<{ page: string; section: string }> = {
     if (existing.pattern.sections.length === 1)
       throw new OperationError("A landing page needs at least one section.");
     spec.remove(["pages", page, "landing", section]);
-    if (content?.has(["pages", page, section])) content.removeAndPrune(["pages", page, section], 0);
-    return [];
+    return [{ kind: "remove-section", page, section }];
   },
 };
 
