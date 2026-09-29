@@ -159,7 +159,7 @@ const setNavigation: Operation<{ menu: string; pages: string[] }> = {
     required: ["menu", "pages"],
     additionalProperties: false,
     properties: {
-      menu: { type: "string", description: 'Usually "main".' },
+      menu: refTo({ ref: "menu", label: "Menu" }),
       pages: refTo({ ref: "page", label: "Pages" }, {}, true),
     },
   },

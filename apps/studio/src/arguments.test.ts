@@ -49,3 +49,25 @@ test("required choices default to the first name, and follow a changed model", (
     field: "number",
   });
 });
+
+test("an annotated argument renders as a choice of the spec's names, a list as checkboxes", async () => {
+  const { renderToString } = await import("react-dom/server");
+  const { createElement } = await import("react");
+  const { ArgumentField } = await import("./arguments");
+  const render = (op: string, arg: string, values = {}) =>
+    renderToString(
+      createElement(ArgumentField, {
+        name: arg,
+        schema: (schema(op).properties as Record<string, object>)[arg],
+        required: true,
+        values,
+        effective: argumentsOf(schema(op), values, spec),
+        setValue: () => {},
+        spec,
+        label: arg,
+      } as Parameters<typeof ArgumentField>[0]),
+    );
+  expect(render("removeField", "model")).toMatch(/<select[^>]*>.*<option value="Customer"/);
+  expect(render("setSearch", "fields", { page: "customers" })).toMatch(/type="checkbox".*Email/);
+  expect(render("setTone", "tone")).toMatch(/<option value="success"/);
+});

@@ -39,12 +39,30 @@ export interface Refusal {
  * a choice value of a field, a landing section of a page. `label` is how Builder asks for it.
  */
 export type ArgRef = { label?: string } & (
-  | { ref: "model" | "page" | "role" }
+  | { ref: "model" | "page" | "menu" | "accessTarget" }
+  /** Roles; with `target`, also "owner" where that argument's rule has an owner to check. */
+  | { ref: "role"; target?: string }
   | { ref: "field"; model: string }
   | { ref: "field"; page: string }
   | { ref: "choiceValue"; model: string; field: string }
   | { ref: "section"; page: string }
 );
+
+/** How a form describes each kind of name (not sent to models: prompts stay as small as they were). */
+const REF_HINTS: Record<ArgRef["ref"], string> = {
+  model: "A kind of record, e.g. Customer.",
+  page: "A page's name, e.g. customers.",
+  menu: 'A menu, usually "main".',
+  accessTarget:
+    "What the rule is for, e.g. model:Order.create, page:orders or action:mergeCustomers.",
+  role: "Roles from smithable.auth.yml, e.g. admin sales.",
+  field: "A field of that kind of record, e.g. email.",
+  choiceValue: "One of the choice field's values.",
+  section: "A section of that landing page.",
+};
+
+/** What a form says under an argument that names something, when its schema says nothing. */
+export const refHint = (ref: ArgRef) => REF_HINTS[ref.ref];
 
 /** A string argument (or, with `list`, a list of them) that names something in the spec. */
 export function refTo(ref: ArgRef, schema: JsonSchema = {}, list = false): JsonSchema {
