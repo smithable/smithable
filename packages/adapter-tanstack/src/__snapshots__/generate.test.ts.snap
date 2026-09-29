@@ -51,6 +51,10 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
    FACEBOOK_CLIENT_ID=...
    FACEBOOK_CLIENT_SECRET=...
    \`\`\`
+## Mail
+
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+
 
 ## Project structure
 
@@ -99,6 +103,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "drizzle-orm": "0.45.3",
     "drizzle-zod": "0.8.3",
     "lucide-react": "1.48.0",
+    "nodemailer": "10.0.12",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "srvx": "1.0.5",
@@ -111,6 +116,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "@playwright/test": "1.63.0",
     "@tanstack/router-cli": "1.167.38",
     "@types/better-sqlite3": "9.6.0",
+    "@types/nodemailer": "8.0.2",
     "@types/node": "24.19.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -2740,6 +2746,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/access.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
+  "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -2783,9 +2790,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "c4f9fdf7 generated",
+  "README.md": "bf062766 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "8e4d067f generated",
+  "package.json": "5d945a29 generated",
   "playwright.config.ts": "4cec8537 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
@@ -2796,7 +2803,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/components/ui/card.tsx": "0621c891 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
-  "src/custom/hooks.ts": "17fa5769 custom",
+  "src/custom/hooks.ts": "4247261f custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "b01c7331 generated",
   "src/db/seed.ts": "b4c519e1 generated",
@@ -2823,6 +2830,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/access.ts": "c46c2136 kit",
   "src/kit/format.ts": "1519dc45 kit",
   "src/kit/formula.ts": "d94102ce kit",
+  "src/kit/mail.ts": "e8c94fdf kit",
   "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
@@ -2898,6 +2906,10 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
    GOOGLE_CLIENT_ID=...
    GOOGLE_CLIENT_SECRET=...
    \`\`\`
+## Mail
+
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+
 
 ## Project structure
 
@@ -2946,6 +2958,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "drizzle-orm": "0.45.3",
     "drizzle-zod": "0.8.3",
     "lucide-react": "1.48.0",
+    "nodemailer": "10.0.12",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "srvx": "1.0.5",
@@ -2958,6 +2971,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "@playwright/test": "1.63.0",
     "@tanstack/router-cli": "1.167.38",
     "@types/better-sqlite3": "9.6.0",
+    "@types/nodemailer": "8.0.2",
     "@types/node": "24.19.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -4930,6 +4944,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/access.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
+  "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -4968,9 +4983,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "3258705d generated",
+  "README.md": "a0d84d48 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "6b5f29dc generated",
+  "package.json": "7bc75a08 generated",
   "playwright.config.ts": "4cec8537 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
@@ -4982,7 +4997,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/actions/merge-customers.ts": "916a9b22 custom",
-  "src/custom/hooks.ts": "17fa5769 custom",
+  "src/custom/hooks.ts": "4247261f custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "66f1ced0 generated",
   "src/db/seed.ts": "9c9f2dc2 generated",
@@ -5008,6 +5023,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/access.ts": "c46c2136 kit",
   "src/kit/format.ts": "1519dc45 kit",
   "src/kit/formula.ts": "d94102ce kit",
+  "src/kit/mail.ts": "e8c94fdf kit",
   "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
@@ -5078,6 +5094,10 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
    GOOGLE_CLIENT_ID=...
    GOOGLE_CLIENT_SECRET=...
    \`\`\`
+## Mail
+
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+
 
 ## Project structure
 
@@ -5126,6 +5146,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "drizzle-orm": "0.45.3",
     "drizzle-zod": "0.8.3",
     "lucide-react": "1.48.0",
+    "nodemailer": "10.0.12",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "srvx": "1.0.5",
@@ -5138,6 +5159,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "@playwright/test": "1.63.0",
     "@tanstack/router-cli": "1.167.38",
     "@types/better-sqlite3": "9.6.0",
+    "@types/nodemailer": "8.0.2",
     "@types/node": "24.19.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -8058,6 +8080,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/aggregate.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
+  "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -8101,9 +8124,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "bb1aea52 generated",
+  "README.md": "6e4ab07f generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "cc9241ab generated",
+  "package.json": "351967e5 generated",
   "playwright.config.ts": "4cec8537 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
@@ -8114,7 +8137,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/components/ui/card.tsx": "0621c891 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
-  "src/custom/hooks.ts": "17fa5769 custom",
+  "src/custom/hooks.ts": "4247261f custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "1c9724c9 generated",
   "src/db/seed.ts": "d388638c generated",
@@ -8147,6 +8170,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "1519dc45 kit",
   "src/kit/formula.ts": "d94102ce kit",
+  "src/kit/mail.ts": "e8c94fdf kit",
   "src/kit/model.ts": "760ee9b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
