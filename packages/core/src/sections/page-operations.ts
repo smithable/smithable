@@ -355,13 +355,12 @@ const removeSection: Operation<{ page: string; section: string }> = {
   },
 };
 
-export const pageOperations: AnyOperation[] = [
-  addPage,
-  addLandingPage,
-  setSearch,
-  addTile,
-  removePage,
-  addSection,
-  removeSection,
-];
+/** Operations on pages of every pattern. */
+export const pageOperations: AnyOperation[] = [removePage];
+/** Operations of the crud pattern. */
+export const crudOperations: AnyOperation[] = [addPage, setSearch];
+/** Operations of the landing pattern. */
+export const landingOperations: AnyOperation[] = [addLandingPage, addSection, removeSection];
+/** Operations of the dashboard pattern. */
+export const dashboardOperations: AnyOperation[] = [addTile];
 export const navigationOperations: AnyOperation[] = [setNavigation];

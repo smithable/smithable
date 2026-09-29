@@ -9,6 +9,7 @@ import {
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { type SpecIR, USER_MODEL } from "./ir.js";
+import { patternInfo } from "./patterns.js";
 import { FIELD_NAME_PATTERN } from "./sections/names.js";
 import { didYouMean } from "./suggest.js";
 
@@ -331,8 +332,7 @@ function checkAgainstSpec(
   // A public page's contact form is sent by visitors: they must be allowed to add its records.
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
-    const sections = page?.pattern.kind === "landing" ? page.pattern.sections : [];
-    for (const form of sections.flatMap((s) => (s.form ? [s.form] : []))) {
+    for (const form of page ? patternInfo(page).forms() : []) {
       if (!auth.public.create.includes(form))
         ctx.warning(
           at,

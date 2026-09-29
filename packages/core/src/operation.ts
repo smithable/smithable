@@ -28,6 +28,11 @@ export type Effect =
 
 export type OperationArgs = { [key: string]: unknown };
 
+/** A registrant's answer to an effect it cannot follow: the operation fails with this message. */
+export interface Refusal {
+  refusal: string;
+}
+
 /**
  * What an argument names in the spec, as its schema's `x-smithable` annotation, so forms can
  * offer the names there are: a field of the model (or the page's model) another argument names,

@@ -31,7 +31,7 @@ import { capitalize } from "../naming.js";
 import type { JsonSchema, SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
-import { modelOperations } from "./model-operations.js";
+import { modelOperations, renameInFormulas } from "./model-operations.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
@@ -94,6 +94,14 @@ export const modelsSection: SpecSection<"models"> = {
   key: "models",
   required: false,
   operations: modelOperations,
+  follow(spec, effect, ir) {
+    // Formulas (and their examples) and an owner field follow a renamed field.
+    if (effect.kind !== "rename-field") return undefined;
+    renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
+    if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
+      spec.set(["models", effect.model, "ownedBy"], effect.to);
+    return undefined;
+  },
   schema: {
     type: "object",
     description: "The data the application stores. Model names are PascalCase.",
