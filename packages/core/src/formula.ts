@@ -105,6 +105,29 @@ function tokenize(source: string): Token[] {
   return tokens;
 }
 
+/**
+ * Renames field references in a formula's text, leaving everything else as written. `rename`
+ * gets each name (not function names or text), and for `lines.amount` the list it follows;
+ * it returns the new name, or undefined to keep it.
+ */
+export function renameInFormula(
+  source: string,
+  rename: (name: string, list?: string) => string | undefined,
+): string {
+  let out = "";
+  let from = 0;
+  const tokens = tokenize(source);
+  tokens.forEach((t, i) => {
+    if (t.type !== "id" || tokens[i + 1]?.type === "(") return;
+    const list = tokens[i - 1]?.type === "." ? tokens[i - 2]?.text : undefined;
+    const to = rename(t.text, list);
+    if (to === undefined || to === t.text) return;
+    out += source.slice(from, t.at) + to;
+    from = t.at + t.text.length;
+  });
+  return out + source.slice(from);
+}
+
 /** Parses a formula into an expression tree. Throws FormulaError with the offset of the problem. */
 export function parseFormula(source: string): Expr {
   const tokens = tokenize(source);

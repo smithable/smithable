@@ -141,13 +141,14 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
   if (kind === "object") {
     const object = value as Record<string, unknown>;
     for (const key of s.required ?? [])
-      if (object[key] === undefined) problems.push(`"${path}" needs "${key}".`);
+      if (object[key] === undefined)
+        problems.push(path ? `"${path}" needs "${key}".` : `"${key}" is missing.`);
     for (const [key, item] of Object.entries(object)) {
       const at = path ? `${path}.${key}` : key;
       const property = s.properties?.[key];
       if (property) problems.push(...checkJson(property, item, at));
       else if (s.additionalProperties === false)
-        problems.push(`Unknown key "${key}" in "${path}".`);
+        problems.push(path ? `Unknown key "${key}" in "${path}".` : `Unknown key "${key}".`);
       else if (typeof s.additionalProperties === "object")
         problems.push(...checkJson(s.additionalProperties, item, at));
     }

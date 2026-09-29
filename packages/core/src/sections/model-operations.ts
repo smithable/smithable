@@ -1,4 +1,5 @@
 import type { YamlEditor } from "../edit.js";
+import { renameInFormula } from "../formula.js";
 import { type FieldIR, type ModelIR, pageModel, type SpecIR, storageOf, typeKey } from "../ir.js";
 import { type AnyOperation, type Editors, type Operation, OperationError } from "../operation.js";
 import { parseFieldShorthand } from "./field-type.js";
@@ -166,6 +167,8 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
     spec.renameKey(fieldPath(m, from), to);
     if (content.has(fieldPath(m, from))) content.renameKey(fieldPath(m, from), to);
     updateFieldLists({ spec, ux }, ir, m, from, to);
+    renameInFormulas(spec, ir, m, from, to);
+    followInPages(spec, ir, m, from, to);
     if (model(ir, m).ownedBy === from) spec.set(["models", m, "ownedBy"], to);
     return [{ kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from)) }];
   },
@@ -187,6 +190,7 @@ const removeField: Operation<{ model: string; field: string }> = {
     field(ir, m, f);
     if (model(ir, m).fields.length === 1)
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
+    followInPages(editors.spec, ir, m, f, undefined);
     editors.spec.remove(fieldPath(m, f));
     if (editors.content.has(fieldPath(m, f))) editors.content.removeAndPrune(fieldPath(m, f), 1);
     updateFieldLists(editors, ir, m, f, undefined);
@@ -240,6 +244,81 @@ function updateFieldLists(
       const next = to ? list.map((f) => (f === from ? to : f)) : list.filter((f) => f !== from);
       if (next.length) editor.set(path, next);
       else editor.removeAndPrune(path, editor === editors.spec ? 3 : 0);
+    }
+  }
+}
+
+/**
+ * Renames a field where formulas use it: the model's own formulas (and their examples' inputs)
+ * and aggregates over it from other models (`SUM(lines.amount)`).
+ */
+function renameInFormulas(spec: YamlEditor, ir: SpecIR, m: string, from: string, to: string): void {
+  for (const x of ir.models)
+    for (const f of x.fields) {
+      if (!f.formula) continue;
+      const path = [...fieldPath(x.name, f.name), "formula"];
+      const text = spec.has(path) ? spec.get(path) : undefined;
+      if (typeof text !== "string") continue;
+      const listsOfM = (list: string) => {
+        const type = x.fields.find((l) => l.name === list)?.type;
+        return type?.kind === "relation" && type.many && type.model === m;
+      };
+      const next = renameInFormula(text, (name, list) =>
+        name !== from
+          ? undefined
+          : list === undefined
+            ? x.name === m
+              ? to
+              : undefined
+            : listsOfM(list)
+              ? to
+              : undefined,
+      );
+      if (next !== text) spec.set(path, next);
+      if (x.name !== m) continue;
+      (f.examples ?? []).forEach((e, i) => {
+        if (from in e.input)
+          spec.renameKey([...fieldPath(x.name, f.name), "examples", String(i), "input", from], to);
+      });
+    }
+}
+
+/**
+ * Dashboard tiles and onboarding steps name fields too: a rename follows into them, a removal
+ * leaves an onboarding step without the field, and is refused while a tile counts on it.
+ */
+function followInPages(
+  spec: YamlEditor,
+  ir: SpecIR,
+  m: string,
+  from: string,
+  to: string | undefined,
+): void {
+  for (const page of ir.pages) {
+    const pattern = page.pattern;
+    if (pattern.kind === "onboarding" && pattern.model === m)
+      for (const step of pattern.steps) {
+        if (!step.fields.includes(from)) continue;
+        const path = ["pages", page.id, "onboarding", "steps", step.name];
+        const next = to
+          ? step.fields.map((f) => (f === from ? to : f))
+          : step.fields.filter((f) => f !== from);
+        if (next.length) spec.set(path, next);
+        else spec.remove(path);
+      }
+    if (pattern.kind !== "dashboard") continue;
+    for (const item of pattern.items) {
+      if (item.model !== m) continue;
+      const uses = item.field === from || item.by === from || (item.where && from in item.where);
+      if (!uses) continue;
+      if (!to)
+        throw new OperationError(
+          `The "${item.name}" tile of the ${page.id} page uses ${m}.${from}; change or remove the tile first.`,
+        );
+      const tile = ["pages", page.id, "dashboard", item.name];
+      if (item.field === from && item.measure) spec.set([...tile, item.measure], `${m}.${to}`);
+      if (item.by === from) spec.set([...tile, "by"], to);
+      if (item.where && from in item.where) spec.renameKey([...tile, "where", from], to);
     }
   }
 }
