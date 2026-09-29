@@ -218,7 +218,7 @@ test("rule mergeCustomers.move-orders: the duplicate's orders move to the kept c
   const keep = db.insert(customers).values({ name: "Keep Ltd" }).returning().get();
   const duplicate = db.insert(customers).values({ name: "Duplicate Ltd" }).returning().get();
   db.insert(orders).values({ number: \`T-\${Date.now()}\`, customerId: duplicate.id, total: 100 }).run();
-  await mergeCustomers({ keep: keep.id, duplicate: duplicate.id });
+  await mergeCustomers({ keep: keep.id, duplicate: duplicate.id }, null);
   expect(db.select().from(orders).where(eq(orders.customerId, keep.id)).all()).toHaveLength(1);
   expect(db.select().from(customers).where(eq(customers.id, duplicate.id)).all()).toHaveLength(0);
 });
@@ -611,6 +611,35 @@ async function askFlow(dir) {
         throw new Error("changes were left behind");
       if (existsSync(join(dir, ".git/hooks/pre-commit"))) throw new Error("the hook was left");
     });
+    await asyncStep("code: a coder that plants a hook and then fails leaves no hook", async () => {
+      const result = await smithableAsync(
+        dir,
+        { ...coder, FAKE_CODER: "hook-fail" },
+        "code",
+        "query:churnRisk",
+        "rank by the last order",
+      );
+      if (result.code === 0) throw new Error(result.out);
+      if (existsSync(join(dir, ".git/hooks/pre-commit"))) throw new Error("the hook was left");
+    });
+    await asyncStep(
+      "code: a coder that edits an installed package is refused before any test runs, and the packages are installed again",
+      async () => {
+        const pkg = join(dir, "node_modules/zod/package.json");
+        const before = readFileSync(pkg, "utf8");
+        const result = await smithableAsync(
+          dir,
+          { ...coder, FAKE_CODER: "package" },
+          "code",
+          "query:churnRisk",
+          "rank by the last order",
+        );
+        if (result.code === 0 || !/node_modules\/\S*zod/.test(result.out))
+          throw new Error(result.out);
+        if (result.out.includes("The tests")) throw new Error("the tests ran");
+        if (readFileSync(pkg, "utf8") !== before) throw new Error("the package was left changed");
+      },
+    );
     await asyncStep("code: a coder that edits a generated file is undone entirely", async () => {
       const before = readFileSync(join(dir, "src/custom/queries/churn-risk.ts"), "utf8");
       const result = await smithableAsync(
@@ -1145,6 +1174,40 @@ for (const [index, example] of examples.entries()) {
       run("pnpm", ["test:smoke"], dir, { SMOKE_PORT: String(port + 200) }),
     );
 
+    if (existsSync(join(dir, "src/lib/auth.ts")))
+      await asyncStep(
+        "without BETTER_AUTH_SECRET and BETTER_AUTH_URL, the built app signs nobody in",
+        async () => {
+          const env = { ...process.env, PORT: String(port + 300) };
+          delete env.BETTER_AUTH_SECRET;
+          delete env.BETTER_AUTH_URL;
+          const server = spawn("pnpm", ["start"], { cwd: dir, env, detached: true });
+          const exited = new Promise((r) => server.on("exit", (code) => r(code)));
+          try {
+            // Either it does not start, or its sign-in fails instead of using a default secret.
+            const outcome = await Promise.race([
+              exited.then((code) => `exited ${code}`),
+              (async () => {
+                // Any answer at all: an app that refuses to run answers every request with 500.
+                for (let i = 0; i < 120; i++) {
+                  const answer = await fetch(
+                    `http://localhost:${port + 300}/api/auth/get-session`,
+                  ).catch(() => undefined);
+                  if (answer) return `sign-in answered ${answer.status}`;
+                  await new Promise((r) => setTimeout(r, 500));
+                }
+                return "no answer";
+              })(),
+            ]);
+            if (/exited 0|answered 200/.test(outcome)) throw new Error(outcome);
+          } finally {
+            try {
+              process.kill(-server.pid);
+            } catch {}
+          }
+        },
+      ).catch(() => {});
+
     let stop = await serve(dir, port, "production");
     try {
       const base = `http://localhost:${port}`;
@@ -1223,6 +1286,20 @@ for (const [index, example] of examples.entries()) {
           } finally {
             await browser.close();
           }
+        },
+      ).catch(() => {});
+      await asyncStep(
+        "changes are limited per address, and a made-up X-Forwarded-For is no new address",
+        async () => {
+          let limited = false;
+          for (let i = 0; i < 65 && !limited; i++) {
+            const answer = await fetch(`${base}/`, {
+              method: "POST",
+              headers: { "x-forwarded-for": `10.0.${i}.1` },
+            });
+            limited = answer.status === 429;
+          }
+          if (!limited) throw new Error("65 changes from made-up addresses were all let through");
         },
       ).catch(() => {});
     } finally {

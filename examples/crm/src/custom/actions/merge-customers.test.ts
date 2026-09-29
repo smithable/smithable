@@ -24,7 +24,7 @@ describe("merging customers", () => {
     db.insert(orders).values({ number: "M-1", customerId: duplicate.id, total: 1000 }).run();
     db.insert(orders).values({ number: "M-2", customerId: duplicate.id, total: 2000 }).run();
 
-    await mergeCustomers({ keep: keep.id, duplicate: duplicate.id });
+    await mergeCustomers({ keep: keep.id, duplicate: duplicate.id }, null);
 
     const kept = db.select().from(customers).where(eq(customers.id, keep.id)).get();
     expect(kept?.name).toBe("Arctic Oy");
@@ -37,7 +37,7 @@ describe("merging customers", () => {
 
   test("a customer is not merged into itself", async () => {
     const one = db.insert(customers).values({ name: "Solo" }).returning().get();
-    await expect(mergeCustomers({ keep: one.id, duplicate: one.id })).rejects.toThrow(
+    await expect(mergeCustomers({ keep: one.id, duplicate: one.id }, null)).rejects.toThrow(
       "two different",
     );
   });
