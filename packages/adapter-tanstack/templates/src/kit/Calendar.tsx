@@ -145,6 +145,7 @@ export function Calendar({
   onOpen,
   onCreate,
   newLabel,
+  details,
 }: {
   search: CalendarSearch;
   items: CalendarItem[];
@@ -158,6 +159,8 @@ export function Calendar({
   onCreate?: (start: string) => void;
   /** "New session", for the empty hours' buttons. */
   newLabel: string;
+  /** More about a record in its panel, e.g. its places and a Book button. */
+  details?: (id: number) => React.ReactNode;
 }) {
   const range = calendarRange(search, timeZone);
   const [shown, setShown] = useState<Placed>();
@@ -359,6 +362,7 @@ export function Calendar({
               {shown.title}
             </h2>
             <p className="mt-2 text-muted-foreground">{when(shown)}</p>
+            {details && <div className="mt-4">{details(shown.id)}</div>}
           </>
         )}
         <div className="mt-6 flex justify-end">

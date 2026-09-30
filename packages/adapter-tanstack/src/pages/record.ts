@@ -13,6 +13,7 @@ import {
   type UxIR,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
+import { reserveElement } from "../data.js";
 import {
   appStart,
   attr,
@@ -254,6 +255,7 @@ export function detailRoute(
   ir: SpecIR,
   ux: UxIR,
   within?: Within,
+  auth?: AuthIR,
 ): string {
   const n = names(model, t);
   const order = fieldOrder(page, model, ux);
@@ -265,6 +267,16 @@ export function detailRoute(
   const imports = new Map<string, string[]>([
     [n.module, [n.remove, n.get, n.schema, n.ui, n.update]],
   ]);
+  // Places on this record (a session's bookings): staff book and cancel here too.
+  const reserve =
+    auth && !within
+      ? reserveElement(
+          model,
+          { ir, t, auth },
+          (m, ...ns) => imports.set(m, [...(imports.get(m) ?? []), ...ns]),
+          "row.id",
+        )
+      : undefined;
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -337,7 +349,14 @@ ${options ? "        options={options}\n" : ""}        submitLabel="Save changes
             : undefined
         }
       />
-${sections.join("\n")}
+${
+  reserve
+    ? `      <section className="mt-10 max-w-3xl">
+        ${reserve}
+      </section>
+`
+    : ""
+}${sections.join("\n")}
     </>
   );
 }
