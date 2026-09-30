@@ -316,8 +316,12 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
     `a first-time setup of your ${humanize(p.model).toLowerCase()} in ${p.steps.length} steps`,
   users: () => "who has access: invite people, change roles, remove users",
   calendar: (p) => `a calendar of ${plural(humanize(p.model)).toLowerCase()} by week or month`,
+  articles: (p) =>
+    `${plural(humanize(p.model)).toLowerCase()} as articles, newest first, each on its own page`,
   data: (p) =>
     p.all
       ? "every kind of record, to find, open, change and delete"
       : `${list(p.models.map((m) => plural(humanize(m)).toLowerCase()))}, to find, open, change and delete`,
+  calculator: (p) =>
+    `a calculator: ${list(p.calculator.fields.filter((f) => !f.formula).map((f) => humanize(f.name).toLowerCase()))} give ${list(p.calculator.fields.filter((f) => f.formula).map((f) => humanize(f.name).toLowerCase()))}`,
 };
