@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
-import { isPreviewMessage } from "./preview";
+import { isPreviewMessage, type Place, shared } from "./preview";
 import { Preview } from "./shared";
 import { Studio } from "./studio/Studio";
 import { Button, cx } from "./ui";
@@ -34,6 +34,32 @@ export function App() {
   const [busy, setBusy] = useState(false);
   // The preview: select mode, and the mode's slot it is placed over on narrow windows.
   const [selecting, setSelecting] = useState(false);
+  const [place, setPlace] = useState<Place>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("smithable:place") ?? "") as Place;
+    } catch {
+      return { builder: {}, studio: {} };
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("smithable:place", JSON.stringify(place));
+    } catch {}
+  }, [place]);
+  // What one mode picks, the other opens at when it can show it.
+  const builderPlace = (next: Place["builder"]) =>
+    setPlace((p) => ({
+      builder: { ...p.builder, ...next },
+      studio: next.selection ? { ...p.studio, concept: next.selection.concept } : p.studio,
+    }));
+  const studioPlace = (next: Place["studio"]) =>
+    setPlace((p) => {
+      const selection = next.concept ? shared(next.concept) : undefined;
+      return {
+        studio: { ...p.studio, ...next },
+        builder: selection ? { ...p.builder, selection } : p.builder,
+      };
+    });
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const box = useSlotBox(slot);
 
@@ -252,7 +278,14 @@ export function App() {
       <main className="flex min-h-0 flex-1">
         <div className="min-h-0 min-w-0 flex-1">
           {mode === "builder" ? (
-            <Builder project={project} spec={spec} run={run} previewSlot={setSlot} />
+            <Builder
+              project={project}
+              spec={spec}
+              run={run}
+              previewSlot={setSlot}
+              place={place.builder}
+              onPlace={builderPlace}
+            />
           ) : (
             <Studio
               project={project}
@@ -262,6 +295,8 @@ export function App() {
               logs={logs}
               onCustomize={customize}
               previewSlot={setSlot}
+              place={place.studio}
+              onPlace={studioPlace}
             />
           )}
         </div>
