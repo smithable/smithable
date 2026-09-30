@@ -203,6 +203,8 @@ export async function proposeChange(options: {
   const phrased = phraseTier(files, options.request);
   if (phrased) {
     const checked = dryRun(files, phrased.operations);
+    if (checked.ok && unchanged(files, checked.files))
+      return { kind: "none", reason: NOTHING, usage };
     const refused = checked.ok ? options.check?.(files, checked.files, checked.effects) : undefined;
     if (checked.ok && !refused)
       return {
@@ -254,6 +256,9 @@ export async function proposeChange(options: {
         break;
       }
       const checked = dryRun(files, answer.operations ?? []);
+      // Operations that leave every file as it was are no change: nothing to apply or trace.
+      if (checked.ok && unchanged(files, checked.files))
+        return { kind: "none", reason: NOTHING, usage };
       const refused = checked.ok
         ? options.check?.(files, checked.files, checked.effects)
         : undefined;
@@ -277,6 +282,14 @@ function phraseTier(files: ProjectFiles, request: string) {
       ? undefined
       : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
   return matchRequest(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
+}
+
+const NOTHING = "This changes nothing.";
+
+/** Whether every file is as it was (a setting put back to what it already is). */
+function unchanged(before: ProjectFiles, after: ProjectFiles): boolean {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)] as (keyof ProjectFiles)[]);
+  return [...keys].every((k) => JSON.stringify(before[k]) === JSON.stringify(after[k]));
 }
 
 /** Applies the operations one after the other to copies of the files. */

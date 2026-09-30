@@ -11,6 +11,7 @@ import {
 import type { ActionIR, FieldIR } from "../ir.js";
 import { capitalize } from "../naming.js";
 import type { JsonSchema, SpecSection } from "../section.js";
+import { actionOperations } from "./action-operations.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -33,6 +34,7 @@ const fieldsSchema: JsonSchema = {
 export const actionsSection: SpecSection<"actions"> = {
   key: "actions",
   required: false,
+  operations: actionOperations,
   schema: {
     type: "object",
     description: "Operations of the application beyond create, edit and delete.",
