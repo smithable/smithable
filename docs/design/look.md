@@ -110,6 +110,8 @@ Every kit component marks its root and its notable parts with data attributes, w
 | `data-section` | a landing section | its name (the `id` it has today stays) |
 | `data-tone` | a badge | `neutral`, `success`, `warning`, `danger` |
 
+The kit uses five shadcn/ui components today (badge, button, card, input, table) and hand-rolls the rest (a combobox, confirmations). From here on, what the kit needs and shadcn has is added with the shadcn CLI, in this order as the work in §5 needs it: `select`, `dialog` (confirmations), `tabs`, `sheet` (the phone menu), `sonner` (notices), `form`, `slider`, `radio-group`, `switch`, `textarea`, `popover`+`command` (the combobox). Their `data-slot` attributes are hooks of the stack's own, so `data-part` is only added where the kit wraps or composes them.
+
 Rules: attributes name what a thing *is*, never how it looks; the set is closed and listed in the generated README, and a value is removed only in a major version. Tests: a snapshot of each kit component's attributes, so a change to a hook is a visible change.
 
 ### 2.3 `src/custom/styles.css`
