@@ -33,6 +33,8 @@ interface ModelTableProps<R extends Row> {
   below?: Partial<Record<keyof R & string, keyof R & string>>;
   /** The page showing the table, so the preview editor can change its columns. */
   page?: string;
+  /** Cards on wide screens too, instead of a table (a phone shows cards anyway). */
+  view?: "table" | "cards";
 }
 
 export function ModelTable<R extends Row>({
@@ -46,6 +48,7 @@ export function ModelTable<R extends Row>({
   columns: chosen,
   below = {},
   page,
+  view = "table",
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
@@ -124,7 +127,11 @@ export function ModelTable<R extends Row>({
   return (
     <div data-kit="model-table">
       {/* Phones: one card per record: its name and status, a contact or other identifier, then a date and a key amount. */}
-      <ul className="space-y-3 md:hidden">
+      <ul
+        className={
+          view === "cards" ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3 md:hidden"
+        }
+      >
         {shown.map((row) => (
           <li key={row.id} data-part="row">
             <Card className="relative space-y-3 p-5 hover:bg-accent/40">
@@ -155,46 +162,48 @@ export function ModelTable<R extends Row>({
           </li>
         ))}
       </ul>
-      <Card className="hidden overflow-hidden md:block">
-        <Table>
-          <TableHeader data-part="header">
-            <TableRow className="hover:bg-transparent">
-              {columns.map((field) => (
-                <TableHead
-                  key={field.name}
-                  className={numeric(field.kind) ? "text-right" : undefined}
-                  {...editorMarker(ui, field, "column", page)}
-                >
-                  {second(field) ? `${field.label} / ${second(field)?.label}` : field.label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shown.map((row) => (
-              <TableRow
-                key={row.id}
-                data-part="row"
-                className={onOpen ? "relative cursor-pointer" : undefined}
-              >
+      {view === "table" && (
+        <Card className="hidden overflow-hidden md:block">
+          <Table>
+            <TableHeader data-part="header">
+              <TableRow className="hover:bg-transparent">
                 {columns.map((field) => (
-                  <TableCell
+                  <TableHead
                     key={field.name}
-                    data-part="cell"
-                    data-field={field.name}
-                    className={cn(
-                      numeric(field.kind) && "text-right tabular-nums",
-                      field.name === ui.titleField && "font-semibold",
-                    )}
+                    className={numeric(field.kind) ? "text-right" : undefined}
+                    {...editorMarker(ui, field, "column", page)}
                   >
-                    {field === title ? open(row, cell(field, row)) : stacked(field, row)}
-                  </TableCell>
+                    {second(field) ? `${field.label} / ${second(field)?.label}` : field.label}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+            </TableHeader>
+            <TableBody>
+              {shown.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-part="row"
+                  className={onOpen ? "relative cursor-pointer" : undefined}
+                >
+                  {columns.map((field) => (
+                    <TableCell
+                      key={field.name}
+                      data-part="cell"
+                      data-field={field.name}
+                      className={cn(
+                        numeric(field.kind) && "text-right tabular-nums",
+                        field.name === ui.titleField && "font-semibold",
+                      )}
+                    >
+                      {field === title ? open(row, cell(field, row)) : stacked(field, row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
     </div>
   );
 }
