@@ -59,6 +59,7 @@ pages:
       repayment: { custom: RepaymentChart }   # src/custom/sections/RepaymentChart.tsx, created once
 ```
 
+- This completes a path that half exists: `smithable customize page:<page>` already moves a hand-edited list component into `src/custom/pages/` and generates the route again (ARCHITECTURE §6.5), and `custom` is listed among the page patterns still to come. A custom page written from a `customize` and one written from scratch are the same thing: a route Smithable owns around a component you own.
 - The value is the component's name. Smithable creates the file **once** as a stub that renders the section's or page's title from the content file, and never changes it. The page's route, access, navigation entry and icon are Smithable's as for any page; a section's place and texts are the landing page's. Removing the page or section leaves the file (it is yours).
 - A custom page or section gets the kit's props for its kind (the page's texts; a section's texts and its name), typed in `src/generated/`, so a change of name fails type checking rather than silently rendering nothing.
 - `smithable code page:planner "<what to do>"` has a model write it under the usual rules (only `src/custom/` changes, the type check and tests pass). The Builder shows a custom page or section as "Planner, a page of your own", and its texts are editable like any section's.
