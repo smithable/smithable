@@ -110,7 +110,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "tailwind-merge": "3.7.0",
     "tailwindcss": "4.3.3",
     "zod": "4.6.5",
-    "@fontsource-variable/inter": "5.3.0"
+    "@fontsource-variable/inter": "5.3.0",
+    "react-markdown": "10.1.0"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
@@ -343,14 +344,14 @@ if (db.select().from(classTypes).limit(1).all().length === 0) {
 if (db.select().from(instructors).limit(1).all().length === 0) {
   db.insert(instructors)
     .values([
-    { name: "Emma Lindqvist", bio: "Prefers email over phone calls." },
-    { name: "Oskar Nieminen", bio: "Follow up after the summer break." },
-    { name: "Sofia Andersson", bio: "Long-standing relationship, very reliable." },
-    { name: "Leo Virtanen", bio: "Interested in the premium offering." },
-    { name: "Aino Karlsson", bio: "Asked for a quote in the spring." },
-    { name: "Elias Johansson", bio: "Recommended to us by a partner." },
-    { name: "Maja Korhonen", bio: "Needs invoices in English." },
-    { name: "William Berg", bio: "Visited our office in August." },
+    { name: "Emma Lindqvist", bio: "A short description of **Emma Lindqvist**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "Oskar Nieminen", bio: "A short description of **Oskar Nieminen**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "Sofia Andersson", bio: "A short description of **Sofia Andersson**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "Leo Virtanen", bio: "A short description of **Leo Virtanen**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "Aino Karlsson", bio: "A short description of **Aino Karlsson**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "Elias Johansson", bio: "A short description of **Elias Johansson**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "Maja Korhonen", bio: "A short description of **Maja Korhonen**.\\n\\n- What it is\\n- Who it is for" },
+    { name: "William Berg", bio: "A short description of **William Berg**.\\n\\n- What it is\\n- Who it is for" },
     ])
     .run();
 }
@@ -1574,6 +1575,7 @@ import { z } from "zod";
 import { instructors } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
+import { MarkdownEditor } from "#/kit/Markdown";
 import { instructorAccess, instructorData } from "./instructor.server";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -1597,8 +1599,9 @@ export const instructorUi: RecordUi<InstructorRow> = {
     {
       name: "bio",
       label: "Bio",
-      kind: "text",
+      kind: "markdown",
       required: false,
+      input: MarkdownEditor,
       get: (row) => row.bio,
     },
   ],
@@ -1606,7 +1609,7 @@ export const instructorUi: RecordUi<InstructorRow> = {
 
 export const instructorSchema = createInsertSchema(instructors, {
   name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  bio: (s) => s.max(10000, "At most 10,000 characters"),
+  bio: (s) => s.max(50000, "At most 50,000 characters"),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InstructorValues = z.output<typeof instructorSchema>;
@@ -4417,6 +4420,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/Landing.tsx",
+  "kit: src/kit/Markdown.tsx",
+  "kit: src/kit/MarkdownFormatted.tsx",
   "kit: src/kit/ModelForm.tsx",
   "kit: src/kit/ModelTable.tsx",
   "kit: src/kit/Reserve.tsx",
@@ -4492,7 +4497,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "Dockerfile": "daba7033 kit",
   "README.md": "bf062766 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "5d945a29 generated",
+  "package.json": "d5004d3e generated",
   "playwright.config.ts": "4cec8537 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
@@ -4506,7 +4511,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3c9130c3 generated",
-  "src/db/seed.ts": "acdd5f60 generated",
+  "src/db/seed.ts": "521283e7 generated",
   "src/generated/access.test.ts": "956d312d generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/booking.server.ts": "5a4cfb09 generated",
@@ -4515,7 +4520,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/class-type.ts": "c491e3fb generated",
   "src/generated/hooks.ts": "b3ee8e1b generated",
   "src/generated/instructor.server.ts": "ac054f7b generated",
-  "src/generated/instructor.ts": "6fb56a61 generated",
+  "src/generated/instructor.ts": "3bb380d1 generated",
   "src/generated/message.server.ts": "986a2bcd generated",
   "src/generated/message.ts": "c03e792b generated",
   "src/generated/pages.ts": "294e67d0 generated",
@@ -4525,8 +4530,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Calendar.tsx": "a4057c01 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/FieldInput.tsx": "9b3ab85a kit",
+  "src/kit/FieldInput.tsx": "76950028 kit",
   "src/kit/Landing.tsx": "535918ee kit",
+  "src/kit/Markdown.tsx": "0f81cab6 kit",
+  "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "69d847af kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/Reserve.tsx": "70a23d5e kit",
@@ -4536,7 +4543,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "760ee9b0 kit",
+  "src/kit/model.ts": "a00a0f53 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -7167,7 +7174,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/FieldInput.tsx": "9b3ab85a kit",
+  "src/kit/FieldInput.tsx": "76950028 kit",
   "src/kit/ModelForm.tsx": "69d847af kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
@@ -7177,7 +7184,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "760ee9b0 kit",
+  "src/kit/model.ts": "a00a0f53 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -10325,7 +10332,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "906b56c9 kit",
-  "src/kit/FieldInput.tsx": "9b3ab85a kit",
+  "src/kit/FieldInput.tsx": "76950028 kit",
   "src/kit/Landing.tsx": "535918ee kit",
   "src/kit/ModelForm.tsx": "69d847af kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
@@ -10337,7 +10344,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "760ee9b0 kit",
+  "src/kit/model.ts": "a00a0f53 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -11759,7 +11766,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "433b620e generated",
   "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/FieldInput.tsx": "9b3ab85a kit",
+  "src/kit/FieldInput.tsx": "76950028 kit",
   "src/kit/Landing.tsx": "535918ee kit",
   "src/kit/ModelForm.tsx": "69d847af kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
@@ -11769,7 +11776,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "760ee9b0 kit",
+  "src/kit/model.ts": "a00a0f53 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
