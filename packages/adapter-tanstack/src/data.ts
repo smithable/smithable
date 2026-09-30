@@ -641,6 +641,8 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
     ...(field.default !== undefined
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
       : {}),
+    ...(field.min !== undefined && kind !== "string" && kind !== "text" ? { min: field.min } : {}),
+    ...(field.max !== undefined && kind !== "string" && kind !== "text" ? { max: field.max } : {}),
     ...(kind === "markdown" ? { input: code("MarkdownEditor") } : {}),
     ...(kind === "picture"
       ? {
