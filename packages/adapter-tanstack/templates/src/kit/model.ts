@@ -4,6 +4,8 @@
 export type FieldKind =
   | "string"
   | "text"
+  /** Long text with formatting (headings, lists, links), written as Markdown. */
+  | "markdown"
   | "int"
   | "decimal"
   | "money"
@@ -31,6 +33,18 @@ export interface FieldUi {
   /** For a reference: the related record's key in a row, and the field that names it. */
   relation?: { key: string; titleField: string };
   default?: string | number | boolean;
+  /** The field's own input control, when a plain one does not do (a Markdown editor). */
+  input?: (props: FieldControlProps) => React.ReactNode;
+}
+
+/** What a field's own input control gets from the form. */
+export interface FieldControlProps {
+  id: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 export interface ModelUi {
