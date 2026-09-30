@@ -15,7 +15,7 @@ import { commandHelp, help, operationHelp } from "./help.js";
 import { inspect, test } from "./inspect.js";
 import { type Io, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
-import { create } from "./new.js";
+import { clarify, create } from "./new.js";
 import { op } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { type Level, security, updateSecurity } from "./security.js";
@@ -126,6 +126,14 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.answers ? { answers: values.answers } : {}),
         yes: values.yes === true,
       });
+    case "clarify":
+      if (!args.length) {
+        io.err(
+          'clarify needs a description, like: smithable clarify "a booking site for a yoga studio"\n',
+        );
+        return 2;
+      }
+      return clarify(io, args.join(" "), values.json === true);
     case "run":
       return runDev(dir, io, values.open !== false);
     case "build":

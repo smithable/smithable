@@ -22,6 +22,8 @@ export function Reserve({
   cancel,
   bookLabel = "Book a place",
   cancelLabel = "Cancel booking",
+  fullLabel = "Full",
+  bookedLabel = "You're booked",
 }: {
   /** The record whose places these are (the session). */
   id: number;
@@ -31,6 +33,8 @@ export function Reserve({
   cancel: (options: { data: number }) => Promise<unknown>;
   bookLabel?: string;
   cancelLabel?: string;
+  fullLabel?: string;
+  bookedLabel?: string;
 }) {
   const [places, setPlaces] = useState<Places | null>();
   const [busy, setBusy] = useState(false);
@@ -72,14 +76,14 @@ export function Reserve({
     <div className="space-y-3">
       <p className="font-semibold tabular-nums">
         {full
-          ? "Full"
+          ? fullLabel
           : `${places.left} of ${places.max} ${places.max === 1 ? "place" : "places"} left`}
       </p>
       {places.mine !== undefined ? (
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-success">
             <CircleCheck aria-hidden className="size-5 shrink-0" />
-            You're booked
+            {bookedLabel}
           </p>
           {asking ? (
             <div className="flex flex-wrap items-center gap-2">

@@ -5,6 +5,8 @@ models:
   ClassType:
     fields:
       level: { values: { allLevels: All levels } }
+  Booking:
+    reserve: { book: Book a mat, cancel: Cancel my booking, full: No mats left }
 
 pages:
   home:
