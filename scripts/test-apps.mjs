@@ -408,6 +408,46 @@ async function bookingFlow(dir, base) {
   }
 }
 
+/**
+ * A Markdown field (an instructor's bio): written, previewed formatted with headings from h2
+ * and raw HTML shown as text, saved and kept.
+ */
+async function markdownFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/instructors/1`);
+    const bio = page.getByLabel("Bio");
+    await bio.fill(
+      "# Teaching since 2010\n\nShe teaches **Yin** and <b>Hatha</b>.\n\n- Mornings\n- Weekends",
+    );
+    await page.getByRole("button", { name: "Preview" }).click();
+    await page
+      .getByRole("heading", { level: 2, name: "Teaching since 2010" })
+      .waitFor({ timeout: 10000 });
+    await page.locator("strong", { hasText: "Yin" }).waitFor();
+    await page.getByText("<b>Hatha</b>", { exact: false }).waitFor();
+    if (await page.locator("main b").count()) throw new Error("raw HTML was run");
+    await page.getByRole("button", { name: "Write" }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(/\/instructors$/);
+    await open(page, `${base}/instructors/1`);
+    if (!(await page.getByLabel("Bio").inputValue()).startsWith("# Teaching since 2010"))
+      throw new Error("the bio was not kept");
+    console.log(
+      "  ✓ browser: a Markdown bio is written, previewed formatted (headings from h2, raw HTML as text), saved and kept",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("markdown flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function landingFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -1524,6 +1564,7 @@ for (const [index, example] of examples.entries()) {
         await landingFlow(base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
+        await markdownFlow(base);
       }
       if (example === "invoicing") {
         await formulaFlow(base);
@@ -1706,6 +1747,29 @@ if (examples.includes("booking")) {
       if (result.code === 0 || !result.out.includes("--starter booking"))
         throw new Error(result.out);
     });
+    await asyncStep(
+      "clarify --json: the model's questions and starter for a program; no model means no questions",
+      async () => {
+        const asked = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+          "clarify",
+          "A site to show my dogs",
+          "--json",
+        );
+        const answer = JSON.parse(asked.out);
+        if (asked.code !== 0 || answer.starter !== "records" || answer.questions.length !== 2)
+          throw new Error(asked.out);
+        const none = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "" },
+          "clarify",
+          "A site to show my dogs",
+          "--json",
+        );
+        if (none.code !== 0 || none.out.trim() !== '{"questions":[]}') throw new Error(none.out);
+      },
+    );
     await asyncStep(
       "the closest starter, adapted by a model, is summarised in plain language and becomes the app",
       async () => {

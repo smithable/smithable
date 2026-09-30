@@ -197,7 +197,7 @@ function readPage(
 }
 
 /** Text you can type into a search box: strings, text, emails, phone numbers, web addresses, choices; and references, by the related record's name. */
-const SEARCHABLE = ["string", "text", "email", "phone", "url"];
+const SEARCHABLE = ["string", "text", "markdown", "email", "phone", "url"];
 
 /** Whether a field's own value can be searched (references are searched by their record's name). */
 const searchable = (field: FieldIR) =>
