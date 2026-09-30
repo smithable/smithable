@@ -22,6 +22,8 @@ export interface PageContent {
   subtitle?: string;
   /** Texts of a landing page's sections and a dashboard's tiles, by name. */
   sections?: Record<string, SectionContent>;
+  /** A calculator page's fields' labels and help. */
+  fields?: Record<string, FieldContent>;
 }
 
 export interface SectionContent {
@@ -38,6 +40,9 @@ export interface SectionContent {
   thanks?: string;
   /** Features, plans, testimonials or questions, depending on the section. */
   items?: Record<string, string | string[] | ContentImage>[];
+  /** A calculator section's results heading, and its fields' labels and help. */
+  results?: string;
+  fields?: Record<string, FieldContent>;
   /** A hero's picture: a file in the app's public/images/, and what it shows. */
   image?: ContentImage;
 }
@@ -51,7 +56,10 @@ export interface ContentImage {
 const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
 
 /** The texts each kind of section takes, and the keys of its items. */
-const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[]; image?: true }> = {
+const SECTION_TEXTS: Record<
+  string,
+  { texts: string[]; items?: string[]; image?: true; fields?: true }
+> = {
   hero: { texts: ["title", "subtitle", "button"], image: true },
   features: { texts: ["title", "text"], items: ["title", "text"] },
   records: { texts: ["title", "text"] },
@@ -67,6 +75,10 @@ const SECTION_TEXTS: Record<string, { texts: string[]; items?: string[]; image?:
     texts: ["title", "text", "address", "phone", "email", "hours", "button", "thanks"],
   },
   gallery: { texts: ["title", "text"], items: ["image", "caption"] },
+  // A calculator section: its heading, the results' heading, and its fields' labels and help.
+  calculator: { texts: ["title", "text", "results"], fields: true },
+  // A calculator page's results heading.
+  results: { texts: ["title"] },
   // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").
   footer: { texts: ["text"], items: ["label", "link"] },
   tile: { texts: ["label"] },
@@ -262,10 +274,16 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
   const page = ir.pages.find((p) => p.id === id);
   const parts = page ? patternInfo(page).parts() : {};
   const result: PageContent = {};
+  const calculatorFields =
+    page?.pattern.kind === "calculator" ? page.pattern.calculator.fields : undefined;
   for (const entry of mapEntries(ctx, node, where) ?? []) {
     if (entry.key === "title" || entry.key === "subtitle") {
       const text = readString(ctx, entry.value, `"${entry.key}" of ${where}`);
       if (text !== undefined) result[entry.key] = text;
+      continue;
+    }
+    if (entry.key === "fields" && calculatorFields) {
+      result.fields = readFieldTexts(ctx, entry.value, `the fields of ${where}`, calculatorFields);
       continue;
     }
     const kind = parts[entry.key];
@@ -285,6 +303,7 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
         ...rules.texts,
         ...(rules.items ? ["items"] : []),
         ...(rules.image ? ["image"] : []),
+        ...(rules.fields ? ["fields"] : []),
       ],
     });
     const section: SectionContent = readTexts(
@@ -292,8 +311,20 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
       null,
       partWhere,
       [],
-      known.filter((e) => e.key !== "items" && e.key !== "image"),
+      known.filter((e) => e.key !== "items" && e.key !== "image" && e.key !== "fields"),
     );
+    const fields = known.find((e) => e.key === "fields");
+    const sectionFields =
+      page?.pattern.kind === "landing"
+        ? page.pattern.sections.find((s) => s.name === entry.key)?.calculator?.fields
+        : undefined;
+    if (fields && sectionFields)
+      section.fields = readFieldTexts(
+        ctx,
+        fields.value,
+        `the fields of ${partWhere}`,
+        sectionFields,
+      );
     const items = known.find((e) => e.key === "items");
     if (items && rules.items) section.items = readItems(ctx, items.value, partWhere, rules.items);
     const image = known.find((e) => e.key === "image");
@@ -302,6 +333,29 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
       if (read) section.image = read;
     }
     result.sections = { ...result.sections, [entry.key]: section };
+  }
+  return result;
+}
+
+/** Labels and help for a calculator's fields, by name. */
+function readFieldTexts(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  fields: readonly { name: string }[],
+): Record<string, FieldContent> {
+  const result: Record<string, FieldContent> = {};
+  for (const field of named(
+    ctx,
+    node,
+    where,
+    fields.map((f) => f.name),
+    "field",
+  )) {
+    result[field.key] = readTexts(ctx, field.value, `field "${field.key}" of ${where}`, [
+      "label",
+      "help",
+    ]);
   }
   return result;
 }

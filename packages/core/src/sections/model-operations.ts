@@ -13,10 +13,22 @@ import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
 
 const name = { type: "string", minLength: 1 };
 
+/**
+ * The model named, or a calculator page's fields as a model (docs/design/calculator.md): the
+ * field operations work on a calculator as on a model, at its own place in the spec.
+ */
 function model(ir: SpecIR, name: string): ModelIR {
   const found = ir.models.find((m) => m.name === name);
-  if (!found) throw new OperationError(`There is no model named "${name}".`);
-  return found;
+  if (found) return found;
+  const page = ir.pages.find((p) => p.id === name && p.pattern.kind === "calculator");
+  if (page && page.pattern.kind === "calculator")
+    return { name, fields: page.pattern.calculator.fields };
+  throw new OperationError(`There is no model named "${name}".`);
+}
+
+/** Whether a name is a calculator page's, whose fields live under the page. */
+function isCalculator(ir: SpecIR, name: string): boolean {
+  return ir.pages.some((p) => p.id === name && p.pattern.kind === "calculator");
 }
 
 function field(ir: SpecIR, modelName: string, name: string): FieldIR {
@@ -44,9 +56,11 @@ function baseType(type: string): string {
   return parsed.ok ? typeKey(parsed.value.type) : type;
 }
 
-/** Where a field lives; smithable.content.yml uses the same path for its texts. */
-function fieldPath(m: string, f: string) {
-  return ["models", m, "fields", f];
+/** Where a field lives (a calculator's under its page); smithable.content.yml keys texts the same way. */
+function fieldPath(m: string, f: string, ir?: SpecIR) {
+  return ir && isCalculator(ir, m)
+    ? ["pages", m, "calculator", "fields", f]
+    : ["models", m, "fields", f];
 }
 
 const addModel: Operation<{ model: string; fields: Record<string, string> }> = {
@@ -102,7 +116,7 @@ const addField: Operation<{ model: string; field: string; type: string }> = {
     checkType(type);
     if (model(ir, m).fields.some((x) => x.name === f))
       throw new OperationError(`${m} already has a field named "${f}".`);
-    spec.add(["models", m, "fields"], f, type);
+    spec.add(fieldPath(m, f, ir).slice(0, -1), f, type);
     return [];
   },
 };
@@ -131,7 +145,7 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
     const parsed = parseFieldShorthand(type);
     const choices =
       parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
-    const path = fieldPath(m, f);
+    const path = fieldPath(m, f, ir);
     const current = spec.get(path);
     if (typeof current === "object" && current !== null) {
       // Long form: replace only the type and keep description, bounds and the rest.
@@ -169,7 +183,12 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
     checkFieldName(to);
     if (model(ir, m).fields.some((x) => x.name === to))
       throw new OperationError(`${m} already has a field named "${to}".`);
-    spec.renameKey(fieldPath(m, from), to);
+    spec.renameKey(fieldPath(m, from, ir), to);
+    if (isCalculator(ir, m)) {
+      // A calculator's formulas and examples name its fields; nothing else does.
+      renameInCalculator(spec, ir, m, from, to);
+      return [];
+    }
     return [{ kind: "rename-field", model: m, from, to, storage: storageOf(field(ir, m, from)) }];
   },
 };
@@ -188,12 +207,14 @@ const removeField: Operation<{ model: string; field: string }> = {
   },
   positional: ["model", "field"],
   describe: ({ model, field }) => `Remove field ${field} from ${model}`,
-  destructive: ({ model: m, field: f }, ir) => storageOf(field(ir, m, f)) !== "none",
+  destructive: ({ model: m, field: f }, ir) =>
+    !isCalculator(ir, m) && storageOf(field(ir, m, f)) !== "none",
   apply(editors: Editors, { model: m, field: f }, ir) {
     field(ir, m, f);
     if (model(ir, m).fields.length === 1)
       throw new OperationError(`${f} is the only field of ${m}; a model needs at least one.`);
-    editors.spec.remove(fieldPath(m, f));
+    editors.spec.remove(fieldPath(m, f, ir));
+    if (isCalculator(ir, m)) return [];
     return [{ kind: "remove-field", model: m, field: f, storage: storageOf(field(ir, m, f)) }];
   },
 };
@@ -268,6 +289,32 @@ export const modelOperations: AnyOperation[] = [
   removeField,
   setCapacity,
 ];
+
+/** Renames a field in a calculator's own formulas and examples. */
+function renameInCalculator(
+  spec: YamlEditor,
+  ir: SpecIR,
+  page: string,
+  from: string,
+  to: string,
+): void {
+  const p = ir.pages.find((x) => x.id === page);
+  if (p?.pattern.kind !== "calculator") return;
+  const base = ["pages", page, "calculator"];
+  for (const f of p.pattern.calculator.fields) {
+    const path = [...base, "fields", f.name, "formula"];
+    const text = spec.has(path) ? spec.get(path) : undefined;
+    if (typeof text !== "string") continue;
+    const next = renameInFormula(text, (name, list) =>
+      name === from && list === undefined ? to : undefined,
+    );
+    if (next !== text) spec.set(path, next);
+  }
+  p.pattern.calculator.examples.forEach((e, i) => {
+    for (const part of ["input", "expected"] as const)
+      if (from in e[part]) spec.renameKey([...base, "examples", String(i), part, from], to);
+  });
+}
 
 /**
  * Renames a field where formulas use it: the model's own formulas (and their examples' inputs)
