@@ -1254,6 +1254,33 @@ function operationsFlow(dir) {
     if (readFileSync(data, "utf8").includes(salesDelete)) throw new Error("undo kept the rule");
   });
   step(
+    "a page and a landing section of your own: created once as stubs, the app type-checks, and removing them leaves the code",
+    () => {
+      const page = join(dir, "src/custom/pages/Planner.tsx");
+      const section = join(dir, "src/custom/sections/Intro.tsx");
+      const start = run("git", ["rev-parse", "HEAD"], dir).trim();
+      expectOk(smithable(dir, "op", "addCustomPage", "planner", "Planner"));
+      expectOk(smithable(dir, "op", "addLandingPage", "welcome"));
+      expectOk(smithable(dir, "op", "addSection", "welcome", "intro", "--custom", "Intro"));
+      if (!existsSync(page) || !existsSync(section)) throw new Error("no stubs");
+      const route = readFileSync(join(dir, "src/routes/planner/index.tsx"), "utf8");
+      if (!route.includes('import { Planner } from "#/custom/pages/Planner"'))
+        throw new Error(route);
+      writeFileSync(
+        page,
+        readFileSync(page, "utf8").replace("This page is yours", "Plan the week"),
+      );
+      run("pnpm", ["typecheck"], dir);
+      run("git", ["commit", "-qam", "Write the planner"], dir);
+      expectOk(smithable(dir, "op", "removePage", "planner"));
+      if (!readFileSync(page, "utf8").includes("Plan the week"))
+        throw new Error("the page's code went");
+      run("pnpm", ["typecheck"], dir);
+      // Back to before: nothing here touched the database.
+      run("git", ["reset", "-q", "--hard", start], dir);
+    },
+  );
+  step(
     "changing an action's input breaks its custom code at type-check; regeneration leaves the code alone",
     () => {
       const specFile = join(dir, "smithable.yml");

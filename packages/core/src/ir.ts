@@ -160,6 +160,8 @@ export interface PageIR extends SemanticText {
     | { kind: "data"; models: string[]; all: boolean }
     /** Inputs and results computed as you type, stored nowhere (docs/design/calculator.md). */
     | { kind: "calculator"; calculator: CalculatorIR }
+    /** A page of your own: the component in src/custom/pages/, in a route Smithable owns. */
+    | { kind: "custom"; component: string }
     /**
      * A model's records as articles (a blog, news): `title` and `body` (a markdown field) always;
      * a `picture`, a `date`, an `address` (a unique string for the article's address) and a
@@ -215,6 +217,7 @@ export const SECTION_KINDS = [
   "gallery",
   "footer",
   "calculator",
+  "custom",
 ] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
 
@@ -231,6 +234,8 @@ export interface LandingSection {
   limit?: number;
   /** A calculator section's inputs and results. */
   calculator?: CalculatorIR;
+  /** A section of your own: the component in src/custom/sections/ (calculator.md §4). */
+  component?: string;
 }
 
 /**

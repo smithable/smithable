@@ -117,7 +117,7 @@ function readPage(
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
     allowed: ["route", ...PATTERN_KINDS, "actions", "access", "search", ...TEXT_KEYS],
-    later: ["list", "calendar", "custom", "filters"],
+    later: ["list", "calendar", "filters"],
     content: ["title", "label", "heading"],
   });
   let route = `/${kebab(id)}`;

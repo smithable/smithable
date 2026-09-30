@@ -202,6 +202,18 @@ export function landingRoute(
         />`,
         ];
       }
+      case "custom": {
+        // The project's own component (src/custom/sections/), with the section's texts.
+        const c = section.component;
+        if (!c) return [];
+        imports.add(`#/custom/sections/${c}`, c);
+        return [
+          `<${c}
+          name=${attr(section.name)}
+          texts=${attr(`pages.${page.id}.${section.name}`)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
+        />`,
+        ];
+      }
       // The footer is the layout's, wherever the section is listed.
       case "footer":
         return [];
