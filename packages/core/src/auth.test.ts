@@ -98,7 +98,7 @@ describe("smithable.auth.yml", () => {
       roles: [{ name: "admin" }, { name: "member" }],
       defaultRole: "member",
       admins: [],
-      public: { pages: [], read: [], create: [] },
+      public: { pages: [], read: [], create: [], readWhere: {} },
     });
   });
 

@@ -20,6 +20,7 @@ import {
 import {
   ACCESS_OPERATIONS,
   type CapacityIR,
+  conditionFits,
   type FieldExample,
   type FieldIR,
   type FieldValue,
@@ -693,16 +694,7 @@ function checkCapacity(ctx: ParseContext, models: ModelIR[], model: ModelIR): vo
     }
   }
   for (const [name, wanted] of Object.entries(capacity.where ?? {})) {
-    const field = model.fields.find((f) => f.name === name);
-    const fits =
-      field &&
-      ((field.type.kind === "choice" &&
-        typeof wanted === "string" &&
-        field.type.values.includes(wanted)) ||
-        (field.type.kind === "scalar" &&
-          field.type.name === "bool" &&
-          typeof wanted === "boolean"));
-    if (!fits) {
+    if (!conditionFits(model, name, wanted)) {
       ctx.error(
         at,
         "invalid-capacity",
