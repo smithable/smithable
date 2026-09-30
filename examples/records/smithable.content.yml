@@ -1,0 +1,22 @@
+smithableContent: 0.1
+
+models:
+  Item:
+    label: Item
+    fields:
+      summary: { label: About }
+      kind: { values: { general: General, favourite: Favourite, archived: Archived } }
+      addedOn: { label: Added }
+
+pages:
+  home:
+    hero:
+      title: Our collection
+      subtitle: The things we keep, and what we know about each of them.
+      button: See everything
+    items:
+      title: In the collection
+    footer:
+      text: Made with care.
+  items:
+    subtitle: Everything we keep, newest first.
