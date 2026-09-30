@@ -188,7 +188,7 @@ export function Users({
     u.id === viewerId && <span className="text-muted-foreground"> (you)</span>;
 
   return (
-    <div className="space-y-6">
+    <div data-kit="users" className="space-y-6">
       <Card className="p-card">
         <form onSubmit={invite} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
