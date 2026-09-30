@@ -21,7 +21,7 @@ import { textSchema } from "./text-schema.js";
 const ROUTE_PATTERN = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/;
 
 /** Routes the generated app uses itself (see the deployment contract). */
-const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/];
+const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/, /^\/files(?:\/|$)/];
 
 export const pagesSection: SpecSection<"pages"> = {
   key: "pages",
