@@ -45,6 +45,8 @@ export type Proposal = { usage: string; id: string } & (
       }[];
     }
   | { kind: "question"; question: string; options: string[] }
+  /** A question about the app, answered (docs/design/studio-v2.md §4). */
+  | { kind: "answer"; text: string; concepts: string[] }
   | { kind: "none"; reason: string }
   | { kind: "failed"; message: string }
 );
