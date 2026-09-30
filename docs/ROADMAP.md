@@ -260,6 +260,7 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - The data page (an admin view of every model's records) is built.
 - The calendar page pattern is built, and date-times are in the app's time zone everywhere.
 - Booking a place: a capacity on a model, checked where records are written, and the Book and Cancel block. The booking starter takes bookings.
+- Articles: Markdown and picture fields, a public read with `where`, and the articles page pattern. The booking starter has a studio blog.
 - Hook points, the mail kit, and invitations with a users page (`users: manage`, `selfSignUp: false`; [design/users.md](design/users.md)) are built (2026-09-29).
 
 **Exit:** a new page pattern or landing section kind touches one module in core and one in the adapter; a project plugin can add operations and a summary; `smithable ask` answers everyday changes without a model and says so; nothing from the review is open except the Spot host.

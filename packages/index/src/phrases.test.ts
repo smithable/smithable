@@ -95,6 +95,15 @@ describe("the seven benchmark tasks", () => {
     expect(ops("Show customers in a calendar")).toEqual(calendar);
   });
 
+  test("Add a blog or news page for a model", () => {
+    const blog = [{ op: "addArticlesPage", args: { page: "blog", model: "Customer" } }];
+    expect(ops("Add a blog for customers")).toEqual(blog);
+    expect(ops("Show customers as articles")).toEqual(blog);
+    expect(ops("Add a news page for customers")).toEqual([
+      { op: "addArticlesPage", args: { page: "news", model: "Customer" } },
+    ]);
+  });
+
   test("Add a custom action by what it is for", () => {
     expect(ops("Add an action to archive customers")).toEqual([
       { op: "addAction", args: { action: "archiveCustomers", intent: "Archive customers." } },
