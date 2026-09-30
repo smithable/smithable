@@ -72,6 +72,8 @@ export function formulaInWords(expr: Expr, label: (name: string) => string): str
           return `${a} rounded to ${b ?? 0} decimals`;
         case "ABS":
           return `the absolute value of ${a}`;
+        case "PMT":
+          return `the payment per period of ${words(expr.args[2] as never)} over ${b} periods at ${a} per period`;
         case "MIN":
           return `the smaller of ${a} and ${b}`;
         case "MAX":

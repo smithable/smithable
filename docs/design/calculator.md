@@ -4,6 +4,8 @@ Status: proposed 2026-09-30 by Fable, from the question "what about a calculator
 
 Against ARCHITECTURE §2.4: calculators are common (mortgage and loan, price and quote estimators, ROI, BMI, savings, "how many do I need"); the formula engine already exists and already runs in forms as you type; the alternative is a hand-written React component per calculator; nothing names a technology; and a formula is checked, testable with `examples` and readable in the Builder, which custom code is not.
 
+Built 2026-09-30 (Fable): §2 and §3 as designed (core, the kit's `Calculator.tsx`, the page route and the landing section, `PMT`, examples as tests, the field operations on a calculator, `addCalculatorPage`, the content keys), except `results: beside | below` in the ux file and the tier-0 phrase; §4 (`custom` pages and sections) is not built yet.
+
 ## 1. What people get
 
 - **A calculator page** (`/mortgage`): a form of a few inputs and, under or beside them, results that change as you type. Nothing is saved, no account is needed unless the page's access says so, and a phone shows results under the inputs, a wide screen beside them.
