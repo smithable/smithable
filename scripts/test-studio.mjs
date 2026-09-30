@@ -236,32 +236,34 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
     },
   );
-  await step("colours of a choice and a page's icon, from the Change tab", async () => {
-    await change("Colours of a choice");
-    await page.getByLabel("Choice field").selectOption({ label: "Status of Order" });
-    await page.getByLabel("Value", { exact: true }).selectOption({ label: "Shipped" });
-    await page.getByLabel("Colour").selectOption({ label: "Green (good)" });
-    await page.getByRole("button", { name: "Set colour" }).click();
+  await step("colours of a choice and a page's icon, from the Look tab", async () => {
+    await page.getByRole("button", { name: "Your app", exact: true }).first().click();
+    await page.getByRole("tab", { name: "Look" }).click();
+    const choices = page.getByRole("region", { name: "Colours of choices" });
+    await choices
+      .getByRole("group", { name: "Status of Order" })
+      .getByLabel("Colour of Shipped")
+      .selectOption("success");
     await trace
       .getByText("Show Order.status shipped as success")
       .first()
       .waitFor({ timeout: 60000 });
-    await change("A page's icon");
-    await page.getByLabel("Page", { exact: true }).selectOption({ label: "Orders" });
-    await page.getByLabel("Icon").selectOption({ label: "Truck" });
-    await page.getByRole("button", { name: "Set icon" }).click();
-    await status
-      .getByText(/orders/i)
-      .first()
-      .waitFor({ timeout: 60000 });
+    await page
+      .getByRole("region", { name: "Pages" })
+      .getByLabel("Icon of Orders")
+      .selectOption("truck");
+    await trace.getByText(/truck/i).first().waitFor({ timeout: 60000 });
     const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     if (!ux.includes("shipped: success") || !ux.includes("truck")) throw new Error(ux);
   });
   await step("look and feel: a theme and density are chosen without touching code", async () => {
-    await change("Look and feel");
-    await page.getByLabel("Theme").selectOption("playful");
-    await page.getByLabel("Density").selectOption("compact");
-    await page.getByRole("button", { name: "Apply" }).click();
+    const theme = page.getByRole("region", { name: "Font and density" });
+    await theme.getByRole("button", { name: "Compact" }).click();
+    await theme.getByRole("button", { name: "Compact", pressed: true }).waitFor({ timeout: 60000 });
+    await page
+      .getByRole("region", { name: "Theme" })
+      .getByRole("button", { name: "Playful" })
+      .click();
     await trace.getByText("Set the theme: preset playful").first().waitFor({ timeout: 60000 });
   });
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
@@ -324,6 +326,13 @@ try {
       await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
       await customers.getByRole("button", { name: "Save label" }).click();
       await trace.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
+      // Who can: a record's properties, a chip per role.
+      await customers.getByRole("button", { name: "Customers", exact: true }).click();
+      await customers.getByRole("button", { name: "Delete: sales" }).click();
+      await trace
+        .getByText(/delete customers/i)
+        .first()
+        .waitFor({ timeout: 60000 });
       // Adding a field: the Change tab's form, with the record filled in.
       await page
         .getByRole("region", { name: "Customers", exact: true })
@@ -395,8 +404,8 @@ try {
     async () => {
       await openPreview("/orders");
       await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 });
-      // Navigating inside the app (opening an order) shows in the address. The dev server
-      // hydrates the page a moment after it shows, so a click may land before the app listens.
+      // Navigating inside the app (opening an order) shows in the address.
+      // A click before the reloaded page is ready does nothing: try again, a few times.
       for (let attempt = 1; ; attempt++) {
         await preview.getByRole("button", { name: "ORD-1008" }).click();
         try {
@@ -410,7 +419,7 @@ try {
           );
           break;
         } catch (error) {
-          if (attempt === 4) throw error;
+          if (attempt === 3) throw error;
         }
       }
       const opened = await page.getByLabel("Preview address").inputValue();
@@ -464,9 +473,11 @@ try {
       .waitFor({ timeout: 60000 });
     await look("Colours of choices").getByLabel("Colour of Draft").first().selectOption("warning");
     await trace.getByText(/draft/i).first().waitFor({ timeout: 60000 });
-    await look("Pages").getByLabel("Icon of Orders").selectOption("truck");
-    await trace.getByText(/truck/i).first().waitFor({ timeout: 60000 });
-    if (!/icon: truck/.test(ux())) throw new Error(`no icon in smithable.ux.yml:\n${ux()}`);
+    // A second line under a column's value.
+    await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
+    for (let i = 0; i < 60 && !/email: phone/.test(ux()); i++)
+      await new Promise((r) => setTimeout(r, 1000));
+    if (!/email: phone/.test(ux())) throw new Error(`no second line in smithable.ux.yml:\n${ux()}`);
     const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
     await columns
       .getByRole("button", { name: /^Hide / })

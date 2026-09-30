@@ -12,6 +12,8 @@ interface FieldInputProps {
   describedBy?: string;
   /** Choices for reference fields. */
   options?: Options;
+  /** The record being edited, when it exists (a picture shows from its address). */
+  record?: number;
   onChange: (value: string | boolean) => void;
 }
 
@@ -30,6 +32,7 @@ export function FieldInput({
   invalid,
   describedBy,
   options,
+  record,
   onChange,
 }: FieldInputProps) {
   const common = {
@@ -48,7 +51,7 @@ export function FieldInput({
   const text = typeof value === "string" ? value : "";
   if (field.input) {
     const Control = field.input;
-    return <Control {...common} value={text} onChange={onChange} />;
+    return <Control {...common} value={text} record={record} onChange={onChange} />;
   }
   if (field.kind === "text" || field.kind === "markdown") {
     return <Textarea {...common} value={text} onChange={(e) => onChange(e.target.value)} />;
