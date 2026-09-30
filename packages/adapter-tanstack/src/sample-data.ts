@@ -76,6 +76,10 @@ function sampleValue(
       const title = Object.values(row).find((v) => typeof v === "string");
       return `A short description of ${title ?? `${words(model.name).join(" ")} ${i + 1}`}.`;
     }
+    case "markdown": {
+      const title = Object.values(row).find((v) => typeof v === "string");
+      return `A short description of **${title ?? `${words(model.name).join(" ")} ${i + 1}`}**.\n\n- What it is\n- Who it is for`;
+    }
     case "email": {
       const title = Object.values(row).find((v) => typeof v === "string" && v.includes(" "));
       const local = typeof title === "string" ? slug(title) : `${kebab(model.name)}${i + 1}`;
