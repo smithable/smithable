@@ -90,7 +90,9 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return 0;
   }
   if (command === "op")
-    return op(values.dir ?? ".", io, args[0], args.slice(1), { yes: values.yes === true });
+    return op(values.dir ?? ".", io, args[0], operationWords(argv).slice(1), {
+      yes: values.yes === true,
+    });
   if (command === "undo") return undo(values.dir ?? ".", io);
   if (command === "teach") return teach(values.dir ?? ".", io, args[0]);
   if (command === "code")
@@ -188,37 +190,54 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   }
 }
 
+const CONFIG = {
+  allowPositionals: true,
+  allowNegative: true,
+  options: {
+    help: { type: "boolean", short: "h" },
+    version: { type: "boolean", short: "v" },
+    force: { type: "boolean" },
+    open: { type: "boolean" },
+    starter: { type: "string" },
+    describe: { type: "string" },
+    answers: { type: "string" },
+    plugin: { type: "string" },
+    level: { type: "string" },
+    security: { type: "boolean" },
+    target: { type: "string" },
+    to: { type: "string" },
+    from: { type: "string" },
+    backup: { type: "string" },
+    container: { type: "string" },
+    url: { type: "string" },
+    yes: { type: "boolean" },
+    dir: { type: "string" },
+    json: { type: "boolean" },
+    implementation: { type: "boolean" },
+    port: { type: "string" },
+    host: { type: "string" },
+    "preview-url": { type: "string" },
+    insecure: { type: "boolean" },
+    home: { type: "string" },
+  },
+} as const;
+
 function parse(argv: string[]) {
-  return parseArgs({
-    args: argv,
-    allowPositionals: true,
-    allowNegative: true,
-    options: {
-      help: { type: "boolean", short: "h" },
-      version: { type: "boolean", short: "v" },
-      force: { type: "boolean" },
-      open: { type: "boolean" },
-      starter: { type: "string" },
-      describe: { type: "string" },
-      answers: { type: "string" },
-      plugin: { type: "string" },
-      level: { type: "string" },
-      security: { type: "boolean" },
-      target: { type: "string" },
-      to: { type: "string" },
-      from: { type: "string" },
-      backup: { type: "string" },
-      container: { type: "string" },
-      url: { type: "string" },
-      yes: { type: "boolean" },
-      dir: { type: "string" },
-      json: { type: "boolean" },
-      implementation: { type: "boolean" },
-      port: { type: "string" },
-      host: { type: "string" },
-      "preview-url": { type: "string" },
-      insecure: { type: "boolean" },
-      home: { type: "string" },
-    },
-  });
+  // An operation's own arguments may be given by name (--output, --allow): `op` takes them as
+  // words, so its options are not refused here (operationWords picks them out).
+  const loose = parseArgs({ ...CONFIG, args: argv, strict: false });
+  return (
+    loose.positionals[0] === "op" ? loose : parseArgs({ ...CONFIG, args: argv })
+  ) as ReturnType<typeof parseArgs<typeof CONFIG>>;
+}
+
+/** The words after `op`, without the options every command has (--yes, --dir, --help). */
+function operationWords(argv: string[]): string[] {
+  const words: string[] = [];
+  for (let i = argv.indexOf("op") + 1; i < argv.length; i++) {
+    const word = argv[i] as string;
+    if (word === "--dir") i++;
+    else if (!/^(--yes|--help|-h|--dir=.*)$/.test(word)) words.push(word);
+  }
+  return words;
 }
