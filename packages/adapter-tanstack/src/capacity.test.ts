@@ -65,3 +65,35 @@ test("without a capacity nothing of it is generated", () => {
   expect(booking).not.toContain("transaction");
   expect(booking).not.toContain("Conflict");
 });
+
+test("the reservation block: a session's page books and cancels through the data functions; no sample places", () => {
+  // Numbers only, never whose: the places counted over every booking, and the viewer's own.
+  const data = file("src/generated/booking.server.ts");
+  expect(data).toContain("places(sessionId: number): { taken: number; max: number }");
+  expect(data).toContain('eq(bookings.status, "confirmed")');
+  expect(data).toContain("mine(viewer: Viewer, sessionId: number)");
+  const module = file("src/generated/booking.ts");
+  expect(module).toContain("export const bookingPlaces = createServerFn()");
+  expect(module).toContain("if (!sessionData.canRead(viewer, id)) return null;");
+  expect(module).toContain(
+    "bookingData.create(await currentViewer(), { sessionId: id } as BookingValues)",
+  );
+  const page = file("src/routes/sessions/$id.tsx");
+  expect(page).toContain(
+    "<Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />",
+  );
+  expect(files.some((f) => f.path === "src/kit/Reserve.tsx")).toBe(true);
+  expect(file("src/db/seed.ts")).not.toContain("db.insert(bookings)");
+});
+
+test("without sign-in there is no one to book: no block and no kit file", () => {
+  const none = validateAuth(
+    { path: "smithable.auth.yml", text: "smithableAuth: 0.1\nsignIn: none\n" },
+    ir,
+  ).auth as AuthIR;
+  const open = generateApp(ir, { smithableVersion: "0.0.0", auth: none, content: emptyContent() });
+  expect(open.some((f) => f.path === "src/kit/Reserve.tsx")).toBe(false);
+  expect(open.find((f) => f.path === "src/routes/sessions/$id.tsx")?.content).not.toContain(
+    "Reserve",
+  );
+});

@@ -139,13 +139,60 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           },
           "unique": false,
         },
-      ],
-      "name": "Session",
-      "rules": [
         {
-          "text": "A session never has more confirmed bookings than its capacity.",
+          "name": "bookings",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Booking",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
+            "kind": "binary",
+            "left": {
+              "kind": "field",
+              "name": "capacity",
+            },
+            "op": "-",
+            "right": {
+              "kind": "aggregate",
+              "list": "bookings",
+              "name": "COUNT",
+            },
+          },
+          "name": "placesLeft",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
         },
       ],
+      "name": "Session",
+    },
+    {
+      "capacity": {
+        "max": "session.capacity",
+        "per": "session",
+      },
+      "description": "A member's place in a session.",
+      "fields": [
+        {
+          "name": "session",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Session",
+          },
+          "unique": true,
+        },
+      ],
+      "name": "Booking",
     },
     {
       "access": {
@@ -201,6 +248,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "class-types",
         "instructors",
         "messages",
+        "my-bookings",
         "admin",
       ],
     },
@@ -302,6 +350,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/messages",
     },
     {
+      "id": "my-bookings",
+      "pattern": {
+        "kind": "crud",
+        "model": "Booking",
+      },
+      "route": "/my-bookings",
+    },
+    {
       "id": "admin",
       "pattern": {
         "all": true,
@@ -310,6 +366,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "ClassType",
           "Instructor",
           "Session",
+          "Booking",
           "Message",
         ],
       },

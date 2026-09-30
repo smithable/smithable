@@ -15,7 +15,9 @@ import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./
 import {
   code,
   dataKey,
+  type GenContext,
   HEADER,
+  type importList,
   lists,
   literal,
   modelNamed,
@@ -109,6 +111,38 @@ export const ${n.options} = createServerFn().handler(async () =>
 );
 `
     : "";
+  // A capacity: the reservation block's server functions (docs/design/booking.md): a
+  // record's places, and taking one in a step. Cancelling is the delete above.
+  const capacity = hasSignIn(auth) ? model.capacity : undefined;
+  const perModel = capacity && relationTarget(model, capacity.per, ir);
+  const perData = perModel && names(perModel, t).data;
+  const reservation =
+    capacity && perModel
+      ? `
+/** A ${capacity.per}'s places for the reservation block: how many are left, and the viewer's own. */
+export const ${reserveNames(model).places} = createServerFn()
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    if (!${perData}.canRead(viewer, id)) return null;
+    const { taken, max } = ${n.data}.places(id);
+    return {
+      left: Math.max(0, max - taken),
+      max,
+      mine: viewer ? ${n.data}.mine(viewer, id) : undefined,
+      canBook: allows(${n.access}.create, viewer),
+      signedIn: viewer !== null,
+    };
+  });
+
+/** Takes a place in one step: the other fields have their defaults. */
+export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data: id }) =>
+    ${n.data}.create(await currentViewer(), { ${capacity.per}Id: id } as ${n.values}),
+  );
+`
+      : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -116,7 +150,7 @@ import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 ${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
-import { currentViewer } from "#/lib/viewer.server";
+${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { currentViewer } from "#/lib/viewer.server";
 
 /** ${model.name} records as the kit reads them. */
 export type ${model.name}Row = ${rowType};
@@ -156,7 +190,45 @@ export const ${n.update} = createServerFn({ method: "POST" })
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${n.data}.remove(await currentViewer(), id));
-`;
+${reservation}`;
+}
+
+/** The model a reference of `model` points to. */
+function relationTarget(model: ModelIR, field: string, ir: SpecIR): ModelIR | undefined {
+  const f = model.fields.find((x) => x.name === field);
+  return f?.type.kind === "relation" ? modelNamed(ir, f.type.model) : undefined;
+}
+
+/** The model whose capacity counts places on this model's records (Booking for Session), if any. */
+export function placesOn(model: ModelIR, ir: SpecIR): ModelIR | undefined {
+  return ir.models.find(
+    (m) => m.capacity && relationTarget(m, m.capacity.per, ir)?.name === model.name,
+  );
+}
+
+/**
+ * The reservation block for a record of `model` (a session), when another model's capacity
+ * counts places on it: its element, with `id` the record's id expression.
+ */
+export function reserveElement(
+  model: ModelIR,
+  { ir, t, auth }: Pick<GenContext, "ir" | "t" | "auth">,
+  add: (module: string, ...names: string[]) => unknown,
+  id: string,
+): string | undefined {
+  const booked = hasSignIn(auth) ? placesOn(model, ir) : undefined;
+  if (!booked) return undefined;
+  const bn = names(booked, t);
+  const r = reserveNames(booked);
+  add(bn.module, r.places, r.book, bn.remove);
+  add("#/kit/Reserve", "Reserve");
+  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}} />`;
+}
+
+/** The reservation block's server functions for a model with a capacity, e.g. bookingPlaces. */
+export function reserveNames(model: ModelIR) {
+  const base = model.name.charAt(0).toLowerCase() + model.name.slice(1);
+  return { places: `${base}Places`, book: `reserve${model.name}` };
 }
 
 /**
@@ -199,6 +271,22 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       return `${f.name}: { ${where}${nested.length ? `, with: { ${nested.join(", ")} }` : ""} }`;
     }),
   ];
+  // Totals over lists the viewer may not read in full (another's bookings): a record's page
+  // must count them all, as lists do.
+  const everyone = (m: ModelIR) => {
+    const read = modelAccess(m, auth).read;
+    return (
+      auth.signIn === "none" ||
+      read.public ||
+      (!modelAccess(model, auth).read.public &&
+        !read.owner &&
+        read.roles.length >= auth.roles.length)
+    );
+  };
+  const hiddenTotals = aggregatedLists(model).filter((list) => {
+    const f = model.fields.find((x) => x.name === list);
+    return f?.type.kind === "relation" && !everyone(modelNamed(ir, f.type.model));
+  });
   const refs = references(model);
   for (const ref of refs)
     if (ref.type.model !== model.name) others.add(modelNamed(ir, ref.type.model));
@@ -360,11 +448,33 @@ ${
 
 `
     : ""
+}${
+  capacity && signedIn
+    ? `  /** How many of a ${capacity.per}'s places are taken, and how many it has: numbers only, never whose. */
+  places(${capacity.per}Id: number): { taken: number; max: number } {
+    const taken = db.select({ n: count() }).from(${n.table}).where(and(${capacityCounted.map((c) => c.replace(`values.${capacity.per}Id`, `${capacity.per}Id`)).join(", ")})).get()?.n ?? 0;
+    return { taken, max: ${capacityMax.replaceAll("tx.", "db.").replace(`values.${capacity.per}Id`, `${capacity.per}Id`)} };
+  },
+
+  /** The viewer's own ${n.label.toLowerCase()} for a ${capacity.per}, if they have one. */
+  mine(viewer: Viewer, ${capacity.per}Id: number): number | undefined {
+    return db.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.${capacity.per}Id, ${capacity.per}Id), eq(${n.table}.${owner}, viewer.id))).get()?.id;
+  },
+
+`
+    : ""
 }  async get(viewer: Viewer | null, id: number) {
     const row = await db.query.${n.table}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
     });
-    return row ? ${compute("row")} : null;
+${
+  hiddenTotals.length
+    ? `    if (!row) return null;
+    // Totals count every related record, as in lists; the related records shown are the viewer's.
+    const all = await db.query.${n.table}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map((l) => `${l}: true`).join(", ")} } });
+    return { ...${compute(`{ ...row, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
+    : `    return row ? ${compute("row")} : null;`
+}
   },
 
   async create(viewer: Viewer | null, values: ${n.values}) {
