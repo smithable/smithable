@@ -1748,6 +1748,29 @@ if (examples.includes("booking")) {
         throw new Error(result.out);
     });
     await asyncStep(
+      "clarify --json: the model's questions and starter for a program; no model means no questions",
+      async () => {
+        const asked = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+          "clarify",
+          "A site to show my dogs",
+          "--json",
+        );
+        const answer = JSON.parse(asked.out);
+        if (asked.code !== 0 || answer.starter !== "records" || answer.questions.length !== 2)
+          throw new Error(asked.out);
+        const none = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "" },
+          "clarify",
+          "A site to show my dogs",
+          "--json",
+        );
+        if (none.code !== 0 || none.out.trim() !== '{"questions":[]}') throw new Error(none.out);
+      },
+    );
+    await asyncStep(
       "the closest starter, adapted by a model, is summarised in plain language and becomes the app",
       async () => {
         const result = await smithableAsync(
