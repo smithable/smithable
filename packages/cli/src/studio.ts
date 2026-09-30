@@ -5,7 +5,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Proposal } from "@smithable/ai";
-import type { OperationArgs } from "@smithable/core";
+import { BUILT_IN_THEMES, type OperationArgs, themeThumbnail } from "@smithable/core";
 import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
@@ -268,11 +268,18 @@ export async function studio(
 
   const state = () => {
     const quiet = { out: () => {}, err: () => {} };
-    const { ir, auth } = loadSpec(dir, quiet);
+    const { ir, auth, themes } = loadSpec(dir, quiet);
     const read = (f: string) =>
       existsSync(join(dir, f)) ? readFileSync(join(dir, f), "utf8") : undefined;
     return {
       name: ir?.app.name ?? "",
+      // The themes the ux file may name, each with its picture, for the Look tab's cards.
+      themes: [...BUILT_IN_THEMES, ...(themes ?? [])].map((t) => ({
+        name: t.name,
+        source: t.source,
+        font: t.font,
+        thumbnail: themeThumbnail(t),
+      })),
       files: {
         spec: read("smithable.yml"),
         auth: read("smithable.auth.yml"),
