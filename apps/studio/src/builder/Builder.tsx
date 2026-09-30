@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { isPreviewMessage, type Selection } from "../preview";
-import { Preview, Trace } from "../shared";
-import { cx, Panel, Tabs } from "../ui";
+import { Trace } from "../shared";
+import { cx, Panel, Tabs, useMedia } from "../ui";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
@@ -15,16 +15,16 @@ export function Builder({
   project,
   spec,
   run,
-  version,
+  previewSlot,
 }: {
   project: Project;
   spec: Spec;
   run: Run;
-  version: number;
+  /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
+  previewSlot: (element: HTMLElement | null) => void;
 }) {
   const [tab, setTab] = useState<"app" | "change">("app");
   const [prefill, setPrefill] = useState<Prefill>();
-  const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<Selection>();
   const selectRef = useRef<(s: Selection) => void>(setSelection);
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
@@ -46,11 +46,15 @@ export function Builder({
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins) : []),
     [spec],
   );
-  // The three panels are a strip that snaps, one window wide each; the change box stays docked
-  // under whichever is shown. Wide windows may show Preview and Details side by side.
+  // The panels are a strip that snaps, one wide each; the change box stays docked under
+  // whichever is shown. From lg the app's preview has its own column beside the panels (App.tsx);
+  // below it the Preview panel is where the frame is placed. Very wide windows may show Your
+  // app and Details side by side.
   const strip = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<PanelId>("app");
-  const wide = useWide();
+  const framed = useMedia("(min-width: 1024px)");
+  const wide = useMedia("(min-width: 1680px)");
+  const panels = framed ? PANELS.filter(([id]) => id !== "preview") : PANELS;
   const [twoUp, setTwoUp] = useState(() => localStorage.getItem("builder-two-up") !== "no");
   const paired = wide && twoUp;
   const show = (id: PanelId) =>
@@ -63,7 +67,7 @@ export function Builder({
     const at = [...el.children].findIndex(
       (c) => Math.abs((c as HTMLElement).offsetLeft - el.scrollLeft) < el.clientWidth / 2,
     );
-    const id = PANELS[at]?.[0];
+    const id = panels[at]?.[0];
     if (id) setShown(id);
   };
   // Something picked in the preview is changed in the Details panel.
@@ -82,17 +86,17 @@ export function Builder({
         <div
           className="flex rounded-md bg-neutral-100 p-0.5"
           onKeyDown={(e) => {
-            const at = PANELS.findIndex(([id]) => id === shown);
+            const at = panels.findIndex(([id]) => id === shown);
             const to = { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key];
-            const next = to === undefined ? undefined : PANELS[to];
+            const next = to === undefined ? undefined : panels[to];
             if (!next) return;
             e.preventDefault();
             show(next[0]);
             (e.currentTarget.children[to as number] as HTMLElement).focus();
           }}
         >
-          {PANELS.map(([id, label]) => {
-            const current = shown === id || (paired && shown === "preview" && id === "details");
+          {panels.map(([id, label]) => {
+            const current = shown === id || (paired && id === "details");
             return (
               <button
                 key={id}
@@ -119,7 +123,7 @@ export function Builder({
                 localStorage.setItem("builder-two-up", e.target.checked ? "yes" : "no");
               }}
             />
-            Preview + Details
+            Your app + Details
           </label>
         )}
       </nav>
@@ -130,7 +134,10 @@ export function Builder({
       >
         <div
           data-panel="app"
-          className="flex w-full shrink-0 snap-start flex-col *:min-h-0 *:flex-1"
+          className={cx(
+            "flex shrink-0 snap-start flex-col *:min-h-0 *:flex-1",
+            paired ? "w-[calc(100%-22rem)]" : "w-full",
+          )}
         >
           <Panel
             className="min-h-0 flex-1"
@@ -164,20 +171,14 @@ export function Builder({
             )}
           </Panel>
         </div>
-        <div
-          data-panel="preview"
-          className={cx(
-            "flex shrink-0 snap-start flex-col border-l border-neutral-200 *:min-h-0 *:flex-1",
-            paired ? "w-[calc(100%-22rem)]" : "w-full",
-          )}
-        >
-          <Preview
-            url={project.preview}
-            version={version}
-            selecting={selecting}
-            onSelecting={setSelecting}
+        {!framed && (
+          // The preview frame is placed over this panel (it never moves, so it keeps its page).
+          <div
+            data-panel="preview"
+            ref={previewSlot}
+            className="w-full shrink-0 snap-start border-l border-neutral-200"
           />
-        </div>
+        )}
         <div
           data-panel="details"
           className={cx(
@@ -226,16 +227,3 @@ const PANELS: [PanelId, string][] = [
   ["preview", "Preview"],
   ["details", "Details"],
 ];
-
-/** Whether the window is wide enough for two panels side by side (1440 px). */
-function useWide(): boolean {
-  const query = "(min-width: 1440px)";
-  const [wide, setWide] = useState(() => matchMedia(query).matches);
-  useEffect(() => {
-    const list = matchMedia(query);
-    const change = () => setWide(list.matches);
-    list.addEventListener("change", change);
-    return () => list.removeEventListener("change", change);
-  }, []);
-  return wide;
-}
