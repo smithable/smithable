@@ -24,7 +24,8 @@ const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
-const port = 4900;
+// Another checkout testing at the same time sets its own (TEST_APPS_PORT does the same for test-apps).
+const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
 const base = `http://localhost:${port}`;
 let failed = false;
 
@@ -209,7 +210,7 @@ try {
         .waitFor({ state: "attached", timeout: 60000 });
       const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
       await header("email").dragTo(header("name"), { timeout: 60000 });
-      await status.getByText("in the customers table").waitFor({ timeout: 60000 });
+      await trace.getByText("in the customers table").first().waitFor({ timeout: 60000 });
       const after = await project();
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
@@ -228,7 +229,7 @@ try {
       await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
-      await status.getByText("Changed a text to “Clients”").waitFor({ timeout: 60000 });
+      await trace.getByText("Changed a text to “Clients”").first().waitFor({ timeout: 60000 });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();
@@ -241,7 +242,10 @@ try {
     await page.getByLabel("Value", { exact: true }).selectOption({ label: "Shipped" });
     await page.getByLabel("Colour").selectOption({ label: "Green (good)" });
     await page.getByRole("button", { name: "Set colour" }).click();
-    await status.getByText("Show Order.status shipped as success").waitFor({ timeout: 60000 });
+    await trace
+      .getByText("Show Order.status shipped as success")
+      .first()
+      .waitFor({ timeout: 60000 });
     await change("A page's icon");
     await page.getByLabel("Page", { exact: true }).selectOption({ label: "Orders" });
     await page.getByLabel("Icon").selectOption({ label: "Truck" });
@@ -258,7 +262,7 @@ try {
     await page.getByLabel("Theme").selectOption("playful");
     await page.getByLabel("Density").selectOption("compact");
     await page.getByRole("button", { name: "Apply" }).click();
-    await status.getByText("Set the theme: preset playful").waitFor({ timeout: 60000 });
+    await trace.getByText("Set the theme: preset playful").first().waitFor({ timeout: 60000 });
   });
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
