@@ -59,6 +59,29 @@ const addPhone = {
 };
 
 describe("proposeChange", () => {
+  test("a question the spec answers needs no model; one it cannot goes to the model as an answer", async () => {
+    const model = scripted([
+      { kind: "answer", text: "An order is shipped when its status says so." },
+    ]);
+    const auth =
+      "smithableAuth: 0.1\nsignIn: { providers: [google], allowedDomains: [acme.com] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {} }\ndefaultRole: sales\n";
+    const answered = await proposeChange({
+      request: "Who can delete customers?",
+      files: { spec, auth },
+      context: buildContext(index, "Who can delete customers?"),
+      providers: [model],
+    });
+    expect(answered).toMatchObject({ kind: "answer", generator: "who-can", usage: [] });
+    expect(answered.kind === "answer" && answered.text).toMatch(/can delete customers\.$/);
+    expect(model.prompts).toHaveLength(0);
+    const asked = await propose("When does an order count as shipped?", [model]);
+    expect(asked).toMatchObject({
+      kind: "answer",
+      text: "An order is shipped when its status says so.",
+    });
+    expect(model.systems[0]).toContain('{"kind":"answer","text":"…"}');
+  });
+
   test("a clear request becomes operations, described and dry-run, with what the model used", async () => {
     const model = scripted([addPhone]);
     const proposal = await propose("Customers should have a mobile number", [model]);
