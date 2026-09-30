@@ -1,6 +1,14 @@
 import type { YamlEditor } from "./edit.js";
 import type { SpecIR, Storage } from "./ir.js";
 import type { JsonSchema } from "./section.js";
+import type { ThemeIR } from "./theme.js";
+
+/** The project's themes/<name>.yml files an operation adds; the host writes them. */
+export interface ThemeFiles {
+  /** The names already taken: the built-in themes' and the project's. */
+  readonly names: readonly string[];
+  add(theme: ThemeIR, text: string): void;
+}
 
 /** The files an operation may edit. */
 export interface Editors {
@@ -13,6 +21,7 @@ export interface Editors {
   ux: YamlEditor;
   /** smithable.context.yml (implementation choices); written only when it changed. */
   context: YamlEditor;
+  themes: ThemeFiles;
 }
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */

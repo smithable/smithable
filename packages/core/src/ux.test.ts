@@ -228,3 +228,25 @@ test("setBelow puts a second field under a column; it follows renames and goes w
     codes("smithableUx: 0.1\npages:\n  customers:\n    table: { below: { email: fone } }\n"),
   ).toEqual(["unknown-field"]);
 });
+
+test("addTheme adds themes/<name>.yml, --use applies it, and a bad file or a taken name is refused", () => {
+  const text = `smithableTheme: 0.1\nfont: Nunito Sans\nlight:\n  primary: "#2f6b3a"\n  background: "#f6f8f4"\n  foreground: "#1f2a1f"\ndark:\n  primary: "#8fd19a"\n  background: "#141a14"\n  foreground: "#e6ece4"\n`;
+  const added = applyOperation({ spec: crm }, "addTheme", { name: "forest", text, use: true });
+  if (!added.ok) throw new Error(added.message);
+  expect(added.added).toEqual([{ path: "themes/forest.yml", text }]);
+  expect(added.files.ux).toBe("smithableUx: 0.1\ntheme:\n  preset: forest\n");
+  expect(added.description).toBe("Add theme forest and use it");
+  const bad = applyOperation({ spec: crm }, "addTheme", {
+    name: "forest",
+    text: "smithableTheme: 0.1\nfont: Comic Sans\n",
+  });
+  expect(bad.ok).toBe(false);
+  if (!bad.ok) expect(bad.message).toContain('"font" must be one of');
+  expect(applyOperation({ spec: crm }, "addTheme", { name: "modern", text })).toMatchObject({
+    ok: false,
+    message: 'There is already a theme "modern", built in: choose another name.',
+  });
+  expect(
+    applyOperation({ spec: crm }, "addTheme", { name: "woods", text: `name: forest\n${text}` }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining('The file says "name: forest"') });
+});
