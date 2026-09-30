@@ -116,6 +116,9 @@ function sampleValue(
       return new Date(
         Date.parse(addDays("2026-09-01T08:00:00Z", i)) + (i % 3) * 2 * 3_600_000,
       ).toISOString();
+    case "picture":
+      // The seed copies a sample picture in, when the app has any (see seedModule).
+      return null;
   }
 }
 

@@ -142,6 +142,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                     invalid={error !== undefined}
                     describedBy={described}
                     options={options}
+                    record={typeof initial?.id === "number" ? initial.id : undefined}
                     onChange={(value) =>
                       setInputs((current) => ({ ...current, [field.name]: value }))
                     }

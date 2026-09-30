@@ -89,6 +89,15 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "portrait",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "picture",
+          },
+          "unique": false,
+        },
       ],
       "name": "Instructor",
     },

@@ -28,6 +28,7 @@ const KINDS: [string, string][] = [
   ["string", "Text"],
   ["text", "Long text"],
   ["markdown", "Formatted text"],
+  ["picture", "Picture"],
   ["int", "Whole number"],
   ["decimal", "Number"],
   ["money", "Amount"],
