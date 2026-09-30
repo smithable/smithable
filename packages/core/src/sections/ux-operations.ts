@@ -1,7 +1,7 @@
 import type { YamlEditor, YamlValue } from "../edit.js";
 import type { SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { CONTROLS, FONTS, ICONS, THEME_PRESETS, TONES } from "../ux.js";
+import { CONTROLS, FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
 function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
@@ -14,44 +14,61 @@ function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void
   }
 }
 
-const setTheme: Operation<{ preset?: string; primary?: string; font?: string; density?: string }> =
-  {
-    name: "setTheme",
-    summary:
-      'Choose the theme preset, brand colour, font or density ("none" removes the brand colour or font).',
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        preset: {
-          type: "string",
-          description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
-        },
-        primary: { type: "string", description: 'A colour like "#2563eb", or "none".' },
-        font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
-        density: { type: "string", enum: ["comfortable", "compact"] },
+const setTheme: Operation<{
+  preset?: string;
+  primary?: string;
+  font?: string;
+  density?: string;
+  page?: string;
+}> = {
+  name: "setTheme",
+  summary:
+    'Choose the theme preset, brand colour, font or density ("none" removes the brand colour or font).',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      preset: {
+        type: "string",
+        description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
       },
+      primary: { type: "string", description: 'A colour like "#2563eb", or "none".' },
+      font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
+      density: { type: "string", enum: ["comfortable", "compact"] },
+      page: refTo(
+        { ref: "page", label: "Landing page" },
+        { description: "A landing page given its own theme; without it, the app's theme." },
+      ),
     },
-    positional: [],
-    describe: (args) =>
-      `Set the theme: ${Object.entries(args)
-        .map(([k, v]) => `${k} ${v}`)
-        .join(", ")}`,
-    destructive: () => false,
-    apply(editors, args) {
-      const ux = editors.ux;
-      if (Object.keys(args).length === 0)
-        throw new OperationError("Say what to set: preset, primary, font or density.");
-      if (args.preset !== undefined) put(ux, ["theme", "preset"], args.preset);
-      if (args.density !== undefined) put(ux, ["theme", "density"], args.density);
-      for (const key of ["primary", "font"] as const) {
-        const value = args[key];
-        if (value !== undefined)
-          put(ux, ["theme", "brand", key], value === "none" ? undefined : value);
-      }
-      return [];
-    },
-  };
+  },
+  positional: [],
+  describe: ({ page, ...args }) =>
+    `Set ${page ? `the ${page} page's` : "the"} theme: ${Object.entries(args)
+      .map(([k, v]) => `${k} ${v}`)
+      .join(", ")}`,
+  destructive: () => false,
+  apply(editors, { page, ...args }, ir) {
+    const ux = editors.ux;
+    if (Object.keys(args).length === 0)
+      throw new OperationError("Say what to set: preset, primary, font or density.");
+    // A landing page's own theme lives under the page, with the same keys as the app's.
+    if (page !== undefined && ir.pages.find((p) => p.id === page)?.pattern.kind !== "landing")
+      throw new OperationError(
+        `Only a landing page has a theme of its own; there is no landing page "${page}".`,
+      );
+    const at = page === undefined ? ["theme"] : ["pages", page, "theme"];
+    // On a page, "none" returns a key to the app's theme; for the app it removes a brand key.
+    if (args.preset !== undefined)
+      put(ux, [...at, "preset"], page && args.preset === "none" ? undefined : args.preset);
+    if (args.density !== undefined)
+      put(ux, [...at, "density"], page && args.density === "none" ? undefined : args.density);
+    for (const key of ["primary", "font"] as const) {
+      const value = args[key];
+      if (value !== undefined) put(ux, [...at, "brand", key], value === "none" ? undefined : value);
+    }
+    return [];
+  },
+};
 
 const setColumns: Operation<{ page: string; columns?: string[] }> = {
   name: "setColumns",
@@ -186,6 +203,55 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
       editors.ux,
       ["pages", page, "table", "below", column],
       field === "none" ? undefined : field,
+    );
+    return [];
+  },
+};
+
+/** A landing section's look (docs/design/look.md §1.4), e.g. a split hero or a carousel. */
+const setSectionLook: Operation<{ page: string; section: string; key: string; value: string }> = {
+  name: "setSectionLook",
+  summary:
+    'Choose how a landing section looks, e.g. hero layout split|centered|plain, faq layout accordion|list ("default" removes it).',
+  schema: {
+    type: "object",
+    required: ["page", "section", "key", "value"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: { type: "string", description: "The section's name, e.g. hero." },
+      key: {
+        type: "string",
+        description: "layout, image, columns or highlight, as the section takes.",
+      },
+      value: { type: "string", description: 'A value the key allows, or "default".' },
+    },
+  },
+  positional: ["page", "section", "key", "value"],
+  describe: ({ page, section, key, value }) =>
+    value === "default"
+      ? `Show the ${section} section of ${page} with its own ${key}`
+      : `Show the ${section} section of ${page} with ${key} ${value}`,
+  destructive: () => false,
+  apply(editors, { page, section, key, value }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (found?.pattern.kind !== "landing")
+      throw new OperationError(`There is no landing page named "${page}".`);
+    const kind = found.pattern.sections.find((s) => s.name === section)?.kind;
+    if (!kind) throw new OperationError(`${page} has no section named "${section}".`);
+    const allowed = SECTION_LOOKS[kind]?.[key];
+    if (!allowed)
+      throw new OperationError(
+        `A ${kind} section has no "${key}"${SECTION_LOOKS[kind] ? `: it takes ${Object.keys(SECTION_LOOKS[kind] ?? {}).join(", ")}` : ""}.`,
+      );
+    const number = Number(value);
+    const typed = allowed !== "text" && typeof allowed[0] === "number" ? number : value;
+    if (value !== "default" && allowed !== "text" && !allowed.includes(typed))
+      throw new OperationError(`"${key}" of a ${kind} section is one of ${allowed.join(", ")}.`);
+    put(
+      editors.ux,
+      ["pages", page, "sections", section, key],
+      value === "default" ? undefined : typed,
     );
     return [];
   },
@@ -348,6 +414,7 @@ const setSort: Operation<{ page: string; field: string }> = {
 
 export const uxOperations: AnyOperation[] = [
   setTheme,
+  setSectionLook,
   setColumns,
   setFieldOrder,
   setTone,

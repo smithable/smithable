@@ -40,6 +40,11 @@ export interface PageUx {
   fieldOrder?: string[];
   /** A calculator's results beside its inputs on a wide screen (the default), or below them. */
   results?: "beside" | "below";
+  /** A landing page's own theme: the keys it changes from the app's (docs/design/look.md §1.5). */
+  theme?: Partial<UxIR["theme"]>;
+  /** A landing page's sections' looks, by section name (docs/design/look.md §1.4); the ux file's
+   * page-level `sections`, not the form's. */
+  looks?: Record<string, SectionLook>;
   /** The form's groups, each with a heading; fields in none follow at the end. */
   sections?: { name: string; fields: string[] }[];
   /** Short fields two abreast on wide screens. */
@@ -94,6 +99,29 @@ export function controlUnfit(field: FieldIR, control: Control): string | undefin
       return scalar === "bool" ? undefined : "a switch needs a yes/no field";
   }
 }
+
+/** How a landing section looks; which keys a section takes depends on its kind (SECTION_LOOKS). */
+export interface SectionLook {
+  layout?: string;
+  image?: "left" | "right";
+  columns?: number;
+  highlight?: string;
+}
+
+/**
+ * The looks each section kind has: a key's allowed values, or "text" for any (a pricing plan's
+ * name). The first value of a layout is the kind's own look, used when none is given.
+ */
+export const SECTION_LOOKS: Partial<
+  Record<string, Record<string, readonly (string | number)[] | "text">>
+> = {
+  hero: { layout: ["split", "centered", "plain"], image: ["right", "left"] },
+  features: { columns: [3, 2, 4] },
+  records: { layout: ["cards", "list", "grid"] },
+  testimonials: { layout: ["cards", "carousel", "one"] },
+  pricing: { highlight: "text" },
+  faq: { layout: ["accordion", "list"] },
+};
 
 export const UX_VERSION = "0.1";
 export const TONES = ["neutral", "success", "warning", "danger"] as const;
@@ -214,61 +242,7 @@ export function validateUx(
   });
 
   for (const { key, value } of known) {
-    if (key === "theme") {
-      const where = `"theme"`;
-      for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
-        allowed: ["preset", "brand", "density"],
-        later: ["radius", "darkMode"],
-      })) {
-        if (entry.key === "preset") {
-          const preset = readString(ctx, entry.value, `"preset"`);
-          const names = themeNames(themes);
-          if (preset !== undefined && !names.includes(preset)) {
-            ctx.error(
-              entry.value,
-              "unknown-preset",
-              `There is no theme "${preset}".`,
-              didYouMean(preset, names) ?? `Available: ${names.join(", ")}.`,
-            );
-          } else if (preset !== undefined) ux.theme.preset = preset;
-        } else if (entry.key === "density") {
-          const density = readString(ctx, entry.value, `"density"`);
-          if (density === "comfortable" || density === "compact") ux.theme.density = density;
-          else if (density !== undefined)
-            ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
-        } else {
-          for (const brand of checkKeys(
-            ctx,
-            mapEntries(ctx, entry.value, `"brand"`) ?? [],
-            `"brand"`,
-            {
-              allowed: ["primary", "font"],
-            },
-          )) {
-            const text = readString(ctx, brand.value, `"${brand.key}"`);
-            if (text === undefined) continue;
-            if (brand.key === "primary") {
-              if (/^#[0-9a-fA-F]{6}$/.test(text)) ux.theme.primary = text.toLowerCase();
-              else
-                ctx.error(
-                  brand.value,
-                  "invalid-color",
-                  `"primary" must be a colour like "#2563eb".`,
-                );
-            } else if ((FONTS as readonly string[]).includes(text)) {
-              ux.theme.font = text;
-            } else {
-              ctx.error(
-                brand.value,
-                "unknown-font",
-                `"${text}" is not one of the available fonts.`,
-                didYouMean(text, FONTS) ?? `Available: ${FONTS.join(", ")}.`,
-              );
-            }
-          }
-        }
-      }
-    }
+    if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "tones") {
       for (const entry of mapEntries(ctx, value, `"tones"`) ?? []) {
         const [modelName = "", fieldName = ""] = entry.key.split(".");
@@ -359,9 +333,28 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form"],
+          allowed: ["icon", "table", "form", "sections", "theme"],
           later: ["detail", "calendar"],
         })) {
+          if (part.key === "sections") {
+            result.looks = readSectionLooks(ctx, part.value, spec, where);
+            continue;
+          }
+          if (part.key === "theme") {
+            // Only a landing page, which has its own frame: a crud page in another theme would
+            // look like another app.
+            if (spec.pattern.kind !== "landing")
+              ctx.error(
+                part.keyNode,
+                "invalid-key",
+                `A theme of its own is for a landing page; ${page.key} is not one.`,
+              );
+            else {
+              result.theme = {};
+              readTheme(ctx, part.value, `the theme of ${where}`, themes, result.theme);
+            }
+            continue;
+          }
           if (part.key === "icon") {
             const icon = readString(ctx, part.value, `"icon"`);
             if (icon !== undefined && !(ICONS as readonly string[]).includes(icon))
@@ -507,6 +500,115 @@ export function validateUx(
     }
   }
   return done();
+}
+
+/** A landing page's `sections:` in the ux file: each named section's look, checked by its kind. */
+function readSectionLooks(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  page: PageIR,
+  where: string,
+): Record<string, SectionLook> {
+  const looks: Record<string, SectionLook> = {};
+  if (page.pattern.kind !== "landing") {
+    ctx.error(node, "invalid-key", `"sections" is for a landing page; ${page.id} is not one.`);
+    return looks;
+  }
+  const sections = page.pattern.sections;
+  for (const entry of mapEntries(ctx, node, `"sections" of ${where}`) ?? []) {
+    const section = sections.find((s) => s.name === entry.key);
+    if (!section) {
+      ctx.error(
+        entry.keyNode,
+        "unknown-section",
+        `${page.id} has no section named "${entry.key}".`,
+        didYouMean(
+          entry.key,
+          sections.map((s) => s.name),
+        ),
+      );
+      continue;
+    }
+    const allowed = SECTION_LOOKS[section.kind] ?? {};
+    const at = `the look of ${entry.key} on ${where}`;
+    const look: SectionLook = {};
+    for (const option of checkKeys(ctx, mapEntries(ctx, entry.value, at) ?? [], at, {
+      allowed: Object.keys(allowed),
+    })) {
+      const values = allowed[option.key];
+      const value = isScalar(option.value) ? option.value.value : undefined;
+      if (
+        values === "text"
+          ? typeof value !== "string" || !value.trim()
+          : !values?.includes(value as string | number)
+      ) {
+        ctx.error(
+          option.value,
+          "invalid-value",
+          values === "text"
+            ? `"${option.key}" of ${at} is a text.`
+            : `"${option.key}" of ${at} is one of ${values?.join(", ")}.`,
+        );
+        continue;
+      }
+      (look as Record<string, unknown>)[option.key] = value;
+    }
+    looks[entry.key] = look;
+  }
+  return looks;
+}
+
+/** A theme's keys (preset, brand, density) into `target`: the app's, or a landing page's own. */
+function readTheme(
+  ctx: ParseContext,
+  value: ParsedNode | null,
+  where: string,
+  themes: readonly ThemeIR[] | undefined,
+  target: Partial<UxIR["theme"]>,
+): void {
+  for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
+    allowed: ["preset", "brand", "density"],
+    later: ["radius", "darkMode"],
+  })) {
+    if (entry.key === "preset") {
+      const preset = readString(ctx, entry.value, `"preset"`);
+      const names = themeNames(themes);
+      if (preset !== undefined && !names.includes(preset)) {
+        ctx.error(
+          entry.value,
+          "unknown-preset",
+          `There is no theme "${preset}".`,
+          didYouMean(preset, names) ?? `Available: ${names.join(", ")}.`,
+        );
+      } else if (preset !== undefined) target.preset = preset;
+    } else if (entry.key === "density") {
+      const density = readString(ctx, entry.value, `"density"`);
+      if (density === "comfortable" || density === "compact") target.density = density;
+      else if (density !== undefined)
+        ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
+    } else {
+      for (const brand of checkKeys(ctx, mapEntries(ctx, entry.value, `"brand"`) ?? [], `"brand"`, {
+        allowed: ["primary", "font"],
+      })) {
+        const text = readString(ctx, brand.value, `"${brand.key}"`);
+        if (text === undefined) continue;
+        if (brand.key === "primary") {
+          if (/^#[0-9a-fA-F]{6}$/.test(text)) target.primary = text.toLowerCase();
+          else
+            ctx.error(brand.value, "invalid-color", `"primary" must be a colour like "#2563eb".`);
+        } else if ((FONTS as readonly string[]).includes(text)) {
+          target.font = text;
+        } else {
+          ctx.error(
+            brand.value,
+            "unknown-font",
+            `"${text}" is not one of the available fonts.`,
+            didYouMean(text, FONTS) ?? `Available: ${FONTS.join(", ")}.`,
+          );
+        }
+      }
+    }
+  }
 }
 
 /** A form's groups: a list of { name, fields }, no field in two of them. */
