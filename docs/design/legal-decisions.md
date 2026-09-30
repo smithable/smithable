@@ -1,6 +1,8 @@
 # Legal and licence decisions before the repository goes public
 
-Status: 2026-09-30, Fable, for the user and their legal review. Each item is a decision with what it implies; where there is an obvious choice I say so. Nothing here is legal advice; it is the engineering view of what the choices do.
+Status: 2026-09-30, Fable, for the user and their legal review; reconciled 2026-10-01 with the consolidated handoff (Johan, ChatGPT and Claude, 30 September 2026), whose corrections are folded in below and take precedence where the two differ. Each item is a decision with what it implies. Nothing here is legal advice; it is the engineering view of what the choices do.
+
+**Settled (handoff §1–2):** the operator is **Åland IT AB** (formerly Yolimi AB, the same entity), operated from Åland; engine Apache-2.0, own kit and templates 0BSD, DCO without a CLA, the service code private; generated apps carry third-party notices (`LICENSES/shadcn-ui.txt`, built 2026-10-01, in the image too) and are never promised "without any obligation" as a whole. The licence decision is not reopened.
 
 ## 1. The engine's licence: Apache-2.0 (recommended), and what it gives away
 
@@ -26,23 +28,25 @@ Status: 2026-09-30, Fable, for the user and their legal review. Each item is a d
 
 ## 3. Who owns the code, and how contributions are taken
 
-**Decision A: the copyright holder.** The files say "Johan Ekenlycka". If the hosted service is (or will be) a company, decide now whether the copyright in the engine is assigned to the company before the flip. It is one line in `NOTICE` and `KIT-LICENSE` today; after outside contributions it is a negotiation. The trademark (§4) should be held by the same entity.
+**Decision A: the copyright holder.** The files say "Johan Ekenlycka". The operator is Åland IT AB; document which parts Johan and which the company own today, and any assignment to the company, before the flip. Updating the headers does not transfer anything; outside contributions later do not stop Johan from assigning his own rights, and the company's earlier name change needs no new transfer of what it already owns. The trademark (§4) belongs with the company.
 
 **Decision B: DCO or CLA.** `CONTRIBUTING.md` uses the **DCO** (each contributor signs off that they have the right to contribute under the repository's licence; they keep their copyright). Implications:
 
 - Simple, no paperwork, the norm for Apache-2.0 projects.
-- **Relicensing later needs every contributor's consent.** If the company wants to keep the option of moving the engine to BSL or of offering it under a commercial licence, a **CLA** (contributors license their contribution to the company, which may relicense) keeps that option, at the cost of friction that measurably reduces outside contributions. Decide before the first outside pull request; changing later is awkward.
+- Published Apache grants cannot be withdrawn, and a later change of licence works only within the rights actually held: contributors' conditions stay. Accept Apache as the durable engine strategy; no CLA by default.
 - My view: DCO, and accept that Apache-2.0 is permanent for the code that exists at the flip. The hosted service stays private regardless.
 
 **Decision C: AI-written code.** Most of the code was written by AI agents under the user's direction, with no AI attribution in the history (a repository rule). Two implications: (1) in the EU and the US, copyright in AI output without human creative contribution is uncertain; the parts that are clearly human (the spec design, the architecture, the reviews, the tests' intent) are not. This weakens nothing about publishing under Apache-2.0 (a permissive licence gives away what copyright there is), but it matters for §1's alternatives: a copyleft or source-available licence is only as strong as the copyright behind it. (2) The model providers' terms (Anthropic, Mistral) assign their output to the user, so there is no third-party claim to the code. Worth a sentence from the lawyer, not more.
 
 ## 4. The name: trademark and a trademark policy
 
-**Decision:** register "Smithable" (word mark) and the anvil mark, at least as an EU trade mark (EUIPO, classes 9 and 42; 35 if the hosted service sells plans), and in the US if the hosted service takes US customers. Check for conflicts first (the name is a common English formation; "Smith" marks exist in software).
+**Decision:** clear "Smithable" against similar marks first (domains and the GitHub organisation are not clearance), then register the **word mark** for Åland IT AB, EUIPO classes 9 and 42 as the starting point (a professional sets the specification; selling plans does not by itself need class 35); the anvil separately once its design is settled; the US when expansion or protection priorities call for it, not automatically with a first US customer. EUIPO online fees: €850 for one class plus €50 for a second.
 
 **What it implies:** the Apache licence does not grant the name, so a fork must not call itself Smithable. Write a short **trademark policy** (a page in the docs: you may say "built with Smithable", "compatible with Smithable"; you may not offer "Smithable hosting" or use the anvil; forks rename). Without a registration the policy has little behind it; with one, the hosted service's name is the one thing a competitor cannot take with the engine. The domains `smithable.ai` and `smithable.app` are already the user's.
 
 ## 5. The hosted service (not licences, but before real testers)
+
+Settled in the handoff (§4): accounts are 18+ by self-declaration; the beta hosts apps and their test databases for testing and demos with synthetic data only, no production or sensitive data; no uptime SLA and data loss is possible; optional analytics only with a genuine opt-in that is never a condition of the free hosting (Johan still to confirm); strictly necessary storage needs no banner; no blanket "EU-only" or "not used for training" claim until each provider is verified. What the code must be checked for, and the drafts to write with placeholders (beta terms, privacy notice, DPA, operational checklist, an inventory of data flows and browser storage, a retention and deletion report) are Fable's next work; a lawyer familiar with the Swedish company and Åland reviews before launch.
 
 - **Terms of service and a privacy policy** for smithable.ai and published apps on smithable.app: what a tester may publish, that a published app's content is theirs and their responsibility, data location (EU: AWS eu-north-1, Scaleway for mail), retention (demo sandboxes deleted after two hours; backups), what the AI gateway sends to which model provider (Mistral EU today; the frontier providers when escalated) and that prompts are not used for training (check each provider's terms; Mistral's API terms say so for paid use).
 - **GDPR:** the service processes testers' Google identities and whatever their apps store. A short record of processing, a data-processing agreement for testers who publish apps with other people's data (the template DPA of each provider covers the sub-processors: AWS, Scaleway, Mistral, Cloudflare, Google), and a way to delete an account and its projects on request. The mail relay sends on the app owner's behalf: sender identification and a way to stop mail from a misused app are already in the relay's limits; the terms should say who is responsible for what is sent.
