@@ -37,7 +37,7 @@ Status: 2026-09-30, proposed by Fable after Johan's "a site to show my dogs" cam
 
 ### 2.5 The fallback, told
 
-`smithable new --describe` already prints the reason. The workspace start script writes it to `.smithable/first-build.txt` in the project, and Studio shows it once as a notice at the top of Builder ("The description could not be used: the demo's AI allowance is used up. This is the CRM starter; describe the changes you want below.") and deletes the file after showing it. The service logs the same line, so it can be seen without reading a container's log.
+`smithable new --describe` already prints the reason. The workspace start script writes it to `data/.smithable/notice.txt` in the project (`data/` is never committed, so it never reaches a checkpoint), and Studio shows it once as a notice at the top of Builder ("The description could not be used: the demo's AI allowance is used up. This is the CRM starter; describe the changes you want below.") and deletes the file after showing it. The service logs the same line, so it can be seen without reading a container's log.
 
 ### 2.6 Cost and the demo
 

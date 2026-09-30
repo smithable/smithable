@@ -1173,6 +1173,139 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
+{
+  "actions": [],
+  "app": {
+    "description": "A place to keep and show a collection of items.",
+    "name": "Our Collection",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "models": [
+    {
+      "access": {
+        "create": [
+          "admin",
+        ],
+        "delete": [
+          "admin",
+        ],
+        "write": [
+          "admin",
+        ],
+      },
+      "description": "One thing in the collection.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "summary",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": "general",
+          "name": "kind",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "general",
+              "favourite",
+              "archived",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "link",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "url",
+          },
+          "unique": false,
+        },
+        {
+          "defaultFormula": {
+            "args": [],
+            "kind": "call",
+            "name": "TODAY",
+          },
+          "name": "addedOn",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Item",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "items",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "items",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "records",
+            "model": "Item",
+            "name": "items",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/",
+    },
+    {
+      "id": "items",
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/items",
+      "search": [
+        "name",
+        "summary",
+      ],
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
 {
   "actions": [
