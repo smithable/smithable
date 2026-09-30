@@ -1152,6 +1152,33 @@ function operationsFlow(dir) {
     if (!existsSync(join(folder, `${last}.db`))) throw new Error("the latest snapshot was pruned");
     expectOk(smithable(dir, "undo"));
   });
+  step("op addTheme writes themes/<name>.yml, --use applies it, and undo removes the file", () => {
+    const file = `${dir}-forest.yml`;
+    writeFileSync(
+      file,
+      'smithableTheme: 0.1\nfont: Nunito Sans\nlight:\n  primary: "#2f6b3a"\n  background: "#f6f8f4"\n  foreground: "#1f2a1f"\ndark:\n  primary: "#8fd19a"\n  background: "#141a14"\n  foreground: "#e6ece4"\n',
+    );
+    const refused = smithable(
+      dir,
+      "op",
+      "addTheme",
+      "forest",
+      "--text",
+      "smithableTheme: 0.1\nfont: Comic Sans\n",
+    );
+    if (refused.code === 0 || !refused.out.includes('"font" must be one of'))
+      throw new Error(refused.out);
+    expectOk(smithable(dir, "op", "addTheme", "forest", "--text", `@${file}`, "--use"));
+    if (!existsSync(join(dir, "themes/forest.yml")))
+      throw new Error("themes/forest.yml is missing");
+    if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes("preset: forest"))
+      throw new Error("the ux file does not use the theme");
+    if (!readFileSync(join(dir, "src/theme.css"), "utf8").includes("Nunito Sans"))
+      throw new Error("theme.css was not regenerated with the theme's font");
+    expectOk(smithable(dir, "undo"));
+    if (existsSync(join(dir, "themes/forest.yml"))) throw new Error("undo left themes/forest.yml");
+    if (run("git", ["status", "--porcelain"], dir).trim()) throw new Error("undo left changes");
+  });
   step("op addField keeps existing rows and adds the column", () => {
     const before = query(dir, "select count(*) n from customers")[0].n;
     expectOk(smithable(dir, "op", "addField", "Customer", "website", "url"));

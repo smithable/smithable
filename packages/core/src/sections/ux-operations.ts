@@ -1,6 +1,8 @@
+import { formatDiagnostic } from "../diagnostics.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import type { SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
+import { parseTheme } from "../theme.js";
 import { CONTROLS, FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
@@ -412,7 +414,49 @@ const setSort: Operation<{ page: string; field: string }> = {
   },
 };
 
+const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
+  name: "addTheme",
+  summary: "Add a theme of the project's own (themes/<name>.yml), and use it with --use.",
+  schema: {
+    type: "object",
+    required: ["name", "text"],
+    additionalProperties: false,
+    properties: {
+      name: { type: "string", description: 'The theme\'s name, kebab-case, like "forest".' },
+      text: {
+        type: "string",
+        description:
+          "The theme file's text: smithableTheme: 0.1, a font, at least three colours per mode (see the spec, Themes). On the command line, --text @path reads a file.",
+      },
+      use: { type: "boolean", description: "Also make it the app's theme." },
+    },
+  },
+  positional: ["name"],
+  describe: ({ name, use }) => `Add theme ${name}${use ? " and use it" : ""}`,
+  destructive: () => false,
+  apply(editors, { name, text, use }) {
+    const path = `themes/${name}.yml`;
+    const parsed = parseTheme({ path, text });
+    if (!parsed.theme)
+      throw new OperationError(
+        `The theme is refused:\n${parsed.diagnostics.map((d) => `  ${formatDiagnostic(d)}`).join("\n")}`,
+      );
+    if (parsed.theme.name !== name)
+      throw new OperationError(
+        `The file says "name: ${parsed.theme.name}": add it as that, or change the name in the file.`,
+      );
+    if (editors.themes.names.includes(name))
+      throw new OperationError(
+        `There is already a theme "${name}"${THEME_PRESETS.includes(name as never) ? ", built in" : ` (${path})`}: choose another name.`,
+      );
+    editors.themes.add(parsed.theme, text.endsWith("\n") ? text : `${text}\n`);
+    if (use) put(editors.ux, ["theme", "preset"], name);
+    return [];
+  },
+};
+
 export const uxOperations: AnyOperation[] = [
+  addTheme,
   setTheme,
   setSectionLook,
   setColumns,
