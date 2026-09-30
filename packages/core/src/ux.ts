@@ -33,6 +33,8 @@ export interface PageUx {
   below?: Record<string, string>;
   /** The form's fields in this order; fields not listed follow. */
   fieldOrder?: string[];
+  /** A calculator's results beside its inputs on a wide screen (the default), or below them. */
+  results?: "beside" | "below";
 }
 
 export const UX_VERSION = "0.1";
@@ -265,7 +267,9 @@ export function validateUx(
           continue;
         }
         const model = ir.models.find((m) => m.name === pageModel(spec));
-        const fields = (model?.fields ?? []).filter(
+        // A calculator's fields are its own (docs/design/calculator.md).
+        const calculator = spec.pattern.kind === "calculator" ? spec.pattern.calculator : undefined;
+        const fields = (model?.fields ?? calculator?.fields ?? []).filter(
           (f) => !(f.type.kind === "relation" && f.type.many),
         );
         const where = `page "${page.key}"`;
@@ -317,7 +321,7 @@ export function validateUx(
             mapEntries(ctx, part.value, partWhere) ?? [],
             partWhere,
             {
-              allowed: part.key === "table" ? ["columns", "below"] : ["fieldOrder"],
+              allowed: part.key === "table" ? ["columns", "below"] : ["fieldOrder", "results"],
               later: part.key === "table" ? ["sort", "pageSize"] : ["groups"],
             },
           )) {
@@ -347,6 +351,22 @@ export function validateUx(
                 )
                   result.below[pair.key] = second;
               }
+            } else if (option.key === "results") {
+              // Where a calculator's results go on a wide screen; a phone shows them below.
+              const results = readString(ctx, option.value, `"results" of ${where}`);
+              if (!calculator)
+                ctx.error(
+                  option.keyNode,
+                  "invalid-key",
+                  `"results" is for a calculator page; ${page.key} is not one.`,
+                );
+              else if (results !== "beside" && results !== "below")
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `"results" of ${where} is "beside" or "below".`,
+                );
+              else result.results = results;
             } else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
           }
         }

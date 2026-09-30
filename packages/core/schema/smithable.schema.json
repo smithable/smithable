@@ -543,6 +543,40 @@
                 "form": {
                   "type": "string",
                   "description": "A contact section's form: the model visitors add a record of."
+                },
+                "calculator": {
+                  "type": "object",
+                  "required": [
+                    "fields"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "object",
+                      "description": "Fields as a model's: entered ones are the inputs, formula fields the results.",
+                      "additionalProperties": true
+                    },
+                    "examples": {
+                      "type": "array",
+                      "description": "Inputs and the results they must give; each becomes a test.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "input",
+                          "expected"
+                        ],
+                        "properties": {
+                          "input": {
+                            "type": "object"
+                          },
+                          "expected": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "description": "Inputs and results computed as you type, stored nowhere."
                 }
               }
             }
