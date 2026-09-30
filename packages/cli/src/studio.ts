@@ -280,6 +280,8 @@ export async function studio(
         font: t.font,
         thumbnail: themeThumbnail(t),
       })),
+      // The project's own themes as parsed, for the engine in the tab to validate the ux file.
+      ownThemes: themes ?? [],
       files: {
         spec: read("smithable.yml"),
         auth: read("smithable.auth.yml"),
