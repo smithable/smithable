@@ -44,8 +44,8 @@ export function LandingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-card">
+    <div data-kit="landing" className="flex min-h-screen flex-col">
+      <header data-part="header" className="border-b bg-card">
         <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4 px-5">
           <p className="min-w-0 truncate text-xl font-bold">{appName}</p>
           {link && (
@@ -56,7 +56,7 @@ export function LandingLayout({
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t">
+      <footer data-part="footer" className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
           {footer && footer.links.length > 0 && (
@@ -82,6 +82,12 @@ export function LandingLayout({
   );
 }
 
+/** A section's hooks for custom styles: its name, the last part of where its texts are kept. */
+const sectionHooks = (texts: string | undefined) => ({
+  "data-kit": "section",
+  "data-section": texts?.split(".").at(-1),
+});
+
 /** Marks one of a section's texts with where it is kept, e.g. "pages.home.hero.title". */
 const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
@@ -101,6 +107,7 @@ function Section({
 }) {
   return (
     <section
+      {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
       className="mx-auto max-w-6xl px-5 py-16"
     >
@@ -175,7 +182,10 @@ export function Hero({
   );
   if (!image)
     return (
-      <section className={cn("mx-auto max-w-6xl px-5 py-20 sm:py-28", more && "pb-6 sm:pb-6")}>
+      <section
+        {...sectionHooks(texts)}
+        className={cn("mx-auto max-w-6xl px-5 py-20 sm:py-28", more && "pb-6 sm:pb-6")}
+      >
         {text}
         {cue && <div className="mt-12">{cue}</div>}
         {end}
@@ -183,7 +193,10 @@ export function Hero({
     );
   // Beside the text on wide screens, above it on narrow ones; the first thing loaded.
   return (
-    <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2">
+    <section
+      {...sectionHooks(texts)}
+      className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2"
+    >
       <img
         src={image.src}
         alt={image.alt}
@@ -426,7 +439,7 @@ export function CallToAction({
   texts?: string;
 }) {
   return (
-    <section className="mx-auto max-w-6xl px-5 py-16">
+    <section {...sectionHooks(texts)} className="mx-auto max-w-6xl px-5 py-16">
       <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
         <h2 className="text-2xl font-bold sm:text-3xl" {...mark(texts, "title")}>
           {title}

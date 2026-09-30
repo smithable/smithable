@@ -1,34 +1,31 @@
-// "Your app": the app in plain language, and each part of it editable in the same words.
-// A change to a model's list of fields is read back without AI; anything else goes to the
-// model as the before and after of that one part. Either way it is a proposal first.
-import { findOperation } from "@smithable/core";
-import { readSummaryEdit, type SummarySection } from "@smithable/index";
+// "Your app": the app in plain language, a map to its parts (docs/design/studio-v2.md §5).
+// A click on a part opens its properties, the same panel Code mode has, where each control is
+// an operation; "In my words" rewords a part for this session only and never changes the app;
+// the add buttons open the Change tab's forms, filled in with their group.
+import type { SummarySection } from "@smithable/index";
 import { useEffect, useState } from "react";
-import { api, type Proposal } from "../api";
 import type { Spec } from "../engine";
-import { Button } from "../ui";
-import { ProposalView, type Words } from "./Ask";
-import type { Run } from "./ChangeForms";
+import { Properties } from "../properties";
+import { Button, cx } from "../ui";
+import type { Prefill, Run } from "./ChangeForms";
 
-/** Headings for the summary's groups of sections (models, actions, queries). */
-const GROUPS: Record<string, string> = {
-  model: "Records",
-  pages: "Pages",
-  action: "Actions",
-  query: "Queries",
-  auth: "Sign-in and access",
+/** Headings for the summary's groups of sections, and what their add button adds. */
+const GROUPS: Record<string, { title: string; add?: [string, Prefill] }> = {
+  model: { title: "Records", add: ["Add a record", { op: "addModel", args: {} }] },
+  pages: { title: "Pages", add: ["Add a page", { op: "addPage", args: {} }] },
+  action: { title: "Actions", add: ["Add an action", { op: "addAction", args: {} }] },
+  query: { title: "Queries" },
+  auth: { title: "Sign-in and access" },
 };
 const kind = (concept: string) => concept.split(":")[0] ?? "";
 
 /**
- * A part in the user's own words, kept for the session: `before` is the summary it was
- * written against, `after` the summary once the change arrived. When the summary moves on
- * from `after` (a change from elsewhere), the generated sentences come back.
+ * A part in the user's own words, kept for the session. `before` is the summary it was
+ * written against: when a change moves the summary on, the generated sentences come back.
  */
 interface Wording {
   text: string;
   before: string;
-  after?: string;
 }
 
 const storageKey = (app: string) => `smithable:wording:${app}`;
@@ -45,286 +42,293 @@ export function AppSummary({
   sections,
   spec,
   run,
-  words,
+  onAdd,
 }: {
   app: string;
   sections: SummarySection[];
   spec: Spec;
   run: Run;
-  words: Words;
+  /** Opens the Change tab's form for an addition, filled in. */
+  onAdd: (prefill: Prefill) => void;
 }) {
   const [wording, setWording] = useState(() => loadWording(app));
   const [updated, setUpdated] = useState<string[]>([]);
+  // The part whose properties are open, e.g. "field:Customer.email".
+  const [open, setOpen] = useState<string>();
   useEffect(() => {
     try {
       sessionStorage.setItem(storageKey(app), JSON.stringify(wording));
     } catch {}
   }, [app, wording]);
-  // Follow the summary: the user's own change arriving, or another one replacing their words.
+  // A change moved a reworded part on: its generated sentences come back, marked updated.
   useEffect(() => {
-    let changed = false;
-    const next = { ...wording };
-    const replaced: string[] = [];
-    for (const [concept, w] of Object.entries(wording)) {
-      const now = sections.find((s) => s.concept === concept)?.sentences.join("\n");
-      if (now === undefined) {
-        delete next[concept];
-        changed = true;
-      } else if (now !== w.before && w.after === undefined) {
-        next[concept] = { ...w, after: now };
-        changed = true;
-      } else if (w.after !== undefined && now !== w.after) {
-        delete next[concept];
-        replaced.push(concept);
-        changed = true;
-      }
-    }
-    // Settles in one more run: the second finds nothing to change.
-    if (changed) setWording(next);
-    if (replaced.length) setUpdated(replaced);
+    const replaced = Object.entries(wording)
+      .filter(
+        ([concept, w]) =>
+          sections.find((s) => s.concept === concept)?.sentences.join("\n") !== w.before,
+      )
+      .map(([concept]) => concept);
+    if (!replaced.length) return;
+    setWording((w) => Object.fromEntries(Object.entries(w).filter(([c]) => !replaced.includes(c))));
+    setUpdated(replaced);
   }, [sections, wording]);
 
+  const heading = (group: string) => {
+    const g = GROUPS[group];
+    if (!g) return null;
+    return (
+      <div className="mb-3 flex items-center justify-between gap-2 border-b border-neutral-200 pb-1">
+        <h2 className="text-xs font-semibold tracking-wide text-neutral-500 uppercase">
+          {g.title}
+        </h2>
+        {g.add && (
+          <button
+            type="button"
+            className="text-xs font-medium text-accent"
+            onClick={() => onAdd(g.add?.[1] as Prefill)}
+          >
+            {g.add[0]}
+          </button>
+        )}
+      </div>
+    );
+  };
   return (
     <div className="space-y-5 p-4">
       {sections.map((s, i) => (
         <section key={s.concept} aria-label={s.title}>
-          {GROUPS[kind(s.concept)] && kind(sections[i - 1]?.concept ?? "") !== kind(s.concept) && (
-            <h2 className="mb-3 border-b border-neutral-200 pb-1 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-              {GROUPS[kind(s.concept)]}
-            </h2>
-          )}
+          {kind(sections[i - 1]?.concept ?? "") !== kind(s.concept) && heading(kind(s.concept))}
           <Part
             section={s}
             spec={spec}
             run={run}
-            words={words}
             // A part named like its group (Pages) needs no heading of its own.
-            titled={s.title !== GROUPS[kind(s.concept)]}
+            titled={s.title !== GROUPS[kind(s.concept)]?.title}
             wording={wording[s.concept]?.text}
             updated={updated.includes(s.concept)}
-            onApplied={(text) =>
-              setWording((w) => ({ ...w, [s.concept]: { text, before: s.sentences.join("\n") } }))
+            open={open}
+            onOpen={(concept) => setOpen((o) => (o === concept ? undefined : concept))}
+            onAdd={onAdd}
+            onWording={(text) =>
+              setWording((w) => {
+                const { [s.concept]: _, ...rest } = w;
+                return text === undefined
+                  ? rest
+                  : { ...rest, [s.concept]: { text, before: s.sentences.join("\n") } };
+              })
             }
           />
         </section>
       ))}
+      {/* Groups that have nothing yet still have their add button. */}
+      {!sections.some((s) => kind(s.concept) === "action") && heading("action")}
     </div>
   );
 }
 
-/** A proposal made here: operations read without AI, or the model's. */
-type Suggestion =
-  | { kind: "local"; operations: { op: string; args: Record<string, unknown> }[] }
-  | { kind: "model"; proposal: Proposal };
+/** The concept a line of a part is about: a model's field, or a page in the pages list. */
+function conceptOf(
+  section: SummarySection,
+  line: string,
+  index: number,
+  spec: Spec,
+): string | undefined {
+  const item = /^[-•*]\s+(.*)$/.exec(line)?.[1];
+  if (item === undefined) return undefined;
+  if (kind(section.concept) === "model") {
+    const field = section.fields?.find((f) => f.text === item);
+    return field ? `field:${section.concept.slice("model:".length)}.${field.field}` : undefined;
+  }
+  if (section.concept === "pages") {
+    const page = spec.ir?.pages[index];
+    return page ? `page:${page.id}` : undefined;
+  }
+  return undefined;
+}
 
 function Part({
   section,
   spec,
   run,
-  words,
   titled,
   wording,
   updated,
-  onApplied,
+  open,
+  onOpen,
+  onAdd,
+  onWording,
 }: {
   section: SummarySection;
   spec: Spec;
   run: Run;
-  words: Words;
   titled: boolean;
   wording?: string;
   updated: boolean;
-  onApplied: (text: string) => void;
+  open?: string;
+  onOpen: (concept: string) => void;
+  onAdd: (prefill: Prefill) => void;
+  onWording: (text: string | undefined) => void;
 }) {
-  const shown = wording ?? section.sentences.join("\n");
+  const generated = section.sentences.join("\n");
   const [draft, setDraft] = useState<string>();
-  const [suggestion, setSuggestion] = useState<Suggestion>();
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState("");
-  const close = () => {
-    setDraft(undefined);
-    setSuggestion(undefined);
-    setNote("");
-  };
-
-  const suggest = async (text: string) => {
-    if (!spec.ir) return;
-    setNote("");
-    const operations = readSummaryEdit(section, text, spec.ir);
-    if (operations?.length === 0) return setNote("Nothing changed.");
-    let next: Suggestion;
-    if (operations) next = { kind: "local", operations };
-    else {
-      setBusy(true);
-      const request = `In the app's plain-language summary, the user rewrote the part "${section.title}" (${section.concept}).\nIt said:\n${section.sentences.join("\n")}\nIt should now say:\n${text}\nChange the app so that it matches the new text.`;
-      try {
-        next = { kind: "model", proposal: await api.ask(request) };
-      } catch (error) {
-        setNote((error as Error).message);
-        return;
-      } finally {
-        setBusy(false);
-      }
-    }
-    // A change that loses no data happens at once (Undo takes it back); one that deletes
-    // data is shown first.
-    const safe =
-      next.kind === "local"
-        ? next.operations.every((o) => o.op !== "removeField")
-        : next.proposal.kind === "change" && !next.proposal.operations.some((o) => o.destructive);
-    if (safe) await apply(next, text);
-    else if (
-      next.kind === "model" &&
-      next.proposal.kind !== "change" &&
-      next.proposal.kind !== "question"
-    ) {
-      // Nothing to apply (it changes nothing, or no operation can do it): the part goes back to
-      // its own sentences at once, with the reason.
-      close();
-      setNote(next.proposal.kind === "none" ? next.proposal.reason : next.proposal.message);
-    } else setSuggestion(next);
-  };
-  const apply = async (suggestion: Suggestion, text: string) => {
-    setBusy(true);
-    let ok = true;
-    try {
-      if (suggestion.kind === "local") {
-        // The proposal already said which changes lose data.
-        for (const { op, args } of suggestion.operations) {
-          ok = await run(op, args, true);
-          if (!ok) break;
-        }
-      } else {
-        const result = await api.applyProposal(suggestion.proposal.id);
-        ok = result.ok;
-        if (!ok) setNote(result.output);
-      }
-    } catch (error) {
-      ok = false;
-      setNote((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-    if (ok) {
-      onApplied(text);
-      close();
-    }
-  };
-
-  const local: Proposal | undefined =
-    suggestion?.kind === "local" && spec.ir
-      ? {
-          kind: "change",
-          id: "local",
-          usage: "Read without AI",
-          operations: suggestion.operations.map(({ op, args }) => {
-            const operation = findOperation(op, spec.plugins);
-            return {
-              op,
-              args,
-              description: operation?.describe(args as never, spec.ir as never) ?? op,
-              destructive: op === "removeField",
-            };
-          }),
-        }
-      : undefined;
-  const proposal = suggestion?.kind === "model" ? suggestion.proposal : local;
+  const model =
+    kind(section.concept) === "model" ? section.concept.slice("model:".length) : undefined;
+  // Under the heading "Customers", "Customers have:" would only repeat it.
+  const lines = (titled ? generated.replace(`${section.title} have:\n`, "") : generated).split(
+    "\n",
+  );
+  let item = -1;
+  const concepts = lines.map((line) => {
+    if (/^[-•*]\s+/.test(line)) item++;
+    return conceptOf(section, line, item, spec);
+  });
+  const properties = (concept: string) =>
+    open === concept && (
+      <div className="my-2 rounded-md border border-neutral-200 bg-neutral-50">
+        <Properties key={concept} concept={concept} spec={spec} run={run} />
+      </div>
+    );
 
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold">
-          {titled && section.title}
+          {titled &&
+            (model ? (
+              <button
+                type="button"
+                className="hover:text-accent"
+                aria-expanded={open === section.concept}
+                onClick={() => onOpen(section.concept)}
+              >
+                {section.title}
+              </button>
+            ) : (
+              section.title
+            ))}
           {updated && <span className="ml-2 text-xs font-normal text-accent">updated</span>}
         </h3>
+        {draft === undefined && section.concept !== "auth" && (
+          <button
+            type="button"
+            className="text-xs text-neutral-500 hover:text-accent"
+            onClick={() => setDraft(wording ?? generated)}
+          >
+            In my words
+          </button>
+        )}
       </div>
-      {draft === undefined ? (
-        <>
-          {section.concept === "auth" ? (
-            <Lines text={shown} />
-          ) : (
-            // One click on the sentences edits them, as a text in the preview is edited.
-            // biome-ignore lint/a11y/useSemanticElements: a button cannot hold the lists
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label={`Edit ${section.title}`}
-              title="Click to change"
-              className="-mx-1.5 cursor-text rounded-md px-1.5 py-0.5 outline-none hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-accent/30"
-              onClick={() => setDraft(shown)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter" && e.key !== " ") return;
-                e.preventDefault();
-                setDraft(shown);
-              }}
-            >
-              {/* Under the heading "Customers", "Customers have:" would only repeat it. */}
-              <Lines text={titled ? shown.replace(`${section.title} have:\n`, "") : shown} />
-            </div>
-          )}
-          {note && <p className="mt-1 text-sm text-neutral-600">{note}</p>}
-        </>
-      ) : (
+      {properties(section.concept)}
+      {draft !== undefined ? (
         <div className="space-y-2">
           <textarea
             aria-label={`${section.title}, in your words`}
             value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setSuggestion(undefined);
-            }}
+            onChange={(e) => setDraft(e.target.value)}
             rows={Math.max(3, draft.split("\n").length + 1)}
             className="block w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
-          {!proposal && (
-            <div className="flex gap-2">
-              <Button onClick={() => void suggest(draft)} disabled={busy || draft === shown}>
-                {busy ? "Working…" : "Make the change"}
-              </Button>
-              <Button variant="ghost" onClick={close} disabled={busy}>
-                Cancel
-              </Button>
-            </div>
-          )}
-          {proposal && (
-            <ProposalView
-              proposal={proposal}
-              words={words}
-              busy={busy}
-              onApply={() => suggestion && draft !== undefined && void apply(suggestion, draft)}
-              onCancel={() => setSuggestion(undefined)}
-            />
-          )}
-          {note && <p className="text-sm text-neutral-600">{note}</p>}
+          <p className="text-xs text-neutral-500">
+            Only the wording, for you: it changes nothing in the app. To change the app, click a
+            part or describe the change below.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                onWording(draft === generated ? undefined : draft);
+                setDraft(undefined);
+              }}
+            >
+              Keep my words
+            </Button>
+            <Button variant="ghost" onClick={() => setDraft(undefined)}>
+              Cancel
+            </Button>
+          </div>
         </div>
+      ) : wording !== undefined ? (
+        <>
+          <Lines text={wording} />
+          <button
+            type="button"
+            className="mt-1 text-xs text-neutral-500 hover:text-accent"
+            onClick={() => onWording(undefined)}
+          >
+            Back to the generated text
+          </button>
+        </>
+      ) : (
+        <Lines
+          text={lines.join("\n")}
+          item={(text, index) => {
+            const concept = concepts[index];
+            return concept ? (
+              <>
+                <button
+                  type="button"
+                  className={cx(
+                    "text-left hover:text-accent",
+                    open === concept && "font-medium text-accent",
+                  )}
+                  aria-expanded={open === concept}
+                  onClick={() => onOpen(concept)}
+                >
+                  {text}
+                </button>
+                {properties(concept)}
+              </>
+            ) : (
+              text
+            );
+          }}
+        />
+      )}
+      {model && (
+        <button
+          type="button"
+          className="mt-1 text-xs font-medium text-accent"
+          onClick={() => onAdd({ op: "addField", args: { model } })}
+        >
+          Add a field
+        </button>
       )}
     </div>
   );
 }
 
 /** Sentences as paragraphs, and runs of "- " lines as a bulleted list. */
-function Lines({ text }: { text: string }) {
-  const blocks: (string | string[])[] = [];
-  for (const line of text.split("\n")) {
-    const item = /^[-•*]\s+(.*)$/.exec(line)?.[1];
+function Lines({
+  text,
+  item,
+}: {
+  text: string;
+  /** A line's content, given its index in `text` (default: the text itself). */
+  item?: (text: string, index: number) => React.ReactNode;
+}) {
+  // Each line with its index in `text`, so `item` knows which one it renders.
+  type Line = { text: string; index: number };
+  const blocks: (Line | Line[])[] = [];
+  const show = (line: Line) => (item ? item(line.text, line.index) : line.text);
+  text.split("\n").forEach((raw, index) => {
+    const bullet = /^[-•*]\s+(.*)$/.exec(raw)?.[1];
     const last = blocks.at(-1);
-    if (item === undefined) blocks.push(line);
-    else if (Array.isArray(last)) last.push(item);
-    else blocks.push([item]);
-  }
+    if (bullet === undefined) blocks.push({ text: raw, index });
+    else if (Array.isArray(last)) last.push({ text: bullet, index });
+    else blocks.push([{ text: bullet, index }]);
+  });
   return (
     <div className="space-y-1 text-sm leading-relaxed text-neutral-700">
       {blocks.map((block, i) =>
         Array.isArray(block) ? (
           // biome-ignore lint/suspicious/noArrayIndexKey: the blocks have no identity of their own
           <ul key={i} className="list-disc space-y-0.5 pl-5">
-            {block.map((item) => (
-              <li key={item}>{item}</li>
+            {block.map((line) => (
+              <li key={line.index}>{show(line)}</li>
             ))}
           </ul>
         ) : (
           // biome-ignore lint/suspicious/noArrayIndexKey: the blocks have no identity of their own
-          <p key={i}>{block}</p>
+          <p key={i}>{show(block)}</p>
         ),
       )}
     </div>

@@ -96,7 +96,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   }
 
   return (
-    <Card className="max-w-3xl">
+    <Card data-kit="model-form" className="max-w-3xl">
       <form onSubmit={submit} noValidate className="space-y-6 p-card">
         {!readOnly && ui.fields.some((f) => f.required && !f.computed) && (
           <p className="text-sm text-muted-foreground">
@@ -114,11 +114,13 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             return (
               <div
                 key={field.name}
+                data-kit="field"
+                data-field={field.name}
                 className={inline ? "flex items-center gap-3" : "space-y-2"}
                 {...editorMarker(ui, field, "field")}
               >
                 {!inline && (
-                  <Label htmlFor={id}>
+                  <Label htmlFor={id} data-part="label">
                     <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
                       {field.label}
                     </span>
@@ -148,15 +150,20 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                     }
                   />
                 )}
-                {inline && <Label htmlFor={id}>{field.label}</Label>}
+                {inline && (
+                  <Label htmlFor={id} data-part="label">
+                    {field.label}
+                  </Label>
+                )}
                 {field.help && (
-                  <p id={`${id}-help`} className="text-sm text-muted-foreground">
+                  <p id={`${id}-help`} data-part="help" className="text-sm text-muted-foreground">
                     {field.help}
                   </p>
                 )}
                 {error && (
                   <p
                     id={`${id}-error`}
+                    data-part="error"
                     className="flex items-center gap-1.5 text-sm text-destructive"
                   >
                     <CircleAlert aria-hidden className="size-4 shrink-0" />
@@ -176,7 +183,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             {failure}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-3 border-t pt-6">
+        <div data-part="actions" className="flex flex-wrap items-center gap-3 border-t pt-6">
           {!readOnly && (
             <Button type="submit" disabled={busy}>
               {busy ? "Saving…" : submitLabel}
