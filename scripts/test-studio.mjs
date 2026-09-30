@@ -60,6 +60,12 @@ writeFileSync(
 );
 writeFileSync(join(dir, "smithable.context.yml"), "smithableContext: 0.1\nplugins: [greeting]\n");
 appendFileSync(join(dir, "smithable.yml"), "\ngreeting: Hello\n");
+// Left by a hosted workspace whose description could not be used: shown once.
+mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+writeFileSync(
+  join(dir, "data/.smithable/notice.txt"),
+  "The description could not be used this time.\n",
+);
 // A stand-in model, so describing a change works without a real one.
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
@@ -92,6 +98,16 @@ try {
     await page.goto(base);
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
+  });
+  await step("a notice left for Studio is shown once, then gone", async () => {
+    const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
+    await alert.waitFor();
+    await alert.getByRole("button", { name: "Dismiss" }).click();
+    if (existsSync(join(dir, "data/.smithable/notice.txt")))
+      throw new Error("the notice file is still there");
+    await page.reload();
+    await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
+    if (await alert.count()) throw new Error("the notice came back");
   });
   await step("the preview runs the app, with the development sign-in", async () => {
     for (let attempt = 1; ; attempt++) {
