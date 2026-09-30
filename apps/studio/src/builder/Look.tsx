@@ -4,8 +4,16 @@
 import { FONTS, humanize, pageModel, THEME_PRESETS } from "@smithable/core";
 import { useState } from "react";
 import type { Spec } from "../engine";
+import { ICON_CHOICES } from "../properties";
 import { cx, Select } from "../ui";
-import { ICON_CHOICES, type Run, TONE_CHOICES } from "./ChangeForms";
+import type { Run } from "./ChangeForms";
+
+const TONE_CHOICES: [string, string][] = [
+  ["neutral", "Grey (neutral)"],
+  ["success", "Green (good)"],
+  ["warning", "Amber (needs attention)"],
+  ["danger", "Red (a problem)"],
+];
 
 export function Look({ spec, run }: { spec: Spec; run: Run }) {
   const { ir, ux } = spec;
@@ -75,6 +83,7 @@ export function Look({ spec, run }: { spec: Spec; run: Run }) {
                     .filter((f) => !(f.type.kind === "relation" && f.type.many))
                     .map((f) => f.name)}
                   columns={ux.pages[page.id]?.columns}
+                  below={ux.pages[page.id]?.below ?? {}}
                   run={run}
                 />
               )}
@@ -197,16 +206,21 @@ function BrandColour({ primary, run }: { primary?: string; run: Run }) {
   );
 }
 
-/** A list page's columns: shown ones in order, with the rest greyed below to add back. */
+/**
+ * A list page's columns: shown ones in order, each with an optional second line under its
+ * value (another field, e.g. the phone under the email), and the rest greyed below to add back.
+ */
 function Columns({
   page,
   fields,
   columns,
+  below,
   run,
 }: {
   page: string;
   fields: string[];
   columns?: string[];
+  below: Record<string, string>;
   run: Run;
 }) {
   if (!columns)
@@ -235,6 +249,16 @@ function Columns({
       {columns.map((c, i) => (
         <li key={c} className="flex items-center gap-2">
           <span className="flex-1">{humanize(c)}</span>
+          <Select
+            aria-label={`Second line under ${humanize(c)}`}
+            value={below[c] ?? "none"}
+            onChange={(e) => run("setBelow", { page, column: c, field: e.target.value })}
+            options={[
+              ["none", "No second line"],
+              ...fields.filter((f) => f !== c).map((f): [string, string] => [f, humanize(f)]),
+            ]}
+            className="h-7 w-36 text-xs"
+          />
           <button
             type="button"
             aria-label={`Move ${humanize(c)} up`}
