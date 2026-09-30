@@ -4536,7 +4536,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "69d847af kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
-  "src/kit/Reserve.tsx": "70a23d5e kit",
+  "src/kit/Reserve.tsx": "ec9889e1 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "2887474b kit",
   "src/kit/access.ts": "c46c2136 kit",
