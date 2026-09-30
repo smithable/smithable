@@ -289,7 +289,7 @@ function readModelAccess(ctx: ParseContext, node: ParsedNode | null, where: stri
   return access;
 }
 
-function readField(
+export function readField(
   ctx: ParseContext,
   model: string,
   { key: name, keyNode, value }: Entry,
@@ -811,7 +811,12 @@ function checkRelations(ctx: ParseContext, models: ModelIR[], relationNodes: Rel
  * other models), rejects cycles between computed fields, and checks examples' inputs.
  */
 function checkFormulas(ctx: ParseContext, models: ModelIR[]): void {
-  for (const model of models) {
+  for (const model of models) checkModelFormulas(ctx, model, models);
+}
+
+/** The formulas, defaults and examples of one model (or a calculator, which is one to them). */
+export function checkModelFormulas(ctx: ParseContext, model: ModelIR, models: ModelIR[]): void {
+  {
     const computed = new Map(model.fields.filter((f) => f.formula).map((f) => [f.name, f]));
     for (const field of model.fields) {
       const where = `field "${model.name}.${field.name}"`;

@@ -92,7 +92,7 @@ const sectionHooks = (texts: string | undefined) => ({
 const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
-function Section({
+export function Section({
   texts,
   id,
   title,

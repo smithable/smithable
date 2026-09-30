@@ -444,4 +444,12 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
     `articles of ${p.model}: ${p.title} and ${p.body}${p.picture ? `, ${p.picture}` : ""}${p.date ? `, by ${p.date}` : ""}${p.address ? `, at ${p.address}` : ""}`,
   data: (p) =>
     `data: ${p.all ? "every model" : p.models.join(", ")}, their records to find, open, change and delete`,
+  calculator: (p) =>
+    `calculator: ${p.calculator.fields
+      .filter((f) => !f.formula)
+      .map((f) => f.name)
+      .join(", ")} give ${p.calculator.fields
+      .filter((f) => f.formula)
+      .map((f) => f.name)
+      .join(", ")}`,
 };
