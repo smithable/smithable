@@ -47,7 +47,7 @@ export function Builder({
     [spec],
   );
   // The three panels are a strip that snaps, one window wide each; the change box stays docked
-  // under whichever is shown. Wide windows may show Preview and Changes side by side.
+  // under whichever is shown. Wide windows may show Preview and Details side by side.
   const strip = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<PanelId>("app");
   const wide = useWide();
@@ -66,10 +66,10 @@ export function Builder({
     const id = PANELS[at]?.[0];
     if (id) setShown(id);
   };
-  // Something picked in the preview is changed in the Changes panel.
+  // Something picked in the preview is changed in the Details panel.
   const select = (s: Selection | undefined) => {
     setSelection(s);
-    if (s && !paired) show("changes");
+    if (s && !paired) show("details");
   };
   selectRef.current = select;
   return (
@@ -92,7 +92,7 @@ export function Builder({
           }}
         >
           {PANELS.map(([id, label]) => {
-            const current = shown === id || (paired && shown === "preview" && id === "changes");
+            const current = shown === id || (paired && shown === "preview" && id === "details");
             return (
               <button
                 key={id}
@@ -119,7 +119,7 @@ export function Builder({
                 localStorage.setItem("builder-two-up", e.target.checked ? "yes" : "no");
               }}
             />
-            Preview + Changes
+            Preview + Details
           </label>
         )}
       </nav>
@@ -179,47 +179,52 @@ export function Builder({
           />
         </div>
         <div
-          data-panel="changes"
+          data-panel="details"
           className={cx(
             "flex min-h-0 shrink-0 flex-col border-l border-neutral-200 *:min-h-0 *:flex-1",
             paired ? "w-[22rem]" : "w-full snap-start",
           )}
         >
           {selection ? (
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] divide-y divide-neutral-200">
-              <Selected
-                selection={selection}
-                spec={spec}
-                run={run}
-                onClose={() => setSelection(undefined)}
-              />
-              <Trace entries={project.trace} words={words} />
-            </div>
+            <Selected
+              selection={selection}
+              spec={spec}
+              run={run}
+              onClose={() => setSelection(undefined)}
+            />
           ) : (
-            <Trace entries={project.trace} words={words} />
+            <p className="p-4 text-sm text-neutral-500">
+              Choose Select above the preview, then click a part of the app to change it here.
+            </p>
           )}
         </div>
       </div>
-      {/* The change box, on every panel: type a request while looking at the preview. */}
-      <div className="max-h-[45vh] shrink-0 overflow-auto border-t border-neutral-200 bg-white">
-        <Ask
-          words={words}
-          onEdit={(p) => {
-            setPrefill(p);
-            setTab("change");
-            show("app");
-          }}
-        />
+      {/* The change box and the changes made, newest first, under every panel: type a request
+          while looking at the preview. The box stays; the list scrolls. */}
+      <div className="flex max-h-[45vh] shrink-0 flex-col border-t border-neutral-200 bg-white">
+        <div className="max-h-[30vh] shrink-0 overflow-auto">
+          <Ask
+            words={words}
+            onEdit={(p) => {
+              setPrefill(p);
+              setTab("change");
+              show("app");
+            }}
+          />
+        </div>
+        <div className="flex min-h-24 flex-1 flex-col border-t border-neutral-200 *:min-h-0 *:flex-1">
+          <Trace entries={project.trace} words={words} />
+        </div>
       </div>
     </div>
   );
 }
 
-type PanelId = "app" | "preview" | "changes";
+type PanelId = "app" | "preview" | "details";
 const PANELS: [PanelId, string][] = [
   ["app", "Your app"],
   ["preview", "Preview"],
-  ["changes", "Changes"],
+  ["details", "Details"],
 ];
 
 /** Whether the window is wide enough for two panels side by side (1440 px). */
