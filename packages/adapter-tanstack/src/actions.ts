@@ -58,7 +58,7 @@ export function zodFor(field: FieldIR): string {
         schema = 'z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")';
         break;
       default:
-        schema = `z.string()${field.type.name === "string" || field.type.name === "text" ? textBounds(field) : field.required ? '.trim().min(1, "Required")' : ""}`;
+        schema = `z.string()${["string", "text", "markdown"].includes(field.type.name) ? textBounds(field) : field.required ? '.trim().min(1, "Required")' : ""}`;
     }
   }
   return field.required ? schema : `${schema}.nullish()`;
