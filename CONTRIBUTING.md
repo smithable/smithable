@@ -23,6 +23,10 @@ pnpm check      # lint, build, unit tests, every example app generated and teste
 
 Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/). Add `Signed-off-by: Your Name <you@example.com>` to each commit (`git commit -s`) to say that you wrote the change or have the right to submit it under the repository's licences: Apache-2.0 for Smithable, 0BSD for the app kit and templates ([NOTICE](NOTICE)).
 
+## Conduct
+
+Everyone here follows the [code of conduct](CODE_OF_CONDUCT.md); reports go to conduct@smithable.ai.
+
 ## Security
 
 Vulnerabilities go to security@smithable.ai, not to the issue tracker: [SECURITY.md](SECURITY.md).
