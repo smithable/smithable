@@ -365,6 +365,111 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "name": "classes",
           },
           {
+            "calculator": {
+              "examples": [
+                {
+                  "expected": {
+                    "saved": 29,
+                    "withoutPass": 128,
+                  },
+                  "input": {
+                    "classesPerMonth": 8,
+                    "dropIn": 16,
+                    "pass": 99,
+                  },
+                },
+              ],
+              "fields": [
+                {
+                  "default": 8,
+                  "max": 31,
+                  "min": 0,
+                  "name": "classesPerMonth",
+                  "required": false,
+                  "type": {
+                    "kind": "scalar",
+                    "name": "int",
+                  },
+                  "unique": false,
+                },
+                {
+                  "default": 16,
+                  "min": 0,
+                  "name": "dropIn",
+                  "required": false,
+                  "type": {
+                    "kind": "scalar",
+                    "name": "money",
+                  },
+                  "unique": false,
+                },
+                {
+                  "default": 99,
+                  "min": 0,
+                  "name": "pass",
+                  "required": false,
+                  "type": {
+                    "kind": "scalar",
+                    "name": "money",
+                  },
+                  "unique": false,
+                },
+                {
+                  "formula": {
+                    "kind": "binary",
+                    "left": {
+                      "kind": "field",
+                      "name": "classesPerMonth",
+                    },
+                    "op": "*",
+                    "right": {
+                      "kind": "field",
+                      "name": "dropIn",
+                    },
+                  },
+                  "name": "withoutPass",
+                  "required": false,
+                  "type": {
+                    "kind": "scalar",
+                    "name": "money",
+                  },
+                  "unique": false,
+                },
+                {
+                  "formula": {
+                    "kind": "binary",
+                    "left": {
+                      "kind": "binary",
+                      "left": {
+                        "kind": "field",
+                        "name": "classesPerMonth",
+                      },
+                      "op": "*",
+                      "right": {
+                        "kind": "field",
+                        "name": "dropIn",
+                      },
+                    },
+                    "op": "-",
+                    "right": {
+                      "kind": "field",
+                      "name": "pass",
+                    },
+                  },
+                  "name": "saved",
+                  "required": false,
+                  "type": {
+                    "kind": "scalar",
+                    "name": "money",
+                  },
+                  "unique": false,
+                },
+              ],
+            },
+            "kind": "calculator",
+            "name": "estimate",
+          },
+          {
             "kind": "gallery",
             "name": "gallery",
           },
