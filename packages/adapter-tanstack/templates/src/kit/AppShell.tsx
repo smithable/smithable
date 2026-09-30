@@ -29,7 +29,7 @@ const sidebarItem =
 export function AppShell({ children, ...shell }: ShellProps & { children: React.ReactNode }) {
   const drawer = useRef<HTMLDialogElement>(null);
   return (
-    <div className="min-h-screen lg:flex">
+    <div data-kit="app-shell" className="min-h-screen lg:flex">
       {/* Desktop: a sidebar. */}
       <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
         <p className="px-6 pt-7 pb-6 text-2xl font-bold">
@@ -38,7 +38,10 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         <Navigation {...shell} />
       </aside>
       {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
-      <header className="sticky top-0 z-10 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden">
+      <header
+        data-part="header"
+        className="sticky top-0 z-10 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden"
+      >
         <button
           type="button"
           aria-label="Open menu"
@@ -108,7 +111,11 @@ function Navigation({
 }: ShellProps & { onNavigate?: () => void }) {
   return (
     <>
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 pb-4">
+      <nav
+        aria-label="Main"
+        data-kit="nav"
+        className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 pb-4"
+      >
         {menus.map((menu) => {
           const items = menu.items.filter((item) => allows(item.access, viewer));
           if (items.length === 0) return null;
@@ -204,9 +211,13 @@ export function PageHeader({
   page?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div
+      data-part="header"
+      className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+    >
       <div className="min-w-0">
         <h1
+          data-part="title"
           className="break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"
           {...(page ? textMarker(`pages.${page}.title`) : {})}
         >
@@ -222,7 +233,9 @@ export function PageHeader({
         )}
       </div>
       {actions && (
-        <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:flex-1">{actions}</div>
+        <div data-part="actions" className="flex flex-wrap items-center gap-2 max-sm:[&>*]:flex-1">
+          {actions}
+        </div>
       )}
     </div>
   );

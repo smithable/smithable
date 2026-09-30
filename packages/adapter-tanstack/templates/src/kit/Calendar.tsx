@@ -214,7 +214,7 @@ export function Calendar({
   };
 
   return (
-    <div className="space-y-4">
+    <div data-kit="calendar" className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"

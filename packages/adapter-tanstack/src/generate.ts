@@ -189,7 +189,7 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}
 ## Project structure
 
 ${structure}`;
@@ -202,6 +202,26 @@ function limitsReadme(ir: SpecIR, auth?: AuthIR): string {
   return `## Limits
 
 ${signIn ? "A signed-in person may make 60 changes a minute, a visitor 10 a minute per address" : "A visitor may make 10 changes a minute per address"}${signIn && hasInvitations(ir, auth) ? ", and an administrator may send 20 invitations an hour" : ""}; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process${signIn ? "; sign-in attempts are limited by Better Auth itself (3 per 10 seconds)" : ""}. Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+
+`;
+}
+
+/** The hooks custom styles may rely on, for the README (docs/design/look.md §2). */
+function stylesReadme(): string {
+  return `## Custom styles
+
+Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and wins over the kit's styles. Rely on these attributes, not on class names or the order of elements; they name what a part is, and a value is removed only in a major version:
+
+| Attribute | On | Values |
+|---|---|---|
+| \`data-page\` | \`<body>\` | the page's name in the spec, e.g. \`customers\`, \`home\` |
+| \`data-kit\` | a kit component's root | \`app-shell\`, \`nav\`, \`model-table\`, \`model-form\`, \`field\`, \`search-box\`, \`dashboard\`, \`tile\`, \`calendar\`, \`reserve\`, \`landing\`, \`section\`, \`users\`, \`sign-in\`, \`onboarding\` |
+| \`data-part\` | inside a component | \`header\`, \`title\`, \`actions\`, \`row\`, \`cell\`, \`label\`, \`input\`, \`help\`, \`error\`, \`empty\`, \`footer\` |
+| \`data-field\` | a field's wrapper, input and table cells | the field's name |
+| \`data-section\` | a landing section | its name, e.g. \`hero\` |
+| \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
+
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
 `;
 }
@@ -226,6 +246,16 @@ const generated = (path: string, content: string): GeneratedFile => ({
   zone: "generated",
 });
 /** Created once; its code belongs to the project from then on. */
+/** src/custom/styles.css as it starts: a comment and nothing that changes the app. */
+const CUSTOM_STYLES = `/* Your own styles for this app. This file is never overwritten.
+   Style the kit's parts through their data-* hooks (listed in the README) and the theme's
+   variables, for example:
+
+   [data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }
+   [data-page="home"] [data-section="hero"] { min-height: 70vh; }
+*/
+`;
+
 const custom = (path: string, content: string): GeneratedFile => ({
   path,
   content,
@@ -240,6 +270,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     files: ({ ir, t, auth, ux, options }) => [
       generated("package.json", packageJson(ir, auth, ux, options.packages)),
       generated("src/theme.css", themeCss(ux)),
+      // The app's own styles, on the kit's data-* hooks (see the README); created once.
+      custom("src/custom/styles.css", CUSTOM_STYLES),
       generated("smithable.lock", smithableLock(ir, options)),
       generated("README.md", readme(ir, false, auth)),
       generated("public/favicon.svg", favicon(ir)),
