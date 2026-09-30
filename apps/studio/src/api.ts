@@ -19,6 +19,8 @@ export interface TraceEntry {
 export interface Project {
   name: string;
   files: { spec?: string; auth?: string; content?: string; ux?: string };
+  /** The themes the ux file may name: built in or the project's, each with its picture (an SVG). */
+  themes: { name: string; source: "built-in" | "project"; font: string; thumbnail: string }[];
   /** The project's plugins, which the engine imports from /api/plugins/<name>.mjs. */
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
