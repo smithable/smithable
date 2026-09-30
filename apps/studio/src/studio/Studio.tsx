@@ -13,6 +13,7 @@ import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import { FieldShapeForm, type Run } from "../builder/ChangeForms";
 import { readSpec, type Spec } from "../engine";
+import type { Place } from "../preview";
 import { Trace } from "../shared";
 import { Button, cx, Input, Label, Panel, Select, Tabs, useMedia } from "../ui";
 
@@ -35,6 +36,8 @@ export function Studio({
   logs,
   onCustomize,
   previewSlot,
+  place,
+  onPlace,
 }: {
   project: Project;
   spec: Spec;
@@ -44,10 +47,21 @@ export function Studio({
   onCustomize: (page: string) => void;
   /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
   previewSlot: (element: HTMLElement | null) => void;
+  /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
+  place: Place["studio"];
+  onPlace: (place: Place["studio"]) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("spec");
+  const [tab, setTabState] = useState<Tab>((place.tab as Tab | undefined) ?? "spec");
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    onPlace({ tab: next });
+  };
   const framed = useMedia("(min-width: 1024px)");
-  const [selected, setSelected] = useState<string>();
+  const [selected, setSelectedState] = useState<string | undefined>(place.concept);
+  const setSelected = (concept: string) => {
+    setSelectedState(concept);
+    onPlace({ concept });
+  };
   // "Show in smithable.yml": the editor selects the concept's lines.
   const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
@@ -139,6 +153,7 @@ function ConceptTree({
       <button
         type="button"
         onClick={() => onSelect(c.concept)}
+        aria-current={selected === c.concept ? "true" : undefined}
         className={cx(
           "block w-full truncate rounded px-2 py-1 text-left text-sm",
           nested && "pl-6 text-neutral-600",
@@ -306,6 +321,31 @@ function SpecEditor({
     return () => removeEventListener("beforeunload", ask);
   }, [edited]);
   const area = useRef<HTMLTextAreaElement>(null);
+  // The cursor and scroll, kept for the session: coming back to Code mode opens the editor where
+  // it was left (docs/design/studio-v2.md §2). Kept here, not in the app's state, since they
+  // change with every key and scroll.
+  useEffect(() => {
+    const editor = area.current;
+    if (!editor || jump) return;
+    try {
+      const { at, scroll } = JSON.parse(sessionStorage.getItem("smithable:editor") ?? "") as {
+        at: number;
+        scroll: number;
+      };
+      editor.setSelectionRange(at, at);
+      editor.scrollTop = scroll;
+    } catch {}
+  }, [jump]);
+  const keepCursor = () => {
+    const editor = area.current;
+    if (!editor) return;
+    try {
+      sessionStorage.setItem(
+        "smithable:editor",
+        JSON.stringify({ at: editor.selectionStart, scroll: editor.scrollTop }),
+      );
+    } catch {}
+  };
   // Selects the lines a concept is declared on, and scrolls to them (when asked, not as the
   // text changes; the editor's own value is the text).
   useEffect(() => {
@@ -331,6 +371,8 @@ function SpecEditor({
         spellCheck={false}
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onSelect={keepCursor}
+        onScroll={keepCursor}
         className="min-h-0 flex-1 resize-none p-3 font-mono text-[13px] leading-5 outline-none"
       />
       {edited && saved !== base && saved !== text && (

@@ -18,6 +18,22 @@ export type PreviewMessage =
 
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
 
+/**
+ * Where someone was in each mode (docs/design/studio-v2.md §2), kept for the browser tab's
+ * session: a mode switch or a reload comes back to it.
+ */
+export interface Place {
+  builder: { tab?: "app" | "change"; selection?: Selection };
+  studio: { tab?: string; concept?: string };
+}
+
+/** A concept picked in either mode that the other can show too: a field or a model. */
+export function shared(concept: string): Selection | undefined {
+  return /^(field|model):/.test(concept)
+    ? { type: "select", concept, part: null, page: null, columns: null }
+    : undefined;
+}
+
 /** The preview's window and origin, set by the Preview panel: only they are listened to. */
 let previewWindow: Window | null = null;
 let previewOrigin = "";
