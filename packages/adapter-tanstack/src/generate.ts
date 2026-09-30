@@ -5,6 +5,7 @@ import {
   isPicture,
   kebab,
   type SpecIR,
+  type ThemeIR,
   type UxIR,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
@@ -116,8 +117,9 @@ function packageJson(
   auth: AuthIR,
   ux: UxIR,
   packages: Record<string, string> = {},
+  themes: ThemeIR[] = [],
 ): string {
-  const fontPackage = FONT_PACKAGES[themeFont(ux)] as string;
+  const fontPackage = FONT_PACKAGES[themeFont(ux, themes)] as string;
   const { "better-auth": _, ...withoutAuth } = STACK_PROFILE.dependencies;
   const pkg = {
     name: kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app",
@@ -313,8 +315,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // The app as a whole: its package, theme, lock, README, root route, pages and smoke tests.
     key: "app",
     files: ({ ir, t, auth, ux, options }) => [
-      generated("package.json", packageJson(ir, auth, ux, options.packages)),
-      generated("src/theme.css", themeCss(ux)),
+      generated("package.json", packageJson(ir, auth, ux, options.packages, options.themes)),
+      generated("src/theme.css", themeCss(ux, options.themes)),
       // The app's own styles, on the kit's data-* hooks (see the README); created once.
       custom("src/custom/styles.css", CUSTOM_STYLES),
       generated("smithable.lock", smithableLock(ir, options)),

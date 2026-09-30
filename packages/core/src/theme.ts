@@ -1,0 +1,385 @@
+// A theme is data (docs/design/look.md §3): a font, a corner radius, a shadow and the colour
+// tokens the app kit uses, in light and dark mode. The four built-in presets are themes; a
+// project's own live in themes/<name>.yml and are checked like the built-ins: every pair of
+// text and background the kit puts together must read. A theme never ships CSS or code.
+import { isScalar, LineCounter, parseDocument } from "yaml";
+import { contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./colour.js";
+import { checkKeys, mapEntries, ParseContext, readString } from "./context.js";
+import type { Diagnostic } from "./diagnostics.js";
+import { didYouMean } from "./suggest.js";
+import { PRESET_TOKENS } from "./theme-presets.js";
+import { FONTS } from "./ux.js";
+
+export type Mode = "light" | "dark";
+
+/** The colour tokens the app kit's styles use (shadcn/ui's names), each a CSS colour. */
+export const TOKEN_NAMES = [
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "accent",
+  "accent-foreground",
+  "border",
+  "input",
+  "ring",
+  "sidebar",
+  "sidebar-foreground",
+  "destructive",
+  "destructive-foreground",
+  "success",
+  "success-foreground",
+  "warning",
+  "warning-foreground",
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "chart-5",
+] as const;
+export type TokenName = (typeof TOKEN_NAMES)[number];
+export type Tokens = Record<TokenName, string>;
+
+export interface ThemeIR {
+  /** The name the ux file's `theme.preset` uses (kebab-case). */
+  name: string;
+  /** Where it comes from: built into Smithable, or the project's themes/ folder. */
+  source: "built-in" | "project";
+  font: string;
+  radius: string;
+  shadow: string;
+  density: "comfortable" | "compact";
+  /** The most chroma a brand colour keeps on this theme (quiet themes stay quiet). */
+  chroma: number;
+  light: Tokens;
+  dark: Tokens;
+}
+
+export const THEME_VERSION = "0.1";
+export const SHADOWS = {
+  none: "none",
+  soft: "0 1px 3px rgb(0 0 0 / 0.08)",
+  raised: "0 4px 12px rgb(0 0 0 / 0.12)",
+} as const;
+
+/** Each built-in preset's font, corner radius, shadow and chroma cap (design delivery). */
+const FOUNDATIONS: Record<
+  keyof typeof PRESET_TOKENS,
+  { font: string; radius: string; shadow: string; chroma: number }
+> = {
+  modern: { font: "Inter", radius: "12px", shadow: SHADOWS.soft, chroma: 0.22 },
+  minimal: { font: "Inter", radius: "4px", shadow: SHADOWS.none, chroma: 0.08 },
+  playful: { font: "Nunito Sans", radius: "18px", shadow: SHADOWS.soft, chroma: 0.22 },
+  corporate: { font: "Source Sans 3", radius: "4px", shadow: SHADOWS.none, chroma: 0.16 },
+};
+
+/** The four themes Smithable ships, from the design delivery's tokens. */
+export const BUILT_IN_THEMES: readonly ThemeIR[] = (
+  Object.keys(PRESET_TOKENS) as (keyof typeof PRESET_TOKENS)[]
+).map((name) => ({
+  name,
+  source: "built-in",
+  ...FOUNDATIONS[name],
+  density: "comfortable",
+  light: { ...PRESET_TOKENS[name].light },
+  dark: { ...PRESET_TOKENS[name].dark },
+}));
+
+/** A theme by name among the built-ins and the project's; the project's wins a clash. */
+export function themeNamed(name: string, themes: readonly ThemeIR[] = []): ThemeIR | undefined {
+  return themes.find((t) => t.name === name) ?? BUILT_IN_THEMES.find((t) => t.name === name);
+}
+
+/** The names a ux file may use, for checks and suggestions. */
+export function themeNames(themes: readonly ThemeIR[] = []): string[] {
+  return [...new Set([...BUILT_IN_THEMES.map((t) => t.name), ...themes.map((t) => t.name)])];
+}
+
+const COLOUR = /^(?:#[0-9a-f]{6}|oklch\([\d.]+ [\d.]+ [\d.]+\))$/i;
+const DARK_TEXT = "#101522";
+const LIGHT_TEXT = "#ffffff";
+
+/**
+ * Parses a project's theme file. A theme can be as short as three colours per mode
+ * (background, foreground, primary): the rest is derived as a brand colour is, and every pair
+ * the kit puts together is checked for contrast.
+ */
+export function parseTheme(file: { path: string; text: string }): {
+  theme?: ThemeIR;
+  diagnostics: Diagnostic[];
+} {
+  const counter = new LineCounter();
+  const doc = parseDocument(file.text, { lineCounter: counter, keepSourceTokens: true });
+  const ctx = new ParseContext(file.path, counter);
+  for (const error of doc.errors) ctx.error(null, "yaml", error.message);
+  if (doc.errors.length) return { diagnostics: ctx.diagnostics };
+  const root = doc.contents;
+  const entries = mapEntries(ctx, root, "the theme") ?? [];
+  const known = checkKeys(ctx, entries, "the theme", {
+    allowed: [
+      "smithableTheme",
+      "name",
+      "font",
+      "radius",
+      "shadow",
+      "density",
+      "chroma",
+      "light",
+      "dark",
+    ],
+  });
+  const byKey = new Map(known.map((e) => [e.key, e]));
+  const version = byKey.get("smithableTheme");
+  if (!version) ctx.error(root, "missing-key", 'A theme starts with "smithableTheme: 0.1".');
+  const fileName = file.path.replace(/^.*\//, "").replace(/\.ya?ml$/, "");
+  const optional = (key: string) => {
+    const entry = byKey.get(key);
+    return entry ? readString(ctx, entry.value, `"${key}"`) : undefined;
+  };
+  const name = optional("name") ?? fileName;
+  if (!/^[a-z][a-z0-9-]*$/.test(name))
+    ctx.error(
+      byKey.get("name")?.value ?? root,
+      "invalid-value",
+      `A theme's name is kebab-case, like "forest" or "warm-sand".`,
+    );
+  const font = optional("font") ?? "Inter";
+  if (!(FONTS as readonly string[]).includes(font))
+    ctx.error(
+      byKey.get("font")?.value ?? root,
+      "invalid-value",
+      `"font" must be one of ${FONTS.join(", ")}: fonts the app hosts itself.`,
+    );
+  const radius = optional("radius") ?? "12px";
+  if (!/^\d+(?:\.\d+)?(?:px|rem)$/.test(radius))
+    ctx.error(
+      byKey.get("radius")?.value ?? root,
+      "invalid-value",
+      `"radius" is a length like 12px or 0.75rem.`,
+    );
+  const shadowName = optional("shadow") ?? "soft";
+  if (!(shadowName in SHADOWS))
+    ctx.error(
+      byKey.get("shadow")?.value ?? root,
+      "invalid-value",
+      `"shadow" is none, soft or raised.`,
+    );
+  const density = optional("density") ?? "comfortable";
+  if (density !== "comfortable" && density !== "compact")
+    ctx.error(
+      byKey.get("density")?.value ?? root,
+      "invalid-value",
+      `"density" is comfortable or compact.`,
+    );
+  const chromaNode = byKey.get("chroma")?.value;
+  const chroma =
+    chromaNode && isScalar(chromaNode) && typeof chromaNode.value === "number"
+      ? chromaNode.value
+      : 0.22;
+  if (chromaNode && (typeof chroma !== "number" || chroma < 0 || chroma > 0.4))
+    ctx.error(chromaNode, "invalid-value", `"chroma" is a number between 0 and 0.4.`);
+  const modes = {} as Record<Mode, Tokens>;
+  for (const mode of ["light", "dark"] as const) {
+    const given: Partial<Tokens> = {};
+    const node = byKey.get(mode)?.value;
+    if (!node) {
+      ctx.error(
+        root,
+        "missing-key",
+        `A theme needs "${mode}" colours: at least background, foreground and primary.`,
+      );
+      continue;
+    }
+    for (const entry of mapEntries(ctx, node, `"${mode}"`) ?? []) {
+      if (!(TOKEN_NAMES as readonly string[]).includes(entry.key)) {
+        ctx.error(
+          entry.keyNode,
+          "unknown-key",
+          `Unknown colour "${entry.key}" in "${mode}".`,
+          didYouMean(entry.key, TOKEN_NAMES),
+        );
+        continue;
+      }
+      const value = readString(ctx, entry.value, `"${entry.key}" in "${mode}"`);
+      if (value === undefined) continue;
+      if (!COLOUR.test(value)) {
+        ctx.error(
+          entry.value,
+          "invalid-value",
+          `"${entry.key}" in "${mode}" is a colour like "#2f6b3a" or "oklch(0.51 0.23 277)".`,
+        );
+        continue;
+      }
+      given[entry.key as TokenName] = hexOf(value);
+    }
+    for (const needed of ["background", "foreground", "primary"] as const)
+      if (!given[needed]) ctx.error(node, "missing-key", `"${mode}" needs at least "${needed}".`);
+    if (given.background && given.foreground && given.primary) {
+      modes[mode] = deriveTokens(
+        given as Partial<Tokens> & Pick<Tokens, "background" | "foreground" | "primary">,
+        mode,
+      );
+      for (const problem of checkContrast(modes[mode]))
+        ctx.error(node, "theme-contrast", `In "${mode}", ${problem}`);
+    }
+  }
+  if (ctx.diagnostics.some((d) => d.severity === "error")) return { diagnostics: ctx.diagnostics };
+  return {
+    theme: {
+      name,
+      source: "project",
+      font,
+      radius,
+      shadow: SHADOWS[shadowName as keyof typeof SHADOWS],
+      density: density as ThemeIR["density"],
+      chroma,
+      light: modes.light as Tokens,
+      dark: modes.dark as Tokens,
+    },
+    diagnostics: ctx.diagnostics,
+  };
+}
+
+/** A colour moved towards another in OKLCH by a share of the way (0 stays, 1 arrives). */
+function towards(from: string, to: string, share: number): string {
+  const [l1, c1, h1] = rgbToOklch(hexToRgb(from));
+  const [l2, c2, h2] = rgbToOklch(hexToRgb(to));
+  return gamutMap([l1 + (l2 - l1) * share, c1 + (c2 - c1) * share, c1 < 0.02 ? h2 : h1]);
+}
+
+/** The text that reads best on a colour. */
+const bestText = (bg: string) =>
+  contrast(LIGHT_TEXT, bg) >= contrast(DARK_TEXT, bg) ? LIGHT_TEXT : DARK_TEXT;
+
+/** A colour on `bg` moved towards `towardsColour` until it reads at `ratio`. */
+function readable(colour: string, bg: string, towardsColour: string, ratio: number): string {
+  let out = colour;
+  for (let i = 0; i < 40 && contrast(out, bg) < ratio; i++) out = towards(out, towardsColour, 0.1);
+  return out;
+}
+
+/** A hue-rotated colour of the same lightness and chroma. */
+function rotate(colour: string, degrees: number): string {
+  const [l, c, h] = rgbToOklch(hexToRgb(colour));
+  return gamutMap([l, Math.max(c, 0.08), (h + degrees) % 360]);
+}
+
+/**
+ * Every token from the ones given, the way a brand colour derives its colours: the "-foreground"
+ * of a colour is the text that reads on it, muted and secondary step the background towards
+ * the foreground, borders a step further, the accent tints the background with the primary,
+ * and the charts spread around the primary's hue.
+ */
+export function deriveTokens(
+  given: Partial<Tokens> & Pick<Tokens, "background" | "foreground" | "primary">,
+  mode: Mode,
+): Tokens {
+  const dark = mode === "dark";
+  const { background, foreground, primary } = given;
+  const card = given.card ?? (dark ? towards(background, foreground, 0.05) : LIGHT_TEXT);
+  const muted = given.muted ?? towards(background, foreground, 0.06);
+  const accent =
+    given.accent ?? readable(towards(background, primary, 0.14), foreground, background, 4.5);
+  const destructive = given.destructive ?? (dark ? "#f08a80" : "#b42318");
+  const success = given.success ?? (dark ? "#7fd39a" : "#1e6b3a");
+  const warning = given.warning ?? (dark ? "#f2c66d" : "#8a5a00");
+  const t: Tokens = {
+    background,
+    foreground,
+    card,
+    "card-foreground": given["card-foreground"] ?? foreground,
+    primary,
+    "primary-foreground": given["primary-foreground"] ?? bestText(primary),
+    secondary: given.secondary ?? towards(background, foreground, 0.08),
+    "secondary-foreground": given["secondary-foreground"] ?? foreground,
+    muted,
+    "muted-foreground":
+      given["muted-foreground"] ??
+      readable(towards(foreground, background, 0.35), muted, foreground, 4.5),
+    accent,
+    "accent-foreground": given["accent-foreground"] ?? foreground,
+    border: given.border ?? towards(background, foreground, 0.3),
+    input: given.input ?? given.border ?? towards(background, foreground, 0.3),
+    ring: given.ring ?? primary,
+    sidebar: given.sidebar ?? card,
+    "sidebar-foreground": given["sidebar-foreground"] ?? foreground,
+    destructive,
+    "destructive-foreground": given["destructive-foreground"] ?? bestText(destructive),
+    success,
+    "success-foreground": given["success-foreground"] ?? bestText(success),
+    warning,
+    "warning-foreground": given["warning-foreground"] ?? bestText(warning),
+    "chart-1": given["chart-1"] ?? primary,
+    "chart-2": given["chart-2"] ?? rotate(primary, 60),
+    "chart-3": given["chart-3"] ?? rotate(primary, 130),
+    "chart-4": given["chart-4"] ?? rotate(primary, 200),
+    "chart-5": given["chart-5"] ?? rotate(primary, 280),
+  };
+  return t;
+}
+
+/** The pairs the kit puts together and the ratio each needs. */
+const PAIRS: [text: TokenName, on: TokenName, ratio: number][] = [
+  ["foreground", "background", 4.5],
+  ["card-foreground", "card", 4.5],
+  ["primary-foreground", "primary", 4.5],
+  ["secondary-foreground", "secondary", 4.5],
+  ["muted-foreground", "muted", 4.5],
+  ["accent-foreground", "accent", 4.5],
+  ["sidebar-foreground", "sidebar", 4.5],
+  ["destructive-foreground", "destructive", 4.5],
+  ["success-foreground", "success", 4.5],
+  ["warning-foreground", "warning", 4.5],
+  ["ring", "card", 3],
+];
+
+/** What does not read, as sentences naming the pair and its ratio; empty when all is well. */
+export function checkContrast(tokens: Tokens): string[] {
+  return PAIRS.flatMap(([text, on, ratio]) => {
+    const got = contrast(hexOf(tokens[text]), hexOf(tokens[on]));
+    return got < ratio
+      ? [`${text} on ${on} is ${got.toFixed(1)}:1; it needs ${ratio}:1 to read.`]
+      : [];
+  });
+}
+
+/**
+ * A theme's picture, drawn from its tokens: light and dark halves with the background, a
+ * card, a heading, a line of muted text, a primary button and a success badge, in the
+ * theme's font and radius. The same for a built-in and a project theme, so nobody draws one.
+ */
+export function themeThumbnail(theme: ThemeIR): string {
+  const half = (tokens: Tokens, x: number) => {
+    const r = Number.parseFloat(theme.radius) * (theme.radius.endsWith("rem") ? 16 : 1);
+    const radius = Math.min(r, 10);
+    return `<g transform="translate(${x} 0)">
+  <rect width="160" height="100" fill="${hexOf(tokens.background)}"/>
+  <rect x="14" y="14" width="132" height="72" rx="${radius}" fill="${hexOf(tokens.card)}" stroke="${hexOf(tokens.border)}"/>
+  <text x="26" y="36" font-family="${theme.font}, sans-serif" font-size="12" font-weight="700" fill="${hexOf(tokens["card-foreground"])}">${theme.name.replace(/-/g, " ")}</text>
+  <rect x="26" y="44" width="80" height="5" rx="2.5" fill="${hexOf(tokens["muted-foreground"])}" opacity="0.6"/>
+  <rect x="26" y="60" width="52" height="16" rx="${Math.min(radius, 8)}" fill="${hexOf(tokens.primary)}"/>
+  <rect x="34" y="66" width="36" height="4" rx="2" fill="${hexOf(tokens["primary-foreground"])}"/>
+  <rect x="88" y="62" width="40" height="12" rx="6" fill="${hexOf(tokens.success)}"/>
+  <rect x="96" y="66" width="24" height="4" rx="2" fill="${hexOf(tokens["success-foreground"])}"/>
+</g>`;
+  };
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="100" viewBox="0 0 320 100" role="img" aria-label="The ${theme.name} theme in light and dark mode">
+${half(theme.light, 0)}
+${half(theme.dark, 160)}
+</svg>
+`;
+}
+
+/** The theme's colours in one mode as written, with a brand colour's changes on top when given. */
+export function tokensOf(theme: ThemeIR, mode: Mode, over: Partial<Tokens> = {}): Tokens {
+  const out = {} as Tokens;
+  for (const name of Object.keys(theme[mode]) as TokenName[])
+    out[name] = over[name] ?? theme[mode][name];
+  return out;
+}

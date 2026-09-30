@@ -4,6 +4,7 @@ import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { PageIR, SpecIR } from "./ir.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
+import { type ThemeIR, themeNames } from "./theme.js";
 
 /**
  * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
@@ -11,7 +12,8 @@ import { didYouMean } from "./suggest.js";
  */
 export interface UxIR {
   theme: {
-    preset: ThemePreset;
+    /** A built-in preset's name, or one of the project's themes (themes/<name>.yml). */
+    preset: string;
     /** A colour like "#2563eb"; the preset derives its colours from it. */
     primary?: string;
     font?: string;
@@ -107,6 +109,8 @@ export function emptyUx(): UxIR {
 export function validateUx(
   file: { path: string; text: string },
   ir: SpecIR,
+  /** The project's own themes (themes/<name>.yml), which `theme.preset` may name too. */
+  themes: readonly ThemeIR[] = [],
 ): { ux?: UxIR; diagnostics: Diagnostic[] } {
   const lines = new LineCounter();
   const doc = parseDocument(file.text, {
@@ -158,14 +162,15 @@ export function validateUx(
       })) {
         if (entry.key === "preset") {
           const preset = readString(ctx, entry.value, `"preset"`);
-          if (preset !== undefined && !(THEME_PRESETS as readonly string[]).includes(preset)) {
+          const names = themeNames(themes);
+          if (preset !== undefined && !names.includes(preset)) {
             ctx.error(
               entry.value,
               "unknown-preset",
-              `There is no theme preset "${preset}".`,
-              didYouMean(preset, THEME_PRESETS) ?? `Available: ${THEME_PRESETS.join(", ")}.`,
+              `There is no theme "${preset}".`,
+              didYouMean(preset, names) ?? `Available: ${names.join(", ")}.`,
             );
-          } else if (preset !== undefined) ux.theme.preset = preset as ThemePreset;
+          } else if (preset !== undefined) ux.theme.preset = preset;
         } else if (entry.key === "density") {
           const density = readString(ctx, entry.value, `"density"`);
           if (density === "comfortable" || density === "compact") ux.theme.density = density;
