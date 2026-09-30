@@ -29,6 +29,7 @@ export function App() {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
     const next = await api.project().catch(() => undefined);
     if (!next) return;
+    if (next.notice) setMessage({ ok: false, text: next.notice });
     setProject(next);
     setVersion((v) => v + 1);
   }, []);
