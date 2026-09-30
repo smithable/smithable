@@ -57,7 +57,9 @@ export function Reserve({
       setFailure(
         message === "full"
           ? "Sorry, the last place was just taken."
-          : "Something went wrong. Please try again.",
+          : message.startsWith("Too many ")
+            ? message
+            : "Something went wrong. Please try again.",
       );
     } finally {
       setAsking(false);
