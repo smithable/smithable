@@ -16,6 +16,7 @@ import { ruleOperations } from "./sections/rule-operations.js";
 import { specOperations } from "./sections/spec-operations.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
+import type { ThemeIR } from "./theme.js";
 
 /**
  * Every operation: those about the spec as a whole (rules and access belong to any concept),
@@ -41,6 +42,8 @@ export interface ProjectFiles {
   context?: string;
   /** The project's plugins, for the sections of smithable.yml they handle. */
   plugins?: SpecPlugin[];
+  /** The project's own themes (themes/<name>.yml), which the ux file's preset may name. */
+  themes?: ThemeIR[];
 }
 
 export type OperationResult =
@@ -153,7 +156,7 @@ export function applyOperation(
   for (const c of COMPANIONS) {
     const editor = editors[c.key];
     if (!editor || (files[c.key] === undefined && editor.text === c.empty)) continue;
-    const problems = c.check(editor.text, after.ir);
+    const problems = c.check(editor.text, after.ir, files);
     if (hasErrors(problems)) return fail(`${name} would make ${c.file} invalid.`, problems);
     written[c.key] = editor.text;
   }
