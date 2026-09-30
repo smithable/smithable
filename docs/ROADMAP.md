@@ -191,7 +191,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - The M7 benchmark is re-run with both models and added to the report.
 - First builds from the same 10 app descriptions are compared across a mid-size Smithable model and a frontier model, for quality (designer and user review) and cost. The default model for first builds is chosen from the result.
 
-**Status (2026-09-27):** in progress. Built and tested with a stand-in model: providers, policy, proposals constrained to the operation schemas with dry-run, repair and escalation, questions for unclear requests, confirmation in `smithable ask` and Studio's Describe tab, tokens and cost in the change trace, and `smithable new --describe` (a model adapts the closest starter; you confirm the summary) ([ai.md](ai.md)). First measurements with an EU-hosted model (Mistral Small): the seven M7 tasks through `smithable ask` in 6–7 of 7 per run for about €0.002, and first builds from ten descriptions valid in 2 / 10 (Medium: 4 / 10) ([report](benchmarks/m12-report.md)). Local model: `qwen2.5:7b` through Ollama did 6 / 7 tasks offline (`local-only`); Mistral Small now 7 / 7 in two runs; first builds with Mistral Medium 7 / 10. Frontier model through Claude Code: first builds 10 / 10 with Sonnet ($0.94 for ten), which makes it the default when the policy allows it, and Mistral Medium otherwise. Still to do: people reviewing the first builds' quality, and first builds as a batch of operations.
+**Status (2026-09-27):** in progress. Built and tested with a stand-in model: providers, policy, proposals constrained to the operation schemas with dry-run, repair and escalation, questions for unclear requests, confirmation in `smithable ask` and Studio's Describe tab, tokens and cost in the change trace, and `smithable new --describe` (a model adapts the closest starter; you confirm the summary) ([ai.md](ai.md)). First measurements with an EU-hosted model (Mistral Small): the seven M7 tasks through `smithable ask` in 6–7 of 7 per run for about €0.002, and first builds from ten descriptions valid in 2 / 10 (Medium: 4 / 10) ([report](benchmarks/m12-report.md)). Local model: `qwen2.5:7b` through Ollama did 6 / 7 tasks offline (`local-only`); Mistral Small now 7 / 7 in two runs; first builds with Mistral Medium 7 / 10. Frontier model through Claude Code: first builds 10 / 10 with Sonnet ($0.94 for ten), which makes it the default when the policy allows it, and Mistral Medium otherwise. Since then (M15.5): first builds as a batch of operations, with questions first. Still to do: people reviewing the first builds' quality.
 
 ## M13 — Escalation and AI-written custom code
 
@@ -263,6 +263,15 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Articles: Markdown and picture fields, a public read with `where`, and the articles page pattern. The booking starter has a studio blog.
 - Hook points, the mail kit, and invitations with a users page (`users: manage`, `selfSignUp: false`; [design/users.md](design/users.md)) are built (2026-09-29).
 
+**Progress (2026-10-01):**
+- First builds v2 ([design/first-build.md](design/first-build.md)): one cheap call picks the starter and asks up to three questions; the draft is a batch of operations from an empty app, each checked against its schema; the CLI and the hosted form ask the questions.
+- Pictures on records (a `picture` field, uploads named by content, `PictureInput`), rate limits on writes and invitations, and questions about the app answered from the index without a model.
+- Themes as files ([design/look.md](design/look.md) §3): `themes/<name>.yml` parsed, derived and contrast-checked in core, a thumbnail per theme, the Look tab's theme cards, `smithable themes`, and `addTheme` through the operation layer.
+- Presentation choices, never positions (look.md §1): how a field is entered, form sections and columns, a list's view and order, each landing section's look and a landing page's own theme, with the Look tab's controls for all of them.
+- Calculators ([design/calculator.md](design/calculator.md)): a calculator page or landing section with fields, formulas and `PMT`; custom pages and sections (§4) as generated routes around a component in `src/custom/`.
+- Third-party notices in every generated app (`LICENSES/`), the legal drafts for the hosted beta (`smithable-cloud/docs/legal/`), the code of conduct and issue and pull-request templates.
+- Designed, not yet built: point-in-time recovery with a preview ([design/pitr.md](design/pitr.md)).
+
 **Exit:** a new page pattern or landing section kind touches one module in core and one in the adapter; a project plugin can add operations and a summary; `smithable ask` answers everyday changes without a model and says so; nothing from the review is open except the Spot host.
 
 ## M16 — Public launch
@@ -270,6 +279,8 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Open-source preparation: license decision with legal review, trademark registration, documentation, published spec and JSON Schema, contributor guide (DCO), security policy, public CI, release process.
 - Pricing and plans with included allowances.
 - The open-source repository goes public together with the hosted beta.
+
+**Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO, with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps.  
 
 ---
 
