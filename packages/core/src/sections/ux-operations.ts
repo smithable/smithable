@@ -13,44 +13,61 @@ function put(ux: YamlEditor, path: string[], value: string | number | string[] |
   }
 }
 
-const setTheme: Operation<{ preset?: string; primary?: string; font?: string; density?: string }> =
-  {
-    name: "setTheme",
-    summary:
-      'Choose the theme preset, brand colour, font or density ("none" removes the brand colour or font).',
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        preset: {
-          type: "string",
-          description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
-        },
-        primary: { type: "string", description: 'A colour like "#2563eb", or "none".' },
-        font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
-        density: { type: "string", enum: ["comfortable", "compact"] },
+const setTheme: Operation<{
+  preset?: string;
+  primary?: string;
+  font?: string;
+  density?: string;
+  page?: string;
+}> = {
+  name: "setTheme",
+  summary:
+    'Choose the theme preset, brand colour, font or density ("none" removes the brand colour or font).',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      preset: {
+        type: "string",
+        description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
       },
+      primary: { type: "string", description: 'A colour like "#2563eb", or "none".' },
+      font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
+      density: { type: "string", enum: ["comfortable", "compact"] },
+      page: refTo(
+        { ref: "page", label: "Landing page" },
+        { description: "A landing page given its own theme; without it, the app's theme." },
+      ),
     },
-    positional: [],
-    describe: (args) =>
-      `Set the theme: ${Object.entries(args)
-        .map(([k, v]) => `${k} ${v}`)
-        .join(", ")}`,
-    destructive: () => false,
-    apply(editors, args) {
-      const ux = editors.ux;
-      if (Object.keys(args).length === 0)
-        throw new OperationError("Say what to set: preset, primary, font or density.");
-      if (args.preset !== undefined) put(ux, ["theme", "preset"], args.preset);
-      if (args.density !== undefined) put(ux, ["theme", "density"], args.density);
-      for (const key of ["primary", "font"] as const) {
-        const value = args[key];
-        if (value !== undefined)
-          put(ux, ["theme", "brand", key], value === "none" ? undefined : value);
-      }
-      return [];
-    },
-  };
+  },
+  positional: [],
+  describe: ({ page, ...args }) =>
+    `Set ${page ? `the ${page} page's` : "the"} theme: ${Object.entries(args)
+      .map(([k, v]) => `${k} ${v}`)
+      .join(", ")}`,
+  destructive: () => false,
+  apply(editors, { page, ...args }, ir) {
+    const ux = editors.ux;
+    if (Object.keys(args).length === 0)
+      throw new OperationError("Say what to set: preset, primary, font or density.");
+    // A landing page's own theme lives under the page, with the same keys as the app's.
+    if (page !== undefined && ir.pages.find((p) => p.id === page)?.pattern.kind !== "landing")
+      throw new OperationError(
+        `Only a landing page has a theme of its own; there is no landing page "${page}".`,
+      );
+    const at = page === undefined ? ["theme"] : ["pages", page, "theme"];
+    // On a page, "none" returns a key to the app's theme; for the app it removes a brand key.
+    if (args.preset !== undefined)
+      put(ux, [...at, "preset"], page && args.preset === "none" ? undefined : args.preset);
+    if (args.density !== undefined)
+      put(ux, [...at, "density"], page && args.density === "none" ? undefined : args.density);
+    for (const key of ["primary", "font"] as const) {
+      const value = args[key];
+      if (value !== undefined) put(ux, [...at, "brand", key], value === "none" ? undefined : value);
+    }
+    return [];
+  },
+};
 
 const setColumns: Operation<{ page: string; columns?: string[] }> = {
   name: "setColumns",

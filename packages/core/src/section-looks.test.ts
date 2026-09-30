@@ -92,3 +92,33 @@ test("setSectionLook writes a look, default removes it, a wrong value is refused
   const removed = applyOperation(faq.files, "removeSection", { page: "home", section: "faq" });
   expect(removed.ok && removed.files.ux).not.toContain("faq");
 });
+
+test("a landing page may have a theme of its own, set with setTheme --page; other pages may not", () => {
+  const read = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\ntheme: { preset: corporate }\npages:\n  home: { theme: { preset: playful, brand: { font: Nunito Sans } } }\n",
+    },
+    ir,
+  );
+  expect(read.diagnostics).toEqual([]);
+  expect(read.ux?.pages.home?.theme).toEqual({ preset: "playful", font: "Nunito Sans" });
+  expect(read.ux?.theme.preset).toBe("corporate");
+  const crud = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  items: { theme: { preset: playful } }\n",
+    },
+    ir,
+  ).diagnostics[0]?.message;
+  expect(crud).toBe("A theme of its own is for a landing page; items is not one.");
+  const set = applyOperation({ spec }, "setTheme", { page: "home", preset: "playful" });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.description).toBe("Set the home page's theme: preset playful");
+  expect(set.files.ux).toContain("home:\n    theme:\n      preset: playful");
+  const back = applyOperation(set.files, "setTheme", { page: "home", preset: "none" });
+  expect(back.ok && back.files.ux).not.toContain("playful");
+  expect(applyOperation({ spec }, "setTheme", { page: "items", preset: "playful" })).toMatchObject({
+    ok: false,
+  });
+});

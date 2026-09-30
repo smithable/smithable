@@ -35,6 +35,8 @@ export interface PageUx {
   fieldOrder?: string[];
   /** A calculator's results beside its inputs on a wide screen (the default), or below them. */
   results?: "beside" | "below";
+  /** A landing page's own theme: the keys it changes from the app's (docs/design/look.md §1.5). */
+  theme?: Partial<UxIR["theme"]>;
   /** A landing page's sections' looks, by section name (docs/design/look.md §1.4). */
   sections?: Record<string, SectionLook>;
 }
@@ -181,61 +183,7 @@ export function validateUx(
   });
 
   for (const { key, value } of known) {
-    if (key === "theme") {
-      const where = `"theme"`;
-      for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
-        allowed: ["preset", "brand", "density"],
-        later: ["radius", "darkMode"],
-      })) {
-        if (entry.key === "preset") {
-          const preset = readString(ctx, entry.value, `"preset"`);
-          const names = themeNames(themes);
-          if (preset !== undefined && !names.includes(preset)) {
-            ctx.error(
-              entry.value,
-              "unknown-preset",
-              `There is no theme "${preset}".`,
-              didYouMean(preset, names) ?? `Available: ${names.join(", ")}.`,
-            );
-          } else if (preset !== undefined) ux.theme.preset = preset;
-        } else if (entry.key === "density") {
-          const density = readString(ctx, entry.value, `"density"`);
-          if (density === "comfortable" || density === "compact") ux.theme.density = density;
-          else if (density !== undefined)
-            ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
-        } else {
-          for (const brand of checkKeys(
-            ctx,
-            mapEntries(ctx, entry.value, `"brand"`) ?? [],
-            `"brand"`,
-            {
-              allowed: ["primary", "font"],
-            },
-          )) {
-            const text = readString(ctx, brand.value, `"${brand.key}"`);
-            if (text === undefined) continue;
-            if (brand.key === "primary") {
-              if (/^#[0-9a-fA-F]{6}$/.test(text)) ux.theme.primary = text.toLowerCase();
-              else
-                ctx.error(
-                  brand.value,
-                  "invalid-color",
-                  `"primary" must be a colour like "#2563eb".`,
-                );
-            } else if ((FONTS as readonly string[]).includes(text)) {
-              ux.theme.font = text;
-            } else {
-              ctx.error(
-                brand.value,
-                "unknown-font",
-                `"${text}" is not one of the available fonts.`,
-                didYouMean(text, FONTS) ?? `Available: ${FONTS.join(", ")}.`,
-              );
-            }
-          }
-        }
-      }
-    }
+    if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "tones") {
       for (const entry of mapEntries(ctx, value, `"tones"`) ?? []) {
         const [modelName = "", fieldName = ""] = entry.key.split(".");
@@ -325,11 +273,26 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form", "sections"],
+          allowed: ["icon", "table", "form", "sections", "theme"],
           later: ["detail", "calendar"],
         })) {
           if (part.key === "sections") {
             result.sections = readSectionLooks(ctx, part.value, spec, where);
+            continue;
+          }
+          if (part.key === "theme") {
+            // Only a landing page, which has its own frame: a crud page in another theme would
+            // look like another app.
+            if (spec.pattern.kind !== "landing")
+              ctx.error(
+                part.keyNode,
+                "invalid-key",
+                `A theme of its own is for a landing page; ${page.key} is not one.`,
+              );
+            else {
+              result.theme = {};
+              readTheme(ctx, part.value, `the theme of ${where}`, themes, result.theme);
+            }
             continue;
           }
           if (part.key === "icon") {
@@ -460,4 +423,57 @@ function readSectionLooks(
     looks[entry.key] = look;
   }
   return looks;
+}
+
+/** A theme's keys (preset, brand, density) into `target`: the app's, or a landing page's own. */
+function readTheme(
+  ctx: ParseContext,
+  value: ParsedNode | null,
+  where: string,
+  themes: readonly ThemeIR[] | undefined,
+  target: Partial<UxIR["theme"]>,
+): void {
+  for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
+    allowed: ["preset", "brand", "density"],
+    later: ["radius", "darkMode"],
+  })) {
+    if (entry.key === "preset") {
+      const preset = readString(ctx, entry.value, `"preset"`);
+      const names = themeNames(themes);
+      if (preset !== undefined && !names.includes(preset)) {
+        ctx.error(
+          entry.value,
+          "unknown-preset",
+          `There is no theme "${preset}".`,
+          didYouMean(preset, names) ?? `Available: ${names.join(", ")}.`,
+        );
+      } else if (preset !== undefined) target.preset = preset;
+    } else if (entry.key === "density") {
+      const density = readString(ctx, entry.value, `"density"`);
+      if (density === "comfortable" || density === "compact") target.density = density;
+      else if (density !== undefined)
+        ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
+    } else {
+      for (const brand of checkKeys(ctx, mapEntries(ctx, entry.value, `"brand"`) ?? [], `"brand"`, {
+        allowed: ["primary", "font"],
+      })) {
+        const text = readString(ctx, brand.value, `"${brand.key}"`);
+        if (text === undefined) continue;
+        if (brand.key === "primary") {
+          if (/^#[0-9a-fA-F]{6}$/.test(text)) target.primary = text.toLowerCase();
+          else
+            ctx.error(brand.value, "invalid-color", `"primary" must be a colour like "#2563eb".`);
+        } else if ((FONTS as readonly string[]).includes(text)) {
+          target.font = text;
+        } else {
+          ctx.error(
+            brand.value,
+            "unknown-font",
+            `"${text}" is not one of the available fonts.`,
+            didYouMean(text, FONTS) ?? `Available: ${FONTS.join(", ")}.`,
+          );
+        }
+      }
+    }
+  }
 }
