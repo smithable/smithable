@@ -22,7 +22,7 @@ models:
   Instructor:
     fields:
       name: string!
-      bio: text
+      bio: markdown                     # formatted text: headings, lists, links
     access: { create: [admin] }
 
   Session:

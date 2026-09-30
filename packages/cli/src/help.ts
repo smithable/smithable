@@ -23,7 +23,16 @@ export const COMMANDS: Command[] = [
       'picks the starter to adapt, drafts the app, and you confirm the result. --answers "a; b"',
       "answers the questions in order; --yes asks nothing and creates the app directly",
     ],
-    options: ["starter", "describe", "yes"],
+    options: ["starter", "describe", "answers", "yes"],
+  },
+  {
+    name: "clarify",
+    usage: 'clarify "<description>"',
+    text: [
+      "The questions a model would ask about a description before drafting an app, and the",
+      "starter it picks (--json for programs; no model, or a failed answer, means no questions)",
+    ],
+    options: ["json"],
   },
   {
     name: "run",

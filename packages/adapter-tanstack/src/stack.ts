@@ -25,6 +25,8 @@ export const STACK_PROFILE = {
     tailwindcss: "4.3.3",
     zod: "4.6.5",
   },
+  /** Only for apps with a Markdown field (MIT). */
+  markdown: { "react-markdown": "10.1.0" },
   /** Self-hosted fonts (OFL); an app gets the one its theme uses. */
   fonts: {
     "@fontsource-variable/inter": "5.3.0",
