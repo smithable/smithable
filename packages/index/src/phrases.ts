@@ -464,6 +464,22 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "add a calendar for sessions", "show sessions in a calendar"
+    name: "calendar page",
+    match(text, scope) {
+      const phrase =
+        /^add (?:a |an )?calendar (?:for|of|with) (?<model>.+)$/.exec(text)?.groups?.model ??
+        /^show (?<model>.+) (?:in|on) (?:a |the )?calendar$/.exec(text)?.groups?.model;
+      if (!phrase) return undefined;
+      const model = modelFor(scope.ir, phrase);
+      if (!model) return null;
+      const page = scope.ir.pages.some((p) => p.id === "calendar")
+        ? `${kebab(plural(model.name))}-calendar`
+        : "calendar";
+      return [{ op: "addCalendarPage", args: { page, model: model.name } }];
+    },
+  },
+  {
     // "add an admin page", "add a page to manage all data", "add a data page for orders and customers"
     name: "data page",
     match(text, scope) {

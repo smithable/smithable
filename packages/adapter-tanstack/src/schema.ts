@@ -1,6 +1,8 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+
 import { type AuthIR, type FieldIR, type ModelIR, type SpecIR, USER_MODEL } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
+import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
   dataKey,
@@ -156,10 +158,16 @@ export function seedModule(ir: SpecIR): string {
   const tables = ordered.map((m) => tableNames(m).table);
   const blocks = ordered.map((model) => {
     const n = tableNames(model);
-    const rows = sampleRows(model).map((row) => {
-      const entries = storedFields(model).map(
-        (field) => `${dataKey(field)}: ${sampleLiteral(field, row[field.name])}`,
-      );
+    // A calendar's records are placed around the day the samples are loaded, never an empty week.
+    const start = calendarStart(model, ir);
+    const rows = sampleRows(model).map((row, i) => {
+      const entries = storedFields(model).map((field) => {
+        const value = sampleLiteral(field, row[field.name]);
+        if (field !== start || value === "null") return `${dataKey(field)}: ${value}`;
+        return field.type.kind === "scalar" && field.type.name === "date"
+          ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).slice(0, 10)`
+          : `${dataKey(field)}: instantOf(aroundToday(${value}, ${i % 2}), app.timeZone)`;
+      });
       return `    { ${entries.join(", ")} },`;
     });
     return `if (db.select().from(${n.table}).limit(1).all().length === 0) {
@@ -172,7 +180,25 @@ ${rows.join("\n")}
   });
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 import { db } from "./index";
-${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}
+${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${
+  ir.pages.some((p) => p.pattern.kind === "calendar")
+    ? `import { app } from "#/generated/app";
+import { instantOf, wallTime } from "#/kit/zoned";
+
+/**
+ * A sample moved to this week (0) or the next (1) in the app's time zone, as a wall time
+ * ("2026-09-30T09:00"): the same weekday, and the clock time the sample is written with.
+ */
+function aroundToday(sample: Date, week: number): string {
+  const today = Date.parse(\`\${wallTime(new Date(), app.timeZone).slice(0, 10)}T00:00:00Z\`);
+  const monday = today - ((new Date(today).getUTCDay() + 6) % 7) * 86_400_000;
+  const day = (sample.getUTCDay() + 6) % 7;
+  const moved = new Date(monday + (week * 7 + day) * 86_400_000).toISOString().slice(0, 10);
+  return \`\${moved}T\${sample.toISOString().slice(11, 16)}\`;
+}
+`
+    : ""
+}
 ${blocks.join("\n\n")}
 `;
 }
