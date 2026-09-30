@@ -6,6 +6,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  appendFileSync,
   chmodSync,
   existsSync,
   mkdtempSync,
@@ -1236,6 +1237,15 @@ async function browserFlow(base) {
   try {
     await signInAs(page, base, "admin");
     console.log("  ✓ browser: the development sign-in signs in as a role");
+    await open(page, `${base}/customers`);
+    const spacing = await page
+      .locator('[data-kit="model-table"] [data-part="header"] th')
+      .first()
+      .evaluate((th) => getComputedStyle(th).letterSpacing);
+    if (spacing !== "3px") throw new Error(`src/custom/styles.css did not apply (${spacing})`);
+    console.log(
+      "  ✓ browser: a rule in src/custom/styles.css on the kit's hooks applies over the kit's styles",
+    );
     await page.setViewportSize({ width: 390, height: 844 });
     await open(page, `${base}/customers`);
     const menu = page.getByRole("button", { name: "Open menu" });
@@ -1390,6 +1400,7 @@ for (const [index, example] of examples.entries()) {
   dirs.push(dir);
   // Parallel runs (scripts/test-apps-parallel.mjs) give each process its own ports.
   const port = Number(process.env.TEST_APPS_PORT ?? 4400) + index;
+  const reported = failures.length;
   try {
     step("smithable new", () => run("node", [cli, "new", dir, "--starter", example], repo));
     if (example === "crm") {
@@ -1555,6 +1566,12 @@ for (const [index, example] of examples.entries()) {
       stop();
     }
 
+    // The owner's stylesheet, on the kit's hooks (docs/design/look.md §2): checked in the CRM.
+    if (example === "crm")
+      appendFileSync(
+        join(dir, "src/custom/styles.css"),
+        '\n[data-page="customers"] [data-kit="model-table"] [data-part="header"] th { letter-spacing: 3px; }\n',
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -1587,8 +1604,14 @@ for (const [index, example] of examples.entries()) {
       upgradeFlow(dir);
       await detachFlow(dir, port);
     }
-  } catch {
-    // Already reported; continue with the next example.
+  } catch (error) {
+    // A step's failure is reported already; anything else (a mistake in this script) is not,
+    // and must not pass as a green run.
+    if (failures.length === reported) {
+      console.log(`  ✗ ${error instanceof Error ? error.stack : error}`);
+      failures.push(`${example}: unexpected error`);
+    }
+    // Continue with the next example.
   }
 }
 
