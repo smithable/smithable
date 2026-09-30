@@ -85,6 +85,7 @@ export function Look({
             );
           })}
         </ul>
+        <AddTheme run={run} />
       </Group>
       <Group title="Colour">
         <BrandColour primary={theme.primary} run={run} />
@@ -598,5 +599,78 @@ function LandingLook({
         }),
       )}
     </div>
+  );
+}
+
+/**
+ * "Add a theme" (look.md §3): a theme file dropped, chosen or pasted, added with addTheme and
+ * used at once; a refusal (the file's problems, a taken name) comes back as the change's message.
+ */
+function AddTheme({ run }: { run: Run }) {
+  const [name, setName] = useState("");
+  const [text, setText] = useState("");
+  const read = async (file: File | undefined) => {
+    if (!file) return;
+    setText(await file.text());
+    setName(file.name.replace(/\.ya?ml$/i, ""));
+  };
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-xs font-medium text-neutral-600">Add a theme</summary>
+      <form
+        className="mt-2 space-y-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const named = name.trim() || /^name:\s*(\S+)/m.exec(text)?.[1] || "";
+          if (await run("addTheme", { name: named, text, use: true })) {
+            setName("");
+            setText("");
+          }
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          void read(e.dataTransfer.files[0]);
+        }}
+      >
+        <input
+          type="file"
+          accept=".yml,.yaml"
+          aria-label="Theme file"
+          onChange={(e) => void read(e.target.files?.[0])}
+          className="block w-full text-xs"
+        />
+        <textarea
+          aria-label="Theme"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={6}
+          placeholder={
+            'smithableTheme: 0.1\nname: forest\nfont: Inter\nlight: { primary: "#2f6f4e", … }'
+          }
+          className="w-full rounded border border-neutral-200 p-2 font-mono text-xs"
+        />
+        <div className="flex items-center gap-2">
+          <input
+            aria-label="Theme name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="forest"
+            className="h-8 flex-1 rounded border border-neutral-200 px-2 text-xs"
+          />
+          <button
+            type="submit"
+            disabled={!text.trim()}
+            className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white disabled:opacity-50"
+          >
+            Add and use
+          </button>
+        </div>
+        <p className="text-xs text-neutral-500">
+          A theme is a file of colours and a font (see the spec, Themes); it is checked before it is
+          added, and saved as themes/&lt;name&gt;.yml.
+        </p>
+      </form>
+    </details>
   );
 }
