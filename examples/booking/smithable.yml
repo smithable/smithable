@@ -23,6 +23,7 @@ models:
     fields:
       name: string!
       bio: markdown                     # formatted text: headings, lists, links
+      portrait: picture                 # a stored picture with its description
     access: { create: [admin] }
 
   Session:
