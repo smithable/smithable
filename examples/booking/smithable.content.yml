@@ -10,6 +10,16 @@ models:
 
 pages:
   home:
+    estimate:
+      title: Would a monthly pass pay off?
+      text: Try your own numbers. Nothing is saved.
+      fields:
+        classesPerMonth: { label: Classes a month }
+        dropIn: { label: One class }
+        pass: { label: Monthly pass }
+        withoutPass: { label: Paying per class }
+        saved: { label: The pass saves you }
+      results: A month
     hero:
       title: Find your calm
       subtitle: Small yoga classes for every level, in the heart of Mariehamn.
