@@ -151,6 +151,30 @@ const crud: PagePattern<"crud"> = {
   },
 };
 
+/** A calculator's schema: a page's, and a landing section's (`estimate: { calculator: … }`). */
+const CALCULATOR_SCHEMA: JsonSchema = {
+  type: "object",
+  required: ["fields"],
+  additionalProperties: false,
+  properties: {
+    fields: {
+      type: "object",
+      description: "Fields as a model's: entered ones are the inputs, formula fields the results.",
+      additionalProperties: true,
+    },
+    examples: {
+      type: "array",
+      description: "Inputs and the results they must give; each becomes a test.",
+      items: {
+        type: "object",
+        required: ["input", "expected"],
+        properties: { input: { type: "object" }, expected: { type: "object" } },
+      },
+    },
+  },
+  description: "Inputs and results computed as you type, stored nowhere.",
+};
+
 const landing: PagePattern<"landing"> = {
   kind: "landing",
   schema: {
@@ -167,6 +191,7 @@ const landing: PagePattern<"landing"> = {
           type: "string",
           description: "A contact section's form: the model visitors add a record of.",
         },
+        calculator: CALCULATOR_SCHEMA,
       },
     },
   },
@@ -576,29 +601,7 @@ function readCalculator(
 
 const calculator: PagePattern<"calculator"> = {
   kind: "calculator",
-  schema: {
-    type: "object",
-    required: ["fields"],
-    additionalProperties: false,
-    properties: {
-      fields: {
-        type: "object",
-        description:
-          "Fields as a model's: entered ones are the inputs, formula fields the results.",
-        additionalProperties: true,
-      },
-      examples: {
-        type: "array",
-        description: "Inputs and the results they must give; each becomes a test.",
-        items: {
-          type: "object",
-          required: ["input", "expected"],
-          properties: { input: { type: "object" }, expected: { type: "object" } },
-        },
-      },
-    },
-    description: "Inputs and results computed as you type, stored nowhere.",
-  },
+  schema: CALCULATOR_SCHEMA,
   example: "calculator: { fields: { … } }",
   parse(ctx, value, where) {
     const name = /page "([^"]+)"/.exec(where)?.[1] ?? "calculator";
