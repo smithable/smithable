@@ -103,6 +103,29 @@ const ux: Companion = {
         if (next.length) editor.set(path, next);
         else editor.removeAndPrune(path, 0);
       }
+      // The list's order, a field's control, and the form's sections follow the field too.
+      const sort = ["pages", page.id, "table", "sort"];
+      const sorted = editor.has(sort) ? (editor.get(sort) as string) : undefined;
+      if (sorted !== undefined && sorted.replace(/^-/, "") === from) {
+        if (to) editor.set(sort, sorted.startsWith("-") ? `-${to}` : to);
+        else editor.removeAndPrune(sort, 0);
+      }
+      const control = ["pages", page.id, "form", "control", from];
+      if (editor.has(control)) {
+        if (to) editor.renameKey(control, to);
+        else editor.removeAndPrune(control, 0);
+      }
+      const sections = ["pages", page.id, "form", "sections"];
+      const groups = editor.has(sections)
+        ? (editor.get(sections) as { name: string; fields: string[] }[])
+        : undefined;
+      groups?.forEach((g, i) => {
+        if (!g.fields.includes(from)) return;
+        const fields = to
+          ? g.fields.map((f) => (f === from ? to : f))
+          : g.fields.filter((f) => f !== from);
+        editor.setItem(sections, i, { name: g.name, fields });
+      });
     }
     return undefined;
   },

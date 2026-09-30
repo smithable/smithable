@@ -37,6 +37,10 @@ interface ModelFormProps<S extends z.ZodType> {
   readOnly?: boolean;
   /** These fields first, in this order; the others follow. */
   fieldOrder?: string[];
+  /** The form's groups, columns and controls, when the page chose them (the ux file). */
+  sections?: { name: string; title: string; fields: string[] }[];
+  formColumns?: 1 | 2;
+  control?: Record<string, FieldUi["control"]>;
 }
 
 export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
@@ -52,7 +56,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     onDelete,
     readOnly,
   } = props;
-  const ui = ordered(props.ui, props.fieldOrder);
+  const ui = presented(props.ui, props);
   const [inputs, setInputs] = useState(() =>
     initialInputs(ui, initial ?? props.preset, app.timeZone, !initial),
   );
@@ -95,6 +99,80 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     }
   }
 
+  // A long text, a picture or a list takes the full width when the form has two columns.
+  const wide = (field: FieldUi) =>
+    ui.formColumns === 2 &&
+    (field.kind === "text" ||
+      field.kind === "markdown" ||
+      field.kind === "picture" ||
+      field.control === "textarea");
+  const renderField = (field: FieldUi) => {
+    const id = `field-${field.name}`;
+    const error = errors[field.name];
+    const inline = field.kind === "bool";
+    const described =
+      [field.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+    return (
+      <div
+        key={field.name}
+        data-kit="field"
+        data-field={field.name}
+        className={`${inline ? "flex items-center gap-3" : "space-y-2"}${wide(field) ? " sm:col-span-2" : ""}`}
+        {...editorMarker(ui, field, "field")}
+      >
+        {!inline && (
+          <Label htmlFor={id} data-part="label">
+            <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
+              {field.label}
+            </span>
+            {field.required && <span className="text-destructive"> *</span>}
+          </Label>
+        )}
+        {field.computed ? (
+          <p
+            id={id}
+            className="flex min-h-control items-center gap-2 rounded-md bg-muted px-3 text-sm font-semibold tabular-nums"
+          >
+            <Calculator aria-hidden className="size-5 text-muted-foreground" />
+            {formatValue(field, computed[field.name], app)}
+            <span className="sr-only">(calculated)</span>
+          </p>
+        ) : (
+          <FieldInput
+            field={field}
+            id={id}
+            value={inputs[field.name] ?? ""}
+            invalid={error !== undefined}
+            describedBy={described}
+            options={options}
+            record={typeof initial?.id === "number" ? initial.id : undefined}
+            onChange={(value) => setInputs((current) => ({ ...current, [field.name]: value }))}
+          />
+        )}
+        {inline && (
+          <Label htmlFor={id} data-part="label">
+            {field.label}
+          </Label>
+        )}
+        {field.help && (
+          <p id={`${id}-help`} data-part="help" className="text-sm text-muted-foreground">
+            {field.help}
+          </p>
+        )}
+        {error && (
+          <p
+            id={`${id}-error`}
+            data-part="error"
+            className="flex items-center gap-1.5 text-sm text-destructive"
+          >
+            <CircleAlert aria-hidden className="size-4 shrink-0" />
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card data-kit="model-form" className="max-w-3xl">
       <form onSubmit={submit} noValidate className="space-y-6 p-card">
@@ -104,75 +182,18 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           </p>
         )}
         <fieldset disabled={readOnly} className="space-y-6">
-          {ui.fields.map((field) => {
-            const id = `field-${field.name}`;
-            const error = errors[field.name];
-            const inline = field.kind === "bool";
-            const described =
-              [field.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") ||
-              undefined;
-            return (
-              <div
-                key={field.name}
-                data-kit="field"
-                data-field={field.name}
-                className={inline ? "flex items-center gap-3" : "space-y-2"}
-                {...editorMarker(ui, field, "field")}
-              >
-                {!inline && (
-                  <Label htmlFor={id} data-part="label">
-                    <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
-                      {field.label}
-                    </span>
-                    {field.required && <span className="text-destructive"> *</span>}
-                  </Label>
-                )}
-                {field.computed ? (
-                  <p
-                    id={id}
-                    className="flex min-h-control items-center gap-2 rounded-md bg-muted px-3 text-sm font-semibold tabular-nums"
-                  >
-                    <Calculator aria-hidden className="size-5 text-muted-foreground" />
-                    {formatValue(field, computed[field.name], app)}
-                    <span className="sr-only">(calculated)</span>
-                  </p>
-                ) : (
-                  <FieldInput
-                    field={field}
-                    id={id}
-                    value={inputs[field.name] ?? ""}
-                    invalid={error !== undefined}
-                    describedBy={described}
-                    options={options}
-                    record={typeof initial?.id === "number" ? initial.id : undefined}
-                    onChange={(value) =>
-                      setInputs((current) => ({ ...current, [field.name]: value }))
-                    }
-                  />
-                )}
-                {inline && (
-                  <Label htmlFor={id} data-part="label">
-                    {field.label}
-                  </Label>
-                )}
-                {field.help && (
-                  <p id={`${id}-help`} data-part="help" className="text-sm text-muted-foreground">
-                    {field.help}
-                  </p>
-                )}
-                {error && (
-                  <p
-                    id={`${id}-error`}
-                    data-part="error"
-                    className="flex items-center gap-1.5 text-sm text-destructive"
-                  >
-                    <CircleAlert aria-hidden className="size-4 shrink-0" />
-                    {error}
-                  </p>
-                )}
+          {groups(ui).map((group) => (
+            <div key={group.name ?? ""} data-part="section" className="space-y-4">
+              {group.title && (
+                <h2 className="text-base font-semibold" data-part="title">
+                  {group.title}
+                </h2>
+              )}
+              <div className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-6"}>
+                {group.fields.map((field) => renderField(field))}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </fieldset>
         {failure && (
           <p
@@ -323,11 +344,42 @@ function storedValues(
 }
 
 /** The model's fields with `order` first, in that order. */
-function ordered(ui: ModelUi, order?: string[]): ModelUi {
-  if (!order) return ui;
+/** The model's description with the page's presentation: field order, sections, columns, controls. */
+function presented(
+  ui: ModelUi,
+  page: {
+    fieldOrder?: string[];
+    sections?: ModelUi["sections"];
+    formColumns?: 1 | 2;
+    control?: Record<string, FieldUi["control"]>;
+  },
+): ModelUi {
+  const order = page.fieldOrder ?? page.sections?.flatMap((s) => s.fields);
   const rank = (name: string) => {
-    const i = order.indexOf(name);
-    return i === -1 ? order.length : i;
+    const i = order?.indexOf(name) ?? -1;
+    return i === -1 ? (order?.length ?? 0) : i;
   };
-  return { ...ui, fields: [...ui.fields].sort((a, b) => rank(a.name) - rank(b.name)) };
+  const fields = [...ui.fields]
+    .sort((a, b) => (order ? rank(a.name) - rank(b.name) : 0))
+    .map((f) => (page.control?.[f.name] ? { ...f, control: page.control[f.name] } : f));
+  return {
+    ...ui,
+    fields,
+    ...(page.sections ? { sections: page.sections } : {}),
+    ...(page.formColumns ? { formColumns: page.formColumns } : {}),
+  };
+}
+
+/** The form's fields in their groups: the sections given, then the rest under no heading. */
+function groups(ui: ModelUi): { name?: string; title?: string; fields: FieldUi[] }[] {
+  if (!ui.sections?.length) return [{ fields: ui.fields }];
+  const placed = new Set(ui.sections.flatMap((s) => s.fields));
+  const byName = new Map(ui.fields.map((f) => [f.name, f]));
+  const sections = ui.sections.map((s) => ({
+    name: s.name,
+    title: s.title,
+    fields: s.fields.flatMap((name) => byName.get(name) ?? []),
+  }));
+  const rest = ui.fields.filter((f) => !placed.has(f.name));
+  return rest.length ? [...sections, { fields: rest }] : sections;
 }
