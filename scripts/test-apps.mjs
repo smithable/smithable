@@ -510,6 +510,66 @@ async function markdownFlow(base) {
   }
 }
 
+/**
+ * Articles (docs/design/articles.md): visitors see the published ones, in the list, as the home
+ * page's cards and on their own page with head tags; a draft is not found; an admin's new
+ * article gets its address from its title.
+ */
+async function articlesFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  try {
+    write(
+      dir,
+      "UPDATE posts SET status = 'draft'; " +
+        "UPDATE posts SET status = 'published', title = 'Morning practice', address = 'morning-practice', published_on = '2026-09-01' WHERE id = 1; " +
+        "UPDATE posts SET title = 'Secret plans', address = 'secret-plans' WHERE id = 2;",
+    );
+    await open(page, `${base}/blog`);
+    await page.getByRole("link", { name: "Morning practice" }).waitFor({ timeout: 10000 });
+    if (await page.getByText("Secret plans").count()) throw new Error("a draft is listed");
+    await page.getByRole("link", { name: "Morning practice" }).click();
+    await page
+      .getByRole("heading", { level: 1, name: "Morning practice" })
+      .waitFor({ timeout: 10000 });
+    if (
+      (await page.locator('meta[property="og:title"]').getAttribute("content")) !==
+      "Morning practice"
+    )
+      throw new Error("no og:title");
+    const draft = await fetch(`${base}/blog/secret-plans`);
+    if (draft.status !== 404 && !(await draft.text()).includes("does not exist"))
+      throw new Error(`a draft opens: ${draft.status}`);
+    await open(page, `${base}/`);
+    await page.getByRole("link", { name: "Morning practice" }).first().waitFor({ timeout: 10000 });
+    if (await page.getByText("Secret plans").count())
+      throw new Error("a draft is a card on the home page");
+    // An admin writes one: its address is made from its title.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/posts/new`);
+    await page.getByLabel("Title").fill("Yin for beginners");
+    await page.getByLabel("Body").fill("Slow and **deep**.");
+    await page.getByLabel("Status").selectOption("published");
+    await page.getByRole("button", { name: "Create post" }).click();
+    await page.waitForURL(/\/posts$/);
+    await open(page, `${base}/blog/yin-for-beginners`);
+    await page
+      .getByRole("heading", { level: 1, name: "Yin for beginners" })
+      .waitFor({ timeout: 10000 });
+    await page.locator("strong", { hasText: "deep" }).waitFor();
+    console.log(
+      "  ✓ browser: visitors see only published articles (list, home cards, article with head tags; a draft is not found); a new article's address comes from its title",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("articles flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function landingFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -1549,7 +1609,9 @@ for (const [index, example] of examples.entries()) {
               ? html.includes("<h1")
               : page.pattern.kind === "calendar"
                 ? html.includes("<ol") && !/aria-label="New [a-z ]+, /.test(html)
-                : html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html))
+                : page.pattern.kind === "articles"
+                  ? html.includes('data-kit="articles"') && !/>New [a-z ]+<\/a>/.test(html)
+                  : html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
         const what = !isPublic
           ? "needs sign-in"
@@ -1557,7 +1619,9 @@ for (const [index, example] of examples.entries()) {
             ? "is public: the landing page opens without sign-in"
             : page.pattern.kind === "calendar"
               ? "is public: this week's sample records without sign-in, and no way to add one"
-              : "is public: lists sample data without sign-in, read-only";
+              : page.pattern.kind === "articles"
+                ? "is public: the published articles without sign-in, read-only"
+                : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
         // A starter's pictures (its hero) are in the app and served.
@@ -1643,6 +1707,7 @@ for (const [index, example] of examples.entries()) {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await markdownFlow(base);
+        await articlesFlow(dir, base);
         await pictureFlow(dir, base);
       }
       if (example === "invoicing") {
