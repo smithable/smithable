@@ -236,6 +236,8 @@ All access checks go through **one generated access layer** in the app kit. Ever
 
 Concretely: `src/kit/access.ts` holds the rule type and the checks (`allows`, `readScope`, `guardPage`). Each model gets a server-only `src/generated/<model>.server.ts` with its effective rules (computed by `modelAccess` in core, so validation, generation and tests share one definition) and data functions that take the signed-in user: `list` and `get` filter by owner where needed, `create`, `update` and `remove` check the rule and the record's owner, and references to records the user cannot read are refused. The server functions the pages call are thin wrappers that pass `currentViewer()`. Pages check their rule in `beforeLoad`; menus and buttons hide what the user may not do, but the server is what enforces it. With `private` access, `unique` becomes unique per owner. `src/generated/access.test.ts` exercises every model for every role and for visitors: reading, creating, changing and deleting their own and others' records.
 
+A model's **capacity** (`capacity: { per, max, where? }`, [design/booking.md](design/booking.md)) is enforced in the same place: the generated data function counts and writes in one transaction, so two people cannot both take the last place, and the referenced record's data function refuses lowering its number below what is taken. The generated access test fills a capacity and sees the next record refused.
+
 Teams are not in v0.1, but the design leaves room for them. Records will later get a **group** (team or workspace) next to their owner, and existing apps migrate by putting each user's records into a personal default group. Because access is enforced in one layer, adding groups changes one place.
 
 #### Sign-in

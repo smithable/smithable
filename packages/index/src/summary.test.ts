@@ -74,3 +74,33 @@ newsletter:
     sentences: ["The newsletter is sent from hi@example.com."],
   });
 });
+
+test("a capacity is one sentence on the model", () => {
+  const text = `smithable: 0.1
+app: { name: Studio }
+models:
+  Session:
+    fields:
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+  Booking:
+    fields:
+      session: Session! unique
+      status: confirmed | cancelled
+    capacity: { per: session, max: session.capacity, where: { status: confirmed } }
+  Seat:
+    fields:
+      session: Session!
+    capacity: { per: session, max: 4 }
+`;
+  const ir = validateSpec({ path: "smithable.yml", text }).ir;
+  if (!ir) throw new Error("invalid");
+  const sections = summarize(ir);
+  expect(sections.find((s) => s.concept === "model:Booking")?.sentences).toContain(
+    "At most the session's capacity bookings per session (counting those with status confirmed).",
+  );
+  expect(sections.find((s) => s.concept === "model:Seat")?.sentences).toContain(
+    "At most 4 seats per session.",
+  );
+});

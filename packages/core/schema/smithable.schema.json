@@ -236,6 +236,37 @@
               }
             }
           },
+          "capacity": {
+            "type": "object",
+            "description": "At most max records per record that per refers to, e.g. { per: session, max: session.capacity }: a booking's places.",
+            "required": [
+              "per",
+              "max"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "per": {
+                "type": "string",
+                "description": "A required reference of this model."
+              },
+              "max": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "A whole number, or a whole-number field of the referenced record, \"reference.field\"."
+              },
+              "where": {
+                "type": "object",
+                "description": "Only records with these choice or yes/no values count."
+              }
+            }
+          },
           "description": {
             "type": "string",
             "description": "What this is. Meaning for AI and developers; not shown to visitors."
