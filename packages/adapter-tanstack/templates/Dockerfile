@@ -18,6 +18,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/server.mjs ./
+# Third-party notices travel with the image (LICENSES/README.md).
+COPY --from=build /app/LICENSES ./LICENSES
 COPY --from=build --chown=nonroot:nonroot /data /data
 VOLUME /data
 EXPOSE 3000

@@ -212,3 +212,18 @@ function hash(text: string): string {
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
   return (h >>> 0).toString(16).padStart(8, "0");
 }
+
+test("every app carries the third-party notices, in its image too, and no Smithable code under Smithable's licence", () => {
+  const ir = validateSpec({ path: "smithable.yml", text: "smithable: 0.1\napp: { name: A }\n" })
+    .ir as SpecIR;
+  const files = generateApp(ir, { ...options });
+  const notice = files.find((f) => f.path === "LICENSES/shadcn-ui.txt")?.content ?? "";
+  expect(notice).toContain("MIT License");
+  expect(notice).toContain("Copyright (c) 2023 shadcn");
+  expect(files.find((f) => f.path === "Dockerfile")?.content).toContain(
+    "COPY --from=build /app/LICENSES ./LICENSES",
+  );
+  expect(files.find((f) => f.path === "README.md")?.content).toContain("## Licences");
+  // Nothing in an app is Apache-licensed engine code: no file imports a Smithable package.
+  for (const file of files) expect(file.content, file.path).not.toMatch(/@smithable\//);
+});
