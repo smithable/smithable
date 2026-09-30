@@ -1,6 +1,16 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
-import { emptyContent, emptyUx, type SpecIR } from "@smithable/core";
-import { crudModel, type GenerateOptions, HEADER, texts } from "../shared.js";
+import { emptyContent, emptyUx, type PageIR, type SpecIR } from "@smithable/core";
+import {
+  attr,
+  crudModel,
+  type GenerateOptions,
+  guard,
+  HEADER,
+  importList,
+  indexPath,
+  type Texts,
+  texts,
+} from "../shared.js";
 import { listParts, listRoute } from "./list.js";
 
 /**
@@ -77,3 +87,82 @@ const route = getRouteApi(${JSON.stringify(p.path)});
 
 export ${p.body("route")}`;
 }
+
+/**
+ * A page of your own (`custom: Planner`, docs/design/calculator.md §4): the route is Smithable's
+ * (access, menu, texts), the component in src/custom/pages/ the project's.
+ */
+export function customRoute(
+  page: PageIR & { pattern: { kind: "custom"; component: string } },
+  t: Texts,
+): string {
+  const c = page.pattern.component;
+  const imports = importList()
+    .add("@tanstack/react-router", "createFileRoute")
+    .add("#/generated/pages", "pageAccess")
+    .add("#/kit/access", "guardPage")
+    .add(`#/custom/pages/${c}`, c);
+  return `${HEADER}${imports.render()}
+export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  component: () => (
+    <${c} page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id, 6)} />
+  ),
+});
+`;
+}
+
+/** The props Smithable passes to a custom page or section, so a renamed text fails to type-check. */
+export const CUSTOM_PROPS = `${HEADER}/** What a page of your own (src/custom/pages/) is given: its name and texts. */
+export interface CustomPageProps {
+  /** The page's name. */
+  page: string;
+  title: string;
+  subtitle?: string;
+}
+
+/** What a landing section of your own (src/custom/sections/) is given: its name and texts. */
+export interface CustomSectionProps {
+  /** The section's name on its page, e.g. repayment. */
+  name: string;
+  /** Where its texts are among the app's texts, for editing them in the preview. */
+  texts: string;
+  title?: string;
+  text?: string;
+}
+`;
+
+/** A custom page's component as it starts: the page's title and a note where to write it. */
+export const customPageStub = (
+  component: string,
+) => `// Your page. Smithable created this file once and never changes it; the route around it (access,
+// menu, texts) is generated from smithable.yml. Read data with the functions in
+// src/generated/<model>.server.ts inside a createServerFn: they apply the access rules.
+import type { CustomPageProps } from "#/generated/custom";
+import { PageHeader } from "#/kit/AppShell";
+
+export function ${component}({ page, title, subtitle }: CustomPageProps) {
+  return (
+    <>
+      <PageHeader page={page} title={title} subtitle={subtitle} />
+      <p className="text-muted-foreground">This page is yours: write it in src/custom/pages/${component}.tsx.</p>
+    </>
+  );
+}
+`;
+
+/** A custom landing section's component as it starts: its title and text in the kit's frame. */
+export const customSectionStub = (
+  component: string,
+) => `// Your landing section. Smithable created this file once and never changes it; its place on the
+// page and its texts come from smithable.yml and smithable.content.yml.
+import type { CustomSectionProps } from "#/generated/custom";
+import { Section } from "#/kit/Landing";
+
+export function ${component}({ name, texts, title, text }: CustomSectionProps) {
+  return (
+    <Section id={name} texts={texts} title={title} text={text}>
+      <p className="text-muted-foreground">This section is yours: write it in src/custom/sections/${component}.tsx.</p>
+    </Section>
+  );
+}
+`;
