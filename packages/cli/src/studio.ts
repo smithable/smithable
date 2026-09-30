@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -21,6 +21,8 @@ import { loadSpec } from "./validate.js";
 import { warmPreview } from "./warm.js";
 
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
+/** A message shown once when Studio next opens, e.g. why a description could not be used. */
+export const NOTICE = "data/.smithable/notice.txt";
 const STUDIO = new URL("../../../apps/studio/dist/", import.meta.url).pathname;
 
 const TYPES: Record<string, string> = {
@@ -258,6 +260,12 @@ export async function studio(
     return { ok: code === 0, output: output.trim() };
   };
 
+  // A message for the first to open Studio, left by whoever made the project (a hosted
+  // workspace says why a description could not be used), shown once.
+  const noticeFile = join(dir, NOTICE);
+  let notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+  rmSync(noticeFile, { force: true });
+
   const state = () => {
     const quiet = { out: () => {}, err: () => {} };
     const { ir, auth } = loadSpec(dir, quiet);
@@ -279,6 +287,7 @@ export async function studio(
       trace: trace(dir),
       preview,
       ...(options.home ? { home: options.home } : {}),
+      ...(notice ? { notice } : {}),
     };
   };
 
@@ -319,7 +328,11 @@ export async function studio(
         await mcp.connect(transport);
         return await transport.handleRequest(req, res);
       }
-      if (url.pathname === "/api/project") return json(state());
+      if (url.pathname === "/api/project") {
+        const answer = state();
+        notice = undefined;
+        return json(answer);
+      }
       if (url.pathname === "/api/logs") return json(logs);
       const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
       if (plugin && declaredPlugins(dir).includes(plugin)) {
