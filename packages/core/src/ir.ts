@@ -245,3 +245,16 @@ export interface MenuIR {
 
 export type PatternKind = PageIR["pattern"]["kind"];
 export type PatternOf<K extends PatternKind> = Extract<PageIR["pattern"], { kind: K }>;
+
+/**
+ * Whether a record condition can be checked on the model: `field` is a choice field of it
+ * with `wanted` one of its values, or a yes/no field with true or false.
+ */
+export function conditionFits(model: ModelIR, field: string, wanted: string | boolean): boolean {
+  const f = model.fields.find((x) => x.name === field);
+  return Boolean(
+    f &&
+      ((f.type.kind === "choice" && typeof wanted === "string" && f.type.values.includes(wanted)) ||
+        (f.type.kind === "scalar" && f.type.name === "bool" && typeof wanted === "boolean")),
+  );
+}

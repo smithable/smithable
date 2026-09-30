@@ -12,7 +12,7 @@ import {
 } from "yaml";
 
 /** A value an operation writes: a scalar, a flow list, or a block mapping. */
-export type YamlValue = string | number | boolean | string[] | { [key: string]: YamlValue };
+export type YamlValue = string | number | boolean | YamlValue[] | { [key: string]: YamlValue };
 
 type Path = readonly string[];
 
@@ -193,7 +193,7 @@ function isBlock(value: YamlValue): value is { [key: string]: YamlValue } {
 
 /** A value on one line: a scalar, [a, b] or { k: v }. */
 function flow(value: YamlValue): string {
-  if (Array.isArray(value)) return `[${value.map(scalar).join(", ")}]`;
+  if (Array.isArray(value)) return `[${value.map(flow).join(", ")}]`;
   if (isBlock(value)) {
     return `{ ${Object.entries(value)
       .map(([k, v]) => `${scalar(k)}: ${flow(v)}`)
