@@ -409,6 +409,67 @@ async function bookingFlow(dir, base) {
 }
 
 /**
+ * A picture field (an instructor's portrait): the seeded portrait shows in the list and is
+ * served as WebP; an admin replaces it from a file (scaled and encoded in the browser, checked
+ * on the server), the new one is kept and the old file is gone; a visitor sees a public
+ * instructor's portrait but cannot upload; a picture that is not one is refused.
+ */
+async function pictureFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const uploads = join(dir, "data", "uploads", "instructor");
+  try {
+    const seeded = await page.request.get(`${base}/files/instructor/1/portrait`);
+    if (!seeded.ok() || seeded.headers()["content-type"] !== "image/webp")
+      throw new Error(`the seeded portrait is not served (${seeded.status()})`);
+    const refused = await page.request.post(`${base}/files/instructor/portrait`, {
+      headers: { "content-type": "image/webp" },
+      data: Buffer.from("not a picture"),
+    });
+    if (refused.status() !== 401) throw new Error(`a visitor could upload (${refused.status()})`);
+    await signInAs(page, base, "admin");
+    const junk = await page.request.post(`${base}/files/instructor/portrait`, {
+      headers: { "content-type": "image/webp" },
+      data: Buffer.from("not a picture"),
+    });
+    if (junk.status() !== 400) throw new Error(`junk was stored (${junk.status()})`);
+    await open(page, `${base}/instructors`);
+    // The list is a table on a wide screen and cards on a phone: both carry the picture.
+    await page
+      .locator('img[src="/files/instructor/1/portrait"]:visible')
+      .waitFor({ timeout: 10000 });
+    await open(page, `${base}/instructors/1`);
+    const before = readdirSync(uploads).length;
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Replace" }).click();
+    await (await chooser).setFiles(join(dir, "public", "images", "hero.webp"));
+    // Uploaded: the form shows the browser's copy of the new picture.
+    await page.locator('img[src^="blob:"]').waitFor({ timeout: 15000 });
+    await page.getByLabel("Description (for those who cannot see it)").fill("Emma at the studio");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(/\/instructors$/);
+    await open(page, `${base}/instructors/1`);
+    await page.getByRole("img", { name: "Emma at the studio" }).waitFor({ timeout: 10000 });
+    // The old file stays: other seeded instructors share it. The new one goes when removed.
+    if (readdirSync(uploads).length !== before + 1) throw new Error("the new file was not kept");
+    await page.getByRole("button", { name: "Remove" }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(/\/instructors$/);
+    if (readdirSync(uploads).length !== before) throw new Error("the removed file was not deleted");
+    console.log(
+      "  ✓ browser: a portrait is served from its record, replaced from a file (scaled in the browser, checked on the server) and removed with its file; visitors and junk are refused",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("picture flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * A Markdown field (an instructor's bio): written, previewed formatted with headings from h2
  * and raw HTML shown as text, saved and kept.
  */
@@ -1565,6 +1626,7 @@ for (const [index, example] of examples.entries()) {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await markdownFlow(base);
+        await pictureFlow(dir, base);
       }
       if (example === "invoicing") {
         await formulaFlow(base);
