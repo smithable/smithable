@@ -59,6 +59,21 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
 
+## Custom styles
+
+Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and wins over the kit's styles. Rely on these attributes, not on class names or the order of elements; they name what a part is, and a value is removed only in a major version:
+
+| Attribute | On | Values |
+|---|---|---|
+| \`data-page\` | \`<body>\` | the page's name in the spec, e.g. \`customers\`, \`home\` |
+| \`data-kit\` | a kit component's root | \`app-shell\`, \`nav\`, \`model-table\`, \`model-form\`, \`field\`, \`search-box\`, \`dashboard\`, \`tile\`, \`calendar\`, \`reserve\`, \`landing\`, \`section\`, \`users\`, \`sign-in\`, \`onboarding\` |
+| \`data-part\` | inside a component | \`header\`, \`title\`, \`actions\`, \`row\`, \`cell\`, \`label\`, \`input\`, \`help\`, \`error\`, \`empty\`, \`footer\` |
+| \`data-field\` | a field's wrapper, input and table cells | the field's name |
+| \`data-section\` | a landing section | its name, e.g. \`hero\` |
+| \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
+
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+
 
 ## Project structure
 
@@ -2371,6 +2386,23 @@ const menus: MenuUi[] = [
 
 const landingRoutes = ["/"];
 
+/** Each page's route and name, longest route first. */
+const pageRoutes: [string, string][] = [
+  ["/class-types", "class-types"],
+  ["/instructors", "instructors"],
+  ["/my-bookings", "my-bookings"],
+  ["/messages", "messages"],
+  ["/schedule", "schedule"],
+  ["/sessions", "sessions"],
+  ["/admin", "admin"],
+  ["/", "home"],
+];
+
+/** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
+function pageOf(path: string): string | undefined {
+  return pageRoutes.find(([route]) => path === route || path.startsWith(route === "/" ? "/" : \`\${route}/\`))?.[1];
+}
+
 
 const getViewer = createServerFn().handler(() => currentViewer());
 
@@ -2400,7 +2432,6 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { viewer } = Route.useRouteContext();
-  // Landing pages have their own frame instead of the app's navigation.
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -2412,7 +2443,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body data-page={pageOf(pathname)}>
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
@@ -4483,6 +4514,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
@@ -4587,7 +4619,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "dfe33fab generated",
+  "README.md": "e13e03e8 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "d5004d3e generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -4595,12 +4627,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "public/favicon.svg": "059fe4c5 generated",
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
-  "src/components/ui/badge.tsx": "93325148 kit",
+  "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "1887e90e kit",
   "src/components/ui/card.tsx": "0621c891 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
+  "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "e4455759 generated",
   "src/db/seed.ts": "297b515f generated",
@@ -4620,19 +4653,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.server.ts": "652c8d07 generated",
   "src/generated/session.ts": "789d2343 generated",
-  "src/kit/AppShell.tsx": "c3cf8cf8 kit",
-  "src/kit/Calendar.tsx": "a4057c01 kit",
+  "src/kit/AppShell.tsx": "5969e952 kit",
+  "src/kit/Calendar.tsx": "eb7327fb kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/FieldInput.tsx": "c83e3d5d kit",
-  "src/kit/Landing.tsx": "535918ee kit",
+  "src/kit/FieldInput.tsx": "9338a769 kit",
+  "src/kit/Landing.tsx": "daab8638 kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "ebbdae7c kit",
-  "src/kit/ModelTable.tsx": "704b17fa kit",
+  "src/kit/ModelForm.tsx": "7bd48d0d kit",
+  "src/kit/ModelTable.tsx": "37609240 kit",
   "src/kit/PictureInput.tsx": "e5ee310f kit",
-  "src/kit/Reserve.tsx": "25146ad3 kit",
-  "src/kit/SearchBox.tsx": "3bf7cb9a kit",
-  "src/kit/SignIn.tsx": "2887474b kit",
+  "src/kit/Reserve.tsx": "3b4a2fff kit",
+  "src/kit/SearchBox.tsx": "7861f45a kit",
+  "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "5630fc69 kit",
   "src/kit/formula.ts": "d94102ce kit",
@@ -4648,7 +4681,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "0a7273c1 generated",
+  "src/routes/__root.tsx": "c41f7390 generated",
   "src/routes/admin/bookings/$id.tsx": "5ef57140 generated",
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
@@ -4687,7 +4720,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/index.tsx": "66e83ebc generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
   "src/routes/sign-in.tsx": "f37ca802 generated",
-  "src/styles.css": "fd9a663a kit",
+  "src/styles.css": "b9cb8065 kit",
   "src/theme.css": "595d2386 generated",
   "tests/smoke.spec.ts": "53974e96 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -4750,6 +4783,21 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 ## Limits
 
 A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+
+## Custom styles
+
+Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and wins over the kit's styles. Rely on these attributes, not on class names or the order of elements; they name what a part is, and a value is removed only in a major version:
+
+| Attribute | On | Values |
+|---|---|---|
+| \`data-page\` | \`<body>\` | the page's name in the spec, e.g. \`customers\`, \`home\` |
+| \`data-kit\` | a kit component's root | \`app-shell\`, \`nav\`, \`model-table\`, \`model-form\`, \`field\`, \`search-box\`, \`dashboard\`, \`tile\`, \`calendar\`, \`reserve\`, \`landing\`, \`section\`, \`users\`, \`sign-in\`, \`onboarding\` |
+| \`data-part\` | inside a component | \`header\`, \`title\`, \`actions\`, \`row\`, \`cell\`, \`label\`, \`input\`, \`help\`, \`error\`, \`empty\`, \`footer\` |
+| \`data-field\` | a field's wrapper, input and table cells | the field's name |
+| \`data-section\` | a landing section | its name, e.g. \`hero\` |
+| \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
+
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
 
 ## Project structure
@@ -6328,7 +6376,7 @@ export async function currentViewer(): Promise<Viewer | null> {
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/__root.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createRootRoute, HeadContent, Scripts, useRouter } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Scripts, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { ShoppingCart, Users } from "lucide-react";
 import { app } from "#/generated/app";
@@ -6365,6 +6413,14 @@ const menus: MenuUi[] = [
   },
 ];
 
+/** Each page's route and name, longest route first. */
+const pageRoutes: [string, string][] = [["/customers", "customers"], ["/orders", "orders"], ["/team", "team"]];
+
+/** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
+function pageOf(path: string): string | undefined {
+  return pageRoutes.find(([route]) => path === route || path.startsWith(route === "/" ? "/" : \`\${route}/\`))?.[1];
+}
+
 
 const getViewer = createServerFn().handler(() => currentViewer());
 
@@ -6394,6 +6450,7 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { viewer } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
@@ -6404,7 +6461,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body data-page={pageOf(pathname)}>
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
           {children}
         </AppShell>
@@ -7196,6 +7253,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/actions/merge-customers.ts",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
@@ -7266,7 +7324,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "78bc3a81 generated",
+  "README.md": "22b36cbe generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "7bc75a08 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -7274,13 +7332,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "public/favicon.svg": "3567ba27 generated",
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
-  "src/components/ui/badge.tsx": "93325148 kit",
+  "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "1887e90e kit",
   "src/components/ui/card.tsx": "0621c891 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/actions/merge-customers.ts": "916a9b22 custom",
   "src/custom/hooks.ts": "4247261f custom",
+  "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "e76e2c31 generated",
   "src/db/seed.ts": "9c9f2dc2 generated",
@@ -7298,14 +7357,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "de07ed11 generated",
   "src/generated/users.test.ts": "b04d6067 generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/AppShell.tsx": "c3cf8cf8 kit",
+  "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/FieldInput.tsx": "c83e3d5d kit",
-  "src/kit/ModelForm.tsx": "ebbdae7c kit",
-  "src/kit/ModelTable.tsx": "704b17fa kit",
-  "src/kit/SearchBox.tsx": "3bf7cb9a kit",
-  "src/kit/SignIn.tsx": "2887474b kit",
-  "src/kit/Users.tsx": "42d0d33f kit",
+  "src/kit/FieldInput.tsx": "9338a769 kit",
+  "src/kit/ModelForm.tsx": "7bd48d0d kit",
+  "src/kit/ModelTable.tsx": "37609240 kit",
+  "src/kit/SearchBox.tsx": "7861f45a kit",
+  "src/kit/SignIn.tsx": "0c0aa148 kit",
+  "src/kit/Users.tsx": "9f5a0cf9 kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "5630fc69 kit",
   "src/kit/formula.ts": "d94102ce kit",
@@ -7320,7 +7379,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "3a31bee0 generated",
+  "src/routes/__root.tsx": "a80452ed generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/customers/$id.tsx": "379e64db generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
@@ -7333,7 +7392,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "d433e790 generated",
   "src/routes/sign-in.tsx": "7b976381 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
-  "src/styles.css": "fd9a663a kit",
+  "src/styles.css": "b9cb8065 kit",
   "src/theme.css": "595d2386 generated",
   "tests/smoke.spec.ts": "6101e15a generated",
   "tsconfig.json": "802b1b64 kit",
@@ -7390,6 +7449,21 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 ## Limits
 
 A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+
+## Custom styles
+
+Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and wins over the kit's styles. Rely on these attributes, not on class names or the order of elements; they name what a part is, and a value is removed only in a major version:
+
+| Attribute | On | Values |
+|---|---|---|
+| \`data-page\` | \`<body>\` | the page's name in the spec, e.g. \`customers\`, \`home\` |
+| \`data-kit\` | a kit component's root | \`app-shell\`, \`nav\`, \`model-table\`, \`model-form\`, \`field\`, \`search-box\`, \`dashboard\`, \`tile\`, \`calendar\`, \`reserve\`, \`landing\`, \`section\`, \`users\`, \`sign-in\`, \`onboarding\` |
+| \`data-part\` | inside a component | \`header\`, \`title\`, \`actions\`, \`row\`, \`cell\`, \`label\`, \`input\`, \`help\`, \`error\`, \`empty\`, \`footer\` |
+| \`data-field\` | a field's wrapper, input and table cells | the field's name |
+| \`data-section\` | a landing section | its name, e.g. \`hero\` |
+| \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
+
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
 
 ## Project structure
@@ -9352,6 +9426,22 @@ const menus: MenuUi[] = [
 
 const landingRoutes = ["/", "/welcome"];
 
+/** Each page's route and name, longest route first. */
+const pageRoutes: [string, string][] = [
+  ["/invoice-lines", "invoice-lines"],
+  ["/invoices", "invoices"],
+  ["/overview", "overview"],
+  ["/settings", "settings"],
+  ["/clients", "clients"],
+  ["/welcome", "welcome"],
+  ["/", "home"],
+];
+
+/** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
+function pageOf(path: string): string | undefined {
+  return pageRoutes.find(([route]) => path === route || path.startsWith(route === "/" ? "/" : \`\${route}/\`))?.[1];
+}
+
 
 const getViewer = createServerFn().handler(() => currentViewer());
 
@@ -9381,7 +9471,6 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { viewer } = Route.useRouteContext();
-  // Landing pages have their own frame instead of the app's navigation.
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -9393,7 +9482,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body data-page={pageOf(pathname)}>
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
@@ -9933,7 +10022,7 @@ function OverviewPage() {
   return (
     <>
       <PageHeader page="overview" title="Overview" />
-      <div className="space-y-6">
+      <div data-kit="dashboard" className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Outstanding" value={formatNumber("money", data.outstanding, app)} />
         <StatCard label="Overdue" value={formatNumber("money", data.overdue, app)} />
@@ -10387,6 +10476,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
@@ -10465,7 +10555,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "6d891024 generated",
+  "README.md": "7fd8819f generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "351967e5 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -10473,12 +10563,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "public/favicon.svg": "288fe58f generated",
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
-  "src/components/ui/badge.tsx": "93325148 kit",
+  "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "1887e90e kit",
   "src/components/ui/card.tsx": "0621c891 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
+  "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "1c9724c9 generated",
   "src/db/seed.ts": "d388638c generated",
@@ -10497,16 +10588,16 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "53bf02b2 generated",
   "src/generated/invoice.ts": "212924a8 generated",
   "src/generated/pages.ts": "1b40062a generated",
-  "src/kit/AppShell.tsx": "c3cf8cf8 kit",
+  "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/Dashboard.tsx": "906b56c9 kit",
-  "src/kit/FieldInput.tsx": "c83e3d5d kit",
-  "src/kit/Landing.tsx": "535918ee kit",
-  "src/kit/ModelForm.tsx": "ebbdae7c kit",
-  "src/kit/ModelTable.tsx": "704b17fa kit",
-  "src/kit/Onboarding.tsx": "6e7938a3 kit",
-  "src/kit/SearchBox.tsx": "3bf7cb9a kit",
-  "src/kit/SignIn.tsx": "2887474b kit",
+  "src/kit/Dashboard.tsx": "c5b62089 kit",
+  "src/kit/FieldInput.tsx": "9338a769 kit",
+  "src/kit/Landing.tsx": "daab8638 kit",
+  "src/kit/ModelForm.tsx": "7bd48d0d kit",
+  "src/kit/ModelTable.tsx": "37609240 kit",
+  "src/kit/Onboarding.tsx": "3b6631a6 kit",
+  "src/kit/SearchBox.tsx": "7861f45a kit",
+  "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "5630fc69 kit",
@@ -10522,7 +10613,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "26f9b7a5 generated",
+  "src/routes/__root.tsx": "3915b995 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/clients/$id.tsx": "d14d0660 generated",
   "src/routes/clients/index.tsx": "ee5cef45 generated",
@@ -10535,11 +10626,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/$id.tsx": "4db1af59 generated",
   "src/routes/invoices/index.tsx": "cc8d4cc5 generated",
   "src/routes/invoices/new.tsx": "c2112728 generated",
-  "src/routes/overview/index.tsx": "154c7215 generated",
+  "src/routes/overview/index.tsx": "66557c73 generated",
   "src/routes/settings/index.tsx": "ccb1cb37 generated",
   "src/routes/sign-in.tsx": "55d5455e generated",
   "src/routes/welcome/index.tsx": "d181401c generated",
-  "src/styles.css": "fd9a663a kit",
+  "src/styles.css": "b9cb8065 kit",
   "src/theme.css": "595d2386 generated",
   "tests/smoke.spec.ts": "52c9ba9c generated",
   "tsconfig.json": "802b1b64 kit",
@@ -10596,6 +10687,21 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 ## Limits
 
 A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+
+## Custom styles
+
+Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and wins over the kit's styles. Rely on these attributes, not on class names or the order of elements; they name what a part is, and a value is removed only in a major version:
+
+| Attribute | On | Values |
+|---|---|---|
+| \`data-page\` | \`<body>\` | the page's name in the spec, e.g. \`customers\`, \`home\` |
+| \`data-kit\` | a kit component's root | \`app-shell\`, \`nav\`, \`model-table\`, \`model-form\`, \`field\`, \`search-box\`, \`dashboard\`, \`tile\`, \`calendar\`, \`reserve\`, \`landing\`, \`section\`, \`users\`, \`sign-in\`, \`onboarding\` |
+| \`data-part\` | inside a component | \`header\`, \`title\`, \`actions\`, \`row\`, \`cell\`, \`label\`, \`input\`, \`help\`, \`error\`, \`empty\`, \`footer\` |
+| \`data-field\` | a field's wrapper, input and table cells | the field's name |
+| \`data-section\` | a landing section | its name, e.g. \`hero\` |
+| \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
+
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
 
 ## Project structure
@@ -11381,6 +11487,14 @@ const menus: MenuUi[] = [
 
 const landingRoutes = ["/"];
 
+/** Each page's route and name, longest route first. */
+const pageRoutes: [string, string][] = [["/items", "items"], ["/", "home"]];
+
+/** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
+function pageOf(path: string): string | undefined {
+  return pageRoutes.find(([route]) => path === route || path.startsWith(route === "/" ? "/" : \`\${route}/\`))?.[1];
+}
+
 
 const getViewer = createServerFn().handler(() => currentViewer());
 
@@ -11410,7 +11524,6 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { viewer } = Route.useRouteContext();
-  // Landing pages have their own frame instead of the app's navigation.
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -11422,7 +11535,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body data-page={pageOf(pathname)}>
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
@@ -11865,6 +11978,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
@@ -11923,7 +12037,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "daba7033 kit",
-  "README.md": "fc1d6845 generated",
+  "README.md": "62a59f42 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c42c8ab6 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -11931,12 +12045,13 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "public/favicon.svg": "57bda269 generated",
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
-  "src/components/ui/badge.tsx": "93325148 kit",
+  "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "1887e90e kit",
   "src/components/ui/card.tsx": "0621c891 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
+  "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "b4f3f794 generated",
   "src/db/seed.ts": "7387f4ce generated",
@@ -11947,14 +12062,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.server.ts": "e4bf319c generated",
   "src/generated/item.ts": "67d7217d generated",
   "src/generated/pages.ts": "433b620e generated",
-  "src/kit/AppShell.tsx": "c3cf8cf8 kit",
+  "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/FieldInput.tsx": "c83e3d5d kit",
-  "src/kit/Landing.tsx": "535918ee kit",
-  "src/kit/ModelForm.tsx": "ebbdae7c kit",
-  "src/kit/ModelTable.tsx": "704b17fa kit",
-  "src/kit/SearchBox.tsx": "3bf7cb9a kit",
-  "src/kit/SignIn.tsx": "2887474b kit",
+  "src/kit/FieldInput.tsx": "9338a769 kit",
+  "src/kit/Landing.tsx": "daab8638 kit",
+  "src/kit/ModelForm.tsx": "7bd48d0d kit",
+  "src/kit/ModelTable.tsx": "37609240 kit",
+  "src/kit/SearchBox.tsx": "7861f45a kit",
+  "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "5630fc69 kit",
   "src/kit/formula.ts": "d94102ce kit",
@@ -11969,7 +12084,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "b9eb726d generated",
+  "src/routes/__root.tsx": "8e7442fa generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "19b18d69 generated",
@@ -11977,7 +12092,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/index.tsx": "00fa6419 generated",
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/sign-in.tsx": "f37ca802 generated",
-  "src/styles.css": "fd9a663a kit",
+  "src/styles.css": "b9cb8065 kit",
   "src/theme.css": "595d2386 generated",
   "tests/smoke.spec.ts": "9cf8f87c generated",
   "tsconfig.json": "802b1b64 kit",

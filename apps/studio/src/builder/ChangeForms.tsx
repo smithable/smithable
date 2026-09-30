@@ -800,7 +800,7 @@ function SetTheme({ run }: { run: Run }) {
   );
 }
 
-const ICON_CHOICES = [
+export const ICON_CHOICES = [
   "auto",
   "users",
   "user",
@@ -848,7 +848,7 @@ function SetIcon({ spec, run }: FormProps) {
   );
 }
 
-const TONE_CHOICES: [string, string][] = [
+export const TONE_CHOICES: [string, string][] = [
   ["neutral", "Grey (neutral)"],
   ["success", "Green (good)"],
   ["warning", "Amber (needs attention)"],

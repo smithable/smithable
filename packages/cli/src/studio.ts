@@ -277,6 +277,7 @@ export async function studio(
         spec: read("smithable.yml"),
         auth: read("smithable.auth.yml"),
         content: read("smithable.content.yml"),
+        ux: read("smithable.ux.yml"),
       },
       // For the engine in the tab, which imports them from /api/plugins/; the version is for
       // its module cache.

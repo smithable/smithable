@@ -18,7 +18,7 @@ export interface TraceEntry {
 
 export interface Project {
   name: string;
-  files: { spec?: string; auth?: string; content?: string };
+  files: { spec?: string; auth?: string; content?: string; ux?: string };
   /** The project's plugins, which the engine imports from /api/plugins/<name>.mjs. */
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
