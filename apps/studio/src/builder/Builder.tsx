@@ -180,7 +180,10 @@ export function Builder({
                 sections={sections}
                 spec={spec}
                 run={run}
-                words={words}
+                onAdd={(p) => {
+                  setPrefill(p);
+                  setTab("change");
+                }}
               />
             ) : (
               // A new proposal to edit starts the form afresh with its values.
