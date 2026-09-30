@@ -167,9 +167,29 @@ export function applyOperation(
 }
 
 /** Turns CLI positional arguments into an operation's arguments, following `positional`. */
-export function parseOperationArgs(op: AnyOperation, values: string[]): OperationArgs {
+export function parseOperationArgs(op: AnyOperation, words: string[]): OperationArgs {
   const properties = (op.schema.properties ?? {}) as Record<string, JsonSchema>;
   const args: OperationArgs = {};
+  // "--name value" gives an argument by name: a list as "a,b", an object as "a=x,b=y".
+  const values: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const key = /^--(\w+)$/.exec(words[i] as string)?.[1];
+    if (key === undefined || !properties[key] || words[i + 1] === undefined) {
+      values.push(words[i] as string);
+      continue;
+    }
+    const value = words[++i] as string;
+    const type = properties[key]?.type;
+    args[key] =
+      type === "array"
+        ? value
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean)
+        : type === "object"
+          ? Object.fromEntries(value.split(",").map((pair) => pairOf(pair.trim())))
+          : value;
+  }
   op.positional.forEach((spec, index) => {
     if (spec.startsWith("...")) {
       const key = spec.slice(3);
@@ -177,12 +197,7 @@ export function parseOperationArgs(op: AnyOperation, values: string[]): Operatio
       if (rest.length === 0) return;
       const type = properties[key]?.type;
       if (type === "object") {
-        args[key] = Object.fromEntries(
-          rest.map((pair) => {
-            const eq = pair.indexOf("=");
-            return eq === -1 ? [pair, ""] : [pair.slice(0, eq), pair.slice(eq + 1)];
-          }),
-        );
+        args[key] = Object.fromEntries(rest.map(pairOf));
       } else if (type === "array") {
         args[key] = rest;
       } else {
@@ -193,6 +208,12 @@ export function parseOperationArgs(op: AnyOperation, values: string[]): Operatio
     }
   });
   return args;
+}
+
+/** "name=value" as a pair; a bare name has an empty value. */
+function pairOf(pair: string): [string, string] {
+  const eq = pair.indexOf("=");
+  return eq === -1 ? [pair, ""] : [pair.slice(0, eq), pair.slice(eq + 1)];
 }
 
 /** Checks required keys and unknown keys in the operation's words, then the values' types. */
