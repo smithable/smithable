@@ -28,6 +28,7 @@ export interface SummarySection {
 
 /** What a field holds, where its name does not say it; plain text needs no note. */
 export const KINDS: Record<string, string> = {
+  markdown: "formatted text",
   int: "a whole number",
   decimal: "a number",
   money: "an amount",
