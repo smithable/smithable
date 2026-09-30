@@ -499,6 +499,33 @@ try {
       .getByRole("button", { name: /^Show / })
       .first()
       .waitFor({ timeout: 60000 });
+    // The last change is done before the next (a change while one runs is not made).
+    await trace
+      .getByText("Show email, name, segment in the customers table")
+      .waitFor({ timeout: 60000 });
+    // A list page's view and order, and its form's columns and sections (look.md §1.1–1.3).
+    const waitUx = async (re) => {
+      for (let i = 0; i < 60 && !re.test(ux()); i++) await new Promise((r) => setTimeout(r, 1000));
+      if (!re.test(ux())) throw new Error(`no ${re} in smithable.ux.yml:\n${ux()}`);
+    };
+    const pages = look("Pages");
+    await pages
+      .getByRole("group", { name: "View of Customers" })
+      .getByRole("button", { name: "Cards" })
+      .click();
+    await waitUx(/view: cards/);
+    await pages.getByLabel("Order of Customers").selectOption("-email");
+    await waitUx(/sort: -email/);
+    await pages.getByText("Form of Customers").click();
+    await pages
+      .getByRole("group", { name: "Columns of the Customers form" })
+      .getByRole("button", { name: "Two columns" })
+      .click();
+    await waitUx(/columns: 2/);
+    await pages.getByLabel("New section of the Customers form").fill("contact");
+    await pages.getByRole("button", { name: "Add a section" }).first().click();
+    await pages.getByLabel("Section of Email").first().selectOption("contact");
+    await waitUx(/name: contact/);
     await page.getByRole("tab", { name: "Your app" }).click();
   });
 
@@ -519,6 +546,14 @@ try {
       await preview
         .getByRole("heading", { name: "Acme CRM", level: 1 })
         .waitFor({ timeout: 60000 });
+      // Its own theme, from the Look tab (look.md §1.5).
+      await page.getByRole("tab", { name: "Look" }).click();
+      await page.getByLabel("Theme of Home").selectOption("playful");
+      await trace
+        .getByText(/home page's theme/i)
+        .first()
+        .waitFor({ timeout: 60000 });
+      await page.getByRole("tab", { name: "Your app" }).click();
     },
   );
 
