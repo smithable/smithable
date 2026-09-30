@@ -130,6 +130,14 @@ describe("proposeChange", () => {
     });
   });
 
+  test("operations that change no file are no change: refused, so nothing is applied or traced", async () => {
+    // A setting put back to what it already is (Johan's rewritten "Your app" sentence).
+    const same = { kind: "operations", operations: [{ op: "setApp", args: { name: "Acme CRM" } }] };
+    const model = scripted([same]);
+    const proposal = await propose("The app is called Acme CRM", [model]);
+    expect(proposal).toMatchObject({ kind: "none", reason: "This changes nothing." });
+  });
+
   test("an ambiguous request becomes a question, not a guess", async () => {
     const proposal = await propose("Add a date", [
       scripted([

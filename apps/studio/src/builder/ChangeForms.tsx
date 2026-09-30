@@ -207,6 +207,7 @@ const CHANGES = [
   ["removePage", "Remove a page"],
   ["addSection", "A section on a landing page"],
   ["removeSection", "Remove a section"],
+  ["addAction", "An action"],
 ] as const;
 
 /** Operations whose form can hold everything a proposal gives them (the change box → the Change tab). */
@@ -268,6 +269,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
           />
         )}
         {change === "addSection" && <AddSection spec={spec} run={run} />}
+        {change === "addAction" && <AddAction spec={spec} run={run} initial={initial} />}
         {change === "removeSection" && (
           <FromSchema
             op="removeSection"
@@ -492,6 +494,96 @@ function AddModel({ run }: { run: Run }) {
         <Input aria-label="First field" value={field} onChange={(e) => setField(e.target.value)} />
       </Label>
       <Submit label="Add" disabled={!name || !field} />
+    </Form>
+  );
+}
+
+/** "name: type" lines as field shorthand, e.g. "keep: Customer!". */
+const fieldLines = (text: string): Record<string, string> =>
+  Object.fromEntries(
+    text
+      .split("\n")
+      .map((line) => line.split(":").map((part) => part.trim()))
+      .filter(([name, type]) => name && type),
+  );
+
+function AddAction({ spec, run, initial }: FormProps) {
+  const roles = spec.auth?.roles.map((r) => r.name) ?? [];
+  const [action, setAction] = useState(str(initial?.action) ?? "");
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("");
+  const [allow, setAllow] = useState<string[]>([]);
+  const [intent, setIntent] = useState(str(initial?.intent) ?? "");
+  const box =
+    "block w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 font-mono text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
+  return (
+    <Form
+      onSubmit={() =>
+        run("addAction", {
+          action,
+          input: fieldLines(input),
+          output: fieldLines(output),
+          allow,
+          intent,
+        })
+      }
+    >
+      <Label text="Name" hint="In camelCase, e.g. mergeCustomers">
+        <Input
+          aria-label="Action name"
+          value={action}
+          onChange={(e) => setAction(e.target.value)}
+        />
+      </Label>
+      <Label text="What it is for">
+        <Input
+          aria-label="What it is for"
+          value={intent}
+          onChange={(e) => setIntent(e.target.value)}
+        />
+      </Label>
+      <Label text="What it needs" hint='One per line, e.g. "keep: Customer!"'>
+        <textarea
+          aria-label="What it needs"
+          rows={3}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className={box}
+        />
+      </Label>
+      <Label text="What it returns (optional)">
+        <textarea
+          aria-label="What it returns"
+          rows={2}
+          value={output}
+          onChange={(e) => setOutput(e.target.value)}
+          className={box}
+        />
+      </Label>
+      {roles.length > 0 && (
+        <fieldset className="space-y-1">
+          <legend className="text-xs font-medium text-neutral-600">
+            Who may run it (none: the default access)
+          </legend>
+          {roles.map((role) => (
+            <label key={role} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allow.includes(role)}
+                onChange={(e) =>
+                  setAllow(e.target.checked ? [...allow, role] : allow.filter((r) => r !== role))
+                }
+              />
+              {role}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <p className="text-xs text-neutral-500">
+        What it does is code: it starts as a stub in src/custom/actions/, for a developer or an
+        agent to write.
+      </p>
+      <Submit label="Add action" disabled={!action} />
     </Form>
   );
 }

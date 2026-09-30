@@ -48,10 +48,33 @@ export function Studio({
   const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
   return (
-    <div className="grid h-full min-h-0 grid-cols-[240px_1fr_300px] divide-x divide-neutral-200">
-      <Panel title="Concepts">
-        <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
-      </Panel>
+    // The details sit beside the concept tree on wide screens, under it on narrower ones.
+    <div className="grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200 lg:grid-cols-[240px_320px_1fr]">
+      <div className="grid min-h-0 grid-rows-[1fr_2fr] lg:contents">
+        <Panel title="Concepts">
+          <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
+        </Panel>
+        <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200 lg:border-t-0 lg:border-l">
+          <Panel title="Details">
+            {concept ? (
+              <>
+                <Properties key={concept.concept} concept={concept.concept} spec={spec} run={run} />
+                <ConceptDetails
+                  info={concept}
+                  onCustomize={onCustomize}
+                  onShow={() => {
+                    setTab("spec");
+                    setJump({ concept: concept.concept, at: Date.now() });
+                  }}
+                />
+              </>
+            ) : (
+              <p className="p-3 text-sm text-neutral-500">Choose a concept.</p>
+            )}
+          </Panel>
+          <Trace entries={project.trace} />
+        </div>
+      </div>
       <Panel
         title={
           <Tabs
@@ -82,26 +105,6 @@ export function Studio({
         )}
         {tab === "preview" && <Preview url={project.preview} version={version} />}
       </Panel>
-      <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200">
-        <Panel title="Details">
-          {concept ? (
-            <>
-              <Properties key={concept.concept} concept={concept.concept} spec={spec} run={run} />
-              <ConceptDetails
-                info={concept}
-                onCustomize={onCustomize}
-                onShow={() => {
-                  setTab("spec");
-                  setJump({ concept: concept.concept, at: Date.now() });
-                }}
-              />
-            </>
-          ) : (
-            <p className="p-3 text-sm text-neutral-500">Choose a concept.</p>
-          )}
-        </Panel>
-        <Trace entries={project.trace} />
-      </div>
     </div>
   );
 }
