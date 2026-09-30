@@ -442,4 +442,12 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
     `calendar of ${p.model} placed by ${p.starts}${p.ends ? ` to ${p.ends}` : p.duration ? ` for ${p.duration} minutes` : ""}`,
   data: (p) =>
     `data: ${p.all ? "every model" : p.models.join(", ")}, their records to find, open, change and delete`,
+  calculator: (p) =>
+    `calculator: ${p.calculator.fields
+      .filter((f) => !f.formula)
+      .map((f) => f.name)
+      .join(", ")} give ${p.calculator.fields
+      .filter((f) => f.formula)
+      .map((f) => f.name)
+      .join(", ")}`,
 };

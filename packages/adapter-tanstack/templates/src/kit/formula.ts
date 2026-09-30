@@ -82,6 +82,17 @@ function DATEADD(date: string, amount: number, unit: "day" | "month" | "year"): 
   return value.toISOString().slice(0, 10);
 }
 
+/**
+ * The payment per period that repays `amount` over `periods` at `rate` per period (the
+ * spreadsheet PMT, as a positive number); with no interest, the amount split evenly.
+ */
+function PMT(rate: number, periods: number, amount: number): number {
+  if (!(periods > 0)) return 0;
+  if (rate === 0) return amount / periods;
+  const growth = (1 + rate) ** periods;
+  return (amount * rate * growth) / (growth - 1);
+}
+
 /** Days from `start` to `end`. */
 function DAYS(end: string, start: string): number {
   if (end === "" || start === "") return 0;
@@ -110,6 +121,7 @@ export const F = {
   d,
   compare,
   ROUND,
+  PMT,
   TODAY,
   NOW,
   DATEADD,
