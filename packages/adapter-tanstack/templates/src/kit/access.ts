@@ -15,6 +15,8 @@ export interface Rule {
   public: boolean;
   roles: readonly string[];
   owner: boolean;
+  /** Reading only: the records anyone may read, when not all (e.g. { status: "published" }). */
+  where?: Readonly<Record<string, string | boolean>>;
 }
 
 export interface ModelAccess {
@@ -60,9 +62,15 @@ export function check(rule: Rule, viewer: Viewer | null, ownerId?: string | null
 }
 
 /** Which records the viewer may read: all of them, only their own, or none. */
-export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "none" {
-  if (allows(rule, viewer)) return "all";
-  return viewer && rule.owner ? "own" : "none";
+/**
+ * Which records the viewer may read: all of them, their own (and the public ones where the
+ * rule limits those), only the public ones, or none.
+ */
+export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "public" | "none" {
+  if (viewer && rule.roles.includes(viewer.role)) return "all";
+  if (rule.public && !rule.where) return "all";
+  if (viewer && rule.owner) return "own";
+  return rule.public ? "public" : "none";
 }
 
 /** For a page's beforeLoad: sends visitors to sign in, and refuses users without the role. */
