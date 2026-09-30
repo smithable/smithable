@@ -45,6 +45,18 @@ models:
       per: session
       max: session.capacity
 
+  Post:
+    description: News and articles on the studio's blog.
+    fields:
+      title: string!
+      address: string unique            # the article's address; made from the title when empty
+      summary: text
+      cover: picture
+      body: markdown!
+      publishedOn: date
+      status: draft | published
+    access: { create: [admin], write: [admin], delete: [admin] }
+
   Message:
     description: A question a visitor sends from the contact form on the home page.
     fields:
@@ -62,6 +74,7 @@ pages:
       gallery:
       faq:
       callToAction: { button: schedule }
+      news: { records: Post }
       contact: { form: Message }
       footer:
   schedule:                           # the week's classes, for visitors too
@@ -77,6 +90,11 @@ pages:
     access: [admin]
   messages:
     crud: Message
+    access: [admin]
+  blog:                               # the studio's articles, for visitors too
+    articles: Post
+  posts:                              # where staff write them
+    crud: Post
     access: [admin]
   my-bookings:                        # a member's own bookings (private access)
     crud: Booking

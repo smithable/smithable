@@ -17,6 +17,10 @@ admins: [owner@stillwater.ax]
 # ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
 # signing in. Never add models that contain personal or business data.
 public:
-  pages: [home, schedule]          # the landing page and the schedule
-  read: [ClassType, Instructor, Session]
+  pages: [home, schedule, blog]    # the landing page, the schedule and the blog
+  read:
+    - ClassType
+    - Instructor
+    - Session
+    - Post: { where: { status: published } }   # visitors read published posts, not drafts
   create: [Message]                # the contact form; only admins read the messages

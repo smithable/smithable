@@ -440,6 +440,8 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
   users: () => "users: invite people by email with a role, change roles, remove users",
   calendar: (p) =>
     `calendar of ${p.model} placed by ${p.starts}${p.ends ? ` to ${p.ends}` : p.duration ? ` for ${p.duration} minutes` : ""}`,
+  articles: (p) =>
+    `articles of ${p.model}: ${p.title} and ${p.body}${p.picture ? `, ${p.picture}` : ""}${p.date ? `, by ${p.date}` : ""}${p.address ? `, at ${p.address}` : ""}`,
   data: (p) =>
     `data: ${p.all ? "every model" : p.models.join(", ")}, their records to find, open, change and delete`,
   calculator: (p) =>
