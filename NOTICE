@@ -1,0 +1,7 @@
+Smithable
+Copyright 2026 Johan Ekenlycka
+
+Licensed under the Apache License, Version 2.0 (see LICENSE). The app kit and
+templates in packages/adapter-tanstack/templates are licensed under the
+Zero-Clause BSD licence instead (see packages/adapter-tanstack/KIT-LICENSE), so
+generated applications carry no obligations from this repository.
