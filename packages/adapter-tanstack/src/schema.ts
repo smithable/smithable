@@ -141,8 +141,9 @@ export function column(field: FieldIR): { expr: string; uses: string } {
 }
 
 export function seedModule(ir: SpecIR): string {
-  // A record that must refer to a user cannot be invented, nor can records that need it.
-  const skipped = new Set<string>();
+  // A record that must refer to a user cannot be invented, nor can records that need it; nor
+  // a person's place (a model with a capacity): every place stays free.
+  const skipped = new Set<string>(ir.models.filter((m) => m.capacity).map((m) => m.name));
   for (const model of dependencyOrder(ir.models)) {
     const needs = model.fields.filter((f) => f.required && f.type.kind === "relation");
     if (

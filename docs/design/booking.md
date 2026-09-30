@@ -1,6 +1,6 @@
 # Booking a place: a capacity on related records, and Book and Cancel (design)
 
-Status: 2026-09-29, proposed by Fable; steps 1–2 (the `capacity` key, `setCapacity`, the write-path check, the referenced record's guard, the generated test, the summary sentence) built 2026-09-30; steps 3–5 (the reservation block, the starter, the docs' page side) are Opus's. The booking starter says "online booking" but has no bookings: its only trace is the rule "A session never has more confirmed bookings than its capacity", written in words and enforced nowhere. This adds one construct to the spec, so merging this document is the go-ahead. It passes ARCHITECTURE §2.4: common (classes, events, tables, rooms, tickets, appointment slots, course seats), deterministic, no model or custom code, technology-neutral, and it is exactly the kind of rule that must be enforced where records are written, not in a page: two people taking the last place at once is the case that matters.
+Status: 2026-09-29, proposed by Fable; steps 1–2 (the `capacity` key, `setCapacity`, the write-path check, the referenced record's guard, the generated test, the summary sentence) built 2026-09-30; steps 3–5 (the reservation block, the starter, the docs' page side) built 2026-09-30 by Opus, with the differences in section 6. The booking starter says "online booking" but has no bookings: its only trace is the rule "A session never has more confirmed bookings than its capacity", written in words and enforced nowhere. This adds one construct to the spec, so merging this document is the go-ahead. It passes ARCHITECTURE §2.4: common (classes, events, tables, rooms, tickets, appointment slots, course seats), deterministic, no model or custom code, technology-neutral, and it is exactly the kind of rule that must be enforced where records are written, not in a page: two people taking the last place at once is the case that matters.
 
 ## 1. What people get
 
@@ -71,3 +71,13 @@ Steps 1 and 2 are the engine part (the write path and its transaction); I'd do t
 - Reminder mails (a daily hook can send them today; a construct can come when several apps want the same).
 - Booking several places at once, or for someone else (ticket-style `max` per owner).
 - Cancellation deadlines ("no cancelling in the last 12 hours"): a rule for custom code or a later `when` on actions.
+
+## 6. As built: steps 3–5
+
+- **The block's server functions** are in the model's generated module (`bookingPlaces`, `reserveBooking`); cancelling is the existing `deleteBooking`. Two data functions came with them: `places(sessionId)`, which counts every booking but returns numbers only, and `mine(viewer, sessionId)`. The block shows the places from that count, not from a formula, so it works without `placesLeft`. The starter still has the formula, which lists show.
+- **Where it shows:** the calendar's panel (`details` on the kit's Calendar), which is where members and visitors meet a session, and the referenced model's crud record page (staff). A data page's record page doesn't get it.
+- **A record page's totals.** `get()` computed formulas over the related records the viewer may read, so a member's `placesLeft` on a session's page counted only their own booking. Totals now count every related record, as `list()` does, when the related model's records are not all readable. That changed invoicing's `invoice.server.ts` too, which is intended.
+- **Texts.** "Book a place" and "Cancel booking" are the block's defaults, taken as props. They are not in `smithable.content.yml` yet (`models.Booking.book`/`cancel`), since the content schema has no model-level texts beyond labels.
+- **No sample bookings.** The seed skips models with a capacity, so every place starts free.
+- **The browser step.** Development sign-in has one user per role, so "a second member" is the admin: every session gets one place, the member books one, the admin sees it full on its page and cannot lower its places, and the member cancels.
+
