@@ -1,5 +1,5 @@
 // Small building blocks for the Studio's own interface.
-import { cloneElement, type ReactElement, type ReactNode, useId } from "react";
+import { cloneElement, type ReactElement, type ReactNode, useEffect, useId, useState } from "react";
 
 export function cx(...classes: (string | false | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
@@ -140,4 +140,16 @@ export function Tabs<T extends string>({
       ))}
     </div>
   );
+}
+
+/** Whether a media query matches, following the window as it changes. */
+export function useMedia(query: string): boolean {
+  const [matches, setMatches] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const change = () => setMatches(list.matches);
+    list.addEventListener("change", change);
+    return () => list.removeEventListener("change", change);
+  }, [query]);
+  return matches;
 }

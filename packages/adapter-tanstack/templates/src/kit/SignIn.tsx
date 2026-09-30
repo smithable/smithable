@@ -40,7 +40,7 @@ export function SignIn({
     }
   }
   return (
-    <Card className="mx-auto mt-10 max-w-sm space-y-5 p-card">
+    <Card data-kit="sign-in" className="mx-auto mt-10 max-w-sm space-y-5 p-card">
       <h1 className="text-2xl font-bold">Sign in to {appName}</h1>
       {invitation && (
         <p className="rounded-md bg-accent p-3 text-sm">

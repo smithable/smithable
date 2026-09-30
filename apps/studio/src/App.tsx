@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
-import { isPreviewMessage } from "./preview";
+import { isPreviewMessage, type Place, shared } from "./preview";
+import { Preview } from "./shared";
 import { Studio } from "./studio/Studio";
 import { Button, cx } from "./ui";
 
@@ -31,6 +32,36 @@ export function App() {
   const [version, setVersion] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // The preview: select mode, and the mode's slot it is placed over on narrow windows.
+  const [selecting, setSelecting] = useState(false);
+  const [place, setPlace] = useState<Place>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("smithable:place") ?? "") as Place;
+    } catch {
+      return { builder: {}, studio: {} };
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("smithable:place", JSON.stringify(place));
+    } catch {}
+  }, [place]);
+  // What one mode picks, the other opens at when it can show it.
+  const builderPlace = (next: Place["builder"]) =>
+    setPlace((p) => ({
+      builder: { ...p.builder, ...next },
+      studio: next.selection ? { ...p.studio, concept: next.selection.concept } : p.studio,
+    }));
+  const studioPlace = (next: Place["studio"]) =>
+    setPlace((p) => {
+      const selection = next.concept ? shared(next.concept) : undefined;
+      return {
+        studio: { ...p.studio, ...next },
+        builder: selection ? { ...p.builder, selection } : p.builder,
+      };
+    });
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const box = useSlotBox(slot);
 
   const refresh = useCallback(async () => {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
@@ -185,6 +216,15 @@ export function App() {
         </fieldset>
         <div className="ml-auto flex items-center gap-3">
           {busy && <span className="text-xs text-neutral-500">Working…</span>}
+          {place.previewHidden && (
+            <Button
+              variant="ghost"
+              className="max-lg:hidden"
+              onClick={() => setPlace((p) => ({ ...p, previewHidden: false }))}
+            >
+              Show preview
+            </Button>
+          )}
           {project.home && (
             <a href={project.home} className="text-xs font-medium text-accent hover:underline">
               Publish and share
@@ -241,20 +281,78 @@ export function App() {
           )}
         </div>
       )}
-      <main className="min-h-0 flex-1">
-        {mode === "builder" ? (
-          <Builder project={project} spec={spec} run={run} version={version} />
-        ) : (
-          <Studio
-            project={project}
-            spec={spec}
-            run={run}
+      {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
+          never moves in the page, so switching modes keeps its page. Wide windows show it on
+          the right; narrow ones place it over the mode's preview slot. */}
+      <main className="flex min-h-0 flex-1">
+        <div className="min-h-0 min-w-0 flex-1">
+          {mode === "builder" ? (
+            <Builder
+              project={project}
+              spec={spec}
+              run={run}
+              previewSlot={setSlot}
+              place={place.builder}
+              onPlace={builderPlace}
+            />
+          ) : (
+            <Studio
+              project={project}
+              spec={spec}
+              run={run}
+              version={version}
+              logs={logs}
+              onCustomize={customize}
+              previewSlot={setSlot}
+              place={place.studio}
+              onPlace={studioPlace}
+              previewHidden={Boolean(place.previewHidden)}
+            />
+          )}
+        </div>
+        <div
+          style={box}
+          className={cx(
+            "flex min-h-0 flex-col border-l border-neutral-200 bg-white",
+            box ? "fixed z-10" : place.previewHidden ? "hidden" : "max-lg:hidden lg:w-[55%]",
+          )}
+        >
+          <Preview
+            url={project.preview}
             version={version}
-            logs={logs}
-            onCustomize={customize}
+            selecting={selecting}
+            onSelecting={setSelecting}
+            onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
           />
-        )}
+        </div>
       </main>
     </div>
   );
+}
+
+/**
+ * Where a mode's preview slot is on the screen, followed frame by frame while it exists (a
+ * snapping strip moves it); none means the preview has its own column.
+ */
+function useSlotBox(slot: HTMLElement | null) {
+  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number }>();
+  useEffect(() => {
+    if (!slot) {
+      setBox(undefined);
+      return;
+    }
+    let frame = 0;
+    const measure = () => {
+      const r = slot.getBoundingClientRect();
+      setBox((b) =>
+        b && b.top === r.top && b.left === r.left && b.width === r.width && b.height === r.height
+          ? b
+          : { top: r.top, left: r.left, width: r.width, height: r.height },
+      );
+      frame = requestAnimationFrame(measure);
+    };
+    measure();
+    return () => cancelAnimationFrame(frame);
+  }, [slot]);
+  return box;
 }

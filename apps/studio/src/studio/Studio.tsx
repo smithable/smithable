@@ -1,20 +1,15 @@
 // Studio mode: the spec as YAML, every operation, the last change's diff, logs and concepts.
-import {
-  type ArgRef,
-  humanize,
-  identifier,
-  type JsonSchema,
-  operationsFor,
-  refHint,
-} from "@smithable/core";
+import { type ArgRef, type JsonSchema, operationsFor, refHint } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
-import { FieldShapeForm, type Run } from "../builder/ChangeForms";
+import type { Run } from "../builder/ChangeForms";
 import { readSpec, type Spec } from "../engine";
-import { Preview, Trace } from "../shared";
-import { Button, cx, Input, Label, Panel, Select, Tabs } from "../ui";
+import type { Place } from "../preview";
+import { Properties } from "../properties";
+import { Trace } from "../shared";
+import { Button, cx, Label, Panel, Select, Tabs, useMedia } from "../ui";
 
 type Tab = "spec" | "operation" | "diff" | "logs" | "preview";
 
@@ -34,6 +29,10 @@ export function Studio({
   version,
   logs,
   onCustomize,
+  previewSlot,
+  place,
+  onPlace,
+  previewHidden,
 }: {
   project: Project;
   spec: Spec;
@@ -41,20 +40,56 @@ export function Studio({
   version: number;
   logs: string[];
   onCustomize: (page: string) => void;
+  /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
+  previewSlot: (element: HTMLElement | null) => void;
+  /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
+  place: Place["studio"];
+  onPlace: (place: Place["studio"]) => void;
+  /** With the preview's column hidden there is room for the details beside the tree from lg. */
+  previewHidden: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("spec");
-  const [selected, setSelected] = useState<string>();
+  const [tab, setTabState] = useState<Tab>((place.tab as Tab | undefined) ?? "spec");
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    onPlace({ tab: next });
+  };
+  const framed = useMedia("(min-width: 1024px)");
+  const [selected, setSelectedState] = useState<string | undefined>(place.concept);
+  const setSelected = (concept: string) => {
+    setSelectedState(concept);
+    onPlace({ concept });
+  };
   // "Show in smithable.yml": the editor selects the concept's lines.
   const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
   return (
-    // The details sit beside the concept tree on wide screens, under it on narrower ones.
-    <div className="grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200 lg:grid-cols-[240px_320px_1fr]">
-      <div className="grid min-h-0 grid-rows-[1fr_2fr] lg:contents">
+    // The details sit beside the concept tree from lg when the preview is hidden, else only on
+    // very wide screens (the preview takes the right of the window from lg); under it otherwise.
+    <div
+      className={cx(
+        "grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200",
+        previewHidden
+          ? "lg:grid-cols-[240px_320px_1fr]"
+          : "min-[1800px]:grid-cols-[240px_320px_1fr]",
+      )}
+    >
+      <div
+        className={cx(
+          "grid min-h-0 grid-rows-[1fr_2fr]",
+          previewHidden ? "lg:contents" : "min-[1800px]:contents",
+        )}
+      >
         <Panel title="Concepts">
           <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
         </Panel>
-        <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200 lg:border-t-0 lg:border-l">
+        <div
+          className={cx(
+            "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200",
+            previewHidden
+              ? "lg:border-t-0 lg:border-l"
+              : "min-[1800px]:border-t-0 min-[1800px]:border-l",
+          )}
+        >
           <Panel title="Details">
             {concept ? (
               <>
@@ -83,7 +118,8 @@ export function Studio({
               ["operation", "Operation"],
               ["diff", "Last change"],
               ["logs", "Logs"],
-              ["preview", "Preview"],
+              // Narrow windows only: from lg the preview has its own column.
+              ...(framed ? [] : [["preview", "Preview"] as [Tab, string]]),
             ]}
             value={tab}
             onChange={setTab}
@@ -103,7 +139,7 @@ export function Studio({
             </pre>
           </section>
         )}
-        {tab === "preview" && <Preview url={project.preview} version={version} />}
+        {tab === "preview" && !framed && <div ref={previewSlot} className="h-full" />}
       </Panel>
     </div>
   );
@@ -133,6 +169,7 @@ function ConceptTree({
       <button
         type="button"
         onClick={() => onSelect(c.concept)}
+        aria-current={selected === c.concept ? "true" : undefined}
         className={cx(
           "block w-full truncate rounded px-2 py-1 text-left text-sm",
           nested && "pl-6 text-neutral-600",
@@ -300,6 +337,31 @@ function SpecEditor({
     return () => removeEventListener("beforeunload", ask);
   }, [edited]);
   const area = useRef<HTMLTextAreaElement>(null);
+  // The cursor and scroll, kept for the session: coming back to Code mode opens the editor where
+  // it was left (docs/design/studio-v2.md §2). Kept here, not in the app's state, since they
+  // change with every key and scroll.
+  useEffect(() => {
+    const editor = area.current;
+    if (!editor || jump) return;
+    try {
+      const { at, scroll } = JSON.parse(sessionStorage.getItem("smithable:editor") ?? "") as {
+        at: number;
+        scroll: number;
+      };
+      editor.setSelectionRange(at, at);
+      editor.scrollTop = scroll;
+    } catch {}
+  }, [jump]);
+  const keepCursor = () => {
+    const editor = area.current;
+    if (!editor) return;
+    try {
+      sessionStorage.setItem(
+        "smithable:editor",
+        JSON.stringify({ at: editor.selectionStart, scroll: editor.scrollTop }),
+      );
+    } catch {}
+  };
   // Selects the lines a concept is declared on, and scrolls to them (when asked, not as the
   // text changes; the editor's own value is the text).
   useEffect(() => {
@@ -325,6 +387,8 @@ function SpecEditor({
         spellCheck={false}
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onSelect={keepCursor}
+        onScroll={keepCursor}
         className="min-h-0 flex-1 resize-none p-3 font-mono text-[13px] leading-5 outline-none"
       />
       {edited && saved !== base && saved !== text && (
@@ -517,211 +581,4 @@ export function specRange(text: string, concept: string): [number, number] | und
     (l, i) => i > at && i < end && new RegExp(`^ {4,}${field}:`).test(l),
   );
   return line < 0 ? undefined : [offset(line), offset(line) + (lines[line]?.length ?? 0)];
-}
-
-/** One visible text, saved with setText; empty restores the text Smithable derives. */
-function TextSetting({
-  label,
-  path,
-  current,
-  fallback,
-  run,
-}: {
-  label: string;
-  path: string[];
-  current?: string;
-  fallback: string;
-  run: Run;
-}) {
-  const [text, setText] = useState(current ?? "");
-  return (
-    <form
-      className="flex items-end gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void run("setText", { path, text: text.trim() });
-      }}
-    >
-      <Label text={label}>
-        <Input
-          aria-label={label}
-          value={text}
-          placeholder={fallback}
-          onChange={(e) => setText(e.target.value)}
-        />
-      </Label>
-      <Button
-        type="submit"
-        variant="ghost"
-        aria-label={`Save ${label.toLowerCase()}`}
-        className="border border-neutral-200"
-        disabled={text.trim() === (current ?? "")}
-      >
-        Save
-      </Button>
-    </form>
-  );
-}
-
-const PAGE_ICONS = [
-  "auto",
-  "users",
-  "user",
-  "file",
-  "receipt",
-  "cart",
-  "package",
-  "calendar",
-  "layers",
-  "book",
-  "briefcase",
-  "building",
-  "chart",
-  "clipboard",
-  "home",
-  "mail",
-  "settings",
-  "star",
-  "tag",
-  "truck",
-  "list",
-];
-
-/** The selected concept's properties, changed with operations (the Photoshop-like panel). */
-function Properties({ concept, spec, run }: { concept: string; spec: Spec; run: Run }) {
-  const ir = spec.ir;
-  const [kind = "", rest = ""] = concept.split(":");
-  const [name = "", fieldName] = rest.split(".");
-  const [rename, setRename] = useState("");
-  if (!ir) return null;
-  const heading = <h3 className="text-xs font-semibold text-neutral-500">Properties</h3>;
-  if (kind === "field" && fieldName) {
-    const field = ir.models.find((m) => m.name === name)?.fields.find((f) => f.name === fieldName);
-    if (!field) return null;
-    const models = ir.models.map((m) => m.name);
-    const to = identifier(rename);
-    return (
-      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
-        {heading}
-        {field.formula || (field.type.kind === "relation" && field.type.many) ? (
-          <p className="text-neutral-600">
-            {field.formula ? "Calculated" : "Lists related records"}: change it in smithable.yml.
-          </p>
-        ) : (
-          <FieldShapeForm
-            field={field}
-            models={models}
-            run={(type) => run("changeField", { model: name, field: fieldName, type })}
-          />
-        )}
-        <TextSetting
-          label="Label"
-          path={["models", name, "fields", fieldName, "label"]}
-          current={spec.content?.models[name]?.fields[fieldName]?.label}
-          fallback={humanize(fieldName)}
-          run={run}
-        />
-        <form
-          className="flex items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (to) void run("renameField", { model: name, from: fieldName, to });
-          }}
-        >
-          <Label
-            text="Rename"
-            hint={to ? `Will be named ${to}; the data is kept` : "The data is kept"}
-          >
-            <Input aria-label="Rename" value={rename} onChange={(e) => setRename(e.target.value)} />
-          </Label>
-          <Button
-            type="submit"
-            variant="ghost"
-            className="border border-neutral-200"
-            disabled={!to}
-          >
-            Rename
-          </Button>
-        </form>
-        <Button
-          variant="ghost"
-          className="border border-red-200 text-red-700"
-          onClick={() => void run("removeField", { model: name, field: fieldName })}
-        >
-          Remove field
-        </Button>
-      </div>
-    );
-  }
-  if (kind === "page") {
-    const page = ir.pages.find((p) => p.id === name);
-    if (!page) return null;
-    const texts = spec.content?.pages[name];
-    return (
-      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
-        {heading}
-        <TextSetting
-          label="Title"
-          path={["pages", name, "title"]}
-          current={texts?.title}
-          fallback={humanize(name)}
-          run={run}
-        />
-        <TextSetting
-          label="Subtitle"
-          path={["pages", name, "subtitle"]}
-          current={texts?.subtitle}
-          fallback="None"
-          run={run}
-        />
-        <Label text="Icon in the menu">
-          <Select
-            aria-label="Icon in the menu"
-            value=""
-            onChange={(e) =>
-              e.target.value && void run("setIcon", { page: name, icon: e.target.value })
-            }
-            options={[
-              ["", "Choose…"],
-              ...PAGE_ICONS.map((i): [string, string] => [
-                i,
-                i === "auto" ? "Automatic" : humanize(i),
-              ]),
-            ]}
-          />
-        </Label>
-        <Button
-          variant="ghost"
-          className="border border-red-200 text-red-700"
-          disabled={ir.pages.length < 2}
-          onClick={() => void run("removePage", { page: name })}
-        >
-          Remove page
-        </Button>
-      </div>
-    );
-  }
-  if (kind === "model") {
-    const texts = spec.content?.models[name];
-    return (
-      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
-        {heading}
-        <TextSetting
-          label="Name for one"
-          path={["models", name, "label"]}
-          current={texts?.label}
-          fallback={humanize(name)}
-          run={run}
-        />
-        <TextSetting
-          label="Name for several"
-          path={["models", name, "pluralLabel"]}
-          current={texts?.pluralLabel}
-          fallback={`${humanize(name)}s`}
-          run={run}
-        />
-      </div>
-    );
-  }
-  return null;
 }

@@ -38,6 +38,8 @@ export function FieldInput({
   const common = {
     id,
     name: field.name,
+    "data-part": "input",
+    "data-field": field.name,
     "aria-invalid": invalid || undefined,
     "aria-describedby": describedBy,
   };

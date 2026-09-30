@@ -24,7 +24,8 @@ const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
-const port = 4900;
+// Another checkout testing at the same time sets its own (TEST_APPS_PORT does the same for test-apps).
+const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
 const base = `http://localhost:${port}`;
 let failed = false;
 
@@ -90,7 +91,7 @@ try {
   };
   const openPreview = async (path) => {
     await page.getByLabel("Preview address").fill(path);
-    await page.getByRole("button", { name: "Go" }).click();
+    await page.getByRole("button", { name: "Go", exact: true }).click();
   };
 
   console.log("Builder mode");
@@ -209,7 +210,7 @@ try {
         .waitFor({ state: "attached", timeout: 60000 });
       const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
       await header("email").dragTo(header("name"), { timeout: 60000 });
-      await status.getByText("in the customers table").waitFor({ timeout: 60000 });
+      await trace.getByText("in the customers table").first().waitFor({ timeout: 60000 });
       const after = await project();
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
@@ -228,7 +229,7 @@ try {
       await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
-      await status.getByText("Changed a text to “Clients”").waitFor({ timeout: 60000 });
+      await trace.getByText("Changed a text to “Clients”").first().waitFor({ timeout: 60000 });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();
@@ -241,7 +242,10 @@ try {
     await page.getByLabel("Value", { exact: true }).selectOption({ label: "Shipped" });
     await page.getByLabel("Colour").selectOption({ label: "Green (good)" });
     await page.getByRole("button", { name: "Set colour" }).click();
-    await status.getByText("Show Order.status shipped as success").waitFor({ timeout: 60000 });
+    await trace
+      .getByText("Show Order.status shipped as success")
+      .first()
+      .waitFor({ timeout: 60000 });
     await change("A page's icon");
     await page.getByLabel("Page", { exact: true }).selectOption({ label: "Orders" });
     await page.getByLabel("Icon").selectOption({ label: "Truck" });
@@ -258,7 +262,7 @@ try {
     await page.getByLabel("Theme").selectOption("playful");
     await page.getByLabel("Density").selectOption("compact");
     await page.getByRole("button", { name: "Apply" }).click();
-    await status.getByText("Set the theme: preset playful").waitFor({ timeout: 60000 });
+    await trace.getByText("Set the theme: preset playful").first().waitFor({ timeout: 60000 });
   });
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
@@ -305,26 +309,40 @@ try {
   );
 
   await step(
-    "Your app is edited in its own words: a new item in the list of fields is added without AI",
+    "Your app is a map to its parts: a field's line opens its properties, Add a field opens the form for that record, and In my words changes only the wording",
     async () => {
       await page.getByRole("tab", { name: "Your app" }).click();
-      await page.getByRole("button", { name: "Edit Customers" }).click();
-      const box = page.getByLabel("Customers, in your words");
-      const lines = (await box.inputValue()).split("\n");
-      const last = lines.findLastIndex((l) => l.startsWith("- "));
-      lines.splice(last + 1, 0, "- a loyalty code (unique)");
-      await box.fill(lines.join("\n"));
+      const customers = page.getByRole("region", { name: "Customers", exact: true });
+      await customers.getByRole("button", { name: "a phone", exact: true }).click();
+      await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
+      await customers.getByRole("button", { name: "Save label" }).click();
+      await trace.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
+      // Adding a field: the Change tab's form, with the record filled in.
       await page
         .getByRole("region", { name: "Customers", exact: true })
-        .getByRole("button", { name: "Make the change" })
+        .getByRole("button", { name: "Add a field" })
         .click();
+      if ((await page.getByLabel("Kind of record").inputValue()) !== "Customer")
+        throw new Error("the form is not for customers");
+      await page.getByLabel("Name", { exact: true }).fill("loyalty code");
+      await page.getByRole("checkbox", { name: "Unique" }).check();
+      await page.getByRole("button", { name: "Add field" }).click();
       await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
-      // The part keeps the user's wording.
-      await page.getByText("a loyalty code (unique)", { exact: true }).first().waitFor();
+      // In my words: the wording only, for this session; no change is made.
+      await page.getByRole("tab", { name: "Your app" }).click();
+      const again = page.getByRole("region", { name: "Customers", exact: true });
+      await again.getByRole("button", { name: "In my words" }).click();
+      await page.getByLabel("Customers, in your words").fill("Our clients and how to reach them.");
+      await again.getByRole("button", { name: "Keep my words" }).click();
+      await again.getByText("Our clients and how to reach them.").waitFor();
+      if (!(await trace.locator("li").first().innerText()).includes("loyalty code"))
+        throw new Error("rewording made a change");
+      await again.getByRole("button", { name: "Back to the generated text" }).click();
+      await again.getByRole("button", { name: "a loyalty code (unique)" }).waitFor();
     },
   );
   await step(
-    "the panels snap: one at a time, picked above or with the arrow keys; wide windows pair Preview and Details",
+    "the panels snap: one at a time, picked above or with the arrow keys; very wide windows pair Your app and Details; the preview has its own column, and on a narrow window it is a panel",
     async () => {
       const panels = page.getByRole("navigation", { name: "Panels" });
       const current = (name) =>
@@ -336,19 +354,81 @@ try {
           name,
           { timeout: 5000 },
         );
-      await panels.getByLabel("Preview + Details").uncheck();
-      await panels.getByRole("button", { name: "Preview" }).click();
-      await current("Preview");
-      await page.keyboard.press("ArrowRight");
+      await page.setViewportSize({ width: 1700, height: 900 });
+      await panels.getByLabel("Your app + Details").uncheck();
+      await panels.getByRole("button", { name: "Details" }).click();
       await current("Details");
+      await page.keyboard.press("ArrowLeft");
+      await current("Your app");
       // The change box, and the changes under it, stay under every panel.
       await page.getByLabel("Describe a change").waitFor();
       await trace.waitFor();
-      await panels.getByLabel("Preview + Details").check();
+      await panels.getByLabel("Your app + Details").check();
+      await current("Your app,Details");
+      // A narrow window: the preview is a panel of the strip, the frame placed over it.
+      await page.setViewportSize({ width: 800, height: 900 });
       await panels.getByRole("button", { name: "Preview" }).click();
-      await current("Preview,Details");
+      await current("Preview");
+      // Once the strip has snapped, the frame covers the window's width.
+      await page.waitForFunction(
+        () => {
+          const r = document.querySelector('iframe[title="App preview"]')?.getBoundingClientRect();
+          return r && Math.abs(r.left) < 2 && r.width > 700;
+        },
+        null,
+        { timeout: 5000 },
+      );
       await panels.getByRole("button", { name: "Your app" }).click();
       await current("Your app");
+      await page.setViewportSize({ width: 1440, height: 900 });
+    },
+  );
+  await step(
+    "one preview for both modes: the address follows it, and a mode switch keeps its page",
+    async () => {
+      await openPreview("/orders");
+      await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 });
+      // Navigating inside the app (opening an order) shows in the address.
+      await preview.getByRole("button", { name: "ORD-1008" }).click();
+      await page.waitForFunction(
+        () =>
+          /^\/orders\/\d+$/.test(
+            document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
+          ),
+        null,
+        { timeout: 10000 },
+      );
+      const opened = await page.getByLabel("Preview address").inputValue();
+      await page.locator("label", { hasText: /^Code$/ }).click();
+      await page.getByRole("navigation", { name: "Concepts" }).waitFor();
+      if ((await page.getByLabel("Preview address").inputValue()) !== opened)
+        throw new Error("the preview lost its page in Code mode");
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+      await page.locator("label", { hasText: /^No code$/ }).click();
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+    },
+  );
+  await step(
+    "the place is remembered per mode: a field picked in the preview is the field in Code mode, and back",
+    async () => {
+      await openPreview("/customers/new");
+      await page.getByRole("button", { name: "Select" }).click();
+      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
+      await page.getByRole("button", { name: "Select" }).click();
+      await page.locator("label", { hasText: /^Code$/ }).click();
+      await page
+        .getByRole("navigation", { name: "Concepts" })
+        .locator('[aria-current="true"]', { hasText: /^email/ })
+        .waitFor({ timeout: 10000 });
+      // A reload keeps both modes' places (the browser tab's session).
+      await page.reload();
+      await page
+        .getByRole("navigation", { name: "Concepts" })
+        .locator('[aria-current="true"]')
+        .waitFor({ timeout: 30000 });
+      await page.locator("label", { hasText: /^No code$/ }).click();
+      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
     },
   );
   await step("Ctrl+Z outside a text field undoes the last change", async () => {
@@ -357,6 +437,31 @@ try {
     await trace
       .getByText("Undid: Customers: added a loyalty code (unique)")
       .waitFor({ timeout: 60000 });
+  });
+  await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
+    const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
+    await page.getByRole("button", { name: "Your app", exact: true }).first().click();
+    await page.getByRole("tab", { name: "Look" }).click();
+    const look = (name) => page.getByRole("region", { name });
+    await look("Font and density").getByRole("button", { name: "Comfortable" }).click();
+    await look("Font and density")
+      .getByRole("button", { name: "Comfortable", pressed: true })
+      .waitFor({ timeout: 60000 });
+    await look("Colours of choices").getByLabel("Colour of Draft").first().selectOption("warning");
+    await trace.getByText(/draft/i).first().waitFor({ timeout: 60000 });
+    await look("Pages").getByLabel("Icon of Orders").selectOption("truck");
+    await trace.getByText(/truck/i).first().waitFor({ timeout: 60000 });
+    if (!/icon: truck/.test(ux())) throw new Error(`no icon in smithable.ux.yml:\n${ux()}`);
+    const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
+    await columns
+      .getByRole("button", { name: /^Hide / })
+      .last()
+      .click();
+    await columns
+      .getByRole("button", { name: /^Show / })
+      .first()
+      .waitFor({ timeout: 60000 });
+    await page.getByRole("tab", { name: "Your app" }).click();
   });
 
   await step(
@@ -451,8 +556,27 @@ try {
       .waitFor({ timeout: 60000 });
     await page.getByText("This page has its own component").waitFor();
   });
+  await step(
+    "the preview can be hidden for room: the details then sit beside the tree, and it stays hidden after a reload",
+    async () => {
+      const concepts = page.getByRole("navigation", { name: "Concepts" });
+      const details = page.getByRole("heading", { name: "Details" });
+      await page.getByRole("button", { name: "Hide", exact: true }).click();
+      await page.locator('iframe[title="App preview"]').waitFor({ state: "hidden" });
+      const beside = async () => {
+        const [a, b] = [await concepts.boundingBox(), await details.boundingBox()];
+        return a && b && b.x >= a.x + a.width - 2;
+      };
+      if (!(await beside())) throw new Error("the details are not beside the tree");
+      await page.reload();
+      await page.getByRole("button", { name: "Show preview" }).click();
+      await page.locator('iframe[title="App preview"]').waitFor();
+      if (await beside())
+        throw new Error("the details stay beside the tree with the preview shown");
+    },
+  );
   await step("the preview shows the changes, and the logs are there", async () => {
-    await page.getByRole("tab", { name: "Preview" }).click();
+    // Beside Code mode from lg: no tab to open.
     await openPreview("/orders");
     await preview.getByRole("searchbox", { name: "Search by number" }).waitFor({ timeout: 60000 });
     await page.getByRole("tab", { name: "Logs" }).click();
