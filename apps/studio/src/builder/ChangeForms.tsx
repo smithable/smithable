@@ -209,7 +209,7 @@ const CHANGES = [
   ["removeSection", "Remove a section"],
 ] as const;
 
-/** Operations whose form can hold everything a proposal gives them (Describe → Manual). */
+/** Operations whose form can hold everything a proposal gives them (the change box → the Change tab). */
 export const PREFILLED = ["addField", "changeField", "renameField", "removeField", "addPage"];
 
 export type Prefill = { op: string; args: Record<string, unknown> };

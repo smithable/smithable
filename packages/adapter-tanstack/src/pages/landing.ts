@@ -76,6 +76,11 @@ export function landingRoute(
               ? `
           image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)} }}`
               : ""
+          }${
+            sections.slice(sections.indexOf(section) + 1).some((s) => s.kind !== "footer")
+              ? `
+          more`
+              : ""
           }
         />`,
         ];

@@ -14,6 +14,8 @@ export interface MenuUi {
 
 interface ShellProps {
   appName: string;
+  /** The page at "/", if the app has one: the name leads there when the viewer may open it. */
+  home?: { to: LinkProps["to"]; access: Rule };
   menus: MenuUi[];
   viewer: Viewer | null;
   /** Without it the app has no sign-in. */
@@ -30,7 +32,9 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
     <div className="min-h-screen lg:flex">
       {/* Desktop: a sidebar. */}
       <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
-        <p className="px-6 pt-7 pb-6 text-2xl font-bold">{shell.appName}</p>
+        <p className="px-6 pt-7 pb-6 text-2xl font-bold">
+          <AppName {...shell} />
+        </p>
         <Navigation {...shell} />
       </aside>
       {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
@@ -43,7 +47,9 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         >
           <Menu aria-hidden className="size-6" />
         </button>
-        <p className="min-w-0 truncate text-lg font-bold">{shell.appName}</p>
+        <p className="min-w-0 truncate text-lg font-bold">
+          <AppName {...shell} />
+        </p>
       </header>
       <dialog
         ref={drawer}
@@ -51,7 +57,9 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
         <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
-          <p className="min-w-0 truncate text-lg font-bold">{shell.appName}</p>
+          <p className="min-w-0 truncate text-lg font-bold">
+            <AppName {...shell} onNavigate={() => drawer.current?.close()} />
+          </p>
           <button
             type="button"
             aria-label="Close menu"
@@ -65,6 +73,30 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
       </dialog>
       <main className="min-w-0 flex-1 px-5 py-6 lg:px-9 lg:py-8">{children}</main>
     </div>
+  );
+}
+
+/** The app's name, a way back to its start: the page at "/", else the first the viewer may open. */
+function AppName({
+  appName,
+  home,
+  menus,
+  viewer,
+  onNavigate,
+}: ShellProps & { onNavigate?: () => void }) {
+  const start =
+    home && allows(home.access, viewer)
+      ? home.to
+      : menus.flatMap((m) => m.items).find((item) => allows(item.access, viewer))?.to;
+  if (!start) return appName;
+  return (
+    <Link
+      to={start}
+      onClick={onNavigate}
+      className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
+    >
+      {appName}
+    </Link>
   );
 }
 

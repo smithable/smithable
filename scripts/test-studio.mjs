@@ -80,7 +80,6 @@ try {
   const trace = page.getByRole("list", { name: "Change trace" });
   const change = async (label) => {
     await page.getByRole("tab", { name: "Change" }).click();
-    await page.getByRole("tab", { name: "Manual" }).click();
     await page.getByLabel("What do you want to change?").selectOption({ label });
   };
   const openPreview = async (path) => {
@@ -220,7 +219,7 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
     },
   );
-  await step("colours of a choice and a page's icon, from Manual", async () => {
+  await step("colours of a choice and a page's icon, from the Change tab", async () => {
     await change("Colours of a choice");
     await page.getByLabel("Choice field").selectOption({ label: "Status of Order" });
     await page.getByLabel("Value", { exact: true }).selectOption({ label: "Shipped" });
@@ -257,15 +256,13 @@ try {
   });
 
   await step(
-    "a change that deletes data is proposed first, and opens in Manual with its values filled in",
+    "a change that deletes data is proposed first, and opens in a form with its values filled in",
     async () => {
-      await page.getByRole("tab", { name: "Change" }).click();
-      await page.getByRole("tab", { name: "Describe" }).click();
       await page.getByLabel("Describe a change").fill("Customers without notes");
       await page.getByRole("button", { name: "Make the change" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
       await proposal.getByText("(loses data)").waitFor({ timeout: 30000 });
-      await proposal.getByRole("button", { name: "Edit in Manual" }).click();
+      await proposal.getByRole("button", { name: "Edit in a form" }).click();
       const values = [
         await page.getByLabel("What do you want to change?").inputValue(),
         await page.getByLabel("Kind of record").inputValue(),
@@ -277,7 +274,6 @@ try {
   await step(
     "describe a change: one that loses no data is made at once, and traced with its model",
     async () => {
-      await page.getByRole("tab", { name: "Describe" }).click();
       await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
       await page.getByRole("button", { name: "Make the change" }).click();
       await page
@@ -302,10 +298,40 @@ try {
       const last = lines.findLastIndex((l) => l.startsWith("- "));
       lines.splice(last + 1, 0, "- a loyalty code (unique)");
       await box.fill(lines.join("\n"));
-      await page.getByRole("button", { name: "Make the change" }).click();
+      await page
+        .getByRole("region", { name: "Customers", exact: true })
+        .getByRole("button", { name: "Make the change" })
+        .click();
       await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
       // The part keeps the user's wording.
       await page.getByText("a loyalty code (unique)", { exact: true }).first().waitFor();
+    },
+  );
+  await step(
+    "the panels snap: one at a time, picked above or with the arrow keys; wide windows pair Preview and Changes",
+    async () => {
+      const panels = page.getByRole("navigation", { name: "Panels" });
+      const current = (name) =>
+        page.waitForFunction(
+          (label) =>
+            [...document.querySelectorAll("nav[aria-label=Panels] [aria-current=true]")]
+              .map((b) => b.textContent)
+              .join() === label,
+          name,
+          { timeout: 5000 },
+        );
+      await panels.getByLabel("Preview + Changes").uncheck();
+      await panels.getByRole("button", { name: "Preview" }).click();
+      await current("Preview");
+      await page.keyboard.press("ArrowRight");
+      await current("Changes");
+      // The change box stays under every panel.
+      await page.getByLabel("Describe a change").waitFor();
+      await panels.getByLabel("Preview + Changes").check();
+      await panels.getByRole("button", { name: "Preview" }).click();
+      await current("Preview,Changes");
+      await panels.getByRole("button", { name: "Your app" }).click();
+      await current("Your app");
     },
   );
   await step("Ctrl+Z outside a text field undoes the last change", async () => {
