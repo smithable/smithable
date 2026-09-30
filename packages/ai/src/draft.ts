@@ -32,10 +32,12 @@ export function closestStarter(description: string, starters: Record<string, Spe
     return [...wanted].filter((w) => w.length > 3 && known.has(w)).length;
   };
   const names = Object.keys(starters);
-  return names.reduce(
-    (best, name) => (score(starters[name] ?? {}) > score(starters[best] ?? {}) ? name : best),
+  const best = names.reduce(
+    (b, name) => (score(starters[name] ?? {}) > score(starters[b] ?? {}) ? name : b),
     names[0] ?? "",
   );
+  // Nothing in common with any starter: the neutral one, when there is one.
+  return score(starters[best] ?? {}) === 0 && "records" in starters ? "records" : best;
 }
 
 /**

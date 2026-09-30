@@ -1,6 +1,14 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { closestStarter, draftProject } from "@smithable/ai";
+import { createInterface } from "node:readline/promises";
+import {
+  clarifyProject,
+  closestStarter,
+  describedWith,
+  draftProject,
+  draftProjectByOperations,
+  type Question,
+} from "@smithable/ai";
 import { validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
@@ -17,14 +25,33 @@ export async function create(
   dir: string,
   io: Io,
   starter: string | undefined,
-  options: { describe?: string; yes?: boolean } = {},
+  options: { describe?: string; answers?: string; yes?: boolean } = {},
 ): Promise<number> {
-  const name = starter ?? (options.describe ? closestStarter(options.describe, STARTERS) : "crm");
-  let files = STARTERS[name];
-  if (files === undefined) {
-    io.err(`Unknown starter "${name}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
+  let name = starter ?? (options.describe ? closestStarter(options.describe, STARTERS) : "crm");
+  if (starter !== undefined && STARTERS[starter] === undefined) {
+    io.err(`Unknown starter "${starter}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
     return 2;
   }
+  let description = options.describe;
+  const providers = description ? providersFor() : [];
+  // Before the draft: the model may ask up to three questions and picks the starter to adapt
+  // (docs/design/first-build.md). --yes asks nothing; --answers answers in order, unasked.
+  if (description && !options.yes && !options.answers) {
+    const asked = await clarifyProject({ description, starters: starterSummaries(), providers });
+    if (asked.starter && starter === undefined) name = asked.starter;
+    if (asked.questions.length) {
+      const answers = await askQuestions(io, asked.questions);
+      if (answers === undefined) return 1;
+      description = describedWith(description, answers);
+    }
+  } else if (description && options.answers) {
+    const given = options.answers.split(";").map((a) => a.trim());
+    description = describedWith(
+      description,
+      given.map((answer, i) => ({ question: `(${i + 1})`, answer })),
+    );
+  }
+  let files = STARTERS[name] as Record<string, string>;
   // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
   // from, as hosted workspaces provide) do not count: the install then has little to do.
   const PREPARED = ["node_modules", "pnpm-lock.yaml"];
@@ -32,10 +59,14 @@ export async function create(
     io.err(`${dir} already exists and is not empty.\n`);
     return 1;
   }
-  if (options.describe) {
+  if (description) {
     io.out(`Starting from the ${name} starter.\n`);
-    const providers = providersFor();
-    const draft = await draftProject({ description: options.describe, starter: files, providers });
+    // Drafting as operations (an empty app, one checked operation at a time; the default, see
+    // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
+    const draft =
+      process.env.SMITHABLE_DRAFT === "files"
+        ? await draftProject({ description, starter: files, providers })
+        : await draftProjectByOperations({ description, providers });
     io.out(`${usageLine(draft.usage)}\n`);
     if (draft.kind === "failed") {
       io.err(
@@ -80,4 +111,46 @@ export async function create(
     io.err("Could not add sample data; the app works without it.\n");
   io.out(`\nCreated ${dir}. Start it with:\n\n  cd ${dir}\n  smithable run\n`);
   return 0;
+}
+
+/** Each starter as the questions step sees it: what it is, and its records. */
+function starterSummaries(): Record<string, { description: string; models: string[] }> {
+  return Object.fromEntries(
+    Object.entries(STARTERS).map(([name, files]) => {
+      const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
+      return [
+        name,
+        { description: ir?.app.description ?? "", models: ir?.models.map((m) => m.name) ?? [] },
+      ];
+    }),
+  );
+}
+
+/** Asks the questions on the terminal: a number picks a suggested answer, text is free, Enter skips. */
+async function askQuestions(
+  io: Io,
+  questions: Question[],
+): Promise<{ question: string; answer: string }[] | undefined> {
+  if (!process.stdin.isTTY) {
+    io.err(
+      `A few questions first:\n${questions.map((q, i) => `  ${i + 1}. ${q.question}${q.options.length ? ` (${q.options.join(" / ")})` : ""}`).join("\n")}\nAnswer them with --answers "a; b; c" (in order), or run again with --yes to skip them.\n`,
+    );
+    return undefined;
+  }
+  io.out("A few questions first (a number picks an answer, text is fine too, Enter skips):\n");
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  const answers: { question: string; answer: string }[] = [];
+  try {
+    for (const q of questions) {
+      io.out(
+        `\n${q.question}\n${q.options.map((o, i) => `  ${i + 1}. ${o}`).join("\n")}${q.options.length ? "\n" : ""}`,
+      );
+      const text = (await prompt.question("> ")).trim();
+      const picked = /^\d+$/.test(text) ? q.options[Number(text) - 1] : undefined;
+      answers.push({ question: q.question, answer: picked ?? text });
+    }
+  } finally {
+    prompt.close();
+  }
+  return answers;
 }

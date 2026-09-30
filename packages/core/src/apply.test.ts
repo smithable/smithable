@@ -573,3 +573,58 @@ test("a removal leaves onboarding steps without the field, and is refused while 
       'The "outstanding" tile of the overview page uses Invoice.status; change or remove the tile first.',
   });
 });
+
+test("setApp, setRoles and setPublic build an app's frame from nothing", () => {
+  const blank = {
+    spec: "smithable: 0.1\napp:\n  name: App\n",
+    auth: "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: private\n",
+  };
+  const app = applyOperation(blank, "setApp", {
+    name: "Stillwater Yoga",
+    description: "Classes and booking.",
+    currency: "EUR",
+    timezone: "Europe/Mariehamn",
+  });
+  if (!app.ok) throw new Error(app.message);
+  expect(app.files.spec).toContain(
+    "  name: Stillwater Yoga\n  description: Classes and booking.\n  currency: EUR\n  timezone: Europe/Mariehamn\n",
+  );
+  expect(applyOperation(blank, "setApp", { timezone: "Mars/Olympus" })).toMatchObject({
+    ok: false,
+  });
+  const lines = applyOperation(blank, "setApp", {
+    description: "Tickets:\n  priorities and owners",
+  });
+  expect(lines.ok && lines.files.spec).toContain('description: "Tickets: priorities and owners"');
+  const roles = applyOperation({ ...blank, ...app.files }, "setRoles", {
+    roles: { admin: "Studio staff.", member: "A student." },
+  });
+  if (!roles.ok) throw new Error(roles.message);
+  expect(roles.files.auth).toContain(
+    "roles:\n  admin:\n    description: Studio staff.\n  member:\n    description: A student.\ndefaultRole: member\n",
+  );
+  expect(
+    applyOperation({ ...blank, ...app.files }, "setRoles", { roles: { owner: "x" } }),
+  ).toMatchObject({ ok: false });
+  const withModel = applyOperation({ ...blank, ...roles.files }, "addModel", {
+    model: "ClassType",
+    fields: { name: "string!" },
+  });
+  if (!withModel.ok) throw new Error(withModel.message);
+  const page = applyOperation({ ...blank, ...withModel.files }, "addPage", {
+    page: "classes",
+    model: "ClassType",
+  });
+  if (!page.ok) throw new Error(page.message);
+  const pub = applyOperation({ ...blank, ...page.files }, "setPublic", {
+    pages: ["classes"],
+    read: ["ClassType"],
+  });
+  if (!pub.ok) throw new Error(pub.message);
+  expect(pub.files.auth).toContain("public:\n  pages: [classes]\n  read: [ClassType]\n");
+  const closed = applyOperation({ ...blank, ...pub.files }, "setPublic", { read: [] });
+  expect(closed.ok && closed.files.auth).not.toContain("read:");
+  expect(
+    applyOperation({ ...blank, ...page.files }, "setPublic", { pages: ["nowhere"] }),
+  ).toMatchObject({ ok: false });
+});
