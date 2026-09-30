@@ -100,6 +100,7 @@ export {
   FONTS,
   ICONS,
   pageIcon,
+  SECTION_LOOKS,
   THEME_PRESETS,
   TONES,
   UX_VERSION,
