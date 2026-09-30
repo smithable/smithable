@@ -181,6 +181,38 @@ const addCalendarPage: Operation<{ page: string; model: string; starts?: string 
   },
 };
 
+const addArticlesPage: Operation<{ page: string; model: string }> = {
+  name: "addArticlesPage",
+  summary:
+    "Add a page showing a model's records as articles (a blog or news): a list, and a page per article; it goes in the main menu.",
+  schema: {
+    type: "object",
+    required: ["page", "model"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. blog." },
+      model: refTo({ ref: "model", label: "Kind of record" }),
+    },
+  },
+  positional: ["page", "model"],
+  describe: ({ page, model }) => `Add articles page ${page} for ${model}`,
+  destructive: () => false,
+  apply({ spec }, { page, model }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    if (!ir.models.some((m) => m.name === model))
+      throw new OperationError(`There is no model named "${model}".`);
+    // The long form names nothing the reader cannot infer: validation says what is missing.
+    spec.add(["pages"], page, { articles: model });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
@@ -474,6 +506,7 @@ export const landingOperations: AnyOperation[] = [addLandingPage, addSection, re
 export const dashboardOperations: AnyOperation[] = [addTile];
 /** Operations of the calendar pattern. */
 export const calendarOperations: AnyOperation[] = [addCalendarPage];
+export const articlesOperations: AnyOperation[] = [addArticlesPage];
 /** Operations of the data pattern. */
 export const dataOperations: AnyOperation[] = [addDataPage];
 /** Operations of the users pattern. */

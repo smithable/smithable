@@ -157,7 +157,22 @@ export interface PageIR extends SemanticText {
         title?: string;
       }
     /** An admin view of models: `data: all` (every model, in spec order) or a list of them. */
-    | { kind: "data"; models: string[]; all: boolean };
+    | { kind: "data"; models: string[]; all: boolean }
+    /**
+     * A model's records as articles (a blog, news): `title` and `body` (a markdown field) always;
+     * a `picture`, a `date`, an `address` (a unique string for the article's address) and a
+     * `summary` when the model has them.
+     */
+    | {
+        kind: "articles";
+        model: string;
+        title: string;
+        body: string;
+        picture?: string;
+        date?: string;
+        address?: string;
+        summary?: string;
+      };
   /** Actions offered on the page, e.g. a "Merge customers" button. */
   actions?: string[];
   /** Only these roles may open the page (admins always can). */
