@@ -35,6 +35,8 @@ In Studio, the editor gets the companion files as tabs next to `smithable.yml`: 
 
 ## 4. Questions about the app
 
+Built 2026-09-30 (Fable): `answerQuestion` and `looksLikeQuestion` in `@smithable/index`, the `answer` kind in `proposeChange`, `smithable ask` and the change box; the links from an answer to the parts it names wait for the properties panel (§5).
+
 The change box says "Describe a change, or ask a question". A question ("who can delete orders?", "what happens when I remove a customer?", "is the schedule public?") is answered, not applied:
 
 - **Tier 0 first:** the project index already answers what a concept is, who may do what and where a rule lives (`inspect`); the common question shapes ("who can X", "what is Y", "is Z public", "where is W used") map to it without a model.

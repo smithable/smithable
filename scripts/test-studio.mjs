@@ -277,6 +277,13 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
 
+  await step("a question about the app is answered from the spec, not applied", async () => {
+    const before = (await project()).files.spec;
+    await page.getByLabel("Describe a change").fill("Who can add orders?");
+    await page.getByRole("button", { name: "Make the change" }).click();
+    await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 });
+    if ((await project()).files.spec !== before) throw new Error("the spec changed");
+  });
   await step(
     "a change that deletes data is proposed first, and opens in a form with its values filled in",
     async () => {
