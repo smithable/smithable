@@ -3,6 +3,7 @@ import {
   type AuthIR,
   camel,
   humanize,
+  kebab,
   type LandingSection,
   type PageIR,
   pascal,
@@ -10,6 +11,7 @@ import {
   type SpecIR,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
+import { calculatorModel } from "../calculators.js";
 import {
   attr,
   guard,
@@ -175,6 +177,21 @@ export function landingRoute(
       // The footer is the layout's, wherever the section is listed.
       case "footer":
         return [];
+      case "calculator": {
+        if (!section.calculator) return [];
+        const model = calculatorModel(`${page.id}.${section.name}`, section.calculator);
+        const ui = `${camel(model.name)}Ui`;
+        imports.add("#/kit/Landing", "Section").add("#/kit/Calculator", "Calculator");
+        imports.add(`#/generated/${kebab(model.name)}`, ui).add("#/generated/app", "app");
+        const results = t.section(page.id, section.name).results;
+        return [
+          `${open("Section")}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
+        >
+          <Calculator ui={${ui}} app={app}${results ? ` resultsTitle=${attr(results)}` : ""} />
+        </Section>`,
+        ];
+      }
       case "callToAction":
         imports.add("#/kit/Landing", "CallToAction");
         return [

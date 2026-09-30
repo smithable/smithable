@@ -20,6 +20,7 @@ import {
   usersModule,
   viewerModule,
 } from "./auth.js";
+import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
@@ -432,7 +433,20 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // A page pattern's kit files, only when a page uses the pattern.
     kit: Object.entries(PAGE_GENERATORS).flatMap(([kind, g]) =>
       g.kit
-        ? [{ files: g.kit, used: ({ ir }) => ir.pages.some((p) => p.pattern.kind === kind) }]
+        ? [
+            {
+              files: g.kit,
+              used: ({ ir }) =>
+                ir.pages.some(
+                  (p) =>
+                    p.pattern.kind === kind ||
+                    // A landing section may be a calculator too.
+                    (kind === "calculator" &&
+                      p.pattern.kind === "landing" &&
+                      p.pattern.sections.some((s) => s.calculator)),
+                ),
+            },
+          ]
         : [],
     ),
     files: (ctx) =>
@@ -453,7 +467,21 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         const routes = Object.entries(pageRoutes(page, ctx)).map(([file, content]) =>
           generated(`${dir}/${file}`, content),
         );
-        return [...actions, ...routes];
+        // A calculator, a page or a landing section: its fields and formulas as modules.
+        const calculators =
+          page.pattern.kind === "calculator"
+            ? [[page.id, page.pattern.calculator, undefined] as const]
+            : page.pattern.kind === "landing"
+              ? page.pattern.sections.flatMap((s) =>
+                  s.calculator ? [[`${page.id}.${s.name}`, s.calculator, s.name] as const] : [],
+                )
+              : [];
+        const modules = calculators.flatMap(([name, calculator, section]) =>
+          Object.entries(
+            calculatorFiles(name, calculator, page.id, ctx.ir, ctx.t, ctx.ux, section),
+          ).map(([path, content]) => generated(path, content)),
+        );
+        return [...actions, ...routes, ...modules];
       }),
   },
   {

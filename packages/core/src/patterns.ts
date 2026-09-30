@@ -14,8 +14,11 @@ import {
 } from "./context.js";
 import type { YamlEditor } from "./edit.js";
 import {
+  type CalculatorExample,
+  type CalculatorIR,
   type DashboardItem,
   type FieldIR,
+  type FieldValue,
   type LandingSection,
   type OnboardingStep,
   type PageIR,
@@ -28,7 +31,9 @@ import {
 import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
+import { checkModelFormulas, readField } from "./sections/models.js";
 import {
+  calculatorOperations,
   calendarOperations,
   crudOperations,
   dashboardOperations,
@@ -94,6 +99,7 @@ export const LANDING_SECTIONS: Record<SectionKind, { button?: true; form?: true 
   contact: { form: true },
   gallery: {},
   footer: {},
+  calculator: {},
 };
 
 const NUMBER_TYPES = ["int", "decimal", "money"];
@@ -394,6 +400,162 @@ const calendar: PagePattern<"calendar"> = {
 };
 
 /** An admin view of every model (or some): each one's records, found, opened, changed. */
+/**
+ * A calculator's fields, written as a model's, and its examples. No references, lists or
+ * pictures (nothing to point at), nothing required or unique (nothing is stored). The formulas
+ * are checked as a model's are, over the calculator's own fields.
+ */
+function readCalculator(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  /** The calculator's name for messages and formula marks, e.g. "mortgage" or "home.estimate". */
+  name: string,
+): CalculatorIR | undefined {
+  const entries = mapEntries(ctx, node, `"calculator" in ${where}`);
+  if (!entries) return undefined;
+  const known = checkKeys(ctx, entries, `"calculator" in ${where}`, {
+    allowed: ["fields", "examples"],
+  });
+  const fieldsEntry = known.find((e) => e.key === "fields");
+  if (!fieldsEntry) {
+    ctx.error(node, "missing-key", `${capitalize(where)} needs "fields": its inputs and results.`);
+    return undefined;
+  }
+  const fields: FieldIR[] = [];
+  for (const entry of mapEntries(ctx, fieldsEntry.value, `the fields of ${where}`) ?? []) {
+    const field = readField(ctx, name, entry);
+    if (!field) continue;
+    const fieldWhere = `field "${name}.${field.name}"`;
+    const unfit =
+      field.type.kind === "relation"
+        ? "cannot refer to records"
+        : field.type.kind === "scalar" && field.type.name === "picture"
+          ? "cannot be a picture"
+          : field.unique
+            ? "cannot be unique"
+            : field.required && !field.formula
+              ? 'cannot be required ("!"): nothing is stored, and an empty input counts as 0'
+              : undefined;
+    if (unfit) {
+      ctx.error(
+        entry.value ?? entry.keyNode,
+        "invalid-field",
+        `${capitalize(fieldWhere)} in a calculator ${unfit}.`,
+      );
+      continue;
+    }
+    fields.push(field);
+  }
+  if (!fields.some((f) => f.formula))
+    ctx.warning(
+      fieldsEntry.keyNode,
+      "calculator-no-result",
+      `${capitalize(where)} has no formula field, so it calculates nothing.`,
+    );
+  const examples: CalculatorExample[] = [];
+  const examplesEntry = known.find((e) => e.key === "examples");
+  if (examplesEntry) {
+    const items = isSeq(examplesEntry.value) ? (examplesEntry.value.items as ParsedNode[]) : [];
+    if (!isSeq(examplesEntry.value))
+      ctx.error(
+        examplesEntry.value,
+        "expected-list",
+        `"examples" in ${where} is a list of { input, expected }.`,
+      );
+    for (const item of items) {
+      const parts = checkKeys(
+        ctx,
+        mapEntries(ctx, item, `an example of ${where}`) ?? [],
+        `an example of ${where}`,
+        {
+          allowed: ["input", "expected"],
+        },
+      );
+      const read = (
+        key: "input" | "expected",
+        allow: (f: FieldIR) => boolean,
+      ): Record<string, FieldValue> | undefined => {
+        const part = parts.find((e) => e.key === key);
+        if (!part) {
+          ctx.error(item, "missing-key", `An example of ${where} needs "${key}".`);
+          return undefined;
+        }
+        const values: Record<string, FieldValue> = {};
+        for (const v of mapEntries(ctx, part.value, `"${key}" of an example of ${where}`) ?? []) {
+          const field = fields.find((f) => f.name === v.key);
+          if (!field || !allow(field)) {
+            ctx.error(
+              v.keyNode,
+              "invalid-example",
+              `"${v.key}" is not ${key === "input" ? "an input" : "a result"} of ${where}.`,
+              didYouMean(
+                v.key,
+                fields.filter(allow).map((f) => f.name),
+              ),
+            );
+            continue;
+          }
+          const value = isScalarNode(v.value) ? v.value.value : undefined;
+          if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+            values[v.key] = value;
+          else
+            ctx.error(
+              v.value,
+              "invalid-value",
+              `"${v.key}" in an example of ${where} must be a single value.`,
+            );
+        }
+        return values;
+      };
+      const input = read("input", (f) => !f.formula);
+      const expected = read("expected", (f) => Boolean(f.formula));
+      if (input && expected) examples.push({ input, expected });
+    }
+  }
+  // The formulas, defaults and cycles, as for a model, over the calculator's own fields.
+  checkModelFormulas(ctx, { name, fields }, []);
+  return { fields, examples };
+}
+
+const calculator: PagePattern<"calculator"> = {
+  kind: "calculator",
+  schema: {
+    type: "object",
+    required: ["fields"],
+    additionalProperties: false,
+    properties: {
+      fields: {
+        type: "object",
+        description:
+          "Fields as a model's: entered ones are the inputs, formula fields the results.",
+        additionalProperties: true,
+      },
+      examples: {
+        type: "array",
+        description: "Inputs and the results they must give; each becomes a test.",
+        items: {
+          type: "object",
+          required: ["input", "expected"],
+          properties: { input: { type: "object" }, expected: { type: "object" } },
+        },
+      },
+    },
+    description: "Inputs and results computed as you type, stored nowhere.",
+  },
+  example: "calculator: { fields: { … } }",
+  parse(ctx, value, where) {
+    const name = /page "([^"]+)"/.exec(where)?.[1] ?? "calculator";
+    const calculator = readCalculator(ctx, value, where, name);
+    return calculator ? { kind: "calculator", calculator } : undefined;
+  },
+  models: () => [],
+  icon: "chart",
+  inMenu: true,
+  parts: () => ({ results: "results" }),
+  operations: calculatorOperations,
+};
+
 const data: PagePattern<"data"> = {
   kind: "data",
   schema: {
@@ -445,6 +607,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   users,
   data,
   calendar,
+  calculator,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -503,14 +666,21 @@ function readLanding(
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
     const options = checkKeys(ctx, entries, sectionWhere, {
-      allowed: ["records", "button", "limit", "form"],
+      allowed: ["records", "button", "limit", "form", "calculator"],
       content: ["title", "subtitle", "text", "items"],
     });
     const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
     const allows = kindOf ? LANDING_SECTIONS[kindOf] : {};
     const section: LandingSection = { name, kind: "records" };
     for (const { key, value: option, keyNode: optionKey } of options) {
-      if (key === "records") {
+      if (key === "calculator") {
+        // A calculator of any name: inputs and results, stored nowhere (docs/design/calculator.md).
+        const calculator = readCalculator(ctx, option, sectionWhere, `${where}.${name}`);
+        if (calculator) {
+          section.kind = "calculator";
+          section.calculator = calculator;
+        }
+      } else if (key === "records") {
         const model = readString(ctx, option, `"records" in ${sectionWhere}`);
         if (model !== undefined) {
           ctx.reference("model", model, option);
@@ -556,6 +726,10 @@ function readLanding(
           ctx.error(option, "invalid-value", `"limit" must be a whole number above 0.`);
         else if (limit !== undefined) section.limit = limit;
       }
+    }
+    if (section.kind === "calculator") {
+      sections.push(section);
+      continue;
     }
     if (!section.model) {
       if (!kindOf) {
