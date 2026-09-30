@@ -29,6 +29,7 @@ export function App() {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
     const next = await api.project().catch(() => undefined);
     if (!next) return;
+    if (next.notice) setMessage({ ok: false, text: next.notice });
     setProject(next);
     setVersion((v) => v + 1);
   }, []);
@@ -143,10 +144,18 @@ export function App() {
   if (!project) return <p className="p-6 text-sm text-neutral-500">Opening the project…</p>;
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-4 border-b border-neutral-200 bg-white px-4">
-        <span className="text-sm font-semibold tracking-tight">Smithable</span>
-        <span className="text-sm text-neutral-500">{project.name}</span>
-        <fieldset className="ml-4 flex rounded-md bg-neutral-100 p-0.5">
+      {/* On a phone the items wrap onto a second line instead of running off the screen. */}
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-neutral-200 bg-white px-4 py-1.5 sm:flex-nowrap sm:py-0">
+        {project.home ? (
+          // Hosted: back to the apps overview.
+          <a href={project.home} className="text-sm font-semibold tracking-tight hover:underline">
+            Smithable
+          </a>
+        ) : (
+          <span className="text-sm font-semibold tracking-tight">Smithable</span>
+        )}
+        <span className="min-w-0 truncate text-sm text-neutral-500">{project.name}</span>
+        <fieldset className="flex rounded-md bg-neutral-100 p-0.5 sm:ml-4">
           <legend className="sr-only">Mode</legend>
           {(["builder", "studio"] as const).map((m) => (
             <label

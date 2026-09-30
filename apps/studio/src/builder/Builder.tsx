@@ -1,11 +1,11 @@
 // Builder mode: the app in plain language, forms for changes, and the preview.
 import { describeChange, summarize } from "@smithable/index";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { isPreviewMessage, type Selection } from "../preview";
 import { Preview, Trace } from "../shared";
-import { Panel, Tabs } from "../ui";
+import { cx, Panel, Tabs } from "../ui";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
@@ -23,16 +23,15 @@ export function Builder({
   version: number;
 }) {
   const [tab, setTab] = useState<"app" | "change">("app");
-  // A change is described in words (the default) or made with a form.
-  const [how, setHow] = useState<"describe" | "manual">("describe");
   const [prefill, setPrefill] = useState<Prefill>();
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<Selection>();
+  const selectRef = useRef<(s: Selection) => void>(setSelection);
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!isPreviewMessage(e)) return;
-      if (e.data.type === "select") setSelection(e.data);
+      if (e.data.type === "select") selectRef.current(e.data);
       if (e.data.type === "columns")
         run("setColumns", { page: e.data.page, columns: e.data.columns });
       if (e.data.type === "text")
@@ -47,70 +46,191 @@ export function Builder({
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins) : []),
     [spec],
   );
+  // The three panels are a strip that snaps, one window wide each; the change box stays docked
+  // under whichever is shown. Wide windows may show Preview and Changes side by side.
+  const strip = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState<PanelId>("app");
+  const wide = useWide();
+  const [twoUp, setTwoUp] = useState(() => localStorage.getItem("builder-two-up") !== "no");
+  const paired = wide && twoUp;
+  const show = (id: PanelId) =>
+    strip.current
+      ?.querySelector<HTMLElement>(`[data-panel="${id}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  const onScroll = () => {
+    const el = strip.current;
+    if (!el) return;
+    const at = [...el.children].findIndex(
+      (c) => Math.abs((c as HTMLElement).offsetLeft - el.scrollLeft) < el.clientWidth / 2,
+    );
+    const id = PANELS[at]?.[0];
+    if (id) setShown(id);
+  };
+  // Something picked in the preview is changed in the Changes panel.
+  const select = (s: Selection | undefined) => {
+    setSelection(s);
+    if (s && !paired) show("changes");
+  };
+  selectRef.current = select;
   return (
-    <div className="grid h-full min-h-0 grid-cols-[380px_1fr_260px] divide-x divide-neutral-200">
-      <Panel
-        title={
-          <Tabs
-            tabs={[
-              ["app", "Your app"],
-              ["change", "Change"],
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-        }
+    <div className="flex h-full min-h-0 flex-col">
+      <nav
+        aria-label="Panels"
+        className="flex shrink-0 flex-wrap items-center gap-3 border-b border-neutral-200 bg-white px-3 py-1.5"
       >
-        {tab === "app" ? (
-          <AppSummary app={project.name} sections={sections} spec={spec} run={run} words={words} />
-        ) : (
-          <div>
-            <div className="border-b border-neutral-200 px-3 py-2">
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys between the panels' buttons */}
+        <div
+          className="flex rounded-md bg-neutral-100 p-0.5"
+          onKeyDown={(e) => {
+            const at = PANELS.findIndex(([id]) => id === shown);
+            const to = { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key];
+            const next = to === undefined ? undefined : PANELS[to];
+            if (!next) return;
+            e.preventDefault();
+            show(next[0]);
+            (e.currentTarget.children[to as number] as HTMLElement).focus();
+          }}
+        >
+          {PANELS.map(([id, label]) => {
+            const current = shown === id || (paired && shown === "preview" && id === "changes");
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-current={current ? "true" : undefined}
+                onClick={() => show(id)}
+                className={cx(
+                  "h-7 rounded px-3 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                  current ? "bg-white shadow-xs" : "text-neutral-600",
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {wide && (
+          <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+            <input
+              type="checkbox"
+              checked={twoUp}
+              onChange={(e) => {
+                setTwoUp(e.target.checked);
+                localStorage.setItem("builder-two-up", e.target.checked ? "yes" : "no");
+              }}
+            />
+            Preview + Changes
+          </label>
+        )}
+      </nav>
+      <div
+        ref={strip}
+        onScroll={onScroll}
+        className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+      >
+        <div
+          data-panel="app"
+          className="flex w-full shrink-0 snap-start flex-col *:min-h-0 *:flex-1"
+        >
+          <Panel
+            className="min-h-0 flex-1"
+            title={
               <Tabs
                 tabs={[
-                  ["describe", "Describe"],
-                  ["manual", "Manual"],
+                  ["app", "Your app"],
+                  ["change", "Change"],
                 ]}
-                value={how}
-                onChange={(h) => {
-                  setPrefill(undefined);
-                  setHow(h);
-                }}
+                value={tab}
+                onChange={setTab}
               />
-            </div>
-            {how === "describe" ? (
-              <Ask
+            }
+          >
+            {tab === "app" ? (
+              <AppSummary
+                app={project.name}
+                sections={sections}
+                spec={spec}
+                run={run}
                 words={words}
-                onEdit={(p) => {
-                  setPrefill(p);
-                  setHow("manual");
-                }}
               />
             ) : (
-              <ChangeForms spec={spec} run={run} prefill={prefill} />
+              // A new proposal to edit starts the form afresh with its values.
+              <ChangeForms
+                key={JSON.stringify(prefill ?? null)}
+                spec={spec}
+                run={run}
+                prefill={prefill}
+              />
             )}
-          </div>
-        )}
-      </Panel>
-      <Preview
-        url={project.preview}
-        version={version}
-        selecting={selecting}
-        onSelecting={setSelecting}
-      />
-      {selection ? (
-        <div className="grid min-h-0 grid-rows-[auto_1fr] divide-y divide-neutral-200">
-          <Selected
-            selection={selection}
-            spec={spec}
-            run={run}
-            onClose={() => setSelection(undefined)}
-          />
-          <Trace entries={project.trace} words={words} />
+          </Panel>
         </div>
-      ) : (
-        <Trace entries={project.trace} words={words} />
-      )}
+        <div
+          data-panel="preview"
+          className={cx(
+            "flex shrink-0 snap-start flex-col border-l border-neutral-200 *:min-h-0 *:flex-1",
+            paired ? "w-[calc(100%-22rem)]" : "w-full",
+          )}
+        >
+          <Preview
+            url={project.preview}
+            version={version}
+            selecting={selecting}
+            onSelecting={setSelecting}
+          />
+        </div>
+        <div
+          data-panel="changes"
+          className={cx(
+            "flex min-h-0 shrink-0 flex-col border-l border-neutral-200 *:min-h-0 *:flex-1",
+            paired ? "w-[22rem]" : "w-full snap-start",
+          )}
+        >
+          {selection ? (
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] divide-y divide-neutral-200">
+              <Selected
+                selection={selection}
+                spec={spec}
+                run={run}
+                onClose={() => setSelection(undefined)}
+              />
+              <Trace entries={project.trace} words={words} />
+            </div>
+          ) : (
+            <Trace entries={project.trace} words={words} />
+          )}
+        </div>
+      </div>
+      {/* The change box, on every panel: type a request while looking at the preview. */}
+      <div className="max-h-[45vh] shrink-0 overflow-auto border-t border-neutral-200 bg-white">
+        <Ask
+          words={words}
+          onEdit={(p) => {
+            setPrefill(p);
+            setTab("change");
+            show("app");
+          }}
+        />
+      </div>
     </div>
   );
+}
+
+type PanelId = "app" | "preview" | "changes";
+const PANELS: [PanelId, string][] = [
+  ["app", "Your app"],
+  ["preview", "Preview"],
+  ["changes", "Changes"],
+];
+
+/** Whether the window is wide enough for two panels side by side (1440 px). */
+function useWide(): boolean {
+  const query = "(min-width: 1440px)";
+  const [wide, setWide] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const change = () => setWide(list.matches);
+    list.addEventListener("change", change);
+    return () => list.removeEventListener("change", change);
+  }, []);
+  return wide;
 }
