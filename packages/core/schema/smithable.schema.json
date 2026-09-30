@@ -449,7 +449,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data or calendar.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar or calculator.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -495,6 +495,11 @@
             "required": [
               "calendar"
             ]
+          },
+          {
+            "required": [
+              "calculator"
+            ]
           }
         ],
         "additionalProperties": false,
@@ -510,7 +515,7 @@
           },
           "landing": {
             "type": "object",
-            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer.",
+            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator.",
             "additionalProperties": {
               "type": [
                 "object",
@@ -667,6 +672,40 @@
               }
             ],
             "description": "A model's records in a week or month calendar."
+          },
+          "calculator": {
+            "type": "object",
+            "required": [
+              "fields"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "fields": {
+                "type": "object",
+                "description": "Fields as a model's: entered ones are the inputs, formula fields the results.",
+                "additionalProperties": true
+              },
+              "examples": {
+                "type": "array",
+                "description": "Inputs and the results they must give; each becomes a test.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "input",
+                    "expected"
+                  ],
+                  "properties": {
+                    "input": {
+                      "type": "object"
+                    },
+                    "expected": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Inputs and results computed as you type, stored nowhere."
           },
           "actions": {
             "type": "array",

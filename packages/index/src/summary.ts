@@ -320,4 +320,6 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
     p.all
       ? "every kind of record, to find, open, change and delete"
       : `${list(p.models.map((m) => plural(humanize(m)).toLowerCase()))}, to find, open, change and delete`,
+  calculator: (p) =>
+    `a calculator: ${list(p.calculator.fields.filter((f) => !f.formula).map((f) => humanize(f.name).toLowerCase()))} give ${list(p.calculator.fields.filter((f) => f.formula).map((f) => humanize(f.name).toLowerCase()))}`,
 };

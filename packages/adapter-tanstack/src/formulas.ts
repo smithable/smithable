@@ -102,6 +102,8 @@ export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
             return `F.ROUND(${a.join(", ")})`;
           case "ABS":
             return `Math.abs(${a[0]})`;
+          case "PMT":
+            return `F.PMT(${a.join(", ")})`;
           case "MIN":
             return `Math.min(${a.join(", ")})`;
           case "MAX":
