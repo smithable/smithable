@@ -394,6 +394,29 @@ try {
       await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
     },
   );
+  await step(
+    "the place is remembered per mode: a field picked in the preview is the field in Code mode, and back",
+    async () => {
+      await openPreview("/customers/new");
+      await page.getByRole("button", { name: "Select" }).click();
+      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
+      await page.getByRole("button", { name: "Select" }).click();
+      await page.locator("label", { hasText: /^Code$/ }).click();
+      await page
+        .getByRole("navigation", { name: "Concepts" })
+        .locator('[aria-current="true"]', { hasText: /^email/ })
+        .waitFor({ timeout: 10000 });
+      // A reload keeps both modes' places (the browser tab's session).
+      await page.reload();
+      await page
+        .getByRole("navigation", { name: "Concepts" })
+        .locator('[aria-current="true"]')
+        .waitFor({ timeout: 30000 });
+      await page.locator("label", { hasText: /^No code$/ }).click();
+      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
+    },
+  );
   await step("Ctrl+Z outside a text field undoes the last change", async () => {
     await page.locator("header").first().click();
     await page.keyboard.press("Control+z");

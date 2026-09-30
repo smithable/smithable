@@ -3,7 +3,7 @@ import { describeChange, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
-import { isPreviewMessage, type Selection } from "../preview";
+import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Trace } from "../shared";
 import { cx, Panel, Tabs, useMedia } from "../ui";
 import { AppSummary } from "./AppSummary";
@@ -16,16 +16,29 @@ export function Builder({
   spec,
   run,
   previewSlot,
+  place,
+  onPlace,
 }: {
   project: Project;
   spec: Spec;
   run: Run;
   /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
   previewSlot: (element: HTMLElement | null) => void;
+  /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
+  place: Place["builder"];
+  onPlace: (place: Place["builder"]) => void;
 }) {
-  const [tab, setTab] = useState<"app" | "change">("app");
+  const [tab, setTabState] = useState<"app" | "change">(place.tab ?? "app");
+  const setTab = (next: "app" | "change") => {
+    setTabState(next);
+    onPlace({ tab: next });
+  };
   const [prefill, setPrefill] = useState<Prefill>();
-  const [selection, setSelection] = useState<Selection>();
+  const [selection, setSelectionState] = useState<Selection | undefined>(place.selection);
+  const setSelection = (next: Selection | undefined) => {
+    setSelectionState(next);
+    onPlace({ selection: next });
+  };
   const selectRef = useRef<(s: Selection) => void>(setSelection);
   // The preview reports what was clicked in select mode, and columns dragged to a new place.
   useEffect(() => {
@@ -76,6 +89,11 @@ export function Builder({
     if (s && !paired) show("details");
   };
   selectRef.current = select;
+  // Back in this mode with something picked (here or in Code mode): open at its details.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the mode opens
+  useEffect(() => {
+    if (place.selection && !paired) show("details");
+  }, []);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav
