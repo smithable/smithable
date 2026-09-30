@@ -18,6 +18,7 @@ Node 24 and pnpm (the version pinned in `package.json`), then:
 pnpm install
 pnpm build
 node packages/cli/dist/bin.js new my-crm        # a CRM from the starter, with sample data
+node packages/cli/dist/bin.js new dogs --describe "a site to show my dogs"   # up to three questions, then a draft (needs a model, docs/ai.md)
 cd my-crm && node ../packages/cli/dist/bin.js studio   # Builder and Studio in the browser
 ```
 
@@ -43,7 +44,7 @@ smithable deploy --target docker                # release checks, then the conta
 | `packages/ai` | Model providers, the AI policy, requests to operations |
 | `packages/cli` | The `smithable` command, the Studio server, the MCP server, deploy and backup targets |
 | `apps/studio` | Builder and Studio, one web app served by `smithable studio` |
-| `examples/` | The starters: a CRM, a booking site, an invoicing app |
+| `examples/` | The starters: a CRM, a booking site, an invoicing app, and records (things and what we know about them) |
 | `docs/` | [Vision](docs/VISION.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), the [spec reference](docs/spec/v0.1.md), [AI setup](docs/ai.md), [how things were built and measured](docs/as-built.md), benchmarks and research |
 
 ## Working on it
