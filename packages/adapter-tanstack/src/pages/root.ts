@@ -64,6 +64,8 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
   });
   const signIn = hasSignIn(auth);
   // Landing and onboarding pages have their own frame instead of the app's navigation.
+  const start = ir.pages.find((p) => p.route === "/");
+  const home = start ? ` home={{ to: "/", access: pageAccess[${JSON.stringify(start.id)}] }}` : "";
   const landings = ir.pages
     .filter((p) => p.pattern.kind === "landing" || p.pattern.kind === "onboarding")
     .map((p) => p.route);
@@ -135,11 +137,11 @@ ${
             ? `{landingRoutes.includes(pathname) ? (
           children
         ) : (
-          <AppShell appName={app.name} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
+          <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
+            : `<AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
           {children}
         </AppShell>`
         }
