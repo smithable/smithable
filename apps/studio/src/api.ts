@@ -26,6 +26,8 @@ export interface Project {
   preview: string;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
+  /** A message for the first to open Studio, e.g. why a description could not be used. */
+  notice?: string;
 }
 
 /** A model's proposal for a request; nothing is applied until it is confirmed. */
