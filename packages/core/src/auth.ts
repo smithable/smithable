@@ -1,7 +1,8 @@
-import { isMap, isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import {
   type At,
   checkKeys,
+  type Entry,
   mapEntries,
   ParseContext,
   readBoolean,
@@ -9,7 +10,7 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import { type SpecIR, USER_MODEL } from "./ir.js";
+import { conditionFits, type SpecIR, USER_MODEL } from "./ir.js";
 import { patternInfo } from "./patterns.js";
 import { FIELD_NAME_PATTERN } from "./sections/names.js";
 import { didYouMean } from "./suggest.js";
@@ -28,8 +29,17 @@ export interface AuthIR {
   defaultRole: string;
   /** Email addresses that become admins when they first sign in. */
   admins: string[];
-  public: { pages: string[]; read: string[]; create: string[] };
+  public: {
+    pages: string[];
+    read: string[];
+    create: string[];
+    /** For a model in `read`, the records visitors may read (`Post: { where: { status: published } }`). */
+    readWhere: Record<string, Condition>;
+  };
 }
+
+/** Field values a record must have: a choice field's value, or a yes/no field's true or false. */
+export type Condition = Record<string, string | boolean>;
 
 export interface SignInIR {
   /** In button order. */
@@ -74,7 +84,7 @@ export function validateAuth(
     roles: [{ name: "admin" }],
     defaultRole: "admin",
     admins: [],
-    public: { pages: [], read: [], create: [] },
+    public: { pages: [], read: [], create: [], readWhere: {} },
   };
   const done = () => ({
     ...(hasErrors(ctx.diagnostics) ? {} : { auth }),
@@ -225,8 +235,11 @@ export function validateAuth(
       allowed: ["pages", "read", "create"],
       later: ["actions", "write", "delete"],
     })) {
-      const k = key as keyof AuthIR["public"];
-      publicNodes[k] = readNameList(ctx, value, `"${key}" in "public"`);
+      const k = key as "pages" | "read" | "create";
+      publicNodes[k] =
+        k === "read"
+          ? readPublicRead(ctx, value, auth.public.readWhere)
+          : readNameList(ctx, value, `"${key}" in "public"`);
       auth.public[k] = publicNodes[k].map((n) => n.name);
     }
   }
@@ -303,6 +316,66 @@ function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
   return signIn;
 }
 
+/**
+ * The models anyone may read: names, or a name with the records it is limited to,
+ * `Post: { where: { status: published } }`.
+ */
+function readPublicRead(
+  ctx: ParseContext,
+  node: At,
+  readWhere: Record<string, Condition>,
+): { name: string; at: At }[] {
+  const what = '"read" in "public"';
+  if (!isSeq(node)) {
+    ctx.error(node, "expected-list", `${what} must be a list, like [a, b].`);
+    return [];
+  }
+  const names: { name: string; at: At }[] = [];
+  for (const item of node.items as ParsedNode[]) {
+    if (!isMap(item)) {
+      const name = readString(ctx, item, `Each item in ${what}`);
+      if (name !== undefined) names.push({ name, at: item });
+      continue;
+    }
+    const entries = mapEntries(ctx, item, what) ?? [];
+    if (entries.length !== 1) {
+      ctx.error(
+        item,
+        "invalid-value",
+        `Each item in ${what} is a model, or one model with "where".`,
+      );
+      continue;
+    }
+    const [entry] = entries as [Entry];
+    const options = checkKeys(
+      ctx,
+      mapEntries(ctx, entry.value, `"${entry.key}" in ${what}`) ?? [],
+      `"${entry.key}" in ${what}`,
+      { allowed: ["where"] },
+    );
+    const where = options.find((o) => o.key === "where");
+    const condition: Condition = {};
+    for (const c of where
+      ? (mapEntries(ctx, where.value, `"where" of "${entry.key}" in ${what}`) ?? [])
+      : []) {
+      if (
+        isScalar(c.value) &&
+        (typeof c.value.value === "string" || typeof c.value.value === "boolean")
+      )
+        condition[c.key] = c.value.value;
+      else
+        ctx.error(
+          c.value,
+          "invalid-value",
+          `"where" of "${entry.key}" in ${what} compares a field with a choice value or true/false.`,
+        );
+    }
+    if (Object.keys(condition).length) readWhere[entry.key] = condition;
+    names.push({ name: entry.key, at: entry.keyNode });
+  }
+  return names;
+}
+
 /** What the public section names must exist, and the spec must fit the sign-in setting. */
 function checkAgainstSpec(
   ctx: ParseContext,
@@ -325,6 +398,15 @@ function checkAgainstSpec(
         continue;
       }
       const model = key === "read" ? ir.models.find((m) => m.name === name) : undefined;
+      const where = model && auth.public.readWhere[model.name];
+      if (model && where)
+        for (const [field, wanted] of Object.entries(where))
+          if (!conditionFits(model, field, wanted))
+            ctx.error(
+              at,
+              "invalid-where",
+              `"where" of ${name}: "${field}" must be a choice field of ${name} with one of its values, or a yes/no field with true or false.`,
+            );
       const personal = model?.fields.filter(
         (f) =>
           (f.type.kind === "scalar" && PERSONAL_TYPES.includes(f.type.name)) ||
