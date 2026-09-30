@@ -244,6 +244,7 @@ export function parseFormula(source: string): Expr {
 export function valueTypeOf(field: FieldIR): ValueType | undefined {
   if (field.type.kind === "choice") return "text";
   if (field.type.kind === "relation") return undefined;
+  if (field.type.name === "picture") return undefined;
   switch (field.type.name) {
     case "int":
     case "decimal":
