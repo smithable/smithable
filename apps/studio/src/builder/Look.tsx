@@ -1,7 +1,16 @@
 // Builder's Look tab (docs/design/studio-v2.md §3): smithable.ux.yml as controls. Each shows the
 // value in the file and applies its operation at once, undoable like any change; nothing to
 // submit and no form state to lose.
-import { FONTS, humanize, pageModel } from "@smithable/core";
+import {
+  CONTROLS,
+  controlUnfit,
+  type FieldIR,
+  FONTS,
+  humanize,
+  type PageUx,
+  pageModel,
+  SECTION_LOOKS,
+} from "@smithable/core";
 import { useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
@@ -123,6 +132,23 @@ export function Look({
                     .map((f) => f.name)}
                   columns={ux.pages[page.id]?.columns}
                   below={ux.pages[page.id]?.below ?? {}}
+                  run={run}
+                />
+              )}
+              {model && (
+                <ListAndForm
+                  page={page.id}
+                  fields={model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many))}
+                  ux={ux.pages[page.id] ?? {}}
+                  run={run}
+                />
+              )}
+              {page.pattern.kind === "landing" && (
+                <LandingLook
+                  page={page.id}
+                  sections={page.pattern.sections}
+                  ux={ux.pages[page.id] ?? {}}
+                  themes={themes.map((t) => t.name)}
                   run={run}
                 />
               )}
@@ -341,5 +367,236 @@ function Columns({
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A list page's view and order, and its form's columns, controls and sections (look.md §1.1–1.3). */
+function ListAndForm({
+  page,
+  fields,
+  ux,
+  run,
+}: {
+  page: string;
+  fields: FieldIR[];
+  ux: PageUx;
+  run: Run;
+}) {
+  const title = humanize(page);
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Segmented
+          label={`View of ${title}`}
+          value={ux.view ?? "table"}
+          options={[
+            ["table", "Table"],
+            ["cards", "Cards"],
+          ]}
+          onChange={(view) => run("setView", { page, view })}
+        />
+        <Select
+          aria-label={`Order of ${title}`}
+          value={ux.sort ?? "none"}
+          onChange={(e) => run("setSort", { page, field: e.target.value })}
+          options={[
+            ["none", "Newest first"],
+            ...fields.flatMap((f): [string, string][] => [
+              [f.name, `By ${humanize(f.name)}`],
+              [`-${f.name}`, `By ${humanize(f.name)}, largest or latest first`],
+            ]),
+          ]}
+          className="h-8 w-52 text-xs"
+        />
+      </div>
+      <details>
+        <summary className="cursor-pointer text-xs font-medium text-neutral-600">
+          Form of {title}
+        </summary>
+        <FormLook page={page} fields={fields} ux={ux} run={run} />
+      </details>
+    </div>
+  );
+}
+
+function FormLook({
+  page,
+  fields,
+  ux,
+  run,
+}: {
+  page: string;
+  fields: FieldIR[];
+  ux: PageUx;
+  run: Run;
+}) {
+  const [added, setAdded] = useState<string[]>([]);
+  const [name, setName] = useState("");
+  const groups = ux.sections ?? [];
+  const names = [
+    ...groups.map((g) => g.name),
+    ...added.filter((a) => !groups.some((g) => g.name === a)),
+  ];
+  // A field moves to another section (or none); sections left empty go.
+  const move = (field: string, to: string) => {
+    const next = names
+      .map((n) => ({
+        name: n,
+        fields: [
+          ...(groups.find((g) => g.name === n)?.fields ?? []),
+          ...(n === to ? [field] : []),
+        ].filter((f) => f !== field || n === to),
+      }))
+      .filter((g) => g.fields.length);
+    void run("setFormSections", {
+      page,
+      sections: next.map((g) => `${g.name}:${g.fields.join(",")}`),
+    });
+  };
+  return (
+    <div className="mt-2 space-y-2">
+      <Segmented
+        label={`Columns of the ${humanize(page)} form`}
+        value={String(ux.formColumns ?? 1)}
+        options={[
+          ["1", "One column"],
+          ["2", "Two columns"],
+        ]}
+        onChange={(columns) => run("setFormColumns", { page, columns: Number(columns) })}
+      />
+      <ul aria-label={`Fields of the ${humanize(page)} form`} className="space-y-1">
+        {fields.map((f) => {
+          const fits = CONTROLS.filter((c) => !controlUnfit(f, c));
+          const section = groups.find((g) => g.fields.includes(f.name))?.name ?? "";
+          return (
+            <li key={f.name} className="flex items-center gap-2">
+              <span className="flex-1">{humanize(f.name)}</span>
+              {fits.length > 1 && (
+                <Select
+                  aria-label={`How ${humanize(f.name)} is entered`}
+                  value={ux.control?.[f.name] ?? "input"}
+                  onChange={(e) =>
+                    run("setControl", { page, field: f.name, control: e.target.value })
+                  }
+                  options={fits.map((c): [string, string] => [
+                    c,
+                    c === "input" ? "Usual control" : humanize(c),
+                  ])}
+                  className="h-7 w-32 text-xs"
+                />
+              )}
+              {names.length > 0 && (
+                <Select
+                  aria-label={`Section of ${humanize(f.name)}`}
+                  value={section}
+                  onChange={(e) => move(f.name, e.target.value)}
+                  options={[
+                    ["", "No section"],
+                    ...names.map((n): [string, string] => [n, humanize(n)]),
+                  ]}
+                  className="h-7 w-32 text-xs"
+                />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (/^[a-z][A-Za-z0-9-]*$/.test(name) && !names.includes(name))
+            setAdded([...added, name]);
+          setName("");
+        }}
+      >
+        <input
+          aria-label={`New section of the ${humanize(page)} form`}
+          placeholder="newSection"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-7 flex-1 rounded border border-neutral-200 px-2 text-xs"
+        />
+        <button type="submit" className="text-xs font-medium text-accent">
+          Add a section
+        </button>
+        {groups.length > 0 && (
+          <button
+            type="button"
+            className="text-xs text-neutral-600 hover:text-accent"
+            onClick={() => run("setFormSections", { page })}
+          >
+            One form
+          </button>
+        )}
+      </form>
+    </div>
+  );
+}
+
+/** A landing page's own theme and each section's look (look.md §1.4–1.5). */
+function LandingLook({
+  page,
+  sections,
+  ux,
+  themes,
+  run,
+}: {
+  page: string;
+  sections: { name: string; kind: string }[];
+  ux: PageUx;
+  themes: string[];
+  run: Run;
+}) {
+  const title = humanize(page);
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="flex items-center justify-between gap-3">
+        <span>Theme</span>
+        <Select
+          aria-label={`Theme of ${title}`}
+          value={ux.theme?.preset ?? "none"}
+          onChange={(e) => run("setTheme", { page, preset: e.target.value })}
+          options={[
+            ["none", "The app's"],
+            ...themes.map((t): [string, string] => [t, humanize(t)]),
+          ]}
+          className="w-44"
+        />
+      </div>
+      {sections.map((section) =>
+        Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
+          const label = `${humanize(key)} of ${humanize(section.name)}`;
+          const current = ux.looks?.[section.name]?.[key as "layout"];
+          const set = (value: string) =>
+            run("setSectionLook", { page, section: section.name, key, value });
+          return values === "text" ? (
+            <label key={`${section.name}.${key}`} className="flex items-center gap-2">
+              <span className="flex-1">{label}</span>
+              <input
+                aria-label={label}
+                defaultValue={current ?? ""}
+                placeholder="A plan's name"
+                onBlur={(e) => {
+                  const value = e.target.value.trim() || "default";
+                  if (value !== (current ?? "default")) void set(value);
+                }}
+                className="h-8 w-44 rounded border border-neutral-200 px-2 text-xs"
+              />
+            </label>
+          ) : (
+            <div key={`${section.name}.${key}`} className="flex items-center justify-between gap-2">
+              <span>{label}</span>
+              <Segmented
+                label={label}
+                value={String(current ?? values[0])}
+                options={values.map((v): [string, string] => [String(v), humanize(String(v))])}
+                onChange={(v) => set(v === String(values[0]) ? "default" : v)}
+              />
+            </div>
+          );
+        }),
+      )}
+    </div>
   );
 }
