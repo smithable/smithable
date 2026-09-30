@@ -1,8 +1,9 @@
 // Builder's Look tab (docs/design/studio-v2.md §3): smithable.ux.yml as controls. Each shows the
 // value in the file and applies its operation at once, undoable like any change; nothing to
 // submit and no form state to lose.
-import { FONTS, humanize, pageModel, THEME_PRESETS } from "@smithable/core";
+import { FONTS, humanize, pageModel } from "@smithable/core";
 import { useState } from "react";
+import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { ICON_CHOICES } from "../properties";
 import { cx, Select } from "../ui";
@@ -15,7 +16,16 @@ const TONE_CHOICES: [string, string][] = [
   ["danger", "Red (a problem)"],
 ];
 
-export function Look({ spec, run }: { spec: Spec; run: Run }) {
+export function Look({
+  spec,
+  run,
+  themes,
+}: {
+  spec: Spec;
+  run: Run;
+  /** Every theme the ux file may name, with its picture (the project's from themes/). */
+  themes: Project["themes"];
+}) {
   const { ir, ux } = spec;
   if (!ir || !ux)
     return (
@@ -30,13 +40,42 @@ export function Look({ spec, run }: { spec: Spec; run: Run }) {
   return (
     <div className="space-y-6 p-3">
       <Group title="Theme">
-        {/* The presets; their cards with a picture come with themes as files (look.md §3). */}
-        <Segmented
-          label="Theme"
-          value={theme.preset}
-          options={THEME_PRESETS.map((p) => [p, humanize(p)])}
-          onChange={(preset) => run("setTheme", { preset })}
-        />
+        {/* A card per theme, built in or the project's, with its picture (docs/design/look.md §3). */}
+        <ul aria-label="Themes" className="grid grid-cols-2 gap-2">
+          {themes.map((t) => {
+            const current = t.name === theme.preset;
+            return (
+              <li key={t.name}>
+                <button
+                  type="button"
+                  aria-pressed={current}
+                  onClick={() => !current && run("setTheme", { preset: t.name })}
+                  className={cx(
+                    "w-full overflow-hidden rounded-md border text-left",
+                    current
+                      ? "border-accent ring-2 ring-accent/30"
+                      : "border-neutral-200 hover:border-neutral-400",
+                  )}
+                >
+                  <img
+                    src={`data:image/svg+xml;utf8,${encodeURIComponent(t.thumbnail)}`}
+                    alt=""
+                    width={320}
+                    height={100}
+                    className="block h-auto w-full"
+                  />
+                  <span className="block px-2 py-1.5 text-xs">
+                    <span className="font-medium">{humanize(t.name)}</span>
+                    <span className="block text-neutral-500">
+                      {t.source === "project" ? `themes/${t.name}.yml · ` : ""}
+                      {t.font}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </Group>
       <Group title="Colour">
         <BrandColour primary={theme.primary} run={run} />

@@ -173,7 +173,7 @@ export function Builder({
             }
           >
             {tab === "look" ? (
-              <Look spec={spec} run={run} />
+              <Look spec={spec} run={run} themes={project.themes} />
             ) : tab === "app" ? (
               <AppSummary
                 app={project.name}
