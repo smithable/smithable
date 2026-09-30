@@ -449,7 +449,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data or calendar.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar or articles.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -494,6 +494,11 @@
           {
             "required": [
               "calendar"
+            ]
+          },
+          {
+            "required": [
+              "articles"
             ]
           }
         ],
@@ -667,6 +672,51 @@
               }
             ],
             "description": "A model's records in a week or month calendar."
+          },
+          "articles": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "A model with a title and a markdown body; its other parts are inferred."
+              },
+              {
+                "type": "object",
+                "required": [
+                  "model"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The article's title."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "A markdown field: the article itself."
+                  },
+                  "picture": {
+                    "type": "string",
+                    "description": "A picture field shown with the article."
+                  },
+                  "date": {
+                    "type": "string",
+                    "description": "A date or date-time field: when it appeared."
+                  },
+                  "address": {
+                    "type": "string",
+                    "description": "A unique string field: the article's address (/blog/<address>)."
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "A short text shown in the list."
+                  }
+                }
+              }
+            ],
+            "description": "A model's records as articles: a blog, news or a knowledge base."
           },
           "actions": {
             "type": "array",
