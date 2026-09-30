@@ -517,6 +517,25 @@ try {
       .waitFor({ timeout: 60000 });
     await page.getByText("This page has its own component").waitFor();
   });
+  await step(
+    "the preview can be hidden for room: the details then sit beside the tree, and it stays hidden after a reload",
+    async () => {
+      const concepts = page.getByRole("navigation", { name: "Concepts" });
+      const details = page.getByRole("heading", { name: "Details" });
+      await page.getByRole("button", { name: "Hide", exact: true }).click();
+      await page.locator('iframe[title="App preview"]').waitFor({ state: "hidden" });
+      const beside = async () => {
+        const [a, b] = [await concepts.boundingBox(), await details.boundingBox()];
+        return a && b && b.x >= a.x + a.width - 2;
+      };
+      if (!(await beside())) throw new Error("the details are not beside the tree");
+      await page.reload();
+      await page.getByRole("button", { name: "Show preview" }).click();
+      await page.locator('iframe[title="App preview"]').waitFor();
+      if (await beside())
+        throw new Error("the details stay beside the tree with the preview shown");
+    },
+  );
   await step("the preview shows the changes, and the logs are there", async () => {
     // Beside Code mode from lg: no tab to open.
     await openPreview("/orders");
