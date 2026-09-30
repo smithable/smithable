@@ -6,6 +6,7 @@ import { Calculator as CalculatorIcon } from "lucide-react";
 import { useState } from "react";
 import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
+import { cn } from "#/lib/utils";
 import { FieldInput } from "./FieldInput";
 import { formatValue, fromInput, toInput } from "./format";
 import type { AppUi, ModelUi } from "./model";
@@ -14,10 +15,13 @@ export function Calculator({
   ui,
   app,
   resultsTitle = "Results",
+  layout = "beside",
 }: {
   ui: ModelUi;
   app: AppUi;
   resultsTitle?: string;
+  /** Where the results go on a wide screen (smithable.ux.yml); a phone shows them below. */
+  layout?: "beside" | "below";
 }) {
   const inputs = ui.fields.filter((f) => !f.computed);
   const results = ui.fields.filter((f) => f.computed);
@@ -29,7 +33,13 @@ export function Calculator({
   );
   const computed = ui.compute?.(entered) ?? {};
   return (
-    <div data-kit="calculator" className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div
+      data-kit="calculator"
+      className={cn(
+        "grid gap-6",
+        layout === "beside" && "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
+      )}
+    >
       <Card className="space-y-6 p-card">
         {inputs.map((field) => {
           const id = `calc-${field.name}`;

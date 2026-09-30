@@ -570,6 +570,30 @@ async function articlesFlow(dir, base) {
   }
 }
 
+/** A calculator on the landing page: its results follow the inputs as they are typed. */
+async function calculatorFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  try {
+    await open(page, `${base}/`);
+    const calculator = page.locator('[data-kit="calculator"]');
+    await calculator.getByLabel("Classes a month").fill("10");
+    // 10 classes at €16 is €160; the €99 pass saves €61.
+    await calculator.getByText("€160.00").waitFor({ timeout: 10000 });
+    await calculator.getByText("€61.00").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: the landing page's calculator works its results out as a visitor types",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("calculator flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function landingFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -1708,6 +1732,7 @@ for (const [index, example] of examples.entries()) {
         await bookingFlow(dir, base);
         await markdownFlow(base);
         await articlesFlow(dir, base);
+        await calculatorFlow(base);
         await pictureFlow(dir, base);
       }
       if (example === "invoicing") {
