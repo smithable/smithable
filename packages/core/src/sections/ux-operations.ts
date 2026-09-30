@@ -1,9 +1,9 @@
 import type { YamlEditor } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { FONTS, ICONS, THEME_PRESETS, TONES } from "../ux.js";
+import { FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
-function put(ux: YamlEditor, path: string[], value: string | string[] | undefined): void {
+function put(ux: YamlEditor, path: string[], value: string | number | string[] | undefined): void {
   if (value === undefined || (Array.isArray(value) && value.length === 0)) {
     if (ux.has(path)) ux.removeAndPrune(path, 0);
   } else if (ux.has(path)) {
@@ -190,8 +190,58 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
   },
 };
 
+/** A landing section's look (docs/design/look.md §1.4), e.g. a split hero or a carousel. */
+const setSectionLook: Operation<{ page: string; section: string; key: string; value: string }> = {
+  name: "setSectionLook",
+  summary:
+    'Choose how a landing section looks, e.g. hero layout split|centered|plain, faq layout accordion|list ("default" removes it).',
+  schema: {
+    type: "object",
+    required: ["page", "section", "key", "value"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: { type: "string", description: "The section's name, e.g. hero." },
+      key: {
+        type: "string",
+        description: "layout, image, columns or highlight, as the section takes.",
+      },
+      value: { type: "string", description: 'A value the key allows, or "default".' },
+    },
+  },
+  positional: ["page", "section", "key", "value"],
+  describe: ({ page, section, key, value }) =>
+    value === "default"
+      ? `Show the ${section} section of ${page} with its own ${key}`
+      : `Show the ${section} section of ${page} with ${key} ${value}`,
+  destructive: () => false,
+  apply(editors, { page, section, key, value }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (found?.pattern.kind !== "landing")
+      throw new OperationError(`There is no landing page named "${page}".`);
+    const kind = found.pattern.sections.find((s) => s.name === section)?.kind;
+    if (!kind) throw new OperationError(`${page} has no section named "${section}".`);
+    const allowed = SECTION_LOOKS[kind]?.[key];
+    if (!allowed)
+      throw new OperationError(
+        `A ${kind} section has no "${key}"${SECTION_LOOKS[kind] ? `: it takes ${Object.keys(SECTION_LOOKS[kind] ?? {}).join(", ")}` : ""}.`,
+      );
+    const number = Number(value);
+    const typed = allowed !== "text" && typeof allowed[0] === "number" ? number : value;
+    if (value !== "default" && allowed !== "text" && !allowed.includes(typed))
+      throw new OperationError(`"${key}" of a ${kind} section is one of ${allowed.join(", ")}.`);
+    put(
+      editors.ux,
+      ["pages", page, "sections", section, key],
+      value === "default" ? undefined : typed,
+    );
+    return [];
+  },
+};
+
 export const uxOperations: AnyOperation[] = [
   setTheme,
+  setSectionLook,
   setColumns,
   setFieldOrder,
   setTone,

@@ -36,8 +36,8 @@ export const PAGE_GENERATORS: {
   },
   landing: {
     kit: ["src/kit/Landing.tsx"],
-    routes: (page, { ir, t, auth }) => ({
-      "index.tsx": landingRoute(page, page.pattern.sections, ir, t, auth),
+    routes: (page, { ir, t, auth, ux }) => ({
+      "index.tsx": landingRoute(page, page.pattern.sections, ir, t, auth, ux),
     }),
   },
   dashboard: {

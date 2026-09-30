@@ -35,7 +35,32 @@ export interface PageUx {
   fieldOrder?: string[];
   /** A calculator's results beside its inputs on a wide screen (the default), or below them. */
   results?: "beside" | "below";
+  /** A landing page's sections' looks, by section name (docs/design/look.md §1.4). */
+  sections?: Record<string, SectionLook>;
 }
+
+/** How a landing section looks; which keys a section takes depends on its kind (SECTION_LOOKS). */
+export interface SectionLook {
+  layout?: string;
+  image?: "left" | "right";
+  columns?: number;
+  highlight?: string;
+}
+
+/**
+ * The looks each section kind has: a key's allowed values, or "text" for any (a pricing plan's
+ * name). The first value of a layout is the kind's own look, used when none is given.
+ */
+export const SECTION_LOOKS: Partial<
+  Record<string, Record<string, readonly (string | number)[] | "text">>
+> = {
+  hero: { layout: ["split", "centered", "plain"], image: ["right", "left"] },
+  features: { columns: [3, 2, 4] },
+  records: { layout: ["cards", "list", "grid"] },
+  testimonials: { layout: ["cards", "carousel", "one"] },
+  pricing: { highlight: "text" },
+  faq: { layout: ["accordion", "list"] },
+};
 
 export const UX_VERSION = "0.1";
 export const TONES = ["neutral", "success", "warning", "danger"] as const;
@@ -300,9 +325,13 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form"],
+          allowed: ["icon", "table", "form", "sections"],
           later: ["detail", "calendar"],
         })) {
+          if (part.key === "sections") {
+            result.sections = readSectionLooks(ctx, part.value, spec, where);
+            continue;
+          }
           if (part.key === "icon") {
             const icon = readString(ctx, part.value, `"icon"`);
             if (icon !== undefined && !(ICONS as readonly string[]).includes(icon))
@@ -375,4 +404,60 @@ export function validateUx(
     }
   }
   return done();
+}
+
+/** A landing page's `sections:` in the ux file: each named section's look, checked by its kind. */
+function readSectionLooks(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  page: PageIR,
+  where: string,
+): Record<string, SectionLook> {
+  const looks: Record<string, SectionLook> = {};
+  if (page.pattern.kind !== "landing") {
+    ctx.error(node, "invalid-key", `"sections" is for a landing page; ${page.id} is not one.`);
+    return looks;
+  }
+  const sections = page.pattern.sections;
+  for (const entry of mapEntries(ctx, node, `"sections" of ${where}`) ?? []) {
+    const section = sections.find((s) => s.name === entry.key);
+    if (!section) {
+      ctx.error(
+        entry.keyNode,
+        "unknown-section",
+        `${page.id} has no section named "${entry.key}".`,
+        didYouMean(
+          entry.key,
+          sections.map((s) => s.name),
+        ),
+      );
+      continue;
+    }
+    const allowed = SECTION_LOOKS[section.kind] ?? {};
+    const at = `the look of ${entry.key} on ${where}`;
+    const look: SectionLook = {};
+    for (const option of checkKeys(ctx, mapEntries(ctx, entry.value, at) ?? [], at, {
+      allowed: Object.keys(allowed),
+    })) {
+      const values = allowed[option.key];
+      const value = isScalar(option.value) ? option.value.value : undefined;
+      if (
+        values === "text"
+          ? typeof value !== "string" || !value.trim()
+          : !values?.includes(value as string | number)
+      ) {
+        ctx.error(
+          option.value,
+          "invalid-value",
+          values === "text"
+            ? `"${option.key}" of ${at} is a text.`
+            : `"${option.key}" of ${at} is one of ${values?.join(", ")}.`,
+        );
+        continue;
+      }
+      (look as Record<string, unknown>)[option.key] = value;
+    }
+    looks[entry.key] = look;
+  }
+  return looks;
 }

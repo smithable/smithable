@@ -3,3 +3,8 @@ smithableUx: 0.1
 
 theme:
   preset: minimal
+
+pages:
+  home:
+    sections:
+      items: { layout: grid }          # the items' pictures, titled
