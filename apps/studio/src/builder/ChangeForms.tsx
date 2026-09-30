@@ -2,13 +2,11 @@
 import {
   type ArgRef,
   type FieldIR,
-  FONTS,
   findOperation,
   humanize,
   identifier,
   type JsonSchema,
   pageModel,
-  THEME_PRESETS,
   typeKey,
 } from "@smithable/core";
 import { describeChange } from "@smithable/index";
@@ -192,7 +190,6 @@ function SpecNote({ label, text }: { label: string; text: string }) {
 }
 
 const CHANGES = [
-  ["setTheme", "Look and feel"],
   ["addField", "Add a field"],
   ["changeField", "Change a field"],
   ["renameField", "Rename a field"],
@@ -202,9 +199,6 @@ const CHANGES = [
   ["setSearch", "Search on a page"],
   ["setAccess", "Who can do what"],
   ["setNavigation", "Menu order"],
-  ["setIcon", "A page's icon"],
-  ["setTone", "Colours of a choice"],
-  ["setBelow", "A second line in a list"],
   ["addTile", "A dashboard tile"],
   ["removePage", "Remove a page"],
   ["addSection", "A section on a landing page"],
@@ -238,7 +232,6 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         />
       </Label>
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-        {change === "setTheme" && <SetTheme run={run} />}
         {change === "addField" && <AddField spec={spec} run={run} initial={initial} />}
         {change === "changeField" && <ChangeField spec={spec} run={run} initial={initial} />}
         {change === "renameField" && <RenameField spec={spec} run={run} initial={initial} />}
@@ -256,9 +249,6 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         {change === "setSearch" && <SetSearch spec={spec} run={run} />}
         {change === "setAccess" && <SetAccess spec={spec} run={run} />}
         {change === "setNavigation" && <SetNavigation spec={spec} run={run} />}
-        {change === "setIcon" && <SetIcon spec={spec} run={run} />}
-        {change === "setTone" && <SetTone spec={spec} run={run} />}
-        {change === "setBelow" && <SetBelow spec={spec} run={run} />}
         {change === "addTile" && <AddTile spec={spec} run={run} />}
         {change === "removePage" && (
           <FromSchema
@@ -737,215 +727,6 @@ function SetNavigation({ spec, run }: FormProps) {
         ))}
       </ol>
       <Submit label="Save menu order" />
-    </Form>
-  );
-}
-
-function SetTheme({ run }: { run: Run }) {
-  const [preset, setPreset] = useState<string>(THEME_PRESETS[0]);
-  const [useBrand, setUseBrand] = useState(false);
-  const [primary, setPrimary] = useState("#2563eb");
-  const [font, setFont] = useState("none");
-  const [density, setDensity] = useState("comfortable");
-  return (
-    <Form
-      onSubmit={() =>
-        run("setTheme", { preset, primary: useBrand ? primary : "none", font, density })
-      }
-    >
-      <Label text="Theme">
-        <Select
-          aria-label="Theme"
-          value={preset}
-          onChange={(e) => setPreset(e.target.value)}
-          options={THEME_PRESETS.map((p) => [p, humanize(p)])}
-        />
-      </Label>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={useBrand} onChange={(e) => setUseBrand(e.target.checked)} />{" "}
-        Use my brand colour
-      </label>
-      {useBrand && (
-        <Label text="Brand colour" hint="Adjusted where needed so text stays readable">
-          <Input
-            type="color"
-            aria-label="Brand colour"
-            value={primary}
-            onChange={(e) => setPrimary(e.target.value)}
-            className="h-10 p-1"
-          />
-        </Label>
-      )}
-      <Label text="Font">
-        <Select
-          aria-label="Font"
-          value={font}
-          onChange={(e) => setFont(e.target.value)}
-          options={[["none", "The theme's font"], ...FONTS.map((f) => [f, f] as [string, string])]}
-        />
-      </Label>
-      <Label text="Density">
-        <Select
-          aria-label="Density"
-          value={density}
-          onChange={(e) => setDensity(e.target.value)}
-          options={[
-            ["comfortable", "Comfortable"],
-            ["compact", "Compact: more on screen"],
-          ]}
-        />
-      </Label>
-      <Submit label="Apply" />
-    </Form>
-  );
-}
-
-export const ICON_CHOICES = [
-  "auto",
-  "users",
-  "user",
-  "file",
-  "receipt",
-  "cart",
-  "package",
-  "calendar",
-  "layers",
-  "book",
-  "briefcase",
-  "building",
-  "chart",
-  "clipboard",
-  "home",
-  "mail",
-  "settings",
-  "star",
-  "tag",
-  "truck",
-  "list",
-];
-
-function SetIcon({ spec, run }: FormProps) {
-  return (
-    <FromSchema
-      op="setIcon"
-      spec={spec}
-      run={run}
-      initial={{ icon: "auto" }}
-      submit="Set icon"
-      controls={{
-        icon: (icon, set) => (
-          <Label text="Icon in the menu" hint='"Automatic" picks one from the page’s records'>
-            <Select
-              aria-label="Icon"
-              value={icon || "auto"}
-              onChange={(e) => set(e.target.value)}
-              options={ICON_CHOICES.map((i) => [i, i === "auto" ? "Automatic" : humanize(i)])}
-            />
-          </Label>
-        ),
-      }}
-    />
-  );
-}
-
-export const TONE_CHOICES: [string, string][] = [
-  ["neutral", "Grey (neutral)"],
-  ["success", "Green (good)"],
-  ["warning", "Amber (needs attention)"],
-  ["danger", "Red (a problem)"],
-];
-
-function SetTone({ spec, run }: FormProps) {
-  const choices = (spec.ir?.models ?? []).flatMap((m) =>
-    m.fields.flatMap((f) =>
-      f.type.kind === "choice" ? [{ model: m.name, field: f.name, values: f.type.values }] : [],
-    ),
-  );
-  const [key, setKey] = useState(choices[0] ? `${choices[0].model}.${choices[0].field}` : "");
-  const current = choices.find((c) => `${c.model}.${c.field}` === key);
-  const [value, setValue] = useState("");
-  const [tone, setTone] = useState("success");
-  const shown = current?.values.includes(value) ? value : (current?.values[0] ?? "");
-  if (!choices.length) return <p className="text-sm text-neutral-600">No field is a choice yet.</p>;
-  return (
-    <Form
-      onSubmit={() =>
-        run("setTone", { model: current?.model, field: current?.field, value: shown, tone })
-      }
-    >
-      <Label text="Choice field">
-        <Select
-          aria-label="Choice field"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          options={choices.map((c) => [
-            `${c.model}.${c.field}`,
-            `${humanize(c.field)} of ${c.model}`,
-          ])}
-        />
-      </Label>
-      <Label text="Value">
-        <Select
-          aria-label="Value"
-          value={shown}
-          onChange={(e) => setValue(e.target.value)}
-          options={(current?.values ?? []).map((v) => [v, humanize(v)])}
-        />
-      </Label>
-      <Label text="Colour">
-        <Select
-          aria-label="Colour"
-          value={tone}
-          onChange={(e) => setTone(e.target.value)}
-          options={TONE_CHOICES}
-        />
-      </Label>
-      <Submit label="Set colour" disabled={!current} />
-    </Form>
-  );
-}
-
-function SetBelow({ spec, run }: FormProps) {
-  const pages = (spec.ir?.pages ?? []).filter((p) => pageModel(p) !== undefined);
-  const [page, setPage] = useState(pages[0]?.id ?? "");
-  const shown = pages.find((p) => p.id === page) ?? pages[0];
-  const model = shown && spec.ir?.models.find((m) => m.name === pageModel(shown));
-  const fields = (model?.fields ?? []).filter((f) => !(f.type.kind === "relation" && f.type.many));
-  const [column, setColumn] = useState("");
-  const [field, setField] = useState("none");
-  const shownColumn = fields.some((f) => f.name === column) ? column : (fields[0]?.name ?? "");
-  return (
-    <Form onSubmit={() => run("setBelow", { page, column: shownColumn, field })}>
-      <Label text="Page">
-        <Select
-          aria-label="Page"
-          value={page}
-          onChange={(e) => setPage(e.target.value)}
-          options={pages.map((p) => [p.id, humanize(p.id)])}
-        />
-      </Label>
-      <Label text="Under the column">
-        <Select
-          aria-label="Under the column"
-          value={shownColumn}
-          onChange={(e) => setColumn(e.target.value)}
-          options={fields.map((f) => [f.name, humanize(f.name)])}
-        />
-      </Label>
-      <Label text="Show" hint="e.g. the phone number under the email">
-        <Select
-          aria-label="Show"
-          value={field}
-          onChange={(e) => setField(e.target.value)}
-          options={[
-            ["none", "Nothing"],
-            ...fields
-              .filter((f) => f.name !== shownColumn)
-              .map((f): [string, string] => [f.name, humanize(f.name)]),
-          ]}
-        />
-      </Label>
-      <Submit label="Set second line" disabled={!page || !shownColumn} />
     </Form>
   );
 }
