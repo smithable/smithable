@@ -74,4 +74,6 @@ For a section of `smithable.yml` Smithable does not know, `smithable teach <sect
 
 A request worded like an everyday change ("Customers should have a phone number", "Only admins may delete customers", "Show orders first in the menu") becomes operations without any model, in milliseconds and offline; anything that does not resolve to exactly one model, field or page goes to the cheapest allowed tier first. A model gets two chances to repair an answer that does not apply; after that, or when it says no operation can do it while a stronger model is allowed, the request goes to the next tier. An unclear request gets a question back instead of a guess, and a request that needs custom code is said to need it.
 
+A question about the app ("who can delete orders?", "is the schedule public?", "what is a customer?") is answered rather than applied: the common shapes from the spec itself without a model, the rest by the cheapest allowed model in a few sentences.
+
 What each request used (tier, model, tokens, cost) is shown before you confirm, recorded in the change's commit and shown in Studio's change trace. Context sizes and usage are logged locally to `data/.smithable/token-log.jsonl`, never sent anywhere.

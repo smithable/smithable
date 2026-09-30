@@ -54,7 +54,10 @@ export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; wor
           if (request.trim()) void propose(request.trim());
         }}
       >
-        <Label text="Describe a change" hint="For example: customers should have a mobile number.">
+        <Label
+          text="Describe a change, or ask a question"
+          hint="For example: customers should have a mobile number. Or: who can delete orders?"
+        >
           <textarea
             value={request}
             onChange={(e) => setRequest(e.target.value)}
@@ -161,6 +164,11 @@ export function ProposalView({
             ))}
           </div>
         </>
+      )}
+      {proposal.kind === "answer" && (
+        <p className="text-sm" role="status">
+          {proposal.text}
+        </p>
       )}
       {proposal.kind === "none" && (
         <p className="text-sm">No operation can do this: {proposal.reason}</p>
