@@ -105,10 +105,10 @@ export function accessTestSource(ir: SpecIR, auth: AuthIR): string {
 ${usesN ? "  const n = next();\n" : ""}  return { ${entries.join(", ")} } as const;
 }
 
-function insert${model.name}(owner: string | null) {
+function insert${model.name}(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(${camel(plural(model.name))})
-    .values({ ...${camel(model.name)}Values(owner)${ownerColumn} })
+    .values({ ...${camel(model.name)}Values(owner), ...values${ownerColumn} })
     .returning()
     .get();
 }`;
@@ -117,14 +117,16 @@ function insert${model.name}(owner: string | null) {
     const access = modelAccess(model, auth);
     const data = `${camel(model.name)}Data`;
     const values = `${camel(model.name)}Values`;
+    // Visitors read only records that fit the public condition: the records here do.
+    const fits = access.read.where ? `, ${JSON.stringify(access.read.where)}` : "";
     const tests = roles.map((role) => {
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const title = role === null ? "a visitor who has not signed in" : role;
       const own = role !== null;
       return `  test(${JSON.stringify(title)}, async () => {
     const viewer = ${viewer};
-    const others = insert${model.name}(${signedIn ? "stranger.id" : "null"});
-${own ? `    const own = insert${model.name}(viewer.id);\n` : ""}    expect({
+    const others = insert${model.name}(${signedIn ? "stranger.id" : "null"}${fits});
+${own ? `    const own = insert${model.name}(viewer.id${fits});\n` : ""}    expect({
       readOthers: await reads(${data}, viewer, others.id),
       readOwn: ${own ? `await reads(${data}, viewer, own.id)` : "false"},
       create: await can(() => ${data}.create(viewer, ${values}(${own ? "viewer.id" : "null"}))),
@@ -149,6 +151,37 @@ ${Object.entries(expected(access, role))
     insert${model.name}(viewer.id);
     for (const row of await ${data}.list(viewer)) expect(Object.keys(row)).not.toContain(${JSON.stringify(lists[0])});
   });`);
+    // The public condition: a visitor reads a record that fits and not one that does not; a role
+    // that reads everything reads both.
+    const where = access.read.where;
+    const [field, wanted] = Object.entries(where ?? {})[0] ?? [];
+    const flipped = model.fields.find((f) => f.name === field);
+    if (where && field !== undefined && flipped) {
+      const other =
+        flipped.type.kind === "choice"
+          ? flipped.type.values.find((v) => v !== wanted)
+          : typeof wanted === "boolean"
+            ? !wanted
+            : undefined;
+      const everything = roles.find((role) => role !== null && access.read.roles.includes(role));
+      if (other !== undefined)
+        tests.push(`  test("visitors read only ${model.name.toLowerCase()} records where ${Object.entries(
+          where,
+        )
+          .map(([k, v]) => `${k} is ${v}`)
+          .join(" and ")}", async () => {
+    const fitting = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${JSON.stringify(where)});
+    const hidden = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${JSON.stringify({ ...where, [field]: other })});
+    expect(await reads(${data}, null, fitting.id)).toBe(true);
+    expect(await reads(${data}, null, hidden.id)).toBe(false);
+    expect((await ${data}.list(null)).map((r) => r.id)).not.toContain(hidden.id);${
+      everything
+        ? `
+    expect(await reads(${data}, signedIn(${JSON.stringify(everything)}), hidden.id)).toBe(true);`
+        : ""
+    }
+  });`);
+    }
     // A capacity: the last place goes to one, the next is refused; the referenced record cannot
     // lower its number below what is taken.
     const capacity = model.capacity;

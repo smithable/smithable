@@ -205,7 +205,9 @@ user:
 # signing in. Never add models that contain personal or business data.
 public:
   pages: [home]                    # sign-in pages are always public
-  read: [Product]
+  read:
+    - Product
+    - Post: { where: { status: published } }   # only these records; drafts stay with their roles and owner
   create: [ContactMessage]         # for example a public contact form
 ```
 
@@ -227,6 +229,7 @@ Every model gets an automatic **owner** field, set to the user who created the r
 - **A reference shows its title, nothing else.** A viewer who may read a record also sees the display title of each record it refers to (an order shows its customer's name), even without read access to that record; no other field of it. A search through a relation matches that title only, among the related records the viewer may read. A stricter per-model rule can come when someone needs it.
 - **Standard actions** follow the model's write access. Custom actions default to signed-in users, and `allow:` narrows that.
 - **Without sign-in** (`signIn: none`), only what the `public` section lists is reachable at all.
+- **A public condition** (`Post: { where: { status: published } }`) is applied where the read scope is decided, in the generated data functions' `readable(viewer)`, so every list, search, reference title, landing card and picture follows it without knowing about it; an owner reads their own records or the public ones, a role that may read the model reads everything. The generated access test proves each condition: a visitor reads a fitting record and not another. The auth companion follows a rename of the field and refuses its removal or the loss of the value.
 - **Warnings, not hidden behaviour.** The validator warns about risky combinations but never changes the meaning. Examples: `shared` together with `selfSignUp: true` ("anyone who creates an account can read all data"), and public read access to a model with personal-data fields such as `email` or `phone`.
 - The Builder's plain-language view shows the **effective** access of every model and page, so nobody has to combine the two files in their head.
 

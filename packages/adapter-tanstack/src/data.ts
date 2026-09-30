@@ -325,7 +325,20 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ...(access.create.public || capped || capacity || holds.length ? ["count"] : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
+    ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
   ];
+  // Visitors (and anyone reading only because it is public) read the records the public
+  // condition fits; an owner reads their own too.
+  const publicWhere = access.read.where
+    ? `and(${Object.entries(access.read.where)
+        .map(([k, v]) => `eq(${n.table}.${k}, ${JSON.stringify(v)})`)
+        .join(", ")})`
+    : undefined;
+  const ownOrPublic = !signedIn
+    ? "sql`false`"
+    : publicWhere && access.read.owner
+      ? `scope === "own" && viewer ? or(eq(${n.table}.${owner}, viewer.id), ${publicWhere}) : sql\`false\``
+      : `scope === "own" && viewer ? eq(${n.table}.${owner}, viewer.id) : sql\`false\``;
   const capacityCounted = capacity
     ? [
         `eq(${n.table}.${capacity.per}Id, values.${capacity.per}Id)`,
@@ -417,7 +430,7 @@ export const ${self} = {
   readable(viewer: Viewer | null) {
     const scope = readScope(${n.access}.read, viewer);
     if (scope === "all") return undefined;
-    ${signedIn ? `return scope === "own" && viewer ? eq(${n.table}.${owner}, viewer.id) : sql\`false\`;` : "return sql`false`;"}
+${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    return ${ownOrPublic};
   },
 
   canRead(viewer: Viewer | null, id: number): boolean {
