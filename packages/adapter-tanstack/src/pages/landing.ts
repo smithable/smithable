@@ -3,6 +3,7 @@ import {
   type AuthIR,
   camel,
   humanize,
+  kebab,
   type LandingSection,
   type PageIR,
   pascal,
@@ -10,6 +11,7 @@ import {
   type SpecIR,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
+import { calculatorModel } from "../calculators.js";
 import {
   attr,
   guard,
@@ -93,6 +95,14 @@ export function landingRoute(
           (f) => f.type.kind === "scalar" && f.type.name === "text",
         );
         const choice = model.fields.find((f) => f.type.kind === "choice");
+        // A card opens its article when the model has an articles page, and shows its picture.
+        const article = ir.pages.find(
+          (p) => p.pattern.kind === "articles" && p.pattern.model === model.name,
+        );
+        const address = article?.pattern.kind === "articles" ? article.pattern.address : undefined;
+        const picture = model.fields.find(
+          (f) => f.type.kind === "scalar" && f.type.name === "picture",
+        );
         const labels =
           choice?.type.kind === "choice"
             ? Object.fromEntries(
@@ -114,6 +124,16 @@ export function landingRoute(
           cards={data.${camel(plural(model.name))}.slice(0, ${section.limit ?? 6}).map((row) => ({
             key: row.id,
             title: String(row.${title}),${
+              article
+                ? `
+            href: \`${article.route === "/" ? "" : article.route}/\${encodeURIComponent(${address ? `row.${address} || ` : ""}String(row.id))}\`,`
+                : ""
+            }${
+              picture
+                ? `
+            picture: row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height } : undefined,`
+                : ""
+            }${
               summary
                 ? `
             text: row.${summary.name} ?? undefined,`
@@ -175,6 +195,21 @@ export function landingRoute(
       // The footer is the layout's, wherever the section is listed.
       case "footer":
         return [];
+      case "calculator": {
+        if (!section.calculator) return [];
+        const model = calculatorModel(`${page.id}.${section.name}`, section.calculator);
+        const ui = `${camel(model.name)}Ui`;
+        imports.add("#/kit/Landing", "Section").add("#/kit/Calculator", "Calculator");
+        imports.add(`#/generated/${kebab(model.name)}`, ui).add("#/generated/app", "app");
+        const results = t.section(page.id, section.name).results;
+        return [
+          `${open("Section")}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
+        >
+          <Calculator ui={${ui}} app={app}${results ? ` resultsTitle=${attr(results)}` : ""} />
+        </Section>`,
+        ];
+      }
       case "callToAction":
         imports.add("#/kit/Landing", "CallToAction");
         return [

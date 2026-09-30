@@ -14,8 +14,11 @@ import {
 } from "./context.js";
 import type { YamlEditor } from "./edit.js";
 import {
+  type CalculatorExample,
+  type CalculatorIR,
   type DashboardItem,
   type FieldIR,
+  type FieldValue,
   type LandingSection,
   type OnboardingStep,
   type PageIR,
@@ -28,7 +31,10 @@ import {
 import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
+import { checkModelFormulas, readField } from "./sections/models.js";
 import {
+  articlesOperations,
+  calculatorOperations,
   calendarOperations,
   crudOperations,
   dashboardOperations,
@@ -94,6 +100,7 @@ export const LANDING_SECTIONS: Record<SectionKind, { button?: true; form?: true 
   contact: { form: true },
   gallery: {},
   footer: {},
+  calculator: {},
 };
 
 const NUMBER_TYPES = ["int", "decimal", "money"];
@@ -393,7 +400,218 @@ const calendar: PagePattern<"calendar"> = {
   },
 };
 
+/** The fields an articles page names, and what each must be (docs/design/articles.md). */
+const ARTICLE_KEYS = ["title", "body", "picture", "date", "address", "summary"] as const;
+
+/** A model's records as articles: a list newest first, and a page per article. */
+const articles: PagePattern<"articles"> = {
+  kind: "articles",
+  schema: {
+    oneOf: [
+      {
+        type: "string",
+        description: "A model with a title and a markdown body; its other parts are inferred.",
+      },
+      {
+        type: "object",
+        required: ["model"],
+        additionalProperties: false,
+        properties: {
+          model: { type: "string" },
+          title: { type: "string", description: "The article's title." },
+          body: { type: "string", description: "A markdown field: the article itself." },
+          picture: { type: "string", description: "A picture field shown with the article." },
+          date: { type: "string", description: "A date or date-time field: when it appeared." },
+          address: {
+            type: "string",
+            description: "A unique string field: the article's address (/blog/<address>).",
+          },
+          summary: { type: "string", description: "A short text shown in the list." },
+        },
+      },
+    ],
+    description: "A model's records as articles: a blog, news or a knowledge base.",
+  },
+  example: "articles: <Model>",
+  parse: (ctx, value, where, parsed) => readArticles(ctx, value, where, parsed),
+  models: (p) => [p.model],
+  icon: "book",
+  inMenu: true,
+  operations: articlesOperations,
+  follow(spec, page, effect) {
+    // A renamed field is renamed where the page names it; a removal it relies on is refused.
+    const f = fieldEffect(effect);
+    const p = page.pattern;
+    if (!f || f.model !== p.model) return undefined;
+    const keys = ARTICLE_KEYS.filter((key) => p[key] === f.from);
+    if (!keys.length) return undefined;
+    if (!f.to)
+      return {
+        refusal: `The ${page.id} page shows ${f.model}.${f.from} in its articles; change or remove the page first.`,
+      };
+    const path = (key: string) => ["pages", page.id, "articles", key];
+    for (const key of keys) if (spec.has(path(key))) spec.set(path(key), f.to);
+    return undefined;
+  },
+};
+
 /** An admin view of every model (or some): each one's records, found, opened, changed. */
+/**
+ * A calculator's fields, written as a model's, and its examples. No references, lists or
+ * pictures (nothing to point at), nothing required or unique (nothing is stored). The formulas
+ * are checked as a model's are, over the calculator's own fields.
+ */
+function readCalculator(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  /** The calculator's name for messages and formula marks, e.g. "mortgage" or "home.estimate". */
+  name: string,
+): CalculatorIR | undefined {
+  const entries = mapEntries(ctx, node, `"calculator" in ${where}`);
+  if (!entries) return undefined;
+  const known = checkKeys(ctx, entries, `"calculator" in ${where}`, {
+    allowed: ["fields", "examples"],
+  });
+  const fieldsEntry = known.find((e) => e.key === "fields");
+  if (!fieldsEntry) {
+    ctx.error(node, "missing-key", `${capitalize(where)} needs "fields": its inputs and results.`);
+    return undefined;
+  }
+  const fields: FieldIR[] = [];
+  for (const entry of mapEntries(ctx, fieldsEntry.value, `the fields of ${where}`) ?? []) {
+    const field = readField(ctx, name, entry);
+    if (!field) continue;
+    const fieldWhere = `field "${name}.${field.name}"`;
+    const unfit =
+      field.type.kind === "relation"
+        ? "cannot refer to records"
+        : field.type.kind === "scalar" && field.type.name === "picture"
+          ? "cannot be a picture"
+          : field.unique
+            ? "cannot be unique"
+            : field.required && !field.formula
+              ? 'cannot be required ("!"): nothing is stored, and an empty input counts as 0'
+              : undefined;
+    if (unfit) {
+      ctx.error(
+        entry.value ?? entry.keyNode,
+        "invalid-field",
+        `${capitalize(fieldWhere)} in a calculator ${unfit}.`,
+      );
+      continue;
+    }
+    fields.push(field);
+  }
+  if (!fields.some((f) => f.formula))
+    ctx.warning(
+      fieldsEntry.keyNode,
+      "calculator-no-result",
+      `${capitalize(where)} has no formula field, so it calculates nothing.`,
+    );
+  const examples: CalculatorExample[] = [];
+  const examplesEntry = known.find((e) => e.key === "examples");
+  if (examplesEntry) {
+    const items = isSeq(examplesEntry.value) ? (examplesEntry.value.items as ParsedNode[]) : [];
+    if (!isSeq(examplesEntry.value))
+      ctx.error(
+        examplesEntry.value,
+        "expected-list",
+        `"examples" in ${where} is a list of { input, expected }.`,
+      );
+    for (const item of items) {
+      const parts = checkKeys(
+        ctx,
+        mapEntries(ctx, item, `an example of ${where}`) ?? [],
+        `an example of ${where}`,
+        {
+          allowed: ["input", "expected"],
+        },
+      );
+      const read = (
+        key: "input" | "expected",
+        allow: (f: FieldIR) => boolean,
+      ): Record<string, FieldValue> | undefined => {
+        const part = parts.find((e) => e.key === key);
+        if (!part) {
+          ctx.error(item, "missing-key", `An example of ${where} needs "${key}".`);
+          return undefined;
+        }
+        const values: Record<string, FieldValue> = {};
+        for (const v of mapEntries(ctx, part.value, `"${key}" of an example of ${where}`) ?? []) {
+          const field = fields.find((f) => f.name === v.key);
+          if (!field || !allow(field)) {
+            ctx.error(
+              v.keyNode,
+              "invalid-example",
+              `"${v.key}" is not ${key === "input" ? "an input" : "a result"} of ${where}.`,
+              didYouMean(
+                v.key,
+                fields.filter(allow).map((f) => f.name),
+              ),
+            );
+            continue;
+          }
+          const value = isScalarNode(v.value) ? v.value.value : undefined;
+          if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+            values[v.key] = value;
+          else
+            ctx.error(
+              v.value,
+              "invalid-value",
+              `"${v.key}" in an example of ${where} must be a single value.`,
+            );
+        }
+        return values;
+      };
+      const input = read("input", (f) => !f.formula);
+      const expected = read("expected", (f) => Boolean(f.formula));
+      if (input && expected) examples.push({ input, expected });
+    }
+  }
+  // The formulas, defaults and cycles, as for a model, over the calculator's own fields.
+  checkModelFormulas(ctx, { name, fields }, []);
+  return { fields, examples };
+}
+
+const calculator: PagePattern<"calculator"> = {
+  kind: "calculator",
+  schema: {
+    type: "object",
+    required: ["fields"],
+    additionalProperties: false,
+    properties: {
+      fields: {
+        type: "object",
+        description:
+          "Fields as a model's: entered ones are the inputs, formula fields the results.",
+        additionalProperties: true,
+      },
+      examples: {
+        type: "array",
+        description: "Inputs and the results they must give; each becomes a test.",
+        items: {
+          type: "object",
+          required: ["input", "expected"],
+          properties: { input: { type: "object" }, expected: { type: "object" } },
+        },
+      },
+    },
+    description: "Inputs and results computed as you type, stored nowhere.",
+  },
+  example: "calculator: { fields: { … } }",
+  parse(ctx, value, where) {
+    const name = /page "([^"]+)"/.exec(where)?.[1] ?? "calculator";
+    const calculator = readCalculator(ctx, value, where, name);
+    return calculator ? { kind: "calculator", calculator } : undefined;
+  },
+  models: () => [],
+  icon: "chart",
+  inMenu: true,
+  parts: () => ({ results: "results" }),
+  operations: calculatorOperations,
+};
+
 const data: PagePattern<"data"> = {
   kind: "data",
   schema: {
@@ -445,6 +663,8 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   users,
   data,
   calendar,
+  calculator,
+  articles,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -503,14 +723,21 @@ function readLanding(
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
     const options = checkKeys(ctx, entries, sectionWhere, {
-      allowed: ["records", "button", "limit", "form"],
+      allowed: ["records", "button", "limit", "form", "calculator"],
       content: ["title", "subtitle", "text", "items"],
     });
     const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
     const allows = kindOf ? LANDING_SECTIONS[kindOf] : {};
     const section: LandingSection = { name, kind: "records" };
     for (const { key, value: option, keyNode: optionKey } of options) {
-      if (key === "records") {
+      if (key === "calculator") {
+        // A calculator of any name: inputs and results, stored nowhere (docs/design/calculator.md).
+        const calculator = readCalculator(ctx, option, sectionWhere, `${where}.${name}`);
+        if (calculator) {
+          section.kind = "calculator";
+          section.calculator = calculator;
+        }
+      } else if (key === "records") {
         const model = readString(ctx, option, `"records" in ${sectionWhere}`);
         if (model !== undefined) {
           ctx.reference("model", model, option);
@@ -556,6 +783,10 @@ function readLanding(
           ctx.error(option, "invalid-value", `"limit" must be a whole number above 0.`);
         else if (limit !== undefined) section.limit = limit;
       }
+    }
+    if (section.kind === "calculator") {
+      sections.push(section);
+      continue;
     }
     if (!section.model) {
       if (!kindOf) {
@@ -803,6 +1034,108 @@ function readDashboard(
 const DATES = ["date", "datetime"];
 const scalarKind = (f: FieldIR | undefined) =>
   f?.type.kind === "scalar" ? f.type.name : undefined;
+
+/**
+ * An articles page, short (`articles: Post`) or long (`{ model, title, body, … }`). Each part
+ * not named is inferred by type and name; one that cannot be, or is found twice, is an error.
+ */
+function readArticles(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): PatternOf<"articles"> | undefined {
+  const at = `the articles of ${where}`;
+  let modelName: string | undefined;
+  let modelAt: At = node;
+  const given: Record<string, { value: string; at: At }> = {};
+  if (isMap(node)) {
+    for (const { key, value } of checkKeys(ctx, mapEntries(ctx, node, at) ?? [], at, {
+      allowed: ["model", ...ARTICLE_KEYS],
+    })) {
+      const text = readString(ctx, value, `"${key}" in ${at}`);
+      if (text === undefined) continue;
+      if (key === "model") {
+        modelName = text;
+        modelAt = value;
+      } else given[key] = { value: text, at: value };
+    }
+    if (modelName === undefined) {
+      ctx.error(node, "missing-key", `${capitalize(at)} needs "model".`);
+      return undefined;
+    }
+  } else modelName = readString(ctx, node, `"articles" in ${where}`);
+  if (modelName === undefined) return undefined;
+  ctx.reference("model", modelName, modelAt);
+  const model = parsed.models?.find((m) => m.name === modelName);
+  if (!model) return { kind: "articles", model: modelName, title: "", body: "" };
+  const stored = model.fields.filter((f) => !f.formula);
+  const kindOf = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
+  // What each part may be, and how it is found when not named.
+  const rules: Record<
+    (typeof ARTICLE_KEYS)[number],
+    { kinds: string[]; named?: RegExp; unique?: boolean }
+  > = {
+    title: { kinds: ["string"], named: /^(title|name|headline)$/i },
+    body: { kinds: ["markdown"] },
+    picture: { kinds: ["picture"] },
+    date: { kinds: DATES },
+    address: { kinds: ["string"], named: /^(address|slug)$/i, unique: true },
+    summary: { kinds: ["string", "text"], named: /^(summary|excerpt)$/i },
+  };
+  const result: PatternOf<"articles"> = { kind: "articles", model: modelName, title: "", body: "" };
+  for (const key of ARTICLE_KEYS) {
+    const rule = rules[key];
+    const fits = (f: FieldIR) =>
+      rule.kinds.includes(kindOf(f) ?? "") && (!rule.unique || Boolean(f.unique));
+    const named = given[key];
+    let found: string | undefined;
+    if (named) {
+      const f = model.fields.find((x) => x.name === named.value);
+      if (!f)
+        ctx.error(
+          named.at,
+          "unknown-field",
+          `${modelName} has no field named "${named.value}".`,
+          didYouMean(
+            named.value,
+            model.fields.map((x) => x.name),
+          ),
+        );
+      else if (!fits(f))
+        ctx.error(
+          named.at,
+          "invalid-value",
+          `"${named.value}" is the ${key} of ${at}: it must be ${rule.unique ? "a unique " : "a "}${rule.kinds.join(" or ")} field.`,
+        );
+      else found = f.name;
+    } else {
+      const candidates = stored.filter((f) => fits(f) && (!rule.named || rule.named.test(f.name)));
+      if (candidates.length > 1 && !rule.named)
+        ctx.error(
+          modelAt,
+          "missing-key",
+          `${modelName} has several ${rule.kinds.join(" or ")} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}.`,
+          `Write "articles: { model: ${modelName}, ${key}: ${candidates[0]?.name} }".`,
+        );
+      else found = candidates[0]?.name;
+    }
+    if (found) result[key] = found;
+  }
+  for (const key of ["title", "body"] as const)
+    if (!result[key] && !given[key])
+      ctx.error(
+        modelAt,
+        "missing-key",
+        key === "body"
+          ? `${modelName} has no markdown field for the body of ${at}.`
+          : `${modelName} has no string field named title, name or headline for ${at}.`,
+        key === "body"
+          ? `Add one, e.g. "body: markdown!", or name it with "body".`
+          : `Name it with "title".`,
+      );
+  return result;
+}
 
 /** A calendar, short (`calendar: Session`) or long (`{ model, starts, ends, duration, title }`). */
 function readCalendar(

@@ -96,6 +96,11 @@ export function texts(content: ContentIR) {
     },
     /** A landing section's or dashboard tile's texts. */
     section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
+    /** A calculator field's label and help: the page's, or a landing section's. */
+    calculatorField: (page: string, field: string, section?: string) =>
+      (section
+        ? content.pages[page]?.sections?.[section]?.fields?.[field]
+        : content.pages[page]?.fields?.[field]) ?? {},
     menuLabel: (name: string) =>
       content.menus[name]?.label ?? (name === "main" ? undefined : humanize(name)),
   };

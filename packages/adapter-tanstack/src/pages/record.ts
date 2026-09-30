@@ -213,6 +213,13 @@ export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux:
   const preset = start
     ? `\n        preset={search.${start.name} ? { ${start.name}: ${timed ? `instantOf(search.${start.name}, app.timeZone)` : `search.${start.name}`} } : undefined}`
     : "";
+  // An article's address, when left empty, is made from its title (docs/design/articles.md).
+  const articles = ir.pages.find(
+    (p) => p.pattern.kind === "articles" && p.pattern.model === model.name && p.pattern.address,
+  )?.pattern as { address: string; title: string } | undefined;
+  const create = articles
+    ? `await ${n.create}({ data: { ...values, ${articles.address}: values.${articles.address} || addressFrom(values.${articles.title}) } });`
+    : `await ${n.create}({ data: values });`;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
@@ -237,7 +244,7 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}${start ? "  c
         schema={${n.schema}}${order}${preset}
 ${options ? "        options={options}\n" : ""}        submitLabel=${attr(`Create ${n.label.toLowerCase()}`)}
         onSubmit={async (values) => {
-          await ${n.create}({ data: values });
+          ${create}
           await back();
         }}
         onCancel={back}
@@ -245,7 +252,22 @@ ${options ? "        options={options}\n" : ""}        submitLabel=${attr(`Creat
     </>
   );
 }
-`;
+${
+  articles
+    ? `
+/** An address from a title: lowercase letters, digits and dashes ("Hello, World!" → hello-world). */
+function addressFrom(title: unknown): string {
+  return String(title ?? "")
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
+}
+`
+    : ""
+}`;
 }
 
 export function detailRoute(
