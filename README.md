@@ -4,7 +4,7 @@ Smithable is an app builder for people who have never written code and for devel
 
 The difference from prompt-to-code builders: **Smithable understands the application.** Routine changes are made by deterministic generators, not by an AI rewriting code. Adding a phone number to customers is one operation, in milliseconds, for no tokens; a request that needs interpretation goes to the cheapest capable model with a small slice of the spec. Changes don't break the app, most of them cost nothing, and the generated code stays clean enough for a developer to take over. Why this matters and who it is for: [docs/VISION.md](docs/VISION.md).
 
-**Status:** private beta. The open-source engine, CLI, Studio and MCP server in this repository work on their own; the hosted service lives in a separate repository and builds on them. The licence (Apache-2.0 for the engine, 0BSD for the app kit) is pending legal review before the public release.
+**Status:** private beta. The open-source engine, CLI, Studio and MCP server in this repository work on their own; the hosted service lives in a separate repository and builds on them.
 
 ## What a generated app is
 
@@ -49,3 +49,7 @@ smithable deploy --target docker                # release checks, then the conta
 ## Working on it
 
 `pnpm check` is the gate before every commit: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change is undoable.
+
+## Licence
+
+Smithable is licensed under [Apache-2.0](LICENSE). The app kit and templates that are copied into every generated app are licensed under [0BSD](packages/adapter-tanstack/KIT-LICENSE), so a generated app carries no obligations from this repository. Contributions are accepted with a [DCO sign-off](CONTRIBUTING.md); vulnerabilities go to [security@smithable.ai](SECURITY.md).
