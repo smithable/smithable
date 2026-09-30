@@ -35,6 +35,11 @@ export interface FieldUi {
   /** For a reference: the related record's key in a row, and the field that names it. */
   relation?: { key: string; titleField: string };
   default?: string | number | boolean;
+  /** Bounds for numbers (a slider or stepper needs them). */
+  min?: number;
+  max?: number;
+  /** How the field is entered, when the ux file chose one (docs/design/look.md §1.1). */
+  control?: "slider" | "stepper" | "radio" | "select" | "combobox" | "textarea" | "switch";
   /** The field's own input control, when a plain one does not do (a Markdown editor). */
   input?: (props: FieldControlProps) => React.ReactNode;
 }
@@ -61,6 +66,10 @@ export interface ModelUi {
   /** Fields shown as table columns, in order. */
   columns: string[];
   fields: FieldUi[];
+  /** The form's groups with headings; fields in none follow (docs/design/look.md §1.2). */
+  sections?: { name: string; title: string; fields: string[] }[];
+  /** Short fields two abreast on wide screens. */
+  formColumns?: 1 | 2;
   /** Adds the computed fields to a record. */
   compute?: (row: Record<string, unknown>) => Record<string, unknown>;
   /** Values suggested for a new record, computed from the values entered so far. */
@@ -115,4 +124,29 @@ export function editorMarker(
     ...(part ? { "data-sm-part": part } : {}),
     ...(page ? { "data-sm-page": page } : {}),
   };
+}
+
+/** Rows ordered by a field (empty values last), descending when asked; a new list, the given one untouched. */
+export function sortRows<R extends Record<string, unknown>>(
+  rows: R[],
+  field: string,
+  descending = false,
+): R[] {
+  const value = (row: R) => {
+    const v = row[field];
+    if (v instanceof Date) return v.getTime();
+    if (v && typeof v === "object") return String((v as { name?: unknown }).name ?? "");
+    return v;
+  };
+  const compare = (a: unknown, b: unknown) => {
+    if (a == null || a === "") return b == null || b === "" ? 0 : 1;
+    if (b == null || b === "") return -1;
+    if (typeof a === "number" && typeof b === "number") return a - b;
+    if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
+    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+  };
+  return [...rows].sort((a, b) => {
+    const order = compare(value(a), value(b));
+    return descending && order !== 0 && value(a) != null && value(b) != null ? -order : order;
+  });
 }

@@ -1,9 +1,10 @@
-import type { YamlEditor } from "../edit.js";
+import type { YamlEditor, YamlValue } from "../edit.js";
+import type { SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
+import { CONTROLS, FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
-function put(ux: YamlEditor, path: string[], value: string | number | string[] | undefined): void {
+function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
   if (value === undefined || (Array.isArray(value) && value.length === 0)) {
     if (ux.has(path)) ux.removeAndPrune(path, 0);
   } else if (ux.has(path)) {
@@ -256,6 +257,161 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
   },
 };
 
+const pageNamed = (ir: SpecIR, page: string) => {
+  if (!ir.pages.some((p) => p.id === page))
+    throw new OperationError(`There is no page named "${page}".`);
+};
+
+const setControl: Operation<{ page: string; field: string; control: string }> = {
+  name: "setControl",
+  summary:
+    'How a field is entered on a page\'s form: slider, stepper, radio, select, combobox, textarea or switch ("input" is the default for its kind).',
+  schema: {
+    type: "object",
+    required: ["page", "field", "control"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      field: refTo({ ref: "field", page: "page", label: "Field" }),
+      control: { type: "string", enum: [...CONTROLS], description: "The control." },
+    },
+  },
+  positional: ["page", "field", "control"],
+  describe: ({ page, field, control }) =>
+    control === "input"
+      ? `Enter ${field} the usual way on the ${page} form`
+      : `Enter ${field} with a ${control} on the ${page} form`,
+  destructive: () => false,
+  apply(editors, { page, field, control }, ir) {
+    pageNamed(ir, page);
+    put(
+      editors.ux,
+      ["pages", page, "form", "control", field],
+      control === "input" ? undefined : control,
+    );
+    return [];
+  },
+};
+
+const setFormSections: Operation<{ page: string; sections?: string[] }> = {
+  name: "setFormSections",
+  summary:
+    'Group a page\'s form into sections with headings, each "name:field,field"; fields in none follow at the end (none: one form).',
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      sections: {
+        type: "array",
+        items: { type: "string" },
+        description: 'Each "name:field,field", e.g. "contact:name,email,phone".',
+      },
+    },
+  },
+  positional: ["page", "...sections"],
+  describe: ({ page, sections }) =>
+    sections?.length
+      ? `Group the ${page} form into ${sections.map((s) => s.split(":")[0]).join(", ")}`
+      : `Show the ${page} form as one`,
+  destructive: () => false,
+  apply(editors, { page, sections }, ir) {
+    pageNamed(ir, page);
+    const groups = (sections ?? []).map((text) => {
+      const [name, fields] = text.split(":");
+      if (!name || !fields)
+        throw new OperationError(`A section is written "name:field,field", not "${text}".`);
+      return { name, fields: fields.split(",").map((f) => f.trim()) };
+    });
+    if (groups.length && editors.ux.has(["pages", page, "form", "fieldOrder"]))
+      editors.ux.removeAndPrune(["pages", page, "form", "fieldOrder"], 0);
+    put(
+      editors.ux,
+      ["pages", page, "form", "sections"],
+      groups.length ? (groups as never) : undefined,
+    );
+    return [];
+  },
+};
+
+const setFormColumns: Operation<{ page: string; columns: number }> = {
+  name: "setFormColumns",
+  summary:
+    "Short fields of a page's form one under the other (1) or two abreast on wide screens (2).",
+  schema: {
+    type: "object",
+    required: ["page", "columns"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      columns: { type: "integer", enum: [1, 2] },
+    },
+  },
+  positional: ["page", "columns"],
+  describe: ({ page, columns }) =>
+    `${columns === 2 ? "Two columns" : "One column"} on the ${page} form`,
+  destructive: () => false,
+  apply(editors, { page, columns }, ir) {
+    pageNamed(ir, page);
+    put(editors.ux, ["pages", page, "form", "columns"], columns === 2 ? 2 : undefined);
+    return [];
+  },
+};
+
+const setView: Operation<{ page: string; view: "table" | "cards" }> = {
+  name: "setView",
+  summary:
+    "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway).",
+  schema: {
+    type: "object",
+    required: ["page", "view"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      view: { type: "string", enum: ["table", "cards"] },
+    },
+  },
+  positional: ["page", "view"],
+  describe: ({ page, view }) =>
+    `Show the ${page} list as ${view === "cards" ? "cards" : "a table"}`,
+  destructive: () => false,
+  apply(editors, { page, view }, ir) {
+    pageNamed(ir, page);
+    put(editors.ux, ["pages", page, "table", "view"], view === "cards" ? "cards" : undefined);
+    return [];
+  },
+};
+
+const setSort: Operation<{ page: string; field: string }> = {
+  name: "setSort",
+  summary:
+    'The order of a page\'s list until someone sorts it: a field, or "-field" for the largest or latest first ("none": newest first).',
+  schema: {
+    type: "object",
+    required: ["page", "field"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      field: {
+        type: "string",
+        description: 'A field, or "-field" descending; "none" for the default.',
+      },
+    },
+  },
+  positional: ["page", "field"],
+  describe: ({ page, field }) =>
+    field === "none"
+      ? `Show the newest ${page} first`
+      : `Sort the ${page} list by ${field.replace(/^-/, "")}${field.startsWith("-") ? ", largest or latest first" : ""}`,
+  destructive: () => false,
+  apply(editors, { page, field }, ir) {
+    pageNamed(ir, page);
+    put(editors.ux, ["pages", page, "table", "sort"], field === "none" ? undefined : field);
+    return [];
+  },
+};
+
 export const uxOperations: AnyOperation[] = [
   setTheme,
   setSectionLook,
@@ -264,4 +420,9 @@ export const uxOperations: AnyOperation[] = [
   setTone,
   setIcon,
   setBelow,
+  setControl,
+  setFormSections,
+  setFormColumns,
+  setView,
+  setSort,
 ];

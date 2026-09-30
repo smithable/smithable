@@ -34,7 +34,7 @@ test("each section kind takes its own looks, checked by name and value", () => {
     "{ hero: { layout: split, image: left }, features: { columns: 4 }, items: { layout: grid }, faq: { layout: list } }",
   );
   expect(read.diagnostics).toEqual([]);
-  expect(read.ux?.pages.home?.sections).toEqual({
+  expect(read.ux?.pages.home?.looks).toEqual({
     hero: { layout: "split", image: "left" },
     features: { columns: 4 },
     items: { layout: "grid" },

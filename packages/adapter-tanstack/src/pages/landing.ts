@@ -62,7 +62,7 @@ export function landingRoute(
     // A section's component, opened with where its texts are kept, so the preview can change
     // them in place.
     // Its look from smithable.ux.yml (layout, image, columns, highlight), checked by its kind.
-    const look = Object.entries(ux.pages[page.id]?.sections?.[section.name] ?? {})
+    const look = Object.entries(ux.pages[page.id]?.looks?.[section.name] ?? {})
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
         ([key, value]) =>

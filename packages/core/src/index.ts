@@ -92,8 +92,10 @@ export {
   themeThumbnail,
   tokensOf,
 } from "./theme.js";
-export type { Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
+export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
 export {
+  CONTROLS,
+  controlUnfit,
   emptyUx,
   FONTS,
   ICONS,
