@@ -1,6 +1,6 @@
 # Articles: pictures on records, Markdown, and an article page pattern (design)
 
-Status: 2026-09-29, proposed by Fable. The first step of the company-websites milestone (ROADMAP, "Later") and what a blog, a news page or a knowledge base needs. It adds four constructs to the spec, so it needs Johan's go-ahead (merging this document is that). Each passes ARCHITECTURE §2.4: common on almost every site, deterministic, it replaces custom code a model would otherwise write, it names no technology, and two of the four (pictures and drafts) touch data and access, where generated code is safer than per-app code.
+Status: 2026-09-29, proposed by Fable. The first step of the company-websites milestone (ROADMAP, "Later") and what a blog, a news page or a knowledge base needs. It adds four constructs to the spec, so it needs Johan's go-ahead (merging this document is that). Each passes ARCHITECTURE §2.4: common on almost every site, deterministic, it replaces custom code a model would otherwise write, it names no technology, and two of the four (pictures and drafts) touch data and access, where generated code is safer than per-app code. Built: Markdown (step 2, Opus, 2026-09-30); the public `where` (part of step 1, Fable, 2026-09-30).
 
 ## 1. What people get
 
