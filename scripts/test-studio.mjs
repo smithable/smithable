@@ -324,7 +324,7 @@ try {
     },
   );
   await step(
-    "the panels snap: one at a time, picked above or with the arrow keys; wide windows pair Preview and Details",
+    "the panels snap: one at a time, picked above or with the arrow keys; very wide windows pair Your app and Details; the preview has its own column, and on a narrow window it is a panel",
     async () => {
       const panels = page.getByRole("navigation", { name: "Panels" });
       const current = (name) =>
@@ -336,19 +336,58 @@ try {
           name,
           { timeout: 5000 },
         );
-      await panels.getByLabel("Preview + Details").uncheck();
-      await panels.getByRole("button", { name: "Preview" }).click();
-      await current("Preview");
-      await page.keyboard.press("ArrowRight");
+      await page.setViewportSize({ width: 1700, height: 900 });
+      await panels.getByLabel("Your app + Details").uncheck();
+      await panels.getByRole("button", { name: "Details" }).click();
       await current("Details");
+      await page.keyboard.press("ArrowLeft");
+      await current("Your app");
       // The change box, and the changes under it, stay under every panel.
       await page.getByLabel("Describe a change").waitFor();
       await trace.waitFor();
-      await panels.getByLabel("Preview + Details").check();
+      await panels.getByLabel("Your app + Details").check();
+      await current("Your app,Details");
+      // A narrow window: the preview is a panel of the strip, the frame placed over it.
+      await page.setViewportSize({ width: 800, height: 900 });
       await panels.getByRole("button", { name: "Preview" }).click();
-      await current("Preview,Details");
+      await current("Preview");
+      // Once the strip has snapped, the frame covers the window's width.
+      await page.waitForFunction(
+        () => {
+          const r = document.querySelector('iframe[title="App preview"]')?.getBoundingClientRect();
+          return r && Math.abs(r.left) < 2 && r.width > 700;
+        },
+        null,
+        { timeout: 5000 },
+      );
       await panels.getByRole("button", { name: "Your app" }).click();
       await current("Your app");
+      await page.setViewportSize({ width: 1440, height: 900 });
+    },
+  );
+  await step(
+    "one preview for both modes: the address follows it, and a mode switch keeps its page",
+    async () => {
+      await openPreview("/orders");
+      await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 });
+      // Navigating inside the app (opening an order) shows in the address.
+      await preview.getByRole("button", { name: "ORD-1008" }).click();
+      await page.waitForFunction(
+        () =>
+          /^\/orders\/\d+$/.test(
+            document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
+          ),
+        null,
+        { timeout: 10000 },
+      );
+      const opened = await page.getByLabel("Preview address").inputValue();
+      await page.locator("label", { hasText: /^Code$/ }).click();
+      await page.getByRole("navigation", { name: "Concepts" }).waitFor();
+      if ((await page.getByLabel("Preview address").inputValue()) !== opened)
+        throw new Error("the preview lost its page in Code mode");
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+      await page.locator("label", { hasText: /^No code$/ }).click();
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
     },
   );
   await step("Ctrl+Z outside a text field undoes the last change", async () => {
@@ -452,7 +491,7 @@ try {
     await page.getByText("This page has its own component").waitFor();
   });
   await step("the preview shows the changes, and the logs are there", async () => {
-    await page.getByRole("tab", { name: "Preview" }).click();
+    // Beside Code mode from lg: no tab to open.
     await openPreview("/orders");
     await preview.getByRole("searchbox", { name: "Search by number" }).waitFor({ timeout: 60000 });
     await page.getByRole("tab", { name: "Logs" }).click();
