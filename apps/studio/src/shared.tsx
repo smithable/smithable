@@ -9,12 +9,15 @@ export function Preview({
   version,
   selecting,
   onSelecting,
+  onHide,
 }: {
   url: string;
   version: number;
   /** Select mode: clicking in the preview selects a part of the spec instead of using the app. */
   selecting?: boolean;
   onSelecting?: (on: boolean) => void;
+  /** Hides the preview's column, for more room (wide windows). */
+  onHide?: () => void;
 }) {
   // The page the preview is on, as it reports it: a reload after a change comes back to it.
   const current = useRef("/");
@@ -81,6 +84,11 @@ export function Preview({
               Go
             </Button>
           </form>
+          {onHide && (
+            <Button variant="ghost" className="h-7" onClick={onHide}>
+              Hide
+            </Button>
+          )}
         </div>
       }
     >
