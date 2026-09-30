@@ -1,0 +1,65 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`every kit component's hooks, as they are 1`] = `
+{
+  "src/components/ui/badge.tsx": [
+    "data-tone={variant && variant !== "default" ? variant : "neutral"}",
+  ],
+  "src/kit/AppShell.tsx": [
+    "data-kit="app-shell"",
+    "data-part="header"",
+    "data-kit="nav"",
+    "data-part="title"",
+    "data-part="actions"",
+  ],
+  "src/kit/Calendar.tsx": [
+    "data-kit="calendar"",
+  ],
+  "src/kit/Dashboard.tsx": [
+    "data-kit="tile"",
+  ],
+  "src/kit/FieldInput.tsx": [
+    "data-part="input"",
+    "data-field=field.name",
+  ],
+  "src/kit/Landing.tsx": [
+    "data-kit="landing"",
+    "data-part="header"",
+    "data-part="footer"",
+    "data-kit="section"",
+    "data-section=texts?.split(".").at(-1)",
+  ],
+  "src/kit/ModelForm.tsx": [
+    "data-kit="model-form"",
+    "data-kit="field"",
+    "data-field={field.name}",
+    "data-part="label"",
+    "data-part="help"",
+    "data-part="error"",
+    "data-part="actions"",
+  ],
+  "src/kit/ModelTable.tsx": [
+    "data-kit="model-table"",
+    "data-part="empty"",
+    "data-part="row"",
+    "data-part="header"",
+    "data-part="cell"",
+    "data-field={field.name}",
+  ],
+  "src/kit/Onboarding.tsx": [
+    "data-kit="onboarding"",
+  ],
+  "src/kit/Reserve.tsx": [
+    "data-kit="reserve"",
+  ],
+  "src/kit/SearchBox.tsx": [
+    "data-kit="search-box"",
+  ],
+  "src/kit/SignIn.tsx": [
+    "data-kit="sign-in"",
+  ],
+  "src/kit/Users.tsx": [
+    "data-kit="users"",
+  ],
+}
+`;
