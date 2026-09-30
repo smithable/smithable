@@ -61,6 +61,12 @@ writeFileSync(
 );
 writeFileSync(join(dir, "smithable.context.yml"), "smithableContext: 0.1\nplugins: [greeting]\n");
 appendFileSync(join(dir, "smithable.yml"), "\ngreeting: Hello\n");
+// A project's own theme, which the Look tab shows as a card beside the built-in ones.
+mkdirSync(join(dir, "themes"), { recursive: true });
+writeFileSync(
+  join(dir, "themes/forest.yml"),
+  'smithableTheme: 0.1\nname: forest\nfont: Nunito Sans\nradius: 12px\nshadow: soft\nlight:\n  primary: "#2f6b3a"\n  background: "#f6f8f4"\n  foreground: "#1f2a1f"\ndark:\n  primary: "#8fd19a"\n  background: "#141a14"\n  foreground: "#e6ece4"\n',
+);
 // Left by a hosted workspace whose description could not be used: shown once.
 mkdirSync(join(dir, "data/.smithable"), { recursive: true });
 writeFileSync(
@@ -260,11 +266,17 @@ try {
     const theme = page.getByRole("region", { name: "Font and density" });
     await theme.getByRole("button", { name: "Compact" }).click();
     await theme.getByRole("button", { name: "Compact", pressed: true }).waitFor({ timeout: 60000 });
-    await page
-      .getByRole("region", { name: "Theme" })
-      .getByRole("button", { name: "Playful" })
-      .click();
+    const themes = page.getByRole("list", { name: "Themes" });
+    // The project's own theme has its card, named with its file.
+    await themes
+      .getByRole("button", { name: /Forest/ })
+      .getByText("themes/forest.yml", { exact: false })
+      .waitFor();
+    await themes.getByRole("button", { name: /Playful/ }).click();
     await trace.getByText("Set the theme: preset playful").first().waitFor({ timeout: 60000 });
+    await themes
+      .getByRole("button", { name: /Playful/, pressed: true })
+      .waitFor({ timeout: 60000 });
   });
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
