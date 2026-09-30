@@ -79,6 +79,7 @@ const SECTION_TEXTS: Record<
   gallery: { texts: ["title", "text"], items: ["image", "caption"] },
   // A calculator section: its heading, the results' heading, and its fields' labels and help.
   calculator: { texts: ["title", "text", "results"], fields: true },
+  custom: { texts: ["title", "text"] },
   // A calculator page's results heading.
   results: { texts: ["title"] },
   // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").

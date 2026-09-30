@@ -1,7 +1,7 @@
 import type { YamlEditor } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { NAME_PATTERN } from "./names.js";
+import { COMPONENT_PATTERN, NAME_PATTERN } from "./names.js";
 
 const addPage: Operation<{ page: string; model: string; route?: string }> = {
   name: "addPage",
@@ -252,6 +252,38 @@ const addCalculatorPage: Operation<{ page: string; fields: Record<string, string
 
 export const calculatorOperations: AnyOperation[] = [addCalculatorPage];
 
+const addCustomPage: Operation<{ page: string; component: string }> = {
+  name: "addCustomPage",
+  summary:
+    "Add a page of your own (a chart, a map, a planner): its component is created once in src/custom/pages/ and is yours; the route, access and menu entry stay Smithable's.",
+  schema: {
+    type: "object",
+    required: ["page", "component"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. planner." },
+      component: { type: "string", description: "The component's name, e.g. Planner." },
+    },
+  },
+  positional: ["page", "component"],
+  describe: ({ page, component }) => `Add page ${page}, your own ${component}`,
+  destructive: () => false,
+  apply({ spec }, { page, component }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    componentName(component);
+    spec.add(["pages"], page, { custom: component });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
+export const customOperations: AnyOperation[] = [addCustomPage];
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
@@ -445,7 +477,14 @@ const removePage: Operation<{ page: string }> = {
 };
 
 /** A landing page's section kinds other than records, which any name can have. */
-const KINDS = SECTION_KINDS.filter((k) => k !== "records");
+const KINDS = SECTION_KINDS.filter((k) => k !== "records" && k !== "calculator" && k !== "custom");
+
+const componentName = (component: string) => {
+  if (!COMPONENT_PATTERN.test(component))
+    throw new OperationError(
+      `A component is named like Planner: a capital letter, then letters and digits; not "${component}".`,
+    );
+};
 
 const addSection: Operation<{
   page: string;
@@ -453,6 +492,7 @@ const addSection: Operation<{
   records?: string;
   form?: string;
   button?: string;
+  custom?: string;
 }> = {
   name: "addSection",
   summary: `Add a section to a landing page: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards). Its texts go in smithable.content.yml.`,
@@ -478,12 +518,17 @@ const addSection: Operation<{
         { ref: "page", label: "Button opens" },
         { description: "The page a hero's or call to action's button opens." },
       ),
+      custom: {
+        type: "string",
+        description:
+          "A section of your own, any name: its component in src/custom/sections/, e.g. RepaymentChart.",
+      },
     },
   },
   positional: ["page", "section"],
   describe: ({ page, section }) => `Add a ${section} section to the ${page} page`,
   destructive: () => false,
-  apply({ spec }, { page, section, records, form, button }, ir) {
+  apply({ spec }, { page, section, records, form, button, custom }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
     if (!existing) throw new OperationError(`There is no page named "${page}".`);
     if (existing.pattern.kind !== "landing")
@@ -492,7 +537,8 @@ const addSection: Operation<{
       );
     if (existing.pattern.sections.some((s) => s.name === section))
       throw new OperationError(`The ${page} page already has a section named "${section}".`);
-    if (!records && !(KINDS as readonly string[]).includes(section))
+    if (custom) componentName(custom);
+    if (!records && !custom && !(KINDS as readonly string[]).includes(section))
       throw new OperationError(
         `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records.`,
       );
@@ -500,6 +546,7 @@ const addSection: Operation<{
       ...(records ? { records } : {}),
       ...(form ? { form } : {}),
       ...(button ? { button } : {}),
+      ...(custom ? { custom } : {}),
     };
     spec.add(["pages", page, "landing"], section, options);
     return [];

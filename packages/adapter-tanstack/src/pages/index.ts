@@ -5,6 +5,7 @@ import { calculatorRoute } from "../calculators.js";
 import type { GenContext } from "../shared.js";
 import { articlesRoutes } from "./articles.js";
 import { calendarRoute } from "./calendar.js";
+import { customRoute } from "./custom.js";
 import { dashboardRoute } from "./dashboard.js";
 import { dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
@@ -68,6 +69,9 @@ export const PAGE_GENERATORS: {
   articles: {
     kit: ["src/kit/Articles.tsx"],
     routes: articlesRoutes,
+  },
+  custom: {
+    routes: (page, { t }) => ({ "index.tsx": customRoute(page, t) }),
   },
   data: {
     // An overview and each model's crud routes inside the page; no kit of its own.
