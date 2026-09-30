@@ -29,6 +29,7 @@ import {
 } from "#/generated/users.server";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
+import { inviteAllowed } from "#/kit/limit";
 import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -45,7 +46,9 @@ const getUsers = createServerFn().handler(async () => listUsers(await currentVie
 const inviteUser = createServerFn({ method: "POST" })
   .validator(z.object({ email: z.email().max(200), role: z.enum(ROLES) }))
   .handler(async ({ data }) => {
-    await invite(await currentViewer(), data.email, data.role, origin());
+    const viewer = await currentViewer();
+    inviteAllowed(viewer);
+    await invite(viewer, data.email, data.role, origin());
   });
 
 const changeRole = createServerFn({ method: "POST" })
@@ -63,7 +66,9 @@ const remove = createServerFn({ method: "POST" })
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
   .handler(async ({ data }) => {
-    await resendInvitation(await currentViewer(), data.invitationId, origin());
+    const viewer = await currentViewer();
+    inviteAllowed(viewer);
+    await resendInvitation(viewer, data.invitationId, origin());
   });
 
 const withdraw = createServerFn({ method: "POST" })
