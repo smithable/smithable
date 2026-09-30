@@ -1,6 +1,8 @@
 // Messages from the preview editor in the app's page (packages/cli/src/preview-editor.ts).
 export type PreviewMessage =
   | { type: "ready" }
+  /** The page the preview is on now, e.g. "/customers/12". */
+  | { type: "navigated"; path: string }
   | {
       type: "select";
       concept: string;
