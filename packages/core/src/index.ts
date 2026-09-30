@@ -11,6 +11,7 @@ export {
 export { namesFor } from "./arguments.js";
 export type { AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
 export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
+export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./colour.js";
 export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
 export type {
@@ -78,6 +79,19 @@ export { parseFieldShorthand } from "./sections/field-type.js";
 export { searchableFields } from "./sections/pages.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
+export type { Mode, ThemeIR, TokenName, Tokens } from "./theme.js";
+export {
+  BUILT_IN_THEMES,
+  checkContrast,
+  deriveTokens,
+  parseTheme,
+  SHADOWS,
+  TOKEN_NAMES,
+  themeNamed,
+  themeNames,
+  themeThumbnail,
+  tokensOf,
+} from "./theme.js";
 export type { Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
 export {
   emptyUx,

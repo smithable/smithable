@@ -21,6 +21,7 @@ import { loadPlugins } from "./plugins.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
+import { themes } from "./themes.js";
 import { undo } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
@@ -101,6 +102,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return ask(values.dir ?? ".", io, args.join(" ") || undefined, { yes: values.yes === true });
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
+  if (command === "themes") return themes(args[0] ?? values.dir ?? ".", io);
   if (command === "context")
     return context(values.dir ?? ".", io, args.join(" ") || undefined, {
       implementation: values.implementation === true,

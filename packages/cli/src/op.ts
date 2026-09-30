@@ -19,6 +19,7 @@ import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git
 import { type Io, lap } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { recordRule } from "./rules.js";
+import { projectThemes } from "./validate.js";
 
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
@@ -93,6 +94,7 @@ export async function runOperation(
     ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
     ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
     plugins,
+    themes: projectThemes(dir),
   };
   const result = applyOperation(files, operation.name, args);
   if (!result.ok) {
