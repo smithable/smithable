@@ -204,7 +204,7 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
 
 export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR): string {
   const n = names(model, t);
-  const order = fieldOrder(page, model, ux);
+  const order = fieldOrder(page, model, ux, t);
   const component = `New${model.name}Page`;
   const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
   // A model on a calendar: the new form can start at the hour chosen there (?startsAt=…).
@@ -280,7 +280,7 @@ export function detailRoute(
   auth?: AuthIR,
 ): string {
   const n = names(model, t);
-  const order = fieldOrder(page, model, ux);
+  const order = fieldOrder(page, model, ux, t);
   const component = `${model.name}Page`;
   const title = titleField(model);
   const heading =
