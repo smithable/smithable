@@ -128,6 +128,8 @@ Tailwind's `@apply` works there too, since the file is in the app's stylesheet. 
 
 ## 3. Themes as files
 
+Built 2026-09-30 (Fable, core and CLI): `packages/core/src/theme.ts` and `colour.ts`, `themes/<name>.yml` read by `loadSpec`, `smithable themes`, the daemon's `/api/project` lists every theme with its thumbnail for the Look tab's cards (Opus). Left of §3: "Add a theme" in the Look tab (a file dropped or pasted, saved as `themes/<name>.yml` through the daemon) and npm packages of themes.
+
 ### 3.1 A theme is data
 
 A preset today is 28 colour tokens in light and dark mode (`theme-presets.ts`, from the design delivery), a font, a corner radius and a shadow. No component knows which preset it is: `theme.css` sets the variables and the kit uses them. A theme is therefore a file:

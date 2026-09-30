@@ -278,6 +278,7 @@ pages:
 
 - Visual edits in Builder or Studio (pick a theme, reorder columns, hide a field, change density) write to this file through operations. Themes and page patterns are described in §10.4.
 - As built (M10): theme presets, brand colour, density, per-page columns, field order, tones and icons, all generated into `src/theme.css` and the kit from the delivered design system, and checked for contrast by `pnpm test:apps`. Details: [as-built.md](as-built.md#m10-presentation).
+- **Themes are files** ([design/look.md](design/look.md) §3, built 2026-09-30): a theme is a font, a radius, a shadow and 28 colour tokens per mode; the four presets are themes in core (`BUILT_IN_THEMES`, from the design delivery) and a project's own are `themes/<name>.yml`, parsed and checked by core (`parseTheme`: at least three colours per mode, the rest derived as a brand colour is, every pair the kit puts together checked for contrast) and read by the host, which passes them to validation, operations and generation. The ux file's `preset` names any of them; `themeCss` writes the resolved theme, so the app never knows where a theme came from. Every theme gets a picture drawn from its tokens (`themeThumbnail`) for Studio's Look tab and `smithable themes`. A theme never carries CSS or code.
 - Anything beyond its vocabulary is handled by a custom component in `src/custom/`.
 - The same growth rule applies as for the DSL (§2.4): add structure only when it is common and deterministic.
 

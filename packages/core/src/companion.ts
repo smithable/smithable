@@ -1,6 +1,8 @@
 // The companion files of smithable.yml (ARCHITECTURE §3), registered like the spec's sections
 // (§5.1): each owns its file, its check, its operations, and how it follows a change made
 // elsewhere (a field renamed, a page removed). applyOperation knows them only through this list.
+
+import type { ProjectFiles } from "./apply.js";
 import { validateAuth } from "./auth.js";
 import { validateContent } from "./content.js";
 import { validateContext } from "./context-file.js";
@@ -20,8 +22,8 @@ export interface Companion {
   file: string;
   /** A new file's text; without it the file is never created (sign-in is chosen, not implied). */
   empty?: string;
-  /** Problems with the file given the spec; an error makes it invalid. */
-  check(text: string, ir: SpecIR): Diagnostic[];
+  /** Problems with the file given the spec (and the project's other files); an error makes it invalid. */
+  check(text: string, ir: SpecIR, files?: ProjectFiles): Diagnostic[];
   operations: AnyOperation[];
   /** Keeps the file in step with what an operation did elsewhere, or refuses the change. */
   follow?(editor: YamlEditor, effect: Effect, ir: SpecIR): Refusal | undefined;
@@ -56,7 +58,8 @@ const ux: Companion = {
   key: "ux",
   file: "smithable.ux.yml",
   empty: "smithableUx: 0.1\n",
-  check: (text, ir) => validateUx({ path: "smithable.ux.yml", text }, ir).diagnostics,
+  check: (text, ir, files) =>
+    validateUx({ path: "smithable.ux.yml", text }, ir, files?.themes).diagnostics,
   operations: uxOperations,
   follow(editor, effect, ir) {
     if (effect.kind === "remove-page") {
