@@ -91,7 +91,7 @@ try {
   };
   const openPreview = async (path) => {
     await page.getByLabel("Preview address").fill(path);
-    await page.getByRole("button", { name: "Go" }).click();
+    await page.getByRole("button", { name: "Go", exact: true }).click();
   };
 
   console.log("Builder mode");
@@ -309,22 +309,36 @@ try {
   );
 
   await step(
-    "Your app is edited in its own words: a new item in the list of fields is added without AI",
+    "Your app is a map to its parts: a field's line opens its properties, Add a field opens the form for that record, and In my words changes only the wording",
     async () => {
       await page.getByRole("tab", { name: "Your app" }).click();
-      await page.getByRole("button", { name: "Edit Customers" }).click();
-      const box = page.getByLabel("Customers, in your words");
-      const lines = (await box.inputValue()).split("\n");
-      const last = lines.findLastIndex((l) => l.startsWith("- "));
-      lines.splice(last + 1, 0, "- a loyalty code (unique)");
-      await box.fill(lines.join("\n"));
+      const customers = page.getByRole("region", { name: "Customers", exact: true });
+      await customers.getByRole("button", { name: "a phone", exact: true }).click();
+      await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
+      await customers.getByRole("button", { name: "Save label" }).click();
+      await trace.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
+      // Adding a field: the Change tab's form, with the record filled in.
       await page
         .getByRole("region", { name: "Customers", exact: true })
-        .getByRole("button", { name: "Make the change" })
+        .getByRole("button", { name: "Add a field" })
         .click();
+      if ((await page.getByLabel("Kind of record").inputValue()) !== "Customer")
+        throw new Error("the form is not for customers");
+      await page.getByLabel("Name", { exact: true }).fill("loyalty code");
+      await page.getByRole("checkbox", { name: "Unique" }).check();
+      await page.getByRole("button", { name: "Add field" }).click();
       await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
-      // The part keeps the user's wording.
-      await page.getByText("a loyalty code (unique)", { exact: true }).first().waitFor();
+      // In my words: the wording only, for this session; no change is made.
+      await page.getByRole("tab", { name: "Your app" }).click();
+      const again = page.getByRole("region", { name: "Customers", exact: true });
+      await again.getByRole("button", { name: "In my words" }).click();
+      await page.getByLabel("Customers, in your words").fill("Our clients and how to reach them.");
+      await again.getByRole("button", { name: "Keep my words" }).click();
+      await again.getByText("Our clients and how to reach them.").waitFor();
+      if (!(await trace.locator("li").first().innerText()).includes("loyalty code"))
+        throw new Error("rewording made a change");
+      await again.getByRole("button", { name: "Back to the generated text" }).click();
+      await again.getByRole("button", { name: "a loyalty code (unique)" }).waitFor();
     },
   );
   await step(
