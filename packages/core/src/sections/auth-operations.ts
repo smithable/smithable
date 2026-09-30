@@ -126,9 +126,16 @@ const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[
     if (Object.keys(args).length === 0)
       throw new OperationError("Say what to set: pages, read or create.");
     for (const key of ["pages", "read", "create"] as const) {
-      const list = args[key];
-      if (list === undefined) continue;
+      const given = args[key];
+      if (given === undefined) continue;
       const path = ["public", key];
+      // Models that stay readable keep the records they are limited to.
+      const before = auth.has(path) ? (auth.get(path) as unknown[]) : [];
+      const list = given.map(
+        (name) =>
+          before.find((item) => item && typeof item === "object" && name in (item as object)) ??
+          name,
+      ) as YamlValue[];
       if (list.length === 0) {
         if (auth.has(path)) auth.removeAndPrune(path, 0);
       } else if (auth.has(path)) auth.set(path, list);
@@ -139,4 +146,56 @@ const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[
   },
 };
 
-export const authOperations: AnyOperation[] = [setSignUp, setRoles, setPublic];
+const setPublicWhere: Operation<{ model: string; where?: Record<string, string> }> = {
+  name: "setPublicWhere",
+  summary:
+    "Limit which records of a model anyone on the internet may read, e.g. published posts only; with no condition, every record.",
+  schema: {
+    type: "object",
+    required: ["model"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      where: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description:
+          'Field values a record must have to be read by visitors, e.g. { "status": "published" }; none means every record.',
+      },
+    },
+  },
+  positional: ["model", "...where"],
+  describe: ({ model, where }) => {
+    const conditions = Object.entries(where ?? {});
+    return conditions.length
+      ? `Let visitors read only ${model} records where ${conditions.map(([k, v]) => `${k} is ${v}`).join(" and ")}`
+      : `Let visitors read every ${model} record`;
+  },
+  destructive: () => false,
+  apply({ auth }, { model, where }, ir) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    if (!ir.models.some((m) => m.name === model))
+      throw new OperationError(`There is no model named "${model}".`);
+    const path = ["public", "read"];
+    const items = auth.has(path) ? (auth.get(path) as unknown[]) : [];
+    const index = items.findIndex(
+      (item) => item === model || (item && typeof item === "object" && model in (item as object)),
+    );
+    if (index < 0)
+      throw new OperationError(`${model} is not public to read; add it with setPublic read first.`);
+    const conditions = Object.fromEntries(
+      Object.entries(where ?? {}).map(([k, v]) => [
+        k,
+        v === "true" ? true : v === "false" ? false : v,
+      ]),
+    );
+    auth.setItem(
+      path,
+      index,
+      Object.keys(conditions).length ? { [model]: { where: conditions } } : model,
+    );
+    return [];
+  },
+};
+
+export const authOperations: AnyOperation[] = [setSignUp, setRoles, setPublic, setPublicWhere];
