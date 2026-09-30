@@ -189,10 +189,21 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}
 ## Project structure
 
 ${structure}`;
+}
+
+/** How often one may write, for the README. */
+function limitsReadme(ir: SpecIR, auth?: AuthIR): string {
+  if (!ir.models.length) return "";
+  const signIn = auth && hasSignIn(auth);
+  return `## Limits
+
+${signIn ? "A signed-in person may make 60 changes a minute, a visitor 10 a minute per address" : "A visitor may make 10 changes a minute per address"}${signIn && hasInvitations(ir, auth) ? ", and an administrator may send 20 invitations an hour" : ""}; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process${signIn ? "; sign-in attempts are limited by Better Auth itself (3 per 10 seconds)" : ""}. Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+
+`;
 }
 
 /** How the app sends mail, for the README. */
