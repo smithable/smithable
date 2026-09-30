@@ -1,6 +1,15 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 
-import { type AuthIR, type FieldIR, type ModelIR, type SpecIR, USER_MODEL } from "@smithable/core";
+import {
+  type AuthIR,
+  type FieldIR,
+  humanize,
+  isPicture,
+  kebab,
+  type ModelIR,
+  type SpecIR,
+  USER_MODEL,
+} from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
@@ -91,8 +100,9 @@ export const ${n.table} = sqliteTable(
     ];
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
+  const pictures = ir.models.some((m) => m.fields.some(isPicture));
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
-
+${pictures ? 'import type { Picture } from "#/kit/uploads";\n' : ""}
 ${[...authBlock, ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
@@ -121,6 +131,10 @@ export function column(field: FieldIR): { expr: string; uses: string } {
       case "datetime":
         uses = "integer";
         expr = `integer({ mode: "timestamp_ms" })`;
+        break;
+      case "picture":
+        // The stored file, its description and size (src/kit/uploads.ts), as JSON.
+        expr = `text({ mode: "json" }).$type<Picture>()`;
         break;
       default:
         expr = "text()";
@@ -164,6 +178,11 @@ export function seedModule(ir: SpecIR): string {
     const rows = sampleRows(model).map((row, i) => {
       const entries = storedFields(model).map((field) => {
         const value = sampleLiteral(field, row[field.name]);
+        // A sample picture from public/images/samples/, when the app ships any.
+        if (isPicture(field)) {
+          const title = Object.values(row).find((v) => typeof v === "string" && /\s/.test(v));
+          return `${dataKey(field)}: samplePicture(${JSON.stringify(kebab(model.name))}, ${i % 3}, ${JSON.stringify(`A picture of ${title ?? `${humanize(model.name).toLowerCase()} ${i + 1}`}`)})`;
+        }
         if (field !== start || value === "null") return `${dataKey(field)}: ${value}`;
         return field.type.kind === "scalar" && field.type.name === "date"
           ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).slice(0, 10)`
@@ -179,9 +198,10 @@ ${rows.join("\n")}
     .run();
 }`;
   });
+  const pictures = ordered.some((m) => m.fields.some(isPicture));
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 import { db } from "./index";
-${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${
+${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
   ir.pages.some((p) => p.pattern.kind === "calendar")
     ? `import { app } from "#/generated/app";
 import { instantOf, wallTime } from "#/kit/zoned";

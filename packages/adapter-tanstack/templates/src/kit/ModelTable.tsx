@@ -92,6 +92,15 @@ export function ModelTable<R extends Row>({
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const cell = (field: RecordFieldUi<R>, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
+    // A picture as a thumbnail; its address is the record's, so it is as private as the record.
+    if (field.kind === "picture" && text !== "—" && ui.model)
+      return (
+        <img
+          src={`/files/${ui.model.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}`}
+          alt={text}
+          className="h-10 w-10 rounded-md border object-cover"
+        />
+      );
     if (field.kind !== "choice" || text === "—") return text;
     const tone = field.choices?.find((c) => c.value === displayValue(field, row))?.tone;
     return <Badge variant={tone}>{text}</Badge>;

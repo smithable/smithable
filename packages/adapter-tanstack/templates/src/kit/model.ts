@@ -15,6 +15,8 @@ export type FieldKind =
   | "email"
   | "phone"
   | "url"
+  /** A stored picture with its description: { file, alt, width, height }. */
+  | "picture"
   | "choice"
   | "relation"
   /** A reference to a user who signs in. */
@@ -42,6 +44,8 @@ export interface FieldControlProps {
   id: string;
   name: string;
   value: string;
+  /** The record being edited, when it exists. */
+  record?: number;
   onChange: (value: string) => void;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
