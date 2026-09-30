@@ -19,7 +19,7 @@ export function SearchBox({
     return () => clearTimeout(timer);
   }, [text, value, onSearch]);
   return (
-    <div className="relative mb-6 max-w-md">
+    <div data-kit="search-box" className="relative mb-6 max-w-md">
       <Input
         type="search"
         aria-label={placeholder}

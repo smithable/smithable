@@ -1,6 +1,8 @@
 // Messages from the preview editor in the app's page (packages/cli/src/preview-editor.ts).
 export type PreviewMessage =
   | { type: "ready" }
+  /** The page the preview is on now, e.g. "/customers/12". */
+  | { type: "navigated"; path: string }
   | {
       type: "select";
       concept: string;
@@ -15,6 +17,24 @@ export type PreviewMessage =
   | { type: "undo" };
 
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
+
+/**
+ * Where someone was in each mode (docs/design/studio-v2.md §2), kept for the browser tab's
+ * session: a mode switch or a reload comes back to it.
+ */
+export interface Place {
+  builder: { tab?: "app" | "look" | "change"; selection?: Selection };
+  studio: { tab?: string; concept?: string };
+  /** The preview's column is hidden (wide windows), for more room for the mode. */
+  previewHidden?: boolean;
+}
+
+/** A concept picked in either mode that the other can show too: a field or a model. */
+export function shared(concept: string): Selection | undefined {
+  return /^(field|model):/.test(concept)
+    ? { type: "select", concept, part: null, page: null, columns: null }
+    : undefined;
+}
 
 /** The preview's window and origin, set by the Preview panel: only they are listened to. */
 let previewWindow: Window | null = null;

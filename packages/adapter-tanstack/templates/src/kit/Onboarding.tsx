@@ -24,7 +24,7 @@ export function OnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
+    <main data-kit="onboarding" className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
       <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
       {subtitle && <p className="mt-2 text-muted-foreground">{subtitle}</p>}
       <p className="mt-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

@@ -53,7 +53,11 @@ export function ModelTable<R extends Row>({
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
   if (rows.length === 0) {
     return (
-      <Card className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+      <Card
+        data-kit="model-table"
+        data-part="empty"
+        className="flex flex-col items-center gap-3 px-6 py-16 text-center"
+      >
         {emptyMessage ? (
           <p className="font-medium">{emptyMessage}</p>
         ) : (
@@ -118,11 +122,11 @@ export function ModelTable<R extends Row>({
       children
     );
   return (
-    <>
+    <div data-kit="model-table">
       {/* Phones: one card per record: its name and status, a contact or other identifier, then a date and a key amount. */}
       <ul className="space-y-3 md:hidden">
         {shown.map((row) => (
-          <li key={row.id}>
+          <li key={row.id} data-part="row">
             <Card className="relative space-y-3 p-5 hover:bg-accent/40">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
@@ -153,7 +157,7 @@ export function ModelTable<R extends Row>({
       </ul>
       <Card className="hidden overflow-hidden md:block">
         <Table>
-          <TableHeader>
+          <TableHeader data-part="header">
             <TableRow className="hover:bg-transparent">
               {columns.map((field) => (
                 <TableHead
@@ -168,10 +172,16 @@ export function ModelTable<R extends Row>({
           </TableHeader>
           <TableBody>
             {shown.map((row) => (
-              <TableRow key={row.id} className={onOpen ? "relative cursor-pointer" : undefined}>
+              <TableRow
+                key={row.id}
+                data-part="row"
+                className={onOpen ? "relative cursor-pointer" : undefined}
+              >
                 {columns.map((field) => (
                   <TableCell
                     key={field.name}
+                    data-part="cell"
+                    data-field={field.name}
                     className={cn(
                       numeric(field.kind) && "text-right tabular-nums",
                       field.name === ui.titleField && "font-semibold",
@@ -185,7 +195,7 @@ export function ModelTable<R extends Row>({
           </TableBody>
         </Table>
       </Card>
-    </>
+    </div>
   );
 }
 

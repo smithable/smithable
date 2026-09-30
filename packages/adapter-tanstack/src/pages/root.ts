@@ -69,7 +69,11 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
   const landings = ir.pages
     .filter((p) => p.pattern.kind === "landing" || p.pattern.kind === "onboarding")
     .map((p) => p.route);
-  return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""}${landings.length ? ", useRouterState" : ""} } from "@tanstack/react-router";
+  // Each page's route, longest first: the page a path is on names it for custom styles.
+  const pageRoutes = [...ir.pages]
+    .sort((a, b) => b.route.length - a.route.length || (a.route < b.route ? -1 : 1))
+    .map((p) => [p.route, p.id]);
+  return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""}, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
@@ -82,6 +86,14 @@ const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
 ${landings.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}
+/** Each page's route and name, longest route first. */
+const pageRoutes: [string, string][] = ${literal(pageRoutes)};
+
+/** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
+function pageOf(path: string): string | undefined {
+  return pageRoutes.find(([route]) => path === route || path.startsWith(route === "/" ? "/" : \`\${route}/\`))?.[1];
+}
+
 
 const getViewer = createServerFn().handler(() => currentViewer());
 
@@ -110,13 +122,8 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();${
-    landings.length
-      ? `
-  // Landing pages have their own frame instead of the app's navigation.
-  const pathname = useRouterState({ select: (state) => state.location.pathname });`
-      : ""
-  }
+  const { viewer } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 ${
   signIn
     ? `  const router = useRouter();
@@ -131,7 +138,7 @@ ${
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body data-page={pageOf(pathname)}>
         ${
           landings.length
             ? `{landingRoutes.includes(pathname) ? (
