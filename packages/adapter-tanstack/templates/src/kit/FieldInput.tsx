@@ -44,7 +44,11 @@ export function FieldInput({
     );
   }
   const text = typeof value === "string" ? value : "";
-  if (field.kind === "text") {
+  if (field.input) {
+    const Control = field.input;
+    return <Control {...common} value={text} onChange={onChange} />;
+  }
+  if (field.kind === "text" || field.kind === "markdown") {
     return <Textarea {...common} value={text} onChange={(e) => onChange(e.target.value)} />;
   }
   if (field.kind === "relation" || field.kind === "user") {

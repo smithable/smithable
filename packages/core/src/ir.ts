@@ -67,6 +67,7 @@ export const USER_MODEL = "User";
 export const SCALAR_TYPES = [
   "string",
   "text",
+  "markdown",
   "int",
   "decimal",
   "money",
