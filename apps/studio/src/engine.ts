@@ -7,9 +7,11 @@ import {
   resolvePlugin,
   type SpecIR,
   type SpecPlugin,
+  type UxIR,
   validateAuth,
   validateContent,
   validateSpec,
+  validateUx,
 } from "@smithable/core";
 import { useEffect, useMemo, useState } from "react";
 import type { Project } from "./api";
@@ -18,6 +20,8 @@ export interface Spec {
   ir?: SpecIR;
   auth?: AuthIR;
   content?: ContentIR;
+  /** smithable.ux.yml: the theme, icons, columns and tones (Builder's Look tab). */
+  ux?: UxIR;
   /** The project's plugins, loaded in this tab. */
   plugins?: SpecPlugin[];
 }
@@ -39,10 +43,12 @@ export function readSpec(
     ir && files.content
       ? validateContent({ path: "smithable.content.yml", text: files.content }, ir).content
       : undefined;
+  const ux = ir ? validateUx({ path: "smithable.ux.yml", text: files.ux ?? "" }, ir).ux : undefined;
   return {
     ...(ir ? { ir } : {}),
     ...(auth ? { auth } : {}),
     ...(content ? { content } : {}),
+    ...(ux ? { ux } : {}),
     plugins,
     diagnostics,
   };
