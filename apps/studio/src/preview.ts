@@ -23,7 +23,7 @@ export type Selection = Extract<PreviewMessage, { type: "select" }>;
  * session: a mode switch or a reload comes back to it.
  */
 export interface Place {
-  builder: { tab?: "app" | "change"; selection?: Selection };
+  builder: { tab?: "app" | "look" | "change"; selection?: Selection };
   studio: { tab?: string; concept?: string };
 }
 
