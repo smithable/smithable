@@ -1,6 +1,6 @@
 # The look of an app: presentation choices, custom CSS and themes as files (design)
 
-Status: proposed 2026-09-30 by Fable, from three questions: what `smithable.ux.yml` can do, whether custom CSS can reach the app's elements, and whether themes could be pluggable with a picture of each. It changes the ux file (more choices, ARCHITECTURE §3.2), the app kit (stable hooks and a custom stylesheet) and how a theme is defined (a file of tokens, built in or the project's own). Merging this document is the go-ahead; §5 splits the work.
+Status: proposed 2026-09-30 by Fable, from three questions: what `smithable.ux.yml` can do, whether custom CSS can reach the app's elements, and whether themes could be pluggable with a picture of each. It changes the ux file (more choices, ARCHITECTURE §3.2), the app kit (stable hooks and a custom stylesheet) and how a theme is defined (a file of tokens, built in or the project's own). Merging this document is the go-ahead; §5 splits the work. Step 1 (hooks and `src/custom/styles.css`) built 2026-09-30 by Opus; `data-page` is on `<body>` (so landing pages have it too), and `reserve` joins the `data-kit` values.
 
 The rule of the ux file stays: **presets and choices, never CSS**, and it never names a technology. Nothing here positions anything or gives one element its own font or colour. What that rule refuses has a supported way out, custom CSS with stable hooks (§2), so nobody has to copy a kit component to move a button.
 

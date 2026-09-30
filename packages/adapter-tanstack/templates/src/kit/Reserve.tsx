@@ -73,7 +73,7 @@ export function Reserve({
   const full = places.left === 0;
 
   return (
-    <div className="space-y-3">
+    <div data-kit="reserve" className="space-y-3">
       <p className="font-semibold tabular-nums">
         {full
           ? fullLabel
