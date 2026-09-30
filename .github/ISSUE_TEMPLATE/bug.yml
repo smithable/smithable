@@ -1,0 +1,31 @@
+name: Bug
+description: Something Smithable, Studio or a generated app does wrong
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Smithable version
+      description: "`smithable --version`, or the commit if you run from source"
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: The spec that shows it
+      description: The smallest `smithable.yml` (and companion file, if one matters) that reproduces the problem. A starter name (`smithable new x --starter crm`) plus the operations you ran is just as good.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did and what happened
+      description: The command or the clicks, the output or the screenshot, and what you expected instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [CLI, Studio, MCP server, a generated app, the hosted service]
