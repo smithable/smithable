@@ -191,7 +191,7 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
             .filter(Boolean)
         : type === "object"
           ? Object.fromEntries(value.split(",").map((pair) => pairOf(pair.trim())))
-          : value;
+          : scalarOf(value, type);
   }
   op.positional.forEach((spec, index) => {
     if (spec.startsWith("...")) {
@@ -207,10 +207,18 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
         args[key] = rest.join(" ");
       }
     } else if (values[index] !== undefined) {
-      args[spec] = values[index];
+      args[spec] = scalarOf(values[index] as string, properties[spec]?.type);
     }
   });
   return args;
+}
+
+/** A word as the schema's type: a number or a boolean when it says so and the word is one. */
+function scalarOf(word: string, type: unknown): unknown {
+  if ((type === "integer" || type === "number") && /^-?\d+(?:\.\d+)?$/.test(word))
+    return Number(word);
+  if (type === "boolean" && (word === "true" || word === "false")) return word === "true";
+  return word;
 }
 
 /** "name=value" as a pair; a bare name has an empty value. */

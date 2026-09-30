@@ -96,6 +96,8 @@ export function texts(content: ContentIR) {
     },
     /** A landing section's or dashboard tile's texts. */
     section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
+    /** A form section's heading, from smithable.content.yml (pages.<page>.form.sections.<name>). */
+    formSection: (page: string, name: string) => content.pages[page]?.formSections?.[name] ?? {},
     /** A calculator field's label and help: the page's, or a landing section's. */
     calculatorField: (page: string, field: string, section?: string) =>
       (section
@@ -301,12 +303,32 @@ export function appStart(ir: SpecIR): PageIR | undefined {
   );
 }
 
-/** The fieldOrder prop of a page's form, from smithable.ux.yml, or nothing. */
-export function fieldOrder(page: PageIR, model: ModelIR, ux: UxIR): string {
-  const order = ux.pages[page.id]?.fieldOrder;
-  if (!order) return "";
-  const keys = order.map((name) => keyOf(model, name));
-  return `\n        fieldOrder={${literal(keys)}}`;
+/**
+ * The props of a page's form from smithable.ux.yml, or nothing: the field order, the sections
+ * (with their headings from smithable.content.yml), the columns and the controls.
+ */
+export function fieldOrder(page: PageIR, model: ModelIR, ux: UxIR, t?: Texts): string {
+  const own = ux.pages[page.id];
+  if (!own) return "";
+  const key = (name: string) => keyOf(model, name);
+  const props: string[] = [];
+  if (own.fieldOrder) props.push(`fieldOrder={${literal(own.fieldOrder.map(key))}}`);
+  if (own.sections?.length)
+    props.push(
+      `sections={${literal(
+        own.sections.map((s) => ({
+          name: s.name,
+          title: t?.formSection(page.id, s.name).title ?? humanize(s.name),
+          fields: s.fields.map(key),
+        })),
+      )}}`,
+    );
+  if (own.formColumns === 2) props.push("formColumns={2}");
+  if (own.control && Object.keys(own.control).length)
+    props.push(
+      `control={${literal(Object.fromEntries(Object.entries(own.control).map(([f, c]) => [key(f), c])))}}`,
+    );
+  return props.map((p) => `\n        ${p}`).join("");
 }
 
 /** Whether a form needs choices loaded: for references to records or users. */
