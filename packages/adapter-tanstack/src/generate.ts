@@ -237,10 +237,19 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}${licencesReadme()}
 ## Project structure
 
 ${structure}`;
+}
+
+/** What the app owner may do with the app, and the notices it carries, for the README. */
+function licencesReadme(): string {
+  return `## Licences
+
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+
+`;
 }
 
 /** How often one may write, for the README. */
