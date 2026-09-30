@@ -9,6 +9,7 @@ import { cx, Panel, Tabs, useMedia } from "../ui";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
+import { Look } from "./Look";
 import { Selected } from "./Selected";
 
 export function Builder({
@@ -28,8 +29,8 @@ export function Builder({
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
 }) {
-  const [tab, setTabState] = useState<"app" | "change">(place.tab ?? "app");
-  const setTab = (next: "app" | "change") => {
+  const [tab, setTabState] = useState<"app" | "look" | "change">(place.tab ?? "app");
+  const setTab = (next: "app" | "look" | "change") => {
     setTabState(next);
     onPlace({ tab: next });
   };
@@ -163,6 +164,7 @@ export function Builder({
               <Tabs
                 tabs={[
                   ["app", "Your app"],
+                  ["look", "Look"],
                   ["change", "Change"],
                 ]}
                 value={tab}
@@ -170,7 +172,9 @@ export function Builder({
               />
             }
           >
-            {tab === "app" ? (
+            {tab === "look" ? (
+              <Look spec={spec} run={run} />
+            ) : tab === "app" ? (
               <AppSummary
                 app={project.name}
                 sections={sections}
