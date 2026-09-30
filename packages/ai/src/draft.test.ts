@@ -22,7 +22,12 @@ const load = (example: string): SpecFiles => {
       .map(([path, text]) => [path.split("/").at(-1) as string, text]),
   );
 };
-const starters = { crm: load("crm"), booking: load("booking"), invoicing: load("invoicing") };
+const starters = {
+  crm: load("crm"),
+  booking: load("booking"),
+  invoicing: load("invoicing"),
+  records: load("records"),
+};
 
 function scripted(answers: SpecFiles[], name = "frontier"): Provider & { prompts: string[] } {
   const prompts: string[] = [];
@@ -53,6 +58,8 @@ describe("starting from a sentence", () => {
       "invoicing",
     );
     expect(closestStarter("Our sales team tracks customers and orders", starters)).toBe("crm");
+    // Nothing in common with any starter: the neutral one.
+    expect(closestStarter("Ett register över våra hundar", starters)).toBe("records");
   });
 
   test("the strongest allowed model adapts the starter; errors go back once, exactly", async () => {
