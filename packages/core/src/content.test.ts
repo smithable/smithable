@@ -205,3 +205,56 @@ pages:
   });
   expect(linked.diagnostics.map((d) => d.message).join()).toContain("cannot link to other records");
 });
+
+test("the reservation block's texts belong to a model with a capacity", () => {
+  const booking = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Yoga }
+models:
+  Session:
+    fields:
+      startsAt: datetime!
+      capacity: int! = 12
+  Booking:
+    fields:
+      session: Session!
+    capacity: { per: session, max: session.capacity }
+pages:
+  sessions: { crud: Session }
+`,
+  }).ir as SpecIR;
+  const ok = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: `smithableContent: 0.1
+models:
+  Booking:
+    reserve: { book: Reserve a mat, full: No mats left }
+`,
+    },
+    booking,
+  );
+  expect(ok.diagnostics).toEqual([]);
+  expect(ok.content?.models.Booking?.reserve).toEqual({
+    book: "Reserve a mat",
+    full: "No mats left",
+  });
+  const wrong = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: `smithableContent: 0.1
+models:
+  Session:
+    reserve: { book: Reserve a mat }
+  Booking:
+    reserve: { join: Reserve }
+`,
+    },
+    booking,
+  );
+  expect(wrong.diagnostics.map((d) => d.message)).toEqual([
+    'Model "Session" has no capacity, so nothing is reserved on it.',
+    expect.stringContaining('"join"'),
+  ]);
+});
