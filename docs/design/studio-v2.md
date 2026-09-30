@@ -8,6 +8,13 @@ Today each mode renders the preview inside its own layout, so switching modes re
 
 Where Builder's panels snap (Your app, Preview, Changes), "Preview" snaps to the frame; on wide windows the frame is always visible and the panels take the rest.
 
+**As built (2026-09-30, Opus, #36, #38 and the Hide button):**
+- **The frame:** it's made once in `App.tsx` and never moves in the page. From lg it's a column taking 55% of the window, because at 45% the preview's app fell into its phone layout at 1440 px. Below lg it's placed over the mode's empty preview slot (Builder's Preview panel, Code's Preview tab) and follows it as the strip snaps.
+- **Builder:** "Your app + Details" side by side from 1680 px.
+- **Hide:** the column's Hide button, and "Show preview" in the header, remembered with the place.
+- **Code mode's details:** beside the tree from lg while the preview is hidden, otherwise from 1800 px.
+- **Address bar:** the preview editor reports `navigated` after the router's History API calls and Back. Repeated reports of the same page are ignored.
+
 ## 2. The place is remembered per mode
 
 What someone selected, opened or was editing survives a mode switch and comes back on the next: in Studio the selected concept and the editor's file and cursor, in Builder the selected sentence or the change being filled in. Kept in one piece of app-level state (`{ builder: { selected?, change? }, studio: { concept?, file?, cursor? } }`) in `sessionStorage` per project, restored when the mode opens, and, when the other mode selected a concept that this mode shows, opened at it: a field selected in the preview is the sentence about that field in Builder and the field in Studio's tree. The preview's own place needs nothing: it is one frame now.
