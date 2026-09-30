@@ -77,7 +77,7 @@ test("the reservation block: a session's page books and cancels through the data
   expect(module).toContain("export const bookingPlaces = createServerFn()");
   expect(module).toContain("if (!sessionData.canRead(viewer, id)) return null;");
   expect(module).toContain(
-    "bookingData.create(await currentViewer(), { sessionId: id } as BookingValues)",
+    "bookingData.create(await writer(), { sessionId: id } as BookingValues)",
   );
   const page = file("src/routes/sessions/$id.tsx");
   expect(page).toContain(
