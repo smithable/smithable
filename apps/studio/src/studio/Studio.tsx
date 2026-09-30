@@ -375,8 +375,8 @@ function SpecEditor({
   }, [jump]);
   // Checked in the tab, as you type: the same validator the CLI uses.
   const { diagnostics } = useMemo(
-    () => readSpec(project.files, text, plugins),
-    [project.files, text, plugins],
+    () => readSpec(project.files, text, plugins, project.ownThemes),
+    [project.files, text, plugins, project.ownThemes],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
   return (
