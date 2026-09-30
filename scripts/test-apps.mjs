@@ -314,6 +314,11 @@ async function calendarFlow(base) {
     if (process.env.CALENDAR_SHOTS)
       await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/month.png`, fullPage: true });
     await page.getByRole("button", { name: "Week" }).click();
+    // The app's name leads back to the landing page, whose hero says more follows.
+    await page.locator("aside").getByRole("link", { name: "Stillwater Yoga", exact: true }).click();
+    await page.waitForURL(`${base}/`);
+    await page.getByRole("link", { name: "More below" }).click();
+    await page.waitForURL(/#/);
     // An admin clicks an empty hour: the new session's start is that hour.
     await signInAs(page, base, "admin");
     await open(page, `${base}/schedule`);
@@ -325,7 +330,7 @@ async function calendarFlow(base) {
     if (!starts.endsWith("T07:00"))
       throw new Error(`the new session starts at ${starts}, from ${label}`);
     console.log(
-      "  ✓ browser: the schedule shows this week's sessions to a visitor, who opens one; Next and Previous change the week and the address; an admin's click on an empty hour starts a new session then",
+      "  ✓ browser: the schedule shows this week's sessions to a visitor, who opens one; Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; an admin's click on an empty hour starts a new session then",
     );
   } catch (error) {
     console.log(
