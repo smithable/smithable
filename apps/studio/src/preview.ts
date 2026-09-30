@@ -25,6 +25,8 @@ export type Selection = Extract<PreviewMessage, { type: "select" }>;
 export interface Place {
   builder: { tab?: "app" | "change"; selection?: Selection };
   studio: { tab?: string; concept?: string };
+  /** The preview's column is hidden (wide windows), for more room for the mode. */
+  previewHidden?: boolean;
 }
 
 /** A concept picked in either mode that the other can show too: a field or a model. */
