@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   type AuthIR,
@@ -6,8 +6,10 @@ import {
   type Diagnostic,
   formatDiagnostic,
   hasErrors,
+  parseTheme,
   type SpecIR,
   type SpecPlugin,
+  type ThemeIR,
   type UxIR,
   validateAuth,
   validateContent,
@@ -33,6 +35,8 @@ export function loadSpec(
   auth?: AuthIR;
   content?: ContentIR;
   ux?: UxIR;
+  /** The project's own themes (themes/<name>.yml). */
+  themes?: ThemeIR[];
   plugins?: SpecPlugin[];
   path: string;
 } {
@@ -93,10 +97,18 @@ export function loadSpec(
     if (!result.content) return failed(contentPath, result.diagnostics);
     content = result.content;
   }
+  // The project's own themes, which the ux file's preset may name.
+  const themes: ThemeIR[] = [];
+  for (const file of projectThemeFiles(dirname(path))) {
+    const result = parseTheme({ path: file, text: readFileSync(file, "utf8") });
+    print(result.diagnostics);
+    if (!result.theme) return failed(file, result.diagnostics);
+    themes.push(result.theme);
+  }
   let ux: UxIR | undefined;
   const uxPath = join(dirname(path), "smithable.ux.yml");
   if (existsSync(uxPath)) {
-    const result = validateUx({ path: uxPath, text: readFileSync(uxPath, "utf8") }, ir);
+    const result = validateUx({ path: uxPath, text: readFileSync(uxPath, "utf8") }, ir, themes);
     print(result.diagnostics);
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;
@@ -110,7 +122,33 @@ export function loadSpec(
     print(problems);
     if (problems.length) return failed(contextPath, problems);
   }
-  return { ir, auth, path, plugins, ...(content ? { content } : {}), ...(ux ? { ux } : {}) };
+  return {
+    ir,
+    auth,
+    path,
+    plugins,
+    ...(content ? { content } : {}),
+    ...(ux ? { ux } : {}),
+    ...(themes.length ? { themes } : {}),
+  };
+}
+
+/** The project's themes that parse, for operations; problems are reported by `loadSpec`. */
+export function projectThemes(dir: string): ThemeIR[] {
+  return projectThemeFiles(dir).flatMap((file) => {
+    const theme = parseTheme({ path: file, text: readFileSync(file, "utf8") }).theme;
+    return theme ? [theme] : [];
+  });
+}
+
+/** The theme files of a project: themes/<name>.yml, in name order. */
+export function projectThemeFiles(dir: string): string[] {
+  const folder = join(dir, "themes");
+  if (!existsSync(folder) || !statSync(folder).isDirectory()) return [];
+  return readdirSync(folder)
+    .filter((f) => /\.ya?ml$/.test(f))
+    .sort()
+    .map((f) => join(folder, f));
 }
 
 /** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */

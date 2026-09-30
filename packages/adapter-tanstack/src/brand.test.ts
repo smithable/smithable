@@ -1,6 +1,6 @@
-import type { ThemePreset } from "@smithable/core";
+import { contrast, hexToRgb, type ThemeIR, type ThemePreset, themeNamed } from "@smithable/core";
 import { describe, expect, test } from "vitest";
-import { brandColors, contrast, hexToRgb } from "./brand.js";
+import { brandColors } from "./brand.js";
 
 const examples = JSON.parse(
   Object.values(
@@ -23,7 +23,7 @@ const close = (a: string, b: string) =>
 
 describe("the design system's brand examples", () => {
   test.each(examples.map((e) => [`${e.input} in ${e.theme} ${e.mode}`, e]))("%s", (_, example) => {
-    const colors = brandColors(example.input, example.theme, example.mode);
+    const colors = brandColors(example.input, themeNamed(example.theme) as ThemeIR, example.mode);
     for (const [role, expected] of Object.entries(example.derived)) {
       const actual = colors[role as keyof typeof colors];
       expect(close(actual, expected), `${role}: ${actual}, expected ${expected}`).toBe(true);

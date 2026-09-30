@@ -22,7 +22,10 @@ const setTheme: Operation<{ preset?: string; primary?: string; font?: string; de
       type: "object",
       additionalProperties: false,
       properties: {
-        preset: { type: "string", enum: [...THEME_PRESETS] },
+        preset: {
+          type: "string",
+          description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
+        },
         primary: { type: "string", description: 'A colour like "#2563eb", or "none".' },
         font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
         density: { type: "string", enum: ["comfortable", "compact"] },

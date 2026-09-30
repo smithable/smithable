@@ -15,6 +15,7 @@ import {
   type SpecIR,
   type SpecPlugin,
   snake,
+  type ThemeIR,
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
@@ -62,6 +63,8 @@ export interface GenerateOptions {
   customPages?: string[];
   /** Presentation from smithable.ux.yml: theme, table columns, form field order. */
   ux?: UxIR;
+  /** The project's own themes (themes/<name>.yml), which the ux file's preset may name. */
+  themes?: ThemeIR[];
   /** Project plugins: their extra files (ARCHITECTURE §5.1). */
   plugins?: SpecPlugin[];
   /** Libraries for custom code, from smithable.context.yml: name → exact version. */
