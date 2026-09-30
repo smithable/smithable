@@ -158,6 +158,8 @@ export interface PageIR extends SemanticText {
       }
     /** An admin view of models: `data: all` (every model, in spec order) or a list of them. */
     | { kind: "data"; models: string[]; all: boolean }
+    /** Inputs and results computed as you type, stored nowhere (docs/design/calculator.md). */
+    | { kind: "calculator"; calculator: CalculatorIR }
     /**
      * A model's records as articles (a blog, news): `title` and `body` (a markdown field) always;
      * a `picture`, a `date`, an `address` (a unique string for the article's address) and a
@@ -181,6 +183,20 @@ export interface PageIR extends SemanticText {
   search?: string[];
 }
 
+/**
+ * A calculator: fields written as a model's, the entered ones its inputs and the formula
+ * fields its results; examples check several results at once.
+ */
+export interface CalculatorIR {
+  fields: FieldIR[];
+  examples: CalculatorExample[];
+}
+
+export interface CalculatorExample {
+  input: Record<string, FieldValue>;
+  expected: Record<string, FieldValue>;
+}
+
 /** One step of an onboarding: some fields of the record it fills in. */
 export interface OnboardingStep {
   name: string;
@@ -198,6 +214,7 @@ export const SECTION_KINDS = [
   "contact",
   "gallery",
   "footer",
+  "calculator",
 ] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
 
@@ -212,6 +229,8 @@ export interface LandingSection {
   /** A contact section's form: visitors add a record of this model (e.g. Message). */
   form?: string;
   limit?: number;
+  /** A calculator section's inputs and results. */
+  calculator?: CalculatorIR;
 }
 
 /**

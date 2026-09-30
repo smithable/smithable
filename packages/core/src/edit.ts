@@ -62,7 +62,8 @@ export class YamlEditor {
     }
     const inlineNode = node && (isScalar(node) || isSeq(node) || (isMap(node) && node.flow));
     if (!isBlock(value) && inlineNode) {
-      this.splice(node.range[0], node.range[1], flow(value));
+      // A scalar in a block mapping keeps its plain form; only inside { … } is it quoted for commas.
+      this.splice(node.range[0], node.range[1], Array.isArray(value) ? flow(value) : scalar(value));
       return;
     }
     // Replace everything after "key:" up to the end of the value's last line.
@@ -199,7 +200,10 @@ function flow(value: YamlValue): string {
       .map(([k, v]) => `${scalar(k)}: ${flow(v)}`)
       .join(", ")} }`;
   }
-  return scalar(value);
+  // Inside { … } or [ … ] a comma or a bracket ends the value: such a text is quoted.
+  return typeof value === "string" && /[,[\]{}]/.test(value) && !/^["']/.test(scalar(value))
+    ? JSON.stringify(value)
+    : scalar(value);
 }
 
 /** Text after "key:" for a value: " scalar", " [a, b]", or a newline and an indented block. */
