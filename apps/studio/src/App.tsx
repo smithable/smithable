@@ -216,6 +216,15 @@ export function App() {
         </fieldset>
         <div className="ml-auto flex items-center gap-3">
           {busy && <span className="text-xs text-neutral-500">Working…</span>}
+          {place.previewHidden && (
+            <Button
+              variant="ghost"
+              className="max-lg:hidden"
+              onClick={() => setPlace((p) => ({ ...p, previewHidden: false }))}
+            >
+              Show preview
+            </Button>
+          )}
           {project.home && (
             <a href={project.home} className="text-xs font-medium text-accent hover:underline">
               Publish and share
@@ -297,6 +306,7 @@ export function App() {
               previewSlot={setSlot}
               place={place.studio}
               onPlace={studioPlace}
+              previewHidden={Boolean(place.previewHidden)}
             />
           )}
         </div>
@@ -304,7 +314,7 @@ export function App() {
           style={box}
           className={cx(
             "flex min-h-0 flex-col border-l border-neutral-200 bg-white",
-            box ? "fixed z-10" : "max-lg:hidden lg:w-[55%]",
+            box ? "fixed z-10" : place.previewHidden ? "hidden" : "max-lg:hidden lg:w-[55%]",
           )}
         >
           <Preview
@@ -312,6 +322,7 @@ export function App() {
             version={version}
             selecting={selecting}
             onSelecting={setSelecting}
+            onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
           />
         </div>
       </main>

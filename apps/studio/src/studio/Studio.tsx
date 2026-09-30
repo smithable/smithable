@@ -38,6 +38,7 @@ export function Studio({
   previewSlot,
   place,
   onPlace,
+  previewHidden,
 }: {
   project: Project;
   spec: Spec;
@@ -50,6 +51,8 @@ export function Studio({
   /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
   place: Place["studio"];
   onPlace: (place: Place["studio"]) => void;
+  /** With the preview's column hidden there is room for the details beside the tree from lg. */
+  previewHidden: boolean;
 }) {
   const [tab, setTabState] = useState<Tab>((place.tab as Tab | undefined) ?? "spec");
   const setTab = (next: Tab) => {
@@ -66,14 +69,33 @@ export function Studio({
   const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
   return (
-    // The details sit beside the concept tree on very wide screens (the preview takes the right
-    // of the window from lg), under it on narrower ones.
-    <div className="grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200 min-[1800px]:grid-cols-[240px_320px_1fr]">
-      <div className="grid min-h-0 grid-rows-[1fr_2fr] min-[1800px]:contents">
+    // The details sit beside the concept tree from lg when the preview is hidden, else only on
+    // very wide screens (the preview takes the right of the window from lg); under it otherwise.
+    <div
+      className={cx(
+        "grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200",
+        previewHidden
+          ? "lg:grid-cols-[240px_320px_1fr]"
+          : "min-[1800px]:grid-cols-[240px_320px_1fr]",
+      )}
+    >
+      <div
+        className={cx(
+          "grid min-h-0 grid-rows-[1fr_2fr]",
+          previewHidden ? "lg:contents" : "min-[1800px]:contents",
+        )}
+      >
         <Panel title="Concepts">
           <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
         </Panel>
-        <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200 min-[1800px]:border-t-0 min-[1800px]:border-l">
+        <div
+          className={cx(
+            "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200",
+            previewHidden
+              ? "lg:border-t-0 lg:border-l"
+              : "min-[1800px]:border-t-0 min-[1800px]:border-l",
+          )}
+        >
           <Panel title="Details">
             {concept ? (
               <>
