@@ -29,6 +29,7 @@ import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
 import {
+  articlesOperations,
   calendarOperations,
   crudOperations,
   dashboardOperations,
@@ -393,6 +394,61 @@ const calendar: PagePattern<"calendar"> = {
   },
 };
 
+/** The fields an articles page names, and what each must be (docs/design/articles.md). */
+const ARTICLE_KEYS = ["title", "body", "picture", "date", "address", "summary"] as const;
+
+/** A model's records as articles: a list newest first, and a page per article. */
+const articles: PagePattern<"articles"> = {
+  kind: "articles",
+  schema: {
+    oneOf: [
+      {
+        type: "string",
+        description: "A model with a title and a markdown body; its other parts are inferred.",
+      },
+      {
+        type: "object",
+        required: ["model"],
+        additionalProperties: false,
+        properties: {
+          model: { type: "string" },
+          title: { type: "string", description: "The article's title." },
+          body: { type: "string", description: "A markdown field: the article itself." },
+          picture: { type: "string", description: "A picture field shown with the article." },
+          date: { type: "string", description: "A date or date-time field: when it appeared." },
+          address: {
+            type: "string",
+            description: "A unique string field: the article's address (/blog/<address>).",
+          },
+          summary: { type: "string", description: "A short text shown in the list." },
+        },
+      },
+    ],
+    description: "A model's records as articles: a blog, news or a knowledge base.",
+  },
+  example: "articles: <Model>",
+  parse: (ctx, value, where, parsed) => readArticles(ctx, value, where, parsed),
+  models: (p) => [p.model],
+  icon: "book",
+  inMenu: true,
+  operations: articlesOperations,
+  follow(spec, page, effect) {
+    // A renamed field is renamed where the page names it; a removal it relies on is refused.
+    const f = fieldEffect(effect);
+    const p = page.pattern;
+    if (!f || f.model !== p.model) return undefined;
+    const keys = ARTICLE_KEYS.filter((key) => p[key] === f.from);
+    if (!keys.length) return undefined;
+    if (!f.to)
+      return {
+        refusal: `The ${page.id} page shows ${f.model}.${f.from} in its articles; change or remove the page first.`,
+      };
+    const path = (key: string) => ["pages", page.id, "articles", key];
+    for (const key of keys) if (spec.has(path(key))) spec.set(path(key), f.to);
+    return undefined;
+  },
+};
+
 /** An admin view of every model (or some): each one's records, found, opened, changed. */
 const data: PagePattern<"data"> = {
   kind: "data",
@@ -445,6 +501,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   users,
   data,
   calendar,
+  articles,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -803,6 +860,108 @@ function readDashboard(
 const DATES = ["date", "datetime"];
 const scalarKind = (f: FieldIR | undefined) =>
   f?.type.kind === "scalar" ? f.type.name : undefined;
+
+/**
+ * An articles page, short (`articles: Post`) or long (`{ model, title, body, … }`). Each part
+ * not named is inferred by type and name; one that cannot be, or is found twice, is an error.
+ */
+function readArticles(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): PatternOf<"articles"> | undefined {
+  const at = `the articles of ${where}`;
+  let modelName: string | undefined;
+  let modelAt: At = node;
+  const given: Record<string, { value: string; at: At }> = {};
+  if (isMap(node)) {
+    for (const { key, value } of checkKeys(ctx, mapEntries(ctx, node, at) ?? [], at, {
+      allowed: ["model", ...ARTICLE_KEYS],
+    })) {
+      const text = readString(ctx, value, `"${key}" in ${at}`);
+      if (text === undefined) continue;
+      if (key === "model") {
+        modelName = text;
+        modelAt = value;
+      } else given[key] = { value: text, at: value };
+    }
+    if (modelName === undefined) {
+      ctx.error(node, "missing-key", `${capitalize(at)} needs "model".`);
+      return undefined;
+    }
+  } else modelName = readString(ctx, node, `"articles" in ${where}`);
+  if (modelName === undefined) return undefined;
+  ctx.reference("model", modelName, modelAt);
+  const model = parsed.models?.find((m) => m.name === modelName);
+  if (!model) return { kind: "articles", model: modelName, title: "", body: "" };
+  const stored = model.fields.filter((f) => !f.formula);
+  const kindOf = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
+  // What each part may be, and how it is found when not named.
+  const rules: Record<
+    (typeof ARTICLE_KEYS)[number],
+    { kinds: string[]; named?: RegExp; unique?: boolean }
+  > = {
+    title: { kinds: ["string"], named: /^(title|name|headline)$/i },
+    body: { kinds: ["markdown"] },
+    picture: { kinds: ["picture"] },
+    date: { kinds: DATES },
+    address: { kinds: ["string"], named: /^(address|slug)$/i, unique: true },
+    summary: { kinds: ["string", "text"], named: /^(summary|excerpt)$/i },
+  };
+  const result: PatternOf<"articles"> = { kind: "articles", model: modelName, title: "", body: "" };
+  for (const key of ARTICLE_KEYS) {
+    const rule = rules[key];
+    const fits = (f: FieldIR) =>
+      rule.kinds.includes(kindOf(f) ?? "") && (!rule.unique || Boolean(f.unique));
+    const named = given[key];
+    let found: string | undefined;
+    if (named) {
+      const f = model.fields.find((x) => x.name === named.value);
+      if (!f)
+        ctx.error(
+          named.at,
+          "unknown-field",
+          `${modelName} has no field named "${named.value}".`,
+          didYouMean(
+            named.value,
+            model.fields.map((x) => x.name),
+          ),
+        );
+      else if (!fits(f))
+        ctx.error(
+          named.at,
+          "invalid-value",
+          `"${named.value}" is the ${key} of ${at}: it must be ${rule.unique ? "a unique " : "a "}${rule.kinds.join(" or ")} field.`,
+        );
+      else found = f.name;
+    } else {
+      const candidates = stored.filter((f) => fits(f) && (!rule.named || rule.named.test(f.name)));
+      if (candidates.length > 1 && !rule.named)
+        ctx.error(
+          modelAt,
+          "missing-key",
+          `${modelName} has several ${rule.kinds.join(" or ")} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}.`,
+          `Write "articles: { model: ${modelName}, ${key}: ${candidates[0]?.name} }".`,
+        );
+      else found = candidates[0]?.name;
+    }
+    if (found) result[key] = found;
+  }
+  for (const key of ["title", "body"] as const)
+    if (!result[key] && !given[key])
+      ctx.error(
+        modelAt,
+        "missing-key",
+        key === "body"
+          ? `${modelName} has no markdown field for the body of ${at}.`
+          : `${modelName} has no string field named title, name or headline for ${at}.`,
+        key === "body"
+          ? `Add one, e.g. "body: markdown!", or name it with "body".`
+          : `Name it with "title".`,
+      );
+  return result;
+}
 
 /** A calendar, short (`calendar: Session`) or long (`{ model, starts, ends, duration, title }`). */
 function readCalendar(
