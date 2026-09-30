@@ -173,7 +173,16 @@ function Part({
         ? next.operations.every((o) => o.op !== "removeField")
         : next.proposal.kind === "change" && !next.proposal.operations.some((o) => o.destructive);
     if (safe) await apply(next, text);
-    else setSuggestion(next);
+    else if (
+      next.kind === "model" &&
+      next.proposal.kind !== "change" &&
+      next.proposal.kind !== "question"
+    ) {
+      // Nothing to apply (it changes nothing, or no operation can do it): the part goes back to
+      // its own sentences at once, with the reason.
+      close();
+      setNote(next.proposal.kind === "none" ? next.proposal.reason : next.proposal.message);
+    } else setSuggestion(next);
   };
   const apply = async (suggestion: Suggestion, text: string) => {
     setBusy(true);
@@ -228,20 +237,33 @@ function Part({
           {titled && section.title}
           {updated && <span className="ml-2 text-xs font-normal text-accent">updated</span>}
         </h3>
-        {draft === undefined && section.concept !== "auth" && (
-          <button
-            type="button"
-            className="text-xs text-neutral-500 hover:text-accent"
-            aria-label={`Edit ${section.title}`}
-            onClick={() => setDraft(shown)}
-          >
-            Edit
-          </button>
-        )}
       </div>
       {draft === undefined ? (
-        // Under the heading "Customers", "Customers have:" would only repeat it.
-        <Lines text={titled ? shown.replace(`${section.title} have:\n`, "") : shown} />
+        <>
+          {section.concept === "auth" ? (
+            <Lines text={shown} />
+          ) : (
+            // One click on the sentences edits them, as a text in the preview is edited.
+            // biome-ignore lint/a11y/useSemanticElements: a button cannot hold the lists
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={`Edit ${section.title}`}
+              title="Click to change"
+              className="-mx-1.5 cursor-text rounded-md px-1.5 py-0.5 outline-none hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-accent/30"
+              onClick={() => setDraft(shown)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                setDraft(shown);
+              }}
+            >
+              {/* Under the heading "Customers", "Customers have:" would only repeat it. */}
+              <Lines text={titled ? shown.replace(`${section.title} have:\n`, "") : shown} />
+            </div>
+          )}
+          {note && <p className="mt-1 text-sm text-neutral-600">{note}</p>}
+        </>
       ) : (
         <div className="space-y-2">
           <textarea
