@@ -162,6 +162,25 @@ function Navigation({
   );
 }
 
+/** Shown while a page's data loads for longer than a moment: the shape of a page, no words. */
+export function Loading() {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="Loading"
+      className="max-w-3xl animate-pulse space-y-6"
+      role="status"
+    >
+      <div className="h-8 w-1/3 rounded-md bg-muted" />
+      <div className="space-y-3">
+        <div className="h-row rounded-md bg-muted" />
+        <div className="h-row rounded-md bg-muted" />
+        <div className="h-row rounded-md bg-muted" />
+      </div>
+    </div>
+  );
+}
+
 /** Shown instead of a page that failed, e.g. "You are not allowed to do this." */
 export function ErrorNotice({ title, message }: { title: string; message?: string }) {
   return (

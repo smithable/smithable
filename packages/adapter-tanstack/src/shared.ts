@@ -80,6 +80,11 @@ export function texts(content: ContentIR) {
       return own?.pluralLabel ?? (own?.label ? plural(own.label) : humanize(plural(model.name)));
     },
     field: (model: ModelIR, field: FieldIR) => content.models[model.name]?.fields[field.name] ?? {},
+    /** The reservation block's words for a model with a capacity, as props: only those given. */
+    reserve: (model: ModelIR) =>
+      Object.entries(content.models[model.name]?.reserve ?? {})
+        .map(([key, text]) => ` ${key}Label=${attr(text)}`)
+        .join(""),
     pageTitle: (id: string) => content.pages[id]?.title ?? humanize(id),
     /** The subtitle prop of a page's header on its own line (indented so), or nothing. */
     pageSubtitle: (id: string, indent = 8) => {

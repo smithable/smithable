@@ -77,7 +77,12 @@ export interface ModelContent {
   label?: string;
   pluralLabel?: string;
   fields: Record<string, FieldContent>;
+  /** The reservation block's words, for a model with a capacity. */
+  reserve?: Record<string, string>;
 }
+
+/** The reservation block's texts: the buttons, and what it says when full or booked. */
+export const RESERVE_TEXTS = ["book", "cancel", "full", "booked"];
 
 export interface FieldContent {
   label?: string;
@@ -182,12 +187,23 @@ function readModels(
     const spec = ir.models.find((m) => m.name === model.key);
     const where = `model "${model.key}"`;
     const entries = mapEntries(ctx, model.value, where) ?? [];
-    const known = checkKeys(ctx, entries, where, { allowed: ["label", "pluralLabel", "fields"] });
+    const known = checkKeys(ctx, entries, where, {
+      allowed: ["label", "pluralLabel", "fields", "reserve"],
+    });
     const result: ModelContent = { fields: {} };
-    for (const { key, value } of known) {
+    for (const { key, value, keyNode } of known) {
       if (key === "label" || key === "pluralLabel") {
         const text = readString(ctx, value, `"${key}" of ${where}`);
         if (text !== undefined) result[key] = text;
+      }
+      if (key === "reserve") {
+        if (spec && !spec.capacity)
+          ctx.error(
+            keyNode,
+            "invalid-key",
+            `${capitalize(where)} has no capacity, so nothing is reserved on it.`,
+          );
+        else result.reserve = readTexts(ctx, value, `"reserve" of ${where}`, RESERVE_TEXTS);
       }
       if (key !== "fields" || !spec) continue;
       for (const field of named(
