@@ -1,4 +1,12 @@
-import { type AuthIR, emptyContent, emptyUx, kebab, type SpecIR, type UxIR } from "@smithable/core";
+import {
+  type AuthIR,
+  emptyContent,
+  emptyUx,
+  isPicture,
+  kebab,
+  type SpecIR,
+  type UxIR,
+} from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import { actionModule, actionRoute, actionStub, queryContract, queryStub } from "./actions.js";
 import {
@@ -18,12 +26,15 @@ import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { indexRoute, pagesModule, rootRoute } from "./pages/root.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
+  dataKey,
   type GenContext,
   type GeneratedFile,
   type GenerateOptions,
   HEADER,
   literal,
+  names,
   type SectionGenerator,
+  type Texts,
   texts,
   userFields,
 } from "./shared.js";
@@ -65,6 +76,40 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
 
 /** Whether a model has a Markdown field (an action's input is a plain text box). */
 const hasMarkdown = (ir: SpecIR) => ir.models.some((m) => m.fields.some(isMarkdown));
+const hasPictures = (ir: SpecIR) => ir.models.some((m) => m.fields.some(isPicture));
+
+/**
+ * src/generated/pictures.ts: each picture field by the model's and the field's names in an
+ * address, with the data function and access the file routes check through.
+ */
+function picturesModule(ir: SpecIR, t: Texts): string {
+  const models = ir.models.filter((m) => m.fields.some(isPicture));
+  const entries = models.map((model) => {
+    const n = names(model, t);
+    const fields = model.fields
+      .filter(isPicture)
+      .map(
+        (f) =>
+          `    ${JSON.stringify(f.name)}: { data: ${n.data}, access: ${n.access}, key: ${JSON.stringify(dataKey(f))} },`,
+      );
+    return `  ${JSON.stringify(kebab(model.name))}: {\n${fields.join("\n")}\n  },`;
+  });
+  return `${HEADER}// The records' pictures: which data function and access each one goes through (src/routes/files/).
+import type { ModelAccess, Viewer } from "#/kit/access";
+${models.map((m) => `import { ${names(m, t).access}, ${names(m, t).data} } from "./${kebab(m.name)}.server";`).join("\n")}
+
+export interface PictureField {
+  data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
+  access: ModelAccess;
+  /** The picture's key in a record. */
+  key: string;
+}
+
+export const PICTURES: Record<string, Record<string, PictureField>> = {
+${entries.join("\n")}
+};
+`;
+}
 
 function packageJson(
   ir: SpecIR,
@@ -293,10 +338,20 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],
         used: ({ ir }) => hasMarkdown(ir),
       },
+      {
+        files: [
+          "src/kit/uploads.ts",
+          "src/kit/PictureInput.tsx",
+          "src/routes/files/$model.$field.ts",
+          "src/routes/files/$model.$id.$field.ts",
+        ],
+        used: ({ ir }) => hasPictures(ir),
+      },
     ],
     files: ({ ir, t, auth, ux, options }) => [
       generated("src/db/schema.ts", schemaModule(ir, auth)),
       generated("src/db/seed.ts", seedModule(ir)),
+      ...(hasPictures(ir) ? [generated("src/generated/pictures.ts", picturesModule(ir, t))] : []),
       ...(ir.models.length
         ? [
             generated("src/generated/access.test.ts", accessTestSource(ir, auth)),
