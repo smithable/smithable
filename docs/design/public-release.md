@@ -24,7 +24,7 @@ Status: 2026-09-30, Fable. The mechanical part of M16's "open-source preparation
 
 ## Still to do in the repository before the flip
 
-- A `LICENSES/shadcn-ui.txt` in every generated app: the `src/components/ui/*` files are shadcn/ui's (MIT), and MIT asks that its notice travel with copies ([legal-decisions.md](legal-decisions.md) §2).
+- ~~A `LICENSES/shadcn-ui.txt` in every generated app~~ — done 2026-10-01: the notice (with `LICENSES/README.md`) is in every app, copied into the container image, and named in the app's README; a test keeps it so and checks that no app file imports a Smithable package.
 - A `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1 is the usual choice; a decision, then a copy).
 - Issue and pull-request templates (a bug needs the spec that shows it and the Smithable version; a change needs `pnpm check`).
 - A pass over the README as a stranger: it is good; the one gap is that "Try it" builds from source, which is right until the packages are published, and should then say `npm install -g smithable`.
