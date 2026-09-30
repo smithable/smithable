@@ -71,6 +71,17 @@ pages:
     landing:
       hero: { button: schedule }
       classes: { records: ClassType }
+      estimate:                         # does a monthly pass pay off? Worked out as you type
+        calculator:
+          fields:
+            classesPerMonth: { type: int, min: 0, max: 31, default: 8 }
+            dropIn: { type: money, min: 0, default: 16 }
+            pass: { type: money, min: 0, default: 99 }
+            withoutPass: { type: money, formula: classesPerMonth * dropIn }
+            saved: { type: money, formula: classesPerMonth * dropIn - pass }
+          examples:
+            - input: { classesPerMonth: 8, dropIn: 16, pass: 99 }
+              expected: { withoutPass: 128, saved: 29 }
       gallery:
       faq:
       callToAction: { button: schedule }

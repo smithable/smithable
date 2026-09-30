@@ -59,7 +59,7 @@ export const PAGE_GENERATORS: {
   },
   calculator: {
     kit: ["src/kit/Calculator.tsx"],
-    routes: (page, { t }) => ({ "index.tsx": calculatorRoute(page, t) }),
+    routes: (page, { t, ux }) => ({ "index.tsx": calculatorRoute(page, t, ux) }),
   },
   calendar: {
     kit: ["src/kit/Calendar.tsx"],

@@ -5,6 +5,7 @@ import {
   validateAuth,
   validateContent,
   validateSpec,
+  validateUx,
 } from "@smithable/core";
 import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
@@ -95,4 +96,25 @@ test("without a calculator nothing of it is generated", () => {
   });
   expect(app.some((f) => f.path === "src/kit/Calculator.tsx")).toBe(false);
   expect(app.some((f) => f.path.includes("calculator"))).toBe(false);
+});
+
+test("results beside the inputs by default, or below them (smithable.ux.yml)", () => {
+  const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+  const below = read("smithableUx: 0.1\npages:\n  mortgage: { form: { results: below } }\n");
+  expect(below.ux?.pages.mortgage?.results).toBe("below");
+  const route = (ux: typeof below.ux) =>
+    generateApp(ir, { smithableVersion: "0.0.0", auth, content, ...(ux ? { ux } : {}) }).find(
+      (f) => f.path === "src/routes/mortgage/index.tsx",
+    )?.content ?? "";
+  expect(route(below.ux)).toContain('layout="below"');
+  expect(file("src/routes/mortgage/index.tsx")).not.toContain("layout=");
+  // Only a calculator page has results, and only these two places.
+  expect(
+    read("smithableUx: 0.1\npages:\n  home: { form: { results: below } }\n").diagnostics[0]
+      ?.message,
+  ).toBe('"results" is for a calculator page; home is not one.');
+  expect(
+    read("smithableUx: 0.1\npages:\n  mortgage: { form: { results: left } }\n").diagnostics[0]
+      ?.message,
+  ).toBe('"results" of page "mortgage" is "beside" or "below".');
 });

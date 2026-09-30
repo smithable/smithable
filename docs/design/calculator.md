@@ -4,7 +4,7 @@ Status: proposed 2026-09-30 by Fable, from the question "what about a calculator
 
 Against ARCHITECTURE §2.4: calculators are common (mortgage and loan, price and quote estimators, ROI, BMI, savings, "how many do I need"); the formula engine already exists and already runs in forms as you type; the alternative is a hand-written React component per calculator; nothing names a technology; and a formula is checked, testable with `examples` and readable in the Builder, which custom code is not.
 
-Built 2026-09-30 (Fable): §2 and §3 as designed (core, the kit's `Calculator.tsx`, the page route and the landing section, `PMT`, examples as tests, the field operations on a calculator, `addCalculatorPage`, the content keys), except `results: beside | below` in the ux file and the tier-0 phrase; §4 (`custom` pages and sections) is not built yet.
+Built 2026-09-30 (Fable): §2 and §3 as designed (core, the kit's `Calculator.tsx`, the page route and the landing section, `PMT`, examples as tests, the field operations on a calculator, `addCalculatorPage`, the content keys), except `results: beside | below` in the ux file and the tier-0 phrase; §4 (`custom` pages and sections) is not built yet. `results: beside | below` (under a calculator page's `form` in the ux file) and the booking landing's `estimate` calculator with its browser step built 2026-10-01 by Opus.
 
 ## 1. What people get
 
