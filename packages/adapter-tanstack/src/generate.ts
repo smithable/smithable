@@ -24,6 +24,7 @@ import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
+import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { indexRoute, pagesModule, rootRoute } from "./pages/root.js";
 import { schemaModule, seedModule } from "./schema.js";
@@ -300,6 +301,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 export { actionNames } from "./actions.js";
 export { customPageFromEdit, customPageSource } from "./pages/custom.js";
+
 export type { GeneratedFile, GenerateOptions, Zone } from "./shared.js";
 export { dataKey, indexPath, join, names, storedFields, tableNames, texts } from "./shared.js";
 
@@ -339,6 +341,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("README.md", readme(ir, false, auth)),
       generated("public/favicon.svg", favicon(ir)),
       generated("src/generated/app.ts", appModule(ir)),
+      // Always: a page or section of your own keeps its file after it leaves the spec.
+      generated("src/generated/custom.ts", CUSTOM_PROPS),
       generated("src/generated/pages.ts", pagesModule(ir, auth)),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
       generated("src/routes/__root.tsx", rootRoute(ir, t, auth, ux)),
@@ -496,7 +500,28 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             calculatorFiles(name, calculator, page.id, ctx.ir, ctx.t, ctx.ux, section),
           ).map(([path, content]) => generated(path, content)),
         );
-        return [...actions, ...routes, ...modules];
+        // A page or section of your own: its component, created once (calculator.md §4).
+        const own =
+          page.pattern.kind === "custom"
+            ? [
+                custom(
+                  `src/custom/pages/${page.pattern.component}.tsx`,
+                  customPageStub(page.pattern.component),
+                ),
+              ]
+            : page.pattern.kind === "landing"
+              ? page.pattern.sections.flatMap((s) =>
+                  s.component
+                    ? [
+                        custom(
+                          `src/custom/sections/${s.component}.tsx`,
+                          customSectionStub(s.component),
+                        ),
+                      ]
+                    : [],
+                )
+              : [];
+        return [...actions, ...routes, ...modules, ...own];
       }),
   },
   {

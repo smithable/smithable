@@ -32,11 +32,13 @@ import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
+import { COMPONENT_PATTERN } from "./sections/names.js";
 import {
   articlesOperations,
   calculatorOperations,
   calendarOperations,
   crudOperations,
+  customOperations,
   dashboardOperations,
   dataOperations,
   landingOperations,
@@ -101,7 +103,21 @@ export const LANDING_SECTIONS: Record<SectionKind, { button?: true; form?: true 
   gallery: {},
   footer: {},
   calculator: {},
+  custom: {},
 };
+
+function readComponent(ctx: ParseContext, value: ParsedNode | null, where: string) {
+  const name = readString(ctx, value, `"custom" in ${where}`);
+  if (name !== undefined && !COMPONENT_PATTERN.test(name)) {
+    ctx.error(
+      value,
+      "invalid-value",
+      `"custom" in ${where} names a component, like Planner: a capital letter, then letters and digits.`,
+    );
+    return undefined;
+  }
+  return name;
+}
 
 const NUMBER_TYPES = ["int", "decimal", "money"];
 
@@ -192,6 +208,10 @@ const landing: PagePattern<"landing"> = {
           description: "A contact section's form: the model visitors add a record of.",
         },
         calculator: CALCULATOR_SCHEMA,
+        custom: {
+          type: "string",
+          description: "A section of your own: the component in src/custom/sections/<Name>.tsx.",
+        },
       },
     },
   },
@@ -615,6 +635,24 @@ const calculator: PagePattern<"calculator"> = {
   operations: calculatorOperations,
 };
 
+const custom: PagePattern<"custom"> = {
+  kind: "custom",
+  schema: {
+    type: "string",
+    description:
+      "A page of your own: the component in src/custom/pages/<Name>.tsx, created once as a stub; the route, access and menu entry stay Smithable's.",
+  },
+  example: "custom: <Component>",
+  parse(ctx, value, where) {
+    const component = readComponent(ctx, value, where);
+    return component ? { kind: "custom", component } : undefined;
+  },
+  models: () => [],
+  icon: "layers",
+  inMenu: true,
+  operations: customOperations,
+};
+
 const data: PagePattern<"data"> = {
   kind: "data",
   schema: {
@@ -668,6 +706,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   calendar,
   calculator,
   articles,
+  custom,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -709,7 +748,10 @@ function readLanding(
   parsed: Partial<SpecIR>,
 ): LandingSection[] {
   const sections: LandingSection[] = [];
-  const named = SECTION_KINDS.filter((k) => k !== "records");
+  // A records, calculator or custom section is known by its options, not its name.
+  const named = SECTION_KINDS.filter(
+    (k) => k !== "records" && k !== "calculator" && k !== "custom",
+  );
   for (const { key: name, keyNode, value } of mapEntries(ctx, node, `the landing of ${where}`) ??
     []) {
     const sectionWhere = `section "${name}" of ${where}`;
@@ -726,14 +768,20 @@ function readLanding(
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
     const options = checkKeys(ctx, entries, sectionWhere, {
-      allowed: ["records", "button", "limit", "form", "calculator"],
+      allowed: ["records", "button", "limit", "form", "calculator", "custom"],
       content: ["title", "subtitle", "text", "items"],
     });
     const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
     const allows = kindOf ? LANDING_SECTIONS[kindOf] : {};
     const section: LandingSection = { name, kind: "records" };
     for (const { key, value: option, keyNode: optionKey } of options) {
-      if (key === "calculator") {
+      if (key === "custom") {
+        const component = readComponent(ctx, option, sectionWhere);
+        if (component) {
+          section.kind = "custom";
+          section.component = component;
+        }
+      } else if (key === "calculator") {
         // A calculator of any name: inputs and results, stored nowhere (docs/design/calculator.md).
         const calculator = readCalculator(ctx, option, sectionWhere, `${where}.${name}`);
         if (calculator) {
@@ -787,7 +835,7 @@ function readLanding(
         else if (limit !== undefined) section.limit = limit;
       }
     }
-    if (section.kind === "calculator") {
+    if (section.kind === "calculator" || section.kind === "custom") {
       sections.push(section);
       continue;
     }

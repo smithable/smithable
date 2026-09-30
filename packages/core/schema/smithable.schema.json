@@ -449,7 +449,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar, calculator or articles.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar, calculator, articles or custom.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -505,6 +505,11 @@
             "required": [
               "articles"
             ]
+          },
+          {
+            "required": [
+              "custom"
+            ]
           }
         ],
         "additionalProperties": false,
@@ -520,7 +525,7 @@
           },
           "landing": {
             "type": "object",
-            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator.",
+            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom.",
             "additionalProperties": {
               "type": [
                 "object",
@@ -577,6 +582,10 @@
                     }
                   },
                   "description": "Inputs and results computed as you type, stored nowhere."
+                },
+                "custom": {
+                  "type": "string",
+                  "description": "A section of your own: the component in src/custom/sections/<Name>.tsx."
                 }
               }
             }
@@ -790,6 +799,10 @@
               }
             ],
             "description": "A model's records as articles: a blog, news or a knowledge base."
+          },
+          "custom": {
+            "type": "string",
+            "description": "A page of your own: the component in src/custom/pages/<Name>.tsx, created once as a stub; the route, access and menu entry stay Smithable's."
           },
           "actions": {
             "type": "array",
