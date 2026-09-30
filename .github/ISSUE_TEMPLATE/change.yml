@@ -1,0 +1,17 @@
+name: Change
+description: A new construct, operation, page pattern or behaviour
+labels: [design]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to build, and what stops you today
+      description: The app or the change in the app's words. If you tried a custom page, a plugin or a rule, say what fell short.
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: How it might look in the spec (optional)
+      description: The DSL grows only through the five questions in docs/ARCHITECTURE.md §2.4; a project plugin is often the better home. A short design note in docs/design/ is welcome instead.
+      render: yaml
