@@ -16,9 +16,23 @@ export function Preview({
   selecting?: boolean;
   onSelecting?: (on: boolean) => void;
 }) {
-  const [path, setPath] = useState("/");
+  // The page the preview is on, as it reports it: a reload after a change comes back to it.
+  const current = useRef("/");
+  const [opened, setOpened] = useState(0);
   const [typed, setTyped] = useState("/");
   const frame = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      // The router reports the same page again (replaceState); only a new page is news, so
+      // what is being typed in the address is not overwritten.
+      if (!isPreviewMessage(e) || e.data.type !== "navigated" || e.data.path === current.current)
+        return;
+      current.current = e.data.path;
+      setTyped(e.data.path);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
   // Tell the page's editor about select mode now, and whenever the page (re)loads.
   useEffect(() => {
     const send = () =>
@@ -53,7 +67,8 @@ export function Preview({
             className="flex items-center gap-1"
             onSubmit={(e) => {
               e.preventDefault();
-              setPath(typed.startsWith("/") ? typed : `/${typed}`);
+              current.current = typed.startsWith("/") ? typed : `/${typed}`;
+              setOpened((n) => n + 1);
             }}
           >
             <Input
@@ -76,9 +91,9 @@ export function Preview({
           // The one window whose messages count, recorded as the frame is (re)made.
           setPreview(el?.contentWindow ?? null, url);
         }}
-        key={`${version}-${path}`}
+        key={`${version}-${opened}`}
         title="App preview"
-        src={`${url}${path}`}
+        src={`${url}${current.current}`}
         className="h-full w-full border-0"
       />
     </Panel>
