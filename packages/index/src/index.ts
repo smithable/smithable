@@ -22,6 +22,8 @@ export {
   hashRule,
   inspect,
 } from "./project-index.js";
+export type { Answer } from "./questions.js";
+export { answerQuestion, looksLikeQuestion } from "./questions.js";
 export type { SummarySection } from "./summary.js";
 export { summarize, wordsFor } from "./summary.js";
 export type { SummaryOperation } from "./summary-edit.js";

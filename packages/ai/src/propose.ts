@@ -10,9 +10,15 @@ import {
   type ProjectFiles,
   type SpecPlugin,
   validateAuth,
+  validateContent,
   validateSpec,
 } from "@smithable/core";
-import { type ContextSlice, matchRequest } from "@smithable/index";
+import {
+  answerQuestion,
+  type ContextSlice,
+  looksLikeQuestion,
+  matchRequest,
+} from "@smithable/index";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export interface ProposedOperation {
@@ -33,6 +39,8 @@ export type Proposal =
       generator?: string;
     }
   | { kind: "question"; question: string; options: string[]; usage: Usage[] }
+  /** A question about the app, answered rather than applied (docs/design/studio-v2.md §4). */
+  | { kind: "answer"; text: string; concepts: string[]; usage: Usage[]; generator?: string }
   | { kind: "none"; reason: string; usage: Usage[] }
   | { kind: "failed"; message: string; usage: Usage[] };
 
@@ -40,6 +48,7 @@ const SYSTEM = `You change a Smithable app. Smithable apps are described by a sp
 Answer with JSON only:
 - {"kind":"operations","operations":[{"op":"<operation>","args":{…}}]} when the request clearly means one change (one or more operations).
 - {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
+- {"kind":"answer","text":"…"} when the request is a question about the app (who can do what, what something is, whether it is public, what happens when), answered in one to three plain sentences from the app as described; never a change.
 - {"kind":"none","reason":"…"} when no operation can do it. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
 Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. A new field is optional (no "!") unless the request says it must always be filled in; "should have" is not "must".
 If the app already does what is asked, answer {"kind":"none","reason":"Already done: …"}. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
@@ -123,10 +132,11 @@ export function answerSchema(operations: AnyOperation[], strict = true): object 
     type: "object",
     required: ["kind"],
     properties: {
-      kind: { enum: ["operations", "question", "none"] },
+      kind: { enum: ["operations", "question", "answer", "none"] },
       operations: { type: "array", items: item },
       question: { type: "string" },
       options: { type: "array", items: { type: "string" } },
+      text: { type: "string" },
       reason: { type: "string" },
     },
   };
@@ -175,6 +185,7 @@ interface Answer {
   operations?: { op?: string; args?: OperationArgs }[];
   question?: string;
   options?: string[];
+  text?: string;
   reason?: string;
 }
 
@@ -200,6 +211,16 @@ export async function proposeChange(options: {
   const usage: Usage[] = [];
   // Tier 0: a request worded like one of the everyday changes needs no model at all. Its
   // operations get the same dry run and host check; when they do not apply, a model reads it.
+  // Tier 0 for questions: what the spec answers on its own (who can, what is, is it public…).
+  const answered = questionTier(files, options.request);
+  if (answered)
+    return {
+      kind: "answer",
+      text: answered.text,
+      concepts: answered.concepts,
+      usage,
+      generator: answered.rule,
+    };
   const phrased = phraseTier(files, options.request);
   if (phrased) {
     const checked = dryRun(files, phrased.operations);
@@ -242,6 +263,8 @@ export async function proposeChange(options: {
         problem = error instanceof Error ? error.message : String(error);
         break;
       }
+      if (answer.kind === "answer" && answer.text)
+        return { kind: "answer", text: answer.text, concepts: [], usage };
       if (answer.kind === "question" && answer.question)
         return {
           kind: "question",
@@ -282,6 +305,23 @@ function phraseTier(files: ProjectFiles, request: string) {
       ? undefined
       : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
   return matchRequest(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
+}
+
+/** A question about the app the index answers without a model (tier 0). */
+function questionTier(files: ProjectFiles, request: string) {
+  if (!looksLikeQuestion(request)) return undefined;
+  const options = files.plugins ? { plugins: files.plugins } : {};
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
+  if (!ir) return undefined;
+  const auth =
+    files.auth === undefined
+      ? undefined
+      : validateAuth({ path: "smithable.auth.yml", text: files.auth }, ir).auth;
+  const content =
+    files.content === undefined
+      ? undefined
+      : validateContent({ path: "smithable.content.yml", text: files.content }, ir).content;
+  return answerQuestion(ir, request, auth, content);
 }
 
 const NOTHING = "This changes nothing.";
