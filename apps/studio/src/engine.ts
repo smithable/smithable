@@ -7,6 +7,7 @@ import {
   resolvePlugin,
   type SpecIR,
   type SpecPlugin,
+  type ThemeIR,
   type UxIR,
   validateAuth,
   validateContent,
@@ -30,6 +31,7 @@ export function readSpec(
   files: Project["files"],
   specText = files.spec ?? "",
   plugins: SpecPlugin[] = [],
+  themes: ThemeIR[] = [],
 ): Spec & { diagnostics: Diagnostic[] } {
   const auth = files.auth
     ? validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth
@@ -43,7 +45,9 @@ export function readSpec(
     ir && files.content
       ? validateContent({ path: "smithable.content.yml", text: files.content }, ir).content
       : undefined;
-  const ux = ir ? validateUx({ path: "smithable.ux.yml", text: files.ux ?? "" }, ir).ux : undefined;
+  const ux = ir
+    ? validateUx({ path: "smithable.ux.yml", text: files.ux ?? "" }, ir, themes).ux
+    : undefined;
   return {
     ...(ir ? { ir } : {}),
     ...(auth ? { auth } : {}),
@@ -84,12 +88,13 @@ function usePlugins(declared: Project["plugins"] = []): SpecPlugin[] | undefined
   return loaded?.key === key ? loaded.plugins : undefined;
 }
 
-export function useSpec(project?: Pick<Project, "files" | "plugins">): Spec {
+export function useSpec(project?: Pick<Project, "files" | "plugins" | "ownThemes">): Spec {
   const plugins = usePlugins(project?.plugins);
   const files = project?.files;
+  const themes = project?.ownThemes;
   // Until the plugins are in, nothing is validated: their sections would look unknown.
   return useMemo(
-    () => (files && plugins ? readSpec(files, undefined, plugins) : {}),
-    [files, plugins],
+    () => (files && plugins ? readSpec(files, undefined, plugins, themes) : {}),
+    [files, plugins, themes],
   );
 }

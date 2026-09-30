@@ -1,3 +1,4 @@
+import type { ThemeIR } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 
 /** The change trace (ARCHITECTURE §9.7), as `smithable studio` reports it. */
@@ -21,6 +22,8 @@ export interface Project {
   files: { spec?: string; auth?: string; content?: string; ux?: string };
   /** The themes the ux file may name: built in or the project's, each with its picture (an SVG). */
   themes: { name: string; source: "built-in" | "project"; font: string; thumbnail: string }[];
+  /** The project's own themes (themes/<name>.yml), parsed: `theme.preset` may name them. */
+  ownThemes: ThemeIR[];
   /** The project's plugins, which the engine imports from /api/plugins/<name>.mjs. */
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
