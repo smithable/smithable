@@ -20,6 +20,8 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
       return new Intl.NumberFormat().format(Number(value));
     case "bool":
       return value ? "Yes" : "No";
+    case "picture":
+      return typeof value === "object" && value && "alt" in value ? String(value.alt) : "Picture";
     case "date":
       return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
         new Date(`${String(value)}T00:00:00Z`),
@@ -47,6 +49,7 @@ export function toInput(field: FieldUi, value: unknown, timeZone?: string): stri
   if (field.kind === "money") return (Number(value) / 100).toFixed(2);
   if (field.kind === "datetime")
     return wallTime(value instanceof Date ? value : new Date(String(value)), timeZone);
+  if (field.kind === "picture") return typeof value === "object" ? JSON.stringify(value) : "";
   return String(value);
 }
 
@@ -65,6 +68,8 @@ export function fromInput(field: FieldUi, input: string | boolean, timeZone?: st
       return instantOf(text, timeZone);
     case "relation":
       return Number(text);
+    case "picture":
+      return JSON.parse(text);
     default:
       return text;
   }
