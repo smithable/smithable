@@ -3,6 +3,7 @@
 import type { PageIR, PatternKind, PatternOf } from "@smithable/core";
 import { calculatorRoute } from "../calculators.js";
 import type { GenContext } from "../shared.js";
+import { articlesRoutes } from "./articles.js";
 import { calendarRoute } from "./calendar.js";
 import { dashboardRoute } from "./dashboard.js";
 import { dataRoutes } from "./data.js";
@@ -63,6 +64,10 @@ export const PAGE_GENERATORS: {
   calendar: {
     kit: ["src/kit/Calendar.tsx"],
     routes: (page, ctx) => ({ "index.tsx": calendarRoute(page, ctx) }),
+  },
+  articles: {
+    kit: ["src/kit/Articles.tsx"],
+    routes: articlesRoutes,
   },
   data: {
     // An overview and each model's crud routes inside the page; no kit of its own.

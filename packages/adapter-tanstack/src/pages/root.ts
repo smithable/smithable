@@ -9,6 +9,7 @@ import {
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
 import { HEADER, literal, type Texts } from "../shared.js";
+import { publicArticles } from "./articles.js";
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,11 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
   const landings = ir.pages
     .filter((p) => p.pattern.kind === "landing" || p.pattern.kind === "onboarding")
     .map((p) => p.route);
+  // Public articles have the site's frame too, their list and every article under it.
+  const sites = ir.pages.filter((p) => publicArticles(p, { auth })).map((p) => p.route);
+  const framedBySite = sites.length
+    ? `landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`))`
+    : "landingRoutes.includes(pathname)";
   // Each page's route, longest first: the page a path is on names it for custom styles.
   const pageRoutes = [...ir.pages]
     .sort((a, b) => b.route.length - a.route.length || (a.route < b.route ? -1 : 1))
@@ -85,7 +91,7 @@ ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCs
 const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
-${landings.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}
+${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = ${literal(pageRoutes)};
 
@@ -140,8 +146,8 @@ ${
       </head>
       <body data-page={pageOf(pathname)}>
         ${
-          landings.length
-            ? `{landingRoutes.includes(pathname) ? (
+          landings.length || sites.length
+            ? `{${framedBySite} ? (
           children
         ) : (
           <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
