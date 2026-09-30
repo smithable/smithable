@@ -13,8 +13,8 @@ import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import { FieldShapeForm, type Run } from "../builder/ChangeForms";
 import { readSpec, type Spec } from "../engine";
-import { Preview, Trace } from "../shared";
-import { Button, cx, Input, Label, Panel, Select, Tabs } from "../ui";
+import { Trace } from "../shared";
+import { Button, cx, Input, Label, Panel, Select, Tabs, useMedia } from "../ui";
 
 type Tab = "spec" | "operation" | "diff" | "logs" | "preview";
 
@@ -34,6 +34,7 @@ export function Studio({
   version,
   logs,
   onCustomize,
+  previewSlot,
 }: {
   project: Project;
   spec: Spec;
@@ -41,20 +42,24 @@ export function Studio({
   version: number;
   logs: string[];
   onCustomize: (page: string) => void;
+  /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
+  previewSlot: (element: HTMLElement | null) => void;
 }) {
   const [tab, setTab] = useState<Tab>("spec");
+  const framed = useMedia("(min-width: 1024px)");
   const [selected, setSelected] = useState<string>();
   // "Show in smithable.yml": the editor selects the concept's lines.
   const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
   return (
-    // The details sit beside the concept tree on wide screens, under it on narrower ones.
-    <div className="grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200 lg:grid-cols-[240px_320px_1fr]">
-      <div className="grid min-h-0 grid-rows-[1fr_2fr] lg:contents">
+    // The details sit beside the concept tree on very wide screens (the preview takes the right
+    // of the window from lg), under it on narrower ones.
+    <div className="grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200 min-[1800px]:grid-cols-[240px_320px_1fr]">
+      <div className="grid min-h-0 grid-rows-[1fr_2fr] min-[1800px]:contents">
         <Panel title="Concepts">
           <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
         </Panel>
-        <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200 lg:border-t-0 lg:border-l">
+        <div className="grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200 min-[1800px]:border-t-0 min-[1800px]:border-l">
           <Panel title="Details">
             {concept ? (
               <>
@@ -83,7 +88,8 @@ export function Studio({
               ["operation", "Operation"],
               ["diff", "Last change"],
               ["logs", "Logs"],
-              ["preview", "Preview"],
+              // Narrow windows only: from lg the preview has its own column.
+              ...(framed ? [] : [["preview", "Preview"] as [Tab, string]]),
             ]}
             value={tab}
             onChange={setTab}
@@ -103,7 +109,7 @@ export function Studio({
             </pre>
           </section>
         )}
-        {tab === "preview" && <Preview url={project.preview} version={version} />}
+        {tab === "preview" && !framed && <div ref={previewSlot} className="h-full" />}
       </Panel>
     </div>
   );
