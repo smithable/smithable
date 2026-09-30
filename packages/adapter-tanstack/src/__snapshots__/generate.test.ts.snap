@@ -74,6 +74,10 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 
 For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
+## Licences
+
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+
 
 ## Project structure
 
@@ -5454,6 +5458,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: AGENTS.md",
   "scaffold: CLAUDE.md",
   "kit: Dockerfile",
+  "kit: LICENSES/README.md",
+  "kit: LICENSES/shadcn-ui.txt",
   "generated: README.md",
   "kit: drizzle.config.ts",
   "generated: package.json",
@@ -5583,8 +5589,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
-  "Dockerfile": "daba7033 kit",
-  "README.md": "e13e03e8 generated",
+  "Dockerfile": "a0cfcece kit",
+  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/shadcn-ui.txt": "38dd653a kit",
+  "README.md": "91209877 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "d5004d3e generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -5774,6 +5782,10 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
 For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+
+## Licences
+
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
 
 
 ## Project structure
@@ -8214,6 +8226,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: AGENTS.md",
   "scaffold: CLAUDE.md",
   "kit: Dockerfile",
+  "kit: LICENSES/README.md",
+  "kit: LICENSES/shadcn-ui.txt",
   "generated: README.md",
   "kit: drizzle.config.ts",
   "generated: package.json",
@@ -8299,8 +8313,10 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
-  "Dockerfile": "daba7033 kit",
-  "README.md": "22b36cbe generated",
+  "Dockerfile": "a0cfcece kit",
+  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/shadcn-ui.txt": "38dd653a kit",
+  "README.md": "d1de41c1 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "7bc75a08 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -8440,6 +8456,10 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
 For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+
+## Licences
+
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
 
 
 ## Project structure
@@ -11438,6 +11458,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: AGENTS.md",
   "scaffold: CLAUDE.md",
   "kit: Dockerfile",
+  "kit: LICENSES/README.md",
+  "kit: LICENSES/shadcn-ui.txt",
   "generated: README.md",
   "kit: drizzle.config.ts",
   "generated: package.json",
@@ -11530,8 +11552,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
-  "Dockerfile": "daba7033 kit",
-  "README.md": "7fd8819f generated",
+  "Dockerfile": "a0cfcece kit",
+  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/shadcn-ui.txt": "38dd653a kit",
+  "README.md": "d685038a generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "351967e5 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -11678,6 +11702,10 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
 For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+
+## Licences
+
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
 
 
 ## Project structure
@@ -12940,6 +12968,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: AGENTS.md",
   "scaffold: CLAUDE.md",
   "kit: Dockerfile",
+  "kit: LICENSES/README.md",
+  "kit: LICENSES/shadcn-ui.txt",
   "generated: README.md",
   "kit: drizzle.config.ts",
   "generated: package.json",
@@ -13012,8 +13042,10 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "f8b666e8 kit",
   "CLAUDE.md": "141c3f5e scaffold",
-  "Dockerfile": "daba7033 kit",
-  "README.md": "62a59f42 generated",
+  "Dockerfile": "a0cfcece kit",
+  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/shadcn-ui.txt": "38dd653a kit",
+  "README.md": "bb9a4095 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c42c8ab6 generated",
   "playwright.config.ts": "4cec8537 kit",
