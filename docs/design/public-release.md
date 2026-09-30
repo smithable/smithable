@@ -25,8 +25,8 @@ Status: 2026-09-30, Fable. The mechanical part of M16's "open-source preparation
 ## Still to do in the repository before the flip
 
 - ~~A `LICENSES/shadcn-ui.txt` in every generated app~~ — done 2026-10-01: the notice (with `LICENSES/README.md`) is in every app, copied into the container image, and named in the app's README; a test keeps it so and checks that no app file imports a Smithable package.
-- A `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1 is the usual choice; a decision, then a copy).
-- Issue and pull-request templates (a bug needs the spec that shows it and the Smithable version; a change needs `pnpm check`).
+- ~~A `CODE_OF_CONDUCT.md`~~ — done 2026-10-01: Contributor Covenant 2.1, reports to conduct@smithable.ai (a mailbox to create with the others).
+- ~~Issue and pull-request templates~~ — done 2026-10-01: `.github/ISSUE_TEMPLATE/` (a bug asks for the version and the spec that shows it; a change asks for the need and points at the five questions; security goes to SECURITY.md) and `.github/pull_request_template.md` (`pnpm check`, the docs, the two invariants, the sign-off).
 - A pass over the README as a stranger: it is good; the one gap is that "Try it" builds from source, which is right until the packages are published, and should then say `npm install -g smithable`.
 - `CLAUDE.md` stays: it is the best short description of how the repository is worked, for people and agents alike.
 
