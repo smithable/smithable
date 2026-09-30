@@ -628,3 +628,22 @@ test("setApp, setRoles and setPublic build an app's frame from nothing", () => {
     applyOperation({ ...blank, ...page.files }, "setPublic", { pages: ["nowhere"] }),
   ).toMatchObject({ ok: false });
 });
+
+test("a boolean argument is a bare flag on the command line", () => {
+  const op = findOperation("addTheme");
+  if (!op) throw new Error("no addTheme");
+  expect(parseOperationArgs(op, ["forest", "--text", "x", "--use"])).toEqual({
+    name: "forest",
+    text: "x",
+    use: true,
+  });
+  expect(parseOperationArgs(op, ["forest", "--use", "--text", "x"])).toEqual({
+    name: "forest",
+    text: "x",
+    use: true,
+  });
+  expect(parseOperationArgs(op, ["forest", "--use", "false"])).toEqual({
+    name: "forest",
+    use: false,
+  });
+});

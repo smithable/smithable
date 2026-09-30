@@ -130,7 +130,7 @@ Tailwind's `@apply` works there too, since the file is in the app's stylesheet. 
 
 ## 3. Themes as files
 
-Built 2026-09-30 (Fable, core and CLI): `packages/core/src/theme.ts` and `colour.ts`, `themes/<name>.yml` read by `loadSpec`, `smithable themes`, the daemon's `/api/project` lists every theme with its thumbnail for the Look tab's cards (Opus). Left of §3: "Add a theme" in the Look tab (a file dropped or pasted, saved as `themes/<name>.yml` through the daemon) and npm packages of themes.
+Built 2026-09-30 (Fable, core and CLI): `packages/core/src/theme.ts` and `colour.ts`, `themes/<name>.yml` read by `loadSpec`, `smithable themes`, the daemon's `/api/project` lists every theme with its thumbnail for the Look tab's cards (Opus). 2026-10-01: `addTheme <name> --text @file [--use]`, an operation (`Editors.themes`; the host writes the result's `added` files and commits them with the rest, so `undo` removes the theme); the Look tab's "Add a theme" posts it to `/api/op` like any operation (Opus). Left of §3: npm packages of themes.
 
 ### 3.1 A theme is data
 
