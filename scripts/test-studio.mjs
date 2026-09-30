@@ -275,6 +275,13 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
 
+  await step("a question about the app is answered from the spec, not applied", async () => {
+    const before = (await project()).files.spec;
+    await page.getByLabel("Describe a change").fill("Who can add orders?");
+    await page.getByRole("button", { name: "Make the change" }).click();
+    await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 });
+    if ((await project()).files.spec !== before) throw new Error("the spec changed");
+  });
   await step(
     "a change that deletes data is proposed first, and opens in a form with its values filled in",
     async () => {
@@ -388,16 +395,24 @@ try {
     async () => {
       await openPreview("/orders");
       await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 });
-      // Navigating inside the app (opening an order) shows in the address.
-      await preview.getByRole("button", { name: "ORD-1008" }).click();
-      await page.waitForFunction(
-        () =>
-          /^\/orders\/\d+$/.test(
-            document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
-          ),
-        null,
-        { timeout: 10000 },
-      );
+      // Navigating inside the app (opening an order) shows in the address. The dev server
+      // hydrates the page a moment after it shows, so a click may land before the app listens.
+      for (let attempt = 1; ; attempt++) {
+        await preview.getByRole("button", { name: "ORD-1008" }).click();
+        try {
+          await page.waitForFunction(
+            () =>
+              /^\/orders\/\d+$/.test(
+                document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
+              ),
+            null,
+            { timeout: 5000 },
+          );
+          break;
+        } catch (error) {
+          if (attempt === 4) throw error;
+        }
+      }
       const opened = await page.getByLabel("Preview address").inputValue();
       await page.locator("label", { hasText: /^Code$/ }).click();
       await page.getByRole("navigation", { name: "Concepts" }).waitFor();
