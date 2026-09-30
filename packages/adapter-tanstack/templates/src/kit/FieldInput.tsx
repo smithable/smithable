@@ -1,4 +1,5 @@
 // Smithable app kit: the input control for one field, chosen by its kind.
+import { Button } from "#/components/ui/button";
 import { Checkbox, Input, NativeSelect, Textarea } from "#/components/ui/input";
 import { Combobox } from "./Combobox";
 import type { FieldUi, Options } from "./model";
@@ -43,9 +44,27 @@ export function FieldInput({
     "aria-invalid": invalid || undefined,
     "aria-describedby": describedBy,
   };
+  if (field.kind === "bool" && field.control === "radio") {
+    return (
+      <Radios
+        {...common}
+        value={value === true ? "yes" : value === false ? "no" : ""}
+        choices={[
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+        ]}
+        onChange={(v) => onChange(v === "yes")}
+      />
+    );
+  }
   if (field.kind === "bool") {
     return (
-      <Checkbox {...common} checked={value === true} onChange={(e) => onChange(e.target.checked)} />
+      <Checkbox
+        {...common}
+        role={field.control === "switch" ? "switch" : undefined}
+        checked={value === true}
+        onChange={(e) => onChange(e.target.checked)}
+      />
     );
   }
   const text = typeof value === "string" ? value : "";
@@ -53,8 +72,93 @@ export function FieldInput({
     const Control = field.input;
     return <Control {...common} value={text} record={record} onChange={onChange} />;
   }
-  if (field.kind === "text" || field.kind === "markdown") {
+  if (field.kind === "text" || field.kind === "markdown" || field.control === "textarea") {
     return <Textarea {...common} value={text} onChange={(e) => onChange(e.target.value)} />;
+  }
+  // A number as a slider (the value shown beside it) or a stepper.
+  if (field.control === "slider" && field.min !== undefined && field.max !== undefined) {
+    const step = field.kind === "int" ? 1 : Math.max((field.max - field.min) / 100, 0.01);
+    return (
+      <div className="flex items-center gap-3" data-part="slider">
+        <input
+          {...common}
+          type="range"
+          min={field.min}
+          max={field.max}
+          step={step}
+          value={text === "" ? field.min : Number(text)}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-2 grow accent-primary"
+        />
+        <output htmlFor={id} className="min-w-12 text-right text-sm tabular-nums">
+          {text === "" ? "—" : text}
+        </output>
+      </div>
+    );
+  }
+  if (field.control === "stepper") {
+    const n = text === "" ? undefined : Number(text);
+    const step = (by: number) => {
+      const next = (n ?? field.min ?? 0) + by;
+      if (field.min !== undefined && next < field.min) return;
+      if (field.max !== undefined && next > field.max) return;
+      onChange(String(next));
+    };
+    return (
+      <div className="flex items-center gap-2" data-part="stepper">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Less"
+          onClick={() => step(-1)}
+        >
+          −
+        </Button>
+        <Input
+          {...common}
+          type="number"
+          inputMode="numeric"
+          min={field.min}
+          max={field.max}
+          value={text}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-24 text-center"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="More"
+          onClick={() => step(1)}
+        >
+          +
+        </Button>
+      </div>
+    );
+  }
+  if (field.control === "radio" && field.choices) {
+    return (
+      <Radios
+        {...common}
+        value={text}
+        choices={field.choices}
+        required={field.required}
+        onChange={onChange}
+      />
+    );
+  }
+  if ((field.kind === "relation" || field.kind === "user") && field.control === "select") {
+    return (
+      <NativeSelect {...common} value={text} onChange={(e) => onChange(e.target.value)}>
+        {!field.required && <option value="">—</option>}
+        {(options?.[field.name] ?? []).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </NativeSelect>
+    );
   }
   if (field.kind === "relation" || field.kind === "user") {
     return (
@@ -90,5 +194,50 @@ export function FieldInput({
       value={text}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+}
+
+/** A choice as radio buttons: a small choice reads at a glance. */
+function Radios({
+  id,
+  name,
+  value,
+  choices,
+  required,
+  onChange,
+  ...aria
+}: {
+  id: string;
+  name: string;
+  value: string;
+  choices: { value: string; label: string }[];
+  required?: boolean;
+  onChange: (value: string) => void;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      id={id}
+      {...aria}
+      className="flex flex-wrap gap-x-5 gap-y-2"
+      data-part="radios"
+    >
+      {choices.map((choice) => (
+        <label key={choice.value} className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name={name}
+            value={choice.value}
+            checked={value === choice.value}
+            required={required}
+            onChange={() => onChange(choice.value)}
+            className="size-4 accent-primary"
+          />
+          {choice.label}
+        </label>
+      ))}
+    </div>
   );
 }

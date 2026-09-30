@@ -24,6 +24,8 @@ export interface PageContent {
   sections?: Record<string, SectionContent>;
   /** A calculator page's fields' labels and help. */
   fields?: Record<string, FieldContent>;
+  /** The headings of a form's sections (smithable.ux.yml), by section name. */
+  formSections?: Record<string, { title?: string }>;
 }
 
 export interface SectionContent {
@@ -284,6 +286,30 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
     }
     if (entry.key === "fields" && calculatorFields) {
       result.fields = readFieldTexts(ctx, entry.value, `the fields of ${where}`, calculatorFields);
+      continue;
+    }
+    if (
+      entry.key === "form" &&
+      (page?.pattern.kind === "crud" ||
+        page?.pattern.kind === "settings" ||
+        page?.pattern.kind === "onboarding")
+    ) {
+      // form: { sections: { contact: { title: How to reach them } } }
+      const formWhere = `"form" of ${where}`;
+      const form = checkKeys(ctx, mapEntries(ctx, entry.value, formWhere) ?? [], formWhere, {
+        allowed: ["sections"],
+      });
+      const sections = form.find((e) => e.key === "sections");
+      if (sections) {
+        result.formSections = {};
+        for (const section of mapEntries(ctx, sections.value, `"sections" of ${formWhere}`) ?? [])
+          result.formSections[section.key] = readTexts(
+            ctx,
+            section.value,
+            `section "${section.key}" of ${formWhere}`,
+            ["title"],
+          );
+      }
       continue;
     }
     const kind = parts[entry.key];
