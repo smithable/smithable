@@ -19,7 +19,14 @@ interface Pending {
 export function App() {
   const [project, setProject] = useState<Project>();
   const [mode, setMode] = useState<Mode>(() => (localStorage.getItem("mode") as Mode) ?? "builder");
-  const [message, setMessage] = useState<{ ok: boolean; text: string }>();
+  // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
+  const [message, setMessage] = useState<{ ok: boolean; text: string; change?: boolean }>();
+  const [holding, setHolding] = useState(false);
+  useEffect(() => {
+    if (!message?.ok || holding) return;
+    const timer = setTimeout(() => setMessage(undefined), 8000);
+    return () => clearTimeout(timer);
+  }, [message, holding]);
   const [pending, setPending] = useState<Pending>();
   const [version, setVersion] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
@@ -79,7 +86,7 @@ export function App() {
       result.ok && mode === "builder" && spec.ir
         ? describeChange(name, args, spec.ir, spec.content)
         : undefined;
-    setMessage({ ok: result.ok, text: plain ?? summary });
+    setMessage({ ok: result.ok, text: plain ?? summary, change: result.ok });
     return result.ok;
   };
 
@@ -172,7 +179,7 @@ export function App() {
                 checked={mode === m}
                 onChange={() => switchMode(m)}
               />
-              {m === "builder" ? "Builder" : "Studio"}
+              {m === "builder" ? "No code" : "Code"}
             </label>
           ))}
         </fieldset>
@@ -193,8 +200,14 @@ export function App() {
         </div>
       </header>
       {(message || pending) && (
+        // Hovering or focusing the notice keeps it while it is read.
+        // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
         <div
           role={message?.ok === false || pending ? "alert" : "status"}
+          onMouseEnter={() => setHolding(true)}
+          onMouseLeave={() => setHolding(false)}
+          onFocus={() => setHolding(true)}
+          onBlur={() => setHolding(false)}
           className={cx(
             "flex items-center gap-3 border-b px-4 py-2 text-sm",
             pending
@@ -216,6 +229,11 @@ export function App() {
                 Cancel
               </Button>
             </>
+          ) : message?.change ? (
+            // The change is the latest one, so undo takes back exactly it.
+            <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
+              Undo this change
+            </Button>
           ) : (
             <Button variant="ghost" onClick={() => setMessage(undefined)}>
               Dismiss

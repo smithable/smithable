@@ -95,6 +95,12 @@ describe("the seven benchmark tasks", () => {
     expect(ops("Show customers in a calendar")).toEqual(calendar);
   });
 
+  test("Add a custom action by what it is for", () => {
+    expect(ops("Add an action to archive customers")).toEqual([
+      { op: "addAction", args: { action: "archiveCustomers", intent: "Archive customers." } },
+    ]);
+  });
+
   test("Add an admin page, for every model or some", () => {
     expect(ops("Add an admin page")).toEqual([{ op: "addDataPage", args: {} }]);
     expect(ops("Add a page to manage all data")).toEqual([{ op: "addDataPage", args: {} }]);
