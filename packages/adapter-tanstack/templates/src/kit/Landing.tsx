@@ -92,7 +92,7 @@ const sectionHooks = (texts: string | undefined) => ({
 const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
-function Section({
+export function Section({
   texts,
   id,
   title,
@@ -258,7 +258,15 @@ export function RecordCards({
   id: string;
   title?: string;
   text?: string;
-  cards: { key: string | number; title: string; text?: string; badge?: string }[];
+  cards: {
+    key: string | number;
+    title: string;
+    text?: string;
+    badge?: string;
+    /** Where the card opens, e.g. its article. */
+    href?: string;
+    picture?: { src: string; alt: string; width: number; height: number };
+  }[];
   texts?: string;
 }) {
   if (cards.length === 0) return null;
@@ -267,16 +275,45 @@ export function RecordCards({
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <li key={card.key}>
-            <Card className="flex h-full flex-col gap-2 p-card">
-              <h3 className="text-lg font-semibold">{card.title}</h3>
-              {card.text && <p className="flex-1 text-muted-foreground">{card.text}</p>}
-              {card.badge && (
-                <p className="mt-2">
-                  <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
-                    {card.badge}
-                  </span>
-                </p>
+            <Card
+              className={cn(
+                "relative flex h-full flex-col gap-2 overflow-hidden",
+                card.href && "hover:bg-accent/40",
               )}
+            >
+              {card.picture && (
+                <img
+                  src={card.picture.src}
+                  alt={card.picture.alt}
+                  width={card.picture.width}
+                  height={card.picture.height}
+                  loading="lazy"
+                  className="aspect-[3/2] w-full object-cover"
+                />
+              )}
+              <div className="flex flex-1 flex-col gap-2 p-card">
+                <h3 className="text-lg font-semibold">
+                  {card.href ? (
+                    // The whole card opens it; the link is the title.
+                    <a
+                      href={card.href}
+                      className="outline-none after:absolute after:inset-0 focus-visible:underline"
+                    >
+                      {card.title}
+                    </a>
+                  ) : (
+                    card.title
+                  )}
+                </h3>
+                {card.text && <p className="flex-1 text-muted-foreground">{card.text}</p>}
+                {card.badge && (
+                  <p className="mt-2">
+                    <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
+                      {card.badge}
+                    </span>
+                  </p>
+                )}
+              </div>
             </Card>
           </li>
         ))}

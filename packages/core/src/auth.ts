@@ -434,6 +434,27 @@ function checkAgainstSpec(
         );
     }
   }
+  // A public blog of a model with a draft state shows its drafts, unless a "where" keeps them.
+  for (const { name, at } of publicNodes.pages ?? []) {
+    const page = ir.pages.find((p) => p.id === name);
+    if (page?.pattern.kind !== "articles") continue;
+    const model = ir.models.find((m) => m.name === (page.pattern as { model: string }).model);
+    const state = model?.fields.find(
+      (f) => f.type.kind === "choice" || (f.type.kind === "scalar" && f.type.name === "bool"),
+    );
+    if (
+      model &&
+      state &&
+      auth.public.read.includes(model.name) &&
+      !auth.public.readWhere[model.name]
+    )
+      ctx.warning(
+        at,
+        "visitors-read-drafts",
+        `Visitors can read every ${model.name} on the ${name} page, drafts too: ${model.name} has "${state.name}" but its public read has no "where".`,
+        `Write "- ${model.name}: { where: { ${state.name}: ${state.type.kind === "choice" ? state.type.values.at(-1) : "true"} } }" under "public: read".`,
+      );
+  }
   const usersPage = ir.pages.find((p) => p.pattern.kind === "users");
   if (auth.signIn !== "none") {
     if (!auth.signIn.selfSignUp && !usersPage)
