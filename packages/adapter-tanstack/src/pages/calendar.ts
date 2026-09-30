@@ -11,6 +11,7 @@ import {
   pascal,
   USER_MODEL,
 } from "@smithable/core";
+import { reserveElement } from "../data.js";
 import {
   attr,
   dataRoute,
@@ -44,7 +45,8 @@ function recordPageId(model: string, ir: GenContext["ir"]): string | undefined {
   )?.id;
 }
 
-export function calendarRoute(page: CalendarPage, { ir, t }: GenContext): string {
+export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
+  const { ir, t } = ctx;
   const { pattern } = page;
   const model = modelNamed(ir, pattern.model);
   const n = names(model, t);
@@ -65,6 +67,8 @@ export function calendarRoute(page: CalendarPage, { ir, t }: GenContext): string
     .add("#/kit/AppShell", "PageHeader")
     .add("#/kit/Calendar", "Calendar", "calendarRange");
   imports.add("#/lib/viewer.server", "currentViewer");
+  // Places on a record (a session's bookings): its panel lets people book one.
+  const reserve = reserveElement(model, ctx, (m, ...ns) => imports.add(m, ...ns), "id");
 
   // How long a record lasts: its end, a duration here or one reference away, else an hour (or the day).
   let lengths = "";
@@ -157,7 +161,12 @@ function ${component}() {
         items={items}
         timeZone={app.timeZone}
         dateOnly={${dateOnly}}
-        newLabel=${attr(`New ${n.label.toLowerCase()}`)}
+        newLabel=${attr(`New ${n.label.toLowerCase()}`)}${
+          reserve
+            ? `
+        details={(id) => ${reserve}}`
+            : ""
+        }
         onNavigate={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: next })}${
           opens
             ? `
