@@ -28,7 +28,7 @@ export function formatNumber(
 
 export function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="space-y-2 p-card">
+    <Card data-kit="tile" className="space-y-2 p-card">
       <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
       <p className="text-3xl font-bold tabular-nums">{value}</p>
     </Card>
@@ -50,7 +50,7 @@ export function BarChart({
   const max = Math.max(...bars.map((b) => b.value), 1);
   const month = new Intl.DateTimeFormat(undefined, { month: "short", timeZone: "UTC" });
   return (
-    <Card className="p-card">
+    <Card data-kit="tile" className="p-card">
       <h2 className="font-semibold">{label}</h2>
       {bars.length === 0 ? (
         <p className="mt-4 text-muted-foreground">No activity in this period.</p>

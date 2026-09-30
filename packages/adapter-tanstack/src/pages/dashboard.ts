@@ -160,7 +160,7 @@ function ${component}() {
   return (
     <>
       <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
-      <div className="space-y-6">
+      <div data-kit="dashboard" className="space-y-6">
       ${blocks.join("\n      ")}
       </div>
     </>
