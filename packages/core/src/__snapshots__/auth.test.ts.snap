@@ -20,6 +20,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
       "Instructor",
       "Session",
     ],
+    "readWhere": {},
   },
   "roles": [
     {
@@ -52,6 +53,7 @@ exports[`the examples > crm is valid with its auth file 1`] = `
     "create": [],
     "pages": [],
     "read": [],
+    "readWhere": {},
   },
   "roles": [
     {
@@ -88,6 +90,7 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
       "home",
     ],
     "read": [],
+    "readWhere": {},
   },
   "roles": [
     {

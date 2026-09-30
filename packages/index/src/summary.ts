@@ -248,7 +248,13 @@ function access(auth: AuthIR): string[] {
   }
   const open = [
     ...auth.public.pages.map((p) => `the ${humanize(p).toLowerCase()} page`),
-    ...auth.public.read.map((m) => `reading ${humanize(plural(m)).toLowerCase()}`),
+    ...auth.public.read.map((m) => {
+      const where = Object.entries(auth.public.readWhere[m] ?? {});
+      const only = where.length
+        ? ` where ${where.map(([k, v]) => `${humanize(k).toLowerCase()} is ${typeof v === "boolean" ? (v ? "yes" : "no") : humanize(v).toLowerCase()}`).join(" and ")}`
+        : "";
+      return `reading ${humanize(plural(m)).toLowerCase()}${only}`;
+    }),
     ...auth.public.create.map((m) => `adding ${humanize(plural(m)).toLowerCase()}`),
   ];
   if (open.length) sentences.push(`Open to anyone without signing in: ${list(open)}.`);
