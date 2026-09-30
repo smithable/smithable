@@ -32,6 +32,7 @@ export { formatFormula, parseFormula } from "./formula.js";
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
+  isPicture,
   SCALAR_TYPES,
   SECTION_KINDS,
   storageOf,
