@@ -125,6 +125,14 @@ export function listParts(
   const columns = presentation?.columns?.map((name) => keyOf(model, name));
   const key = (name: string) => keyOf(model, name);
   const below = Object.entries(presentation?.below ?? {}).map(([c, f]) => [key(c), key(f)]);
+  // The list's order until someone sorts it, and cards instead of a table on wide screens.
+  const sort = presentation?.sort
+    ? {
+        field: key(presentation.sort.replace(/^-/, "")),
+        descending: presentation.sort.startsWith("-"),
+      }
+    : undefined;
+  const cards = presentation?.view === "cards";
   // Inside a data page without a search, the list still loads the newest records only.
   const capped = within && !search;
 
@@ -161,6 +169,7 @@ export function listParts(
   view.add("#/generated/app", "app").add(n.module, n.ui);
   if (actions.length) view.add("#/kit/access", "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
+  if (sort) view.add("#/kit/model", "sortRows");
   if (search) view.add("#/kit/SearchBox", "SearchBox");
 
   const newest = `list${pascal(plural(model.name))}`;
@@ -201,7 +210,7 @@ ${
 }${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
         ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
-        rows={rows}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
+        rows={${sort ? `sortRows(rows, ${JSON.stringify(sort.field)}${sort.descending ? ", true" : ""})` : "rows"}}${cards ? '\n        view="cards"' : ""}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
       />
