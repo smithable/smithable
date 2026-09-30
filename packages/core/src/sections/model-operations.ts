@@ -1,4 +1,4 @@
-import type { YamlEditor } from "../edit.js";
+import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula } from "../formula.js";
 import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
 import {
@@ -198,12 +198,75 @@ const removeField: Operation<{ model: string; field: string }> = {
   },
 };
 
+const setCapacity: Operation<{
+  model: string;
+  per: string;
+  max?: string;
+  where?: Record<string, string>;
+}> = {
+  name: "setCapacity",
+  summary:
+    'Limit how many records of a model each referenced record may have, e.g. a session\'s bookings up to its capacity ("none" as per removes the limit).',
+  schema: {
+    type: "object",
+    required: ["model", "per"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      per: refTo(
+        { ref: "field", model: "model", label: "Per" },
+        {
+          description:
+            'A required reference of the model, e.g. session; "none" removes the capacity.',
+        },
+      ),
+      max: {
+        type: "string",
+        description:
+          'A whole number, or a whole-number field of the referenced record, e.g. "session.capacity".',
+      },
+      where: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description: 'Only records with these values count, e.g. { "status": "confirmed" }.',
+      },
+    },
+  },
+  positional: ["model", "per", "max", "...where"],
+  describe: ({ model, per, max }) =>
+    per === "none" ? `Remove the capacity of ${model}` : `Limit ${model} to ${max} per ${per}`,
+  destructive: () => false,
+  apply({ spec }, { model, per, max, where }, ir) {
+    if (!ir.models.some((m) => m.name === model))
+      throw new OperationError(`There is no model named "${model}".`);
+    const path = ["models", model, "capacity"];
+    if (per === "none") {
+      if (spec.has(path)) spec.removeAndPrune(path, 0);
+      return [];
+    }
+    if (max === undefined)
+      throw new OperationError('Say "max": a whole number, or a field like session.capacity.');
+    const value: Record<string, YamlValue> = { per, max: /^\d+$/.test(max) ? Number(max) : max };
+    const conditions = Object.fromEntries(
+      Object.entries(where ?? {}).map(([k, v]) => [
+        k,
+        v === "true" ? true : v === "false" ? false : v,
+      ]),
+    );
+    if (Object.keys(conditions).length) value.where = conditions;
+    if (spec.has(path)) spec.set(path, value);
+    else spec.add(["models", model], "capacity", value);
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
   addModel,
   addField,
   changeField,
   renameField,
   removeField,
+  setCapacity,
 ];
 
 /**

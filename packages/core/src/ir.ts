@@ -44,6 +44,17 @@ export interface ModelIR extends SemanticText {
   ownedBy?: string;
   /** Exceptions to the default access in smithable.auth.yml: roles, or "owner". */
   access?: ModelAccessIR;
+  /** At most `max` records per record `per` refers to (a booking's places in a session). */
+  capacity?: CapacityIR;
+}
+
+export interface CapacityIR {
+  /** A required reference of the model. */
+  per: string;
+  /** A whole number, or a whole-number field of the referenced record ("session.capacity"). */
+  max: number | string;
+  /** Only records with these choice or yes/no values count. */
+  where?: Record<string, string | boolean>;
 }
 
 export const ACCESS_OPERATIONS = ["read", "create", "write", "delete"] as const;

@@ -84,6 +84,23 @@ export function summarize(
       const verb = VERBS[op as keyof typeof VERBS];
       sentences.push(`Only ${who(roles)} can ${verb} ${pluralLabel(model).toLowerCase()}.`);
     }
+    if (model.capacity) {
+      const per = model.fields.find((f) => f.name === model.capacity?.per);
+      const target = per?.type.kind === "relation" ? per.type.model : model.capacity.per;
+      const limit =
+        typeof model.capacity.max === "number"
+          ? String(model.capacity.max)
+          : `the ${humanize(target).toLowerCase()}'s ${humanize(model.capacity.max.split(".")[1] ?? "").toLowerCase()}`;
+      const counted = Object.entries(model.capacity.where ?? {})
+        .map(
+          ([k, v]) =>
+            `${humanize(k).toLowerCase()} ${typeof v === "boolean" ? (v ? "yes" : "no") : humanize(v).toLowerCase()}`,
+        )
+        .join(" and ");
+      sentences.push(
+        `At most ${limit} ${pluralLabel(model).toLowerCase()} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
+      );
+    }
     for (const rule of model.rules ?? []) sentences.push(`Rule: ${rule.text}`);
     sections.push({
       concept: `model:${model.name}`,
