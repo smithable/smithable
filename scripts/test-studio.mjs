@@ -424,6 +424,31 @@ try {
       .getByText("Undid: Customers: added a loyalty code (unique)")
       .waitFor({ timeout: 60000 });
   });
+  await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
+    const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
+    await page.getByRole("button", { name: "Your app", exact: true }).first().click();
+    await page.getByRole("tab", { name: "Look" }).click();
+    const look = (name) => page.getByRole("region", { name });
+    await look("Font and density").getByRole("button", { name: "Comfortable" }).click();
+    await look("Font and density")
+      .getByRole("button", { name: "Comfortable", pressed: true })
+      .waitFor({ timeout: 60000 });
+    await look("Colours of choices").getByLabel("Colour of Draft").first().selectOption("warning");
+    await trace.getByText(/draft/i).first().waitFor({ timeout: 60000 });
+    await look("Pages").getByLabel("Icon of Orders").selectOption("truck");
+    await trace.getByText(/truck/i).first().waitFor({ timeout: 60000 });
+    if (!/icon: truck/.test(ux())) throw new Error(`no icon in smithable.ux.yml:\n${ux()}`);
+    const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
+    await columns
+      .getByRole("button", { name: /^Hide / })
+      .last()
+      .click();
+    await columns
+      .getByRole("button", { name: /^Show / })
+      .first()
+      .waitFor({ timeout: 60000 });
+    await page.getByRole("tab", { name: "Your app" }).click();
+  });
 
   await step(
     "a landing page and a contact section, made in Builder, show in the preview",
