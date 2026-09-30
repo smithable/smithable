@@ -139,18 +139,27 @@ export const ${reserveNames(model).places} = createServerFn()
 export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) =>
-    ${n.data}.create(await currentViewer(), { ${capacity.per}Id: id } as ${n.values}),
+    ${n.data}.create(await writer(), { ${capacity.per}Id: id } as ${n.values}),
   );
 `
       : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
-${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { currentViewer } from "#/lib/viewer.server";
+${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
 
 /** ${model.name} records as the kit reads them. */
 export type ${model.name}Row = ${rowType};
@@ -181,15 +190,15 @@ export const ${n.get} = createServerFn()
 ${options}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
-  .handler(async ({ data }) => ${n.data}.create(await currentViewer(), data));
+  .handler(async ({ data }) => ${n.data}.create(await writer(), data));
 
 export const ${n.update} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: ${n.schema} }))
-  .handler(async ({ data }) => ${n.data}.update(await currentViewer(), data.id, data.values));
+  .handler(async ({ data }) => ${n.data}.update(await writer(), data.id, data.values));
 
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data: id }) => ${n.data}.remove(await currentViewer(), id));
+  .handler(async ({ data: id }) => ${n.data}.remove(await writer(), id));
 ${reservation}`;
 }
 
