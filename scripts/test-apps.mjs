@@ -366,9 +366,9 @@ async function bookingFlow(dir, base) {
     const title = (await session.locator("span").first().innerText()).trim();
     await session.click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
-    await panel.getByRole("button", { name: "Book a place" }).click();
+    await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 });
-    await panel.getByText(/^Full$/).waitFor();
+    await panel.getByText(/^No mats left$/).waitFor();
     await open(page, `${base}/my-bookings`);
     await page.locator("main tbody tr").first().waitFor({ timeout: 10000 });
     if ((await page.locator("main tbody tr").count()) !== 1)
@@ -378,8 +378,8 @@ async function bookingFlow(dir, base) {
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
     await page.waitForURL(/\/sessions\/\d+$/);
-    await page.getByText(/^Full$/).waitFor({ timeout: 10000 });
-    if (await page.getByRole("button", { name: "Book a place" }).count())
+    await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 });
+    if (await page.getByRole("button", { name: "Book a mat" }).count())
       throw new Error("a full session offers a place");
     await page.getByLabel("Capacity").fill("0");
     await page.getByRole("button", { name: "Save changes" }).click();
@@ -390,10 +390,10 @@ async function bookingFlow(dir, base) {
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
-    await panel.getByRole("button", { name: "Cancel booking" }).click();
+    await panel.getByRole("button", { name: "Cancel my booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
-    await panel.getByRole("button", { name: "Book a place" }).waitFor();
+    await panel.getByRole("button", { name: "Book a mat" }).waitFor();
     console.log(
       "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again",
     );
