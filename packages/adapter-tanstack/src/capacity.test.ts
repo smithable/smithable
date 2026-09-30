@@ -3,6 +3,7 @@ import {
   emptyContent,
   type SpecIR,
   validateAuth,
+  validateContent,
   validateSpec,
 } from "@smithable/core";
 import { expect, test } from "vitest";
@@ -76,7 +77,7 @@ test("the reservation block: a session's page books and cancels through the data
   expect(module).toContain("export const bookingPlaces = createServerFn()");
   expect(module).toContain("if (!sessionData.canRead(viewer, id)) return null;");
   expect(module).toContain(
-    "bookingData.create(await currentViewer(), { sessionId: id } as BookingValues)",
+    "bookingData.create(await writer(), { sessionId: id } as BookingValues)",
   );
   const page = file("src/routes/sessions/$id.tsx");
   expect(page).toContain(
@@ -95,5 +96,19 @@ test("without sign-in there is no one to book: no block and no kit file", () => 
   expect(open.some((f) => f.path === "src/kit/Reserve.tsx")).toBe(false);
   expect(open.find((f) => f.path === "src/routes/sessions/$id.tsx")?.content).not.toContain(
     "Reserve",
+  );
+});
+
+test("the block's words come from the content file", () => {
+  const content = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: "smithableContent: 0.1\nmodels:\n  Booking:\n    reserve: { book: Book a mat, full: No mats left }\n",
+    },
+    ir,
+  ).content;
+  const app = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
+  expect(app.find((f) => f.path === "src/routes/sessions/$id.tsx")?.content).toContain(
+    'cancel={deleteBooking} bookLabel="Book a mat" fullLabel="No mats left" />',
   );
 });

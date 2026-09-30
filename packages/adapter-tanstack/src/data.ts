@@ -46,7 +46,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     pluralLabel: n.pluralLabel,
     titleField: titleField(model),
     columns: shown
-      .filter((f) => !(f.type.kind === "scalar" && f.type.name === "text"))
+      .filter((f) => !(f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name)))
       .slice(0, 5)
       .map(dataKey),
     fields: shown.map((field) => ({
@@ -139,18 +139,27 @@ export const ${reserveNames(model).places} = createServerFn()
 export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) =>
-    ${n.data}.create(await currentViewer(), { ${capacity.per}Id: id } as ${n.values}),
+    ${n.data}.create(await writer(), { ${capacity.per}Id: id } as ${n.values}),
   );
 `
       : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
-${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { currentViewer } from "#/lib/viewer.server";
+${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
 
 /** ${model.name} records as the kit reads them. */
 export type ${model.name}Row = ${rowType};
@@ -181,15 +190,15 @@ export const ${n.get} = createServerFn()
 ${options}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
-  .handler(async ({ data }) => ${n.data}.create(await currentViewer(), data));
+  .handler(async ({ data }) => ${n.data}.create(await writer(), data));
 
 export const ${n.update} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: ${n.schema} }))
-  .handler(async ({ data }) => ${n.data}.update(await currentViewer(), data.id, data.values));
+  .handler(async ({ data }) => ${n.data}.update(await writer(), data.id, data.values));
 
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data: id }) => ${n.data}.remove(await currentViewer(), id));
+  .handler(async ({ data: id }) => ${n.data}.remove(await writer(), id));
 ${reservation}`;
 }
 
@@ -222,7 +231,7 @@ export function reserveElement(
   const r = reserveNames(booked);
   add(bn.module, r.places, r.book, bn.remove);
   add("#/kit/Reserve", "Reserve");
-  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}} />`;
+  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}}${t.reserve(booked)} />`;
 }
 
 /** The reservation block's server functions for a model with a capacity, e.g. bookingPlaces. */
@@ -592,6 +601,9 @@ ${
 `;
 }
 
+/** A field written as Markdown. */
+export const isMarkdown = (f: FieldIR) => f.type.kind === "scalar" && f.type.name === "markdown";
+
 export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux: UxIR) {
   const tones = ux.tones[`${model.name}.${field.name}`] ?? {};
   const isUser = field.type.kind === "relation" && field.type.model === USER_MODEL;
@@ -619,6 +631,7 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
     ...(field.default !== undefined
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
       : {}),
+    ...(kind === "markdown" ? { input: code("MarkdownEditor") } : {}),
   };
 }
 
@@ -629,14 +642,18 @@ export const VISITOR_ROWS = 10_000;
  * Longest texts by default, unless the spec gives a `max`: a line, and a longer text; shorter
  * where visitors write it (a contact form's message).
  */
-export const TEXT_MAX = { string: 200, text: 10_000, publicText: 2_000 };
+export const TEXT_MAX = { string: 200, text: 10_000, markdown: 50_000, publicText: 2_000 };
 
 /** A text's length rules: required (not only spaces), `min` and `max` characters. */
 export function textBounds(field: FieldIR, visitors = false): string {
-  const long = visitors ? TEXT_MAX.publicText : TEXT_MAX.text;
+  const long = (max: number) => (visitors ? TEXT_MAX.publicText : max);
   const max =
     field.max ??
-    (field.type.kind === "scalar" && field.type.name === "text" ? long : TEXT_MAX.string);
+    (field.type.kind === "scalar" && field.type.name === "text"
+      ? long(TEXT_MAX.text)
+      : field.type.kind === "scalar" && field.type.name === "markdown"
+        ? long(TEXT_MAX.markdown)
+        : TEXT_MAX.string);
   const min = field.min ?? (field.required ? 1 : 0);
   return `${field.required ? ".trim()" : ""}${min > 0 ? `.min(${min}, ${JSON.stringify(min === 1 ? "Required" : `At least ${min} characters`)})` : ""}.max(${max}, "At most ${max.toLocaleString("en")} characters")`;
 }
@@ -658,6 +675,7 @@ export function refinement(field: FieldIR, visitors = false): string | undefined
       return `(s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")`;
     case "string":
     case "text":
+    case "markdown":
       return `(s) => s${textBounds(field, visitors)}`;
     case "int":
     case "decimal":

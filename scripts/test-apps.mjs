@@ -366,9 +366,9 @@ async function bookingFlow(dir, base) {
     const title = (await session.locator("span").first().innerText()).trim();
     await session.click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
-    await panel.getByRole("button", { name: "Book a place" }).click();
+    await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 });
-    await panel.getByText(/^Full$/).waitFor();
+    await panel.getByText(/^No mats left$/).waitFor();
     await open(page, `${base}/my-bookings`);
     await page.locator("main tbody tr").first().waitFor({ timeout: 10000 });
     if ((await page.locator("main tbody tr").count()) !== 1)
@@ -378,8 +378,8 @@ async function bookingFlow(dir, base) {
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
     await page.waitForURL(/\/sessions\/\d+$/);
-    await page.getByText(/^Full$/).waitFor({ timeout: 10000 });
-    if (await page.getByRole("button", { name: "Book a place" }).count())
+    await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 });
+    if (await page.getByRole("button", { name: "Book a mat" }).count())
       throw new Error("a full session offers a place");
     await page.getByLabel("Capacity").fill("0");
     await page.getByRole("button", { name: "Save changes" }).click();
@@ -390,10 +390,10 @@ async function bookingFlow(dir, base) {
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
-    await panel.getByRole("button", { name: "Cancel booking" }).click();
+    await panel.getByRole("button", { name: "Cancel my booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
-    await panel.getByRole("button", { name: "Book a place" }).waitFor();
+    await panel.getByRole("button", { name: "Book a mat" }).waitFor();
     console.log(
       "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again",
     );
@@ -404,6 +404,46 @@ async function bookingFlow(dir, base) {
     failures.push("booking flow");
   } finally {
     write(dir, "UPDATE sessions SET capacity = 12");
+    await browser.close();
+  }
+}
+
+/**
+ * A Markdown field (an instructor's bio): written, previewed formatted with headings from h2
+ * and raw HTML shown as text, saved and kept.
+ */
+async function markdownFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/instructors/1`);
+    const bio = page.getByLabel("Bio");
+    await bio.fill(
+      "# Teaching since 2010\n\nShe teaches **Yin** and <b>Hatha</b>.\n\n- Mornings\n- Weekends",
+    );
+    await page.getByRole("button", { name: "Preview" }).click();
+    await page
+      .getByRole("heading", { level: 2, name: "Teaching since 2010" })
+      .waitFor({ timeout: 10000 });
+    await page.locator("strong", { hasText: "Yin" }).waitFor();
+    await page.getByText("<b>Hatha</b>", { exact: false }).waitFor();
+    if (await page.locator("main b").count()) throw new Error("raw HTML was run");
+    await page.getByRole("button", { name: "Write" }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(/\/instructors$/);
+    await open(page, `${base}/instructors/1`);
+    if (!(await page.getByLabel("Bio").inputValue()).startsWith("# Teaching since 2010"))
+      throw new Error("the bio was not kept");
+    console.log(
+      "  ✓ browser: a Markdown bio is written, previewed formatted (headings from h2, raw HTML as text), saved and kept",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("markdown flow");
+  } finally {
     await browser.close();
   }
 }
@@ -1524,6 +1564,7 @@ for (const [index, example] of examples.entries()) {
         await landingFlow(base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
+        await markdownFlow(base);
       }
       if (example === "invoicing") {
         await formulaFlow(base);
@@ -1706,6 +1747,29 @@ if (examples.includes("booking")) {
       if (result.code === 0 || !result.out.includes("--starter booking"))
         throw new Error(result.out);
     });
+    await asyncStep(
+      "clarify --json: the model's questions and starter for a program; no model means no questions",
+      async () => {
+        const asked = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+          "clarify",
+          "A site to show my dogs",
+          "--json",
+        );
+        const answer = JSON.parse(asked.out);
+        if (asked.code !== 0 || answer.starter !== "records" || answer.questions.length !== 2)
+          throw new Error(asked.out);
+        const none = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "" },
+          "clarify",
+          "A site to show my dogs",
+          "--json",
+        );
+        if (none.code !== 0 || none.out.trim() !== '{"questions":[]}') throw new Error(none.out);
+      },
+    );
     await asyncStep(
       "the closest starter, adapted by a model, is summarised in plain language and becomes the app",
       async () => {
