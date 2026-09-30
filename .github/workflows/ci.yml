@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }   # the whole history, for the secrets scan
       # pnpm first (the version package.json pins): setup-node caches for the package manager
       # package.json names, and needs it on the PATH to ask where its store is.
       - uses: pnpm/action-setup@v4
@@ -15,6 +16,8 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Secrets in the tree or the history (the test scripts' placeholders are allowlisted).
+      - run: docker run --rm -v "$PWD:/repo" -v "$PWD/.gitleaks.toml:/cfg.toml" zricethezav/gitleaks:v8.30.1 git /repo --no-banner --config /cfg.toml
       - run: pnpm lint
       - run: pnpm build
       - run: pnpm test

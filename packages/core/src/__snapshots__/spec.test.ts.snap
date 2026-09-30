@@ -85,7 +85,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "required": false,
           "type": {
             "kind": "scalar",
-            "name": "text",
+            "name": "markdown",
           },
           "unique": false,
         },

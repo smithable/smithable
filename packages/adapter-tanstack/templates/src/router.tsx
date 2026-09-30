@@ -1,5 +1,6 @@
 import { createRouter } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
+import { Loading } from "./kit/AppShell";
 import { routeTree } from "./routeTree.gen";
 
 /**
@@ -16,6 +17,10 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    // A page that takes longer than a moment to load shows a placeholder, not the old page.
+    defaultPendingComponent: Loading,
+    defaultPendingMs: 300,
+    defaultPendingMinMs: 300,
     ssr: ssrOptions(),
   });
 }

@@ -1,0 +1,11 @@
+# Gitleaks configuration for this repository (the generated apps have their own scan in
+# `smithable security`). The tests and benchmarks use made-up secrets whose values say so.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholder secrets in the test and benchmark scripts"
+regexes = [
+  '''(test|bench|container-test)-secret-0123456789''',
+  '''smithable-secret-key-0123456789''',
+]

@@ -27,6 +27,7 @@ export type Run = (
 const KINDS: [string, string][] = [
   ["string", "Text"],
   ["text", "Long text"],
+  ["markdown", "Formatted text"],
   ["int", "Whole number"],
   ["decimal", "Number"],
   ["money", "Amount"],
@@ -644,7 +645,7 @@ function SetSearch({ spec, run }: FormProps) {
       (f.type.kind === "choice" ||
         (f.type.kind === "relation" && !f.type.many) ||
         (f.type.kind === "scalar" &&
-          ["string", "text", "email", "phone", "url"].includes(f.type.name))),
+          ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name))),
   );
   const [chosen, setChosen] = useState<string[] | undefined>();
   const fields = chosen ?? current?.search ?? [];
