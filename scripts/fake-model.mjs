@@ -63,6 +63,53 @@ const ANSWERS = [
   [/email .* ships/i, { kind: "none", reason: "Sending email needs custom code." }],
 ];
 
+/** The questions step: a dogs site gets the records starter and two questions; the rest none. */
+function clarify(user) {
+  const description = /^Description: (.*)$/m.exec(user)?.[1] ?? "";
+  if (/dogs?/i.test(description))
+    return {
+      starter: "records",
+      questions: [
+        { question: "Who will use it?", options: ["Only me", "Anyone on the internet"] },
+        {
+          question: "What should each dog's page show?",
+          options: ["Pictures and a story", "Pictures only"],
+        },
+      ],
+    };
+  return { starter: "booking", questions: [] };
+}
+
+/** A first draft as operations: a small pilates app from nothing. */
+function operationsDraft() {
+  return {
+    operations: [
+      {
+        op: "setApp",
+        args: {
+          name: "Lotus Pilates",
+          description: "Classes and booking for a pilates studio.",
+          currency: "EUR",
+        },
+      },
+      {
+        op: "addModel",
+        args: { model: "ClassType", fields: { name: "string!", level: "beginner | advanced" } },
+      },
+      {
+        op: "addModel",
+        args: {
+          model: "Session",
+          fields: { classType: "ClassType!", startsAt: "datetime!", capacity: "int! = 10" },
+        },
+      },
+      { op: "addPage", args: { page: "sessions", model: "Session" } },
+      { op: "addPage", args: { page: "class-types", model: "ClassType" } },
+      { op: "setPublic", args: { pages: ["sessions"], read: ["Session", "ClassType"] } },
+    ],
+  };
+}
+
 /** Starts the server on a free port; `requests` collects what it was asked. */
 export async function startFakeModel() {
   const requests = [];
@@ -74,12 +121,16 @@ export async function startFakeModel() {
     const user = body.messages?.find((m) => m.role === "user")?.content ?? "";
     const system = body.messages?.find((m) => m.role === "system")?.content ?? "";
     const request = /^Request: (.*)$/m.exec(user)?.[1] ?? "";
-    const answer = system.includes("first version of a web app")
-      ? draft()
-      : (ANSWERS.find(([pattern]) => pattern.test(request))?.[1] ?? {
-          kind: "none",
-          reason: "The stand-in model only knows a few requests.",
-        });
+    const answer = system.includes("first version of a web app as a list of Smithable operations")
+      ? operationsDraft()
+      : system.includes("first version of a web app")
+        ? draft()
+        : system.includes("pick the starter that is the best example")
+          ? clarify(user)
+          : (ANSWERS.find(([pattern]) => pattern.test(request))?.[1] ?? {
+              kind: "none",
+              reason: "The stand-in model only knows a few requests.",
+            });
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({

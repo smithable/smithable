@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+smithable: 0.1
+
+# The neutral starter: things and what we know about them (dogs, tools, recipes, players,
+# jobs). A first build from a description adapts it when no other starter fits.
+app:
+  name: Our Collection
+  description: A place to keep and show a collection of items.
+  timezone: Europe/Mariehamn
+
+models:
+  Item:
+    description: One thing in the collection.
+    fields:
+      name: string!
+      summary: text
+      kind: general | favourite | archived      # the first value is the default
+      link: url
+      addedOn: date! = TODAY()
+    access: { create: [admin], write: [admin], delete: [admin] }
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: items }
+      items: { records: Item }
+      footer:
+  items:
+    crud: Item
+    search: [name, summary]
+
+navigation: [items]

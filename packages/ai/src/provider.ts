@@ -67,6 +67,9 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
       const post = (answerSchema: object) =>
         fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
           method: "POST",
+          // A model that never answers must not hang a change or a first build for good; a local
+          // model on a slow machine still gets long enough for a large answer.
+          signal: AbortSignal.timeout(options.tier === "local" ? 600_000 : 180_000),
           headers: {
             "Content-Type": "application/json",
             ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),

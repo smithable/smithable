@@ -121,6 +121,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       }
       return create(dir, io, values.starter, {
         ...(values.describe ? { describe: values.describe } : {}),
+        ...(values.answers ? { answers: values.answers } : {}),
         yes: values.yes === true,
       });
     case "run":
@@ -199,6 +200,7 @@ function parse(argv: string[]) {
       open: { type: "boolean" },
       starter: { type: "string" },
       describe: { type: "string" },
+      answers: { type: "string" },
       plugin: { type: "string" },
       level: { type: "string" },
       security: { type: "boolean" },

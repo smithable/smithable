@@ -1,12 +1,14 @@
 import { checkKeys, mapEntries, readString } from "../context.js";
 import type { AppIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
+import { appOperations } from "./app-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
 export const appSection: SpecSection<"app"> = {
   key: "app",
   required: true,
+  operations: appOperations,
   schema: {
     type: "object",
     description: "The application as a whole.",

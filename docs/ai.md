@@ -2,7 +2,7 @@
 
 `smithable ask "<request>"` (and the Builder's **Describe** tab in Studio) turns a request in your own words into Smithable operations. The model only proposes; you see the change in plain language and it is applied when you confirm. Nothing it does bypasses the operation pipeline: each change is checked, migrated, committed and undoable like any other.
 
-`smithable new <dir> --describe "a booking site for a yoga studio"` starts a project from a sentence. The closest starter is picked without a model; then the strongest model the policy allows adapts its spec files to the description, once. The draft is validated like a hand-written spec (a draft with errors goes back once with the exact messages), summarised in plain language, and used after you confirm. Without a model, start from a starter with `--starter`.
+`smithable new <dir> --describe "a booking site for a yoga studio"` starts a project from a sentence. First the smallest model the policy allows may ask up to three questions (who uses it, what visitors see, what the records hold) and picks the starter to adapt; `--answers "a; b; c"` answers them in order without asking, and `--yes` asks nothing. Then the strongest model the policy allows drafts the app as a batch of operations from an empty app, each checked as it is applied (docs/design/first-build.md; `SMITHABLE_DRAFT=files` drafts whole spec files adapted from the starter instead). The draft is validated like a hand-written spec, summarised in plain language, and used after you confirm. Without a model, start from a starter with `--starter` (crm, booking, invoicing, or records for "things and what we know about them").
 
 Models are configured with environment variables, so keys never end up in a project.
 
