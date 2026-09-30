@@ -213,6 +213,45 @@ const addArticlesPage: Operation<{ page: string; model: string }> = {
   },
 };
 
+const addCalculatorPage: Operation<{ page: string; fields: Record<string, string> }> = {
+  name: "addCalculatorPage",
+  summary:
+    "Add a calculator page: fields written as a model's, the entered ones its inputs and the formula fields its results, stored nowhere; it goes in the main menu.",
+  schema: {
+    type: "object",
+    required: ["page", "fields"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. mortgage." },
+      fields: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description:
+          'Field name → type shorthand, e.g. { "price": "money = 300000", "years": "int = 25" }; results are added with addField and a formula.',
+      },
+    },
+  },
+  positional: ["page", "...fields"],
+  describe: ({ page, fields }) =>
+    `Add calculator page ${page} with ${Object.keys(fields).join(", ")}`,
+  destructive: () => false,
+  apply({ spec }, { page, fields }, ir) {
+    if (!NAME_PATTERN.test(page))
+      throw new OperationError(
+        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
+      );
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    if (!Object.keys(fields).length)
+      throw new OperationError("A calculator needs at least one field, e.g. price=money.");
+    spec.add(["pages"], page, { calculator: { fields } });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
+export const calculatorOperations: AnyOperation[] = [addCalculatorPage];
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
