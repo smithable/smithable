@@ -55,6 +55,13 @@ export const COMMANDS: Command[] = [
     ],
     options: ["plugin"],
   },
+  {
+    name: "themes",
+    usage: "themes [dir]",
+    text: [
+      "List the themes the ux file may name: the built-in ones and the project's themes/*.yml",
+    ],
+  },
   { name: "build", usage: "build [dir]", text: ["Build the app's container image with Docker"] },
   {
     name: "security",
