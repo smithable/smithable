@@ -2,6 +2,9 @@
    Colours follow shadcn/ui's token names. */
 @import "tailwindcss";
 @import "./theme.css";
+/* The app's own styles (never overwritten). Tailwind's styles are in cascade layers, so these
+   rules win over the kit's without !important, wherever they are imported. */
+@import "./custom/styles.css";
 
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
