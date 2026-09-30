@@ -24,5 +24,3 @@ export {
 } from "./project-index.js";
 export type { SummarySection } from "./summary.js";
 export { summarize, wordsFor } from "./summary.js";
-export type { SummaryOperation } from "./summary-edit.js";
-export { readSummaryEdit } from "./summary-edit.js";
