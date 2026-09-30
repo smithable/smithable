@@ -7,6 +7,7 @@ import {
   identifier,
   type JsonSchema,
   pageModel,
+  pascal,
   typeKey,
 } from "@smithable/core";
 import { describeChange } from "@smithable/index";
@@ -585,10 +586,15 @@ function AddPage({ spec, run, initial }: FormProps) {
   const [page, setPage] = useState(str(initial?.page) ?? "");
   const [model, setModel] = useState(str(initial?.model) ?? models[0]?.name ?? "");
   const [kind, setKind] = useState("list");
+  const [component, setComponent] = useState("");
   return (
     <Form
       onSubmit={() =>
-        kind === "landing" ? run("addLandingPage", { page }) : run("addPage", { page, model })
+        kind === "landing"
+          ? run("addLandingPage", { page })
+          : kind === "custom"
+            ? run("addCustomPage", { page, component: component || pascal(page) })
+            : run("addPage", { page, model })
       }
     >
       <Label text="Page name" hint="Lowercase, e.g. products">
@@ -602,10 +608,18 @@ function AddPage({ spec, run, initial }: FormProps) {
           options={[
             ["list", "A list of records"],
             ["landing", "A landing page for visitors"],
+            ["custom", "A page of your own, in code"],
           ]}
         />
       </Label>
-      {kind === "landing" ? (
+      {kind === "custom" ? (
+        <OwnComponent
+          value={component}
+          placeholder={pascal(page || "planner")}
+          folder="pages"
+          onChange={setComponent}
+        />
+      ) : kind === "landing" ? (
         <p className="text-xs text-neutral-500">
           It starts with a heading and a footer, opens without sign-in, and gets more sections from
           “A section on a landing page”.
@@ -827,7 +841,38 @@ const SECTIONS: [string, string][] = [
   ["gallery", "Pictures (a gallery)"],
   ["footer", "Footer"],
   ["records", "Records as cards"],
+  ["custom", "A section of your own, in code"],
 ];
+
+/** A page's or section's own component: its name, and where the code goes. */
+function OwnComponent({
+  value,
+  placeholder,
+  folder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  folder: "pages" | "sections";
+  onChange: (value: string) => void;
+}) {
+  return (
+    <>
+      <Label text="Component" hint="Capitalised, e.g. RepaymentChart">
+        <Input
+          aria-label="Component"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </Label>
+      <p className="text-xs text-neutral-500">
+        It starts as a stub in src/custom/{folder}/{value || placeholder}.tsx, for a developer or an
+        agent to write; Smithable never changes it.
+      </p>
+    </>
+  );
+}
 
 function AddSection({ spec, run }: FormProps) {
   const landings = (spec.ir?.pages ?? []).filter((p) => p.pattern.kind === "landing");
@@ -837,8 +882,10 @@ function AddSection({ spec, run }: FormProps) {
   const [label, setLabel] = useState("");
   const [model, setModel] = useState(models[0]?.name ?? "");
   const [form, setForm] = useState("");
+  const [component, setComponent] = useState("");
   const records = kind === "records";
-  const section = records ? identifier(label) : kind;
+  const own = kind === "custom";
+  const section = records || own ? identifier(label) : kind;
   if (!landings.length)
     return <p className="text-sm text-neutral-600">The app has no landing page yet.</p>;
   return (
@@ -848,6 +895,7 @@ function AddSection({ spec, run }: FormProps) {
           page,
           section,
           ...(records ? { records: model } : {}),
+          ...(own ? { custom: component || pascal(section) } : {}),
           ...(kind === "contact" && form ? { form } : {}),
         })
       }
@@ -868,6 +916,24 @@ function AddSection({ spec, run }: FormProps) {
           options={SECTIONS}
         />
       </Label>
+      {own && (
+        <>
+          <Label text="Name">
+            <Input
+              aria-label="Section name"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Repayment"
+            />
+          </Label>
+          <OwnComponent
+            value={component}
+            placeholder={pascal(section || "repaymentChart")}
+            folder="sections"
+            onChange={setComponent}
+          />
+        </>
+      )}
       {records && (
         <>
           <Label text="Name">

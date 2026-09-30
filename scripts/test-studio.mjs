@@ -490,6 +490,10 @@ try {
     for (let i = 0; i < 60 && !/email: phone/.test(ux()); i++)
       await new Promise((r) => setTimeout(r, 1000));
     if (!/email: phone/.test(ux())) throw new Error(`no second line in smithable.ux.yml:\n${ux()}`);
+    // A change made while another runs is dropped: wait for the trace.
+    await trace
+      .getByText("Show phone under email in the customers table")
+      .waitFor({ timeout: 60000 });
     const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
     await columns
       .getByRole("button", { name: /^Hide / })
