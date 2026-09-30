@@ -6,6 +6,8 @@ The rule of the ux file stays: **presets and choices, never CSS**, and it never 
 
 ## 1. More presentation choices
 
+Built 2026-10-01 (Fable): §1.1–1.3 (`control`, `sections`/`columns`, `view`/`sort`) in core and the kit, with their operations and texts. §1.4–1.5 (landing looks, a landing page's own theme) are still to come.
+
 What the file can do today: the theme (preset, brand colour, one of three fonts, density) for the whole app; a crud page's icon, table columns, a second field under a column, and the form's field order; the colours of choice values. These are the choices asked for most and still refused, each a choice, not a position.
 
 ### 1.1 How a field is entered: `control`

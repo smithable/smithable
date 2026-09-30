@@ -1,7 +1,8 @@
-import { isScalar, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { checkKeys, mapEntries, ParseContext, readNameList, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { PageIR, SpecIR } from "./ir.js";
+import type { FieldIR, PageIR, SpecIR } from "./ir.js";
+import { capitalize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
 import { type ThemeIR, themeNames } from "./theme.js";
@@ -31,10 +32,67 @@ export interface PageUx {
   columns?: string[];
   /** A second field shown under a column's value, e.g. { email: "phone" }. */
   below?: Record<string, string>;
+  /** The list's order until someone sorts it: a field, or "-field" for descending. */
+  sort?: string;
+  /** How the list looks on a wide screen; a phone shows cards anyway. */
+  view?: "table" | "cards";
   /** The form's fields in this order; fields not listed follow. */
   fieldOrder?: string[];
   /** A calculator's results beside its inputs on a wide screen (the default), or below them. */
   results?: "beside" | "below";
+  /** The form's groups, each with a heading; fields in none follow at the end. */
+  sections?: { name: string; fields: string[] }[];
+  /** Short fields two abreast on wide screens. */
+  formColumns?: 1 | 2;
+  /** How a field is entered, when not the default for its kind (docs/design/look.md §1.1). */
+  control?: Record<string, Control>;
+}
+
+/** The ways a field can be entered, chosen by name in the ux file. */
+export const CONTROLS = [
+  "input",
+  "slider",
+  "stepper",
+  "radio",
+  "select",
+  "combobox",
+  "textarea",
+  "switch",
+] as const;
+export type Control = (typeof CONTROLS)[number];
+
+/** Why a control does not fit a field, or undefined when it does. */
+export function controlUnfit(field: FieldIR, control: Control): string | undefined {
+  const scalar = field.type.kind === "scalar" ? field.type.name : undefined;
+  const number = scalar === "int" || scalar === "decimal" || scalar === "money";
+  switch (control) {
+    case "input":
+      return undefined;
+    case "slider":
+      return number && field.min !== undefined && field.max !== undefined
+        ? undefined
+        : "a slider needs a number field with both min and max";
+    case "stepper":
+      return scalar === "int" ? undefined : "a stepper needs a whole-number field";
+    case "radio":
+      return (field.type.kind === "choice" && field.type.values.length <= 5) || scalar === "bool"
+        ? undefined
+        : "radio buttons need a choice of at most five values, or a yes/no";
+    case "select":
+      return field.type.kind === "choice" || (field.type.kind === "relation" && !field.type.many)
+        ? undefined
+        : "a select needs a choice or a reference";
+    case "combobox":
+      return field.type.kind === "relation" && !field.type.many
+        ? undefined
+        : "a combobox needs a reference";
+    case "textarea":
+      return scalar === "string" || scalar === "text" || scalar === "markdown"
+        ? undefined
+        : "a textarea needs a text field";
+    case "switch":
+      return scalar === "bool" ? undefined : "a switch needs a yes/no field";
+  }
 }
 
 export const UX_VERSION = "0.1";
@@ -267,8 +325,9 @@ export function validateUx(
           continue;
         }
         const model = ir.models.find((m) => m.name === pageModel(spec));
-        // A calculator's fields are its own (docs/design/calculator.md).
+        // A calculator's fields are the page's own (docs/design/calculator.md).
         const calculator = spec.pattern.kind === "calculator" ? spec.pattern.calculator : undefined;
+        const owner = model?.name ?? (calculator ? page.key : undefined);
         const fields = (model?.fields ?? calculator?.fields ?? []).filter(
           (f) => !(f.type.kind === "relation" && f.type.many),
         );
@@ -281,7 +340,7 @@ export function validateUx(
               ctx.error(
                 at,
                 "unknown-field",
-                `${model?.name} has no field named "${name}" to show.`,
+                `${owner} has no field named "${name}" to show.`,
                 didYouMean(
                   name,
                   fields.map((f) => f.name),
@@ -321,11 +380,78 @@ export function validateUx(
             mapEntries(ctx, part.value, partWhere) ?? [],
             partWhere,
             {
-              allowed: part.key === "table" ? ["columns", "below"] : ["fieldOrder", "results"],
-              later: part.key === "table" ? ["sort", "pageSize"] : ["groups"],
+              allowed:
+                part.key === "table"
+                  ? ["columns", "below", "sort", "view"]
+                  : ["fieldOrder", "sections", "columns", "control", "results"],
+              later: part.key === "table" ? ["pageSize"] : [],
             },
           )) {
-            if (option.key === "columns")
+            if (part.key === "form" && option.key === "columns") {
+              const n = isScalar(option.value) ? option.value.value : undefined;
+              if (n === 1 || n === 2) result.formColumns = n;
+              else ctx.error(option.value, "invalid-value", `"columns" of a form is 1 or 2.`);
+            } else if (option.key === "sort") {
+              const sort = readString(ctx, option.value, `"sort" of ${where}`);
+              if (sort === undefined) continue;
+              const name = sort.replace(/^-/, "");
+              if (fields.some((f) => f.name === name)) result.sort = sort;
+              else
+                ctx.error(
+                  option.value,
+                  "unknown-field",
+                  `${owner} has no field named "${name}" to sort by.`,
+                  didYouMean(
+                    name,
+                    fields.map((f) => f.name),
+                  ),
+                );
+            } else if (option.key === "view") {
+              const view = readString(ctx, option.value, `"view" of ${where}`);
+              if (view === "table" || view === "cards") result.view = view;
+              else if (view !== undefined)
+                ctx.error(option.value, "invalid-value", `"view" is table or cards.`);
+            } else if (option.key === "sections") {
+              result.sections = readSections(ctx, option.value, where, names);
+            } else if (option.key === "control") {
+              result.control = {};
+              for (const pair of mapEntries(ctx, option.value, `"control" of ${where}`) ?? []) {
+                const field = fields.find((f) => f.name === pair.key);
+                const control = readString(ctx, pair.value, `"${pair.key}" in "control"`);
+                if (!field) {
+                  ctx.error(
+                    pair.keyNode,
+                    "unknown-field",
+                    `${owner} has no field named "${pair.key}".`,
+                    didYouMean(
+                      pair.key,
+                      fields.map((f) => f.name),
+                    ),
+                  );
+                  continue;
+                }
+                if (control === undefined) continue;
+                if (!(CONTROLS as readonly string[]).includes(control)) {
+                  ctx.error(
+                    pair.value,
+                    "unknown-control",
+                    `"${control}" is not a control.`,
+                    didYouMean(control, CONTROLS) ?? `Available: ${CONTROLS.join(", ")}.`,
+                  );
+                  continue;
+                }
+                const unfit = field.formula
+                  ? "a computed field is shown, not entered"
+                  : controlUnfit(field, control as Control);
+                if (unfit)
+                  ctx.error(
+                    pair.value,
+                    "invalid-control",
+                    `${pair.key} cannot be a ${control}: ${unfit}.`,
+                  );
+                else if (control !== "input") result.control[pair.key] = control as Control;
+              }
+            } else if (option.key === "columns")
               result.columns = names(option.value, `the columns of ${where}`, true);
             else if (option.key === "below") {
               result.below = {};
@@ -370,9 +496,64 @@ export function validateUx(
             } else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
           }
         }
+        if (result.sections && result.fieldOrder)
+          ctx.error(
+            page.keyNode,
+            "conflict",
+            `${capitalize(where)} has both "sections" and "fieldOrder"; sections order the fields.`,
+          );
         ux.pages[page.key] = result;
       }
     }
   }
   return done();
+}
+
+/** A form's groups: a list of { name, fields }, no field in two of them. */
+function readSections(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  names: (node: ParsedNode | null, what: string, allowComputed: boolean) => string[],
+): { name: string; fields: string[] }[] {
+  if (!isSeq(node)) {
+    ctx.error(node, "expected-list", `"sections" of ${where} is a list of { name, fields }.`);
+    return [];
+  }
+  const sections: { name: string; fields: string[] }[] = [];
+  const seen = new Set<string>();
+  for (const item of node.items as ParsedNode[]) {
+    const entries = checkKeys(
+      ctx,
+      mapEntries(ctx, item, `a section of ${where}`) ?? [],
+      `a section of ${where}`,
+      {
+        allowed: ["name", "fields"],
+      },
+    );
+    const name = readString(
+      ctx,
+      entries.find((e) => e.key === "name")?.value ?? null,
+      `"name" of a section of ${where}`,
+    );
+    if (name === undefined) continue;
+    if (!/^[a-z][A-Za-z0-9-]*$/.test(name) || sections.some((s) => s.name === name)) {
+      ctx.error(
+        item,
+        "invalid-value",
+        `A section's name is camelCase or kebab-case and used once: "${name}".`,
+      );
+      continue;
+    }
+    const fields = names(
+      entries.find((e) => e.key === "fields")?.value ?? null,
+      `the fields of section "${name}" of ${where}`,
+      false,
+    );
+    for (const f of fields)
+      if (seen.has(f)) ctx.error(item, "conflict", `"${f}" is in two sections of ${where}.`);
+      else seen.add(f);
+    sections.push({ name, fields });
+  }
+  return sections;
 }
