@@ -77,6 +77,7 @@ export const SCALAR_TYPES = [
   "email",
   "phone",
   "url",
+  "picture",
 ] as const;
 
 export type ScalarType = (typeof SCALAR_TYPES)[number];
@@ -259,3 +260,7 @@ export function conditionFits(model: ModelIR, field: string, wanted: string | bo
         (f.type.kind === "scalar" && f.type.name === "bool" && typeof wanted === "boolean")),
   );
 }
+
+/** A field that stores a picture (a file with its description and size). */
+export const isPicture = (f: FieldIR): boolean =>
+  f.type.kind === "scalar" && f.type.name === "picture";

@@ -3,6 +3,7 @@ import {
   type AuthIR,
   type FieldIR,
   humanize,
+  isPicture,
   kebab,
   type ModelIR,
   modelAccess,
@@ -150,7 +151,7 @@ import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${model.fields.some(isPicture) ? 'import { bindPicture } from "#/kit/PictureInput";\n' : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -390,12 +391,21 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
     throw new AccessDenied(viewer !== null);`,
   );
-  const selectOwner = signedIn ? `{ ${owner}: ${n.table}.${owner} }` : `{ id: ${n.table}.id }`;
+  const pictures = model.fields.filter(isPicture).map(dataKey);
+  const selectOwner = `{ ${signedIn ? `${owner}: ${n.table}.${owner}` : `id: ${n.table}.id`}${pictures.map((k) => `, ${k}: ${n.table}.${k}`).join("")} }`;
+  // A replaced or removed picture's file goes, unless another record still shows the same one.
+  const dropPictures = (after: (key: string) => string) =>
+    pictures
+      .map(
+        (k) =>
+          `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, !!db.select({ id: ${n.table}.id }).from(${n.table}).where(sql\`\${${n.table}.${k}} like \${\`%"file":"\${row.${k}.file}"%\`}\`).get());\n`,
+      )
+      .join("");
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table)])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied, check, ${capacity || holds.length ? "Conflict, " : ""}type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
-${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}import { afterChange, afterDelete } from "./hooks";
+${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -546,7 +556,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
     } catch (error) {
       throw ${capacity || holds.length ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
     }
-    await afterChange("afterUpdate", "${model.name}", changed, viewer);
+${dropPictures((k) => `changed.${k}?.file`)}    await afterChange("afterUpdate", "${model.name}", changed, viewer);
     return changed;
   },
 
@@ -563,7 +573,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
     } catch (error) {
       throw refusal(error);
     }
-    await afterDelete("${model.name}", id, viewer);
+${dropPictures(() => "undefined")}    await afterDelete("${model.name}", id, viewer);
   },
 ${
   referenced
@@ -632,6 +642,13 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
       : {}),
     ...(kind === "markdown" ? { input: code("MarkdownEditor") } : {}),
+    ...(kind === "picture"
+      ? {
+          input: code(
+            `bindPicture(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(field.name)})`,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -682,6 +699,9 @@ export function refinement(field: FieldIR, visitors = false): string | undefined
       return bounds(1) ? `(s) => s${bounds(1)}` : undefined;
     case "money":
       return bounds(100) ? `(s) => s${bounds(100)}` : undefined;
+    case "picture":
+      // What src/kit/uploads.ts returned, plus the description a person wrote.
+      return `z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })${optional}`;
     default:
       return undefined;
   }
