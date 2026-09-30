@@ -66,6 +66,12 @@ const ux: Companion = {
       if (editor.has(["pages", effect.page])) editor.removeAndPrune(["pages", effect.page], 0);
       return undefined;
     }
+    if (effect.kind === "remove-section") {
+      // A section's look goes with it.
+      const look = ["pages", effect.page, "sections", effect.section];
+      if (editor.has(look)) editor.removeAndPrune(look, 0);
+      return undefined;
+    }
     if (effect.kind === "change-field") {
       // Tones of choice values the new type no longer has go with them.
       const tones = ["tones", `${effect.model}.${effect.field}`];

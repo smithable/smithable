@@ -139,6 +139,8 @@ export function Hero({
   link,
   image,
   more,
+  layout = "split",
+  imageSide = "right",
 }: {
   title: string;
   subtitle?: string;
@@ -146,6 +148,10 @@ export function Hero({
   image?: LandingImage;
   /** Sections follow: a quiet arrow under the content says the page goes on. */
   more?: boolean;
+  /** split: text beside the picture; centered: text over it; plain: no picture. */
+  layout?: "split" | "centered" | "plain";
+  /** The picture's side in a split hero on wide screens. */
+  imageSide?: "left" | "right";
   texts?: string;
 }) {
   const after = useId();
@@ -180,7 +186,8 @@ export function Hero({
       )}
     </div>
   );
-  if (!image)
+  // Without a picture every look is plain, so a missing picture never breaks the page.
+  if (!image || layout === "plain")
     return (
       <section
         {...sectionHooks(texts)}
@@ -189,6 +196,26 @@ export function Hero({
         {text}
         {cue && <div className="mt-12">{cue}</div>}
         {end}
+      </section>
+    );
+  // Over the picture: a dark veil keeps the text readable on any picture.
+  if (layout === "centered")
+    return (
+      <section {...sectionHooks(texts)} className="relative isolate overflow-hidden">
+        <img
+          src={image.src}
+          alt={image.alt}
+          width={1200}
+          height={800}
+          fetchPriority="high"
+          className="absolute inset-0 -z-10 size-full object-cover"
+        />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-black/60" />
+        <div className="mx-auto flex max-w-4xl flex-col items-center px-5 py-24 text-center text-white sm:py-36 [&_h1]:mx-auto [&_p]:mx-auto [&_p]:text-white/90">
+          {text}
+          {cue && <div className="mt-12 text-white/80">{cue}</div>}
+          {end}
+        </div>
       </section>
     );
   // Beside the text on wide screens, above it on narrow ones; the first thing loaded.
@@ -203,7 +230,10 @@ export function Hero({
         width={1200}
         height={800}
         fetchPriority="high"
-        className="aspect-[3/2] w-full rounded-xl object-cover lg:order-2"
+        className={cn(
+          "aspect-[3/2] w-full rounded-xl object-cover",
+          imageSide === "right" && "lg:order-2",
+        )}
       />
       {text}
       {cue}
@@ -217,15 +247,23 @@ export function Features({
   title,
   text,
   items,
+  columns = 3,
 }: {
   title?: string;
   text?: string;
   items: { title?: string; text?: string }[];
+  /** Items side by side on wide screens: 2, 3 or 4. */
+  columns?: 2 | 3 | 4;
   texts?: string;
 }) {
+  const grid = {
+    2: "sm:grid-cols-2",
+    3: "sm:grid-cols-2 lg:grid-cols-3",
+    4: "sm:grid-cols-2 lg:grid-cols-4",
+  }[columns];
   return (
     <Section id="features" texts={texts} title={title} text={text}>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className={cn("grid gap-4", grid)}>
         {items.map((item, i) => (
           <li key={item.title ?? item.text}>
             <Card className="h-full space-y-2 p-card">
@@ -254,6 +292,7 @@ export function RecordCards({
   title,
   text,
   cards,
+  layout = "cards",
 }: {
   id: string;
   title?: string;
@@ -267,57 +306,100 @@ export function RecordCards({
     href?: string;
     picture?: { src: string; alt: string; width: number; height: number };
   }[];
+  /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
+  layout?: "cards" | "list" | "grid";
   texts?: string;
 }) {
   if (cards.length === 0) return null;
+  type CardItem = (typeof cards)[number];
+  // The whole card or row opens it; the link is the title.
+  const heading = (card: CardItem) =>
+    card.href ? (
+      <a
+        href={card.href}
+        className="outline-none after:absolute after:inset-0 focus-visible:underline"
+      >
+        {card.title}
+      </a>
+    ) : (
+      card.title
+    );
+  const picture = (card: CardItem, className: string) =>
+    card.picture && (
+      <img
+        src={card.picture.src}
+        alt={card.picture.alt}
+        width={card.picture.width}
+        height={card.picture.height}
+        loading="lazy"
+        className={className}
+      />
+    );
+  const details = (card: CardItem) => (
+    <>
+      {card.text && <p className="flex-1 text-muted-foreground">{card.text}</p>}
+      {card.badge && (
+        <p className="mt-2">
+          <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
+            {card.badge}
+          </span>
+        </p>
+      )}
+    </>
+  );
   return (
     <Section id={id} texts={texts} title={title} text={text}>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => (
-          <li key={card.key}>
-            <Card
+      {layout === "list" ? (
+        <ul className="divide-y border-y">
+          {cards.map((card) => (
+            <li
+              key={card.key}
               className={cn(
-                "relative flex h-full flex-col gap-2 overflow-hidden",
+                "relative flex items-start gap-4 py-4",
                 card.href && "hover:bg-accent/40",
               )}
             >
-              {card.picture && (
-                <img
-                  src={card.picture.src}
-                  alt={card.picture.alt}
-                  width={card.picture.width}
-                  height={card.picture.height}
-                  loading="lazy"
-                  className="aspect-[3/2] w-full object-cover"
-                />
-              )}
-              <div className="flex flex-1 flex-col gap-2 p-card">
-                <h3 className="text-lg font-semibold">
-                  {card.href ? (
-                    // The whole card opens it; the link is the title.
-                    <a
-                      href={card.href}
-                      className="outline-none after:absolute after:inset-0 focus-visible:underline"
-                    >
-                      {card.title}
-                    </a>
-                  ) : (
-                    card.title
-                  )}
-                </h3>
-                {card.text && <p className="flex-1 text-muted-foreground">{card.text}</p>}
-                {card.badge && (
-                  <p className="mt-2">
-                    <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
-                      {card.badge}
-                    </span>
-                  </p>
-                )}
+              {picture(card, "aspect-[3/2] w-28 shrink-0 rounded-md object-cover sm:w-40")}
+              <div className="flex flex-1 flex-col gap-1">
+                <h3 className="text-lg font-semibold">{heading(card)}</h3>
+                {details(card)}
               </div>
-            </Card>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      ) : layout === "grid" ? (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {cards.map((card) => (
+            <li key={card.key} className="relative">
+              <figure className="space-y-2">
+                {picture(card, "aspect-square w-full rounded-lg object-cover") ?? (
+                  <div aria-hidden className="aspect-square w-full rounded-lg bg-muted" />
+                )}
+                <figcaption className="font-semibold">{heading(card)}</figcaption>
+              </figure>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {cards.map((card) => (
+            <li key={card.key}>
+              <Card
+                className={cn(
+                  "relative flex h-full flex-col gap-2 overflow-hidden",
+                  card.href && "hover:bg-accent/40",
+                )}
+              >
+                {picture(card, "aspect-[3/2] w-full object-cover")}
+                <div className="flex flex-1 flex-col gap-2 p-card">
+                  <h3 className="text-lg font-semibold">{heading(card)}</h3>
+                  {details(card)}
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
     </Section>
   );
 }
@@ -328,9 +410,12 @@ export function Pricing({
   text,
   plans,
   link,
+  highlight,
 }: {
   title?: string;
   text?: string;
+  /** The plan drawn forward, by its name. */
+  highlight?: string;
   plans: {
     name?: string;
     price?: string;
@@ -342,12 +427,20 @@ export function Pricing({
   link?: LandingLink;
   texts?: string;
 }) {
+  const forward = (name?: string) =>
+    Boolean(highlight && name && name.trim().toLowerCase() === highlight.trim().toLowerCase());
   return (
     <Section id="pricing" texts={texts} title={title} text={text}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan, i) => (
           <li key={plan.name}>
-            <Card className="flex h-full flex-col gap-4 p-card">
+            <Card
+              data-part={forward(plan.name) ? "highlight" : undefined}
+              className={cn(
+                "flex h-full flex-col gap-4 p-card",
+                forward(plan.name) && "border-primary ring-2 ring-primary",
+              )}
+            >
               <h3 className="text-lg font-semibold" {...mark(texts, `items.${i}.name`)}>
                 {plan.name}
               </h3>
@@ -382,7 +475,12 @@ export function Pricing({
                 </ul>
               )}
               {link && (
-                <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
+                <Link
+                  to={link.to}
+                  className={buttonVariants({
+                    variant: forward(plan.name) ? "default" : "outline",
+                  })}
+                >
                   <span {...mark(texts, `items.${i}.button`)}>{plan.button ?? link.label}</span>
                 </Link>
               )}
@@ -398,36 +496,60 @@ export function Testimonials({
   texts,
   title,
   items,
+  layout = "cards",
 }: {
   title?: string;
   items: { quote?: string; name?: string; role?: string }[];
+  /** cards: side by side; carousel: a row that scrolls sideways; one: the first quote, large. */
+  layout?: "cards" | "carousel" | "one";
   texts?: string;
 }) {
+  const quote = (item: (typeof items)[number], i: number, large = false) => (
+    <figure className={cn("space-y-4", large && "mx-auto max-w-3xl text-center")}>
+      <blockquote className={large ? "text-2xl leading-snug sm:text-3xl" : "text-lg"}>
+        “<span {...mark(texts, `items.${i}.quote`)}>{item.quote}</span>”
+      </blockquote>
+      <figcaption className="text-sm">
+        <span className="font-semibold" {...mark(texts, `items.${i}.name`)}>
+          {item.name}
+        </span>
+        {item.role && (
+          <span className="text-muted-foreground">
+            , <span {...mark(texts, `items.${i}.role`)}>{item.role}</span>
+          </span>
+        )}
+      </figcaption>
+    </figure>
+  );
+  const first = items[0];
   return (
     <Section id="testimonials" texts={texts} title={title}>
-      <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {items.map((item, i) => (
-          <li key={item.quote}>
-            <Card className="h-full p-card">
-              <figure className="space-y-4">
-                <blockquote className="text-lg">
-                  “<span {...mark(texts, `items.${i}.quote`)}>{item.quote}</span>”
-                </blockquote>
-                <figcaption className="text-sm">
-                  <span className="font-semibold" {...mark(texts, `items.${i}.name`)}>
-                    {item.name}
-                  </span>
-                  {item.role && (
-                    <span className="text-muted-foreground">
-                      , <span {...mark(texts, `items.${i}.role`)}>{item.role}</span>
-                    </span>
-                  )}
-                </figcaption>
-              </figure>
-            </Card>
-          </li>
-        ))}
-      </ul>
+      {layout === "one" && first ? (
+        quote(first, 0, true)
+      ) : (
+        <ul
+          className={
+            layout === "carousel"
+              ? "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
+              : "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+          }
+          // A row that scrolls sideways: reachable with the keyboard's arrow keys.
+          {...(layout === "carousel" ? { tabIndex: 0, "aria-label": title ?? "Testimonials" } : {})}
+        >
+          {items.map((item, i) => (
+            <li
+              key={item.quote}
+              className={
+                layout === "carousel"
+                  ? "w-[85%] shrink-0 snap-start sm:w-[45%] lg:w-[31%]"
+                  : undefined
+              }
+            >
+              <Card className="h-full p-card">{quote(item, i)}</Card>
+            </li>
+          ))}
+        </ul>
+      )}
     </Section>
   );
 }
@@ -437,11 +559,31 @@ export function Faq({
   texts,
   title,
   items,
+  layout = "accordion",
 }: {
   title?: string;
   items: { question?: string; answer?: string }[];
+  /** accordion: answers open on a click; list: every answer shown. */
+  layout?: "accordion" | "list";
   texts?: string;
 }) {
+  if (layout === "list")
+    return (
+      <Section id="faq" texts={texts} title={title}>
+        <dl className="max-w-3xl space-y-6">
+          {items.map((item, i) => (
+            <div key={item.question}>
+              <dt className="font-semibold" {...mark(texts, `items.${i}.question`)}>
+                {item.question}
+              </dt>
+              <dd className="mt-1 text-muted-foreground" {...mark(texts, `items.${i}.answer`)}>
+                {item.answer}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </Section>
+    );
   return (
     <Section id="faq" texts={texts} title={title}>
       <div className="max-w-3xl divide-y border-y">

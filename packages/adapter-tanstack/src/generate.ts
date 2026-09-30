@@ -43,7 +43,7 @@ import {
 import { smokeTests } from "./smoke.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
-import { FONT_PACKAGES, themeCss, themeFont } from "./themes.js";
+import { FONT_PACKAGES, themeCss, themeFont, themeFonts } from "./themes.js";
 import { usersReadme, usersServerModule, usersTestSource } from "./users.js";
 
 const SCAFFOLD = new Set([
@@ -142,7 +142,13 @@ function packageJson(
     },
     dependencies: {
       ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
-      [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts],
+      // The app's font, and its landing pages' own.
+      ...Object.fromEntries(
+        themeFonts(ux, themes).map((font) => {
+          const name = FONT_PACKAGES[font] as string;
+          return [name, STACK_PROFILE.fonts[name as keyof typeof STACK_PROFILE.fonts]];
+        }),
+      ),
       ...(hasMarkdown(ir) ? STACK_PROFILE.markdown : {}),
       ...Object.fromEntries(
         Object.entries(packages).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),

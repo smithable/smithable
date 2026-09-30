@@ -9,6 +9,11 @@ tones:
   Invoice.status: { paid: success, overdue: warning }
 
 pages:
+  home:
+    sections:                          # how the landing page's sections look
+      hero: { layout: centered }       # the text over the picture
+      pricing: { highlight: Pro }      # the plan drawn forward
+      faq: { layout: list }            # every answer shown
   invoices:
     table:
       columns: [number, client, status, issuedOn, total]

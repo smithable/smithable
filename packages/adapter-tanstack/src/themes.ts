@@ -43,19 +43,41 @@ function tokens(ux: UxIR, theme: ThemeIR, mode: Mode): Tokens {
   return tokensOf(theme, mode, ux.theme.primary ? brandColors(ux.theme.primary, theme, mode) : {});
 }
 
+/** A landing page's ux: the app's theme with the keys the page changes (look.md §1.5). */
+const pageUx = (ux: UxIR, page: string): UxIR => ({
+  ...ux,
+  theme: { ...ux.theme, ...ux.pages[page]?.theme },
+});
+
+/** The pages with a theme of their own. */
+const themedPages = (ux: UxIR) =>
+  Object.entries(ux.pages)
+    .filter(([, p]) => p.theme && Object.keys(p.theme).length)
+    .map(([id]) => id);
+
+/** Every font the app shows: the app's, and its landing pages' own. */
+export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] {
+  return [
+    ...new Set([
+      themeFont(ux, themes),
+      ...themedPages(ux).map((id) => themeFont(pageUx(ux, id), themes)),
+    ]),
+  ];
+}
+
 export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
-  const theme = themeOf(ux, themes);
-  const font = themeFont(ux, themes);
-  const density = DENSITY[ux.theme.density];
   const block = (values: Record<string, string>, indent: string) =>
     Object.entries(values)
       .map(([k, v]) => `${indent}--${k}: ${v};`)
       .join("\n");
-  return `${HEADER}@import "${FONT_PACKAGES[font]}";
-
-/* Theme: ${theme.name}${ux.theme.primary ? `, brand colour ${ux.theme.primary}` : ""}, font ${font}, ${ux.theme.density} */
-:root {
-${block(tokens(ux, theme, "light"), "  ")}
+  /** One theme's variables under a selector: :root for the app, a page's own under its hook. */
+  const scope = (selector: string, from: UxIR) => {
+    const theme = themeOf(from, themes);
+    const font = themeFont(from, themes);
+    const density = DENSITY[from.theme.density];
+    return {
+      light: `${selector} {
+${block(tokens(from, theme, "light"), "  ")}
   --radius: ${theme.radius};
   --card-shadow: ${theme.shadow};
   --font-body: "${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -63,19 +85,35 @@ ${block(tokens(ux, theme, "light"), "  ")}
   --row-height: ${density.row};
   --cell-padding: ${density.cell};
   --card-padding: ${density.card};
-}
+}`,
+      dark: `  ${selector} {
+${block(tokens(from, theme, "dark"), "    ")}
+  }`,
+      comment: `${theme.name}${from.theme.primary ? `, brand colour ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}`,
+    };
+  };
+  const app = scope(":root", ux);
+  // A landing page's own theme: the same variables on its body (data-page), so only it changes.
+  const pages = themedPages(ux).map((id) => ({
+    id,
+    ...scope(`[data-page="${id}"]`, pageUx(ux, id)),
+  }));
+  return `${HEADER}${themeFonts(ux, themes)
+    .map((font) => `@import "${FONT_PACKAGES[font]}";`)
+    .join("\n")}
 
+/* Theme: ${app.comment} */
+${app.light}
+${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.light}\n`).join("")}
 /* Touch screens get 44 px targets whatever the density. */
 @media (pointer: coarse) {
-  :root {
+  :root${pages.map((p) => `,\n  [data-page="${p.id}"]`).join("")} {
     --control-height: 2.75rem;
   }
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-${block(tokens(ux, theme, "dark"), "    ")}
-  }
+${[app.dark, ...pages.map((p) => p.dark)].join("\n")}
 }
 `;
 }

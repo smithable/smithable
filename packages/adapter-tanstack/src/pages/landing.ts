@@ -9,6 +9,7 @@ import {
   pascal,
   plural,
   type SpecIR,
+  type UxIR,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
 import { calculatorModel } from "../calculators.js";
@@ -32,6 +33,7 @@ export function landingRoute(
   ir: SpecIR,
   t: Texts,
   auth: AuthIR,
+  ux: UxIR,
 ): string {
   const text = (name: string) => t.section(page.id, name);
   const component = `${pascal(page.id)}Page`;
@@ -59,8 +61,16 @@ export function landingRoute(
   const sectionParts = (section: LandingSection): string[] => {
     // A section's component, opened with where its texts are kept, so the preview can change
     // them in place.
+    // Its look from smithable.ux.yml (layout, image, columns, highlight), checked by its kind.
+    const look = Object.entries(ux.pages[page.id]?.looks?.[section.name] ?? {})
+      // The hero's "image" (which side) is imageSide: its image is the picture itself.
+      .map(
+        ([key, value]) =>
+          `\n          ${key === "image" ? "imageSide" : key}=${typeof value === "number" ? `{${value}}` : attr(String(value))}`,
+      )
+      .join("");
     const open = (component: string) =>
-      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}`;
+      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}${look}`;
     const own = text(section.name);
     switch (section.kind) {
       case "hero":

@@ -3,3 +3,9 @@ smithableUx: 0.1
 
 theme:
   preset: minimal
+
+pages:
+  home:
+    theme: { preset: playful }         # the public page warmer than the tool behind it
+    sections:
+      items: { layout: grid }          # the items' pictures, titled
