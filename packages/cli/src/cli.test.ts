@@ -25,7 +25,9 @@ test("new requires a directory and a known starter", async () => {
   const io = captureIo();
   expect(await run(["new"], io)).toBe(2);
   expect(await run(["new", "x", "--starter", "nope"], io)).toBe(2);
-  expect(io.stderr).toContain('Unknown starter "nope". Available: booking, crm, invoicing.');
+  expect(io.stderr).toContain(
+    'Unknown starter "nope". Available: booking, crm, invoicing, records.',
+  );
 });
 
 test("a command's own help, an operation's help from its schema, and the completion script", async () => {

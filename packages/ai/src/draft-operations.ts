@@ -1,0 +1,325 @@
+// The first draft as a batch of operations (docs/design/first-build.md, 2.7; ARCHITECTURE §9):
+// the model starts from an empty app and answers with operations, constrained to each
+// operation's own argument schema, so the spec's grammar cannot go wrong. The operations are
+// applied one by one; the one that fails goes back to the model with its reason, and the model
+// answers with that one corrected and the rest.
+import {
+  type AnyOperation,
+  applyOperation,
+  type OperationArgs,
+  operationsFor,
+  type ProjectFiles,
+} from "@smithable/core";
+import type { Draft, SpecFiles } from "./draft.js";
+import { plainSchema } from "./propose.js";
+import { completeJson, type Provider, type Usage } from "./provider.js";
+
+/** An app with nothing in it yet: what the operations start from. */
+export const BLANK: SpecFiles = {
+  "smithable.yml": "smithable: 0.1\napp:\n  name: App\n",
+  "smithable.auth.yml":
+    "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: private\n",
+  "smithable.content.yml": "smithableContent: 0.1\n",
+  "smithable.ux.yml": "smithableUx: 0.1\n",
+};
+
+/** Operations a first draft never needs: they change or undo what a draft has not made yet. */
+const NOT_FOR_DRAFTS = new Set([
+  "editSpec",
+  "removeField",
+  "renameField",
+  "changeField",
+  "removePage",
+  "removeSection",
+  "setRuleId",
+  "setPackage",
+]);
+
+export function draftOperations(): AnyOperation[] {
+  return operationsFor([]).filter((op) => !NOT_FOR_DRAFTS.has(op.name));
+}
+
+const GUIDANCE = `You design the first version of a web app as a list of Smithable operations, applied in order to an empty app. Smithable generates the whole app from the result.
+Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts.
+Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
+Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic.`;
+
+/**
+ * Slips models make in the field shorthand, mended without a model: "unique!" for "! unique",
+ * "required" for "!", a choice default written with "=" (the first value is the default),
+ * prefixes like "choices:", and other libraries' type names.
+ */
+export function repairFieldShorthand(text: string): string {
+  let t = text.trim().replace(/^(?:choices?|enum|options?|type)\s*:\s*/i, "");
+  t = t
+    .replace(/\b(boolean)\b/g, "bool")
+    .replace(/\b(integer)\b/g, "int")
+    .replace(/\b(number|float|double)\b/g, "decimal");
+  t = t
+    .replace(/\b(timestamp|date-time|dateTime)\b/g, "datetime")
+    .replace(/\b(str|varchar)\b/g, "string")
+    .replace(/\blongtext\b/g, "text");
+  t = t
+    .replace(/\s+required\b/g, "!")
+    .replace(/\s*unique!/g, "! unique")
+    .replace(/!\s*!/g, "!");
+  if (t.includes("|")) {
+    const m = /^(.*?)\s*=\s*["']?([A-Za-z0-9]+)["']?\s*$/.exec(t);
+    const chosen = m?.[2];
+    let values = (m?.[1] ?? t)
+      .replace(/!|\bunique\b|["']/g, "")
+      .split("|")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (chosen && values.includes(chosen)) values = [chosen, ...values.filter((v) => v !== chosen)];
+    t = values.join(" | ");
+  }
+  return t.replace(/\s+/g, " ").trim();
+}
+
+/** The step with its field shorthand mended, or undefined when nothing changed. */
+function repaired(step: Step): Step | undefined {
+  if (step.op === "addModel" && step.args.fields && typeof step.args.fields === "object") {
+    const fields = Object.fromEntries(
+      Object.entries(step.args.fields as Record<string, unknown>).map(([k, v]) => [
+        k,
+        repairFieldShorthand(String(v)),
+      ]),
+    );
+    return JSON.stringify(fields) === JSON.stringify(step.args.fields)
+      ? undefined
+      : { ...step, args: { ...step.args, fields } };
+  }
+  if (step.op === "addField" && typeof step.args.type === "string") {
+    const type = repairFieldShorthand(step.args.type);
+    return type === step.args.type ? undefined : { ...step, args: { ...step.args, type } };
+  }
+  return undefined;
+}
+
+function describeOperations(operations: AnyOperation[]): string {
+  return operations
+    .map(
+      (op) => `- ${op.name}: ${op.summary}\n  arguments: ${JSON.stringify(plainSchema(op.schema))}`,
+    )
+    .join("\n");
+}
+
+function answerSchema(operations: AnyOperation[]): object {
+  return {
+    type: "object",
+    required: ["operations"],
+    additionalProperties: false,
+    properties: {
+      operations: {
+        type: "array",
+        items: {
+          anyOf: operations.map((op) => ({
+            type: "object",
+            required: ["op", "args"],
+            additionalProperties: false,
+            properties: { op: { const: op.name }, args: plainSchema(op.schema) },
+          })),
+        },
+      },
+    },
+  };
+}
+
+type Step = { op: string; args: OperationArgs };
+
+/** Operations a draft cannot do without; the others are extras a draft may drop. */
+const ESSENTIAL = new Set([
+  "setApp",
+  "addModel",
+  "addField",
+  "addPage",
+  "addLandingPage",
+  "setRoles",
+  "setPublic",
+  "setSignUp",
+]);
+
+/**
+ * Applies steps in order: a slip in the field shorthand is mended, a step already applied or
+ * already there is skipped, a model referred to before it is added is added first, and a step
+ * that still cannot be applied is kept with its reason for the model.
+ */
+function applyAll(
+  start: ProjectFiles,
+  done: Step[],
+  steps: Step[],
+): { files: ProjectFiles; refused: { step: Step; message: string }[] } {
+  let files = start;
+  const refused: { step: Step; message: string }[] = [];
+  const queue: Step[] = steps.map((raw) => ({ op: raw.op, args: raw.args ?? {} }));
+  /** Steps put back once for a model added later; a second time they are refused, not looped. */
+  const deferred = new Set<string>();
+  while (queue.length) {
+    const step = queue.shift() as Step;
+    if (done.some((d) => JSON.stringify(d) === JSON.stringify(step))) continue;
+    // User is built in: a model of that name is dropped, references to it then mean users.
+    if (step.op === "addModel" && step.args.model === "User") continue;
+    let result = applyOperation(files, step.op, step.args);
+    let applied = step;
+    if (!result.ok) {
+      const mended = repaired(step);
+      if (mended) {
+        const again = applyOperation(files, mended.op, mended.args);
+        if (again.ok) {
+          result = again;
+          applied = mended;
+        }
+      }
+    }
+    if (!result.ok) {
+      const detail = result.diagnostics.map((d) => d.message).join(" ");
+      const message = `${result.message}${detail ? ` ${detail}` : ""}`;
+      if (/already (?:has|exists)/i.test(message)) continue;
+      // A list of related records the other model does not refer back to: a convenience the
+      // app is complete without, so it is left out rather than refused.
+      if (
+        step.op === "addField" &&
+        /\[\]\s*$/.test(String(step.args.type ?? "")) &&
+        /reference/i.test(message)
+      )
+        continue;
+      const unmatched = /has no reference to \w+, so "\w+\.(\w+)"/.exec(message)?.[1];
+      if (
+        unmatched &&
+        step.op === "addModel" &&
+        typeof step.args.fields === "object" &&
+        step.args.fields
+      ) {
+        const { [unmatched]: _dropped, ...rest } = step.args.fields as Record<string, string>;
+        queue.unshift({ op: "addModel", args: { ...step.args, fields: rest } });
+        continue;
+      }
+      const missing = /no model named "(\w+)"/.exec(message)?.[1];
+      if (
+        missing &&
+        step.op === "addModel" &&
+        typeof step.args.fields === "object" &&
+        step.args.fields
+      ) {
+        // A field that needs a model not added yet (two models referring to each other, or
+        // one added later): the model is added without it, and the field follows at the end.
+        const fields = step.args.fields as Record<string, string>;
+        const needs = Object.entries(fields).filter(([, type]) =>
+          new RegExp(`\\b${missing}\\b`).test(String(type)),
+        );
+        if (needs.length && needs.length < Object.keys(fields).length) {
+          const rest = Object.fromEntries(
+            Object.entries(fields).filter(([name]) => !needs.some(([n]) => n === name)),
+          );
+          queue.unshift({ op: "addModel", args: { ...step.args, fields: rest } });
+          for (const [field, type] of needs)
+            queue.push({ op: "addField", args: { model: step.args.model, field, type } });
+          continue;
+        }
+      }
+      const later = missing
+        ? queue.findIndex((q) => q.op === "addModel" && q.args.model === missing)
+        : -1;
+      if (later !== -1 && !deferred.has(JSON.stringify(step))) {
+        deferred.add(JSON.stringify(step));
+        queue.unshift(queue.splice(later, 1)[0] as Step, step);
+        continue;
+      }
+      refused.push({ step, message });
+      continue;
+    }
+    files = result.files;
+    done.push(applied);
+  }
+  return { files, refused };
+}
+
+const toProject = (files: SpecFiles): ProjectFiles => ({
+  spec: files["smithable.yml"] ?? "",
+  auth: files["smithable.auth.yml"],
+  content: files["smithable.content.yml"],
+  ux: files["smithable.ux.yml"],
+});
+const toFiles = (files: ProjectFiles): SpecFiles => ({
+  "smithable.yml": files.spec,
+  "smithable.auth.yml": files.auth ?? "",
+  "smithable.content.yml": files.content ?? "",
+  "smithable.ux.yml": files.ux ?? "",
+});
+
+/** At most this many operations in one draft, and rounds of corrections. */
+const MAX_OPERATIONS = 80;
+const MAX_ROUNDS = 4;
+
+/**
+ * Drafts a project as operations from the description, with the strongest allowed model
+ * first. An operation that cannot be applied goes back to the model with its reason and what
+ * was applied before it; the model answers with that one corrected and the rest.
+ */
+export async function draftProjectByOperations(options: {
+  description: string;
+  providers: Provider[];
+  operations?: AnyOperation[];
+}): Promise<Draft & { operations?: Step[] }> {
+  const usage: Usage[] = [];
+  if (options.providers.length === 0)
+    return { kind: "failed", message: "No model is available under the AI policy.", usage };
+  const operations = options.operations ?? draftOperations();
+  const system = `${GUIDANCE}\n\nOperations:\n${describeOperations(operations)}\n\nAnswer with JSON only: {"operations": [{"op": "<name>", "args": {...}}, ...]}.`;
+  const schema = answerSchema(operations);
+  let problem = "";
+  for (const provider of [...options.providers].reverse()) {
+    let files = toProject(BLANK);
+    const done: Step[] = [];
+    let prompt = `Description: ${options.description}`;
+    let round = 0;
+    let refused: { step: Step; message: string }[] = [];
+    while (round < MAX_ROUNDS) {
+      round += 1;
+      let answer: { operations?: Step[] };
+      try {
+        answer = (await completeJson(provider, { system, user: prompt, schema }, usage)) as {
+          operations?: Step[];
+        };
+      } catch (error) {
+        problem = error instanceof Error ? error.message : String(error);
+        // A broken answer (cut off, not JSON) is asked for once more.
+        if (/JSON|Unexpected|position/.test(problem) && round < MAX_ROUNDS) continue;
+        break;
+      }
+      const steps = (answer.operations ?? []).slice(0, MAX_OPERATIONS - done.length);
+      if (steps.length === 0) {
+        // In a correction round an empty answer drops what was refused; a first answer with
+        // nothing in it is no draft.
+        if (done.length > 0)
+          return { kind: "draft", files: toFiles(files), usage, operations: done };
+        problem = refused.length
+          ? refused.map((r) => `${r.step.op}: ${r.message}`).join("\n")
+          : "The answer has no operations.";
+        break;
+      }
+      // Everything that can be applied is; what cannot goes back together, with its reasons.
+      // The model's correction is the authority: what it leaves out is dropped.
+      const outcome = applyAll(files, done, steps);
+      files = outcome.files;
+      refused = outcome.refused;
+      const essential = refused.filter((r) => ESSENTIAL.has(r.step.op));
+      if (essential.length === 0) {
+        // Refused extras (a text, a colour) are left out rather than failing the draft.
+        if (done.length > 0)
+          return { kind: "draft", files: toFiles(files), usage, operations: done };
+        problem =
+          refused.map((r) => `${r.step.op}: ${r.message}`).join("\n") ||
+          "Nothing could be applied.";
+        break;
+      }
+      if (round === MAX_ROUNDS) {
+        problem = essential.map((r) => `${r.step.op}: ${r.message}`).join("\n");
+        break;
+      }
+      prompt = `Description: ${options.description}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
+    }
+  }
+  return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };
+}

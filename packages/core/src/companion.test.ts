@@ -29,7 +29,7 @@ const files = {
 };
 
 test("companions own their operations; nothing hangs off the app section", () => {
-  expect(appSection.operations).toBeUndefined();
+  expect(appSection.operations?.map((o) => o.name)).toEqual(["setApp"]);
   for (const c of COMPANIONS) for (const op of c.operations) expect(OPERATIONS).toContain(op);
 });
 
