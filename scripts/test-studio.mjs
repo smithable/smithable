@@ -288,6 +288,35 @@ try {
     for (const name of Object.keys(after))
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
+  await step(
+    "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
+    async () => {
+      const look = page.getByRole("region", { name: "Theme" });
+      await look.getByText("Add a theme").click();
+      await look
+        .getByLabel("Theme", { exact: true })
+        .fill("smithableTheme: 0.1\nname: moss\nlight:\n  primary: nope\n");
+      await look.getByRole("button", { name: "Add and use" }).click();
+      await page
+        .getByText(/The theme is refused/)
+        .first()
+        .waitFor({ timeout: 60000 });
+      const forest = readFileSync(join(dir, "themes/forest.yml"), "utf8");
+      await look
+        .getByLabel("Theme", { exact: true })
+        .fill(forest.replace("name: forest", "name: moss"));
+      await look.getByRole("button", { name: "Add and use" }).click();
+      await trace.getByText("Add theme moss and use it").first().waitFor({ timeout: 60000 });
+      if (!existsSync(join(dir, "themes/moss.yml"))) throw new Error("no themes/moss.yml");
+      await page
+        .getByRole("list", { name: "Themes" })
+        .getByRole("button", { name: /Moss/, pressed: true })
+        .waitFor({ timeout: 60000 });
+      await page.getByRole("button", { name: "Undo", exact: true }).click();
+      await status.getByText(/Undid: Add theme moss/).waitFor({ timeout: 60000 });
+      if (existsSync(join(dir, "themes/moss.yml"))) throw new Error("undo left themes/moss.yml");
+    },
+  );
 
   await step("a question about the app is answered from the spec, not applied", async () => {
     const before = (await project()).files.spec;
