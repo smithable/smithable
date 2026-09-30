@@ -113,6 +113,38 @@ export async function create(
   return 0;
 }
 
+/**
+ * `smithable clarify "<description>"`: the questions before a draft and the starter chosen, for
+ * a program (--json) or a person. A model that fails or is missing means no questions, so a
+ * caller never has to tell a failure from a description that says enough.
+ */
+export async function clarify(io: Io, description: string, json: boolean): Promise<number> {
+  const asked = await clarifyProject({
+    description,
+    starters: starterSummaries(),
+    providers: providersFor(),
+  }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
+  const result = {
+    ...(asked.starter ? { starter: asked.starter } : {}),
+    questions: asked.questions,
+  };
+  if (json) io.out(`${JSON.stringify(result)}\n`);
+  else {
+    io.out(`Starter: ${asked.starter ?? "(the closest by words)"}\n`);
+    io.out(
+      asked.questions.length
+        ? asked.questions
+            .map(
+              (q, i) =>
+                `${i + 1}. ${q.question}${q.options.length ? ` (${q.options.join(" / ")})` : ""}\n`,
+            )
+            .join("")
+        : "No questions: the description says enough.\n",
+    );
+  }
+  return 0;
+}
+
 /** Each starter as the questions step sees it: what it is, and its records. */
 function starterSummaries(): Record<string, { description: string; models: string[] }> {
   return Object.fromEntries(

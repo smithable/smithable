@@ -11,7 +11,7 @@ import {
   usersModule,
   viewerModule,
 } from "./auth.js";
-import { dataModule, modelModule } from "./data.js";
+import { dataModule, isMarkdown, modelModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
@@ -63,6 +63,9 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
+/** Whether a model has a Markdown field (an action's input is a plain text box). */
+const hasMarkdown = (ir: SpecIR) => ir.models.some((m) => m.fields.some(isMarkdown));
+
 function packageJson(
   ir: SpecIR,
   auth: AuthIR,
@@ -92,6 +95,7 @@ function packageJson(
     dependencies: {
       ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
       [fontPackage]: STACK_PROFILE.fonts[fontPackage as keyof typeof STACK_PROFILE.fonts],
+      ...(hasMarkdown(ir) ? STACK_PROFILE.markdown : {}),
       ...Object.fromEntries(
         Object.entries(packages).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
       ),
@@ -267,11 +271,16 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   },
   {
     key: "models",
-    // The reservation block, for a model with a capacity (docs/design/booking.md).
+    // The reservation block, for a model with a capacity (docs/design/booking.md), and Markdown
+    // fields' editor and formatter: each only in apps that use it.
     kit: [
       {
         files: ["src/kit/Reserve.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.models.some((m) => m.capacity),
+      },
+      {
+        files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],
+        used: ({ ir }) => hasMarkdown(ir),
       },
     ],
     files: ({ ir, t, auth, ux, options }) => [
