@@ -33,6 +33,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     // Only the page this preview is in: Studio.
     if (event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
     studio = event.origin;
+    report();
     selecting = Boolean(event.data.on);
     // Visible to people (a cursor) and to tests: the page is in select mode.
     document.documentElement.toggleAttribute("data-sm-selecting", selecting);
@@ -116,6 +117,18 @@ if (typeof window !== "undefined" && window.parent !== window) {
       post({ type: "undo" });
     }
   });
+  // The page the preview is on, for Studio's address bar: after every navigation, including
+  // the app's own (the router uses the History API) and Back.
+  const report = () => post({ type: "navigated", path: location.pathname + location.search });
+  for (const name of ["pushState", "replaceState"]) {
+    const original = history[name];
+    history[name] = function (...args) {
+      const result = original.apply(this, args);
+      report();
+      return result;
+    };
+  }
+  window.addEventListener("popstate", report);
   post({ type: "ready" });
 }
 `;
