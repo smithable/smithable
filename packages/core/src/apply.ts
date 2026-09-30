@@ -8,6 +8,7 @@ import {
   type Effect,
   type OperationArgs,
   OperationError,
+  type ThemeFiles,
 } from "./operation.js";
 import { checkJson, type SpecPlugin } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
@@ -16,7 +17,7 @@ import { ruleOperations } from "./sections/rule-operations.js";
 import { specOperations } from "./sections/spec-operations.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
-import type { ThemeIR } from "./theme.js";
+import { type ThemeIR, themeNames } from "./theme.js";
 
 /**
  * Every operation: those about the spec as a whole (rules and access belong to any concept),
@@ -50,6 +51,8 @@ export type OperationResult =
   | {
       ok: true;
       files: ProjectFiles;
+      /** Files the operation adds besides the five (themes/<name>.yml), for the host to write. */
+      added: { path: string; text: string }[];
       description: string;
       destructive: boolean;
       effects: Effect[];
@@ -117,8 +120,14 @@ export function applyOperation(
 
   // Each companion gets an editor: its file, or a new one if it may be created.
   const start = (key: (typeof COMPANIONS)[number]["key"], empty?: string) => files[key] ?? empty;
+  const added: { theme: ThemeIR; text: string }[] = [];
+  const themes: ThemeFiles = {
+    names: themeNames(files.themes),
+    add: (theme, text) => void added.push({ theme, text }),
+  };
   const editors = {
     spec: new YamlEditor(files.spec),
+    themes,
     ...Object.fromEntries(
       COMPANIONS.flatMap((c) => {
         const text = start(c.key, c.empty);
@@ -151,18 +160,22 @@ export function applyOperation(
   const after = validateSpec({ path: "smithable.yml", text: editors.spec.text }, options);
   if (!after.ir) return fail(`${name} would make smithable.yml invalid.`, after.diagnostics);
   // A companion file is written (and so checked) if the project has one or the operation
-  // changed it.
+  // changed it. A theme added by the operation counts for the check, so the ux file may use it.
   const written: Partial<Record<(typeof COMPANIONS)[number]["key"], string>> = {};
+  const known = added.length
+    ? { ...files, themes: [...(files.themes ?? []), ...added.map((a) => a.theme)] }
+    : files;
   for (const c of COMPANIONS) {
     const editor = editors[c.key];
     if (!editor || (files[c.key] === undefined && editor.text === c.empty)) continue;
-    const problems = c.check(editor.text, after.ir, files);
+    const problems = c.check(editor.text, after.ir, known);
     if (hasErrors(problems)) return fail(`${name} would make ${c.file} invalid.`, problems);
     written[c.key] = editor.text;
   }
   return {
     ok: true,
     files: { spec: editors.spec.text, ...written },
+    added: added.map((a) => ({ path: `themes/${a.theme.name}.yml`, text: a.text })),
     description: op.describe(args, before.ir),
     destructive: op.destructive(args, before.ir, after.ir),
     effects,
@@ -173,16 +186,22 @@ export function applyOperation(
 export function parseOperationArgs(op: AnyOperation, words: string[]): OperationArgs {
   const properties = (op.schema.properties ?? {}) as Record<string, JsonSchema>;
   const args: OperationArgs = {};
-  // "--name value" gives an argument by name: a list as "a,b", an object as "a=x,b=y".
+  // "--name value" gives an argument by name: a list as "a,b", an object as "a=x,b=y"; a boolean
+  // needs no value ("--use").
   const values: string[] = [];
   for (let i = 0; i < words.length; i++) {
     const key = /^--(\w+)$/.exec(words[i] as string)?.[1];
-    if (key === undefined || !properties[key] || words[i + 1] === undefined) {
+    const type = key === undefined ? undefined : properties[key]?.type;
+    const next = words[i + 1];
+    if (type === "boolean" && (next === undefined || /^--\w+$/.test(next))) {
+      args[key as string] = true;
+      continue;
+    }
+    if (key === undefined || !properties[key] || next === undefined) {
       values.push(words[i] as string);
       continue;
     }
     const value = words[++i] as string;
-    const type = properties[key]?.type;
     args[key] =
       type === "array"
         ? value

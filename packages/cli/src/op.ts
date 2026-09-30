@@ -1,5 +1,5 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   applyOperation,
@@ -52,7 +52,11 @@ export function op(
       io.err(`  ${o.name} ${o.positional.map((p) => `<${p}>`).join(" ")}  ${o.summary}\n`);
     return 2;
   }
-  return runOperation(dir, io, operation.name, parseOperationArgs(operation, values), flags);
+  // A word "@path" stands for that file's text (a theme file for addTheme).
+  const words = values.map((w) =>
+    w.startsWith("@") && existsSync(w.slice(1)) ? readFileSync(w.slice(1), "utf8") : w,
+  );
+  return runOperation(dir, io, operation.name, parseOperationArgs(operation, words), flags);
 }
 
 /**
@@ -138,6 +142,10 @@ export async function runOperation(
     if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
     if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
     if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
+    for (const file of result.added) {
+      mkdirSync(dirname(join(dir, file.path)), { recursive: true });
+      writeFileSync(join(dir, file.path), file.text);
+    }
     mkdirSync(join(dir, ".smithable"), { recursive: true });
     appendFileSync(
       join(dir, OPLOG),
