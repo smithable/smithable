@@ -32,9 +32,17 @@ models:
       instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
+      bookings: Booking[]
+      placesLeft: { type: int, formula: capacity - COUNT(bookings) }
     access: { create: [admin] }
-    rules:
-      - A session never has more confirmed bookings than its capacity.
+
+  Booking:
+    description: A member's place in a session.
+    fields:
+      session: Session!  unique         # private access: one booking per member and session
+    capacity:                           # a session never has more bookings than its capacity
+      per: session
+      max: session.capacity
 
   Message:
     description: A question a visitor sends from the contact form on the home page.
@@ -69,5 +77,7 @@ pages:
   messages:
     crud: Message
     access: [admin]
+  my-bookings:                        # a member's own bookings (private access)
+    crud: Booking
   admin:
     data: all                      # every model, for administrators

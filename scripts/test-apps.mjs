@@ -294,6 +294,12 @@ async function calendarFlow(base) {
     const title = (await session.locator("span").first().innerText()).trim();
     await session.click();
     await page.getByRole("dialog").getByRole("heading", { name: title }).waitFor({ timeout: 5000 });
+    // Its places, and for a visitor a way to sign in and book.
+    await page
+      .getByRole("dialog")
+      .getByText(/^\d+ of \d+ places? left$/)
+      .waitFor({ timeout: 10000 });
+    await page.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).waitFor();
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
     // Next and Previous: another week, in the address too.
     await page.getByRole("button", { name: "Next" }).click();
@@ -330,7 +336,7 @@ async function calendarFlow(base) {
     if (!starts.endsWith("T07:00"))
       throw new Error(`the new session starts at ${starts}, from ${label}`);
     console.log(
-      "  ✓ browser: the schedule shows this week's sessions to a visitor, who opens one; Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; an admin's click on an empty hour starts a new session then",
+      "  ✓ browser: the schedule shows this week's sessions to a visitor, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; an admin's click on an empty hour starts a new session then",
     );
   } catch (error) {
     console.log(
@@ -338,6 +344,66 @@ async function calendarFlow(base) {
     );
     failures.push("booking calendar flow");
   } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Booking a place (docs/design/booking.md): with one place per session, a member books one
+ * and sees it among their bookings; the admin then finds it full and cannot lower its places
+ * below one; the member cancels and the place is free again.
+ */
+async function bookingFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const panel = page.getByRole("dialog");
+  try {
+    write(dir, "UPDATE sessions SET capacity = 1");
+    await signInAs(page, base, "member");
+    await open(page, `${base}/schedule`);
+    const session = page.locator("section ol button").first();
+    await session.waitFor({ timeout: 10000 });
+    const title = (await session.locator("span").first().innerText()).trim();
+    await session.click();
+    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
+    await panel.getByRole("button", { name: "Book a place" }).click();
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 });
+    await panel.getByText(/^Full$/).waitFor();
+    await open(page, `${base}/my-bookings`);
+    await page.locator("main tbody tr").first().waitFor({ timeout: 10000 });
+    if ((await page.locator("main tbody tr").count()) !== 1)
+      throw new Error("not one booking in My bookings");
+    // The admin opens the same session on its page: full, and its places cannot go below one.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/schedule`);
+    await page.locator("section ol button", { hasText: title }).first().click();
+    await page.waitForURL(/\/sessions\/\d+$/);
+    await page.getByText(/^Full$/).waitFor({ timeout: 10000 });
+    if (await page.getByRole("button", { name: "Book a place" }).count())
+      throw new Error("a full session offers a place");
+    await page.getByLabel("Capacity").fill("0");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page
+      .getByText("1 is already taken; the number cannot go below that.")
+      .waitFor({ timeout: 10000 });
+    // The member cancels; the place is free again.
+    await signInAs(page, base, "member");
+    await open(page, `${base}/schedule`);
+    await page.locator("section ol button", { hasText: title }).first().click();
+    await panel.getByRole("button", { name: "Cancel booking" }).click();
+    await panel.getByRole("button", { name: "Yes, cancel it" }).click();
+    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
+    await panel.getByRole("button", { name: "Book a place" }).waitFor();
+    console.log(
+      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("booking flow");
+  } finally {
+    write(dir, "UPDATE sessions SET capacity = 12");
     await browser.close();
   }
 }
@@ -1457,6 +1523,7 @@ for (const [index, example] of examples.entries()) {
       if (example === "booking") {
         await landingFlow(base);
         await calendarFlow(base);
+        await bookingFlow(dir, base);
       }
       if (example === "invoicing") {
         await formulaFlow(base);

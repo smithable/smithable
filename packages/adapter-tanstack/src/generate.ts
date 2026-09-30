@@ -267,6 +267,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   },
   {
     key: "models",
+    // The reservation block, for a model with a capacity (docs/design/booking.md).
+    kit: [
+      {
+        files: ["src/kit/Reserve.tsx"],
+        used: ({ ir, auth }) => hasSignIn(auth) && ir.models.some((m) => m.capacity),
+      },
+    ],
     files: ({ ir, t, auth, ux, options }) => [
       generated("src/db/schema.ts", schemaModule(ir, auth)),
       generated("src/db/seed.ts", seedModule(ir)),
