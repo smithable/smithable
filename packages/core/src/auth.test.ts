@@ -79,7 +79,9 @@ describe("the examples", () => {
       delete: { public: false, roles: ["admin"], owner: true },
     });
     const pages = Object.fromEntries(spec.pages.map((p) => [p.id, pageAccess(p, a)]));
-    expect(pages.sessions).toEqual({ public: true, roles: ["admin", "member"], owner: false });
+    // The public schedule is a calendar; the list of sessions is the staff's.
+    expect(pages.schedule).toEqual({ public: true, roles: ["admin", "member"], owner: false });
+    expect(pages.sessions).toEqual({ public: false, roles: ["admin"], owner: false });
     expect(pages["class-types"]).toEqual({ public: false, roles: ["admin"], owner: false });
   });
 });

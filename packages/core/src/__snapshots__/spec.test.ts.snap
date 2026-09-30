@@ -196,6 +196,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
     {
       "name": "main",
       "pages": [
+        "schedule",
         "sessions",
         "class-types",
         "instructors",
@@ -211,7 +212,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "kind": "landing",
         "sections": [
           {
-            "button": "sessions",
+            "button": "schedule",
             "kind": "hero",
             "name": "hero",
           },
@@ -229,7 +230,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "name": "faq",
           },
           {
-            "button": "sessions",
+            "button": "schedule",
             "kind": "callToAction",
             "name": "callToAction",
           },
@@ -247,6 +248,19 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/",
     },
     {
+      "id": "schedule",
+      "pattern": {
+        "duration": "classType.durationMinutes",
+        "kind": "calendar",
+        "model": "Session",
+        "starts": "startsAt",
+      },
+      "route": "/schedule",
+    },
+    {
+      "access": [
+        "admin",
+      ],
       "id": "sessions",
       "pattern": {
         "kind": "crud",

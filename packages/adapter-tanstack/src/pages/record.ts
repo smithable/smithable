@@ -1,4 +1,5 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+
 import {
   type AuthIR,
   humanize,
@@ -36,6 +37,7 @@ import {
   titleField,
   type Within,
 } from "../shared.js";
+import { calendarStart } from "./calendar.js";
 
 /**
  * A settings page edits the viewer's one record of a model (their own when the model's
@@ -204,6 +206,12 @@ export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux:
   const order = fieldOrder(page, model, ux);
   const component = `New${model.name}Page`;
   const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  // A model on a calendar: the new form can start at the hour chosen there (?startsAt=…).
+  const start = calendarStart(model, ir);
+  const timed = start?.type.kind === "scalar" && start.type.name === "datetime";
+  const preset = start
+    ? `\n        preset={search.${start.name} ? { ${start.name}: ${timed ? `instantOf(search.${start.name}, app.timeZone)` : `search.${start.name}`} } : undefined}`
+    : "";
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
@@ -211,13 +219,13 @@ import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
 ${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-
+${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${start ? 'import { z } from "zod";\n' : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${start ? `  validateSearch: z.object({ ${start.name}: z.string().max(40).optional().catch(undefined) }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
-${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const navigate = useNavigate();
+${options ? "  const { options } = Route.useLoaderData();\n" : ""}${start ? "  const search = Route.useSearch();\n" : ""}  const navigate = useNavigate();
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
@@ -225,7 +233,7 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
       <ModelForm
         ui={${n.ui}}
         app={app}
-        schema={${n.schema}}${order}
+        schema={${n.schema}}${order}${preset}
 ${options ? "        options={options}\n" : ""}        submitLabel=${attr(`Create ${n.label.toLowerCase()}`)}
         onSubmit={async (values) => {
           await ${n.create}({ data: values });
