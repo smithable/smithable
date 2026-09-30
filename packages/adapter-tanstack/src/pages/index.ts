@@ -21,14 +21,14 @@ export const PAGE_GENERATORS: {
   };
 } = {
   crud: {
-    routes(page, { ir, t, ux, options }): Record<string, string> {
+    routes(page, { ir, t, ux, auth, options }): Record<string, string> {
       const model = ir.models.find((m) => m.name === page.pattern.model);
       if (!model) return {};
       const custom = options.customPages?.includes(page.id) ?? false;
       return {
         "index.tsx": listRoute(page, model, t, ir, custom, ux),
         "new.tsx": newRoute(page, model, t, ir, ux),
-        "$id.tsx": detailRoute(page, model, t, ir, ux),
+        "$id.tsx": detailRoute(page, model, t, ir, ux, undefined, auth),
       };
     },
   },
