@@ -114,6 +114,7 @@ ${tests.join("\n\n")}
 export function calculatorRoute(
   page: PageIR & { pattern: { kind: "calculator"; calculator: CalculatorIR } },
   t: Texts,
+  ux: UxIR,
 ): string {
   const model = calculatorModel(page.id, page.pattern.calculator);
   const component = `${pascal(page.id)}Page`;
@@ -137,7 +138,7 @@ function ${component}() {
   return (
     <>
       <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
-      <Calculator ui={${ui}} app={app}${results ? ` resultsTitle=${attr(results)}` : ""} />
+      <Calculator ui={${ui}} app={app}${results ? ` resultsTitle=${attr(results)}` : ""}${ux.pages[page.id]?.results === "below" ? ' layout="below"' : ""} />
     </>
   );
 }
