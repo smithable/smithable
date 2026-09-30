@@ -64,7 +64,7 @@ interface Rule {
 }
 
 /** Lowercase, one space between words, no final punctuation, and the polite openers gone. */
-function normalize(request: string): string {
+export function normalize(request: string): string {
   let text = request
     .trim()
     .toLowerCase()
@@ -82,7 +82,7 @@ const OPENERS =
   /^(?:please|can you|could you|would you|i want to|i want|i would like to|i'd like to|we want to|we need to|we want|we need|let's|lets|make it possible to|it should be possible to|make sure that|make sure) /;
 
 const ARTICLE = /^(?:a|an|the|each|every|all|our|its|their|any) /;
-const dropArticles = (s: string) => {
+export const dropArticles = (s: string) => {
   let out = s.trim();
   for (;;) {
     const next = out.replace(ARTICLE, "");
@@ -108,7 +108,7 @@ const key = (s: string) =>
   kebab(dropArticles(s)).split("-").filter(Boolean).map(singular).join(" ");
 
 /** The one model a phrase names ("customers", "each class type"), or undefined. */
-function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
+export function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
   const wanted = key(phrase.replace(/\b(?:record|records|entry|entries|model)$/, ""));
   if (!wanted) return undefined;
   const found = ir.models.filter((m) => key(m.name) === wanted);
@@ -116,7 +116,7 @@ function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
 }
 
 /** A field of `model` by name or by the words of its label: "phone number" finds `phone`. */
-function fieldFor(model: ModelIR, phrase: string): FieldIR | undefined {
+export function fieldFor(model: ModelIR, phrase: string): FieldIR | undefined {
   const wanted = key(phrase.replace(/ field$/, ""));
   if (!wanted) return undefined;
   const exact = model.fields.filter((f) => key(f.name) === wanted);
@@ -133,7 +133,10 @@ function fieldFor(model: ModelIR, phrase: string): FieldIR | undefined {
 }
 
 /** A field named without its model: the one field of that name across all models. */
-function fieldAnywhere(ir: SpecIR, phrase: string): { model: ModelIR; field: FieldIR } | undefined {
+export function fieldAnywhere(
+  ir: SpecIR,
+  phrase: string,
+): { model: ModelIR; field: FieldIR } | undefined {
   const found = ir.models.flatMap((model) => {
     const field = fieldFor(model, phrase);
     return field ? [{ model, field }] : [];
@@ -142,7 +145,7 @@ function fieldAnywhere(ir: SpecIR, phrase: string): { model: ModelIR; field: Fie
 }
 
 /** A page by its name ("customers", "the class types page") or as the list of a model. */
-function pageFor(ir: SpecIR, phrase: string): PageIR | undefined {
+export function pageFor(ir: SpecIR, phrase: string): PageIR | undefined {
   const wanted = key(phrase.replace(/ (?:page|list|screen)$/, ""));
   if (!wanted) return undefined;
   const byName = ir.pages.filter((p) => key(p.id) === wanted);
@@ -312,7 +315,7 @@ const ROLE_VERBS: Record<string, "read" | "create" | "write" | "delete"> = {
 };
 
 /** "delete", "deleting" and "deletion" are the same access operation. */
-function verbOf(word: string): "read" | "create" | "write" | "delete" | undefined {
+export function verbOf(word: string): "read" | "create" | "write" | "delete" | undefined {
   for (const form of [
     word,
     word.replace(/ing$/, ""),

@@ -107,7 +107,9 @@ export async function proposeFor(
     concepts: context.concepts,
     usage: proposal.usage,
     answered:
-      proposal.kind === "change" && proposal.generator ? "generator" : proposal.usage.at(-1)?.tier,
+      (proposal.kind === "change" || proposal.kind === "answer") && proposal.generator
+        ? "generator"
+        : proposal.usage.at(-1)?.tier,
     kind: proposal.kind,
     ...(proposal.kind === "change"
       ? { operations: proposal.operations.map(({ op, args }) => ({ op, args })) }
@@ -219,7 +221,7 @@ export async function ask(
   const proposal = await proposeFor(dir, io, request, id);
   if (!proposal) return 1;
   io.out(
-    `${usageLine(proposal.usage, proposal.kind === "change" ? proposal.generator : undefined)}\n`,
+    `${usageLine(proposal.usage, proposal.kind === "change" || proposal.kind === "answer" ? proposal.generator : undefined)}\n`,
   );
   switch (proposal.kind) {
     case "failed":
@@ -241,6 +243,9 @@ export async function ask(
       io.out(
         `${proposal.question}\n${proposal.options.map((o) => `  - ${o}\n`).join("")}Ask again with the details.\n`,
       );
+      return 0;
+    case "answer":
+      io.out(`${proposal.text}\n`);
       return 0;
   }
   io.out("Proposed change:\n");

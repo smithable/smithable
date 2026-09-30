@@ -531,6 +531,8 @@ For hosted users, who have no local model, tier 2 is the main AI tier. It starts
 
 The system escalates only when the lower tier is unavailable, fails validation, returns no valid operation, answers that no operation can do it while a stronger tier is allowed (a small model's "cannot" is not the last word), or the task needs custom code. A question from any tier goes to the user as it is: asking is cheap and never a guess.
 
+**Questions about the app** ("who can delete orders?", "is the schedule public?", "what is a customer?", "where is the total used?", "what happens when I delete a customer?") are answered, never applied (`docs/design/studio-v2.md` §4). Tier 0 answers the common shapes from the spec and the access rules (`answerQuestion` in `@smithable/index`, with the same name resolution as the phrase grammar); a question it cannot read goes to the model with the app's context, whose answer kind is `answer` (one to three sentences, constrained by the schema like the others). The proposal kind `answer` carries the text and the concepts it is about; `smithable ask` prints it, Studio shows it under the change box, and nothing is traced, since nothing changed.
+
 ### 9.3 Context construction
 
 Before any model runs, simple fuzzy and embedding matching over the manifest shortlists the likely concepts, so even a 1–3B local model only chooses among a few candidates. A **context builder** then assembles the smallest useful slice from the manifest, the index and (only for custom code) the relevant source files: the request, the relevant concepts with their free text, available operations, and the implementation slice needed for that tier. Every tier gets the same semantic slice; escalating a tier never means adding unrelated project data.
