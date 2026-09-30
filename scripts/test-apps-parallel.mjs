@@ -24,7 +24,12 @@ const results = await Promise.all(
       new Promise((resolve) => {
         const child = spawn("node", [join(repo, "scripts/test-apps.mjs"), example], {
           cwd: repo,
-          env: { ...process.env, TEST_APPS_PORT: String(4400 + i * 10) },
+          // Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts
+          // testing at the same time can keep apart.
+          env: {
+            ...process.env,
+            TEST_APPS_PORT: String(Number(process.env.TEST_APPS_PORT ?? 4400) + i * 10),
+          },
         });
         children.add(child);
         // Each line as it comes, so a stuck run shows which step it is in.

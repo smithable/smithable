@@ -20,7 +20,7 @@ import type { Io } from "./io.js";
 import { requiredButEmpty, runOperation } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
-import { loadSpec } from "./validate.js";
+import { loadSpec, projectThemes } from "./validate.js";
 
 /**
  * The models Smithable may use, from the environment (ARCHITECTURE §9.5), so keys never end
@@ -82,6 +82,7 @@ export async function proposeFor(
     ...(read("smithable.auth.yml") ? { auth: read("smithable.auth.yml") } : {}),
     ...(read("smithable.ux.yml") ? { ux: read("smithable.ux.yml") } : {}),
     plugins: loadPlugins(dir),
+    themes: projectThemes(dir),
   };
   const context = buildContext(projectIndex(dir, ir, auth), request);
   const providers = providersFor();
