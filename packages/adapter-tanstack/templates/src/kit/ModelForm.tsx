@@ -269,6 +269,10 @@ function failureMessage(ui: ModelUi, error: unknown): string {
     return `Another ${ui.label.toLowerCase()} already has this ${field.label.toLowerCase()}.`;
   if (message === "in-use")
     return `This ${ui.label.toLowerCase()} is still used by other records. Change or delete those first.`;
+  if (message === "full") return "No places left.";
+  const booked = /^booked:(\d+)$/.exec(message)?.[1];
+  if (booked)
+    return `${booked} ${booked === "1" ? "is" : "are"} already taken; the number cannot go below that.`;
   return message || "Something went wrong. Please try again.";
 }
 

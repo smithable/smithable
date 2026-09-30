@@ -19,6 +19,7 @@ import {
 } from "../formula.js";
 import {
   ACCESS_OPERATIONS,
+  type CapacityIR,
   type FieldExample,
   type FieldIR,
   type FieldValue,
@@ -96,10 +97,48 @@ export const modelsSection: SpecSection<"models"> = {
   operations: modelOperations,
   follow(spec, effect, ir) {
     // Formulas (and their examples) and an owner field follow a renamed field.
+    // A field a capacity counts on cannot go while it does.
+    if (effect.kind === "remove-field") {
+      for (const m of ir.models) {
+        const c = m.capacity;
+        if (!c) continue;
+        const perField = m.fields.find((f) => f.name === c.per);
+        const target = perField?.type.kind === "relation" ? perField.type.model : undefined;
+        const uses =
+          (m.name === effect.model &&
+            (c.per === effect.field || (c.where && effect.field in c.where))) ||
+          (target === effect.model && c.max === `${c.per}.${effect.field}`);
+        if (uses)
+          return {
+            refusal: `${m.name}'s capacity counts on ${effect.model}.${effect.field}; change the capacity first.`,
+          };
+      }
+      return undefined;
+    }
     if (effect.kind !== "rename-field") return undefined;
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
       spec.set(["models", effect.model, "ownedBy"], effect.to);
+    for (const m of ir.models) {
+      const c = m.capacity;
+      if (!c) continue;
+      const path = ["models", m.name, "capacity"];
+      if (m.name === effect.model && c.per === effect.from) {
+        spec.set([...path, "per"], effect.to);
+        if (typeof c.max === "string")
+          spec.set([...path, "max"], `${effect.to}.${c.max.split(".")[1]}`);
+      }
+      if (m.name === effect.model && c.where && effect.from in c.where)
+        spec.renameKey([...path, "where", effect.from], effect.to);
+      const perField = m.fields.find((f) => f.name === c.per);
+      const target = perField?.type.kind === "relation" ? perField.type.model : undefined;
+      if (
+        target === effect.model &&
+        typeof c.max === "string" &&
+        c.max === `${c.per}.${effect.from}`
+      )
+        spec.set([...path, "max"], `${c.per}.${effect.to}`);
+    }
     return undefined;
   },
   schema: {
@@ -129,6 +168,25 @@ export const modelsSection: SpecSection<"models"> = {
           properties: Object.fromEntries(
             ACCESS_OPERATIONS.map((op) => [op, { type: "array", items: { type: "string" } }]),
           ),
+        },
+        capacity: {
+          type: "object",
+          description:
+            "At most max records per record that per refers to, e.g. { per: session, max: session.capacity }: a booking's places.",
+          required: ["per", "max"],
+          additionalProperties: false,
+          properties: {
+            per: { type: "string", description: "A required reference of this model." },
+            max: {
+              oneOf: [{ type: "integer", minimum: 1 }, { type: "string" }],
+              description:
+                'A whole number, or a whole-number field of the referenced record, "reference.field".',
+            },
+            where: {
+              type: "object",
+              description: "Only records with these choice or yes/no values count.",
+            },
+          },
         },
         ...textSchema,
       },
@@ -176,7 +234,7 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "access", ...TEXT_KEYS],
+    allowed: ["fields", "ownedBy", "access", "capacity", ...TEXT_KEYS],
     later: ["unique", "examples"],
     content: ["label", "title"],
   });
@@ -189,6 +247,14 @@ function readModel(
     if (field !== undefined) {
       model.ownedBy = field;
       ctx.mark(`ownedBy:${name}`, ownedBy.value);
+    }
+  }
+  const capacity = known.find((e) => e.key === "capacity");
+  if (capacity) {
+    const read = readCapacity(ctx, capacity.value, name);
+    if (read) {
+      model.capacity = read;
+      ctx.mark(`capacity:${name}`, capacity.value);
     }
   }
   const fields = known.find((e) => e.key === "fields");
@@ -520,6 +586,141 @@ function buildField(
   return field;
 }
 
+/** The keys of a model's capacity as written; what they name is checked once every model is parsed. */
+function readCapacity(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  model: string,
+): CapacityIR | undefined {
+  const where = `the capacity of "${model}"`;
+  const entries = mapEntries(ctx, node, where);
+  if (!entries) return undefined;
+  const known = checkKeys(ctx, entries, where, { allowed: ["per", "max", "where"] });
+  const per = known.find((e) => e.key === "per");
+  const max = known.find((e) => e.key === "max");
+  if (!per || !max) {
+    ctx.error(node, "missing-key", `${capitalize(where)} needs "per" (a reference) and "max".`);
+    return undefined;
+  }
+  const perName = readString(ctx, per.value, `"per" in ${where}`);
+  if (perName === undefined) return undefined;
+  let maxValue: number | string | undefined;
+  if (isScalar(max.value) && typeof max.value.value === "number") {
+    if (!Number.isInteger(max.value.value) || max.value.value < 1) {
+      ctx.error(
+        max.value,
+        "invalid-value",
+        `"max" in ${where} must be a whole number of at least 1.`,
+      );
+      return undefined;
+    }
+    maxValue = max.value.value;
+  } else {
+    maxValue = readString(ctx, max.value, `"max" in ${where}`);
+    if (maxValue === undefined) return undefined;
+  }
+  const result: CapacityIR = { per: perName, max: maxValue };
+  const conditions = known.find((e) => e.key === "where");
+  if (conditions) {
+    result.where = {};
+    for (const condition of mapEntries(ctx, conditions.value, `"where" in ${where}`) ?? []) {
+      if (
+        isScalar(condition.value) &&
+        (typeof condition.value.value === "string" || typeof condition.value.value === "boolean")
+      )
+        result.where[condition.key] = condition.value.value;
+      else
+        ctx.error(
+          condition.value,
+          "invalid-value",
+          `"where" in ${where} compares a field with a choice value or true/false.`,
+        );
+    }
+  }
+  return result;
+}
+
+/** A model's capacity names its own fields and the referenced model's: checked once all are parsed. */
+function checkCapacity(ctx: ParseContext, models: ModelIR[], model: ModelIR): void {
+  const capacity = model.capacity;
+  if (!capacity) return;
+  const at = ctx.at(`capacity:${model.name}`);
+  const where = `the capacity of "${model.name}"`;
+  const per = model.fields.find((f) => f.name === capacity.per);
+  if (
+    per?.type.kind !== "relation" ||
+    per.type.many ||
+    per.type.model === USER_MODEL ||
+    !per.required
+  ) {
+    ctx.error(
+      at,
+      "invalid-capacity",
+      `"per" in ${where} must be one of ${model.name}'s required references (a field like "session: Session!").`,
+      didYouMean(
+        capacity.per,
+        model.fields
+          .filter((f) => f.type.kind === "relation" && !f.type.many && f.required)
+          .map((f) => f.name),
+      ),
+    );
+    delete model.capacity;
+    return;
+  }
+  const target = models.find((m) => m.name === (per.type as { model: string }).model);
+  if (typeof capacity.max === "string") {
+    const [ref, field, ...rest] = capacity.max.split(".");
+    const found =
+      ref === capacity.per && rest.length === 0
+        ? target?.fields.find((f) => f.name === field)
+        : undefined;
+    if (found?.type.kind !== "scalar" || found.type.name !== "int" || found.formula) {
+      ctx.error(
+        at,
+        "invalid-capacity",
+        `"max" in ${where} must be a whole number, or a whole-number field of the ${target?.name ?? "referenced"} record, like "${capacity.per}.capacity".`,
+        target
+          ? didYouMean(
+              field ?? "",
+              target.fields
+                .filter((f) => f.type.kind === "scalar" && f.type.name === "int")
+                .map((f) => `${capacity.per}.${f.name}`),
+            )
+          : undefined,
+      );
+      delete model.capacity;
+      return;
+    }
+  }
+  for (const [name, wanted] of Object.entries(capacity.where ?? {})) {
+    const field = model.fields.find((f) => f.name === name);
+    const fits =
+      field &&
+      ((field.type.kind === "choice" &&
+        typeof wanted === "string" &&
+        field.type.values.includes(wanted)) ||
+        (field.type.kind === "scalar" &&
+          field.type.name === "bool" &&
+          typeof wanted === "boolean"));
+    if (!fits) {
+      ctx.error(
+        at,
+        "invalid-capacity",
+        `"where" in ${where}: "${name}" must be a choice field of ${model.name} with one of its values, or a yes/no field with true or false.`,
+      );
+      delete model.capacity;
+      return;
+    }
+  }
+  if (!per.unique)
+    ctx.warning(
+      at,
+      "capacity-no-unique",
+      `${model.name} has a capacity per ${capacity.per}, but "${capacity.per}" is not unique: one person can take several places.`,
+      `Write "${capacity.per}: ${(per.type as { model: string }).model}! unique" for one ${model.name.toLowerCase()} per person and ${target?.name.toLowerCase() ?? "record"} (unique per owner with private access).`,
+    );
+}
+
 /** Where each relation field was written ("Model.field"), for positioning cross-model errors. */
 type RelationNodes = Map<string, ParsedNode>;
 
@@ -530,6 +731,7 @@ type RelationNodes = Map<string, ParsedNode>;
  */
 function checkRelations(ctx: ParseContext, models: ModelIR[], relationNodes: RelationNodes): void {
   for (const model of models) {
+    checkCapacity(ctx, models, model);
     if (model.ownedBy !== undefined) {
       const owner = model.fields.find((f) => f.name === model.ownedBy);
       if (owner?.type.kind !== "relation" || owner.type.model !== USER_MODEL || owner.type.many) {

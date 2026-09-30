@@ -149,6 +149,30 @@ ${Object.entries(expected(access, role))
     insert${model.name}(viewer.id);
     for (const row of await ${data}.list(viewer)) expect(Object.keys(row)).not.toContain(${JSON.stringify(lists[0])});
   });`);
+    // A capacity: the last place goes to one, the next is refused; the referenced record cannot
+    // lower its number below what is taken.
+    const capacity = model.capacity;
+    const per = capacity && model.fields.find((f) => f.name === capacity.per);
+    if (capacity && per?.type.kind === "relation" && reader && !capacity.where) {
+      const target = ir.models.find((m) => m.name === (per.type as { model: string }).model);
+      const maxField = typeof capacity.max === "string" ? capacity.max.split(".")[1] : undefined;
+      const fill = maxField
+        ? `{ ...${camel(target?.name ?? "")}Values(viewer.id), ${maxField}: 1 }`
+        : `${camel(target?.name ?? "")}Values(viewer.id)`;
+      const max = maxField ? 1 : capacity.max;
+      tests.push(`  test("a capacity: at most ${max} per ${per.name}, and the number cannot go below what is taken", async () => {
+    const viewer = signedIn(${JSON.stringify(reader)});
+    const place = db.insert(${camel(plural(target?.name ?? ""))}).values({ ...${fill}${signedIn && !target?.ownedBy ? ", ownerId: viewer.id" : ""} }).returning().get();
+    for (let i = 0; i < ${max}; i++)
+      await ${data}.create(signedIn(${JSON.stringify(reader)}), { ...${values}(viewer.id), ${per.name}Id: place.id });
+    await expect(${data}.create(signedIn(${JSON.stringify(reader)}), { ...${values}(viewer.id), ${per.name}Id: place.id })).rejects.toThrow("full");${
+      maxField
+        ? `
+    await expect(${camel(target?.name ?? "")}Data.update(signedIn("admin"), place.id, { ...${fill}, ${maxField}: 0 })).rejects.toThrow("booked:${max}");`
+        : ""
+    }
+  });`);
+    }
     return `describe(${JSON.stringify(model.name)}, () => {
 ${tests.join("\n\n")}
 });`;

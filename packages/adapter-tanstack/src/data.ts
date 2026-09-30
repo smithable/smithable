@@ -26,6 +26,7 @@ import {
   shownFields,
   storedFields,
   type Texts,
+  tableNames,
   titleField,
   userFields,
 } from "./shared.js";
@@ -207,14 +208,66 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const titleColumn = titleField(model);
   const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
   const access = modelAccess(model, auth);
+  // A capacity: at most so many of these per referenced record (docs/design/booking.md),
+  // checked in the same transaction as the write. And the records that hold a capacity for
+  // this model's records ("max" a field here): lowering it below what is taken is refused.
+  const capacity = model.capacity;
+  const holds = ir.models.filter((m) => {
+    const c = m.capacity;
+    if (!c) return false;
+    const per = m.fields.find((f) => f.name === c.per);
+    return (
+      per?.type.kind === "relation" && per.type.model === model.name && typeof c.max === "string"
+    );
+  });
   const drizzle = [
     "and",
     "eq",
     "sql",
     ...(referenced && titleColumn !== "id" ? ["asc"] : []),
-    ...(access.create.public || capped ? ["count"] : []),
+    ...(access.create.public || capped || capacity || holds.length ? ["count"] : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
+    ...(capacity ? ["ne"] : []),
   ];
+  const capacityCounted = capacity
+    ? [
+        `eq(${n.table}.${capacity.per}Id, values.${capacity.per}Id)`,
+        ...Object.entries(capacity.where ?? {}).map(
+          ([k, v]) => `eq(${n.table}.${k}, ${JSON.stringify(v)})`,
+        ),
+      ]
+    : [];
+  const perField = capacity && model.fields.find((f) => f.name === capacity.per);
+  const perTarget =
+    perField?.type.kind === "relation" ? tableNames(modelNamed(ir, perField.type.model)).table : "";
+  const capacityMax = capacity
+    ? typeof capacity.max === "number"
+      ? String(capacity.max)
+      : `(tx.select({ n: ${perTarget}.${capacity.max.split(".")[1]} }).from(${perTarget}).where(eq(${perTarget}.id, values.${capacity.per}Id)).get()?.n ?? 0)`
+    : "0";
+  /** The check before a write inside its transaction; `except` leaves out the record being changed. */
+  const capacityCheck = (except?: string) =>
+    capacity
+      ? `
+      const taken = tx.select({ n: count() }).from(${n.table}).where(and(${[...capacityCounted, ...(except ? [`ne(${n.table}.id, ${except})`] : [])].join(", ")})).get()?.n ?? 0;
+      if (taken >= ${capacityMax}) throw new Conflict("full");`
+      : "";
+  const holdChecks = holds.map((m) => {
+    const c = m.capacity as { per: string; max: string; where?: Record<string, string | boolean> };
+    const tn = tableNames(m);
+    const field = c.max.split(".")[1];
+    const conditions = [
+      `eq(${tn.table}.${c.per}Id, id)`,
+      ...Object.entries(c.where ?? {}).map(
+        ([k, v]) => `eq(${tn.table}.${k}, ${JSON.stringify(v)})`,
+      ),
+    ];
+    return `
+      if (values.${field} != null) {
+        const booked = tx.select({ n: count() }).from(${tn.table}).where(and(${conditions.join(", ")})).get()?.n ?? 0;
+        if (values.${field} < booked) throw new Conflict(\`booked:\${booked}\`);
+      }`;
+  });
   const ownerOf = signedIn ? `row.${owner}` : "undefined";
   const createValues = !signedIn
     ? "values"
@@ -230,8 +283,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const selectOwner = signedIn ? `{ ${owner}: ${n.table}.${owner} }` : `{ id: ${n.table}.id }`;
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
-import { ${n.table} } from "#/db/schema";
-import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table)])].sort().join(", ")} } from "#/db/schema";
+import { AccessDenied, check, ${capacity || holds.length ? "Conflict, " : ""}type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
@@ -325,9 +378,16 @@ ${
     : ""
 }${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let row: typeof ${n.table}.$inferSelect;
     try {
-      row = db.insert(${n.table}).values(${createValues}).returning().get();
+      ${
+        capacity
+          ? `// The count and the insert in one transaction: two people cannot both take the last place.
+      row = db.transaction((tx) => {${capacityCheck()}
+        return tx.insert(${n.table}).values(${createValues}).returning().get();
+      });`
+          : `row = db.insert(${n.table}).values(${createValues}).returning().get();`
+      }
     } catch (error) {
-      throw refusal(error);
+      throw ${capacity ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
     }
     await afterChange("afterCreate", "${model.name}", row, viewer);
     return row;
@@ -342,10 +402,17 @@ ${
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.write, viewer, ${ownerOf});
 ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: typeof ${n.table}.$inferSelect;
+    const updated = ${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"};
     try {
-      changed = db.update(${n.table}).set(${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"}).where(eq(${n.table}.id, id)).returning().get();
+      ${
+        capacity || holds.length
+          ? `changed = db.transaction((tx) => {${capacityCheck("id")}${holdChecks.join("")}
+        return tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
+      });`
+          : `changed = db.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();`
+      }
     } catch (error) {
-      throw refusal(error);
+      throw ${capacity || holds.length ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
     }
     await afterChange("afterUpdate", "${model.name}", changed, viewer);
     return changed;
