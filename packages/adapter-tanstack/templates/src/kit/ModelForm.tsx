@@ -23,6 +23,8 @@ interface ModelFormProps<S extends z.ZodType> {
   schema: S;
   /** The stored record when editing; omit to create a new one. */
   initial?: Record<string, unknown>;
+  /** Values a new record starts with, e.g. the start of the hour chosen in a calendar. */
+  preset?: Record<string, unknown>;
   /** Choices for reference fields, e.g. { customerId: [...] }. */
   options?: Options;
   submitLabel: string;
@@ -51,11 +53,13 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     readOnly,
   } = props;
   const ui = ordered(props.ui, props.fieldOrder);
-  const [inputs, setInputs] = useState(() => initialInputs(ui, initial));
+  const [inputs, setInputs] = useState(() =>
+    initialInputs(ui, initial ?? props.preset, app.timeZone, !initial),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Computed fields follow what has been entered so far.
   // The record comes first so values that are not inputs (like related lines) are included.
-  const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs) }) ?? {};
+  const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs, app.timeZone) }) ?? {};
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
   const confirmDelete = useRef<HTMLDialogElement>(null);
@@ -63,7 +67,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const values = storedValues(ui, inputs);
+    const values = storedValues(ui, inputs, app.timeZone);
     const result = schema.safeParse(values);
     if (!result.success) {
       const messages: Record<string, string> = {};
@@ -271,16 +275,24 @@ function failureMessage(ui: ModelUi, error: unknown): string {
 /** Form inputs for a record being edited, or for a new one: defaults, including formula defaults. */
 function initialInputs(
   ui: ModelUi,
-  initial?: Record<string, unknown>,
+  initial: Record<string, unknown> | undefined,
+  timeZone: string | undefined,
+  /** A new record: what `initial` leaves out comes from the defaults. */
+  fresh = false,
 ): Record<string, string | boolean> {
   const inputs: Record<string, string | boolean> = {};
   const values: Record<string, unknown> = {};
   for (const field of ui.fields) {
     if (field.computed) continue;
     const suggested = ui.defaults?.[field.name];
-    const value = initial ? initial[field.name] : suggested ? suggested(values) : field.default;
+    const value =
+      initial && (!fresh || initial[field.name] !== undefined)
+        ? initial[field.name]
+        : suggested
+          ? suggested(values)
+          : field.default;
     values[field.name] = value;
-    inputs[field.name] = toInput(field, value);
+    inputs[field.name] = toInput(field, value, timeZone);
   }
   return inputs;
 }
@@ -289,9 +301,12 @@ function initialInputs(
 function storedValues(
   ui: ModelUi,
   inputs: Record<string, string | boolean>,
+  timeZone: string | undefined,
 ): Record<string, unknown> {
   return Object.fromEntries(
-    ui.fields.filter((f) => !f.computed).map((f) => [f.name, fromInput(f, inputs[f.name] ?? "")]),
+    ui.fields
+      .filter((f) => !f.computed)
+      .map((f) => [f.name, fromInput(f, inputs[f.name] ?? "", timeZone)]),
   );
 }
 

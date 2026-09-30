@@ -1,6 +1,6 @@
 # The calendar page pattern (design)
 
-Status: 2026-09-29, proposed by Fable. The last page pattern ARCHITECTURE §10.4 lists as "still to come" besides kanban. It is the most visible gap in the booking starter, whose schedule is a plain list today. It adds one page pattern, so merging this document is the go-ahead. It passes §2.4: common (classes, appointments, shifts, events, deadlines), deterministic, no model or custom code needed, technology-neutral, and it goes through the same data functions and access rules as every list.
+Status: built 2026-09-30 by Opus (branch `opus/calendar`) as planned below; Fable reviews. Proposed 2026-09-29 by Fable. The last page pattern ARCHITECTURE §10.4 lists as "still to come" besides kanban. It is the most visible gap in the booking starter, whose schedule is a plain list today. It adds one page pattern, so merging this document is the go-ahead. It passes §2.4: common (classes, appointments, shifts, events, deadlines), deterministic, no model or custom code needed, technology-neutral, and it goes through the same data functions and access rules as every list.
 
 ## 1. What people get
 

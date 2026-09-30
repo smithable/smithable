@@ -55,8 +55,10 @@ pages:
     footer:
       text: Stillwater Yoga · Storagatan 1, Mariehamn
       items:
-        - { label: Class schedule, link: /sessions }
+        - { label: Class schedule, link: /schedule }
         - { label: Email us, link: "mailto:hello@stillwater.ax" }
-  sessions:
+  schedule:
     title: Class schedule
     subtitle: A little time, just for you.
+  sessions:
+    title: Sessions

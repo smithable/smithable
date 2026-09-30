@@ -13,7 +13,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
     ],
     "pages": [
       "home",
-      "sessions",
+      "schedule",
     ],
     "read": [
       "ClassType",
