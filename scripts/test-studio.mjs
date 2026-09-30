@@ -146,7 +146,7 @@ try {
       .waitFor({ timeout: 60000 });
   });
   await step(
-    "removing a field asks first, with what data it loses; undo brings it back",
+    "removing a field asks first, with what data it loses; its notice's Undo brings it back",
     async () => {
       await change("Remove a field");
       await page.getByLabel("Kind of record").selectOption("Customer");
@@ -158,7 +158,7 @@ try {
         .waitFor({ timeout: 60000 });
       await page.getByRole("button", { name: "Apply anyway" }).click();
       await trace.getByText("Customers: removed the phone").waitFor({ timeout: 60000 });
-      await page.getByRole("button", { name: "Undo" }).click();
+      await status.getByRole("button", { name: "Undo this change" }).click();
       await status.getByText("Undid: Customers: removed the phone").waitFor({ timeout: 60000 });
       await trace.getByText("Undid: Customers: removed the phone").waitFor();
     },
@@ -262,7 +262,7 @@ try {
   });
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
-    await page.getByRole("button", { name: "Undo" }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     await status.getByText(/Undid: Set the theme/).waitFor({ timeout: 60000 });
     const after = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
     if (JSON.stringify(before) === JSON.stringify(after))
@@ -324,7 +324,7 @@ try {
     },
   );
   await step(
-    "the panels snap: one at a time, picked above or with the arrow keys; wide windows pair Preview and Changes",
+    "the panels snap: one at a time, picked above or with the arrow keys; wide windows pair Preview and Details",
     async () => {
       const panels = page.getByRole("navigation", { name: "Panels" });
       const current = (name) =>
@@ -336,16 +336,17 @@ try {
           name,
           { timeout: 5000 },
         );
-      await panels.getByLabel("Preview + Changes").uncheck();
+      await panels.getByLabel("Preview + Details").uncheck();
       await panels.getByRole("button", { name: "Preview" }).click();
       await current("Preview");
       await page.keyboard.press("ArrowRight");
-      await current("Changes");
-      // The change box stays under every panel.
+      await current("Details");
+      // The change box, and the changes under it, stay under every panel.
       await page.getByLabel("Describe a change").waitFor();
-      await panels.getByLabel("Preview + Changes").check();
+      await trace.waitFor();
+      await panels.getByLabel("Preview + Details").check();
       await panels.getByRole("button", { name: "Preview" }).click();
-      await current("Preview,Changes");
+      await current("Preview,Details");
       await panels.getByRole("button", { name: "Your app" }).click();
       await current("Your app");
     },
@@ -380,8 +381,8 @@ try {
 
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {
-    await page.locator("label", { hasText: /^Studio$/ }).click();
-    if (!(await page.getByRole("radio", { name: "Studio" }).isChecked()))
+    await page.locator("label", { hasText: /^Code$/ }).click();
+    if (!(await page.getByRole("radio", { name: "Code", exact: true }).isChecked()))
       throw new Error("not in Studio mode");
     await page
       .getByRole("navigation", { name: "Concepts" })

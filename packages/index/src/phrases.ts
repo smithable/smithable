@@ -480,6 +480,23 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "add an action to merge customers": the name and what it is for; its input, output and
+    // who may run it are the form's (or a model's) to fill in.
+    name: "custom action",
+    match(text, scope) {
+      const what =
+        /^add (?:a |an )?(?:new |custom )*action (?:to|that|which) (?<what>[a-z][a-z ]*)$/.exec(
+          text,
+        )?.groups?.what;
+      if (!what) return undefined;
+      const action = identifier(what);
+      if (scope.ir.actions.some((a) => a.name === action)) return null;
+      return [
+        { op: "addAction", args: { action, intent: `${what[0]?.toUpperCase()}${what.slice(1)}.` } },
+      ];
+    },
+  },
+  {
     // "add an admin page", "add a page to manage all data", "add a data page for orders and customers"
     name: "data page",
     match(text, scope) {
