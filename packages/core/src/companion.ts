@@ -110,6 +110,42 @@ const auth: Companion = {
   file: "smithable.auth.yml",
   check: (text, ir) => validateAuth({ path: "smithable.auth.yml", text }, ir).diagnostics,
   operations: authOperations,
+  follow(editor, effect) {
+    // What visitors may read (`Post: { where: { status: published } }`) follows the field it
+    // names, and refuses to lose it: reading would otherwise widen silently.
+    if (
+      effect.kind !== "rename-field" &&
+      effect.kind !== "remove-field" &&
+      effect.kind !== "change-field"
+    )
+      return undefined;
+    const read = ["public", "read"];
+    const items = editor.has(read) ? (editor.get(read) as unknown[]) : [];
+    for (const [i, item] of items.entries()) {
+      if (!item || typeof item !== "object") continue;
+      const [model, options] = Object.entries(item as Record<string, unknown>)[0] ?? [];
+      if (model !== effect.model || !options || typeof options !== "object") continue;
+      const where = (options as { where?: Record<string, string | boolean> }).where ?? {};
+      const field = effect.kind === "rename-field" ? effect.from : effect.field;
+      if (!(field in where)) continue;
+      if (effect.kind === "remove-field")
+        return {
+          refusal: `Visitors read ${model} only where ${field} fits; change "read" under "public" in smithable.auth.yml first.`,
+        };
+      if (effect.kind === "change-field") {
+        const wanted = where[field];
+        if (typeof wanted !== "string" || effect.choices.includes(wanted)) continue;
+        return {
+          refusal: `Visitors read ${model} only where ${field} is ${wanted}; change "read" under "public" in smithable.auth.yml first.`,
+        };
+      }
+      const renamed = Object.fromEntries(
+        Object.entries(where).map(([k, v]) => [k === field ? effect.to : k, v]),
+      );
+      editor.setItem(read, i, { [model]: { where: renamed } });
+    }
+    return undefined;
+  },
 };
 
 const context: Companion = {

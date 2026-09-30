@@ -1,4 +1,4 @@
-import type { AuthIR } from "./auth.js";
+import type { AuthIR, Condition } from "./auth.js";
 import {
   ACCESS_OPERATIONS,
   type AccessOperation,
@@ -16,6 +16,8 @@ export interface Allowed {
   public: boolean;
   roles: string[];
   owner: boolean;
+  /** Reading only: the records the public may read, when not all (`{ status: "published" }`). */
+  where?: Condition;
 }
 
 export type ModelAllowed = Record<AccessOperation, Allowed>;
@@ -36,8 +38,9 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
     const isPublic =
       (op === "read" && auth.public.read.includes(model.name)) ||
       (op === "create" && auth.public.create.includes(model.name));
-    result[op] =
-      auth.signIn === "none"
+    const where = op === "read" && isPublic ? auth.public.readWhere[model.name] : undefined;
+    result[op] = {
+      ...(auth.signIn === "none"
         ? { public: isPublic, roles: [], owner: false }
         : {
             public: isPublic,
@@ -46,7 +49,9 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
               everyone,
             ),
             owner: listed.includes("owner"),
-          };
+          }),
+      ...(where ? { where } : {}),
+    };
   }
   return result;
 }

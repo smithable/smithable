@@ -452,10 +452,10 @@ function classTypeValues(_owner: string | null) {
   return { name: \`ClassType name \${n}\`, summary: null, level: "beginner", durationMinutes: n } as const;
 }
 
-function insertClassType(owner: string | null) {
+function insertClassType(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(classTypes)
-    .values({ ...classTypeValues(owner), ownerId: owner })
+    .values({ ...classTypeValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -465,10 +465,10 @@ function instructorValues(_owner: string | null) {
   return { name: \`Instructor name \${n}\`, bio: null } as const;
 }
 
-function insertInstructor(owner: string | null) {
+function insertInstructor(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(instructors)
-    .values({ ...instructorValues(owner), ownerId: owner })
+    .values({ ...instructorValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -478,10 +478,10 @@ function sessionValues(owner: string | null) {
   return { classTypeId: insertClassType(owner).id, instructorId: insertInstructor(owner).id, startsAt: new Date("2026-01-15T10:00:00Z"), capacity: n } as const;
 }
 
-function insertSession(owner: string | null) {
+function insertSession(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(sessions)
-    .values({ ...sessionValues(owner), ownerId: owner })
+    .values({ ...sessionValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -490,10 +490,10 @@ function bookingValues(owner: string | null) {
   return { sessionId: insertSession(owner).id } as const;
 }
 
-function insertBooking(owner: string | null) {
+function insertBooking(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(bookings)
-    .values({ ...bookingValues(owner), ownerId: owner })
+    .values({ ...bookingValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -503,10 +503,10 @@ function messageValues(_owner: string | null) {
   return { name: \`Message name \${n}\`, email: \`message\${n}@example.com\`, message: \`Message message \${n}\` } as const;
 }
 
-function insertMessage(owner: string | null) {
+function insertMessage(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(messages)
-    .values({ ...messageValues(owner), ownerId: owner })
+    .values({ ...messageValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -4562,7 +4562,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3c9130c3 generated",
   "src/db/seed.ts": "521283e7 generated",
-  "src/generated/access.test.ts": "956d312d generated",
+  "src/generated/access.test.ts": "a1bdc296 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/booking.server.ts": "5a4cfb09 generated",
   "src/generated/booking.ts": "8175ba8a generated",
@@ -4589,7 +4589,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Reserve.tsx": "25146ad3 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "2887474b kit",
-  "src/kit/access.ts": "c46c2136 kit",
+  "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/limit.ts": "d4e977eb kit",
@@ -5021,10 +5021,10 @@ function customerValues(owner: string | null) {
   return { name: \`Customer name \${n}\`, email: \`customer\${n}@example.com\`, phone: null, segment: "smb", creditLimit: null, notes: null, accountManagerId: owner } as const;
 }
 
-function insertCustomer(owner: string | null) {
+function insertCustomer(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(customers)
-    .values({ ...customerValues(owner) })
+    .values({ ...customerValues(owner), ...values })
     .returning()
     .get();
 }
@@ -5034,10 +5034,10 @@ function orderValues(owner: string | null) {
   return { number: \`Order number \${n}\`, customerId: insertCustomer(owner).id, status: "draft", total: 1000, shippingMethod: "standard", placedAt: null } as const;
 }
 
-function insertOrder(owner: string | null) {
+function insertOrder(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(orders)
-    .values({ ...orderValues(owner), ownerId: owner })
+    .values({ ...orderValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -7237,7 +7237,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "e76e2c31 generated",
   "src/db/seed.ts": "9c9f2dc2 generated",
-  "src/generated/access.test.ts": "d68472ee generated",
+  "src/generated/access.test.ts": "e0e88ab4 generated",
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/customer.server.ts": "62145b59 generated",
@@ -7259,7 +7259,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "2887474b kit",
   "src/kit/Users.tsx": "42d0d33f kit",
-  "src/kit/access.ts": "c46c2136 kit",
+  "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/limit.ts": "d4e977eb kit",
@@ -7719,10 +7719,10 @@ function businessProfileValues(_owner: string | null) {
   return { businessName: \`BusinessProfile businessName \${n}\`, vatNumber: null, iban: null, paymentTermDays: n, invoiceFooter: null } as const;
 }
 
-function insertBusinessProfile(owner: string | null) {
+function insertBusinessProfile(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(businessProfiles)
-    .values({ ...businessProfileValues(owner), ownerId: owner })
+    .values({ ...businessProfileValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -7732,10 +7732,10 @@ function clientValues(_owner: string | null) {
   return { name: \`Client name \${n}\`, email: \`client\${n}@example.com\`, address: null, vatNumber: null } as const;
 }
 
-function insertClient(owner: string | null) {
+function insertClient(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(clients)
-    .values({ ...clientValues(owner), ownerId: owner })
+    .values({ ...clientValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -7745,10 +7745,10 @@ function invoiceValues(owner: string | null) {
   return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2026-01-15", dueOn: "2026-01-15", status: "draft" } as const;
 }
 
-function insertInvoice(owner: string | null) {
+function insertInvoice(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(invoices)
-    .values({ ...invoiceValues(owner), ownerId: owner })
+    .values({ ...invoiceValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -7758,10 +7758,10 @@ function invoiceLineValues(owner: string | null) {
   return { invoiceId: insertInvoice(owner).id, description: \`InvoiceLine description \${n}\`, quantity: 1.5, unitPrice: 1000 } as const;
 }
 
-function insertInvoiceLine(owner: string | null) {
+function insertInvoiceLine(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(invoiceLines)
-    .values({ ...invoiceLineValues(owner), ownerId: owner })
+    .values({ ...invoiceLineValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -10435,7 +10435,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "1c9724c9 generated",
   "src/db/seed.ts": "d388638c generated",
-  "src/generated/access.test.ts": "68e71381 generated",
+  "src/generated/access.test.ts": "55d5d46d generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/business-profile.server.ts": "795e7c7f generated",
   "src/generated/business-profile.ts": "43f1dceb generated",
@@ -10460,7 +10460,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Onboarding.tsx": "6e7938a3 kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "2887474b kit",
-  "src/kit/access.ts": "c46c2136 kit",
+  "src/kit/access.ts": "abceb487 kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
@@ -10813,10 +10813,10 @@ function itemValues(_owner: string | null) {
   return { name: \`Item name \${n}\`, summary: null, kind: "general", link: null, addedOn: "2026-01-15" } as const;
 }
 
-function insertItem(owner: string | null) {
+function insertItem(owner: string | null, values: Record<string, unknown> = {}) {
   return db
     .insert(items)
-    .values({ ...itemValues(owner), ownerId: owner })
+    .values({ ...itemValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -11893,7 +11893,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "b4f3f794 generated",
   "src/db/seed.ts": "7387f4ce generated",
-  "src/generated/access.test.ts": "39be40be generated",
+  "src/generated/access.test.ts": "ea88ffb1 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/hooks.ts": "1bccea19 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
@@ -11908,7 +11908,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
   "src/kit/SignIn.tsx": "2887474b kit",
-  "src/kit/access.ts": "c46c2136 kit",
+  "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "638b6cff kit",
   "src/kit/formula.ts": "d94102ce kit",
   "src/kit/limit.ts": "d4e977eb kit",
