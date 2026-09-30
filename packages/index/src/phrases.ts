@@ -483,6 +483,31 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "add a blog for posts", "add a news page for articles", "show posts as articles"
+    name: "articles page",
+    match(text, scope) {
+      const blog =
+        /^add (?:a |an )?(?<kind>blog|news|news page|knowledge base) (?:for|of|with) (?<model>.+)$/.exec(
+          text,
+        )?.groups;
+      const shown = /^show (?<model>.+) as (?:a blog|articles|news)$/.exec(text)?.groups?.model;
+      const phrase = blog?.model ?? shown;
+      if (!phrase) return undefined;
+      const model = modelFor(scope.ir, phrase);
+      if (!model) return null;
+      const name =
+        blog?.kind === "knowledge base"
+          ? "knowledge-base"
+          : blog?.kind?.startsWith("news")
+            ? "news"
+            : "blog";
+      const page = scope.ir.pages.some((p) => p.id === name)
+        ? `${kebab(plural(model.name))}-${name}`
+        : name;
+      return [{ op: "addArticlesPage", args: { page, model: model.name } }];
+    },
+  },
+  {
     // "add an action to merge customers": the name and what it is for; its input, output and
     // who may run it are the form's (or a model's) to fill in.
     name: "custom action",

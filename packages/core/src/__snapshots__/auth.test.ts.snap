@@ -14,13 +14,19 @@ exports[`the examples > booking is valid with its auth file 1`] = `
     "pages": [
       "home",
       "schedule",
+      "blog",
     ],
     "read": [
       "ClassType",
       "Instructor",
       "Session",
+      "Post",
     ],
-    "readWhere": {},
+    "readWhere": {
+      "Post": {
+        "status": "published",
+      },
+    },
   },
   "roles": [
     {

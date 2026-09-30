@@ -27,6 +27,7 @@ const FUNCTIONS = [
   "NOT",
   "ROUND",
   "ABS",
+  "PMT",
   "MIN",
   "MAX",
   "TODAY",
@@ -432,6 +433,11 @@ export function checkFormula(expr: Expr, model: ModelIR, models: ModelIR[]): Val
       case "ABS":
         count(1);
         need(types[0] as ValueType, "number", "ABS");
+        return "number";
+      case "PMT":
+        // The payment per period of a loan: PMT(rate per period, periods, amount).
+        count(3);
+        for (const t of types) need(t, "number", "PMT");
         return "number";
       case "MIN":
       case "MAX":
