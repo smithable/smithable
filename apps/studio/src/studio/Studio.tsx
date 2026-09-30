@@ -289,6 +289,13 @@ function SpecEditor({
     setText(saved);
     setBase(saved);
   }, [saved, edited, text]);
+  // Unsaved edits: the browser asks before a link, Back or closing the tab loses them.
+  useEffect(() => {
+    if (!edited) return;
+    const ask = (event: BeforeUnloadEvent) => event.preventDefault();
+    addEventListener("beforeunload", ask);
+    return () => removeEventListener("beforeunload", ask);
+  }, [edited]);
   const area = useRef<HTMLTextAreaElement>(null);
   // Selects the lines a concept is declared on, and scrolls to them (when asked, not as the
   // text changes; the editor's own value is the text).

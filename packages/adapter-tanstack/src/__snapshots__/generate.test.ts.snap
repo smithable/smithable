@@ -1896,7 +1896,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
-          <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
+          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["home"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
           </AppShell>
         )}
@@ -2809,6 +2809,7 @@ function HomePage() {
           title="Stillwater Yoga"
           subtitle="Class schedule and online booking for a small yoga studio."
           link={{ to: "/schedule", label: "Get started" }}
+          more
         />
       <RecordCards
           texts="pages.home.classes"
@@ -3730,11 +3731,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "64f95363 generated",
   "src/generated/session.server.ts": "4131ec3a generated",
   "src/generated/session.ts": "557d8225 generated",
-  "src/kit/AppShell.tsx": "0a27222c kit",
+  "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Calendar.tsx": "27b1bc81 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
-  "src/kit/Landing.tsx": "be72b7ac kit",
+  "src/kit/Landing.tsx": "535918ee kit",
   "src/kit/ModelForm.tsx": "3acea586 kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/SearchBox.tsx": "3bf7cb9a kit",
@@ -3752,7 +3753,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "0cff398c kit",
-  "src/routes/__root.tsx": "ffc47af7 generated",
+  "src/routes/__root.tsx": "4d67a257 generated",
   "src/routes/admin/class-types/$id.tsx": "8c82275f generated",
   "src/routes/admin/class-types/index.tsx": "15a93d9b generated",
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
@@ -3771,7 +3772,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/index.tsx": "fcfc2715 generated",
   "src/routes/class-types/new.tsx": "d60149e8 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "7a44b472 generated",
+  "src/routes/index.tsx": "5824186d generated",
   "src/routes/instructors/$id.tsx": "186fe32d generated",
   "src/routes/instructors/index.tsx": "e892ed21 generated",
   "src/routes/instructors/new.tsx": "f5955aca generated",
@@ -6364,7 +6365,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "de07ed11 generated",
   "src/generated/users.test.ts": "b04d6067 generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/AppShell.tsx": "0a27222c kit",
+  "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
   "src/kit/ModelForm.tsx": "3acea586 kit",
@@ -8415,7 +8416,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
-          <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
+          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["home"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
           </AppShell>
         )}
@@ -8598,6 +8599,7 @@ function HomePage() {
           title="Invoicely"
           subtitle="Simple invoicing for freelancers. Each user manages their own clients and invoices."
           link={{ to: "/overview", label: "Get started" }}
+          more
         />
       <CallToAction
           texts="pages.home.callToAction"
@@ -9513,11 +9515,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "8183c565 generated",
   "src/generated/invoice.ts": "ce1888cd generated",
   "src/generated/pages.ts": "1b40062a generated",
-  "src/kit/AppShell.tsx": "0a27222c kit",
+  "src/kit/AppShell.tsx": "7414e57c kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "906b56c9 kit",
   "src/kit/FieldInput.tsx": "9b3ab85a kit",
-  "src/kit/Landing.tsx": "be72b7ac kit",
+  "src/kit/Landing.tsx": "535918ee kit",
   "src/kit/ModelForm.tsx": "3acea586 kit",
   "src/kit/ModelTable.tsx": "62a176ad kit",
   "src/kit/Onboarding.tsx": "6e7938a3 kit",
@@ -9537,13 +9539,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "0cff398c kit",
-  "src/routes/__root.tsx": "5106ea09 generated",
+  "src/routes/__root.tsx": "26f9b7a5 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/clients/$id.tsx": "d14d0660 generated",
   "src/routes/clients/index.tsx": "ee5cef45 generated",
   "src/routes/clients/new.tsx": "156ce1da generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "eb162da0 generated",
+  "src/routes/index.tsx": "de2b67e5 generated",
   "src/routes/invoice-lines/$id.tsx": "2ca1e08d generated",
   "src/routes/invoice-lines/index.tsx": "dcf6d604 generated",
   "src/routes/invoice-lines/new.tsx": "02678970 generated",

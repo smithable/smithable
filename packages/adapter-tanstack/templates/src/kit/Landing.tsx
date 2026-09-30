@@ -13,7 +13,7 @@ import {
   Phone,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
@@ -131,13 +131,28 @@ export function Hero({
   subtitle,
   link,
   image,
+  more,
 }: {
   title: string;
   subtitle?: string;
   link?: LandingLink;
   image?: LandingImage;
+  /** Sections follow: a quiet arrow under the content says the page goes on. */
+  more?: boolean;
   texts?: string;
 }) {
+  const after = useId();
+  // A link to where the next section starts, so it works by keyboard and without JavaScript.
+  const cue = more && (
+    <a
+      href={`#${after}`}
+      aria-label="More below"
+      className="mx-auto flex size-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground lg:col-span-2"
+    >
+      <ChevronDown aria-hidden className="size-6 motion-safe:animate-bounce" />
+    </a>
+  );
+  const end = more && <span id={after} tabIndex={-1} />;
   const text = (
     <div>
       <h1
@@ -158,7 +173,14 @@ export function Hero({
       )}
     </div>
   );
-  if (!image) return <section className="mx-auto max-w-6xl px-5 py-20 sm:py-28">{text}</section>;
+  if (!image)
+    return (
+      <section className={cn("mx-auto max-w-6xl px-5 py-20 sm:py-28", more && "pb-6 sm:pb-6")}>
+        {text}
+        {cue && <div className="mt-12">{cue}</div>}
+        {end}
+      </section>
+    );
   // Beside the text on wide screens, above it on narrow ones; the first thing loaded.
   return (
     <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2">
@@ -171,6 +193,8 @@ export function Hero({
         className="aspect-[3/2] w-full rounded-xl object-cover lg:order-2"
       />
       {text}
+      {cue}
+      {end}
     </section>
   );
 }

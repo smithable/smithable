@@ -6,7 +6,7 @@ import { api, type Proposal } from "../api";
 import { Button, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 
-/** `onEdit` opens a proposed operation in Manual, with its values filled in. */
+/** `onEdit` opens a proposed operation in the Change tab, with its values filled in. */
 export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; words?: Words }) {
   const [request, setRequest] = useState("");
   const [proposal, setProposal] = useState<Proposal>();
@@ -128,7 +128,7 @@ export function ProposalView({
                     className="ml-2 text-xs text-accent underline"
                     onClick={() => onEdit({ op: o.op, args: o.args })}
                   >
-                    Edit in Manual
+                    Edit in a form
                   </button>
                 )}
               </li>
