@@ -24,6 +24,7 @@ export type {
 } from "./content.js";
 export { CONTENT_VERSION, emptyContent, RESERVE_TEXTS, validateContent } from "./content.js";
 export { CONTEXT_SCHEMA, validateContext } from "./context-file.js";
+export { type DiffTable, dataDiffSql, restoreOrder } from "./data-diff.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
