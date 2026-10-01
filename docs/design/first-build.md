@@ -43,11 +43,15 @@ Status: 2026-09-30, proposed by Fable after Johan's "a site to show my dogs" cam
 
 A clarify call is a few hundred tokens with the small model; the draft is as today. 
 
+### 2.7 To evaluate: the draft as operations rather than files
+
+ARCHITECTURE §9 says the first draft is "expressed as a batch of operations"; the code has the model write whole files. Drafting through operations (what an AI agent does over MCP) cannot produce invalid syntax: every operation is validated as it is applied, and an error goes back naming that one operation. Judgment can still go wrong (the wrong models), but the grammar cannot, and my test without a starter (4 of 11 valid files, every failure a grammar slip) suggests that is most of what goes wrong. Step 3 below evaluates both on the ten descriptions with the same model: whole files as today, and a batch of operations answered against the constrained schema over every operation; the one that makes more valid and better apps stays.
+
 ## 3. Order of work
 
 1. **Bugs first** (with Opus): the demo allowance and the reservation; the visible fallback (2.5).
 2. **`clarify`** in `packages/ai` with tests against the fake model (`scripts/fake-model.mjs` learns the clarify shape), and the CLI's questions, `--answers` and `--yes`.
-3. **The records starter**, its example texts, `test:apps` and the starter-choice test in `draft.test.ts` (the ten benchmark descriptions choose sensibly, with the fake model answering the starter names).
+3. **The records starter** (built), then the evaluation of 2.7 (operations against files) with the fake model for the plumbing and the real one once for the numbers; its example texts, `test:apps` and the starter-choice test in `draft.test.ts` (the ten benchmark descriptions choose sensibly, with the fake model answering the starter names).
 4. **Hosted:** the two-step form on the projects and demo pages, `ANSWERS` through the workspace, a test in `test/hosted.cjs`.
 5. **Benchmark:** `scripts/bench-m12.mjs` runs the ten descriptions with questions answered by a fixed script (the fake answers), so the numbers stay comparable, plus a column for the starter chosen; a report next to the existing ones.
 6. **Docs:** ARCHITECTURE §9 (the first build), `docs/ai.md`, the README's "describe" lines.
