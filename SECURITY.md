@@ -4,6 +4,8 @@
 
 Please report vulnerabilities in Smithable, in the apps it generates, or in the hosted service at smithable.ai by email to **security@smithable.ai**, not in a public issue. Include what you found, how to reproduce it, and what you think it allows. You will get an acknowledgement within three working days and a fix or a plan within thirty; we credit reporters in the release notes unless they prefer not to be named.
 
+Fixed vulnerabilities are published as [GitHub security advisories](https://github.com/smithable/smithable/security/advisories) on this repository, naming the affected versions; owners of apps on the hosted service are told by email as well.
+
 ## What is in scope
 
 - The engine, CLI, Studio and MCP server in this repository.
