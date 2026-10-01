@@ -15,6 +15,7 @@ const PAGES = [
   { src: "docs/site/index.md", out: "index.html", nav: "Home" },
   { src: "docs/site/start.md", out: "start.html", nav: "Getting started" },
   { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
+  { src: "docs/ai.md", out: "ai.html", nav: "AI setup" },
 ];
 const schema = JSON.parse(
   readFileSync(join(root, "packages/core/schema/smithable.schema.json"), "utf8"),
@@ -39,13 +40,14 @@ for (const page of PAGES) {
   page.markdown = readFileSync(join(root, page.src), "utf8");
   page.headings = [];
   const seen = new Map();
-  for (const token of lexer.lexer(page.markdown)) {
-    if (token.type !== "heading") continue;
+  // Every heading, also one inside a list or a quote, in the order the renderer meets them.
+  lexer.walkTokens(lexer.lexer(page.markdown), (token) => {
+    if (token.type !== "heading") return;
     const base = slug(token.text);
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
     page.headings.push({ depth: token.depth, text: token.text, id: n ? `${base}-${n}` : base });
-  }
+  });
 }
 
 const problems = [];
@@ -133,11 +135,14 @@ ${body}</main></div>
 rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, dirname(schemaPath)), { recursive: true });
 for (const page of PAGES) {
-  let heading = 0;
+  // A heading's id by its text: the next unused one of that text, so repeated headings keep
+  // GitHub's -1, -2 suffixes.
+  const ids = new Map();
+  for (const h of page.headings) ids.set(h.text, [...(ids.get(h.text) ?? []), h.id]);
   const marked = new Marked({
     renderer: {
-      heading({ tokens, depth }) {
-        return `<h${depth} id="${page.headings[heading++].id}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+      heading({ tokens, depth, text }) {
+        return `<h${depth} id="${ids.get(text)?.shift() ?? slug(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
       },
       link({ href, title, tokens }) {
         return `<a href="${esc(target(page, href))}"${title ? ` title="${esc(title)}"` : ""}>${this.parser.parseInline(tokens)}</a>`;
