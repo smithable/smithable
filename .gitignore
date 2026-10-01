@@ -12,4 +12,4 @@ examples/*/data/
 data/
 
 # The documentation site, built by pnpm docs.
-site/
+/site/
