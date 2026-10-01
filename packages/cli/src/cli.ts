@@ -17,6 +17,7 @@ import { type Io, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
 import { clarify, create } from "./new.js";
 import { op } from "./op.js";
+import { backupContinuous, restoreAt } from "./pitr.js";
 import { loadPlugins } from "./plugins.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
@@ -157,6 +158,11 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.url ? { url: values.url } : {}),
       });
     case "backup":
+      if (values.continuous && values.to)
+        return backupContinuous(values.dir ?? dir, io, {
+          to: values.to,
+          ...(values.data ? { data: values.data } : {}),
+        });
       if (!values.to) {
         io.err("backup needs --to <folder or s3://bucket/prefix>\n");
         return 2;
@@ -169,6 +175,25 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       if (!values.from) {
         io.err("restore needs --from <folder or s3://bucket/prefix>\n");
         return 2;
+      }
+      if (values.at) {
+        const list = (v?: string) =>
+          v
+            ? v
+                .split(",")
+                .map((m) => m.trim())
+                .filter(Boolean)
+            : undefined;
+        const bringBack = list(values["bring-back"]);
+        const undoChanges = list(values["undo-changes"]);
+        return restoreAt(values.dir ?? dir, io, {
+          at: values.at,
+          from: values.from,
+          ...(values.data ? { data: values.data } : {}),
+          ...(bringBack ? { bringBack } : {}),
+          ...(undoChanges ? { undoChanges } : {}),
+          ...(values.yes ? { yes: true } : {}),
+        });
       }
       return restore(values.dir ?? dir, io, {
         from: values.from,
@@ -218,6 +243,11 @@ const CONFIG = {
     to: { type: "string" },
     from: { type: "string" },
     backup: { type: "string" },
+    continuous: { type: "boolean" },
+    at: { type: "string" },
+    data: { type: "string" },
+    "bring-back": { type: "string" },
+    "undo-changes": { type: "string" },
     container: { type: "string" },
     url: { type: "string" },
     yes: { type: "boolean" },

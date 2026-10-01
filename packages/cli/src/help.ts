@@ -87,18 +87,22 @@ export const COMMANDS: Command[] = [
     usage: "backup [dir]",
     text: [
       "Back up the database and uploads --to a folder or s3://bucket/prefix (S3",
-      "credentials in AWS_* variables); --container <name> for a deployed app",
+      "credentials in AWS_* variables); --container <name> for a deployed app.",
+      "--continuous streams every change with Litestream (installed separately),",
+      "so restore --at can reach any second of the last 30 days; --data <dir>",
     ],
-    options: ["to", "container"],
+    options: ["to", "container", "continuous", "data"],
   },
   {
     name: "restore",
     usage: "restore [dir]",
     text: [
       "Restore the newest backup (or --backup <time>) --from a folder or s3://…,",
-      "into the project or --container <name>",
+      "into the project or --container <name>. With --at <time> and a continuous",
+      "backup: what is new, changed and removed since; --bring-back and",
+      "--undo-changes <Model,…> --yes write those records back (stop the app first)",
     ],
-    options: ["from", "backup", "container"],
+    options: ["from", "backup", "container", "at", "data", "bring-back", "undo-changes", "yes"],
   },
   {
     name: "upgrade",
