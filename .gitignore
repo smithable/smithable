@@ -8,3 +8,5 @@ coverage/
 
 # An example run leaves its data (token log, databases) here; it is never part of the example.
 examples/*/data/
+# Running the CLI in the repository root leaves its data here too.
+data/
