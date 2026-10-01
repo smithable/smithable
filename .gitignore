@@ -11,5 +11,5 @@ examples/*/data/
 # Running the CLI in the repository root leaves its data here too.
 data/
 
-# The documentation site, built by pnpm docs.
+# The documentation site, built by pnpm site.
 /site/
