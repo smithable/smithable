@@ -110,6 +110,14 @@ ${providers.map(provider).join("\n")}
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+const NO_TOKENS = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+};
+
 // Production needs both: without a secret sessions could be forged, without the address
 // sign-in breaks. Better to refuse to start than to run like that.
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
@@ -135,6 +143,12 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${role} } };
         },${afterCreate}
       },
+    },
+    // The app only signs people in with a provider and never calls it afterwards, so the
+    // provider's tokens are not kept: not in the database, its backups or its exports.
+    account: {
+      create: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
+      update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
     },
   },
   plugins: [tanstackStartCookies()],
