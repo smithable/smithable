@@ -25,7 +25,7 @@ models:
       startsAt: datetime = 2026-09-01T09:30
       email: email! unique
       phone: phone
-      website: url = "https://smithable.ax"
+      website: url = "https://smithable.ai"
       status: draft | sent | paid
       level:
         type: beginner | allLevels | advanced
