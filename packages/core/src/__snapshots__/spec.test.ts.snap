@@ -1927,7 +1927,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
           "unique": false,
         },
         {
-          "default": "https://smithable.ax",
+          "default": "https://smithable.ai",
           "name": "website",
           "required": false,
           "type": {

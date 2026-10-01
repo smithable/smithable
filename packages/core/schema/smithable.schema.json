@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://smithable.ax/schema/smithable-0.1.json",
+  "$id": "https://docs.smithable.ai/schema/smithable-0.1.json",
   "title": "smithable.yml",
   "description": "Describes what a Smithable application does. See docs/spec.",
   "type": "object",
