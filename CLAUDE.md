@@ -21,7 +21,7 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   - `pnpm schema`: regenerate `packages/core/schema/smithable.schema.json` after changing a section's schema. A test fails if it is stale.
 - App templates live in `packages/adapter-tanstack/templates/` as real files; `pnpm build` embeds them (and the example specs used as starters) via `scripts/embed.mjs`. Generated `*.gen.ts` files are never edited by hand.
 - The spec reference is `docs/spec/v0.1.md`. Update it together with any change to the spec grammar.
-- The Studio web app (Builder and Studio modes) is `apps/studio` (React + Vite); `pnpm build` builds it, and `smithable studio` serves it. `spikes/` holds experiments that are not part of the product or `check`.
+- The Studio web app (Builder and Studio modes) is `apps/studio` (React + Vite); `pnpm build` builds it, and `smithable studio` serves it.
 - New packages go in `packages/<name>` with a `tsconfig.json` extending `tsconfig.base.json`. Add them to the root `tsconfig.json` references.
 
 ## Rules when working on Smithable

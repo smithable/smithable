@@ -1,6 +1,6 @@
 # M8: can the preview run in the browser? (2026-09-27)
 
-The spike ([spikes/webcontainer](../../spikes/webcontainer)) runs the Smithable engine in a web page and a generated app's dev server inside a StackBlitz WebContainer (`@webcontainer/api` 1.6.4) in the same tab, driven by headless Chromium.
+The spike (removed from the repository on 2026-10-01, after the decision; this note keeps its findings) ran the Smithable engine in a web page and a generated app's dev server inside a StackBlitz WebContainer (`@webcontainer/api` 1.6.4) in the same tab, driven by headless Chromium.
 
 ## What works
 

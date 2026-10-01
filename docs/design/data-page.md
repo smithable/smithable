@@ -1,6 +1,6 @@
 # The data page: an admin view of every model (design and plan)
 
-Status: built 2026-09-29 (Opus, branch `opus/data-page`), as planned below; Fable reviews. Differences from the plan are noted in section 6.
+Status: built 2026-09-29 by Opus, reviewed by Fable. Differences from the plan are noted in section 6.
 
 ## 1. Why
 
