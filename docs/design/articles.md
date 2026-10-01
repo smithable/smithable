@@ -1,6 +1,6 @@
 # Articles: pictures on records, Markdown, and an article page pattern (design)
 
-Status: 2026-09-29, proposed by Fable. The first step of the company-websites milestone (ROADMAP, "Later") and what a blog, a news page or a knowledge base needs. It adds four constructs to the spec, so it needs Johan's go-ahead (merging this document is that). Each passes ARCHITECTURE §2.4: common on almost every site, deterministic, it replaces custom code a model would otherwise write, it names no technology, and two of the four (pictures and drafts) touch data and access, where generated code is safer than per-app code. Step 2 (Markdown) built 2026-09-30 by Opus: the `markdown` type, the kit's editor (Write and Preview) and formatter (react-markdown, loaded only where Markdown is shown), through a field's own `input` control in the kit's FieldUi; the booking starter's instructor bio is Markdown. The public `where` and pictures on records (step 1, Fable, 2026-09-30) are built too; left of the design: the article pages (step 3), pictures on landing cards (step 4). Step 3 (the articles pattern) and step 4 (the booking starter's blog) built 2026-09-30 by Opus; a new article's address is made from its title when it is saved (in the generated new route, so no other app's form changes), not as the title is typed.
+Status: built 2026-09-30 (pictures and the public `where`, Markdown, the `articles` pattern, the booking starter's blog). Proposed 2026-09-29 by Fable. The first step of the company-websites milestone (ROADMAP, "Later") and what a blog, a news page or a knowledge base needs. It adds four constructs to the spec, so it needs Johan's go-ahead (merging this document is that). Each passes ARCHITECTURE §2.4: common on almost every site, deterministic, it replaces custom code a model would otherwise write, it names no technology, and two of the four (pictures and drafts) touch data and access, where generated code is safer than per-app code. Step 2 (Markdown) built 2026-09-30 by Opus: the `markdown` type, the kit's editor (Write and Preview) and formatter (react-markdown, loaded only where Markdown is shown), through a field's own `input` control in the kit's FieldUi; the booking starter's instructor bio is Markdown. The public `where` and pictures on records (step 1, Fable, 2026-09-30) are built too; left of the design: the article pages (step 3), pictures on landing cards (step 4). Step 3 (the articles pattern) and step 4 (the booking starter's blog) built 2026-09-30 by Opus; a new article's address is made from its title when it is saved (in the generated new route, so no other app's form changes), not as the title is typed.
 
 ## 1. What people get
 
@@ -82,16 +82,6 @@ For `blog: { articles: Post }` at `/blog`:
 - **Head:** the article's title, the summary as the description, and `og:image` with the picture's absolute address, so links shared in chat apps show a card.
 - **Addresses:** when the address field is empty on create, the kit fills it from the title (lowercase, ASCII, dashes) until the writer edits it; uniqueness is the field's `unique`, so a clash is the usual "already taken" message.
 - A landing page's records section of an article model links each card to its article, and shows the card's picture when the model has a picture field (every records section gains pictures this way).
-
-## 4. Order of work
-
-1. **Pictures and the public `where`** (engine: core types, the access layer, the data functions, the file route, the kit's `PictureInput`, sample pictures, tests). Fable, since it is the access layer and new column kinds.
-2. **Markdown** (core type, the kit's editor and renderer, the dependency in the stack profile). Small; either of us.
-3. **The `articles` pattern** (core pattern object with inference and the drafts warning, `addArticlesPage` and phrases like "add a blog for posts", the two routes, the site frame choice, head tags, landing cards linking to articles). It follows the users and data patterns file by file; a good one for Opus with this document.
-4. **Example:** the booking starter gets a studio blog (Post with cover, body, status; a `blog` page; the home page's news section), so `test:apps` covers the visual checks, the public/draft split in a browser, and an upload through the form.
-5. **Docs:** spec, ARCHITECTURE (§3.1 for `where`, §6.3 for the kit, a pictures paragraph replacing "Next: …" in the pictures bullet), ROADMAP.
-
-Each step lands with `pnpm check` green and apps without these constructs byte-identical.
 
 ## 5. Out of scope, for later
 
