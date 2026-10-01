@@ -1,0 +1,51 @@
+# Questions and answers
+
+Checked against the code on 2026-10-01. Where something is not built yet, this page says so.
+
+## How is this different from Lovable, Bolt, v0 or Replit?
+
+Those tools have a model write and rewrite the application's code from your prompts. Smithable keeps a short description of the application, `smithable.yml`, and generates the code from it. Routine changes are operations that need no model and cannot produce broken code; a model is used only to turn a request in your own words into operations, and it proposes, you confirm. The result is an ordinary application a developer can read, and changes that are cheap, tested and undoable. The reasoning and the measurements are on [Why Smithable](why.md).
+
+## Does my app depend on Smithable?
+
+No. A generated app has no Smithable package at build time or run time; a test in this repository fails if one appears. It is a TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. `smithable detach` turns the project into an ordinary one in a single commit when you want to stop using Smithable, and the app kit copied into it is licensed under 0BSD.
+
+## Do I need an AI model?
+
+No. Everything in [Getting started](start.md) works without one: starters, Studio, every operation, deploy, backup. A model adds two things: `smithable ask "<request>"`, which turns your words into operations, and `smithable new --describe`, which drafts an app from a sentence. You can run a local model with Ollama, an EU-hosted model with your own key, or none. See [AI setup](../ai.md).
+
+## What does it cost to run?
+
+The software is free and open source under Apache-2.0. Operations cost nothing. A model call costs what your provider charges: in the benchmarks an everyday change with a small EU-hosted model cost a fraction of a cent, and a local model costs nothing but time. Every change in Studio and the CLI shows what handled it and what it cost.
+
+## Can I host it myself?
+
+Yes. `smithable deploy --target docker` runs the release checks and builds a container that keeps its data in a `/data` volume; `--target compose` writes a `compose.yaml`, and `ssh://user@host` deploys to a remote Docker host. `smithable backup` copies the database and uploads to a folder or an S3-compatible bucket, and `smithable restore` brings them back, to a point in time when continuous backup is on.
+
+## Is there a hosted version?
+
+A private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
+
+## Where does my data live?
+
+On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region, and model calls go to an EU-hosted model. The hosted service's legal documents are drafts until the public beta and say exactly what is kept and for how long.
+
+## What can it build today?
+
+Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management. Four starters show the range: a CRM, a booking site, an invoicing app and a plain records app. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
+
+## What happens when the spec cannot say what I need?
+
+You write ordinary code in `src/custom/`, which Smithable never overwrites: a custom action's implementation, a page with its own component, a section, a stylesheet. The generated data functions apply the access rules for you. `smithable teach` lets a project add a construct of its own, and a construct that many projects need becomes part of the spec through a design note and the five questions in [ARCHITECTURE §2.4](../ARCHITECTURE.md#24-growing-the-dsl).
+
+## Is it production-ready?
+
+It is a beta. The engine is tested on every change against every example: generated, type-checked, built, served and regenerated, and Studio driven in a real browser. Until 1.0, only the latest release is supported, the spec is version 0.1 and may change with a migration path, and the packages are not on npm yet, so you install from the repository. Treat it the way you would treat any 0.x tool: good for real internal tools and small sites, with your own backups.
+
+## Why YAML, and why one stack?
+
+YAML because non-developers can read it and a model can write it reliably, and because a spec with positions, comments and a JSON Schema fits editors as they are. One stack because an ordinary, idiomatic application for one stack is worth more than a mediocre one for five; a second adapter comes when the first is proven, and the spec is kept neutral so that it can.
+
+## How do I contribute or report a problem?
+
+Issues and pull requests on [GitHub](https://github.com/smithable/smithable); [CONTRIBUTING.md](../../CONTRIBUTING.md) says what to read first and how changes are checked. Vulnerabilities go to security@smithable.ai, as [SECURITY.md](../../SECURITY.md) explains, not to a public issue.
