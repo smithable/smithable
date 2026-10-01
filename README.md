@@ -4,7 +4,7 @@ Smithable is an app builder for people who have never written code and for devel
 
 The difference from prompt-to-code builders: **Smithable understands the application.** Routine changes are made by deterministic generators, not by an AI rewriting code. Adding a phone number to customers is one operation, in milliseconds, for no tokens; a request that needs interpretation goes to the cheapest capable model with a small slice of the spec. Changes don't break the app, most of them cost nothing, and the generated code stays clean enough for a developer to take over. Why this matters and who it is for: [docs/VISION.md](docs/VISION.md).
 
-**Status:** private beta. The open-source engine, CLI, Studio and MCP server in this repository work on their own; the hosted service lives in a separate repository and builds on them.
+**Status:** beta. The engine, CLI, Studio and MCP server in this repository work on their own, on your machine, with no account. The hosted service (smithable.ai, a private beta) lives in a separate repository and builds on them.
 
 ## What a generated app is
 
@@ -22,7 +22,7 @@ node packages/cli/dist/bin.js new dogs --describe "a site to show my dogs"   # u
 cd my-crm && node ../packages/cli/dist/bin.js studio   # Builder and Studio in the browser
 ```
 
-From inside a project, the everyday commands:
+The packages are not on npm yet, so `smithable` below means `node <repo>/packages/cli/dist/bin.js` (an alias does it: `alias smithable="node $PWD/packages/cli/dist/bin.js"` from the repository root). From inside a project, the everyday commands:
 
 ```sh
 smithable op addField Customer phone phone     # a deterministic change: spec, migration, forms, tables
@@ -32,7 +32,7 @@ smithable mcp                                   # the same operations as tools f
 smithable deploy --target docker                # release checks, then the container
 ```
 
-`smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md).
+`smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker.
 
 ## The repository
 
@@ -49,7 +49,7 @@ smithable deploy --target docker                # release checks, then the conta
 
 ## Working on it
 
-`pnpm check` is the gate before every commit: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change is undoable.
+`pnpm check` is the gate before every commit: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change is undoable. How to contribute, and what to read first: [CONTRIBUTING.md](CONTRIBUTING.md); conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Licence
 
