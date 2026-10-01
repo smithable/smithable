@@ -2769,6 +2769,14 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+const NO_TOKENS = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+};
+
 // Production needs both: without a secret sessions could be forged, without the address
 // sign-in breaks. Better to refuse to start than to run like that.
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
@@ -2794,6 +2802,12 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
       },
+    },
+    // The app only signs people in with a provider and never calls it afterwards, so the
+    // provider's tokens are not kept: not in the database, its backups or its exports.
+    account: {
+      create: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
+      update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
     },
   },
   plugins: [tanstackStartCookies()],
@@ -5808,7 +5822,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "3f2db2ae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "01e86383 generated",
+  "src/lib/auth.ts": "64bcb759 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -7474,6 +7488,14 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+const NO_TOKENS = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+};
+
 // Production needs both: without a secret sessions could be forged, without the address
 // sign-in breaks. Better to refuse to start than to run like that.
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
@@ -7517,6 +7539,12 @@ export const auth = betterAuth({
           db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
         },
       },
+    },
+    // The app only signs people in with a provider and never calls it afterwards, so the
+    // provider's tokens are not kept: not in the database, its backups or its exports.
+    account: {
+      create: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
+      update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
     },
   },
   plugins: [tanstackStartCookies()],
@@ -8557,7 +8585,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "b166d3d9 generated",
+  "src/lib/auth.ts": "48cad4e9 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -10533,6 +10561,14 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+const NO_TOKENS = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+};
+
 // Production needs both: without a secret sessions could be forged, without the address
 // sign-in breaks. Better to refuse to start than to run like that.
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
@@ -10558,6 +10594,12 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
       },
+    },
+    // The app only signs people in with a provider and never calls it afterwards, so the
+    // provider's tokens are not kept: not in the database, its backups or its exports.
+    account: {
+      create: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
+      update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
     },
   },
   plugins: [tanstackStartCookies()],
@@ -11833,7 +11875,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "65f51832 generated",
+  "src/lib/auth.ts": "5fcb3166 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -12660,6 +12702,14 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+const NO_TOKENS = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+};
+
 // Production needs both: without a secret sessions could be forged, without the address
 // sign-in breaks. Better to refuse to start than to run like that.
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
@@ -12685,6 +12735,12 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
       },
+    },
+    // The app only signs people in with a provider and never calls it afterwards, so the
+    // provider's tokens are not kept: not in the database, its backups or its exports.
+    account: {
+      create: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
+      update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
     },
   },
   plugins: [tanstackStartCookies()],
@@ -13346,7 +13402,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "1c5c1d63 generated",
+  "src/lib/auth.ts": "fd4a3af9 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
