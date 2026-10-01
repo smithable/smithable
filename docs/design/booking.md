@@ -54,16 +54,6 @@ Visitors see "Sign in to book" linking to the sign-in page, which returns them t
 - Pages: `my-bookings: { crud: Booking }` for members (their own, by access), and staff see each session's bookings on its page through the related list.
 - Sample data: none for bookings (they need users); sessions show all their places left.
 
-## 4. Order of work
-
-1. **Core:** the `capacity` model key (schema, parse, checks and the warning), `setCapacity`, the phrases, index and summary words ("At most `capacity` bookings per session").
-2. **Adapter, data functions:** the count in the write transaction, the capacity-lowering check, the conflict codes and their words, the access test case.
-3. **Adapter, the reservation block:** `Reserve.tsx`, its server function (the viewer's own record, places left), on the referenced model's record page and, when the calendar exists, in its panel; sign-in return path.
-4. **Example and tests:** the starter as in 3.3; `test-apps` browser steps: a member books a session and sees "You're booked"; with capacity 1, a second member sees "Full"; the member cancels and the place is free again; an admin lowering the capacity below the bookings is refused.
-5. **Docs:** spec (a "Capacity" subsection under models, and the reservation block under pages), ARCHITECTURE (the access layer paragraph: capacity is checked in the same place as access), ROADMAP.
-
-Steps 1 and 2 are the engine part (the write path and its transaction); I'd do those. Steps 3 to 5 follow the patterns Opus has built twice now. Apps without a capacity stay byte-identical.
-
 ## 5. Out of scope, for later
 
 - Waiting lists (a place freed goes to the first in line, with a mail through the mail kit).
@@ -80,4 +70,3 @@ Steps 1 and 2 are the engine part (the write path and its transaction); I'd do t
 - **Texts.** "Book a place" and "Cancel booking" are the block's defaults, taken as props. They are not in `smithable.content.yml` yet (`models.Booking.book`/`cancel`), since the content schema has no model-level texts beyond labels.
 - **No sample bookings.** The seed skips models with a capacity, so every place starts free.
 - **The browser step.** Development sign-in has one user per role, so "a second member" is the admin: every session gets one place, the member books one, the admin sees it full on its page and cannot lower its places, and the member cancels.
-

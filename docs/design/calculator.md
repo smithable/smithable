@@ -1,6 +1,6 @@
 # Calculators, and pages and sections of your own (design)
 
-Status: proposed 2026-09-30 by Fable, from the question "what about a calculator that is bound to no model: inputs, a slider, results computed as you type?". It adds one page pattern that is also a landing section (`calculator`), one formula function (`PMT`), and the escape hatch for everything more interactive (`custom` pages and sections, created once in `src/custom/`). Merging this document is the go-ahead; §5 splits the work. What it does not add is a component vocabulary (`input`, `output`, `row`, `button`): that is a UI framework in YAML, unbounded and ambiguous for the AI, and the three constructs here cover the calculator without it. §4 (`custom` pages and sections) built 2026-10-01 by Opus: `addCustomPage` and `addSection --custom`, stubs created once, their props in `src/generated/custom.ts` (always generated, so a component left behind by a removed page still type-checks), and the Builder's add forms. `calculator` and `custom` are no longer section kinds named by their name: `addSection home calculator` with no fields made a section with nothing to show.
+Status: built 2026-09-30 to 2026-10-01 (the notes below). Proposed 2026-09-30 by Fable, from the question "what about a calculator that is bound to no model: inputs, a slider, results computed as you type?". It adds one page pattern that is also a landing section (`calculator`), one formula function (`PMT`), and the escape hatch for everything more interactive (`custom` pages and sections, created once in `src/custom/`). Merging this document is the go-ahead; §5 splits the work. What it does not add is a component vocabulary (`input`, `output`, `row`, `button`): that is a UI framework in YAML, unbounded and ambiguous for the AI, and the three constructs here cover the calculator without it. §4 (`custom` pages and sections) built 2026-10-01 by Opus: `addCustomPage` and `addSection --custom`, stubs created once, their props in `src/generated/custom.ts` (always generated, so a component left behind by a removed page still type-checks), and the Builder's add forms. `calculator` and `custom` are no longer section kinds named by their name: `addSection home calculator` with no fields made a section with nothing to show.
 
 Against ARCHITECTURE §2.4: calculators are common (mortgage and loan, price and quote estimators, ROI, BMI, savings, "how many do I need"); the formula engine already exists and already runs in forms as you type; the alternative is a hand-written React component per calculator; nothing names a technology; and a formula is checked, testable with `examples` and readable in the Builder, which custom code is not.
 
@@ -68,16 +68,6 @@ pages:
 - A custom page has no data functions; code that reads records imports the generated data functions, which apply the access rules, as custom queries do.
 
 This is the boundary: the ux file chooses looks, the spec names what exists, and custom code is a named thing in a file. Nothing in YAML ever describes an element.
-
-## 5. Order of work
-
-1. **Core:** `FieldsIR` shared by models and calculators, the `calculator` pattern (page and section), `PMT`, examples over several results, field operations on a calculator, `addCalculatorPage`, phrases ("add a mortgage calculator with price, deposit, years and rate" is a tier-0 phrase when every field is `name=type`), index and summary. Fable.
-2. **Adapter:** `Calculator.tsx`, the page route and the section, the generated formula module for a page, formula tests from `examples`, the `data-kit="calculator"` hook (look.md §2.2). Opus.
-3. **`custom` pages and sections:** the pattern and section kind in core (a name, no fields), the one-time stub and typed props in the adapter, `smithable code page:` and `section:` targets, Builder's wording. Opus, after 2.
-4. **Example:** the booking starter's landing page gets an `estimate` section (classes per month and the pass that pays off) or, if that reads as clutter, the CRM gets a `/quote` calculator; `test-apps` types into it in a browser and reads a result. Whichever is chosen also serves as the Look tab's demo of a slider.
-5. **Docs:** spec (a "Calculators" subsection under pages, `PMT` under formulas, "Custom pages and sections"), ARCHITECTURE §6.3 (ownership zones: `src/custom/pages`, `sections`, `styles.css`) and §10.4, ROADMAP.
-
-Apps without a calculator or a custom page stay byte-identical.
 
 ## 6. Out of scope, for later
 

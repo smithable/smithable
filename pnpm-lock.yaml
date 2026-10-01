@@ -271,22 +271,6 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  spikes/webcontainer:
-    dependencies:
-      '@smithable/adapter-tanstack':
-        specifier: workspace:*
-        version: link:../../packages/adapter-tanstack
-      '@smithable/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@webcontainer/api':
-        specifier: 1.6.4
-        version: 1.6.4
-    devDependencies:
-      vite:
-        specifier: 8.3.1
-        version: 8.3.1(@types/node@24.13.6)(jiti@2.7.0)(yaml@2.9.1)
-
 packages:
 
   '@biomejs/biome@2.5.14':
@@ -743,9 +727,6 @@ packages:
 
   '@vitest/spy@5.0.2':
     resolution: {integrity: sha512-Ijc7T1nT9efNb5LxvjaBrEqw3f/QwUv5EE0nKqZxgqsaV/FxAAZ8baGylA8X/Z2oS4Lp+K74Jr6dTJsDKxJDeg==}
-
-  '@webcontainer/api@1.6.4':
-    resolution: {integrity: sha512-r9sHCXg1FcC1AMgppGwAc0vYWaQhqvg282cnsuPbJEzYnWifAdCVvg+8ngJUEHyHcomhJJp+/zuytite4ITHLw==}
 
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
@@ -1779,8 +1760,6 @@ snapshots:
       vite: 8.3.1(@types/node@24.13.6)(jiti@2.7.0)(yaml@2.9.1)
 
   '@vitest/spy@5.0.2': {}
-
-  '@webcontainer/api@1.6.4': {}
 
   accepts@2.0.0:
     dependencies:

@@ -1,6 +1,6 @@
 # Studio, second round: one preview, a remembered place, a Look tab, questions, editing by parts (design)
 
-Status: 2026-09-30, proposed by Fable from Johan's testing of the yoga app on the beta. The routine items from the same testing (the mode names "No code" and "Code", the change notice with Undo, the trace below the change box, a no-change edit refused, one-click editing of a sentence, adding a custom action, details beside the concepts) are with Opus already. This document is the rest: the parts that change how Builder and Studio are put together.
+Status: §1 (one preview), §3 (the Look tab) and §4 (questions) are built; §2 (the remembered place) and §5 (editing by parts) are not built and not scheduled. Proposed 2026-09-30 by Fable from Johan's testing of the yoga app on the beta. The routine items from the same testing (the mode names "No code" and "Code", the change notice with Undo, the trace below the change box, a no-change edit refused, one-click editing of a sentence, adding a custom action, details beside the concepts) are with Opus already. This document is the rest: the parts that change how Builder and Studio are put together.
 
 ## 1. One preview, outside both modes
 
@@ -53,12 +53,3 @@ Johan's doubt is right: rewriting a sentence freely and hoping the model reads i
 - **Adding:** "add a record", "add a field", "add a page", "add an action" as buttons in the summary's groups, opening the same forms as the Change tab, prefilled with the group.
 
 The Change tab's forms and the properties panel are then the same thing seen from two sides, and the summary is a map to them.
-
-## 6. Order of work
-
-1. One preview frame and the address bar (§1), then the remembered place (§2): `App.tsx`, the preview script's `navigated` message, both modes' layouts. `test-studio` covers switching modes without losing the page and the selection.
-2. The Look tab (§3) and the companion files in Studio's editor (`editFile`).
-3. Editing by parts (§5): the properties panel shared by both modes, the summary's click, the add buttons.
-4. Questions (§4): the router's `answer` kind, tier-0 question shapes on the index, the model's answer, the reply under the box.
-
-All four are Studio work following patterns that exist; Opus can build them from this document, one pull request each, with Fable reviewing. Nothing here changes the spec.

@@ -148,7 +148,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - Preview runtime interface with the Local (daemon) and Remote VM runtimes; the engine runs in the browser tab (M8).
 - Concept tree, plain-language spec summary, spec editor, diff, undo, logs, and forms for the most common operations.
 - Change trace, with generator entries only for now.
-- Usability tests with 5–8 people from the beachhead groups, each building their own small app idea in the Builder (they replace M7's interviews; guide in [research/interviews.md](research/interviews.md)).
+- Usability tests with 5–8 people from the beachhead groups, each building their own small app idea in the Builder (they replace M7's interviews).
 
 **Exit:** the M3–M5 flows work in both modes, both locally (daemon) and in the browser with a Remote VM preview.
 
@@ -270,7 +270,7 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Presentation choices, never positions (look.md §1): how a field is entered, form sections and columns, a list's view and order, each landing section's look and a landing page's own theme, with the Look tab's controls for all of them.
 - Calculators ([design/calculator.md](design/calculator.md)): a calculator page or landing section with fields, formulas and `PMT`; custom pages and sections (§4) as generated routes around a component in `src/custom/`.
 - Third-party notices in every generated app (`LICENSES/`), the legal drafts for the hosted beta (`smithable-cloud/docs/legal/`), the code of conduct and issue and pull-request templates.
-- Designed, not yet built: point-in-time recovery with a preview ([design/pitr.md](design/pitr.md)).
+- Point-in-time recovery ([design/pitr.md](design/pitr.md)): built in the service (preview, bring back, undo, a Look at an earlier time, restore everything), in core (`dataDiffSql`, `restoreOrder`) and in the CLI (`backup --continuous`, `restore --at`).
 
 **Exit:** a new page pattern or landing section kind touches one module in core and one in the adapter; a project plugin can add operations and a summary; `smithable ask` answers everyday changes without a model and says so; nothing from the review is open except the Spot host.
 

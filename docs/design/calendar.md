@@ -1,6 +1,6 @@
 # The calendar page pattern (design)
 
-Status: built 2026-09-30 by Opus (branch `opus/calendar`) as planned below; Fable reviews. Proposed 2026-09-29 by Fable. The last page pattern ARCHITECTURE §10.4 lists as "still to come" besides kanban. It is the most visible gap in the booking starter, whose schedule is a plain list today. It adds one page pattern, so merging this document is the go-ahead. It passes §2.4: common (classes, appointments, shifts, events, deadlines), deterministic, no model or custom code needed, technology-neutral, and it goes through the same data functions and access rules as every list.
+Status: built 2026-09-30 by Opus, reviewed by Fable. Proposed 2026-09-29 by Fable. The last page pattern ARCHITECTURE §10.4 lists as "still to come" besides kanban. It is the most visible gap in the booking starter, whose schedule is a plain list today. It adds one page pattern, so merging this document is the go-ahead. It passes §2.4: common (classes, appointments, shifts, events, deadlines), deterministic, no model or custom code needed, technology-neutral, and it goes through the same data functions and access rules as every list.
 
 ## 1. What people get
 
@@ -44,16 +44,6 @@ Accessibility: each day is a `section` labelled with its date, and its records a
 ### 3.4 Sample data
 
 Sample records of a calendar's model are placed around the day the sample data is loaded (the same weekday and hour as the sample, in the current and next week), so a new booking app's schedule is never an empty week. The generated seed stays byte-identical; only the dates it writes depend on the day it runs.
-
-## 4. Order of work
-
-1. **Date-times in the app's zone** (3.1): `zoned.ts`, `toInput`/`fromInput` and `formatValue` use it, tests around the summer-time changes (Europe/Mariehamn: 29 March and 25 October 2026).
-2. **Core**: the `calendar` pattern object (parse with inference and clear errors for what cannot be inferred or is found twice, `models`, icon `calendar`, `inMenu`), the timezone warning, `addCalendarPage` and the phrases, index words.
-3. **Adapter**: `pages/calendar.ts` (the route: range from the address, the server function, the view switch), `src/kit/Calendar.tsx` (kit file only for apps with a calendar), the new-record form taking a start from the address (`/sessions/new?startsAt=…`), sample data around today.
-4. **Example**: the booking starter's public `sessions` list becomes a public `schedule` calendar (the landing page's buttons point to it), and `sessions` stays as the staff's list. `test-apps` gets a browser step: a visitor sees this week's sessions and opens one; an admin clicks an empty hour and the new session's start is that hour; Next and Previous change the week and the address.
-5. **Docs**: spec (a "Calendars" subsection), ARCHITECTURE §10.4 (the "still to come" sentence), ROADMAP.
-
-Steps 1 to 3 touch the kit and generator the way the users and data pages did; this is a good one for Opus with this document, and I review. Apps without a calendar stay byte-identical, except for step 1, which changes `format.ts` in every app on purpose.
 
 ## 5. Out of scope, for later
 
