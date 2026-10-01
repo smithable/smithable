@@ -3316,16 +3316,22 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { currentViewer } from "#/lib/viewer.server";
 
-/** How many records of each model the viewer may read; null where they may read none. */
+/**
+ * How many records of each model the viewer may read (null where they may read none), and,
+ * when a hosting service runs the app, its page for restoring data to an earlier time.
+ */
 const getCounts = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   return {
-    "class-types": classTypeData.count(viewer),
-    "instructors": instructorData.count(viewer),
-    "sessions": sessionData.count(viewer),
-    "bookings": bookingData.count(viewer),
-    "posts": postData.count(viewer),
-    "messages": messageData.count(viewer),
+    counts: {
+      "class-types": classTypeData.count(viewer),
+      "instructors": instructorData.count(viewer),
+      "sessions": sessionData.count(viewer),
+      "bookings": bookingData.count(viewer),
+      "posts": postData.count(viewer),
+      "messages": messageData.count(viewer),
+    },
+    restore: process.env.SMITHABLE_HOST_URL ? \`\${process.env.SMITHABLE_HOST_URL}/data\` : undefined,
   };
 });
 
@@ -3345,10 +3351,14 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminPage() {
-  const counts = Route.useLoaderData();
+  const { counts, restore } = Route.useLoaderData();
   return (
     <>
-      <PageHeader page="admin" title="Admin" />
+      <PageHeader
+        page="admin"
+        title="Admin"
+        actions={restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
+      />
       <ul className="divide-y divide-border rounded-lg border border-border bg-card">
         {MODELS.filter((m) => counts[m.key] !== null).map((m) => (
           <li key={m.key}>
@@ -5799,7 +5809,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/class-types/$id.tsx": "8c82275f generated",
   "src/routes/admin/class-types/index.tsx": "15a93d9b generated",
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
-  "src/routes/admin/index.tsx": "14d63120 generated",
+  "src/routes/admin/index.tsx": "9fd4c171 generated",
   "src/routes/admin/instructors/$id.tsx": "20e8bd2a generated",
   "src/routes/admin/instructors/index.tsx": "6540d251 generated",
   "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
