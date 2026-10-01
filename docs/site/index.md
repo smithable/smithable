@@ -6,6 +6,7 @@ Routine changes are made by deterministic generators, not by an AI rewriting cod
 
 - **[Getting started](start.md)**: install the CLI, make a first app, open it in Studio.
 - **[The spec reference](../spec/v0.1.md)**: everything `smithable.yml` and its companion files can say, with examples.
+- **[AI setup](../ai.md)**: the models behind `smithable ask` and drafting an app from a sentence, local first.
 - **[JSON Schema](https://docs.smithable.ai/schema/smithable-0.1.json)** for `smithable.yml`, for autocomplete and checking in your editor.
 
 The source is on [GitHub](https://github.com/smithable/smithable), under the Apache-2.0 licence.
