@@ -5,7 +5,7 @@ import { SECTIONS, SPEC_VERSION } from "./spec.js";
 export function buildJsonSchema(): JsonSchema {
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
-    $id: `https://smithable.ai/schema/smithable-${SPEC_VERSION}.json`,
+    $id: `https://docs.smithable.ai/schema/smithable-${SPEC_VERSION}.json`,
     title: "smithable.yml",
     description: "Describes what a Smithable application does. See docs/spec.",
     type: "object",

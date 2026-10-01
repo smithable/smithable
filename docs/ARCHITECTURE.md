@@ -161,7 +161,7 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 
 ### 2.5 Mechanics
 
-- A JSON Schema for the manifest is published and used for validation, editor autocomplete and operation validation.
+- A JSON Schema for the manifest is published (at its `$id`, https://docs.smithable.ai/schema/smithable-0.1.json, with the spec reference on docs.smithable.ai, built by `pnpm site`) and used for validation, editor autocomplete and operation validation.
 - Validation errors carry file, line and column positions.
 - Hand edits are first-class: users may edit `smithable.yml` directly, and Smithable validates and recompiles on save.
 - Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
