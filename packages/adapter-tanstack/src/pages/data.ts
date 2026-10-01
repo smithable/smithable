@@ -68,11 +68,17 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { currentViewer } from "#/lib/viewer.server";
 
-/** How many records of each model the viewer may read; null where they may read none. */
+/**
+ * How many records of each model the viewer may read (null where they may read none), and,
+ * when a hosting service runs the app, its page for restoring data to an earlier time.
+ */
 const getCounts = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   return {
-${models.map(({ key, n }) => `    ${JSON.stringify(key)}: ${n.data}.count(viewer),`).join("\n")}
+    counts: {
+${models.map(({ key, n }) => `      ${JSON.stringify(key)}: ${n.data}.count(viewer),`).join("\n")}
+    },
+    restore: process.env.SMITHABLE_HOST_URL ? \`\${process.env.SMITHABLE_HOST_URL}/data\` : undefined,
   };
 });
 
@@ -84,10 +90,14 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => getCounts(),
 });
 
 function ${component}() {
-  const counts = Route.useLoaderData();
+  const { counts, restore } = Route.useLoaderData();
   return (
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader
+        page=${attr(page.id)}
+        title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
+        actions={restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
+      />
       <ul className="divide-y divide-border rounded-lg border border-border bg-card">
         {MODELS.filter((m) => counts[m.key] !== null).map((m) => (
           <li key={m.key}>
