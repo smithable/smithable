@@ -101,11 +101,16 @@ function pageOf(path: string): string | undefined {
 }
 
 
-const getViewer = createServerFn().handler(() => currentViewer());
+// Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
+// time to look at (DATA_AS_OF), that time.
+const getViewer = createServerFn().handler(async () => ({
+  viewer: await currentViewer(),
+  asOf: process.env.DATA_AS_OF,
+}));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
-  beforeLoad: async () => ({ viewer: await getViewer() }),
+  beforeLoad: () => getViewer(),
   headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
@@ -128,7 +133,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();
+  const { viewer, asOf } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 ${
   signIn
@@ -145,6 +150,11 @@ ${
         <HeadContent />
       </head>
       <body data-page={pageOf(pathname)}>
+        {asOf && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
         ${
           landings.length || sites.length
             ? `{${framedBySite} ? (
