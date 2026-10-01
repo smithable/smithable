@@ -78,7 +78,7 @@ const getCounts = createServerFn().handler(async () => {
     counts: {
 ${models.map(({ key, n }) => `      ${JSON.stringify(key)}: ${n.data}.count(viewer),`).join("\n")}
     },
-    restore: process.env.SMITHABLE_HOST_URL ? \`\${process.env.SMITHABLE_HOST_URL}/data\` : undefined,
+    restore: process.env.HOST_PAGE_URL ? \`\${process.env.HOST_PAGE_URL}/data\` : undefined,
   };
 });
 
