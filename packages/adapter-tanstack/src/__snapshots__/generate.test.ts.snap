@@ -2916,11 +2916,16 @@ function pageOf(path: string): string | undefined {
 }
 
 
-const getViewer = createServerFn().handler(() => currentViewer());
+// Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
+// time to look at (DATA_AS_OF), that time.
+const getViewer = createServerFn().handler(async () => ({
+  viewer: await currentViewer(),
+  asOf: process.env.DATA_AS_OF,
+}));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
-  beforeLoad: async () => ({ viewer: await getViewer() }),
+  beforeLoad: () => getViewer(),
   headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
@@ -2943,7 +2948,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();
+  const { viewer, asOf } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -2956,6 +2961,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body data-page={pageOf(pathname)}>
+        {asOf && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
           children
         ) : (
@@ -3331,7 +3341,7 @@ const getCounts = createServerFn().handler(async () => {
       "posts": postData.count(viewer),
       "messages": messageData.count(viewer),
     },
-    restore: process.env.SMITHABLE_HOST_URL ? \`\${process.env.SMITHABLE_HOST_URL}/data\` : undefined,
+    restore: process.env.HOST_PAGE_URL ? \`\${process.env.HOST_PAGE_URL}/data\` : undefined,
   };
 });
 
@@ -5802,14 +5812,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "ba32c764 generated",
+  "src/routes/__root.tsx": "ac51d62d generated",
   "src/routes/admin/bookings/$id.tsx": "5ef57140 generated",
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
   "src/routes/admin/class-types/$id.tsx": "8c82275f generated",
   "src/routes/admin/class-types/index.tsx": "15a93d9b generated",
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
-  "src/routes/admin/index.tsx": "9fd4c171 generated",
+  "src/routes/admin/index.tsx": "dc5e3939 generated",
   "src/routes/admin/instructors/$id.tsx": "20e8bd2a generated",
   "src/routes/admin/instructors/index.tsx": "6540d251 generated",
   "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
@@ -7578,11 +7588,16 @@ function pageOf(path: string): string | undefined {
 }
 
 
-const getViewer = createServerFn().handler(() => currentViewer());
+// Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
+// time to look at (DATA_AS_OF), that time.
+const getViewer = createServerFn().handler(async () => ({
+  viewer: await currentViewer(),
+  asOf: process.env.DATA_AS_OF,
+}));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
-  beforeLoad: async () => ({ viewer: await getViewer() }),
+  beforeLoad: () => getViewer(),
   headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
@@ -7605,7 +7620,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();
+  const { viewer, asOf } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -7618,6 +7633,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body data-page={pageOf(pathname)}>
+        {asOf && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
           {children}
         </AppShell>
@@ -8541,7 +8561,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "a80452ed generated",
+  "src/routes/__root.tsx": "e6f687f6 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/customers/$id.tsx": "379e64db generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
@@ -10631,11 +10651,16 @@ function pageOf(path: string): string | undefined {
 }
 
 
-const getViewer = createServerFn().handler(() => currentViewer());
+// Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
+// time to look at (DATA_AS_OF), that time.
+const getViewer = createServerFn().handler(async () => ({
+  viewer: await currentViewer(),
+  asOf: process.env.DATA_AS_OF,
+}));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
-  beforeLoad: async () => ({ viewer: await getViewer() }),
+  beforeLoad: () => getViewer(),
   headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
@@ -10658,7 +10683,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();
+  const { viewer, asOf } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -10671,6 +10696,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body data-page={pageOf(pathname)}>
+        {asOf && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
@@ -11807,7 +11837,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "3915b995 generated",
+  "src/routes/__root.tsx": "cea90d32 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/clients/$id.tsx": "d14d0660 generated",
   "src/routes/clients/index.tsx": "ee5cef45 generated",
@@ -12716,11 +12746,16 @@ function pageOf(path: string): string | undefined {
 }
 
 
-const getViewer = createServerFn().handler(() => currentViewer());
+// Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
+// time to look at (DATA_AS_OF), that time.
+const getViewer = createServerFn().handler(async () => ({
+  viewer: await currentViewer(),
+  asOf: process.env.DATA_AS_OF,
+}));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
-  beforeLoad: async () => ({ viewer: await getViewer() }),
+  beforeLoad: () => getViewer(),
   headers: ({ ssr }) => pageHeaders(ssr?.nonce),
   head: () => ({
     meta: [
@@ -12743,7 +12778,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer } = Route.useRouteContext();
+  const { viewer, asOf } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -12756,6 +12791,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body data-page={pageOf(pathname)}>
+        {asOf && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
         {landingRoutes.includes(pathname) ? (
           children
         ) : (
@@ -13310,7 +13350,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "8e7442fa generated",
+  "src/routes/__root.tsx": "f30f79c3 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "19b18d69 generated",
