@@ -303,7 +303,15 @@ export { actionNames } from "./actions.js";
 export { customPageFromEdit, customPageSource } from "./pages/custom.js";
 
 export type { GeneratedFile, GenerateOptions, Zone } from "./shared.js";
-export { dataKey, indexPath, join, names, storedFields, tableNames, texts } from "./shared.js";
+export {
+  dataKey,
+  indexPath,
+  join,
+  names,
+  storedFields,
+  tableNames,
+  texts,
+} from "./shared.js";
 
 const generated = (path: string, content: string): GeneratedFile => ({
   path,
