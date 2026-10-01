@@ -127,7 +127,7 @@ describe("YamlEditor changes only what it targets", () => {
 
   test("the booking draft keeps every untouched line", () => {
     const text = Object.values(
-      import.meta.glob("../../../docs/spec/drafts/booking/smithable.yml", {
+      import.meta.glob("./edit.fixture.yml", {
         query: "?raw",
         import: "default",
         eager: true,
