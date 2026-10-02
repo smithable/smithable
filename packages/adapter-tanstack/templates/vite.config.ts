@@ -6,11 +6,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [tailwindcss(), tanstackStart(), viteReact()],
-  // The pages and the kit are compiled as the dev server starts, so the libraries they use are
-  // found then. Otherwise the first visit to a page can find a new one: Vite optimizes it and
-  // reloads, and a page loading at that moment fails ("Failed to fetch dynamically imported
-  // module"), which a busy machine makes likely.
-  server: { warmup: { clientFiles: ["./src/routes/**/*.tsx", "./src/kit/**/*.tsx"] } },
+  // The libraries every app uses, bundled for the browser as the dev server starts. Otherwise the
+  // first visit to a page can find one: Vite optimizes it and reloads, and a page loading at that
+  // moment fails ("Failed to fetch dynamically imported module"), which a busy machine makes likely.
   optimizeDeps: {
     include: [
       "react",
