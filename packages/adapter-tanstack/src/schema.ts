@@ -262,7 +262,8 @@ ${rows.join("\n")}
     .run();
 }`;
   });
-  const pictures = ordered.some((m) => m.fields.some(storesPictures));
+  // Only when a sample row has a picture: samples may leave every picture out.
+  const pictures = blocks.some((b) => b.includes("samplePicture("));
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 import { db } from "./index";
 ${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${

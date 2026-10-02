@@ -1,0 +1,29 @@
+# What visitors read. Derived from names when not given here.
+smithableContent: 0.1
+
+models:
+  Item:
+    label: Item
+    fields:
+      category: { values: { bikes: Bikes, kids: Kids' things } }
+      condition: { values: { likeNew: Like new, good: Good, worn: Well used } }
+      place: { label: Where }
+
+pages:
+  catalogue:
+    title: For sale
+    subtitle: Second-hand things from people nearby.
+  myItems:
+    title: My items
+  saved:
+    title: Saved
+  home:
+    hero:
+      title: Give things a second home
+      subtitle: Sell what you no longer use, and find what you need, from people nearby.
+      button: Browse items
+      image:
+        src: images/hero.webp
+        alt: An outdoor market with stalls of vegetables and flowers
+    latest:
+      title: Just in
