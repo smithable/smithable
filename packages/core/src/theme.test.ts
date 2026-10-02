@@ -1,7 +1,14 @@
 import { expect, test } from "vitest";
 import { contrast, hexOf } from "./color.js";
 import { validateSpec } from "./spec.js";
-import { BUILT_IN_THEMES, checkContrast, parseTheme, themeNamed, themeThumbnail } from "./theme.js";
+import {
+  BUILT_IN_THEMES,
+  checkContrast,
+  parseTheme,
+  themeNamed,
+  themeThumbnail,
+  withBackground,
+} from "./theme.js";
 import { validateUx } from "./ux.js";
 
 const forest = `smithableTheme: 0.1
@@ -108,4 +115,35 @@ test("a theme's picture is drawn from its tokens", () => {
   expect(svg).toContain('fill="#2f6b3a"');
   expect(svg).toContain('font-family="Nunito Sans, sans-serif"');
   expect(svg).toContain("forest");
+});
+
+test("an owner's background: a wash in light mode and a deep one in dark, everything on it readable", () => {
+  for (const name of ["modern", "minimal", "playful", "corporate"]) {
+    const theme = themeNamed(name);
+    if (!theme) throw new Error(name);
+    // A beige, a loud red and a near-black all become quiet backgrounds of their hue.
+    for (const color of ["#f5efe6", "#e11d48", "#0b1020"]) {
+      const out = withBackground(theme, color);
+      if (!out) throw new Error(`${name} ${color}`);
+      expect(checkContrast(out.light)).toEqual([]);
+      expect(checkContrast(out.dark)).toEqual([]);
+      expect(contrast(hexOf(out.light.background), "#000000")).toBeGreaterThan(17);
+      expect(contrast(hexOf(out.dark.background), "#ffffff")).toBeGreaterThan(14);
+      // The primary and the states are the theme's own.
+      expect(out.light.primary).toBe(theme.light.primary);
+      expect(out.dark.success).toBe(theme.dark.success);
+    }
+  }
+});
+
+test("the ux file's background: a color, set by setTheme, refused when not a color", () => {
+  const ir = validateSpec({ path: "smithable.yml", text: "smithable: 0.1\napp: { name: A }\n" }).ir;
+  if (!ir) throw new Error("setup");
+  const read = (theme: string) =>
+    validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\ntheme: ${theme}\n` }, ir);
+  expect(read('{ brand: { background: "#F5EFE6" } }').ux?.theme.background).toBe("#f5efe6");
+  expect(read("{ brand: { background: beige } }").diagnostics[0]).toMatchObject({
+    code: "invalid-color",
+    message: '"background" must be a color like "#2563eb".',
+  });
 });

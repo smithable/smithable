@@ -7,6 +7,7 @@ import {
   themeNamed,
   tokensOf,
   type UxIR,
+  withBackground,
 } from "@smithable/core";
 import { brandColors } from "./brand.js";
 
@@ -38,9 +39,13 @@ export function themeFont(ux: UxIR, themes: readonly ThemeIR[] = []): string {
   return ux.theme.font ?? themeOf(ux, themes).font;
 }
 
-/** The theme's color tokens in one mode, with a brand color applied when there is one. */
+/**
+ * The theme's color tokens in one mode: the owner's background first (the colors on it derived
+ * again), then a brand color on top, when there are any.
+ */
 function tokens(ux: UxIR, theme: ThemeIR, mode: Mode): Tokens {
-  return tokensOf(theme, mode, ux.theme.primary ? brandColors(ux.theme.primary, theme, mode) : {});
+  const base = (ux.theme.background && withBackground(theme, ux.theme.background)) || theme;
+  return tokensOf(base, mode, ux.theme.primary ? brandColors(ux.theme.primary, base, mode) : {});
 }
 
 /** A landing page's ux: the app's theme with the keys the page changes (look.md §1.5). */
