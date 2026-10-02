@@ -1482,7 +1482,9 @@ async function browserFlow(base) {
       throw new Error("the search box lost focus while the results loaded");
     if ((await box.inputValue()) !== "nor")
       throw new Error(`the search box holds "${await box.inputValue()}" instead of "nor"`);
-    console.log("  ✓ browser: typing a search keeps the box's focus and text while a slow answer loads");
+    console.log(
+      "  ✓ browser: typing a search keeps the box's focus and text while a slow answer loads",
+    );
     await page.getByRole("searchbox", { name: "Search by name or email" }).fill("NORDIC");
     await page.waitForURL(/q=NORDIC/);
     await page

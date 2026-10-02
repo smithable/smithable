@@ -36,20 +36,46 @@ import {
 
 // ── Models: UI description, validation and server functions ─────────────────
 
+/**
+ * A table's default columns, at most five: the title, then pictures, then required fields, then
+ * the rest, each in the spec's order; long texts never (a card shows the description instead).
+ */
+function columnsOf(model: ModelIR, shown: FieldIR[]): FieldIR[] {
+  const rank = (f: FieldIR) =>
+    f.name === titleField(model)
+      ? 0
+      : f.type.kind === "scalar" && f.type.name === "picture"
+        ? 1
+        : f.required
+          ? 2
+          : 3;
+  return shown
+    .filter((f) => !(f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name)))
+    .map((f, i) => ({ f, i }))
+    .sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i)
+    .slice(0, 5)
+    .map(({ f }) => f);
+}
+
 export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, ux: UxIR): string {
   const n = names(model, t);
   const stored = storedFields(model);
   const shown = shownFields(model);
   const formulas = hasFormulas(model);
+  const long = (f: FieldIR) =>
+    f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name);
+  // A card's description: a long text called that (or a summary), else the first required one;
+  // never an optional note.
+  const description =
+    shown.find((f) => long(f) && ["description", "summary"].includes(f.name)) ??
+    shown.find((f) => long(f) && f.required);
   const ui = {
     model: model.name,
     label: n.label,
     pluralLabel: n.pluralLabel,
     titleField: titleField(model),
-    columns: shown
-      .filter((f) => !(f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name)))
-      .slice(0, 5)
-      .map(dataKey),
+    ...(description ? { descriptionField: dataKey(description) } : {}),
+    columns: columnsOf(model, shown).map(dataKey),
     fields: shown.map((field) => ({
       ...fieldUi(model, field, t, ir, ux),
       get: code(accessor(field)),
