@@ -548,6 +548,10 @@
                   },
                   "description": "A records section's filters (fields of the model), leading to its list page."
                 },
+                "where": {
+                  "type": "object",
+                  "description": "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }."
+                },
                 "button": {
                   "type": "string",
                   "description": "The page the section's button opens."
