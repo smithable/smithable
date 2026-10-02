@@ -9,11 +9,24 @@ models:
       photos: pictures
       price: money
       category: furniture | other
+      seller: User
+  Tag:
+    fields:
+      name: string!
+      item: Item
 pages:
   catalogue:
     crud: Item
     filters: [description, photos, nope, category, category]   # expect: invalid-filter, invalid-filter, unknown-field, duplicate-field
     sortable: [photos, description, owner]    # expect: invalid-sort, invalid-sort, unknown-field
+    favourites: maybe                         # expect: invalid-value
+    contact: title                            # expect: invalid-contact
+  kept:
+    crud: Item
+    contact: { to: owner, keep: Tag }         # expect: invalid-value
+  nobody:
+    crud: Item
+    contact: { keep: Tag }                    # expect: missing-key
   home:
     route: /
     landing:
@@ -24,3 +37,4 @@ pages:
     dashboard:
       items: { count: Item }
     filters: [category]                       # expect: invalid-key
+    favourites: true                          # expect: invalid-key

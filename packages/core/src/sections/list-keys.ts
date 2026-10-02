@@ -14,15 +14,20 @@ const RANGE = ["int", "decimal", "money", "date", "datetime"];
 export const filterable = (field: FieldIR): boolean =>
   !field.formula &&
   (field.type.kind === "choice" ||
-    (field.type.kind === "relation" && !field.type.many) ||
+    // People who sign in are never listed as chips; the automatic owner is a "Mine" toggle.
+    (field.type.kind === "relation" && !field.type.many && field.type.model !== "User") ||
     (field.type.kind === "scalar" &&
       (field.type.name === "bool" || RANGE.includes(field.type.name))));
 
-/** Whether a list can be sorted by a field: anything stored with an order, so not pictures or long text. */
+/**
+ * Whether a list can be sorted by a field: anything stored with an order, so not pictures, long
+ * text or a calculated field (it has no column to sort the query by).
+ */
 export const sortableBy = (field: FieldIR): boolean =>
-  field.type.kind === "choice" ||
-  (field.type.kind === "scalar" &&
-    !["text", "markdown", "picture", "pictures"].includes(field.type.name));
+  !field.formula &&
+  (field.type.kind === "choice" ||
+    (field.type.kind === "scalar" &&
+      !["text", "markdown", "picture", "pictures"].includes(field.type.name)));
 
 /** A model's fields a list could be filtered by, in the model's order. */
 export const filterableFields = (model: ModelIR): string[] =>
@@ -42,7 +47,7 @@ function checkListFields(
   const names: string[] = [];
   for (const { name, at } of fields) {
     // The automatic fields: when a record was made or changed (a date, so a range or an order),
-    // and who owns it (a reference, so chips); never an order by owner.
+    // and who owns it (a "Mine" toggle for those signed in); never an order by owner.
     if (name === "createdAt" || name === "updatedAt" || (name === "owner" && key === "filters")) {
       if (names.includes(name))
         ctx.error(at, "duplicate-field", `"${name}" is listed twice in the ${key} of ${where}.`);
@@ -65,8 +70,12 @@ function checkListFields(
         at,
         key === "filters" ? "invalid-filter" : "invalid-sort",
         key === "filters"
-          ? `"${name}" cannot be a filter: only choices, references, numbers, amounts, dates and yes/no fields can (text is searched, not filtered).`
-          : `"${name}" cannot be sorted by: pictures, long text and lists of records have no order.`,
+          ? field.type.kind === "relation" && field.type.model === "User"
+            ? `"${name}" cannot be a filter: people are not listed as filters; owner gives a Mine toggle.`
+            : `"${name}" cannot be a filter: only choices, references, numbers, amounts, dates and yes/no fields can (text is searched, not filtered).`
+          : field.formula
+            ? `"${name}" cannot be sorted by: a calculated field has no stored value to sort by.`
+            : `"${name}" cannot be sorted by: pictures, long text and lists of records have no order.`,
       );
     } else if (names.includes(name)) {
       ctx.error(at, "duplicate-field", `"${name}" is listed twice in the ${key} of ${where}.`);

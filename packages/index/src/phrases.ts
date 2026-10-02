@@ -671,6 +671,52 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "let people save items", "items can be saved as favourites", "add favourites to the catalogue page"
+    name: "favourites",
+    match(text, scope) {
+      const m =
+        /^(?:allow (?:users |people )?to |let (?:users |people )?)?(?:save|favourite|bookmark) (?:the )?(?<target>.+?)(?: as favou?rites)?(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        ) ??
+        /^(?:the )?(?<target>.+?) (?:can|should|must) be (?:saved|favou?rited|bookmarked)(?: as favou?rites)?$/.exec(
+          text,
+        ) ??
+        /^add favou?rites (?:to|on) (?:the )?(?<page>.+?)(?: page)?$/.exec(text);
+      if (!m?.groups) return undefined;
+      const page = pageFor(scope.ir, m.groups.page ?? m.groups.target ?? "");
+      if (!page || page.pattern.kind !== "crud") return null;
+      if (page.favourites) return null;
+      return [{ op: "setFavourites", args: { page: page.id, mode: "on" } }];
+    },
+  },
+  {
+    // "let visitors contact the seller of an item", "let people contact the owner of a listing"
+    name: "contact",
+    match(text, scope) {
+      const m =
+        /^(?:allow (?:users |people |visitors )?to |let (?:users |people |visitors )?)?contact (?:the )?(?<who>.+?) (?:of|behind) (?:an? |the |each )?(?<target>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const page = pageFor(scope.ir, m.groups.page ?? m.groups.target ?? "");
+      if (!page || page.pattern.kind !== "crud") return null;
+      const model = scope.ir.models.find(
+        (x) => page.pattern.kind === "crud" && x.name === page.pattern.model,
+      );
+      if (!model) return null;
+      const who = (m.groups.who ?? "").trim();
+      let to: string | undefined;
+      if (/^(owner|creator|author|person who (?:added|created|made) it)$/i.test(who)) to = "owner";
+      else {
+        const field = fieldFor(model, who);
+        if (field?.type.kind === "relation" && !field.type.many && field.type.model === USER_MODEL)
+          to = field.name;
+      }
+      if (!to || page.contact?.to === to) return null;
+      return [{ op: "setContact", args: { page: page.id, to } }];
+    },
+  },
+  {
     // "add a page for orders, and show it in the menu"
     name: "add page",
     match(text, scope) {

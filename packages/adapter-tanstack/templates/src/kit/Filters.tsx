@@ -1,0 +1,286 @@
+// Smithable app kit: a list's filters and its sort order, above the list beside the search box.
+// The state lives in the address (?segment=enterprise&creditLimit=1000..&sort=-creditLimit), so a
+// filtered view can be linked and reloaded; the page passes it in and gets the next state back.
+// On phones the filters fold behind a "Filters" button; the active ones show as removable chips.
+import { SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { Button } from "#/components/ui/button";
+import { Input, Label } from "#/components/ui/input";
+import { cn } from "#/lib/utils";
+
+export interface FilterUi {
+  /** The field's name: its key in the address. */
+  name: string;
+  label: string;
+  /**
+   * chips (a choice or a reference), range (a number, amount or date), toggle (yes/no), mine
+   * (the viewer's own records, for those signed in).
+   */
+  kind: "chips" | "range" | "toggle" | "mine";
+  options?: { value: string; label: string }[];
+  /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
+  input?: "number" | "date";
+}
+
+export interface SortUi {
+  value: string;
+  label: string;
+}
+
+/** A filter's state in the address: chips as "a,b", a range as "from..to", a toggle as "true". */
+export type FilterValues = Record<string, string | undefined>;
+
+export function Filters({
+  filters,
+  values,
+  sorts = [],
+  sort,
+  signedIn = false,
+  onChange,
+}: {
+  filters: FilterUi[];
+  values: FilterValues;
+  sorts?: SortUi[];
+  sort?: string;
+  /** Whether the viewer is signed in: only then is there a "Mine". */
+  signedIn?: boolean;
+  onChange: (next: FilterValues & { sort?: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const shown = filters.filter((f) => f.kind !== "mine" || signedIn);
+  const active = shown.filter((f) => values[f.name]);
+  const set = (name: string, value: string | undefined) =>
+    onChange({ ...values, [name]: value || undefined, sort });
+  return (
+    <div data-kit="filters" className="mb-6 space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {shown.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            aria-expanded={open}
+            aria-controls={`${id}-panel`}
+            onClick={() => setOpen(!open)}
+            className="md:hidden"
+          >
+            <SlidersHorizontal aria-hidden className="size-4" /> Filters
+            {active.length > 0 && ` (${active.length})`}
+          </Button>
+        )}
+        {sorts.length > 0 && (
+          <div className="ml-auto flex items-center gap-2">
+            <Label htmlFor={`${id}-sort`} className="text-sm">
+              Sort by
+            </Label>
+            <select
+              id={`${id}-sort`}
+              value={sort ?? ""}
+              onChange={(e) => onChange({ ...values, sort: e.target.value || undefined })}
+              className="h-control rounded-md border border-input bg-card px-3 text-sm"
+            >
+              <option value="">Newest first</option>
+              {sorts.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+      {shown.length > 0 && (
+        <div
+          id={`${id}-panel`}
+          className={cn("flex-wrap items-end gap-x-6 gap-y-3 md:flex", open ? "flex" : "hidden")}
+        >
+          {filters.map((f) => (
+            <Filter
+              key={f.name}
+              filter={f}
+              value={values[f.name]}
+              onChange={(v) => set(f.name, v)}
+            />
+          ))}
+        </div>
+      )}
+      {active.length > 0 && (
+        <ul aria-label="Active filters" className="flex flex-wrap gap-2">
+          {active.map((f) => (
+            <li key={f.name}>
+              <button
+                type="button"
+                onClick={() => set(f.name, undefined)}
+                className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm text-accent-foreground"
+              >
+                {f.label}: {describe(f, values[f.name] as string)}
+                <X aria-label={`Remove the ${f.label.toLowerCase()} filter`} className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Filter({
+  filter,
+  value,
+  onChange,
+}: {
+  filter: FilterUi;
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
+}) {
+  const id = useId();
+  const chosen = new Set((value ?? "").split(",").filter(Boolean));
+  if (filter.kind === "mine")
+    return (
+      <label className="flex h-control items-center gap-2 text-sm font-semibold">
+        <input
+          type="checkbox"
+          checked={value === "mine"}
+          onChange={(e) => onChange(e.target.checked ? "mine" : undefined)}
+          className="size-4 accent-primary"
+        />
+        {filter.label}
+      </label>
+    );
+  if (filter.kind === "toggle")
+    return (
+      <div className="space-y-1">
+        <Label htmlFor={id}>{filter.label}</Label>
+        <select
+          id={id}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          className="h-control rounded-md border border-input bg-card px-3 text-sm"
+        >
+          <option value="">Any</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+    );
+  if (filter.kind === "range") return <Range filter={filter} value={value} onChange={onChange} />;
+  const options = filter.options ?? [];
+  // Many values read better as a list to pick one from than as a row of chips.
+  if (options.length > 8)
+    return (
+      <div className="space-y-1">
+        <Label htmlFor={id}>{filter.label}</Label>
+        <select
+          id={id}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          className="h-control max-w-60 rounded-md border border-input bg-card px-3 text-sm"
+        >
+          <option value="">Any</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  return (
+    <fieldset className="space-y-1">
+      <legend className="text-sm font-semibold">{filter.label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = chosen.has(o.value);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => {
+                const next = new Set(chosen);
+                if (on) next.delete(o.value);
+                else next.add(o.value);
+                onChange([...next].join(",") || undefined);
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-sm",
+                on
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-accent",
+              )}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+/** "From" and "to", applied once typing pauses, so the list never jumps on every key. */
+function Range({
+  filter,
+  value,
+  onChange,
+}: {
+  filter: FilterUi;
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
+}) {
+  const id = useId();
+  const [from = "", to = ""] = (value ?? "").split("..");
+  const [text, setText] = useState({ from, to });
+  useEffect(() => {
+    const next = text.from || text.to ? `${text.from}..${text.to}` : undefined;
+    if (next === value) return;
+    const timer = setTimeout(() => onChange(next), 400);
+    return () => clearTimeout(timer);
+  }, [text, value, onChange]);
+  const type = filter.input === "date" ? "date" : "number";
+  return (
+    <fieldset className="space-y-1">
+      <legend className="text-sm font-semibold">{filter.label}</legend>
+      <div className="flex items-center gap-2">
+        <Label htmlFor={`${id}-from`} className="sr-only">
+          {filter.label} from
+        </Label>
+        <Input
+          id={`${id}-from`}
+          type={type}
+          placeholder="From"
+          value={text.from}
+          onChange={(e) => setText({ ...text, from: e.target.value })}
+          className="w-32"
+        />
+        <span aria-hidden>–</span>
+        <Label htmlFor={`${id}-to`} className="sr-only">
+          {filter.label} to
+        </Label>
+        <Input
+          id={`${id}-to`}
+          type={type}
+          placeholder="To"
+          value={text.to}
+          onChange={(e) => setText({ ...text, to: e.target.value })}
+          className="w-32"
+        />
+      </div>
+    </fieldset>
+  );
+}
+
+/** An active filter in words, for its removable chip. */
+function describe(filter: FilterUi, value: string): string {
+  if (filter.kind === "mine") return "yes";
+  if (filter.kind === "toggle") return value === "true" ? "Yes" : "No";
+  if (filter.kind === "range") {
+    const [from, to] = value.split("..");
+    return from && to ? `${from}–${to}` : from ? `from ${from}` : `up to ${to}`;
+  }
+  const labels = new Map((filter.options ?? []).map((o) => [o.value, o.label]));
+  return value
+    .split(",")
+    .map((v) => labels.get(v) ?? v)
+    .join(", ");
+}

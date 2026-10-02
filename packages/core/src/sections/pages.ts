@@ -1,4 +1,4 @@
-import type { ParsedNode } from "yaml";
+import { isMap, isScalar, type ParsedNode } from "yaml";
 import {
   type At,
   checkKeys,
@@ -8,7 +8,14 @@ import {
   readRoleList,
   readString,
 } from "../context.js";
-import type { FieldIR, ModelIR, PageIR, PatternKind, SpecIR } from "../ir.js";
+import {
+  type FieldIR,
+  type ModelIR,
+  type PageIR,
+  type PatternKind,
+  type SpecIR,
+  USER_MODEL,
+} from "../ir.js";
 import { capitalize, kebab } from "../naming.js";
 import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
@@ -80,6 +87,30 @@ export const pagesSection: SpecSection<"pages"> = {
           items: { type: "string" },
           description: "Fields the list can be sorted by, either way, from a Sort by control.",
         },
+        favourites: {
+          oneOf: [{ type: "boolean" }, { const: "only" }],
+          description:
+            "true: a heart on each record and a Saved view of the list; only: a list of the viewer's saved records.",
+        },
+        contact: {
+          oneOf: [
+            { type: "string" },
+            {
+              type: "object",
+              required: ["to"],
+              additionalProperties: false,
+              properties: {
+                to: { type: "string", description: "owner, or a user field of the model." },
+                keep: {
+                  type: "string",
+                  description: "A model a copy of each message is stored in.",
+                },
+              },
+            },
+          ],
+          description:
+            "A contact block on the record page that mails the record's owner (or the user a field names): owner, a field, or { to, keep }.",
+        },
         ...textSchema,
       },
     },
@@ -136,6 +167,8 @@ function readPage(
       "search",
       "filters",
       "sortable",
+      "favourites",
+      "contact",
       ...TEXT_KEYS,
     ],
     later: ["list", "calendar"],
@@ -148,6 +181,8 @@ function readPage(
   let search: { name: string; at: At }[] | undefined;
   let filters: { name: string; at: At }[] | undefined;
   let sortable: { name: string; at: At }[] | undefined;
+  let favourites: PageIR["favourites"] | undefined;
+  let contact: { to: string; keep?: string; toAt: At; keepAt?: At } | undefined;
   for (const { key, value } of known) {
     if (key === "route") {
       const r = readString(ctx, value, `The route of ${where}`);
@@ -174,6 +209,44 @@ function readPage(
       filters = readNameList(ctx, value, `the filters of ${where}`);
     } else if (key === "sortable") {
       sortable = readNameList(ctx, value, `the sortable fields of ${where}`);
+    } else if (key === "favourites") {
+      const v = isScalar(value) ? value.value : undefined;
+      if (v === true) favourites = "all";
+      else if (v === "only") favourites = "only";
+      else if (v !== false)
+        ctx.error(
+          value,
+          "invalid-value",
+          `"favourites" in ${where} must be true (a heart and a Saved view) or only (the viewer's saved records).`,
+        );
+    } else if (key === "contact") {
+      if (isScalar(value) && typeof value.value === "string") {
+        contact = { to: value.value, toAt: value };
+      } else if (isMap(value)) {
+        const cw = `"contact" in ${where}`;
+        const options = checkKeys(ctx, mapEntries(ctx, value, cw) ?? [], cw, {
+          allowed: ["to", "keep"],
+        });
+        const to = options.find((o) => o.key === "to");
+        const keep = options.find((o) => o.key === "keep");
+        const toValue = to ? readString(ctx, to.value, `"to" in ${where}`) : undefined;
+        if (!to)
+          ctx.error(value, "missing-key", `${cw} needs "to": owner, or a user field of the model.`);
+        else if (toValue !== undefined) {
+          const keepValue = keep ? readString(ctx, keep.value, `"keep" in ${where}`) : undefined;
+          contact = {
+            to: toValue,
+            toAt: to.value,
+            ...(keepValue !== undefined ? { keep: keepValue, keepAt: keep?.value } : {}),
+          };
+        }
+      } else {
+        ctx.error(
+          value,
+          "invalid-value",
+          `"contact" in ${where} is owner, a user field of the model, or { to, keep }.`,
+        );
+      }
     } else if (key === "access") {
       access = readRoleList(ctx, value, `the access of ${where}`, false);
     } else if (key in PAGE_PATTERNS) {
@@ -203,7 +276,7 @@ function readPage(
   const model = patternInfo({ id, route, pattern }).manages();
   if (!model)
     for (const e of known.filter((e) =>
-      ["actions", "search", "filters", "sortable"].includes(e.key),
+      ["actions", "search", "filters", "sortable", "favourites", "contact"].includes(e.key),
     ))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
   if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
@@ -227,6 +300,8 @@ function readPage(
     ...(model && sortable?.length
       ? { sortable: checkSortableFields(ctx, sortable, model, parsed, where) }
       : {}),
+    ...(model && favourites ? { favourites } : {}),
+    ...(model && contact ? checkContact(ctx, contact, model, parsed, where) : {}),
     ...readSemanticText(ctx, known),
   };
 }
@@ -291,4 +366,51 @@ function checkSearch(
     }
   }
   return fields.map((f) => f.name);
+}
+
+/** A page's contact block: who it mails (the owner, or a user field of the model) and where a copy may be kept. */
+function checkContact(
+  ctx: ParseContext,
+  contact: { to: string; keep?: string; toAt: At; keepAt?: At },
+  model: string,
+  parsed: Partial<SpecIR>,
+  where: string,
+): { contact?: PageIR["contact"] } {
+  const target = parsed.models?.find((m) => m.name === model);
+  if (!target) return {}; // reported as an unknown model
+  if (contact.to !== "owner") {
+    const field = target.fields.find((f) => f.name === contact.to);
+    const toUser =
+      field?.type.kind === "relation" && !field.type.many && field.type.model === USER_MODEL;
+    if (!toUser) {
+      ctx.error(
+        contact.toAt,
+        "invalid-contact",
+        field
+          ? `"${contact.to}" is not a user field of ${model}: a contact block mails the owner, or the user a field like "seller: User" names.`
+          : `${model} has no field "${contact.to}": a contact block mails the owner, or the user a field like "seller: User" names.`,
+      );
+      return {};
+    }
+  }
+  if (contact.keep !== undefined) {
+    const kept = parsed.models?.find((m) => m.name === contact.keep);
+    if (!kept) {
+      ctx.reference("model", contact.keep, contact.keepAt ?? contact.toAt);
+      return {};
+    }
+    const links = kept.fields.filter(
+      (f) => f.type.kind === "relation" && !f.type.many && !f.formula,
+    );
+    if (links.length) {
+      ctx.error(
+        contact.keepAt ?? contact.toAt,
+        "invalid-value",
+        `A kept message's model cannot link to other records (${contact.keep} has ${links.map((f) => f.name).join(", ")}): the sender fills it in alone.`,
+        "Use a model of its own for messages, e.g. Message with name, email and message.",
+      );
+      return {};
+    }
+  }
+  return { contact: { to: contact.to, ...(contact.keep ? { keep: contact.keep } : {}) } };
 }
