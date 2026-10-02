@@ -535,6 +535,37 @@ const setFavourites: Operation<{ page: string; mode?: "on" | "only" | "off" }> =
   },
 };
 
+const setMine: Operation<{ page: string; mode?: "on" | "off" }> = {
+  name: "setMine",
+  summary:
+    "Make a page list only the viewer's own records (my items, my orders), or every record again (off).",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      mode: { type: "string", enum: ["on", "off"], description: "on (default) or off." },
+    },
+  },
+  positional: ["page", "mode"],
+  describe: ({ page, mode = "on" }) =>
+    mode === "off"
+      ? `Make ${page} list every record again`
+      : `Make ${page} list only the viewer's own records`,
+  destructive: () => false,
+  apply({ spec }, { page, mode = "on" }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    const path = ["pages", page, "mine"];
+    if (mode === "off") {
+      if (spec.has(path)) spec.remove(path);
+    } else if (spec.has(path)) spec.set(path, true);
+    else spec.add(["pages", page], "mine", true);
+    return [];
+  },
+};
+
 const setContact: Operation<{ page: string; to?: string; keep?: string }> = {
   name: "setContact",
   summary:
@@ -770,6 +801,7 @@ export const crudOperations: AnyOperation[] = [
   setSortable,
   setFavourites,
   setContact,
+  setMine,
 ];
 /** Operations of the landing pattern. */
 export const landingOperations: AnyOperation[] = [
