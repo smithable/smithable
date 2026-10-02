@@ -24,6 +24,47 @@ export function Preview({
   const [opened, setOpened] = useState(0);
   const [typed, setTyped] = useState("/");
   const frame = useRef<HTMLIFrameElement>(null);
+  // The app's dev server may be starting, or restarting after a change, and a frame never
+  // retries a page that failed to load: the frame is made once the server answers ("Starting…"
+  // until then, retried with a short backoff), and after a few minutes a Retry button.
+  const [attempt, setAttempt] = useState(0);
+  // A new frame after every change, Go or Retry; the server's state is for one frame.
+  const frameKey = `${version}-${opened}-${attempt}`;
+  const [answer, setAnswer] = useState({
+    key: "",
+    server: "starting" as "starting" | "up" | "down",
+  });
+  const server = answer.key === frameKey ? answer.server : "starting";
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      const until = Date.now() + 180_000;
+      for (let wait = 250; !stopped; wait = Math.min(wait * 2, 4000)) {
+        if (await answers(url)) return stopped || setAnswer({ key: frameKey, server: "up" });
+        if (Date.now() > until) return stopped || setAnswer({ key: frameKey, server: "down" });
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    })();
+    return () => {
+      stopped = true;
+    };
+  }, [url, frameKey]);
+  // A page that loaded without the preview editor's "ready" (the server's error page, or one
+  // that stopped while loading) is checked again: a server that no longer answers is waited for.
+  const ready = useRef(false);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (isPreviewMessage(e) && e.data.type === "ready") ready.current = true;
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  const loaded = () => {
+    ready.current = false;
+    setTimeout(async () => {
+      if (!ready.current && !(await answers(url))) setAttempt((n) => n + 1);
+    }, 8000);
+  };
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       // The router reports the same page again (replaceState); only a new page is news, so
@@ -93,17 +134,31 @@ export function Preview({
       }
     >
       {/* Remounted after every change, so server code and data are fresh. */}
-      <iframe
-        ref={(el) => {
-          frame.current = el;
-          // The one window whose messages count, recorded as the frame is (re)made.
-          setPreview(el?.contentWindow ?? null, url);
-        }}
-        key={`${version}-${opened}`}
-        title="App preview"
-        src={`${url}${current.current}`}
-        className="h-full w-full border-0"
-      />
+      {server !== "up" ? (
+        <div role="status" className="grid h-full place-items-center p-6 text-sm text-neutral-500">
+          {server === "starting" ? (
+            <p>Starting…</p>
+          ) : (
+            <div className="space-y-3 text-center">
+              <p>The preview is not answering.</p>
+              <Button onClick={() => setAttempt((n) => n + 1)}>Retry</Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <iframe
+          ref={(el) => {
+            frame.current = el;
+            // The one window whose messages count, recorded as the frame is (re)made.
+            setPreview(el?.contentWindow ?? null, url);
+          }}
+          key={frameKey}
+          title="App preview"
+          src={`${url}${current.current}`}
+          onLoad={loaded}
+          className="h-full w-full border-0"
+        />
+      )}
     </Panel>
   );
 }
@@ -145,4 +200,17 @@ export function Trace({
       )}
     </Panel>
   );
+}
+
+/**
+ * Whether the app's server answers at all. A cross-origin request reads nothing, but it fails
+ * only when nothing answers (a server that is starting or has stopped).
+ */
+async function answers(url: string): Promise<boolean> {
+  try {
+    await fetch(`${url}/health`, { mode: "no-cors", cache: "no-store" });
+    return true;
+  } catch {
+    return false;
+  }
 }
