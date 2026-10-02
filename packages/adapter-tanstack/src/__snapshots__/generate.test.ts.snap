@@ -3247,6 +3247,10 @@ export const Route = createFileRoute("/admin/class-types/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchClassTypes({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminClassTypesPage,
 });
 
@@ -3491,6 +3495,10 @@ export const Route = createFileRoute("/admin/instructors/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchInstructors({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminInstructorsPage,
 });
 
@@ -3661,6 +3669,10 @@ export const Route = createFileRoute("/admin/messages/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchMessages({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminMessagesPage,
 });
 
@@ -3831,6 +3843,10 @@ export const Route = createFileRoute("/admin/posts/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchPosts({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminPostsPage,
 });
 
@@ -5831,17 +5847,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
   "src/routes/admin/class-types/$id.tsx": "8c82275f generated",
-  "src/routes/admin/class-types/index.tsx": "15a93d9b generated",
+  "src/routes/admin/class-types/index.tsx": "a1bbdb49 generated",
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
   "src/routes/admin/index.tsx": "dc5e3939 generated",
   "src/routes/admin/instructors/$id.tsx": "20e8bd2a generated",
-  "src/routes/admin/instructors/index.tsx": "6540d251 generated",
+  "src/routes/admin/instructors/index.tsx": "66d0b7ff generated",
   "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
   "src/routes/admin/messages/$id.tsx": "4374122a generated",
-  "src/routes/admin/messages/index.tsx": "36770d87 generated",
+  "src/routes/admin/messages/index.tsx": "2ddc3153 generated",
   "src/routes/admin/messages/new.tsx": "6d8977f3 generated",
   "src/routes/admin/posts/$id.tsx": "99714c43 generated",
-  "src/routes/admin/posts/index.tsx": "d8771179 generated",
+  "src/routes/admin/posts/index.tsx": "b61f398f generated",
   "src/routes/admin/posts/new.tsx": "979f6005 generated",
   "src/routes/admin/sessions/$id.tsx": "6f5082d1 generated",
   "src/routes/admin/sessions/index.tsx": "73356889 generated",
@@ -7819,6 +7835,10 @@ export const Route = createFileRoute("/customers/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchCustomers({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: CustomersPage,
 });
 
@@ -8009,6 +8029,10 @@ export const Route = createFileRoute("/orders/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchOrders({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: OrdersPage,
 });
 
@@ -8593,12 +8617,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/customers/$id.tsx": "379e64db generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
-  "src/routes/customers/index.tsx": "91a7397a generated",
+  "src/routes/customers/index.tsx": "9797579e generated",
   "src/routes/customers/new.tsx": "297d905c generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "2a7ff8e1 generated",
-  "src/routes/orders/index.tsx": "ab85167a generated",
+  "src/routes/orders/index.tsx": "d5fa6fb2 generated",
   "src/routes/orders/new.tsx": "d433e790 generated",
   "src/routes/sign-in.tsx": "7b976381 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
@@ -12997,6 +13021,10 @@ export const Route = createFileRoute("/items/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchItems({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: ItemsPage,
 });
 
@@ -13411,7 +13439,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "19b18d69 generated",
   "src/routes/items/$id.tsx": "97e50061 generated",
-  "src/routes/items/index.tsx": "00fa6419 generated",
+  "src/routes/items/index.tsx": "df71a94d generated",
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/sign-in.tsx": "f37ca802 generated",
   "src/styles.css": "b9cb8065 kit",
