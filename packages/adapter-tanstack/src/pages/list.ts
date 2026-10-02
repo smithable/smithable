@@ -24,7 +24,7 @@ import {
   dataKey,
   guard,
   HEADER,
-  hasFavourites,
+  hasFavorites,
   importList,
   indexPath,
   join,
@@ -40,7 +40,7 @@ import {
 } from "../shared.js";
 import { LUCIDE } from "./root.js";
 
-type Favourites = PageIR["favourites"];
+type Favorites = PageIR["favorites"];
 
 /** Fields every model has, which a list may be filtered or sorted by too. */
 const AUTOMATIC: Record<string, { key: string; label: string }> = {
@@ -58,7 +58,7 @@ function filterCode(
   model: ModelIR,
   t: Texts,
   ir: SpecIR,
-  favourites?: Favourites,
+  favorites?: Favorites,
   ownOnly?: boolean,
 ) {
   const n = names(model, t);
@@ -71,11 +71,11 @@ function filterCode(
   let toggles = false;
   let mine = false;
   // The viewer's saved records (marketplace.md §2.3): always (only), or in the Saved view.
-  if (favourites) {
+  if (favorites) {
     lists = true;
     const savedOnly = `inArray(${n.table}.id, saved)`;
     conditions.push(
-      favourites === "only" ? savedOnly : `data.view === "saved" ? ${savedOnly} : undefined`,
+      favorites === "only" ? savedOnly : `data.view === "saved" ? ${savedOnly} : undefined`,
     );
   }
   // A page of only the viewer's own records (mine: true): always, so no Mine toggle there.
@@ -192,7 +192,7 @@ function filterCode(
       return `${key}: ${n.table}.${key}`;
     }),
     mine,
-    favourites,
+    favorites,
     imports: { ranges, lists, toggles: toggles || mine },
   };
 }
@@ -204,14 +204,14 @@ export function searchCode(
   t: Texts,
   ir: SpecIR,
   within?: Within,
-  favourites?: Favourites,
+  favorites?: Favorites,
   ownOnly?: boolean,
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
   const filtering =
-    !within && (page.filters?.length || page.sortable?.length || favourites || ownOnly)
-      ? filterCode(page, model, t, ir, favourites, ownOnly)
+    !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly)
+      ? filterCode(page, model, t, ir, favorites, ownOnly)
       : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -258,7 +258,7 @@ export function searchCode(
     const searched = terms.length
       ? `data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined`
       : "undefined";
-    const view = favourites === "all";
+    const view = favorites === "all";
     // A page of only the viewer's saved records may have nothing else to read from the address.
     const usesData =
       searched !== "undefined" || filtering.names.length || filtering.columns.length || view;
@@ -270,7 +270,7 @@ const ${fn} = createServerFn()
   .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional() }))
   .handler(async (${usesData ? "{ data }" : ""}) => {
     const viewer = await currentViewer();${
-      favourites
+      favorites
         ? `
     const saved = ${n.data}.saved(viewer);`
         : ""
@@ -287,7 +287,7 @@ const ${fn} = createServerFn()
     return {
       rows: await ${n.data}.list(viewer, where${filtering.columns.length ? (ir.pages.some((p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name)) ? ", undefined, order" : ", order") : ""}),
       canCreate: allows(${n.access}.create, viewer),
-      options: { ${filtering.options.join(", ")} },${favourites ? "\n      saved," : ""}
+      options: { ${filtering.options.join(", ")} },${favorites ? "\n      saved," : ""}
     };
   });
 `,
@@ -355,8 +355,7 @@ export function listParts(
 ) {
   const n = names(model, t);
   // Hearts and the viewer's saved records (marketplace.md §2.3), for apps with sign-in.
-  const favourites =
-    !within && auth && hasFavourites(model, ir, auth) ? page.favourites : undefined;
+  const favorites = !within && auth && hasFavorites(model, ir, auth) ? page.favorites : undefined;
   // Inside a data page, one of many lists: named after its model too.
   const component = `${pascal(page.id)}${within ? pascal(plural(model.name)) : ""}Page`;
   const path = indexPath(page.route);
@@ -364,10 +363,10 @@ export function listParts(
   // Only the viewer's own records (mine: true), for apps with sign-in.
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
   const filtered =
-    !within && (page.filters?.length || page.sortable?.length || favourites || ownOnly);
+    !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly);
   const search =
     page.search?.length || filtered
-      ? searchCode(page, model, t, ir, within, favourites, ownOnly)
+      ? searchCode(page, model, t, ir, within, favorites, ownOnly)
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;
   const searchable = Boolean(page.search?.length);
@@ -430,17 +429,17 @@ export function listParts(
   if (sort) view.add("#/kit/model", "sortRows");
   if (searchable) view.add("#/kit/SearchBox", "SearchBox");
   if (filtering?.controls.length || filtering?.sorts.length) view.add("#/kit/Filters", "Filters");
-  if (favourites) view.add("@tanstack/react-router", "useRouter").add(n.module, savedToggle(model));
-  if (favourites === "all") view.add("#/kit/Filters", "SavedTabs");
+  if (favorites) view.add("@tanstack/react-router", "useRouter").add(n.module, savedToggle(model));
+  if (favorites === "all") view.add("#/kit/Filters", "SavedTabs");
   if (icon) view.add("lucide-react", icon);
 
   const newest = `list${pascal(plural(model.name))}`;
   const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${capped ? newest : n.list}(),\n`}`;
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
   const body = (api: string) => `function ${component}() {
-  const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""}${favourites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favourites === "all" ? "view, " : ""}...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || filtering?.mine || favourites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${
-    favourites
+  const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
+${actions.length || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${
+    favorites
       ? `
   const router = useRouter();
   // A heart saves the record for the viewer; a visitor signs in first and comes back.
@@ -484,7 +483,7 @@ ${
 `
     : ""
 }${
-  favourites === "all"
+  favorites === "all"
     ? `      {viewer && (
         <SavedTabs
           saved={view === "saved"}
@@ -498,7 +497,7 @@ ${
     ? `      <Filters
         filters={${literal(filtering.controls)}}
         values={values}${filtering.mine ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
-        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favourites === "all" ? "view, " : ""}...next }, replace: true })}
+        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favorites === "all" ? "view, " : ""}...next }, replace: true })}
       />
 `
     : ""
@@ -514,12 +513,12 @@ ${
           return filtering?.sorts.length && ordered !== "rows"
             ? `sort ? rows : ${ordered}`
             : ordered;
-        })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favourites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${
+        })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${
           filtering
             ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${n.pluralLabel.toLowerCase()} match the search and filters." : ${
-                favourites === "only"
+                favorites === "only"
                   ? `"No saved ${n.pluralLabel.toLowerCase()} yet."`
-                  : favourites
+                  : favorites
                     ? `view === "saved" ? "No saved ${n.pluralLabel.toLowerCase()} yet: the heart on one saves it." : undefined`
                     : "undefined"
               }}`

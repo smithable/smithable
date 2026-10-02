@@ -15,11 +15,11 @@ models:
       name: string!
       item: Item
 pages:
-  catalogue:
+  catalog:
     crud: Item
     filters: [description, photos, nope, category, category]   # expect: invalid-filter, invalid-filter, unknown-field, duplicate-field
     sortable: [photos, description, owner]    # expect: invalid-sort, invalid-sort, unknown-field
-    favourites: maybe                         # expect: invalid-value
+    favorites: maybe                         # expect: invalid-value
     mine: maybe                               # expect: expected-boolean
     contact: title                            # expect: invalid-contact
   kept:
@@ -38,5 +38,5 @@ pages:
     dashboard:
       items: { count: Item }
     filters: [category]                       # expect: invalid-key
-    favourites: true                          # expect: invalid-key
+    favorites: true                          # expect: invalid-key
     mine: true                                # expect: invalid-key

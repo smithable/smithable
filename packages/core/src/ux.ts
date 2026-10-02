@@ -15,13 +15,13 @@ export interface UxIR {
   theme: {
     /** A built-in preset's name, or one of the project's themes (themes/<name>.yml). */
     preset: string;
-    /** A colour like "#2563eb"; the preset derives its colours from it. */
+    /** A color like "#2563eb"; the preset derives its colors from it. */
     primary?: string;
     font?: string;
     density: "comfortable" | "compact";
   };
   pages: Record<string, PageUx>;
-  /** Colours of choice values by meaning, by "Model.field"; values not listed are neutral. */
+  /** Colors of choice values by meaning, by "Model.field"; values not listed are neutral. */
   tones: Record<string, Record<string, Tone>>;
 }
 
@@ -186,7 +186,7 @@ export function pageIcon(ux: UxIR, page: PageIR): Icon {
 export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
-/** Open-licence fonts the generated apps can host themselves. */
+/** Open-license fonts the generated apps can host themselves. */
 export const FONTS = ["Inter", "Nunito Sans", "Source Sans 3"] as const;
 
 export function emptyUx(): UxIR {
@@ -596,8 +596,7 @@ function readTheme(
         if (text === undefined) continue;
         if (brand.key === "primary") {
           if (/^#[0-9a-fA-F]{6}$/.test(text)) target.primary = text.toLowerCase();
-          else
-            ctx.error(brand.value, "invalid-color", `"primary" must be a colour like "#2563eb".`);
+          else ctx.error(brand.value, "invalid-color", `"primary" must be a color like "#2563eb".`);
         } else if ((FONTS as readonly string[]).includes(text)) {
           target.font = text;
         } else {

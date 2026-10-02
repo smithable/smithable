@@ -925,7 +925,7 @@ function OwnComponent({
 }) {
   return (
     <>
-      <Label text="Component" hint="Capitalised, e.g. RepaymentChart">
+      <Label text="Component" hint="Capitalized, e.g. RepaymentChart">
         <Input
           aria-label="Component"
           value={value}
