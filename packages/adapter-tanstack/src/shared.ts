@@ -398,12 +398,10 @@ export function literal(value: unknown, indent = ""): string {
   return JSON.stringify(value);
 }
 
-/** Whether a model's records can be marked as favourites (a crud page says so; marks need sign-in). */
-export function hasFavourites(model: ModelIR, ir: SpecIR, auth: AuthIR): boolean {
+/** Whether a model's records can be marked as favorites (a crud page says so; marks need sign-in). */
+export function hasFavorites(model: ModelIR, ir: SpecIR, auth: AuthIR): boolean {
   return (
     hasSignIn(auth) &&
-    ir.pages.some(
-      (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.favourites,
-    )
+    ir.pages.some((p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.favorites)
   );
 }

@@ -862,7 +862,7 @@
             "type": "boolean",
             "description": "The page lists only the viewer's own records (my items, my orders); it needs sign-in."
           },
-          "favourites": {
+          "favorites": {
             "oneOf": [
               {
                 "type": "boolean"

@@ -1,5 +1,5 @@
 /* Smithable app kit: styles built on the theme's tokens in src/theme.css.
-   Colours follow shadcn/ui's token names. */
+   Colors follow shadcn/ui's token names. */
 @import "tailwindcss";
 @import "./theme.css";
 /* The app's own styles (never overwritten). Tailwind's styles are in cascade layers, so these

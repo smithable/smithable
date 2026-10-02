@@ -14,4 +14,4 @@ pages:
       fieldOrder: [name, segment, email, phone]
 
 tones:
-  Order.status: { shipped: success, cancelled: danger }
+  Order.status: { shipped: success, canceled: danger }

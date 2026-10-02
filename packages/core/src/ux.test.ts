@@ -31,7 +31,7 @@ pages:
     table: { columns: [name, segment, email] }
     form: { fieldOrder: [name, email] }
 tones:
-  Order.status: { shipped: success, cancelled: danger }
+  Order.status: { shipped: success, canceled: danger }
 `,
       },
       ir,
@@ -41,7 +41,7 @@ tones:
       pages: {
         customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
       },
-      tones: { "Order.status": { shipped: "success", cancelled: "danger" } },
+      tones: { "Order.status": { shipped: "success", canceled: "danger" } },
     });
   });
 
@@ -58,7 +58,7 @@ pages:
 tones:
   Order.stat: { shipped: success }
   Order.number: { a: success }
-  Order.status: { shiped: success, cancelled: red }
+  Order.status: { shiped: success, canceled: red }
 `),
     ).toEqual([
       "unknown-preset",
@@ -130,7 +130,7 @@ test("renaming or removing a field updates the search, table columns and form or
   expect(removed.files.ux).toContain("columns: [name]");
 });
 
-test("setTone colours a choice value; the tone follows renames and goes with its field or value", () => {
+test("setTone colors a choice value; the tone follows renames and goes with its field or value", () => {
   const toned = applyOperation({ spec: crm }, "setTone", {
     model: "Order",
     field: "status",

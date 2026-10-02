@@ -28,7 +28,7 @@ const fieldsSchema: JsonSchema = {
 
 /**
  * Actions: operations of the application beyond create, edit and delete. In spec version 0.1
- * every action is custom: its input and output are declared here, and the behaviour is
+ * every action is custom: its input and output are declared here, and the behavior is
  * code in src/custom/actions/.
  */
 export const actionsSection: SpecSection<"actions"> = {
