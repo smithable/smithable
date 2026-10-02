@@ -1,0 +1,35 @@
+# The collection's items, as the starter shows them (docs/spec/v0.1.md, Sample data).
+- name: Stoneware teapot
+  summary: Thrown by hand on Gotland in the 1970s, with a glaze the color of wet sand. It still pours without a drip.
+  kind: favourite
+  addedOn: 2026-09-24
+- name: Bentwood chair
+  summary: One of four chairs from a café that closed in 1962. The seat was recaned last winter.
+  kind: general
+  addedOn: 2026-09-18
+- name: Brass ship's lamp
+  summary: Hung in a fishing boat out of Kökar until the boat was sold. It burns paraffin and smells of it.
+  kind: favourite
+  addedOn: 2026-09-10
+- name: Linen tablecloth
+  summary: Woven in Ostrobothnia with a pattern of small birds. Too long for any table we have.
+  kind: general
+  addedOn: 2026-09-03
+- name: Birch bark basket
+  summary: Plaited from a single strip of bark, the old way. Light enough to carry berries all day.
+  kind: general
+  link: https://en.wikipedia.org/wiki/Birch_bark
+  addedOn: 2026-08-27
+- name: Wall clock
+  summary: A Mora clock in a painted pine case, made around 1840. It needs winding every eight days.
+  kind: favourite
+  link: https://en.wikipedia.org/wiki/Mora_clock
+  addedOn: 2026-08-15
+- name: Enamel coffee pot
+  summary: A blue enamel pot that boiled coffee on a wood stove for forty years. Chipped at the spout, now only for show.
+  kind: archived
+  addedOn: 2026-07-30
+- name: Wool blanket
+  summary: Striped gray and red, from a mill in Jämtland that still makes them. It lives on the reading chair.
+  kind: general
+  addedOn: 2026-07-12

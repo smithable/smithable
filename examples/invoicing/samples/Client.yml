@@ -1,0 +1,28 @@
+# A freelancer's clients, invoices and lines, as the starter shows them (docs/spec/v0.1.md, Sample data).
+- name: Skerry Software
+  email: accounts@skerry.example
+  address: |-
+    Torggatan 4
+    22100 Mariehamn
+    Åland, Finland
+  vatNumber: FI12345678
+- name: Kallio Design
+  email: laskut@kallio.example
+  address: |-
+    Fleminginkatu 12 B
+    00530 Helsinki
+    Finland
+  vatNumber: FI87654321
+- name: Solstice Bakery
+  email: hej@solstice.example
+  address: |-
+    Södra Hamngatan 7
+    41114 Göteborg
+    Sweden
+  vatNumber: SE556677889901
+- name: Fjord Analytics
+  email: invoices@fjordanalytics.example
+  address: |-
+    Strandkaien 20
+    5013 Bergen
+    Norway
