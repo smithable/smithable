@@ -4,6 +4,7 @@ import { api, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
 import { isPreviewMessage, type Place, shared } from "./preview";
+import { ReportDialog } from "./Report";
 import { Preview } from "./shared";
 import { Studio } from "./studio/Studio";
 import { Button, cx } from "./ui";
@@ -21,7 +22,13 @@ export function App() {
   const [project, setProject] = useState<Project>();
   const [mode, setMode] = useState<Mode>(() => (localStorage.getItem("mode") as Mode) ?? "builder");
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
-  const [message, setMessage] = useState<{ ok: boolean; text: string; change?: boolean }>();
+  const [message, setMessage] = useState<{
+    ok: boolean;
+    text: string;
+    change?: boolean;
+    report?: "sent" | "offer";
+  }>();
+  const [reporting, setReporting] = useState(false);
   const [holding, setHolding] = useState(false);
   useEffect(() => {
     if (!message?.ok || holding) return;
@@ -117,7 +124,15 @@ export function App() {
       result.ok && mode === "builder" && spec.ir
         ? describeChange(name, args, spec.ir, spec.content)
         : undefined;
-    setMessage({ ok: result.ok, text: plain ?? summary, change: result.ok });
+    setMessage({
+      ok: result.ok,
+      text:
+        result.report === "sent"
+          ? `${plain ?? summary}\nA report of this was sent.`
+          : (plain ?? summary),
+      change: result.ok,
+      report: result.report,
+    });
     return result.ok;
   };
 
@@ -275,12 +290,20 @@ export function App() {
               Undo this change
             </Button>
           ) : (
-            <Button variant="ghost" onClick={() => setMessage(undefined)}>
-              Dismiss
-            </Button>
+            <>
+              {message?.report === "offer" && (
+                <Button variant="ghost" onClick={() => setReporting(true)}>
+                  Report this
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => setMessage(undefined)}>
+                Dismiss
+              </Button>
+            </>
           )}
         </div>
       )}
+      {reporting && <ReportDialog onClose={() => setReporting(false)} />}
       {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
           never moves in the page, so switching modes keeps its page. Wide windows show it on
           the right; narrow ones place it over the mode's preview slot. */}

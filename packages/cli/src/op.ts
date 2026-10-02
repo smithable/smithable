@@ -20,6 +20,7 @@ import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { type Io, lap } from "./io.js";
 import { loadPlugins } from "./plugins.js";
+import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
 import { projectThemes } from "./validate.js";
 
@@ -36,6 +37,8 @@ export interface OpFlags {
   mcp?: boolean;
   /** An extra commit trailer, e.g. what the model that proposed the change used. */
   trailer?: string;
+  /** The caller offers a report of a failure itself (Studio, with its log). */
+  reportLater?: boolean;
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -66,6 +69,34 @@ export function op(
  * edits the spec, regenerates, migrates, and commits a checkpoint that `undo` reverts.
  */
 export async function runOperation(
+  dir: string,
+  io: Io,
+  name: string,
+  args: OperationArgs,
+  flags: OpFlags,
+): Promise<number> {
+  // What it says is kept, so that a failure can be reported (report.ts).
+  const said: string[] = [];
+  const kept: Io = {
+    out: (text) => {
+      said.push(text);
+      io.out(text);
+    },
+    err: (text) => {
+      said.push(text);
+      io.err(text);
+    },
+  };
+  const code = await applyAndCheckpoint(dir, kept, name, args, flags);
+  if (code !== 0) {
+    recordFailure(dir, name, args, said.join(""));
+    if (!flags.reportLater && !said.join("").includes("Run again with"))
+      await afterFailure(dir, io);
+  }
+  return code;
+}
+
+async function applyAndCheckpoint(
   dir: string,
   io: Io,
   name: string,

@@ -177,6 +177,16 @@ export const COMMANDS: Command[] = [
     options: ["dir"],
   },
   {
+    name: "report",
+    usage: "report [--send] [--always | --never | --ask]",
+    text: [
+      "Show the report of the last failure: the operation, the error, the log and the spec",
+      "files (never records, uploads or custom code); --send sends it, --always and --never",
+      "are remembered for you, --ask asks again",
+    ],
+    options: ["send", "always", "never", "ask", "dir"],
+  },
+  {
     name: "test",
     usage: "test [dir]",
     text: ["Run the app's tests and remember the results for rule status"],
@@ -244,7 +254,7 @@ export const COMMANDS: Command[] = [
 const GLOBAL_OPTIONS = [
   "-h, --help       Show this help (after a command: that command's help)",
   "-v, --version    Show the Smithable version",
-  "--dir <path>     Project directory for op, undo, inspect and test (default: current)",
+  "--dir <path>     Project directory for op, undo, report, inspect and test (default: current)",
 ];
 
 /** The global help: every command in the table. */
