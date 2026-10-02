@@ -2409,23 +2409,61 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
       ],
       "name": "Item",
     },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "message",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Message",
+    },
   ],
   "navigation": [
     {
       "name": "main",
       "pages": [
         "catalogue",
+        "saved",
+        "mine",
       ],
     },
   ],
   "pages": [
     {
+      "contact": {
+        "keep": "Message",
+        "to": "seller",
+      },
+      "favourites": "all",
       "filters": [
         "category",
         "price",
         "condition",
         "available",
-        "seller",
         "owner",
         "createdAt",
       ],
@@ -2444,6 +2482,26 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "createdAt",
         "title",
       ],
+    },
+    {
+      "favourites": "only",
+      "id": "saved",
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/saved",
+    },
+    {
+      "contact": {
+        "to": "owner",
+      },
+      "id": "mine",
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/mine",
     },
     {
       "id": "welcome",
