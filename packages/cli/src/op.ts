@@ -12,12 +12,22 @@ import {
   parseOperationArgs,
   type SpecIR,
   storageOf,
+  validateAuth,
+  validateContent,
   validateSpec,
   YamlEditor,
 } from "@smithable/core";
 import { countValues, pruneSnapshots, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
+import {
+  dropImport,
+  importOwner,
+  insertImport,
+  keepImport,
+  prepareImport,
+  refusalText,
+} from "./import.js";
 import { type Io, lap } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { recordRule } from "./rules.js";
@@ -120,6 +130,29 @@ export async function runOperation(
     io.err(`${blocker}\n`);
     return 1;
   }
+  // An import reads its file and looks its references up before anything is written: a dry
+  // run, or a file with problems, stops here with every one of them.
+  const importing = result.effects.find((e) => e.kind === "import-records");
+  const auth = files.auth ? validateAuth({ path: AUTH, text: files.auth }, before).auth : undefined;
+  const prepared =
+    importing &&
+    prepareImport(
+      dir,
+      importing,
+      before,
+      files.content
+        ? validateContent({ path: CONTENT, text: files.content }, before).content
+        : undefined,
+    );
+  if (prepared && importing) {
+    if (prepared.refusals.length || importing.dryRun) {
+      const problems = prepared.refusals.length
+        ? `\n\nNothing ${importing.dryRun ? "would be" : "was"} imported:\n${refusalText(prepared.refusals)}`
+        : "\n\nA dry run: nothing was added.";
+      (prepared.refusals.length ? io.err : io.out)(`${prepared.shown}${problems}\n`);
+      return prepared.refusals.length ? 1 : 0;
+    }
+  }
   if (result.destructive && !flags.yes) {
     io.err(
       `${result.description}: ${dataImpact(dir, result.effects, args)}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
@@ -133,6 +166,7 @@ export async function runOperation(
   const fail = (message: string) => {
     discardChanges(dir);
     if (snapshot) restoreDatabase(dir, id);
+    if (prepared) dropImport(dir, id);
     io.err(`${message} Nothing was changed.\n`);
     return 1;
   };
@@ -149,10 +183,17 @@ export async function runOperation(
       writeFileSync(join(dir, file.path), file.text);
     }
     followInSamples(dir, result.effects);
+    // The imported file is kept beside the checkpoint; the log names it instead of holding it.
+    const recordedArgs =
+      prepared && operation.name === "importRecords"
+        ? { ...args, text: undefined, from: keepImport(dir, id, prepared.text) }
+        : operation.name === "editSpec"
+          ? {}
+          : args;
     mkdirSync(join(dir, ".smithable"), { recursive: true });
     appendFileSync(
       join(dir, OPLOG),
-      `${JSON.stringify({ id, op: operation.name, args: operation.name === "editSpec" ? {} : args, description: result.description })}\n`,
+      `${JSON.stringify({ id, op: operation.name, args: recordedArgs, description: result.description })}\n`,
     );
     // Only stored fields have a column to rename; a list of related records stores nothing.
     const renames = result.effects.flatMap((e) =>
@@ -172,9 +213,10 @@ export async function runOperation(
     for (const effect of result.effects) {
       if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
     }
+    if (prepared && auth) insertImport(dir, prepared, before, auth, importOwner(dir, auth));
     git(dir, ["add", "-A"]);
     // A whole edited spec is in the diff; the trailer stays short.
-    const recorded = operation.name === "editSpec" ? {} : args;
+    const recorded = recordedArgs;
     const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.trailer ? `${flags.trailer}\n` : ""}`;
     const commit = git(dir, ["commit", "-q", "-m", message]);
     if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
@@ -195,7 +237,7 @@ export async function runOperation(
       ),
     );
     io.out(
-      `${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
+      `${result.description}${prepared ? `: ${prepared.rows.length} added` : ""}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
     );
     if (operation.name === "addAction") io.out(actionNote(String(args.action)));
     return 0;
