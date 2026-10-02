@@ -20,6 +20,7 @@ pages:
     filters: [description, photos, nope, category, category]   # expect: invalid-filter, invalid-filter, unknown-field, duplicate-field
     sortable: [photos, description, owner]    # expect: invalid-sort, invalid-sort, unknown-field
     favourites: maybe                         # expect: invalid-value
+    mine: maybe                               # expect: expected-boolean
     contact: title                            # expect: invalid-contact
   kept:
     crud: Item
@@ -38,3 +39,4 @@ pages:
       items: { count: Item }
     filters: [category]                       # expect: invalid-key
     favourites: true                          # expect: invalid-key
+    mine: true                                # expect: invalid-key
