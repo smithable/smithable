@@ -5835,7 +5835,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "README.md": "b45d3b78 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "d5004d3e generated",
-  "playwright.config.ts": "4cec8537 kit",
+  "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
   "server.mjs": "11fdc40d kit",
@@ -5956,7 +5956,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "7d81e484 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "c4a6bc96 kit",
+  "vite.config.ts": "b81576e8 kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -8649,7 +8649,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "README.md": "901e417e generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "7bc75a08 generated",
-  "playwright.config.ts": "4cec8537 kit",
+  "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
   "server.mjs": "11fdc40d kit",
@@ -8720,7 +8720,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "tests/smoke.spec.ts": "6101e15a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "c4a6bc96 kit",
+  "vite.config.ts": "b81576e8 kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -11968,7 +11968,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "README.md": "3b839b97 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "351967e5 generated",
-  "playwright.config.ts": "4cec8537 kit",
+  "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
   "server.mjs": "11fdc40d kit",
@@ -12047,7 +12047,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "tests/smoke.spec.ts": "52c9ba9c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "c4a6bc96 kit",
+  "vite.config.ts": "b81576e8 kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -14209,7 +14209,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "README.md": "578cabac generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "33a09c60 generated",
-  "playwright.config.ts": "4cec8537 kit",
+  "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
   "server.mjs": "11fdc40d kit",
@@ -14282,7 +14282,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "tests/smoke.spec.ts": "fe8c020e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "c4a6bc96 kit",
+  "vite.config.ts": "b81576e8 kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -15788,7 +15788,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "README.md": "bf00ccf2 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c42c8ab6 generated",
-  "playwright.config.ts": "4cec8537 kit",
+  "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
   "server.mjs": "11fdc40d kit",
@@ -15847,7 +15847,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "9cf8f87c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "c4a6bc96 kit",
+  "vite.config.ts": "b81576e8 kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
