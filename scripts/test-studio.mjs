@@ -78,7 +78,13 @@ writeFileSync(
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
   detached: true,
-  env: { ...process.env, SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+  env: {
+    ...process.env,
+    SMITHABLE_LOCAL_MODEL: "fake-model",
+    SMITHABLE_LOCAL_URL: model.url,
+    // The person's own report choice stays out of the test: Studio offers a report.
+    XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), "smithable-studio-config-")),
+  },
 });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -734,6 +740,15 @@ try {
         throw new Error(`the failed change was not rolled back: ${answer.output}`);
       if (readFileSync(join(dir, "smithable.context.yml"), "utf8").includes("no-such-package"))
         throw new Error("the context file kept the failed change");
+      // Studio offers to report it; the report holds the change and the spec, never records.
+      if (answer.report !== "offer") throw new Error(`no report offered: ${answer.report}`);
+      const report = await (await fetch(`http://localhost:${port}/api/report`)).json();
+      if (
+        !report.text?.includes("smithable-no-such-package") ||
+        !report.text.includes("smithable.yml")
+      )
+        throw new Error(`the report: ${report.text?.slice(0, 300)}`);
+      if (report.text.includes("ORD-1001")) throw new Error("the report holds records");
       await health();
       // A preview that stops by itself is started again.
       if (spawnSync("pkill", ["-f", `preview.vite.config.mjs --port ${port + 1}`]).status !== 0)

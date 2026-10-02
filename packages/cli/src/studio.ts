@@ -15,6 +15,7 @@ import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
+import { buildReport, reportChoice, reportText, sendReport, setReportChoice } from "./report.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
@@ -409,6 +410,7 @@ export async function studio(
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
+            reportLater: true,
           }),
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
@@ -421,7 +423,38 @@ export async function studio(
           startApp();
           send("changed", {});
         }
-        return json({ ...result, needsConfirm });
+        // A failure is reported at once for someone who chose "always"; else Studio offers it.
+        let report: "sent" | "offer" | undefined;
+        if (!result.ok && !needsConfirm && buildReport(dir, logs)) {
+          const choice = reportChoice();
+          if (choice === "always") {
+            const built = buildReport(dir, logs);
+            report =
+              built && "sent" in (await sendReport(built).catch(() => ({ url: "" })))
+                ? "sent"
+                : "offer";
+          } else if (choice !== "never") report = "offer";
+        }
+        return json({ ...result, needsConfirm, report });
+      }
+      // The report of the last failure, exactly as it would be sent, and the person's choice.
+      if (req.method === "GET" && url.pathname === "/api/report") {
+        const built = buildReport(dir, logs);
+        return json({
+          text: built ? reportText(built) : undefined,
+          choice: reportChoice() ?? "ask",
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/report") {
+        const { send: sending, choice } = await body();
+        if (choice === "always" || choice === "never" || choice === "ask") setReportChoice(choice);
+        const built = buildReport(dir, logs);
+        if (!sending || !built) return json({ ok: true });
+        try {
+          return json({ ok: true, ...(await sendReport(built)) });
+        } catch (error) {
+          return json({ ok: false, message: (error as Error).message });
+        }
       }
       if (req.method === "POST" && url.pathname === "/api/ask") {
         // A model proposes; nothing changes until the proposal is applied.
