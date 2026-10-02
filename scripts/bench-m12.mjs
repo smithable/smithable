@@ -24,7 +24,7 @@ const DESCRIPTIONS = [
   "A booking site for a yoga studio, with classes, teachers and online booking.",
   "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
   "Invoicing for freelancers, with clients, invoices and payments.",
-  "A tool library where neighbours lend each other tools.",
+  "A tool library where neighbors lend each other tools.",
   "An inventory app for a small bakery: ingredients, suppliers and stock levels.",
   "A job board for a local union, with job posts and applications.",
   "A football club's site: teams, players, matches and results.",

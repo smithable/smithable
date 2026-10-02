@@ -93,7 +93,7 @@ export const pagesSection: SpecSection<"pages"> = {
           description:
             "The page lists only the viewer's own records (my items, my orders); it needs sign-in.",
         },
-        favourites: {
+        favorites: {
           oneOf: [{ type: "boolean" }, { const: "only" }],
           description:
             "true: a heart on each record and a Saved view of the list; only: a list of the viewer's saved records.",
@@ -173,7 +173,7 @@ function readPage(
       "search",
       "filters",
       "sortable",
-      "favourites",
+      "favorites",
       "contact",
       "mine",
       ...TEXT_KEYS,
@@ -188,7 +188,7 @@ function readPage(
   let search: { name: string; at: At }[] | undefined;
   let filters: { name: string; at: At }[] | undefined;
   let sortable: { name: string; at: At }[] | undefined;
-  let favourites: PageIR["favourites"] | undefined;
+  let favorites: PageIR["favorites"] | undefined;
   let mine = false;
   let contact: { to: string; keep?: string; toAt: At; keepAt?: At } | undefined;
   for (const { key, value } of known) {
@@ -220,15 +220,15 @@ function readPage(
     } else if (key === "mine") {
       const v = readBoolean(ctx, value, `"mine" in ${where}`);
       if (v) mine = true;
-    } else if (key === "favourites") {
+    } else if (key === "favorites") {
       const v = isScalar(value) ? value.value : undefined;
-      if (v === true) favourites = "all";
-      else if (v === "only") favourites = "only";
+      if (v === true) favorites = "all";
+      else if (v === "only") favorites = "only";
       else if (v !== false)
         ctx.error(
           value,
           "invalid-value",
-          `"favourites" in ${where} must be true (a heart and a Saved view) or only (the viewer's saved records).`,
+          `"favorites" in ${where} must be true (a heart and a Saved view) or only (the viewer's saved records).`,
         );
     } else if (key === "contact") {
       if (isScalar(value) && typeof value.value === "string") {
@@ -287,7 +287,7 @@ function readPage(
   const model = patternInfo({ id, route, pattern }).manages();
   if (!model)
     for (const e of known.filter((e) =>
-      ["actions", "search", "filters", "sortable", "favourites", "contact", "mine"].includes(e.key),
+      ["actions", "search", "filters", "sortable", "favorites", "contact", "mine"].includes(e.key),
     ))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
   if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
@@ -311,7 +311,7 @@ function readPage(
     ...(model && sortable?.length
       ? { sortable: checkSortableFields(ctx, sortable, model, parsed, where) }
       : {}),
-    ...(model && favourites ? { favourites } : {}),
+    ...(model && favorites ? { favorites } : {}),
     ...(model && mine ? { mine: true as const } : {}),
     ...(model && contact ? checkContact(ctx, contact, model, parsed, where) : {}),
     ...readSemanticText(ctx, known),

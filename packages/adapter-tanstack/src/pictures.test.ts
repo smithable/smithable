@@ -148,8 +148,8 @@ pages:
   expect(gen.some((f) => f.path === "src/kit/Filters.tsx")).toBe(true);
 });
 
-test("favourites: each person's marks in a table of their own, a heart and a Saved view, only one's saved records", () => {
-  const spec = (favourites: string) =>
+test("favorites: each person's marks in a table of their own, a heart and a Saved view, only one's saved records", () => {
+  const spec = (favorites: string) =>
     validateSpec({
       path: "smithable.yml",
       text: `smithable: 0.1
@@ -158,7 +158,7 @@ models:
   Item:
     fields: { title: string! }
 pages:
-  items: { crud: Item, favourites: ${favourites} }
+  items: { crud: Item, favorites: ${favorites} }
 `,
     }).ir as SpecIR;
   const gen = generateApp(spec("true"), {
@@ -168,7 +168,7 @@ pages:
   });
   const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
   expect(at("src/db/schema.ts")).toContain(
-    'export const itemsFavourites = sqliteTable(\n  "items_favourites"',
+    'export const itemsFavorites = sqliteTable(\n  "items_favorites"',
   );
   expect(at("src/db/schema.ts")).toContain("(t) => [unique().on(t.userId, t.recordId)]");
   // Marking checks that the viewer may read the record.
@@ -197,7 +197,7 @@ pages:
     auth: { ...auth, signIn: "none" },
     content: emptyContent(),
   });
-  expect(open.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("Favourites");
+  expect(open.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("Favorites");
   expect(open.find((f) => f.path === "src/routes/items/index.tsx")?.content).not.toContain("saved");
 });
 
@@ -228,7 +228,7 @@ pages:
   expect(gen.some((f) => f.path === "src/kit/ContactOwner.tsx")).toBe(true);
 });
 
-test("the catalogue as the start page: the site's frame at / and its records; a records section opens it", () => {
+test("the catalog as the start page: the site's frame at / and its records; a records section opens it", () => {
   const spec = validateSpec({
     path: "smithable.yml",
     text: `smithable: 0.1
@@ -237,21 +237,21 @@ models:
   Item:
     fields: { title: string!, category: furniture | other, price: money }
 pages:
-  catalogue:
+  catalog:
     route: /
     crud: Item
     search: [title]
     filters: [category, price]
   welcome:
     landing:
-      hero: { button: catalogue }
+      hero: { button: catalog }
       latest: { records: Item, search: true, filters: [category, price], limit: 8 }
 `,
   }).ir as SpecIR;
   const open = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { read: [Item], pages: [catalogue, welcome] }\n",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { read: [Item], pages: [catalog, welcome] }\n",
     },
     spec,
   ).auth as AuthIR;

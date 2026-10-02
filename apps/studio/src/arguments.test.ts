@@ -35,7 +35,7 @@ test("an annotated argument offers the names in the spec, following the argument
   ).toContain("email");
   expect(
     choicesFor(ref("setTone", "value"), { model: "Order", field: "status" }, spec).map(([v]) => v),
-  ).toEqual(["draft", "placed", "shipped", "cancelled"]);
+  ).toEqual(["draft", "placed", "shipped", "canceled"]);
 });
 
 test("required choices default to the first name, and follow a changed model", () => {

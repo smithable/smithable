@@ -105,9 +105,16 @@ const singular = (w: string) =>
 const plural = (w: string) =>
   /[^aeiou]y$/.test(w) ? `${w.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(w) ? `${w}es` : `${w}s`;
 
-/** The words of a name or phrase, lowercased and singular: "ClassTypes" → "class type". */
+/** British spellings people type, in the US spelling names are written in. */
+const american = (w: string) =>
+  w
+    .replace(/^catalogue$/, "catalog")
+    .replace(/^colour/, "color")
+    .replace(/^favourite/, "favorite");
+
+/** The words of a name or phrase, lowercased, singular and US-spelled: "ClassTypes" → "class type". */
 const key = (s: string) =>
-  kebab(dropArticles(s)).split("-").filter(Boolean).map(singular).join(" ");
+  kebab(dropArticles(s)).split("-").filter(Boolean).map(singular).map(american).join(" ");
 
 /** The one model a phrase names ("customers", "each class type"), or undefined. */
 export function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
@@ -158,11 +165,11 @@ export function pageFor(ir: SpecIR, phrase: string): PageIR | undefined {
     ? ir.pages.filter((p) => p.pattern.kind === "crud" && p.pattern.model === model.name)
     : [];
   if (byModel.length <= 1) return byModel[0];
-  // Several lists of the model (a catalogue, my items, saved ones): the one at "/", else the
+  // Several lists of the model (a catalog, my items, saved ones): the one at "/", else the
   // one named after the model, else the only one that is not the viewer's own or saved records.
   // key() is singular: "items" and "item" both name the Item model's page.
   const named = key(model?.name ?? "");
-  const everyone = byModel.filter((p) => !p.mine && p.favourites !== "only");
+  const everyone = byModel.filter((p) => !p.mine && p.favorites !== "only");
   return (
     byModel.find((p) => p.route === "/") ??
     byModel.find((p) => key(p.id) === named) ??
@@ -638,7 +645,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    // "let people filter items by category and price", "items can be filtered by category on the catalogue page"
+    // "let people filter items by category and price", "items can be filtered by category on the catalog page"
     name: "filters",
     match(text, scope) {
       const m =
@@ -698,11 +705,11 @@ const RULES: Rule[] = [
     },
   },
   {
-    // "let people save items", "items can be saved as favourites", "add favourites to the catalogue page"
-    name: "favourites",
+    // "let people save items", "items can be saved as favorites", "add favorites to the catalog page"
+    name: "favorites",
     match(text, scope) {
       const m =
-        /^(?:allow (?:users |people )?to |let (?:users |people )?)?(?:save|favourite|bookmark) (?:the )?(?<target>.+?)(?: as favou?rites)?(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+        /^(?:allow (?:users |people )?to |let (?:users |people )?)?(?:save|favou?rite|bookmark) (?:the )?(?<target>.+?)(?: as favou?rites)?(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
           text,
         ) ??
         /^(?:the )?(?<target>.+?) (?:can|should|must) be (?:saved|favou?rited|bookmarked)(?: as favou?rites)?$/.exec(
@@ -712,8 +719,8 @@ const RULES: Rule[] = [
       if (!m?.groups) return undefined;
       const page = pageFor(scope.ir, m.groups.page ?? m.groups.target ?? "");
       if (!page || page.pattern.kind !== "crud") return null;
-      if (page.favourites) return null;
-      return [{ op: "setFavourites", args: { page: page.id, mode: "on" } }];
+      if (page.favorites) return null;
+      return [{ op: "setFavorites", args: { page: page.id, mode: "on" } }];
     },
   },
   {

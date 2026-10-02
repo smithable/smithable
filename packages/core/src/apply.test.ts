@@ -341,29 +341,29 @@ test("setFilters and setSortable add, change and remove a list's filters and sor
   expect(apply("setFilters", ["nowhere", "segment"])).toMatchObject({ ok: false });
 });
 
-test("setFavourites and setContact add, change and remove a page's favourites and contact block", () => {
-  const saved = ok("setFavourites", ["customers"]);
+test("setFavorites and setContact add, change and remove a page's favorites and contact block", () => {
+  const saved = ok("setFavorites", ["customers"]);
   expect(changed(files.spec, saved.files.spec)).toEqual({
-    added: ["    favourites: true"],
+    added: ["    favorites: true"],
     removed: [],
   });
-  const only = applyOperation({ ...files, spec: saved.files.spec }, "setFavourites", {
+  const only = applyOperation({ ...files, spec: saved.files.spec }, "setFavorites", {
     page: "customers",
     mode: "only",
   });
   if (!only.ok) throw new Error(only.message);
   expect(changed(saved.files.spec, only.files.spec)).toEqual({
-    added: ["    favourites: only"],
-    removed: ["    favourites: true"],
+    added: ["    favorites: only"],
+    removed: ["    favorites: true"],
   });
-  const off = applyOperation({ ...files, spec: only.files.spec }, "setFavourites", {
+  const off = applyOperation({ ...files, spec: only.files.spec }, "setFavorites", {
     page: "customers",
     mode: "off",
   });
   if (!off.ok) throw new Error(off.message);
   expect(changed(only.files.spec, off.files.spec)).toEqual({
     added: [],
-    removed: ["    favourites: only"],
+    removed: ["    favorites: only"],
   });
   // The CRM's customers have an account manager, a user: the contact block may mail them.
   const owner = ok("setContact", ["customers", "owner"]);
@@ -390,7 +390,7 @@ test("setFavourites and setContact add, change and remove a page's favourites an
   });
   // Not a user field; no such page.
   expect(apply("setContact", ["customers", "name"])).toMatchObject({ ok: false });
-  expect(apply("setFavourites", ["nowhere"])).toMatchObject({ ok: false });
+  expect(apply("setFavorites", ["nowhere"])).toMatchObject({ ok: false });
 });
 
 test("setMine makes a page list only the viewer's own records, and back", () => {
