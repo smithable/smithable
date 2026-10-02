@@ -6,6 +6,8 @@
 
 Models are configured with environment variables, so keys never end up in a project.
 
+An app drafted from a description also gets pictures: the landing page's hero and a few sample pictures for its records, chosen by subject from the Smithable image library (photographs made for Smithable, CC0, served from docs.smithable.ai; the index is fetched once a day and cached under `~/.cache/smithable/images/`). Offline, or with `SMITHABLE_NO_PICTURES=1`, the app starts without them, and `smithable new --from <url> --with-pictures` uses the page's own pictures instead.
+
 ## A local model (tier 1)
 
 Any OpenAI-compatible server on your machine works. With [Ollama](https://ollama.com):
