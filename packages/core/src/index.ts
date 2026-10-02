@@ -78,6 +78,14 @@ export {
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export {
+  IMPORT_MAX,
+  type ImportRecords,
+  type ImportRefusal,
+  type ImportValue,
+  parseCsv,
+  readRecords,
+} from "./records.js";
+export {
   type SamplePicture,
   type SampleRecordValue,
   type SamplesIR,
@@ -124,3 +132,4 @@ export {
   UX_VERSION,
   validateUx,
 } from "./ux.js";
+export { convertValue } from "./values.js";
