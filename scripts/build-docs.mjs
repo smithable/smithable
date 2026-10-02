@@ -108,6 +108,10 @@ th,td{border:1px solid var(--line);padding:.4rem .6rem;text-align:left;vertical-
 footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding:1rem;text-align:center}
 `;
 
+// Before the public release the site is reachable but kept out of search engines.
+const PRERELEASE =
+  process.env.SITE_PRERELEASE === "1" ? '\n<meta name="robots" content="noindex">' : "";
+
 const html = (page, body) => {
   const title = page.headings.find((h) => h.depth === 1)?.text.replace(/`/g, "") ?? "Smithable";
   const toc = page.toc
@@ -120,7 +124,7 @@ const html = (page, body) => {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">${PRERELEASE}
 <title>${esc(title)} · Smithable docs</title>
 <style>${CSS}</style>
 </head>
