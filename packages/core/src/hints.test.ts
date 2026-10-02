@@ -36,6 +36,19 @@ models:
   ).toContain('add a user field (like "lender: User") and "ownedBy: lender"');
 });
 
+test("a model called User explains the owner and how to point at a user", () => {
+  expect(
+    hints(`smithable: 0.1
+app: { name: Market }
+models:
+  User:
+    fields: { name: string! }
+`)[0],
+  ).toContain(
+    'add a field of type User (e.g. "seller: User"), or make that field the owner with "ownedBy"',
+  );
+});
+
 test("a landing section written as a list shows the accepted forms", () => {
   expect(
     hints(`smithable: 0.1
