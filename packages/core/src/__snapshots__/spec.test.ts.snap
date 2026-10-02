@@ -358,6 +358,10 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "button": "schedule",
             "kind": "hero",
             "name": "hero",
+            "shortcuts": [
+              "schedule",
+              "blog",
+            ],
           },
           {
             "kind": "records",

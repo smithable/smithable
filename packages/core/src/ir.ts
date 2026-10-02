@@ -227,6 +227,8 @@ export interface LandingSection {
   kind: SectionKind;
   /** The page a hero's or call to action's button opens. */
   button?: string;
+  /** A hero's shortcuts: up to four pages, shown as round icons over its lower edge. */
+  shortcuts?: string[];
   /** A records section shows this model's records as cards. */
   model?: string;
   /** A contact section's form: visitors add a record of this model (e.g. Message). */

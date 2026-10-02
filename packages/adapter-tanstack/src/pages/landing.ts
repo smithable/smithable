@@ -6,6 +6,7 @@ import {
   kebab,
   type LandingSection,
   type PageIR,
+  pageIcon,
   pascal,
   plural,
   type SpecIR,
@@ -25,6 +26,7 @@ import {
   type Texts,
   titleField,
 } from "../shared.js";
+import { LUCIDE } from "./root.js";
 
 /** A landing page: its sections in order, with texts from smithable.content.yml or derived ones. */
 export function landingRoute(
@@ -87,6 +89,18 @@ export function landingRoute(
             own.image
               ? `
           image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)} }}`
+              : ""
+          }${
+            section.shortcuts?.length
+              ? `
+          shortcuts={[${section.shortcuts
+            .map((id) => {
+              const target = ir.pages.find((p) => p.id === id) as PageIR;
+              const icon = LUCIDE[pageIcon(ux, target)];
+              imports.add("lucide-react", icon);
+              return `{ to: ${JSON.stringify(target.route)}, label: ${JSON.stringify(t.pageTitle(id))}, icon: ${icon} }`;
+            })
+            .join(", ")}]}`
               : ""
           }${
             sections.slice(sections.indexOf(section) + 1).some((s) => s.kind !== "footer")
