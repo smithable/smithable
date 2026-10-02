@@ -1,6 +1,6 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customise a table, copy this file into src/custom/components/ and edit the copy.
-import { ChevronRight, ImageIcon, type LucideIcon } from "lucide-react";
+import { ChevronRight, Heart, ImageIcon, type LucideIcon } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import {
@@ -37,6 +37,32 @@ interface ModelTableProps<R extends Row> {
   view?: "table" | "cards";
   /** The model's icon, shown where a picture is missing. */
   icon?: LucideIcon;
+  /** A heart on each record: the ids the viewer saved, and what a click does (sign in, for a visitor). */
+  saved?: { ids: number[]; onToggle: (id: number) => void };
+}
+
+/** Saves a record for the viewer, or unsaves it: a toggle above the row's own link. */
+export function SaveButton({
+  saved,
+  label,
+  onToggle,
+}: {
+  saved: boolean;
+  label: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-part="save"
+      aria-pressed={saved}
+      aria-label={`Save ${label}`}
+      onClick={onToggle}
+      className="relative z-10 -m-2.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Heart aria-hidden className={cn("size-5", saved && "fill-current text-primary")} />
+    </button>
+  );
 }
 
 /** Where a picture is missing: the theme's muted tone with the model's icon. */
@@ -71,6 +97,7 @@ export function ModelTable<R extends Row>({
   page,
   view = "table",
   icon,
+  saved,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
@@ -156,6 +183,14 @@ export function ModelTable<R extends Row>({
     ) : (
       children
     );
+  const heart = (row: R) =>
+    saved && (
+      <SaveButton
+        saved={saved.ids.includes(row.id)}
+        label={title ? formatValue(title, displayValue(title, row), app) : String(row.id)}
+        onToggle={() => saved.onToggle(row.id)}
+      />
+    );
   return (
     <div data-kit="model-table">
       {/* Phones: one card per record: its name and status, a contact or other identifier, its description, then a date and a key amount. */}
@@ -201,8 +236,11 @@ export function ModelTable<R extends Row>({
                     </p>
                   )}
                 </div>
-                {status ? (
-                  <div className="shrink-0">{cell(status, row)}</div>
+                {status || saved ? (
+                  <div className="flex shrink-0 items-start gap-3">
+                    {status && cell(status, row)}
+                    {heart(row)}
+                  </div>
                 ) : (
                   onOpen && <ChevronRight aria-hidden className="mt-0.5 size-5 shrink-0" />
                 )}
@@ -237,6 +275,11 @@ export function ModelTable<R extends Row>({
                     {second(field) ? `${field.label} / ${second(field)?.label}` : field.label}
                   </TableHead>
                 ))}
+                {saved && (
+                  <TableHead className="w-12">
+                    <span className="sr-only">Saved</span>
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -259,6 +302,7 @@ export function ModelTable<R extends Row>({
                       {field === title ? open(row, cell(field, row)) : stacked(field, row)}
                     </TableCell>
                   ))}
+                  {saved && <TableCell className="py-0">{heart(row)}</TableCell>}
                 </TableRow>
               ))}
             </TableBody>

@@ -13,7 +13,7 @@ import {
   type UxIR,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
-import { reserveElement } from "../data.js";
+import { reserveElement, savedToggle } from "../data.js";
 import {
   appStart,
   attr,
@@ -23,6 +23,7 @@ import {
   guard,
   HEADER,
   hasChoices,
+  hasFavourites,
   importList,
   indexPath,
   join,
@@ -299,6 +300,9 @@ export function detailRoute(
           "row.id",
         )
       : undefined;
+  // A heart for the viewer's saved records (marketplace.md §2.3).
+  const favourite = Boolean(auth && !within && page.favourites && hasFavourites(model, ir, auth));
+  if (favourite) imports.set(n.module, [...(imports.get(n.module) ?? []), savedToggle(model)]);
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -326,14 +330,14 @@ export function detailRoute(
         />
       </section>`;
   });
-  return `${HEADER}import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+  return `${HEADER}import { createFileRoute, notFound, useNavigate${favourite ? ", useRouter" : ""} } from "@tanstack/react-router";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
 ${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-${sections.length ? 'import { ModelTable } from "#/kit/ModelTable";\n' : ""}
+${sections.length || favourite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favourite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
@@ -344,12 +348,34 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) =
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${options ? ", options" : ""} } = Route.useLoaderData();
+  const { row, canWrite, canDelete${options ? ", options" : ""}${favourite ? ", saved" : ""} } = Route.useLoaderData();
   const navigate = useNavigate();
-  const back = () => navigate({ to: ${JSON.stringify(page.route)} });
+  const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
+    favourite
+      ? `
+  const { viewer } = Route.useRouteContext();
+  const router = useRouter();
+  // The heart saves the record for the viewer; a visitor signs in first and comes back.
+  const toggleSaved = async () => {
+    if (!viewer) {
+      await navigate({ to: "/sign-in", search: { redirect: location.pathname } });
+      return;
+    }
+    await ${savedToggle(model)}({ data: row.id });
+    await router.invalidate();
+  };`
+      : ""
+  }
   return (
     <>
-      <PageHeader title={${heading}} />
+      ${
+        favourite
+          ? `<PageHeader
+        title={${heading}}
+        actions={<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />}
+      />`
+          : `<PageHeader title={${heading}} />`
+      }
       <ModelForm
         ui={${n.ui}}
         app={app}

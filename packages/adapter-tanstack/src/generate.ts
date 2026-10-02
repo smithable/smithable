@@ -399,9 +399,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // fields' editor and formatter: each only in apps that use it.
     kit: [
       {
-        // A list's filters and sort control (marketplace.md §2.2), where a page has them.
+        // A list's filters and sort control (marketplace.md §2.2), where a page has them,
         files: ["src/kit/Filters.tsx", "src/kit/filter.ts"],
-        used: ({ ir }) => ir.pages.some((p) => p.filters?.length || p.sortable?.length),
+        // and the Saved view's tabs (§2.3).
+        used: ({ ir, auth }) =>
+          ir.pages.some(
+            (p) => p.filters?.length || p.sortable?.length || (hasSignIn(auth) && p.favourites),
+          ),
       },
       {
         files: ["src/kit/Reserve.tsx"],

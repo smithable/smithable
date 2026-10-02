@@ -27,10 +27,27 @@ export function customPageFromEdit(
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(page, crudModel(ir, page), t, ir, options.ux ?? emptyUx());
+  const p = listParts(
+    page,
+    crudModel(ir, page),
+    t,
+    ir,
+    options.ux ?? emptyUx(),
+    undefined,
+    options.auth,
+  );
   const routeBlock = /export const Route = createFileRoute\([\s\S]*?\n\}\);\n/;
   const generatedRoute = routeBlock.exec(
-    listRoute(page, crudModel(ir, page), t, ir, false, options.ux ?? emptyUx()),
+    listRoute(
+      page,
+      crudModel(ir, page),
+      t,
+      ir,
+      false,
+      options.ux ?? emptyUx(),
+      undefined,
+      options.auth,
+    ),
   )?.[0];
   const editedRoute = routeBlock.exec(edited)?.[0];
   if (
@@ -77,7 +94,15 @@ export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOp
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(page, crudModel(ir, page), t, ir, options.ux ?? emptyUx());
+  const p = listParts(
+    page,
+    crudModel(ir, page),
+    t,
+    ir,
+    options.ux ?? emptyUx(),
+    undefined,
+    options.auth,
+  );
   p.view.add("@tanstack/react-router", "getRouteApi");
   return `// Your version of the "${page.id}" page. Smithable created it from the generated page and never
 // changes it. The route (loading, search, access) stays generated: read its data with \`route\`.
