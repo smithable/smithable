@@ -93,6 +93,8 @@ export function validateSamples(
         return [];
       }
       const row: Record<string, SampleRecordValue> = {};
+      // A field given with a wrong value is reported as wrong, not also as missing.
+      const given = new Set<string>();
       for (const pair of item.items) {
         const keyNode = pair.key as ParsedNode;
         const key = isScalar(keyNode) ? String(keyNode.value) : "";
@@ -109,6 +111,7 @@ export function validateSamples(
           );
           continue;
         }
+        given.add(field.name);
         const value = sampleValue(
           ctx,
           model,
@@ -121,7 +124,7 @@ export function validateSamples(
         if (value !== undefined) row[field.name] = value;
       }
       for (const field of fields)
-        if (field.required && field.default === undefined && !(field.name in row))
+        if (field.required && field.default === undefined && !given.has(field.name))
           ctx.error(
             item,
             "missing-field",
