@@ -551,12 +551,15 @@ function buildField(
   let raw: FieldValue | undefined = shorthand.defaultText;
   let rawAt: ParsedNode | null = at;
   // A picture is a stored file with its description: nothing to compare or default to.
-  if (field.type.kind === "scalar" && field.type.name === "picture") {
+  if (
+    field.type.kind === "scalar" &&
+    (field.type.name === "picture" || field.type.name === "pictures")
+  ) {
     if (field.unique || raw !== undefined || defaultEntry) {
       ctx.error(
         at,
         "invalid-field",
-        `${capitalize(where)}: a picture cannot be unique or have a default.`,
+        `${capitalize(where)}: ${field.type.name} cannot be unique or have a default.`,
       );
       return undefined;
     }

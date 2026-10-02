@@ -152,6 +152,24 @@ describe("the seven benchmark tasks", () => {
       matchRequest(spec, "Customers should be searchable by name and email", ROLES)?.operations,
     ).toEqual([{ op: "setSearch", args: { page: "customers", fields: ["name", "email"] } }]);
   });
+  test("Let people filter customers by segment and credit limit on the customers page", () => {
+    const o = ops("Let people filter customers by segment and credit limit on the customers page.");
+    expect(o).toEqual([
+      { op: "setFilters", args: { page: "customers", fields: ["segment", "creditLimit"] } },
+    ]);
+    const filtered = applies(o as PhraseOperation[]);
+    const spec = validateSpec({ path: "smithable.yml", text: filtered }, { roles: ROLES }).ir;
+    if (!spec) throw new Error("invalid");
+    // Already filtered by segment: "already done"; notes are text, which is searched, not filtered.
+    expect(matchRequest(spec, "Customers can be filtered by segment", ROLES)).toBeUndefined();
+    expect(matchRequest(spec, "Let people filter customers by notes", ROLES)).toBeUndefined();
+    expect(
+      matchRequest(spec, "Customers should be sortable by name and credit limit", ROLES)
+        ?.operations,
+    ).toEqual([
+      { op: "setSortable", args: { page: "customers", fields: ["name", "creditLimit"] } },
+    ]);
+  });
   test("Show products first in the menu", () => {
     const o = ops("Show Products first in the menu.");
     expect(o).toEqual([

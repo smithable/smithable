@@ -35,9 +35,12 @@ export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
   isPicture,
+  isPictures,
+  PICTURES_MAX,
   SCALAR_TYPES,
   SECTION_KINDS,
   storageOf,
+  storesPictures,
   typeKey,
   USER_MODEL,
 } from "./ir.js";
@@ -84,6 +87,13 @@ export {
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export { parseFieldShorthand } from "./sections/field-type.js";
+export {
+  checkFilterFields,
+  checkSortableFields,
+  filterable,
+  filterableFields,
+  sortableBy,
+} from "./sections/list-keys.js";
 export { searchableFields } from "./sections/pages.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
