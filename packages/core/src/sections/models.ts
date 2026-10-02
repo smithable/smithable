@@ -1,4 +1,5 @@
 import { isMap, isScalar, isSeq, type ParsedNode } from "yaml";
+import { lostValues, readCondition } from "../condition.js";
 import {
   checkKeys,
   type Entry,
@@ -112,6 +113,18 @@ export const modelsSection: SpecSection<"models"> = {
         if (uses)
           return {
             refusal: `${m.name}'s capacity counts on ${effect.model}.${effect.field}; change the capacity first.`,
+          };
+      }
+      return undefined;
+    }
+    // Nor can a capacity count on a choice value that goes.
+    if (effect.kind === "change-field") {
+      for (const m of ir.models) {
+        const wanted = m.name === effect.model ? m.capacity?.where?.[effect.field] : undefined;
+        const lost = wanted === undefined ? [] : lostValues(wanted, effect.choices);
+        if (lost.length)
+          return {
+            refusal: `${m.name}'s capacity counts ${effect.model} records where ${effect.field} is ${lost.join(" or ")}; change the capacity first.`,
           };
       }
       return undefined;
@@ -637,22 +650,10 @@ function readCapacity(
   }
   const result: CapacityIR = { per: perName, max: maxValue };
   const conditions = known.find((e) => e.key === "where");
-  if (conditions) {
-    result.where = {};
-    for (const condition of mapEntries(ctx, conditions.value, `"where" in ${where}`) ?? []) {
-      if (
-        isScalar(condition.value) &&
-        (typeof condition.value.value === "string" || typeof condition.value.value === "boolean")
-      )
-        result.where[condition.key] = condition.value.value;
-      else
-        ctx.error(
-          condition.value,
-          "invalid-value",
-          `"where" in ${where} compares a field with a choice value or true/false.`,
-        );
-    }
-  }
+  const condition = conditions
+    ? readCondition(ctx, conditions.value, `"where" in ${where}`)
+    : undefined;
+  if (condition) result.where = condition;
   return result;
 }
 
@@ -713,7 +714,7 @@ function checkCapacity(ctx: ParseContext, models: ModelIR[], model: ModelIR): vo
       ctx.error(
         at,
         "invalid-capacity",
-        `"where" in ${where}: "${name}" must be a choice field of ${model.name} with one of its values, or a yes/no field with true or false.`,
+        `"where" in ${where}: "${name}" must be a choice field of ${model.name} with one of its values (or a list of them), or a yes/no field with true or false.`,
       );
       delete model.capacity;
       return;

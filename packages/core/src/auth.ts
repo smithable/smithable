@@ -1,4 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import { readCondition } from "./condition.js";
 import {
   type At,
   checkKeys,
@@ -10,7 +11,10 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import { conditionFits, type SpecIR, USER_MODEL } from "./ir.js";
+import { type Condition, conditionFits, type SpecIR, USER_MODEL } from "./ir.js";
+
+export type { Condition } from "./ir.js";
+
 import { patternInfo } from "./patterns.js";
 import { FIELD_NAME_PATTERN } from "./sections/names.js";
 import { didYouMean } from "./suggest.js";
@@ -37,9 +41,6 @@ export interface AuthIR {
     readWhere: Record<string, Condition>;
   };
 }
-
-/** Field values a record must have: a choice field's value, or a yes/no field's true or false. */
-export type Condition = Record<string, string | boolean>;
 
 export interface SignInIR {
   /** In button order. */
@@ -354,23 +355,10 @@ function readPublicRead(
       { allowed: ["where"] },
     );
     const where = options.find((o) => o.key === "where");
-    const condition: Condition = {};
-    for (const c of where
-      ? (mapEntries(ctx, where.value, `"where" of "${entry.key}" in ${what}`) ?? [])
-      : []) {
-      if (
-        isScalar(c.value) &&
-        (typeof c.value.value === "string" || typeof c.value.value === "boolean")
-      )
-        condition[c.key] = c.value.value;
-      else
-        ctx.error(
-          c.value,
-          "invalid-value",
-          `"where" of "${entry.key}" in ${what} compares a field with a choice value or true/false.`,
-        );
-    }
-    if (Object.keys(condition).length) readWhere[entry.key] = condition;
+    const condition = where
+      ? readCondition(ctx, where.value, `"where" of "${entry.key}" in ${what}`)
+      : undefined;
+    if (condition) readWhere[entry.key] = condition;
     names.push({ name: entry.key, at: entry.keyNode });
   }
   return names;
@@ -405,7 +393,7 @@ function checkAgainstSpec(
             ctx.error(
               at,
               "invalid-where",
-              `"where" of ${name}: "${field}" must be a choice field of ${name} with one of its values, or a yes/no field with true or false.`,
+              `"where" of ${name}: "${field}" must be a choice field of ${name} with one of its values (or a list of them), or a yes/no field with true or false.`,
             );
       const personal = model?.fields.filter(
         (f) =>
