@@ -33,7 +33,18 @@ export type Effect =
   | { kind: "remove-page"; page: string }
   | { kind: "remove-section"; page: string; section: string }
   /** A rule got an id: its text is the baseline for noticing later edits. */
-  | { kind: "rule-identified"; rule: string; text: string };
+  | { kind: "rule-identified"; rule: string; text: string }
+  /**
+   * Records to add from a spreadsheet: the host reads the source with readRecords, looks the
+   * references up and inserts them in one transaction (or, on a dry run, only shows them).
+   */
+  | {
+      kind: "import-records";
+      model: string;
+      source: { path: string } | { text: string };
+      map: Record<string, string>;
+      dryRun: boolean;
+    };
 
 export type OperationArgs = { [key: string]: unknown };
 
