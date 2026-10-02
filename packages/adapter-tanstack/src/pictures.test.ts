@@ -292,3 +292,26 @@ pages:
   expect(list).not.toContain("<Filters");
   expect(list).toContain("New item");
 });
+
+test("a sample row without a field that has a default (added since) seeds the default, not null", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Torget }
+models:
+  Item:
+    fields: { title: string!, delivery: pickup | shipping, available: bool = true }
+pages:
+  items: { crud: Item }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(spec, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    samples: { Item: [{ title: "Lamp" }] },
+  });
+  expect(gen.find((f) => f.path === "src/db/seed.ts")?.content).toContain(
+    '{ title: "Lamp", delivery: "pickup", available: true }',
+  );
+});
