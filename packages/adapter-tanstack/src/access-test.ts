@@ -1,6 +1,7 @@
 import {
   type AuthIR,
   camel,
+  conditionText,
   type FieldIR,
   kebab,
   type ModelAllowed,
@@ -156,23 +157,29 @@ ${Object.entries(expected(access, role))
   });`);
     // The public condition: a visitor reads a record that fits and not one that does not; a role
     // that reads everything reads both.
-    const where = access.read.where;
+    // A list of values fits with its first one and not with a value outside it.
+    const where = access.read.where
+      ? Object.fromEntries(
+          Object.entries(access.read.where).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
+        )
+      : undefined;
     const [field, wanted] = Object.entries(where ?? {})[0] ?? [];
     const flipped = model.fields.find((f) => f.name === field);
     if (where && field !== undefined && flipped) {
+      const listed = access.read.where?.[field];
       const other =
         flipped.type.kind === "choice"
-          ? flipped.type.values.find((v) => v !== wanted)
+          ? flipped.type.values.find((v) =>
+              Array.isArray(listed) ? !listed.includes(v) : v !== wanted,
+            )
           : typeof wanted === "boolean"
             ? !wanted
             : undefined;
       const everything = roles.find((role) => role !== null && access.read.roles.includes(role));
       if (other !== undefined)
-        tests.push(`  test("visitors read only ${model.name.toLowerCase()} records where ${Object.entries(
-          where,
-        )
-          .map(([k, v]) => `${k} is ${v}`)
-          .join(" and ")}", async () => {
+        tests.push(`  test("visitors read only ${model.name.toLowerCase()} records where ${conditionText(
+          access.read.where ?? {},
+        )}", async () => {
     const fitting = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${JSON.stringify(where)});
     const hidden = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${JSON.stringify({ ...where, [field]: other })});
     expect(await reads(${data}, null, fitting.id)).toBe(true);
