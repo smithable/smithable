@@ -35,6 +35,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="stepper"",
     "data-part="radios"",
   ],
+  "src/kit/Filters.tsx": [
+    "data-kit="filters"",
+  ],
   "src/kit/Landing.tsx": [
     "data-kit="landing"",
     "data-part="header"",

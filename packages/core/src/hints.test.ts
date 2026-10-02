@@ -110,3 +110,31 @@ ${landing}
   ).toContain("A hero has at most four shortcuts.");
   expect(messages("      hero: { shortcuts: [nowhere] }").join(" ")).toContain("nowhere");
 });
+
+test("people are not filters (owner is a Mine toggle), and calculated fields are not sorted by", () => {
+  const messages = (keys: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Market }
+models:
+  Item:
+    fields:
+      title: string!
+      price: money
+      seller: User
+      double: { type: money, formula: price * 2 }
+pages:
+  items:
+    crud: Item
+${keys}
+`,
+    }).diagnostics.map((d) => d.message);
+  expect(messages("    filters: [owner, price]")).toEqual([]);
+  expect(messages("    filters: [seller]")[0]).toContain(
+    "people are not listed as filters; owner gives a Mine toggle",
+  );
+  expect(messages("    sortable: [double]")[0]).toContain(
+    "a calculated field has no stored value to sort by",
+  );
+});
