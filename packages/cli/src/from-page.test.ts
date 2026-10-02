@@ -1,0 +1,102 @@
+import { createServer, type Server } from "node:http";
+import { afterAll, beforeAll, expect, test } from "vitest";
+import {
+  allowedByRobots,
+  describePage,
+  downloadPictures,
+  fetchPage,
+  PageError,
+  readPage,
+  tooLittle,
+  USER_AGENT,
+} from "./from-page.js";
+
+const PAGE = `<!doctype html><html><head><title>Harbour Café</title><script>track()</script></head>
+<body><header><nav><a href="/">Home</a><a href="/menu">Menu</a><a href="/book">Book a table</a></nav></header>
+<h1>Coffee by the water</h1><p>We roast our own beans and bake every morning in the old harbour master's house.</p>
+<h2>Opening hours</h2><ul><li>Monday to Friday from seven in the morning until six</li></ul>
+<img src="/img/hero.jpg" alt="Cups on a wooden table by the window"><img src="data:image/png;base64,AAAA">
+<form><label for="n">Your name</label><input id="n"><input type="email" placeholder="Email"><input type="hidden" name="x"><button>Send</button></form>
+</body></html>`;
+
+test("robots.txt: Smithable's own rules, else everyone's; the longest rule wins", () => {
+  const robots =
+    "User-agent: *\nDisallow: /private\n\nUser-agent: Smithable\nDisallow: /\nAllow: /public\n";
+  expect(allowedByRobots(robots, "/public/page")).toBe(true);
+  expect(allowedByRobots(robots, "/other")).toBe(false);
+  expect(allowedByRobots("User-agent: *\nDisallow: /private\n", "/menu")).toBe(true);
+  expect(allowedByRobots("User-agent: *\nDisallow: /private\n", "/private/x")).toBe(false);
+  expect(allowedByRobots("User-agent: *\nDisallow:\n", "/")).toBe(true);
+});
+
+test("a page's text, menu, forms and pictures; scripts and inline pictures left out", () => {
+  const reading = readPage(PAGE, "https://cafe.example/");
+  expect(reading.title).toBe("Harbour Café");
+  expect(reading.navigation).toEqual(["Home", "Menu", "Book a table"]);
+  expect(reading.headings).toEqual(["Coffee by the water", "Opening hours"]);
+  expect(reading.text[0]).toContain("We roast our own beans");
+  expect(reading.forms).toEqual([{ fields: ["Your name (input)", "Email (email)"] }]);
+  expect(reading.pictures).toEqual([
+    { src: "https://cafe.example/img/hero.jpg", alt: "Cups on a wooden table by the window" },
+  ]);
+  expect(tooLittle(reading)).toBe(false);
+  expect(
+    tooLittle(
+      readPage(
+        "<html><body><div id=root></div><script>app()</script></body></html>",
+        "https://x.example/",
+      ),
+    ),
+  ).toBe(true);
+  const description = describePage(reading, [{ file: "page-1.jpg", alt: "Cups on a table" }]);
+  expect(description).toContain("The app behind a site like this one (https://cafe.example/)");
+  expect(description).toContain("- Book a table");
+  expect(description).toContain("- page-1.jpg: Cups on a table");
+});
+
+let server: Server;
+let base: string;
+const agents: string[] = [];
+beforeAll(async () => {
+  server = createServer((req, res) => {
+    agents.push(String(req.headers["user-agent"]));
+    if (req.url === "/robots.txt") return res.end("User-agent: *\nDisallow: /secret\n");
+    if (req.url === "/old") return res.writeHead(301, { location: "/" }).end();
+    if (req.url === "/away")
+      return res.writeHead(302, { location: "https://elsewhere.example/" }).end();
+    if (req.url === "/big") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<p>${"x".repeat(2.5 * 1024 * 1024)}</p>`);
+    }
+    if (req.url === "/img/hero.jpg") {
+      res.writeHead(200, { "content-type": "image/jpeg" });
+      return res.end(Buffer.alloc(1000, 1));
+    }
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(PAGE);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const address = server.address();
+  base = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
+});
+afterAll(() => server.close());
+
+test("fetching: a named agent, robots.txt, same-site redirects and a size limit", async () => {
+  const page = await fetchPage(`${base}/old`);
+  expect(page.url).toBe(`${base}/`);
+  expect(page.html).toContain("Harbour Café");
+  expect(agents).toContain(USER_AGENT);
+  await expect(fetchPage(`${base}/secret`)).rejects.toThrow("robots.txt asks not to read /secret");
+  await expect(fetchPage(`${base}/away`)).rejects.toThrow("redirects to another site");
+  await expect(fetchPage(`${base}/big`)).rejects.toThrow("larger than 2 MB");
+  await expect(fetchPage("cafe.example")).rejects.toBeInstanceOf(PageError);
+});
+
+test("pictures are downloaded as the project's own, named by their order", async () => {
+  const saved: Record<string, number> = {};
+  const pictures = await downloadPictures(readPage(PAGE, `${base}/`), (file, bytes) => {
+    saved[file] = bytes.length;
+  });
+  expect(pictures).toEqual([{ file: "page-1.jpg", alt: "Cups on a wooden table by the window" }]);
+  expect(saved).toEqual({ "page-1.jpg": 1000 });
+});
