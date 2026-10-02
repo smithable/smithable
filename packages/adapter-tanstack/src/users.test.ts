@@ -63,9 +63,7 @@ test("closed sign-up refuses uninvited addresses at sign-in, but not the admins 
   const app = files(authOf(CLOSED));
   const auth = file(app, "src/lib/auth.ts");
   expect(auth).toContain('import { APIError } from "better-auth/api";');
-  expect(auth).toContain(
-    'if (!open && !ADMINS.includes(email) && !(import.meta.env.DEV && email.startsWith("dev-")))',
-  );
+  expect(auth).toContain('!(demoSignIn && email.startsWith("demo-"))');
   expect(auth).toContain("Only invited people can sign in to");
   expect(file(app, "src/generated/users.test.ts")).toContain("is refused");
   expect(file(app, "README.md")).toContain("Sign-up is closed");

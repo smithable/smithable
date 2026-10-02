@@ -448,6 +448,15 @@ function checkAgainstSpec(
           `Visitors can't open ${target} from the ${name} hero's shortcuts: list it under public.pages, or choose another page.`,
         );
   }
+  // A page of the viewer's own records has nothing to show a visitor, who owns nothing.
+  for (const { name, at } of publicNodes.pages ?? []) {
+    if (ir.pages.find((p) => p.id === name)?.mine)
+      ctx.warning(
+        at,
+        "mine-public",
+        `${name} lists only the viewer's own records, so a visitor sees nothing there: take it out of public.pages.`,
+      );
+  }
   // A public blog of a model with a draft state shows its drafts, unless a "where" keeps them.
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);

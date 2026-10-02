@@ -181,6 +181,11 @@ describe("the seven benchmark tasks", () => {
       { op: "setContact", args: { page: "customers", to: "owner" } },
     ]);
   });
+  test("Let people see only their own customers on the customers page", () => {
+    expect(ops("Let people see only their own customers on the customers page.")).toEqual([
+      { op: "setMine", args: { page: "customers", mode: "on" } },
+    ]);
+  });
   test("Show products first in the menu", () => {
     const o = ops("Show Products first in the menu.");
     expect(o).toEqual([
