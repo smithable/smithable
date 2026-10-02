@@ -418,6 +418,63 @@ async function bookingFlow(dir, base) {
 }
 
 /**
+ * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
+ * describes them and moves the second first; they are served in that order, the first as the
+ * cover; removing one deletes its file and keeps the other.
+ */
+async function picturesFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const uploads = join(dir, "data", "uploads", "post");
+  try {
+    await signInAs(page, base, "admin");
+    const none = await page.request.get(`${base}/files/post/1/gallery/0`);
+    if (none.status() !== 404)
+      throw new Error(`a post without pictures served one (${none.status()})`);
+    await open(page, `${base}/posts/1`);
+    const before = new Set(readdirSync(uploads));
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Choose pictures" }).click();
+    await (await chooser).setFiles([
+      join(dir, "public", "images", "hero.webp"),
+      join(dir, "public", "images", "gallery", "coast.webp"),
+    ]);
+    await page.locator('[data-part="picture"]').nth(1).waitFor({ timeout: 20000 });
+    await page.getByLabel("Description of picture 1").fill("The studio");
+    await page.getByLabel("Description of picture 2").fill("The coast");
+    await page.getByRole("button", { name: "Move picture 2 earlier" }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(/\/posts$/);
+    await open(page, `${base}/posts/1`);
+    if ((await page.getByLabel("Description of picture 1").inputValue()) !== "The coast")
+      throw new Error("the moved picture is not the cover");
+    const served = await Promise.all(
+      [0, 1, 2].map((n) =>
+        page.request.get(`${base}/files/post/1/gallery/${n}`).then((r) => r.status()),
+      ),
+    );
+    if (served.join() !== "200,200,404") throw new Error(`the pictures answered ${served.join()}`);
+    if (readdirSync(uploads).filter((f) => !before.has(f)).length !== 2)
+      throw new Error("the two pictures were not both stored");
+    await page.getByRole("button", { name: "Remove picture 2" }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(/\/posts$/);
+    if (readdirSync(uploads).length !== before.size + 1)
+      throw new Error("the removed picture's file was not deleted");
+    console.log(
+      "  ✓ browser: several pictures are added at once, described, reordered (the first is the cover) and served in order; removing one deletes its file",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("pictures flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * A picture field (an instructor's portrait): the seeded portrait shows in the list and is
  * served as WebP; an admin replaces it from a file (scaled and encoded in the browser, checked
  * on the server), the new one is kept and the old file is gone; a visitor sees a public
@@ -1844,6 +1901,13 @@ for (const [index, example] of examples.entries()) {
         join(dir, "src/custom/styles.css"),
         '\n[data-page="customers"] [data-kit="model-table"] [data-part="header"] th { letter-spacing: 3px; }\n',
       );
+    // Several pictures on a record (marketplace.md §2.1): posts get a gallery by an operation.
+    if (example === "booking")
+      step("op addField gives posts a gallery of several pictures, and the app type-checks", () => {
+        const added = smithable(dir, "op", "addField", "Post", "gallery", "pictures");
+        if (added.code !== 0) throw new Error(added.out);
+        run("pnpm", ["typecheck"], dir);
+      });
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -1857,6 +1921,7 @@ for (const [index, example] of examples.entries()) {
         await articlesFlow(dir, base);
         await calculatorFlow(base);
         await pictureFlow(dir, base);
+        await picturesFlow(dir, base);
       }
       if (example === "invoicing") {
         await formulaFlow(base);

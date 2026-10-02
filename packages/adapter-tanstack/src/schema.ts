@@ -5,9 +5,11 @@ import {
   type FieldIR,
   humanize,
   isPicture,
+  isPictures,
   kebab,
   type ModelIR,
   type SpecIR,
+  storesPictures,
   USER_MODEL,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
@@ -101,7 +103,7 @@ export const ${n.table} = sqliteTable(
     ];
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
-  const pictures = ir.models.some((m) => m.fields.some(isPicture));
+  const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${pictures ? 'import type { Picture } from "#/kit/uploads";\n' : ""}
 ${[...authBlock, ...tables, ...relationBlocks].join("\n\n")}
@@ -136,6 +138,10 @@ export function column(field: FieldIR): { expr: string; uses: string } {
       case "picture":
         // The stored file, its description and size (src/kit/uploads.ts), as JSON.
         expr = `text({ mode: "json" }).$type<Picture>()`;
+        break;
+      case "pictures":
+        // Several of them, the first the cover.
+        expr = `text({ mode: "json" }).$type<Picture[]>()`;
         break;
       default:
         expr = "text()";
@@ -204,15 +210,22 @@ export function seedModule(ir: SpecIR, options: Pick<GenerateOptions, "samples">
       const entries = storedFields(model).map((field) => {
         // A sample file's picture: its file under public/images/samples/, and its description.
         const own = row[field.name];
+        const sample = (picture: string | number, alt: string) =>
+          `samplePicture(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(picture)}, ${JSON.stringify(alt)})`;
         if (isPicture(field) && own && typeof own === "object" && "picture" in own)
-          return `${dataKey(field)}: samplePicture(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(own.picture)}, ${JSON.stringify(own.alt)})`;
+          return `${dataKey(field)}: ${sample(own.picture, own.alt)}`;
+        if (isPictures(field) && Array.isArray(own))
+          return `${dataKey(field)}: [${own.map((p) => sample(p.picture, p.alt)).join(", ")}].filter((p) => p !== null)`;
         const value = sampleLiteral(field, row[field.name]);
         // A sample picture from public/images/samples/, when the app ships any.
-        if (isPicture(field) && options.samples?.[model.name]) return `${dataKey(field)}: null`;
-        if (isPicture(field)) {
-          const title = Object.values(row).find((v) => typeof v === "string" && /\s/.test(v));
-          return `${dataKey(field)}: samplePicture(${JSON.stringify(kebab(model.name))}, ${i % 3}, ${JSON.stringify(`A picture of ${title ?? `${humanize(model.name).toLowerCase()} ${i + 1}`}`)})`;
-        }
+        if (storesPictures(field) && options.samples?.[model.name])
+          return `${dataKey(field)}: null`;
+        const title = Object.values(row).find((v) => typeof v === "string" && /\s/.test(v));
+        const alt = `A picture of ${title ?? `${humanize(model.name).toLowerCase()} ${i + 1}`}`;
+        if (isPicture(field)) return `${dataKey(field)}: ${sample(i % 3, alt)}`;
+        // Several pictures: one to three of the starter's, in turn.
+        if (isPictures(field))
+          return `${dataKey(field)}: [${Array.from({ length: 1 + (i % 3) }, (_, k) => sample((i + k) % 3, alt)).join(", ")}].filter((p) => p !== null)`;
         if (field !== start || value === "null") return `${dataKey(field)}: ${value}`;
         return field.type.kind === "scalar" && field.type.name === "date"
           ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).slice(0, 10)`
@@ -228,7 +241,7 @@ ${rows.join("\n")}
     .run();
 }`;
   });
-  const pictures = ordered.some((m) => m.fields.some(isPicture));
+  const pictures = ordered.some((m) => m.fields.some(storesPictures));
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 import { db } from "./index";
 ${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
