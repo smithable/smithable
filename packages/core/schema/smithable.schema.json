@@ -858,6 +858,10 @@
             },
             "description": "Fields the list can be sorted by, either way, from a Sort by control."
           },
+          "mine": {
+            "type": "boolean",
+            "description": "The page lists only the viewer's own records (my items, my orders); it needs sign-in."
+          },
           "favourites": {
             "oneOf": [
               {

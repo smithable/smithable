@@ -2497,6 +2497,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "to": "owner",
       },
       "id": "mine",
+      "mine": true,
       "pattern": {
         "kind": "crud",
         "model": "Item",
