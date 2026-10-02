@@ -217,7 +217,9 @@ export async function studio(
     join(dir, config),
     previewConfig(options.previewUrl, store ? [resolve(dir), resolve(store)] : undefined),
   );
-  // When the preview stops by itself (a crash), it starts again, at most five times a minute.
+  // When the preview stops by itself (a crash), it starts again: at once for the first few
+  // stops in a minute, then with a growing pause up to two minutes, and never for good, so a
+  // burst of crashes after a broken change does not leave the preview dead until a restart.
   let restarts: number[] = [];
   const startApp = () => {
     const child = spawn(
@@ -241,10 +243,14 @@ export async function studio(
     child.stderr?.on("data", (d) => log(String(d)));
     child.on("exit", () => {
       if (app !== child) return;
-      restarts = [...restarts.filter((t) => Date.now() - t < 60_000), Date.now()];
-      if (restarts.length > 5) return log("The preview keeps stopping; it is not started again.\n");
-      log("The preview stopped; starting it again.\n");
-      setTimeout(startApp, 1000);
+      restarts = [...restarts.filter((t) => Date.now() - t < RESTART_WINDOW), Date.now()];
+      const delay = previewRestartDelay(restarts.length);
+      log(
+        delay > 1000
+          ? `The preview keeps stopping; trying again in ${Math.round(delay / 1000)} s.\n`
+          : "The preview stopped; starting it again.\n",
+      );
+      setTimeout(startApp, delay);
     });
     void warmPreview(previewPort, log);
   };
@@ -489,4 +495,16 @@ export async function studio(
   stopApp();
   server.close();
   return 0;
+}
+
+/** Stops within this long count towards the pause between restarts. */
+export const RESTART_WINDOW = 10 * 60_000;
+
+/**
+ * How long to wait before starting the preview again after its n-th stop in the window: at
+ * once (a second) for the first five, then 10 s, 20 s, 40 s, 80 s and two minutes from then on.
+ */
+export function previewRestartDelay(stopsInWindow: number): number {
+  if (stopsInWindow <= 5) return 1000;
+  return Math.min(120_000, 10_000 * 2 ** (stopsInWindow - 6));
 }
