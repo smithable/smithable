@@ -12,6 +12,7 @@ export function SignIn({
   missing,
   invitation,
   devRoles,
+  demo,
   onProvider,
   onDevRole,
 }: {
@@ -22,8 +23,10 @@ export function SignIn({
   missing: string[];
   /** Whom the invitation link that opened the page is for; the address must sign in itself. */
   invitation?: { email: string; role: string } | null;
-  /** Roles to sign in as; only given in development. */
+  /** Roles to sign in as; given in development, and in a demo. */
   devRoles?: string[];
+  /** A demo: the role buttons are the way in, not a development aid. */
+  demo?: boolean;
   onProvider: (provider: string) => Promise<unknown>;
   onDevRole?: (role: string) => Promise<unknown>;
 }) {
@@ -76,7 +79,7 @@ export function SignIn({
       {devRoles && onDevRole && (
         <div className="space-y-2 border-t pt-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Development only
+            {demo ? "Try it as" : "Development only"}
           </p>
           {devRoles.map((role) => (
             <Button
