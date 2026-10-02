@@ -49,7 +49,7 @@ test("a list and a page per article, read through the data function in the handl
   );
   expect(article).toContain('allows(pageAccess["posts"], viewer) ? `/posts/${row.id}` : undefined');
   // A public page has the site's frame; a signed-in one the app's shell.
-  expect(list).toContain("<LandingLayout appName={app.name}>");
+  expect(list).toContain("<LandingLayout appName={app.name} site={site}>");
   expect(file("src/routes/news/index.tsx")).toContain("<PageHeader");
   expect(file("src/routes/__root.tsx")).toContain('const siteRoutes = ["/blog"];');
   // A new post's address comes from its title when left empty.

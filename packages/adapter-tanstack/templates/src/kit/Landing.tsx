@@ -11,6 +11,7 @@ import {
   type LucideIcon,
   Mail,
   MapPin,
+  Menu,
   Phone,
   X,
 } from "lucide-react";
@@ -39,51 +40,172 @@ export interface LandingFooter {
 }
 
 /** The page frame: the app's name, a link into the app, the sections and the footer. */
+/** The public site's frame (src/generated/site.ts): its menu and how to reach the business. */
+export interface LandingSite {
+  /** The landing page's address: the app's name leads there. */
+  home?: LinkProps["to"];
+  menu: LandingLink[];
+  contact?: { address?: string; phone?: string; email?: string; hours?: string };
+}
+
 export function LandingLayout({
   appName,
   link,
   footer,
+  site,
   children,
 }: {
   appName: string;
   link?: LandingLink;
   footer?: LandingFooter;
+  site?: LandingSite;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+  const menu = site?.menu ?? [];
+  const contact = site?.contact;
+  // Columns when there is something to put in them; otherwise the one line it always had.
+  const columns = menu.length > 0 || contact !== undefined;
+  const name = site?.home ? (
+    <Link to={site.home} className="min-w-0 truncate text-xl font-bold">
+      {appName}
+    </Link>
+  ) : (
+    <p className="min-w-0 truncate text-xl font-bold">{appName}</p>
+  );
+  const footerLinks = footer && footer.links.length > 0 && (
+    <ul className="flex flex-wrap gap-x-6 gap-y-2">
+      {footer.links.map((l, i) => (
+        <li key={l.link ?? i}>
+          <a
+            href={l.link}
+            className="underline-offset-4 hover:text-foreground hover:underline"
+            {...mark(footer.texts, `items.${i}.label`)}
+          >
+            {l.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <div data-kit="landing" className="flex min-h-screen flex-col">
       <header data-part="header" className="border-b bg-card">
         <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4 px-5">
-          <p className="min-w-0 truncate text-xl font-bold">{appName}</p>
-          {link && (
-            <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
-              {link.label}
-            </Link>
-          )}
-        </div>
-      </header>
-      <main className="flex-1">{children}</main>
-      <footer data-part="footer" className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
-          {footer && footer.links.length > 0 && (
-            <nav aria-label="Footer">
-              <ul className="flex flex-wrap gap-x-6 gap-y-2">
-                {footer.links.map((l, i) => (
-                  <li key={l.link ?? i}>
-                    <a
-                      href={l.link}
-                      className="underline-offset-4 hover:text-foreground hover:underline"
-                      {...mark(footer.texts, `items.${i}.label`)}
+          {name}
+          {menu.length > 0 && (
+            <nav aria-label="Site" className="hidden md:block">
+              <ul className="flex items-center gap-6 text-sm font-medium">
+                {menu.map((m) => (
+                  <li key={String(m.to)}>
+                    <Link
+                      to={m.to}
+                      className="underline-offset-4 hover:underline"
+                      activeProps={{ "aria-current": "page", className: "text-primary" }}
                     >
-                      {l.label}
-                    </a>
+                      {m.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
             </nav>
           )}
+          <div className="flex items-center gap-2">
+            {link && (
+              <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
+                {link.label}
+              </Link>
+            )}
+            {menu.length > 0 && (
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-controls="site-menu"
+                aria-label="Menu"
+                onClick={() => setOpen(!open)}
+                className={cn(buttonVariants({ variant: "ghost" }), "md:hidden")}
+              >
+                {open ? (
+                  <X aria-hidden className="size-5" />
+                ) : (
+                  <Menu aria-hidden className="size-5" />
+                )}
+              </button>
+            )}
+          </div>
         </div>
+        {open && menu.length > 0 && (
+          <nav id="site-menu" aria-label="Site" className="border-t md:hidden">
+            <ul className="mx-auto max-w-6xl px-5 py-2">
+              {menu.map((m) => (
+                <li key={String(m.to)}>
+                  <Link to={m.to} onClick={() => setOpen(false)} className="block py-3 font-medium">
+                    {m.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+      </header>
+      <main className="flex-1">{children}</main>
+      <footer data-part="footer" className="border-t">
+        {columns ? (
+          <div className="mx-auto max-w-6xl px-5 py-12 text-sm">
+            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <p className="text-base font-semibold">{appName}</p>
+                {contact?.address && <p className="text-muted-foreground">{contact.address}</p>}
+                {contact?.phone && (
+                  <p>
+                    <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="hover:underline">
+                      {contact.phone}
+                    </a>
+                  </p>
+                )}
+                {contact?.email && (
+                  <p>
+                    <a href={`mailto:${contact.email}`} className="hover:underline">
+                      {contact.email}
+                    </a>
+                  </p>
+                )}
+                {contact?.hours && <p className="text-muted-foreground">{contact.hours}</p>}
+              </div>
+              {menu.length > 0 && (
+                <nav aria-label="Pages" className="space-y-2">
+                  <p className="text-base font-semibold">Pages</p>
+                  <ul className="space-y-2">
+                    {menu.map((m) => (
+                      <li key={String(m.to)}>
+                        <Link
+                          to={m.to}
+                          className="text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          {m.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              )}
+              {(footer?.text || footerLinks) && (
+                <div className="space-y-3 text-muted-foreground">
+                  {footer?.text && <p {...mark(footer.texts, "text")}>{footer.text}</p>}
+                  {footerLinks && <nav aria-label="Footer">{footerLinks}</nav>}
+                </div>
+              )}
+            </div>
+            <p className="mt-10 border-t pt-6 text-muted-foreground">
+              © {new Date().getFullYear()} {appName}
+            </p>
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
+            {footerLinks && <nav aria-label="Footer">{footerLinks}</nav>}
+          </div>
+        )}
       </footer>
     </div>
   );
