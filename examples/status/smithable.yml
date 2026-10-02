@@ -68,7 +68,8 @@ pages:
     landing:
       hero: { button: history }
       services: { records: Component }
-      recent: { records: Incident, limit: 5 }
+      open: { records: Incident, where: { status: [investigating, identified, monitoring] } }
+      recent: { records: Incident, where: { status: resolved }, limit: 5 }
       planned: { records: Maintenance, limit: 3 }
       footer: {}
   history:
