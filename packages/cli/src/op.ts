@@ -46,6 +46,8 @@ export interface OpFlags {
   mcp?: boolean;
   /** An extra commit trailer, e.g. what the model that proposed the change used. */
   trailer?: string;
+  /** Who imported records belong to (a user id or email); else the first admin who signed in. */
+  owner?: string;
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -144,7 +146,14 @@ export async function runOperation(
         ? validateContent({ path: CONTENT, text: files.content }, before).content
         : undefined,
     );
+  const owner = prepared && auth ? importOwner(dir, auth, flags.owner) : null;
   if (prepared && importing) {
+    if ((flags.owner || process.env.SMITHABLE_IMPORT_OWNER) && !owner)
+      prepared.refusals.push({
+        line: 0,
+        message: `No user "${flags.owner ?? process.env.SMITHABLE_IMPORT_OWNER}" has signed in to the app.`,
+      });
+    prepared.shown += `\n${owner ? `They will belong to ${owner.email}.` : "They will belong to no one (no admin has signed in yet)."}`;
     if (prepared.refusals.length || importing.dryRun) {
       const problems = prepared.refusals.length
         ? `\n\nNothing ${importing.dryRun ? "would be" : "was"} imported:\n${refusalText(prepared.refusals)}`
@@ -213,7 +222,7 @@ export async function runOperation(
     for (const effect of result.effects) {
       if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
     }
-    if (prepared && auth) insertImport(dir, prepared, before, auth, importOwner(dir, auth));
+    if (prepared && auth) insertImport(dir, prepared, before, auth, owner?.id ?? null);
     git(dir, ["add", "-A"]);
     // A whole edited spec is in the diff; the trailer stays short.
     const recorded = recordedArgs;
