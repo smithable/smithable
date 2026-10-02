@@ -605,6 +605,16 @@ async function landingFlow(base) {
     await shortcuts.getByRole("link", { name: "Schedule" }).click();
     await page.waitForURL(`${base}/schedule`);
     console.log("  ✓ browser: the hero's shortcuts lead to their pages");
+    // Classes have no picture field: their cards stay text cards, with no placeholder.
+    await open(page, base);
+    await page
+      .locator('[data-section="classes"]')
+      .getByText("Foundations")
+      .first()
+      .waitFor({ timeout: 5000 });
+    if (await page.locator('[data-section="classes"] [data-part="placeholder"]').count())
+      throw new Error("cards of a model without pictures show placeholders");
+    console.log("  ✓ browser: cards of a model without pictures stay text cards");
     await open(page, base);
     await page.getByRole("button", { name: /^Open A rolled-up yoga mat/ }).click();
     const lightbox = page.getByRole("dialog");

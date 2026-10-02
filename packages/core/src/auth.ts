@@ -434,6 +434,20 @@ function checkAgainstSpec(
         );
     }
   }
+  // A public landing page's shortcuts are for visitors (one behind sign-in has none to mislead):
+  // a shortcut to a page they cannot open meets sign-in.
+  // (A hero's button into the app is often meant to: "Get started" leads to signing in.)
+  for (const { name, at } of publicNodes.pages ?? []) {
+    const page = ir.pages.find((p) => p.id === name);
+    if (page?.pattern.kind !== "landing") continue;
+    for (const target of page.pattern.sections.flatMap((s) => s.shortcuts ?? []))
+      if (!auth.public.pages.includes(target))
+        ctx.warning(
+          at,
+          "shortcut-closed",
+          `Visitors can't open ${target} from the ${name} hero's shortcuts: list it under public.pages, or choose another page.`,
+        );
+  }
   // A public blog of a model with a draft state shows its drafts, unless a "where" keeps them.
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
