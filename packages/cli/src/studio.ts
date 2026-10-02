@@ -24,7 +24,12 @@ import { warmPreview } from "./warm.js";
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
 /** A message shown once when Studio next opens, e.g. why a description could not be used. */
 export const NOTICE = "data/.smithable/notice.txt";
-const STUDIO = new URL("../../../apps/studio/dist/", import.meta.url).pathname;
+// Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
+// repository it is apps/studio's own build.
+const PACKAGED = new URL("../studio/", import.meta.url).pathname;
+const STUDIO = existsSync(join(PACKAGED, "index.html"))
+  ? PACKAGED
+  : new URL("../../../apps/studio/dist/", import.meta.url).pathname;
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
