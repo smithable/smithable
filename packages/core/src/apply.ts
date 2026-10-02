@@ -190,10 +190,13 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
   // needs no value ("--use").
   const values: string[] = [];
   for (let i = 0; i < words.length; i++) {
-    const key = /^--(\w+)$/.exec(words[i] as string)?.[1];
+    // "--dry-run" names dryRun.
+    const key = /^--([\w-]+)$/
+      .exec(words[i] as string)?.[1]
+      ?.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
     const type = key === undefined ? undefined : properties[key]?.type;
     const next = words[i + 1];
-    if (type === "boolean" && (next === undefined || /^--\w+$/.test(next))) {
+    if (type === "boolean" && (next === undefined || /^--[\w-]+$/.test(next))) {
       args[key as string] = true;
       continue;
     }

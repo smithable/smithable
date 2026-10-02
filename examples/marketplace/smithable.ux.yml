@@ -8,5 +8,5 @@ pages:
   home:
     sections:
       hero: { layout: cover }
-  catalogue:
+  catalog:
     table: { view: cards }

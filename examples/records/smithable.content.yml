@@ -5,7 +5,7 @@ models:
     label: Item
     fields:
       summary: { label: About }
-      kind: { values: { general: General, favourite: Favourite, archived: Archived } }
+      kind: { values: { general: General, favorite: Favorite, archived: Archived } }
       addedOn: { label: Added }
 
 pages:

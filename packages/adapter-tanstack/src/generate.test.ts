@@ -213,7 +213,7 @@ function hash(text: string): string {
   return (h >>> 0).toString(16).padStart(8, "0");
 }
 
-test("every app carries the third-party notices, in its image too, and no Smithable code under Smithable's licence", () => {
+test("every app carries the third-party notices, in its image too, and no Smithable code under Smithable's license", () => {
   const ir = validateSpec({ path: "smithable.yml", text: "smithable: 0.1\napp: { name: A }\n" })
     .ir as SpecIR;
   const files = generateApp(ir, { ...options });
@@ -223,7 +223,7 @@ test("every app carries the third-party notices, in its image too, and no Smitha
   expect(files.find((f) => f.path === "Dockerfile")?.content).toContain(
     "COPY --from=build /app/LICENSES ./LICENSES",
   );
-  expect(files.find((f) => f.path === "README.md")?.content).toContain("## Licences");
+  expect(files.find((f) => f.path === "README.md")?.content).toContain("## Licenses");
   // Nothing in an app is Apache-licensed engine code: no file imports a Smithable package.
   for (const file of files) expect(file.content, file.path).not.toMatch(/@smithable\//);
 });

@@ -1,5 +1,5 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
-// To customise a table, copy this file into src/custom/components/ and edit the copy.
+// To customize a table, copy this file into src/custom/components/ and edit the copy.
 import { ChevronRight, Heart, ImageIcon, type LucideIcon } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
