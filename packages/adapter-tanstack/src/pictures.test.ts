@@ -189,6 +189,8 @@ pages:
   const onlyList = only.find((f) => f.path === "src/routes/items/index.tsx")?.content ?? "";
   expect(onlyList).toContain("inArray(items.id, saved),");
   expect(onlyList).not.toContain("<SavedTabs");
+  // Nothing to read from the address: the handler takes no data (an unused one fails tsc).
+  expect(onlyList).toContain(".handler(async () => {");
   // Without sign-in there is no one to save for: no table, no hearts.
   const open = generateApp(spec("true"), {
     smithableVersion: "0.0.0",
