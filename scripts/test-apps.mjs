@@ -599,6 +599,13 @@ async function landingFlow(base) {
   const page = await browser.newPage();
   try {
     await open(page, base);
+    // The cover hero's shortcuts: round links to the schedule and the blog over its edge.
+    const shortcuts = page.getByRole("navigation", { name: "Shortcuts" });
+    await shortcuts.getByRole("link", { name: "Blog" }).waitFor({ timeout: 5000 });
+    await shortcuts.getByRole("link", { name: "Schedule" }).click();
+    await page.waitForURL(`${base}/schedule`);
+    console.log("  ✓ browser: the hero's shortcuts lead to their pages");
+    await open(page, base);
     await page.getByRole("button", { name: /^Open A rolled-up yoga mat/ }).click();
     const lightbox = page.getByRole("dialog");
     await lightbox.getByRole("img", { name: /yoga mat/ }).waitFor({ timeout: 5000 });

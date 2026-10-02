@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  type LucideIcon,
   Mail,
   MapPin,
   Phone,
@@ -22,6 +23,11 @@ import { textMarker } from "./model";
 export interface LandingLink {
   to: LinkProps["to"];
   label: string;
+}
+
+/** A hero's shortcut: a page, shown as a round icon with its title under it. */
+export interface LandingShortcut extends LandingLink {
+  icon: LucideIcon;
 }
 
 /** A footer of its own: a line of text and links (a page's address, or a full one). */
@@ -139,6 +145,7 @@ export function Hero({
   link,
   image,
   more,
+  shortcuts = [],
   layout = "split",
   imageSide = "right",
 }: {
@@ -148,8 +155,13 @@ export function Hero({
   image?: LandingImage;
   /** Sections follow: a quiet arrow under the content says the page goes on. */
   more?: boolean;
-  /** split: text beside the picture; centered: text over it; plain: no picture. */
-  layout?: "split" | "centered" | "plain";
+  /** Up to four pages, as round icons over the hero's lower edge. */
+  shortcuts?: LandingShortcut[];
+  /**
+   * split: text beside the picture; centered: text over it; plain: no picture; cover: the
+   * picture across the width with the theme's primary washing over it under the text.
+   */
+  layout?: "split" | "centered" | "plain" | "cover";
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
@@ -166,6 +178,25 @@ export function Hero({
     </a>
   );
   const end = more && <span id={after} tabIndex={-1} />;
+  const shortcutList = shortcuts.length > 0 && (
+    <nav aria-label="Shortcuts" className="relative z-10 mx-auto -mt-12 max-w-4xl px-5">
+      <ul className="grid grid-cols-2 gap-4 sm:flex sm:justify-center sm:gap-8">
+        {shortcuts.map((s) => (
+          <li key={String(s.to)} data-part="shortcut">
+            <Link
+              to={s.to}
+              className="group flex flex-col items-center gap-2 rounded-lg text-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="flex size-20 items-center justify-center rounded-full border bg-card text-primary shadow-md transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
+                <s.icon aria-hidden className="size-8" />
+              </span>
+              <span className="max-w-32">{s.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
   const text = (
     <div>
       <h1
@@ -194,13 +225,58 @@ export function Hero({
         className={cn("mx-auto max-w-6xl px-5 py-20 sm:py-28", more && "pb-6 sm:pb-6")}
       >
         {text}
+        {shortcutList && <div className="mt-16 [&_nav]:mt-0 [&_nav]:px-0">{shortcutList}</div>}
         {cue && <div className="mt-12">{cue}</div>}
         {end}
       </section>
     );
+  // Across the width: the primary washes over the picture where the text is, so the text keeps
+  // the theme's own contrast (primary against its foreground), checked like the rest.
+  if (layout === "cover")
+    return (
+      <>
+        <section {...sectionHooks(texts)} className="relative isolate overflow-hidden">
+          <img
+            src={image.src}
+            alt={image.alt}
+            width={1600}
+            height={900}
+            fetchPriority="high"
+            className="absolute inset-0 -z-10 size-full object-cover"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 bg-linear-to-t from-primary via-primary/90 to-primary/40 sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10"
+          />
+          <div
+            className={cn(
+              "mx-auto max-w-6xl px-5 py-24 text-primary-foreground sm:py-32 [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90",
+              shortcutList && "pb-28 sm:pb-36",
+            )}
+          >
+            {text}
+          </div>
+        </section>
+        {shortcutList}
+        {cue && <div className="mt-8">{cue}</div>}
+        {end}
+      </>
+    );
+  // Shortcuts sit over the hero's lower edge; the arrow down, if any, then comes after them.
+  const framed = (hero: React.ReactNode) =>
+    shortcutList ? (
+      <>
+        {hero}
+        {shortcutList}
+        {cue && <div className="mt-8">{cue}</div>}
+        {end}
+      </>
+    ) : (
+      hero
+    );
   // Over the picture: a dark veil keeps the text readable on any picture.
   if (layout === "centered")
-    return (
+    return framed(
       <section {...sectionHooks(texts)} className="relative isolate overflow-hidden">
         <img
           src={image.src}
@@ -211,18 +287,26 @@ export function Hero({
           className="absolute inset-0 -z-10 size-full object-cover"
         />
         <div aria-hidden className="absolute inset-0 -z-10 bg-black/60" />
-        <div className="mx-auto flex max-w-4xl flex-col items-center px-5 py-24 text-center text-white sm:py-36 [&_h1]:mx-auto [&_p]:mx-auto [&_p]:text-white/90">
+        <div
+          className={cn(
+            "mx-auto flex max-w-4xl flex-col items-center px-5 py-24 text-center text-white sm:py-36 [&_h1]:mx-auto [&_p]:mx-auto [&_p]:text-white/90",
+            shortcutList && "pb-28 sm:pb-40",
+          )}
+        >
           {text}
-          {cue && <div className="mt-12 text-white/80">{cue}</div>}
-          {end}
+          {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
+          {!shortcutList && end}
         </div>
-      </section>
+      </section>,
     );
   // Beside the text on wide screens, above it on narrow ones; the first thing loaded.
-  return (
+  return framed(
     <section
       {...sectionHooks(texts)}
-      className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2"
+      className={cn(
+        "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2",
+        shortcutList && "pb-20 sm:pb-28",
+      )}
     >
       <img
         src={image.src}
@@ -236,9 +320,9 @@ export function Hero({
         )}
       />
       {text}
-      {cue}
-      {end}
-    </section>
+      {!shortcutList && cue}
+      {!shortcutList && end}
+    </section>,
   );
 }
 

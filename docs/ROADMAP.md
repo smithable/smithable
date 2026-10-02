@@ -278,7 +278,7 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 
 - Open-source preparation: license decision with legal review, trademark registration, documentation, published spec and JSON Schema, contributor guide (DCO), security policy, public CI, release process.
 - Before the public beta: the look fixes (a cover hero with shortcuts, pictures on cards, a header menu and a footer, scale and rhythm, public pages in the site frame), the marketplace constructs ([design/marketplace.md](design/marketplace.md): several pictures, filters and sort, favourites, contact the owner, the catalogue as the start page) and the live example sites with demo sign-in ([design/showcase.md](design/showcase.md)).
-- Pricing and plans with included allowances.
+- Pricing and plans with included allowances, and the hosting provider (EU-owned or AWS), one stack.
 - The open-source repository goes public together with the hosted beta.
 
 **Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO, with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps.  
