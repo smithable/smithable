@@ -10,6 +10,7 @@ import type { Diagnostic } from "./diagnostics.js";
 import { type FieldIR, type ModelIR, PICTURES_MAX, type SpecIR } from "./ir.js";
 import { humanize } from "./naming.js";
 import { didYouMean } from "./suggest.js";
+import { convertValue } from "./values.js";
 
 /** A sample picture: a file under public/images/samples/ and its description. */
 export interface SamplePicture {
@@ -28,9 +29,6 @@ export function titleField(model: ModelIR): string {
   const strings = model.fields.filter((f) => f.type.kind === "scalar" && f.type.name === "string");
   return (strings.find((f) => /name|title/i.test(f.name)) ?? strings[0])?.name ?? "id";
 }
-
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}$/;
 
 /**
  * The project's sample files, checked against the spec: each file a model's, each record's
@@ -187,52 +185,24 @@ function sampleValue(
     );
     return undefined;
   }
-  if (field.type.kind === "choice") {
-    const labels = content?.models?.[model.name]?.fields?.[field.name]?.values ?? {};
-    const choice = field.type.values.find(
-      (v) => v === value || labels[v] === value || humanize(v) === value,
+  if (field.type.kind === "scalar" && field.type.name === "picture")
+    return (
+      samplePicture(node, model, row) ??
+      wrong("a picture: a file name under public/images/samples/, or { file, alt }")
     );
-    return choice ?? wrong(`one of ${field.type.values.join(", ")}`);
+  if (field.type.kind === "scalar" && field.type.name === "pictures") {
+    // Several pictures: a list of them, at most the field's maximum.
+    const items = isSeq(node) ? (node.items as ParsedNode[]) : undefined;
+    const pictures = items?.map((item) => samplePicture(item, model, row));
+    if (!pictures || pictures.some((p) => !p))
+      return wrong("a list of pictures: file names under public/images/samples/, or { file, alt }");
+    if (pictures.length > (field.max ?? PICTURES_MAX))
+      return wrong(`at most ${field.max ?? PICTURES_MAX} pictures`);
+    return pictures as SamplePicture[];
   }
-  switch (field.type.name) {
-    case "int":
-      return typeof value === "number" && Number.isInteger(value) ? value : wrong("a whole number");
-    case "decimal":
-      return typeof value === "number" ? value : wrong("a number");
-    case "money":
-      return typeof value === "number" ? Math.round(value * 100) : wrong("an amount, like 12.50");
-    case "bool":
-      return typeof value === "boolean" ? value : wrong("true or false");
-    case "date":
-      return typeof value === "string" && DATE.test(value)
-        ? value
-        : wrong("a date, like 2026-10-05");
-    case "datetime":
-      return typeof value === "string" && DATETIME.test(value)
-        ? value.replace(" ", "T")
-        : wrong("a date and time, like 2026-10-05 08:00");
-    case "picture":
-      return (
-        samplePicture(node, model, row) ??
-        wrong("a picture: a file name under public/images/samples/, or { file, alt }")
-      );
-    case "pictures": {
-      // Several pictures: a list of them, at most the field's maximum.
-      const items = isSeq(node) ? (node.items as ParsedNode[]) : undefined;
-      const pictures = items?.map((item) => samplePicture(item, model, row));
-      if (!pictures || pictures.some((p) => !p))
-        return wrong(
-          "a list of pictures: file names under public/images/samples/, or { file, alt }",
-        );
-      if (pictures.length > (field.max ?? PICTURES_MAX))
-        return wrong(`at most ${field.max ?? PICTURES_MAX} pictures`);
-      return pictures as SamplePicture[];
-    }
-    default:
-      return typeof value === "string" ? value : wrong("a text");
-  }
+  const converted = convertValue(model, field, value, content);
+  return "value" in converted ? converted.value : wrong(converted.expected);
 }
-
 /** A sample picture: a file under public/images/samples/, with a description (or the title). */
 function samplePicture(
   node: ParsedNode,
