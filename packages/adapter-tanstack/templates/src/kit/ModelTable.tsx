@@ -93,6 +93,7 @@ export function ModelTable<R extends Row>({
   const amount = others.find((f) => numeric(f.kind));
   const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
+  const description = ui.fields.find((f) => f.name === ui.descriptionField);
   const cell = (field: RecordFieldUi<R>, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
     // A picture as a thumbnail; its address is the record's, so it is as private as the record.
@@ -126,7 +127,7 @@ export function ModelTable<R extends Row>({
     );
   return (
     <div data-kit="model-table">
-      {/* Phones: one card per record: its name and status, a contact or other identifier, then a date and a key amount. */}
+      {/* Phones: one card per record: its name and status, a contact or other identifier, its description, then a date and a key amount. */}
       <ul
         className={
           view === "cards" ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3 md:hidden"
@@ -139,6 +140,14 @@ export function ModelTable<R extends Row>({
                 <div className="min-w-0 space-y-1">
                   {title && open(row, cell(title, row), "break-words text-base font-semibold")}
                   {secondary && <p className="break-words text-sm">{stacked(secondary, row)}</p>}
+                  {description && Boolean(displayValue(description, row)) && (
+                    <p
+                      data-part="description"
+                      className="line-clamp-2 break-words text-sm text-muted-foreground"
+                    >
+                      {formatValue(description, displayValue(description, row), app)}
+                    </p>
+                  )}
                 </div>
                 {status ? (
                   <div className="shrink-0">{cell(status, row)}</div>

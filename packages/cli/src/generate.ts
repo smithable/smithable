@@ -205,7 +205,7 @@ export async function runTools(
   }
   lap("drizzle-kit");
   // In this process it costs well under 0.1 s.
-  if (!(await routeTree(dir)) && !run(["exec", "tsr", "generate"])) return 1;
+  if (!(await routeTree(dir, io)) && !run(["exec", "tsr", "generate"])) return 1;
   lap("route generator");
   if (schema && migration?.apply) {
     const applied = applyMigrations(dir, io);
@@ -222,20 +222,29 @@ export async function runTools(
  * generate` runs; tsr.config.json is read the same way): about 0.05 s instead of 2 s for a
  * process in a sandbox. False if it can't be loaded here, so the caller runs tsr.
  */
-async function routeTree(dir: string): Promise<boolean> {
+async function routeTree(dir: string, io: Io): Promise<boolean> {
   const root = resolve(dir);
+  let generator: string;
   try {
     const cli = createRequire(join(root, "package.json")).resolve(
       "@tanstack/router-cli/package.json",
     );
-    const generator = createRequire(cli).resolve("@tanstack/router-generator");
+    generator = createRequire(cli).resolve("@tanstack/router-generator");
+  } catch {
+    return false;
+  }
+  try {
     const { Generator, getConfig } = (await import(pathToFileURL(generator).href)) as {
       Generator: new (options: { config: unknown; root: string }) => { run(): Promise<void> };
       getConfig(inline: object, root: string): unknown;
     };
     await new Generator({ config: getConfig({}, root), root }).run();
     return true;
-  } catch {
+  } catch (error) {
+    // The generator's own reason, before tsr tries the same and usually says less.
+    io.err(
+      `The route generator failed: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
     return false;
   }
 }

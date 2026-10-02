@@ -1463,7 +1463,28 @@ async function browserFlow(base) {
     console.log(
       "  ✓ browser: on a phone the menu is a drawer: Escape closes it and returns focus, a link in it navigates",
     );
+    // A slow answer while typing keeps the page, the box's focus and every letter typed.
     await open(page, `${base}/customers`);
+    const slow = async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await route.continue();
+    };
+    await page.route((url) => url.pathname.includes("_serverFn"), slow);
+    const box = page.getByRole("searchbox", { name: "Search by name or email" });
+    for (const letter of "nor") {
+      await box.press(letter);
+      await page.waitForTimeout(400);
+    }
+    await page.waitForURL(/q=nor/);
+    await page.waitForTimeout(800);
+    await page.unroute((url) => url.pathname.includes("_serverFn"), slow);
+    if (!(await box.evaluate((input) => input === document.activeElement)))
+      throw new Error("the search box lost focus while the results loaded");
+    if ((await box.inputValue()) !== "nor")
+      throw new Error(`the search box holds "${await box.inputValue()}" instead of "nor"`);
+    console.log(
+      "  ✓ browser: typing a search keeps the box's focus and text while a slow answer loads",
+    );
     await page.getByRole("searchbox", { name: "Search by name or email" }).fill("NORDIC");
     await page.waitForURL(/q=NORDIC/);
     await page
