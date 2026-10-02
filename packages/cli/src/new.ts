@@ -22,6 +22,7 @@ import {
 } from "./from-page.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
+import { addLibraryPictures } from "./pictures.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
 
 /**
@@ -138,6 +139,9 @@ export async function create(
     }
     const confirmed = await confirm(io, "\nCreate this app?", options.yes === true);
     if (confirmed !== true) return confirmed;
+    // Pictures from the Smithable image library, unless the page's own came with --with-pictures.
+    if (ir && pictures.length === 0 && process.env.SMITHABLE_NO_PICTURES !== "1")
+      pictures = await addLibraryPictures({ description, ir, files, io });
   }
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
@@ -156,9 +160,14 @@ export async function create(
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       writeFileSync(join(dir, file), text);
     }
-  // The page's pictures, as the project's sample pictures (never linked to the site).
+  // The page's pictures (as sample pictures, never linked to the site) or the library's.
   for (const picture of pictures) {
-    const path = join(dir, "public", "images", "samples", picture.file);
+    const path = join(
+      dir,
+      "public",
+      "images",
+      picture.file.includes("/") ? picture.file : `samples/${picture.file}`,
+    );
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, picture.bytes);
   }
