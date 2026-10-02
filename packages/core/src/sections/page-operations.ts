@@ -494,6 +494,88 @@ const setSortable = listKeyOperation(
     fields.length ? `Sort ${page} by ${fields.join(", ")}` : `Remove the sort choice from ${page}`,
 );
 
+const setFavourites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
+  name: "setFavourites",
+  summary:
+    "Let people save a page's records (a heart on each, and a Saved view), list only the viewer's saved ones (only), or remove favourites (off).",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      mode: {
+        type: "string",
+        enum: ["on", "only", "off"],
+        description:
+          "on: a heart and a Saved view (default); only: the viewer's saved records; off: none.",
+      },
+    },
+  },
+  positional: ["page", "mode"],
+  describe: ({ page, mode = "on" }) =>
+    mode === "off"
+      ? `Remove favourites from ${page}`
+      : mode === "only"
+        ? `Make ${page} list the viewer's saved records`
+        : `Let people save records on ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, mode = "on" }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    const path = ["pages", page, "favourites"];
+    if (mode === "off") {
+      if (spec.has(path)) spec.remove(path);
+      return [];
+    }
+    const value = mode === "only" ? "only" : true;
+    if (spec.has(path)) spec.set(path, value);
+    else spec.add(["pages", page], "favourites", value);
+    return [];
+  },
+};
+
+const setContact: Operation<{ page: string; to?: string; keep?: string }> = {
+  name: "setContact",
+  summary:
+    "Give a page's record page a contact block that mails the record's owner (or the user a field names), optionally keeping a copy in a model; no recipient removes it.",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      to: refTo(
+        { ref: "field", page: "page", label: "Mail to" },
+        { description: "owner, or a user field of the page's model, e.g. seller." },
+      ),
+      keep: refTo(
+        { ref: "model", label: "Keep a copy in" },
+        { description: "A model of its own for messages, with no links to other records." },
+      ),
+    },
+  },
+  positional: ["page", "to"],
+  describe: ({ page, to, keep }) =>
+    to
+      ? `Let people contact the ${to} of a record on ${page}${keep ? `, keeping each message in ${keep}` : ""}`
+      : `Remove the contact block from ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, to, keep }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    const path = ["pages", page, "contact"];
+    if (!to) {
+      if (spec.has(path)) spec.remove(path);
+      return [];
+    }
+    const value = keep ? { to, keep } : to;
+    if (spec.has(path)) spec.set(path, value);
+    else spec.add(["pages", page], "contact", value);
+    return [];
+  },
+};
+
 const removePage: Operation<{ page: string }> = {
   name: "removePage",
   summary: "Remove a page, from the menus too. Its records and their data stay.",
@@ -681,7 +763,14 @@ const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
 /** Operations on pages of every pattern. */
 export const pageOperations: AnyOperation[] = [removePage];
 /** Operations of the crud pattern. */
-export const crudOperations: AnyOperation[] = [addPage, setSearch, setFilters, setSortable];
+export const crudOperations: AnyOperation[] = [
+  addPage,
+  setSearch,
+  setFilters,
+  setSortable,
+  setFavourites,
+  setContact,
+];
 /** Operations of the landing pattern. */
 export const landingOperations: AnyOperation[] = [
   addLandingPage,
