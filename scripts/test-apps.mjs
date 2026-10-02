@@ -468,6 +468,75 @@ async function filtersFlow(base) {
 }
 
 /**
+ * Favourites (marketplace.md §2.3): the admin saves a customer with its heart; the Saved view
+ * lists only it, the record page shows it saved, another person's Saved view stays empty, and
+ * unsaving on the record page empties the admin's.
+ */
+async function favouritesFlow(base) {
+  const browser = await chromium.launch();
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
+  const heart = page.getByRole("button", { name: "Save Nordic Timber Oy" });
+  const rows = () => page.locator('[data-part="row"] [data-field="name"]').allInnerTexts();
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers`);
+    await heart.click();
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('[aria-label="Save Nordic Timber Oy"]')
+          ?.getAttribute("aria-pressed") === "true",
+    );
+    await page.getByRole("button", { name: "Saved", exact: true }).click();
+    await page.waitForURL(/view=saved/);
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-part="row"] [data-field="name"]').length === 1,
+    );
+    if ((await rows()).join().trim() !== "Nordic Timber Oy")
+      throw new Error(`the Saved view shows ${(await rows()).join()}`);
+    // Saved views are each person's own.
+    const other = await (
+      await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+    ).newPage();
+    await signInAs(other, base, "sales");
+    await open(other, `${base}/customers?view=saved`);
+    await other
+      .getByText("No saved customers yet: the heart on one saves it.")
+      .waitFor({ timeout: 10000 });
+    await page
+      .getByRole("button", { name: "Open Nordic Timber Oy" })
+      .or(page.getByRole("button", { name: "Nordic Timber Oy", exact: true }))
+      .first()
+      .click();
+    await page.waitForURL(/\/customers\/\d+$/);
+    if ((await heart.getAttribute("aria-pressed")) !== "true")
+      throw new Error("the record page does not show the customer saved");
+    await heart.click();
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('[aria-label="Save Nordic Timber Oy"]')
+          ?.getAttribute("aria-pressed") === "false",
+    );
+    await open(page, `${base}/customers?view=saved`);
+    await page
+      .getByText("No saved customers yet: the heart on one saves it.")
+      .waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: a heart saves a customer; the Saved view and the record page show it, another person's Saved view does not, and unsaving empties it",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("favourites flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
  * describes them and moves the second first; they are served in that order, the first as the
  * cover; removing one deletes its file and keeps the other.
@@ -1642,9 +1711,9 @@ async function browserFlow(base) {
     await page.getByRole("searchbox", { name: "Search by name or email" }).fill("NORDIC");
     await page.waitForURL(/q=NORDIC/);
     await page
-      .getByRole("cell", { name: "Baltic Freight AB" })
+      .getByRole("cell", { name: "Baltic Freight AB", exact: true })
       .waitFor({ state: "detached", timeout: 5000 });
-    await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
+    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
     console.log(
       "  ✓ browser: searching customers by name ignores case and keeps the search in the URL",
     );
@@ -1668,13 +1737,13 @@ async function browserFlow(base) {
     await page.waitForURL(`${base}/customers`);
     await expectText("create: the new customer is listed with its amount", "€1,500.00");
 
-    await page.getByRole("cell", { name: "Mariehamn Marine AB" }).click();
+    await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
     await page.getByRole("textbox", { name: "Credit limit" }).fill("2750.50");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.waitForURL(`${base}/customers`);
     await expectText("edit: the change is saved", "€2,750.50");
 
-    await page.getByRole("cell", { name: "Mariehamn Marine AB" }).click();
+    await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
     // The confirmation names the record and starts on Cancel, so Enter does not delete.
     await page.getByRole("button", { name: "Delete", exact: true }).click();
     const confirm = page.getByRole("dialog", { name: "Delete “Mariehamn Marine AB”?" });
@@ -1687,7 +1756,7 @@ async function browserFlow(base) {
       throw new Error("the delete confirmation does not start on Cancel");
     await confirm.getByRole("button", { name: "Delete customer" }).click();
     await page.waitForURL(`${base}/customers`);
-    await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
+    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
     if (await page.getByText("Mariehamn Marine AB").count())
       throw new Error("The customer was not deleted");
     console.log("  ✓ browser: delete asks first, naming the customer, then removes it");
@@ -1702,7 +1771,7 @@ async function browserFlow(base) {
     console.log("  ✓ browser: an order is created for a customer chosen from a list");
 
     await open(page, `${base}/customers`);
-    await page.getByRole("cell", { name: "Skerry Software" }).click();
+    await page.getByRole("cell", { name: "Skerry Software", exact: true }).click();
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
 
@@ -1717,7 +1786,7 @@ async function browserFlow(base) {
     await page.waitForURL(/q=skerry/);
     // The other customers' orders go; Skerry's stay.
     await page
-      .getByRole("cell", { name: "Nordic Timber Oy" })
+      .getByRole("cell", { name: "Nordic Timber Oy", exact: true })
       .first()
       .waitFor({ state: "detached", timeout: 5000 });
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
@@ -1736,15 +1805,15 @@ async function browserFlow(base) {
     await chooseRecord(page, "Duplicate *", "Skerry Software");
     await page.getByRole("button", { name: "Merge customers" }).click();
     await page.waitForURL(`${base}/customers`);
-    await page.getByRole("cell", { name: "Nordic Timber Oy" }).waitFor();
+    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
     // The list refreshes after the action; the duplicate must disappear from it.
     await page
-      .getByRole("cell", { name: "Skerry Software" })
+      .getByRole("cell", { name: "Skerry Software", exact: true })
       .waitFor({ state: "detached", timeout: 10000 })
       .catch(() => {
         throw new Error("the duplicate is still there");
       });
-    await page.getByRole("cell", { name: "Nordic Timber Oy" }).click();
+    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
     await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the custom action merges customers and moves their orders");
 
@@ -1754,7 +1823,7 @@ async function browserFlow(base) {
     await open(page, `${base}/customers`);
     if (await page.getByRole("link", { name: "Merge customers" }).count())
       throw new Error("sales can merge customers");
-    await page.getByRole("cell", { name: "Nordic Timber Oy" }).click();
+    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
     await page.getByRole("button", { name: "Save changes" }).waitFor();
     if (await page.getByRole("button", { name: "Delete" }).count())
       throw new Error("sales can delete customers");
@@ -1954,11 +2023,12 @@ for (const [index, example] of examples.entries()) {
     // A list's filters and sort (marketplace.md §2.2): the CRM's customers get them by operations.
     if (example === "crm")
       step(
-        "op setFilters and setSortable give the customers list filters and a sort, and the app type-checks",
+        "op setFilters, setSortable and setFavourites give the customers list filters, a sort and hearts, and the app type-checks",
         () => {
           for (const args of [
             ["setFilters", "customers", "segment", "creditLimit", "owner"],
             ["setSortable", "customers", "creditLimit", "name"],
+            ["setFavourites", "customers"],
           ]) {
             const result = smithable(dir, "op", ...args);
             if (result.code !== 0) throw new Error(result.out);
@@ -1980,6 +2050,7 @@ for (const [index, example] of examples.entries()) {
       if (example === "crm") {
         await browserFlow(base);
         await filtersFlow(base);
+        await favouritesFlow(base);
       }
       if (example === "booking") {
         await landingFlow(base);
@@ -2001,13 +2072,14 @@ for (const [index, example] of examples.entries()) {
     }
     // The CRM's later steps work on its customers page as the starter has it.
     if (example === "crm")
-      step("undo takes the list's filters and sort back off", () => {
-        for (let i = 0; i < 2; i++) {
+      step("undo takes the list's filters, sort and hearts back off", () => {
+        for (let i = 0; i < 3; i++) {
           const undone = smithable(dir, "undo");
           if (undone.code !== 0) throw new Error(undone.out);
         }
-        if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("filters:"))
-          throw new Error("the filters are still in the spec");
+        const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+        if (spec.includes("filters:") || spec.includes("favourites:"))
+          throw new Error("the filters or favourites are still in the spec");
       });
 
     step("regenerating changes nothing", () => {
