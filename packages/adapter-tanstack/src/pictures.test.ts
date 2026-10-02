@@ -147,3 +147,54 @@ pages:
   );
   expect(gen.some((f) => f.path === "src/kit/Filters.tsx")).toBe(true);
 });
+
+test("favourites: each person's marks in a table of their own, a heart and a Saved view, only one's saved records", () => {
+  const spec = (favourites: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Market }
+models:
+  Item:
+    fields: { title: string! }
+pages:
+  items: { crud: Item, favourites: ${favourites} }
+`,
+    }).ir as SpecIR;
+  const gen = generateApp(spec("true"), {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+  });
+  const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
+  expect(at("src/db/schema.ts")).toContain(
+    'export const itemsFavourites = sqliteTable(\n  "items_favourites"',
+  );
+  expect(at("src/db/schema.ts")).toContain("(t) => [unique().on(t.userId, t.recordId)]");
+  // Marking checks that the viewer may read the record.
+  expect(at("src/generated/item.server.ts")).toContain(
+    "if (!viewer || !itemData.canRead(viewer, id)) throw new AccessDenied(viewer !== null);",
+  );
+  expect(at("src/generated/item.ts")).toContain("export const toggleSavedItem = createServerFn");
+  const list = at("src/routes/items/index.tsx");
+  expect(list).toContain('data.view === "saved" ? inArray(items.id, saved) : undefined');
+  expect(list).toContain("saved={{ ids: saved, onToggle: toggleSaved }}");
+  expect(list).toContain("<SavedTabs");
+  expect(at("src/routes/items/$id.tsx")).toContain("<SaveButton saved={saved}");
+  const only = generateApp(spec("only"), {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+  });
+  const onlyList = only.find((f) => f.path === "src/routes/items/index.tsx")?.content ?? "";
+  expect(onlyList).toContain("inArray(items.id, saved),");
+  expect(onlyList).not.toContain("<SavedTabs");
+  // Without sign-in there is no one to save for: no table, no hearts.
+  const open = generateApp(spec("true"), {
+    smithableVersion: "0.0.0",
+    auth: { ...auth, signIn: "none" },
+    content: emptyContent(),
+  });
+  expect(open.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("Favourites");
+  expect(open.find((f) => f.path === "src/routes/items/index.tsx")?.content).not.toContain("saved");
+});

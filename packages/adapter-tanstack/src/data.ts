@@ -21,6 +21,7 @@ import {
   dataKey,
   type GenContext,
   HEADER,
+  hasFavourites,
   type importList,
   lists,
   literal,
@@ -206,7 +207,12 @@ export const ${n.get} = createServerFn()
     const row = await ${n.data}.get(viewer, id);
     if (!row) return null;
     return {
-      row,
+      row,${
+        hasFavourites(model, ir, auth)
+          ? `
+      saved: ${n.data}.saved(viewer).includes(id),`
+          : ""
+      }
       canWrite: allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
       canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
     };
@@ -223,7 +229,21 @@ export const ${n.update} = createServerFn({ method: "POST" })
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${n.data}.remove(await writer(), id));
-${reservation}`;
+${
+  hasFavourites(model, ir, auth)
+    ? `
+/** Saves the record for the viewer, or unsaves it (their own mark); whether it is saved now. */
+export const ${savedToggle(model)} = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => ${n.data}.toggleSaved(await writer(), id));
+`
+    : ""
+}${reservation}`;
+}
+
+/** The server function behind a model's hearts (marketplace.md §2.3). */
+export function savedToggle(model: ModelIR): string {
+  return `toggleSaved${model.name}`;
 }
 
 /** The model a reference of `model` points to. */
@@ -413,6 +433,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner}) }`
       : `{ ...values, ownerId: viewer?.id ?? null }`;
   const self = n.data;
+  const favourites = hasFavourites(model, ir, auth) ? `${n.table}Favourites` : undefined;
   const referenceChecks = refs.map(
     (ref) =>
       `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
@@ -440,7 +461,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ].join("");
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
-import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table)])].sort().join(", ")} } from "#/db/schema";
+import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favourites ? [favourites] : [])])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied, check, ${capacity || holds.length ? "Conflict, " : ""}type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
@@ -488,7 +509,31 @@ ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    
       .get();
     return found !== undefined;
   },
+${
+  favourites
+    ? `
+  /** The ${n.pluralLabel.toLowerCase()} the viewer saved, by id: their own marks, never anyone else's. */
+  saved(viewer: Viewer | null): number[] {
+    if (!viewer) return [];
+    return db
+      .select({ id: ${favourites}.recordId })
+      .from(${favourites})
+      .where(eq(${favourites}.userId, viewer.id))
+      .all()
+      .map((r) => r.id);
+  },
 
+  /** Saves a ${n.label.toLowerCase()} the viewer may read, or unsaves it; whether it is saved now. */
+  toggleSaved(viewer: Viewer | null, id: number): boolean {
+    if (!viewer || !${self}.canRead(viewer, id)) throw new AccessDenied(viewer !== null);
+    const mark = and(eq(${favourites}.userId, viewer.id), eq(${favourites}.recordId, id));
+    if (db.delete(${favourites}).where(mark).run().changes) return false;
+    db.insert(${favourites}).values({ userId: viewer.id, recordId: id }).onConflictDoNothing().run();
+    return true;
+  },
+`
+    : ""
+}
   /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
   async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}${ordered ? ", order?: SQL" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
