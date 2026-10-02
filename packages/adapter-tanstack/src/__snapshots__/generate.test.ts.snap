@@ -19091,10 +19091,26 @@ function HomePage() {
           }))}
         />
       <RecordCards
+          texts="pages.home.open"
+          id="open"
+          title="Incidents"
+          cards={data.incidents.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).slice(0, 6).map((row) => ({
+            key: row.id,
+            title: String(row.title),
+            href: \`/history/\${encodeURIComponent(String(row.id))}\`,
+            badge: ({
+  investigating: "Investigating",
+  identified: "Identified",
+  monitoring: "Monitoring",
+  resolved: "Resolved",
+} as Record<string, string>)[row.status],
+          }))}
+        />
+      <RecordCards
           texts="pages.home.recent"
           id="recent"
           title="Incidents"
-          cards={data.incidents.slice(0, 5).map((row) => ({
+          cards={data.incidents.filter((row) => row.status === "resolved").slice(0, 5).map((row) => ({
             key: row.id,
             title: String(row.title),
             href: \`/history/\${encodeURIComponent(String(row.id))}\`,
@@ -20031,7 +20047,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
-  "src/kit/access.ts": "abceb487 kit",
+  "src/kit/access.ts": "ac916cfe kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -20060,7 +20076,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/actions/resolve.tsx": "c15d93c2 generated",
   "src/routes/incidents/index.tsx": "3fa44671 generated",
   "src/routes/incidents/new.tsx": "8f10b8a0 generated",
-  "src/routes/index.tsx": "9b15fa5a generated",
+  "src/routes/index.tsx": "8b95548c generated",
   "src/routes/maintenance/$id.tsx": "4fe3347c generated",
   "src/routes/maintenance/index.tsx": "dc95808c generated",
   "src/routes/maintenance/new.tsx": "67635ee5 generated",
