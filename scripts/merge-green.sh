@@ -18,6 +18,7 @@ case "$state" in
   "OPEN false "*) ;;
   *) echo "Not merging #$pr: state, draft, mergeable = $state"; exit 1 ;;
 esac
+head_sha() { gh pr view "$pr" "${repo[@]}" --json headRefOid -q .headRefOid; }
 merged() { [ "$(gh pr view "$pr" "${repo[@]}" --json state -q .state)" = MERGED ]; }
 refuse() {
   gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 || true
@@ -35,10 +36,16 @@ for attempt in 1 2 3 4 5 6 7 8; do
   [ "$merge_state" = DIRTY ] && refuse "it has conflicts: rebase it."
   if [ "$merge_state" = BEHIND ]; then
     echo "#$pr is behind main: updating it."
+    before=$(head_sha)
     gh pr update-branch "$pr" "${repo[@]}"
-    sleep 15
+    # Until GitHub has the new head, the checks it shows are the old head's, green and finished.
+    for _ in $(seq 24); do
+      [ "$(head_sha)" != "$before" ] && break
+      sleep 5
+    done
   fi
-  # The checks of a just-updated head take a moment to appear; none at all is not green.
+  # The workflow registers a new head's checks a minute or two after the push; none after five
+  # minutes is not green.
   for _ in $(seq 30); do
     gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . && break
     sleep 10
@@ -56,6 +63,6 @@ for attempt in 1 2 3 4 5 6 7 8; do
     merged && { echo "Merged #$pr."; exit 0; }
     sleep 5
   done
-  echo "#$pr is green but not merged (another merge came first?): going round again."
+  echo "#$pr is green but not merged (behind main again?): going round again."
 done
 refuse "still not merged after eight rounds."
