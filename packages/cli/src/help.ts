@@ -59,6 +59,15 @@ export const COMMANDS: Command[] = [
     options: ["plugin"],
   },
   {
+    name: "theme",
+    usage: "theme --from <url>",
+    text: [
+      "A theme from a site: its colours, corners and font, read in a browser (needs Playwright),",
+      "made readable and added as themes/<name>.yml; --name names it, --use makes it the app's",
+    ],
+    options: ["from", "name", "use"],
+  },
+  {
     name: "themes",
     usage: "themes [dir]",
     text: [
