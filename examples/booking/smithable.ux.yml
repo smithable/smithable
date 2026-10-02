@@ -5,6 +5,9 @@ theme:
   preset: playful
 
 pages:
+  home:
+    sections:
+      hero: { layout: cover }          # the picture across the width, the text on the theme's colour
   sessions:
     table:
       columns: [startsAt, classType, instructor, capacity]
