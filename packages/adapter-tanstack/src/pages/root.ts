@@ -72,6 +72,18 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
     .map((p) => p.route);
   // Public articles have the site's frame too, their list and every article under it.
   const sites = ir.pages.filter((p) => publicArticles(p, { auth })).map((p) => p.route);
+  // Other public pages (a schedule) have the site's frame for visitors, the app's for those
+  // signed in; only in an app with sign-in and a site (its landing page or blog).
+  const visitorPages =
+    signIn && (ir.pages.some((p) => p.pattern.kind === "landing") || sites.length)
+      ? ir.pages
+          .filter(
+            (p) =>
+              auth.public.pages.includes(p.id) &&
+              !["landing", "onboarding", "articles"].includes(p.pattern.kind),
+          )
+          .map((p) => p.route)
+      : [];
   const framedBySite = sites.length
     ? `landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`))`
     : "landingRoutes.includes(pathname)";
@@ -84,14 +96,14 @@ import { createServerFn } from "@tanstack/react-start";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { pageHeaders } from "#/kit/security";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
 const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
-${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}
+${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}${visitorPages.length ? `/** Public pages that visitors see in the site's frame (signed in, the app's). */\nconst visitorRoutes = ${literal(visitorPages)};\n` : ""}
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = ${literal(pageRoutes)};
 
@@ -159,7 +171,15 @@ ${
           landings.length || sites.length
             ? `{${framedBySite} ? (
           children
-        ) : (
+        ) : ${
+          visitorPages.length
+            ? `!viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+            <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
+          </LandingLayout>
+        ) : `
+            : ""
+        }(
           <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
             {children}
           </AppShell>
