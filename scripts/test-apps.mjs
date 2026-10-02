@@ -605,6 +605,11 @@ async function landingFlow(base) {
     await shortcuts.getByRole("link", { name: "Schedule" }).click();
     await page.waitForURL(`${base}/schedule`);
     console.log("  ✓ browser: the hero's shortcuts lead to their pages");
+    // Classes have no picture field: each card shows the placeholder with the model's icon.
+    await open(page, base);
+    const placeholders = page.locator('[data-section="classes"] [data-part="placeholder"]');
+    await placeholders.first().waitFor({ timeout: 5000 });
+    console.log("  ✓ browser: a card without a picture shows the placeholder");
     await open(page, base);
     await page.getByRole("button", { name: /^Open A rolled-up yoga mat/ }).click();
     const lightbox = page.getByRole("dialog");
