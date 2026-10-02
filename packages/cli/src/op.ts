@@ -13,6 +13,7 @@ import {
   type SpecIR,
   storageOf,
   validateSpec,
+  YamlEditor,
 } from "@smithable/core";
 import { countValues, pruneSnapshots, restoreDatabase, snapshotDatabase } from "./database.js";
 import { generate } from "./generate.js";
@@ -147,6 +148,7 @@ export async function runOperation(
       mkdirSync(dirname(join(dir, file.path)), { recursive: true });
       writeFileSync(join(dir, file.path), file.text);
     }
+    followInSamples(dir, result.effects);
     mkdirSync(join(dir, ".smithable"), { recursive: true });
     appendFileSync(
       join(dir, OPLOG),
@@ -211,6 +213,27 @@ export function actionNote(action: string): string {
   import { sendMail } from "#/kit/mail";
   await sendMail({ to: "orders@example.com", subject: "New order", text: JSON.stringify(input) });
 `;
+}
+
+/**
+ * A renamed or removed field follows into the project's sample records (samples/<Model>.yml),
+ * as it does into the companions: the key is renamed or dropped in every record, comments kept.
+ */
+function followInSamples(dir: string, effects: Effect[]): void {
+  for (const effect of effects) {
+    if (effect.kind !== "rename-field" && effect.kind !== "remove-field") continue;
+    const file = join(dir, "samples", `${effect.model}.yml`);
+    if (!existsSync(file)) continue;
+    const editor = new YamlEditor(readFileSync(file, "utf8"));
+    const rows = editor.get([]);
+    const key = effect.kind === "rename-field" ? effect.from : effect.field;
+    for (let i = 0; Array.isArray(rows) && i < rows.length; i++) {
+      if (!editor.has([String(i), key])) continue;
+      if (effect.kind === "rename-field") editor.renameKey([String(i), key], effect.to);
+      else editor.remove([String(i), key]);
+    }
+    writeFileSync(file, editor.text);
+  }
 }
 
 /** "Add field phone (phone) to Customer" → "add_field_phone_phone_to_customer". */

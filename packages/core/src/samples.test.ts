@@ -67,6 +67,15 @@ test("a model's records: references by title, choices by label, money in cents, 
   ]);
 });
 
+test("a sample naming a field or model that is gone warns and is left out, never blocks", () => {
+  const stale = check({
+    "samples/Teacher.yml": "- { name: A }\n",
+    "samples/Instructor.yml": "- { name: Emma, age: 3 }\n",
+  });
+  expect(stale.diagnostics.map((d) => d.severity)).toEqual(["warning", "warning"]);
+  expect(stale.samples.Instructor).toEqual([{ name: "Emma" }]);
+});
+
 test("mistakes are reported where they are: model, field, kind, required, reference", () => {
   const messages = (files: Record<string, string>) =>
     check(files).diagnostics.map((d) => d.message);
