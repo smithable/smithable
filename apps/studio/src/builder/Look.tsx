@@ -88,7 +88,20 @@ export function Look({
         <AddTheme run={run} />
       </Group>
       <Group title="Color">
-        <BrandColor primary={theme.primary} run={run} />
+        <ThemeColor
+          which="primary"
+          label="Brand color"
+          value={theme.primary}
+          fallback="#2563eb"
+          run={run}
+        />
+        <ThemeColor
+          which="background"
+          label="Background"
+          value={theme.background}
+          fallback="#f8fafc"
+          run={run}
+        />
       </Group>
       <Group title="Font and density">
         <Segmented
@@ -235,35 +248,51 @@ function Segmented({
   );
 }
 
-/** The brand color: picked, applied when the picker closes; or back to the theme's own. */
-function BrandColor({ primary, run }: { primary?: string; run: Run }) {
+/**
+ * A theme color of the owner's (the brand color, or the background): picked, applied when the
+ * picker closes; or back to the theme's own.
+ */
+function ThemeColor({
+  which,
+  label,
+  value,
+  fallback,
+  run,
+}: {
+  which: "primary" | "background";
+  label: string;
+  value?: string;
+  fallback: string;
+  run: Run;
+}) {
   const [picked, setPicked] = useState<string>();
-  const shown = picked ?? primary ?? "#2563eb";
+  const shown = picked ?? value ?? fallback;
   const apply = () => {
-    if (picked && picked !== primary) void run("setTheme", { primary: picked });
+    if (picked && picked !== value) void run("setTheme", { [which]: picked });
     setPicked(undefined);
   };
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
       <input
         type="color"
-        aria-label="Brand color"
+        aria-label={label}
         value={shown}
         onChange={(e) => setPicked(e.target.value)}
         onBlur={apply}
         className="h-9 w-14 cursor-pointer rounded border border-neutral-200 p-1"
       />
-      <span className="font-mono text-xs">{primary ?? "the theme's own"}</span>
-      {picked && picked !== primary && (
+      <span className="text-xs text-neutral-600">{label}</span>
+      <span className="font-mono text-xs">{value ?? "the theme's own"}</span>
+      {picked && picked !== value && (
         <button type="button" className="text-xs font-medium text-accent" onClick={apply}>
           Use this color
         </button>
       )}
-      {primary && (
+      {value && (
         <button
           type="button"
           className="text-xs text-neutral-600 hover:text-accent"
-          onClick={() => run("setTheme", { primary: "none" })}
+          onClick={() => run("setTheme", { [which]: "none" })}
         >
           Use the theme's own
         </button>

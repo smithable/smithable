@@ -19,13 +19,14 @@ function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void
 const setTheme: Operation<{
   preset?: string;
   primary?: string;
+  background?: string;
   font?: string;
   density?: string;
   page?: string;
 }> = {
   name: "setTheme",
   summary:
-    'Choose the theme preset, brand color, font or density ("none" removes the brand color or font).',
+    'Choose the theme preset, brand color, background color, font or density ("none" removes a color or the font).',
   schema: {
     type: "object",
     additionalProperties: false,
@@ -35,6 +36,11 @@ const setTheme: Operation<{
         description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
       },
       primary: { type: "string", description: 'A color like "#2563eb", or "none".' },
+      background: {
+        type: "string",
+        description:
+          'A background color like "#f5efe6" (a wash in light and dark mode), or "none".',
+      },
       font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
       density: { type: "string", enum: ["comfortable", "compact"] },
       page: refTo(
@@ -52,7 +58,7 @@ const setTheme: Operation<{
   apply(editors, { page, ...args }, ir) {
     const ux = editors.ux;
     if (Object.keys(args).length === 0)
-      throw new OperationError("Say what to set: preset, primary, font or density.");
+      throw new OperationError("Say what to set: preset, primary, background, font or density.");
     // A landing page's own theme lives under the page, with the same keys as the app's.
     if (page !== undefined && ir.pages.find((p) => p.id === page)?.pattern.kind !== "landing")
       throw new OperationError(
@@ -64,7 +70,7 @@ const setTheme: Operation<{
       put(ux, [...at, "preset"], page && args.preset === "none" ? undefined : args.preset);
     if (args.density !== undefined)
       put(ux, [...at, "density"], page && args.density === "none" ? undefined : args.density);
-    for (const key of ["primary", "font"] as const) {
+    for (const key of ["primary", "background", "font"] as const) {
       const value = args[key];
       if (value !== undefined) put(ux, [...at, "brand", key], value === "none" ? undefined : value);
     }
