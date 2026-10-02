@@ -22,6 +22,7 @@ import { loadPlugins } from "./plugins.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
+import { themeFrom } from "./theme-from.js";
 import { themes } from "./themes.js";
 import { undo } from "./undo.js";
 import { upgrade } from "./upgrade.js";
@@ -104,6 +105,16 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
   if (command === "themes") return themes(args[0] ?? values.dir ?? ".", io);
+  if (command === "theme") {
+    if (!values.from) {
+      io.err("theme needs a site to read, like: smithable theme --from https://example.com\n");
+      return 2;
+    }
+    return themeFrom(values.dir ?? ".", io, values.from, {
+      ...(values.name ? { name: values.name } : {}),
+      use: values.use === true,
+    });
+  }
   if (command === "context")
     return context(values.dir ?? ".", io, args.join(" ") || undefined, {
       implementation: values.implementation === true,
@@ -236,6 +247,8 @@ const CONFIG = {
     version: { type: "boolean", short: "v" },
     force: { type: "boolean" },
     "no-sample-data": { type: "boolean" },
+    name: { type: "string" },
+    use: { type: "boolean" },
     "with-pictures": { type: "boolean" },
     open: { type: "boolean" },
     starter: { type: "string" },

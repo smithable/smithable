@@ -72,7 +72,12 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
             selfSignUp
               ? ""
               : `
-          if (!open && !ADMINS.includes(email) && !(import.meta.env.DEV && email.startsWith("dev-"))) {
+          if (
+            !open &&
+            !ADMINS.includes(email) &&
+            !(import.meta.env.DEV && email.startsWith("dev-")) &&
+            !(demoSignIn && email.startsWith("demo-"))
+          ) {
             throw new APIError("FORBIDDEN", {
               message: invited
                 ? "Your invitation has expired. Ask an administrator for a new one."
@@ -110,6 +115,13 @@ ${providers.map(provider).join("\n")}
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+/**
+ * A demo (DEMO_SIGN_IN=1 in the environment): the sign-in page offers every role without a
+ * provider, as development does, and the data is reset by whoever runs the demo. Never set it
+ * on a real app.
+ */
+export const demoSignIn = process.env.DEMO_SIGN_IN === "1";
+
 const NO_TOKENS = {
   accessToken: null,
   refreshToken: null,
@@ -129,7 +141,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
   // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV },
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: ${JSON.stringify(auth.defaultRole)}, input: false },
@@ -222,6 +234,7 @@ const signInOptions = createServerFn()
     return {
       providers,
       missing: PROVIDERS.filter((p) => !providers.includes(p)),
+      demo: demoSignIn,
       invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null,
     };
   });
@@ -229,7 +242,7 @@ const signInOptions = createServerFn()
     : `
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)) };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn };
 });
 `;
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
@@ -241,20 +254,21 @@ import { db } from "#/db";
 import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
-import { auth, configuredProviders, PROVIDERS } from "#/lib/auth";
+import { auth, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
 ${invitations ? `const ROLE_LABELS: Record<string, string> = ${record(roleLabels(auth))};\n` : ""}${options}
-/** Development only: signs in as a user with the role, without a provider. */
+/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV) throw new Error("Only available in development.");
-    const email = \`dev-\${role}@${devDomain(auth)}\`;
-    const password = "dev-password";
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
+    const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
+    const password = \`\${prefix}-password\`;
     if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`Dev \${role}\` } });
+      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -281,7 +295,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing${invitations ? ", invitation" : ""} } = Route.useLoaderData();
+  const { providers, missing, demo${invitations ? ", invitation" : ""} } = Route.useLoaderData();
   const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
   const router = useRouter();
   return (
@@ -289,7 +303,8 @@ function SignInPage() {
       appName={app.name}
       providers={providers}
       missing={missing}${invitations ? "\n      invitation={invitation}" : ""}
-      devRoles={import.meta.env.DEV ? [...ROLES] : undefined}
+      devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}
+      demo={demo}
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
         if (error) throw new Error(error.message);

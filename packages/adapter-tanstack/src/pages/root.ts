@@ -125,6 +125,7 @@ function pageOf(path: string): string | undefined {
 const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
+  demo: process.env.DEMO_SIGN_IN === "1",
 }));
 
 export const Route = createRootRoute({
@@ -152,7 +153,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf } = Route.useRouteContext();
+  const { viewer, asOf, demo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 ${
   signIn
@@ -172,6 +173,11 @@ ${
         {asOf && (
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
+        {demo && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
         ${
