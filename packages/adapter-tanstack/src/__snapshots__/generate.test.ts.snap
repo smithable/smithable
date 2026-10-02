@@ -5880,7 +5880,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "a8e4bc32 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/uploads.ts": "3f2db2ae kit",
+  "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
   "src/lib/auth.ts": "64bcb759 generated",

@@ -128,6 +128,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.describe ? { describe: values.describe } : {}),
         ...(values.answers ? { answers: values.answers } : {}),
         yes: values.yes === true,
+        sampleData: values["no-sample-data"] !== true,
       });
     case "clarify":
       if (!args.length) {
@@ -232,6 +233,7 @@ const CONFIG = {
     help: { type: "boolean", short: "h" },
     version: { type: "boolean", short: "v" },
     force: { type: "boolean" },
+    "no-sample-data": { type: "boolean" },
     open: { type: "boolean" },
     starter: { type: "string" },
     describe: { type: "string" },

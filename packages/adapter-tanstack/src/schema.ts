@@ -168,7 +168,9 @@ function seedRows(model: ModelIR, options: Pick<GenerateOptions, "samples">) {
         const field = model.fields.find((f) => f.name === name);
         return [
           name,
-          field?.type.kind === "scalar" && field.type.name === "datetime" && typeof value === "string"
+          field?.type.kind === "scalar" &&
+          field.type.name === "datetime" &&
+          typeof value === "string"
             ? `${value}:00Z`
             : value,
         ];
@@ -177,10 +179,7 @@ function seedRows(model: ModelIR, options: Pick<GenerateOptions, "samples">) {
   );
 }
 
-export function seedModule(
-  ir: SpecIR,
-  options: Pick<GenerateOptions, "samples"> = {},
-): string {
+export function seedModule(ir: SpecIR, options: Pick<GenerateOptions, "samples"> = {}): string {
   // A record that must refer to a user cannot be invented, nor can records that need it; nor
   // a person's place (a model with a capacity): every place stays free.
   const skipped = new Set<string>(ir.models.filter((m) => m.capacity).map((m) => m.name));
