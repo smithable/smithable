@@ -29,7 +29,7 @@ export const PAGE_GENERATORS: {
       if (!model) return {};
       const custom = options.customPages?.includes(page.id) ?? false;
       return {
-        "index.tsx": listRoute(page, model, t, ir, custom, ux),
+        "index.tsx": listRoute(page, model, t, ir, custom, ux, undefined, auth),
         "new.tsx": newRoute(page, model, t, ir, ux),
         "$id.tsx": detailRoute(page, model, t, ir, ux, undefined, auth),
       };
