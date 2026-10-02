@@ -7,11 +7,13 @@
 import {
   type AuthIR,
   type FieldIR,
+  filterable,
   identifier,
   kebab,
   type ModelIR,
   type PageIR,
   type SpecIR,
+  sortableBy,
   USER_MODEL,
 } from "@smithable/core";
 import { KINDS } from "./summary.js";
@@ -626,6 +628,49 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "let people filter items by category and price", "items can be filtered by category on the catalogue page"
+    name: "filters",
+    match(text, scope) {
+      const m =
+        /^(?:allow (?:users |people |visitors )?to |let (?:users |people |visitors )?)?filter(?:ing)? (?:the )?(?<target>.+?) by (?<fields>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        ) ??
+        /^(?:the )?(?<target>.+?) (?:should be|must be|can be|are|is) filter(?:able|ed) by (?<fields>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        ) ??
+        /^add (?:a )?filters? (?:by|on|for) (?<fields>.+?) (?:to|on) (?:the )?(?<page>.+?)(?: page)?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      return listKeyChange(
+        scope,
+        "filters",
+        m.groups.page ?? m.groups.target ?? "",
+        m.groups.fields ?? "",
+      );
+    },
+  },
+  {
+    // "let visitors sort items by price", "orders should be sortable by total and date"
+    name: "sortable",
+    match(text, scope) {
+      const m =
+        /^(?:allow (?:users |people |visitors )?to |let (?:users |people |visitors )?)?sort(?:ing)? (?:the )?(?<target>.+?) by (?<fields>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        ) ??
+        /^(?:the )?(?<target>.+?) (?:should be|must be|can be|are|is) sort(?:able|ed) by (?<fields>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      return listKeyChange(
+        scope,
+        "sortable",
+        m.groups.page ?? m.groups.target ?? "",
+        m.groups.fields ?? "",
+      );
+    },
+  },
+  {
     // "add a page for orders, and show it in the menu"
     name: "add page",
     match(text, scope) {
@@ -770,6 +815,40 @@ function subjectField(
     if (model && field) return { model, field };
   }
   return fieldAnywhere(scope.ir, s);
+}
+
+/**
+ * A list's filters or sort choice from a sentence: the page (a crud page, by its name or its
+ * model's), then the fields; a field already listed adds nothing ("already done").
+ */
+function listKeyChange(
+  scope: Scope,
+  key: "filters" | "sortable",
+  pageText: string,
+  fieldsText: string,
+): PhraseOperation[] | null {
+  const page = pageFor(scope.ir, pageText);
+  if (!page || page.pattern.kind !== "crud") return null;
+  const model = scope.ir.models.find(
+    (x) => page.pattern.kind === "crud" && x.name === page.pattern.model,
+  );
+  if (!model) return null;
+  const fits = key === "filters" ? filterable : sortableBy;
+  const fields: string[] = [];
+  for (const phrase of list(fieldsText)) {
+    const field = fieldFor(model, phrase);
+    if (!field || !fits(field)) return null;
+    fields.push(field.name);
+  }
+  const current = page[key] ?? [];
+  const added = fields.filter((f) => !current.includes(f));
+  if (added.length === 0) return null;
+  return [
+    {
+      op: key === "filters" ? "setFilters" : "setSortable",
+      args: { page: page.id, fields: [...current, ...added] },
+    },
+  ];
 }
 
 const searchable = (field: FieldIR) =>

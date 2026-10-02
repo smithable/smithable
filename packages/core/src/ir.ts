@@ -78,6 +78,7 @@ export const SCALAR_TYPES = [
   "phone",
   "url",
   "picture",
+  "pictures",
 ] as const;
 
 export type ScalarType = (typeof SCALAR_TYPES)[number];
@@ -183,6 +184,10 @@ export interface PageIR extends SemanticText {
   access?: string[];
   /** Fields of the model a list can be searched by. */
   search?: string[];
+  /** Fields of the model the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle. */
+  filters?: string[];
+  /** Fields of the model the list can be sorted by, either way, from a "Sort by" control. */
+  sortable?: string[];
 }
 
 /**
@@ -231,6 +236,10 @@ export interface LandingSection {
   shortcuts?: string[];
   /** A records section shows this model's records as cards. */
   model?: string;
+  /** A records section with a search box, leading to the model's list page with the text. */
+  search?: boolean;
+  /** A records section's filters, leading to the model's list page with them set. */
+  filters?: string[];
   /** A contact section's form: visitors add a record of this model (e.g. Message). */
   form?: string;
   limit?: number;
@@ -305,3 +314,13 @@ export function conditionFits(model: ModelIR, field: string, wanted: string | bo
 /** A field that stores a picture (a file with its description and size). */
 export const isPicture = (f: FieldIR): boolean =>
   f.type.kind === "scalar" && f.type.name === "picture";
+
+/** A field that stores several pictures (up to PICTURES_MAX; the first is the cover). */
+export const isPictures = (f: FieldIR): boolean =>
+  f.type.kind === "scalar" && f.type.name === "pictures";
+
+/** A field that stores one picture or several. */
+export const storesPictures = (f: FieldIR): boolean => isPicture(f) || isPictures(f);
+
+/** How many pictures a `pictures` field holds at most. */
+export const PICTURES_MAX = 10;

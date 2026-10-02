@@ -8,6 +8,7 @@ import {
   checkKeys,
   mapEntries,
   type ParseContext,
+  readBoolean,
   readNameList,
   readNumber,
   readString,
@@ -31,6 +32,7 @@ import {
 import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
+import { checkFilterFields } from "./sections/list-keys.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
 import { COMPONENT_PATTERN } from "./sections/names.js";
 import {
@@ -162,10 +164,11 @@ const crud: PagePattern<"crud"> = {
   inMenu: true,
   operations: crudOperations,
   follow(spec, page, effect) {
-    // The page's search follows a renamed field, or loses a removed one.
+    // The page's search, filters and sort follow a renamed field, or lose a removed one.
     const f = fieldEffect(effect);
     if (f && page.pattern.model === f.model)
-      followInList(spec, ["pages", page.id, "search"], f.from, f.to, 3);
+      for (const key of ["search", "filters", "sortable"])
+        followInList(spec, ["pages", page.id, key], f.from, f.to, 3);
     return undefined;
   },
 };
@@ -204,6 +207,16 @@ const landing: PagePattern<"landing"> = {
       additionalProperties: false,
       properties: {
         records: { type: "string", description: "A model whose records the section shows." },
+        search: {
+          type: "boolean",
+          description: "A records section with a search box, leading to the model's list page.",
+        },
+        filters: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "A records section's filters (fields of the model), leading to its list page.",
+        },
         button: { type: "string", description: "The page the section's button opens." },
         shortcuts: {
           type: "array",
@@ -540,7 +553,8 @@ function readCalculator(
     const unfit =
       field.type.kind === "relation"
         ? "cannot refer to records"
-        : field.type.kind === "scalar" && field.type.name === "picture"
+        : field.type.kind === "scalar" &&
+            (field.type.name === "picture" || field.type.name === "pictures")
           ? "cannot be a picture"
           : field.unique
             ? "cannot be unique"
@@ -776,8 +790,19 @@ function readLanding(
       continue;
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
+    const sectionFilters: { filters?: { name: string; at: At }[]; at?: At; searchAt?: At } = {};
     const options = checkKeys(ctx, entries, sectionWhere, {
-      allowed: ["records", "button", "shortcuts", "limit", "form", "calculator", "custom"],
+      allowed: [
+        "records",
+        "search",
+        "filters",
+        "button",
+        "shortcuts",
+        "limit",
+        "form",
+        "calculator",
+        "custom",
+      ],
       content: ["title", "subtitle", "text", "items"],
     });
     const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
@@ -803,6 +828,13 @@ function readLanding(
           ctx.reference("model", model, option);
           section.model = model;
         }
+      } else if (key === "search") {
+        const on = readBoolean(ctx, option, `"search" in ${sectionWhere}`);
+        if (on) section.search = true;
+        sectionFilters.searchAt = optionKey;
+      } else if (key === "filters") {
+        sectionFilters.filters = readNameList(ctx, option, `"filters" in ${sectionWhere}`);
+        sectionFilters.at = optionKey;
       } else if (key === "form") {
         const model = readString(ctx, option, `"form" in ${sectionWhere}`);
         if (!allows.form) {
@@ -852,6 +884,25 @@ function readLanding(
         if (limit !== undefined && (!Number.isInteger(limit) || limit < 1))
           ctx.error(option, "invalid-value", `"limit" must be a whole number above 0.`);
         else if (limit !== undefined) section.limit = limit;
+      }
+    }
+    // A search box or filters belong to a records section: they lead to the model's list page.
+    if (sectionFilters.searchAt || sectionFilters.filters) {
+      if (!section.model) {
+        ctx.error(
+          sectionFilters.at ?? sectionFilters.searchAt ?? null,
+          "invalid-key",
+          `Only a records section has a search box or filters (${sectionWhere} shows no records).`,
+        );
+      } else if (sectionFilters.filters) {
+        const checked = checkFilterFields(
+          ctx,
+          sectionFilters.filters,
+          section.model,
+          parsed,
+          sectionWhere,
+        );
+        if (checked.length) section.filters = checked;
       }
     }
     if (section.kind === "calculator" || section.kind === "custom") {

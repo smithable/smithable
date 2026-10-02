@@ -2302,6 +2302,180 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
+{
+  "actions": [],
+  "app": {
+    "description": "A place to sell things.",
+    "name": "Torget",
+  },
+  "extensions": {},
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "photos",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "pictures",
+          },
+          "unique": false,
+        },
+        {
+          "name": "price",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "default": "furniture",
+          "name": "category",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "furniture",
+              "electronics",
+              "vehicles",
+              "other",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": "new",
+          "name": "condition",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "new",
+              "used",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "place",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": true,
+          "name": "available",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "bool",
+          },
+          "unique": false,
+        },
+        {
+          "name": "seller",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Item",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "catalogue",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "filters": [
+        "category",
+        "price",
+        "condition",
+        "available",
+        "seller",
+        "owner",
+        "createdAt",
+      ],
+      "id": "catalogue",
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/",
+      "search": [
+        "title",
+        "description",
+      ],
+      "sortable": [
+        "price",
+        "createdAt",
+        "title",
+      ],
+    },
+    {
+      "id": "welcome",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "catalogue",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "filters": [
+              "category",
+              "price",
+            ],
+            "kind": "records",
+            "limit": 8,
+            "model": "Item",
+            "name": "latest",
+            "search": true,
+          },
+        ],
+      },
+      "route": "/welcome",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
 {
   "actions": [],
