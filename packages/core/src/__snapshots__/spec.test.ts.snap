@@ -2425,7 +2425,6 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "price",
         "condition",
         "available",
-        "seller",
         "owner",
         "createdAt",
       ],

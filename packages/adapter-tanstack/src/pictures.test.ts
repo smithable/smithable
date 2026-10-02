@@ -112,3 +112,38 @@ pages:
   // A removed picture's file goes unless a record still shows it.
   expect(at("src/generated/item.server.ts")).toContain("for (const p of row.photos ?? [])");
 });
+
+test("a list's filters and sort: conditions in the query, controls above the list, Mine for the owner", () => {
+  const market = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Market }
+models:
+  Item:
+    fields:
+      title: string!
+      condition: new | used
+      price: money
+      available: bool
+pages:
+  items:
+    crud: Item
+    search: [title]
+    filters: [condition, price, available, owner]
+    sortable: [price]
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(market, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const route = gen.find((f) => f.path === "src/routes/items/index.tsx")?.content ?? "";
+  expect(route).toContain(
+    'data.f?.price ? inRange(items.price, data.f?.price, "number", 100) : undefined',
+  );
+  expect(route).toContain('eq(items.available, data.f?.available === "true")');
+  expect(route).toContain('data.f?.owner === "mine" && viewer ? eq(items.ownerId, viewer.id)');
+  expect(route).toContain("const order = orderOf({ price: items.price }, data.sort);");
+  expect(route).toContain("signedIn={Boolean(viewer)}");
+  expect(gen.find((f) => f.path === "src/generated/item.server.ts")?.content).toContain(
+    "order?: SQL",
+  );
+  expect(gen.some((f) => f.path === "src/kit/Filters.tsx")).toBe(true);
+});

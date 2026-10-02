@@ -16,6 +16,7 @@ import {
 import { actionNames } from "../actions.js";
 import {
   attr,
+  code,
   DATA_LIMIT,
   dataKey,
   guard,
@@ -27,6 +28,7 @@ import {
   literal,
   modelNamed,
   names,
+  ownerKey,
   relatedTitle,
   type Texts,
   tableNames,
@@ -34,9 +36,147 @@ import {
 } from "../shared.js";
 import { LUCIDE } from "./root.js";
 
+/** Fields every model has, which a list may be filtered or sorted by too. */
+const AUTOMATIC: Record<string, { key: string; label: string }> = {
+  createdAt: { key: "createdAt", label: "Added" },
+  updatedAt: { key: "updatedAt", label: "Changed" },
+};
+
+/**
+ * A list's filters (marketplace.md §2.2): each field's condition in the server function, its
+ * control for the kit's Filters, and the choices a reference filter offers. References to
+ * people who sign in (owner) are not filters yet: listing them would show every user's name.
+ */
+function filterCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
+  const n = names(model, t);
+  const conditions: string[] = [];
+  const controls: Record<string, unknown>[] = [];
+  const options: string[] = [];
+  const modules: { module: string; data: string }[] = [];
+  let ranges = false;
+  let lists = false;
+  let toggles = false;
+  let mine = false;
+  for (const name of page.filters ?? []) {
+    // The owner: a "Mine" toggle for those signed in, never a list of people.
+    if (name === "owner") {
+      mine = true;
+      conditions.push(
+        `data.f?.owner === "mine" && viewer ? eq(${n.table}.${ownerKey(model)}, viewer.id) : undefined`,
+      );
+      controls.push({ name, label: "Mine", kind: "mine" });
+      continue;
+    }
+    const auto = AUTOMATIC[name];
+    const field = model.fields.find((f) => f.name === name);
+    const value = `data.f?.${name}`;
+    if (auto) {
+      ranges = true;
+      conditions.push(
+        `${value} ? inRange(${n.table}.${auto.key}, ${value}, "instant") : undefined`,
+      );
+      controls.push({ name, label: auto.label, kind: "range", input: "date" });
+      continue;
+    }
+    if (!field) continue;
+    const label = t.field(model, field).label ?? humanize(field.name);
+    if (field.type.kind === "choice") {
+      lists = true;
+      const values = field.type.values;
+      conditions.push(
+        `${value} ? inArray(${n.table}.${dataKey(field)}, ${value}.split(",").filter((v) => ${literal(values)}.includes(v)) as (${values.map((v) => JSON.stringify(v)).join(" | ")})[]) : undefined`,
+      );
+      const labels = t.field(model, field).values ?? {};
+      controls.push({
+        name,
+        label,
+        kind: "chips",
+        options: values.map((v) => ({ value: v, label: labels[v] ?? humanize(v) })),
+      });
+    } else if (
+      field.type.kind === "relation" &&
+      !field.type.many &&
+      field.type.model !== USER_MODEL
+    ) {
+      lists = true;
+      const target = modelNamed(ir, field.type.model);
+      const tn = names(target, t);
+      const title = relatedTitle(ir, target.name);
+      modules.push({ module: `#/generated/${kebab(target.name)}.server`, data: tn.data });
+      conditions.push(
+        `${value} ? inArray(${n.table}.${dataKey(field)}, ${value}.split(",").map(Number).filter(Number.isInteger)) : undefined`,
+      );
+      // The related records the viewer may read, by their names.
+      options.push(
+        `${name}: (await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.${title}) }))`,
+      );
+      controls.push({ name, label, kind: "chips", options: code(`options.${name}`) });
+    } else if (field.type.kind === "scalar") {
+      const kind = field.type.name;
+      if (["int", "decimal", "money", "date", "datetime"].includes(kind)) {
+        ranges = true;
+        const how = kind === "date" ? '"date"' : kind === "datetime" ? '"instant"' : '"number"';
+        conditions.push(
+          `${value} ? inRange(${n.table}.${dataKey(field)}, ${value}, ${how}${kind === "money" ? ", 100" : ""}) : undefined`,
+        );
+        controls.push({
+          name,
+          label,
+          kind: "range",
+          input: kind === "date" || kind === "datetime" ? "date" : "number",
+        });
+      } else if (kind === "bool") {
+        toggles = true;
+        conditions.push(
+          `${value} === "true" || ${value} === "false" ? eq(${n.table}.${dataKey(field)}, ${value} === "true") : undefined`,
+        );
+        controls.push({ name, label, kind: "toggle" });
+      }
+    }
+  }
+  // "Sort by": each field both ways, in words that fit its kind.
+  const sorts = (page.sortable ?? []).flatMap((name) => {
+    const auto = AUTOMATIC[name];
+    const field = model.fields.find((f) => f.name === name);
+    const label =
+      auto?.label ?? (field ? (t.field(model, field).label ?? humanize(field.name)) : name);
+    const key = auto?.key ?? (field ? dataKey(field) : name);
+    const kind = auto ? "date" : field?.type.kind === "scalar" ? field.type.name : "string";
+    const [up, down] = ["int", "decimal", "money"].includes(kind)
+      ? ["low to high", "high to low"]
+      : ["date", "datetime"].includes(kind)
+        ? ["oldest first", "newest first"]
+        : ["A to Z", "Z to A"];
+    return [
+      { value: key, label: `${label}, ${up}` },
+      { value: `-${key}`, label: `${label}, ${down}` },
+    ];
+  });
+  return {
+    conditions,
+    controls,
+    options,
+    modules,
+    sorts,
+    names: [...(page.filters ?? [])],
+    columns: (page.sortable ?? []).map((name) => {
+      const field = model.fields.find((f) => f.name === name);
+      const key = AUTOMATIC[name]?.key ?? (field ? dataKey(field) : name);
+      return `${key}: ${n.table}.${key}`;
+    }),
+    mine,
+    imports: { ranges, lists, toggles: toggles || mine },
+  };
+}
+
 /** A searchable list's server function and route options: the search text is in the URL. */
 export function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, within?: Within) {
   const n = names(model, t);
+  // Filters and sorting live beside the search, in the address too (not inside a data page).
+  const filtering =
+    !within && (page.filters?.length || page.sortable?.length)
+      ? filterCode(page, model, t, ir)
+      : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
   );
@@ -78,6 +218,52 @@ export function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, w
         : tableNames(modelNamed(ir, (f.type as { model: string }).model)).table,
     );
   const placeholder = `Search by ${labels.length > 1 ? `${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}` : labels[0]}`;
+  if (filtering) {
+    const searched = terms.length
+      ? `data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined`
+      : "undefined";
+    const keys = ["q", "sort", ...filtering.names];
+    return {
+      fn: `
+/** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
+const ${fn} = createServerFn()
+  .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(), f: z.record(z.string(), z.string().max(200)).optional() }))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    const where = and(
+      ${[searched, ...filtering.conditions].join(",\n      ")},
+    );${
+      filtering.columns.length
+        ? `
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ ${filtering.columns.join(", ")} }, data.sort);`
+        : ""
+    }
+    return {
+      rows: await ${n.data}.list(viewer, where${filtering.columns.length ? (ir.pages.some((p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name)) ? ", undefined, order" : ", order") : ""}),
+      canCreate: allows(${n.access}.create, viewer),
+      options: { ${filtering.options.join(", ")} },
+    };
+  });
+`,
+      options: `  validateSearch: z.object({ ${keys.map((k) => `${k}: z.string().optional().catch(undefined)`).join(", ")} }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, ...f } }) => ${fn}({ data: { q, sort, f } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
+`,
+      placeholder,
+      filtering,
+      imports: {
+        related: [...new Set(related)],
+        titled: [...titled, ...filtering.modules],
+        own: own.length > 0,
+        relation: related.length > 0,
+        or: terms.length > 1,
+      },
+    };
+  }
   return {
     fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
@@ -126,7 +312,11 @@ export function listParts(
   const component = `${pascal(page.id)}${within ? pascal(plural(model.name)) : ""}Page`;
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
-  const search = page.search?.length ? searchCode(page, model, t, ir, within) : undefined;
+  const filtered = !within && (page.filters?.length || page.sortable?.length);
+  const search =
+    page.search?.length || filtered ? searchCode(page, model, t, ir, within) : undefined;
+  const filtering = search && "filtering" in search ? search.filtering : undefined;
+  const searchable = Boolean(page.search?.length);
   // A data page shows each model as it is: the presentation belongs to the model's own page.
   const presentation = within ? undefined : ux.pages[page.id];
   const columns = presentation?.columns?.map((name) => keyOf(model, name));
@@ -159,7 +349,12 @@ export function listParts(
     if (search.imports.or) route.add("drizzle-orm", "or");
     if (search.imports.own) route.add("#/kit/search", "contains");
     if (search.imports.relation) route.add("#/kit/search", "relatedContains");
-    if (search.imports.titled.length) route.add("drizzle-orm", "inArray");
+    if (search.imports.titled.length || filtering?.imports.lists)
+      route.add("drizzle-orm", "inArray");
+    if (filtering) route.add("drizzle-orm", "and");
+    if (filtering?.imports.toggles) route.add("drizzle-orm", "eq");
+    if (filtering?.imports.ranges) route.add("#/kit/filter", "inRange");
+    if (filtering?.columns.length) route.add("#/kit/filter", "orderOf");
     for (const t of search.imports.titled) route.add(t.module, t.data);
     route.add("#/lib/viewer.server", "currentViewer");
   } else if (capped) {
@@ -179,15 +374,16 @@ export function listParts(
   if (actions.length) view.add("#/kit/access", "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
   if (sort) view.add("#/kit/model", "sortRows");
-  if (search) view.add("#/kit/SearchBox", "SearchBox");
+  if (searchable) view.add("#/kit/SearchBox", "SearchBox");
+  if (filtering) view.add("#/kit/Filters", "Filters");
   if (icon) view.add("lucide-react", icon);
 
   const newest = `list${pascal(plural(model.name))}`;
   const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${capped ? newest : n.list}(),\n`}`;
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
   const body = (api: string) => `function ${component}() {
-  const { rows, canCreate${within ? ", more" : ""} } = ${api}.useLoaderData();${search ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();
+  const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
+${actions.length || filtering?.mine ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to=${attr(join(page.route, "new"))} className={buttonVariants()}>
       New ${n.label.toLowerCase()}
@@ -209,18 +405,42 @@ ${actions.length ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  con
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
 ${
-  search
+  searchable && search
     ? `      <SearchBox
         value={q ?? ""}
         placeholder=${attr(search.placeholder)}
-        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: ${filtering ? "(prev) => ({ ...prev, q: text || undefined })" : "{ q: text || undefined }"}, replace: true })}
+      />
+`
+    : ""
+}${
+  filtering
+    ? `      <Filters
+        filters={${literal(filtering.controls)}}
+        values={values}${filtering.mine ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
+        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ...next }, replace: true })}
       />
 `
     : ""
 }${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
         ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
-        rows={${sort ? `sortRows(rows, ${JSON.stringify(sort.field)}${sort.descending ? ", true" : ""})` : "rows"}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
+        rows={${(() => {
+          const ordered = sort
+            ? `sortRows(rows, ${JSON.stringify(sort.field)}${sort.descending ? ", true" : ""})`
+            : "rows";
+          // A visitor's own sort (from the address) before the page's.
+          // The viewer's own sort is already the query's order; the page's applies otherwise.
+          return filtering?.sorts.length && ordered !== "rows"
+            ? `sort ? rows : ${ordered}`
+            : ordered;
+        })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${
+          filtering
+            ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${n.pluralLabel.toLowerCase()} match the search and filters." : undefined}`
+            : searchable
+              ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}`
+              : ""
+        }
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
       />
