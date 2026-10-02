@@ -7,7 +7,7 @@ import { captureIo } from "./test-io.js";
 
 const examples = new URL("../../../examples/", import.meta.url).pathname;
 
-test("validate accepts a directory and summarises a valid spec", async () => {
+test("validate accepts a directory and summarizes a valid spec", async () => {
   const io = captureIo();
   const path = join(examples, "crm");
   expect(await run(["validate", path], io)).toBe(0);

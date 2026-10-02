@@ -84,10 +84,10 @@ export function summarize(
         filtered.length ? `filter by ${list(filtered, "or")}` : "",
         sorted.length ? `sort by ${list(sorted, "or")}` : "",
         p.mine ? "only the viewer's own records" : "",
-        p.favourites === "only"
+        p.favorites === "only"
           ? "only the viewer's saved records"
-          : p.favourites
-            ? "records can be saved as favourites"
+          : p.favorites
+            ? "records can be saved as favorites"
             : "",
         p.contact ? contactWords(p.contact, model, fieldLabel) : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),

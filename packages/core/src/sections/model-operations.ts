@@ -1,6 +1,7 @@
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula } from "../formula.js";
 import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
+import { humanize, plural } from "../naming.js";
 import {
   type AnyOperation,
   type Editors,
@@ -281,6 +282,55 @@ const setCapacity: Operation<{
   },
 };
 
+const importRecords: Operation<{
+  model: string;
+  from?: string;
+  text?: string;
+  map?: Record<string, string>;
+  dryRun?: boolean;
+}> = {
+  name: "importRecords",
+  summary:
+    "Add records from a CSV file (a header row; columns matched to fields by name or --map). --dry-run shows the first rows and every problem without adding anything.",
+  schema: {
+    type: "object",
+    required: ["model"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }, name),
+      from: { type: "string", description: "The CSV file, e.g. customers.csv." },
+      text: { type: "string", description: "The CSV itself, instead of a file." },
+      map: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description: 'Columns for fields where the names differ, e.g. { "Company": "name" }.',
+      },
+      dryRun: { type: "boolean", description: "Show what would be added; add nothing." },
+    },
+  },
+  positional: ["model"],
+  describe: ({ model, from }) =>
+    `Import ${humanize(plural(model)).toLowerCase()} from ${from ?? "a CSV text"}`,
+  destructive: () => false,
+  apply(_editors, { model: m, from, text, map = {}, dryRun = false }, ir) {
+    const target = model(ir, m);
+    if (isCalculator(ir, m))
+      throw new OperationError(`${m} is a calculator: it keeps no records to import.`);
+    if (text === undefined && !from)
+      throw new OperationError("Give the CSV file with --from, or its text.");
+    // An import adds data, not grammar: the spec stays as it is and the host does the rest.
+    return [
+      {
+        kind: "import-records",
+        model: target.name,
+        source: text !== undefined ? { text } : { path: from as string },
+        map,
+        dryRun,
+      },
+    ];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
   addModel,
   addField,
@@ -288,6 +338,7 @@ export const modelOperations: AnyOperation[] = [
   renameField,
   removeField,
   setCapacity,
+  importRecords,
 ];
 
 /** Renames a field in a calculator's own formulas and examples. */

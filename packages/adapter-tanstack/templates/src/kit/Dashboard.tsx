@@ -35,7 +35,7 @@ export function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Bars with their values written on them, so the chart reads without a pointer or colour. */
+/** Bars with their values written on them, so the chart reads without a pointer or color. */
 export function BarChart({
   label,
   kind,
