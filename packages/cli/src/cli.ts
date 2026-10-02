@@ -19,6 +19,7 @@ import { clarify, create } from "./new.js";
 import { op } from "./op.js";
 import { backupContinuous, restoreAt } from "./pitr.js";
 import { loadPlugins } from "./plugins.js";
+import { report } from "./report.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
@@ -97,6 +98,13 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       yes: values.yes === true,
     });
   if (command === "undo") return undo(values.dir ?? ".", io);
+  if (command === "report")
+    return report(values.dir ?? ".", io, {
+      send: values.send === true,
+      always: values.always === true,
+      never: values.never === true,
+      ask: values.ask === true,
+    });
   if (command === "teach") return teach(values.dir ?? ".", io, args[0]);
   if (command === "code")
     return writeCode(values.dir ?? ".", io, args[0] ?? "", args.slice(1).join(" "));
@@ -277,6 +285,10 @@ const CONFIG = {
     "preview-url": { type: "string" },
     insecure: { type: "boolean" },
     home: { type: "string" },
+    send: { type: "boolean" },
+    always: { type: "boolean" },
+    never: { type: "boolean" },
+    ask: { type: "boolean" },
   },
 } as const;
 
