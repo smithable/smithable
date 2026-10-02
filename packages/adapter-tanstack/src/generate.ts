@@ -408,6 +408,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ),
       },
       {
+        // "Contact the owner" on a record's page (marketplace.md §2.4).
+        files: ["src/kit/ContactOwner.tsx"],
+        used: ({ ir, auth }) => hasSignIn(auth) && ir.pages.some((p) => p.contact),
+      },
+      {
         files: ["src/kit/Reserve.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.models.some((m) => m.capacity),
       },
