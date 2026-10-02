@@ -217,8 +217,10 @@ export async function studio(
     join(dir, config),
     previewConfig(options.previewUrl, store ? [resolve(dir), resolve(store)] : undefined),
   );
+  // When the preview stops by itself (a crash), it starts again, at most five times a minute.
+  let restarts: number[] = [];
   const startApp = () => {
-    app = spawn(
+    const child = spawn(
       ...tool(dir, "vite", [
         "dev",
         "--config",
@@ -234,14 +236,24 @@ export async function studio(
         detached: true,
       },
     );
-    app.stdout?.on("data", (d) => log(String(d)));
-    app.stderr?.on("data", (d) => log(String(d)));
+    app = child;
+    child.stdout?.on("data", (d) => log(String(d)));
+    child.stderr?.on("data", (d) => log(String(d)));
+    child.on("exit", () => {
+      if (app !== child) return;
+      restarts = [...restarts.filter((t) => Date.now() - t < 60_000), Date.now()];
+      if (restarts.length > 5) return log("The preview keeps stopping; it is not started again.\n");
+      log("The preview stopped; starting it again.\n");
+      setTimeout(startApp, 1000);
+    });
     void warmPreview(previewPort, log);
   };
   const stopApp = () => {
-    if (app?.pid) {
+    const child = app;
+    app = undefined;
+    if (child?.pid) {
       try {
-        process.kill(-app.pid);
+        process.kill(-child.pid);
       } catch {}
     }
   };
@@ -396,6 +408,13 @@ export async function studio(
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
         const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
         if (result.ok) changed({ description: result.output });
+        // A change that failed halfway was rolled back, its database included: the preview
+        // reopens it, as after an undo.
+        else if (result.output.includes("Nothing was changed.")) {
+          stopApp();
+          startApp();
+          send("changed", {});
+        }
         return json({ ...result, needsConfirm });
       }
       if (req.method === "POST" && url.pathname === "/api/ask") {

@@ -60,6 +60,30 @@ export function summarize(
     sections.push({ concept: "app", title: ir.app.name, sentences: [ir.app.description] });
   }
 
+  // The pages first: they are the app as people see it.
+  if (ir.pages.length) {
+    // The home page first, then the others in the spec's order.
+    const ordered = [...ir.pages].sort((a, b) => Number(b.route === "/") - Number(a.route === "/"));
+    const pages = ordered.map((p) => {
+      const crud = pageModel(p);
+      const model = crud === undefined ? undefined : modelNamed(crud);
+      const title = content.pages[p.id]?.title ?? humanize(p.id);
+      const searched = (p.search ?? []).map((name) => {
+        const field = model?.fields.find((f) => f.name === name);
+        return model && field ? fieldLabel(model, field) : name;
+      });
+      const notes = [
+        model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
+        (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
+        searched.length ? `search by ${list(searched, "or")}` : "",
+        ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
+        p.access ? `only for ${who(p.access)}` : "",
+      ].filter(Boolean);
+      return `${title} (${notes.join("; ")})`;
+    });
+    sections.push({ concept: "pages", title: "Pages", sentences: pages.map((p) => `- ${p}`) });
+  }
+
   for (const model of ir.models) {
     const isOwnValue = (f: FieldIR) =>
       !f.formula && !(f.type.kind === "relation" && (f.type.many || f.type.model === USER_MODEL));
@@ -114,27 +138,6 @@ export function summarize(
         text: parts[i] as string,
       })),
     });
-  }
-
-  if (ir.pages.length) {
-    const pages = ir.pages.map((p) => {
-      const crud = pageModel(p);
-      const model = crud === undefined ? undefined : modelNamed(crud);
-      const title = content.pages[p.id]?.title ?? humanize(p.id);
-      const searched = (p.search ?? []).map((name) => {
-        const field = model?.fields.find((f) => f.name === name);
-        return model && field ? fieldLabel(model, field) : name;
-      });
-      const notes = [
-        model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
-        (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
-        searched.length ? `search by ${list(searched, "or")}` : "",
-        ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
-        p.access ? `only for ${who(p.access)}` : "",
-      ].filter(Boolean);
-      return `${title} (${notes.join("; ")})`;
-    });
-    sections.push({ concept: "pages", title: "Pages", sentences: pages.map((p) => `- ${p}`) });
   }
 
   for (const action of ir.actions) {
