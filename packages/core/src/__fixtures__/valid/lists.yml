@@ -32,6 +32,7 @@ pages:
   mine:
     crud: Item
     contact: owner
+    mine: true
   welcome:
     route: /welcome
     landing:
