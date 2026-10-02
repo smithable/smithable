@@ -230,3 +230,28 @@ pages:
   expect(auth("home")).toContain("shortcut-closed");
   expect(auth("home, classes")).not.toContain("shortcut-closed");
 });
+
+test("a public page of the viewer's own records is warned about: a visitor owns nothing", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Market }
+models:
+  Item:
+    fields: { title: string! }
+pages:
+  items: { crud: Item }
+  myItems: { crud: Item, mine: true }
+`,
+  }).ir;
+  const codes = (pages: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\nroles: { admin: {} }\npublic: { pages: [${pages}], read: [Item] }\n`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.code);
+  expect(codes("items, myItems")).toContain("mine-public");
+  expect(codes("items")).not.toContain("mine-public");
+});
