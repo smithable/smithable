@@ -15,6 +15,7 @@ import {
   type SpecIR,
   type SpecPlugin,
   snake,
+  type SamplesIR,
   type ThemeIR,
   USER_MODEL,
   type UxIR,
@@ -69,6 +70,8 @@ export interface GenerateOptions {
   plugins?: SpecPlugin[];
   /** Libraries for custom code, from smithable.context.yml: name → exact version. */
   packages?: Record<string, string>;
+  /** The project's sample records (samples/<Model>.yml), seeded instead of generated ones. */
+  samples?: SamplesIR;
 }
 
 export const HEADER =
@@ -243,10 +246,9 @@ export function relatedTitle(ir: SpecIR, model: string): string {
   return model === USER_MODEL ? "name" : titleField(modelNamed(ir, model));
 }
 
-export function titleField(model: ModelIR): string {
-  const strings = model.fields.filter((f) => f.type.kind === "scalar" && f.type.name === "string");
-  return (strings.find((f) => /name|title/i.test(f.name)) ?? strings[0])?.name ?? "id";
-}
+import { titleField } from "@smithable/core";
+
+export { titleField };
 
 /** A route's beforeLoad that checks the page's access. */
 export function guard(rule: string): string {
