@@ -2,7 +2,13 @@
   "name": "@smithable/adapter-tanstack",
   "version": "0.0.0",
   "description": "Generates TanStack Start + Drizzle applications from the Smithable IR.",
-  "private": true,
+  "license": "Apache-2.0 AND 0BSD",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smithable/smithable.git",
+    "directory": "packages/adapter-tanstack"
+  },
+  "homepage": "https://smithable.ai",
   "type": "module",
   "exports": {
     ".": {
@@ -12,10 +18,20 @@
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "LICENSE",
+    "NOTICE",
+    "KIT-LICENSE"
   ],
   "dependencies": {
     "@smithable/core": "workspace:*"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "scripts": {
+    "prepack": "node ../../scripts/prepack.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }
