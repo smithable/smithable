@@ -1,3 +1,4 @@
+import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlValue } from "../edit.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 
@@ -146,7 +147,10 @@ const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[
   },
 };
 
-const setPublicWhere: Operation<{ model: string; where?: Record<string, string> }> = {
+const setPublicWhere: Operation<{
+  model: string;
+  where?: Record<string, string | boolean | string[]>;
+}> = {
   name: "setPublicWhere",
   summary:
     "Limit which records of a model anyone on the internet may read, e.g. published posts only; with no condition, every record.",
@@ -158,19 +162,16 @@ const setPublicWhere: Operation<{ model: string; where?: Record<string, string> 
       model: refTo({ ref: "model", label: "Kind of record" }),
       where: {
         type: "object",
-        additionalProperties: { type: "string" },
         description:
-          'Field values a record must have to be read by visitors, e.g. { "status": "published" }; none means every record.',
+          'Field values a record must have to be read by visitors, e.g. { "status": "published" }, or one of several, { "status": "investigating | identified" }; none means every record.',
       },
     },
   },
   positional: ["model", "...where"],
-  describe: ({ model, where }) => {
-    const conditions = Object.entries(where ?? {});
-    return conditions.length
-      ? `Let visitors read only ${model} records where ${conditions.map(([k, v]) => `${k} is ${v}`).join(" and ")}`
-      : `Let visitors read every ${model} record`;
-  },
+  describe: ({ model, where }) =>
+    Object.keys(where ?? {}).length
+      ? `Let visitors read only ${model} records where ${conditionText(conditionArgs(where ?? {}))}`
+      : `Let visitors read every ${model} record`,
   destructive: () => false,
   apply({ auth }, { model, where }, ir) {
     if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
@@ -183,12 +184,7 @@ const setPublicWhere: Operation<{ model: string; where?: Record<string, string> 
     );
     if (index < 0)
       throw new OperationError(`${model} is not public to read; add it with setPublic read first.`);
-    const conditions = Object.fromEntries(
-      Object.entries(where ?? {}).map(([k, v]) => [
-        k,
-        v === "true" ? true : v === "false" ? false : v,
-      ]),
-    );
+    const conditions = conditionArgs(where ?? {});
     auth.setItem(
       path,
       index,

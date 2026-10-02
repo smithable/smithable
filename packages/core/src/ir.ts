@@ -54,7 +54,7 @@ export interface CapacityIR {
   /** A whole number, or a whole-number field of the referenced record ("session.capacity"). */
   max: number | string;
   /** Only records with these choice or yes/no values count. */
-  where?: Record<string, string | boolean>;
+  where?: Condition;
 }
 
 export const ACCESS_OPERATIONS = ["read", "create", "write", "delete"] as const;
@@ -246,6 +246,8 @@ export interface LandingSection {
   search?: boolean;
   /** A records section's filters, leading to the model's list page with them set. */
   filters?: string[];
+  /** A records section shows only the records these values fit (e.g. open incidents). */
+  where?: Condition;
   /** A contact section's form: visitors add a record of this model (e.g. Message). */
   form?: string;
   limit?: number;
@@ -269,7 +271,7 @@ export interface DashboardItem {
   /** A custom query whose records a list shows, instead of the latest ones. */
   query?: string;
   /** Only records whose fields have these values (choice values or yes/no). */
-  where?: Record<string, string | boolean>;
+  where?: Condition;
   /** A date field: the chart has one bar per month. */
   by?: string;
   limit?: number;
@@ -308,13 +310,26 @@ export type PatternOf<K extends PatternKind> = Extract<PageIR["pattern"], { kind
  * Whether a record condition can be checked on the model: `field` is a choice field of it
  * with `wanted` one of its values, or a yes/no field with true or false.
  */
-export function conditionFits(model: ModelIR, field: string, wanted: string | boolean): boolean {
+/**
+ * Field values a record must have: a choice field's value (or a list of them), or a yes/no
+ * field's true or false.
+ */
+export type Condition = Record<string, string | boolean | string[]>;
+
+export function conditionFits(model: ModelIR, field: string, wanted: Condition[string]): boolean {
   const f = model.fields.find((x) => x.name === field);
-  return Boolean(
-    f &&
-      ((f.type.kind === "choice" && typeof wanted === "string" && f.type.values.includes(wanted)) ||
-        (f.type.kind === "scalar" && f.type.name === "bool" && typeof wanted === "boolean")),
-  );
+  if (!f) return false;
+  if (f.type.kind === "choice") {
+    const values = Array.isArray(wanted) ? wanted : [wanted];
+    return (
+      values.length > 0 &&
+      new Set(values).size === values.length &&
+      values.every(
+        (v) => typeof v === "string" && (f.type as { values: string[] }).values.includes(v),
+      )
+    );
+  }
+  return f.type.kind === "scalar" && f.type.name === "bool" && typeof wanted === "boolean";
 }
 
 /** A field that stores a picture (a file with its description and size). */
