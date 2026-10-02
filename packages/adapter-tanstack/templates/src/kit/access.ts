@@ -16,7 +16,7 @@ export interface Rule {
   roles: readonly string[];
   owner: boolean;
   /** Reading only: the records anyone may read, when not all (e.g. { status: "published" }). */
-  where?: Readonly<Record<string, string | boolean>>;
+  where?: Readonly<Record<string, string | boolean | readonly string[]>>;
 }
 
 export interface ModelAccess {

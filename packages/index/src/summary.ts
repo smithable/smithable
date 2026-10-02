@@ -132,10 +132,7 @@ export function summarize(
           ? String(model.capacity.max)
           : `the ${humanize(target).toLowerCase()}'s ${humanize(model.capacity.max.split(".")[1] ?? "").toLowerCase()}`;
       const counted = Object.entries(model.capacity.where ?? {})
-        .map(
-          ([k, v]) =>
-            `${humanize(k).toLowerCase()} ${typeof v === "boolean" ? (v ? "yes" : "no") : humanize(v).toLowerCase()}`,
-        )
+        .map(([k, v]) => `${humanize(k).toLowerCase()} ${valueWords(v)}`)
         .join(" and ");
       sentences.push(
         `At most ${limit} ${pluralLabel(model).toLowerCase()} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
@@ -268,9 +265,7 @@ function access(auth: AuthIR): string[] {
     ...auth.public.pages.map((p) => `the ${humanize(p).toLowerCase()} page`),
     ...auth.public.read.map((m) => {
       const where = Object.entries(auth.public.readWhere[m] ?? {});
-      const only = where.length
-        ? ` where ${where.map(([k, v]) => `${humanize(k).toLowerCase()} is ${typeof v === "boolean" ? (v ? "yes" : "no") : humanize(v).toLowerCase()}`).join(" and ")}`
-        : "";
+      const only = where.length ? ` where ${conditionWords(auth.public.readWhere[m] ?? {})}` : "";
       return `reading ${humanize(plural(m)).toLowerCase()}${only}`;
     }),
     ...auth.public.create.map((m) => `adding ${humanize(plural(m)).toLowerCase()}`),
@@ -356,4 +351,17 @@ function contactWords(
       ? "the owner"
       : `the ${fieldLabel(model, field).toLowerCase()}`;
   return `contact ${who} by mail${contact.keep ? ` (kept in ${contact.keep})` : ""}`;
+}
+
+/** A condition in words: "status is published and pinned is yes". */
+export function conditionWords(where: Record<string, string | boolean | string[]>): string {
+  return Object.entries(where)
+    .map(([k, v]) => `${humanize(k).toLowerCase()} is ${valueWords(v)}`)
+    .join(" and ");
+}
+
+/** A condition's value in words: "yes", "published", "investigating or identified". */
+function valueWords(v: string | boolean | string[]): string {
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  return (Array.isArray(v) ? v : [v]).map((x) => humanize(x).toLowerCase()).join(" or ");
 }

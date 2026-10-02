@@ -1,3 +1,4 @@
+import { conditionArgs } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula } from "../formula.js";
 import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
@@ -224,7 +225,7 @@ const setCapacity: Operation<{
   model: string;
   per: string;
   max?: string;
-  where?: Record<string, string>;
+  where?: Record<string, string | boolean | string[]>;
 }> = {
   name: "setCapacity",
   summary:
@@ -249,8 +250,8 @@ const setCapacity: Operation<{
       },
       where: {
         type: "object",
-        additionalProperties: { type: "string" },
-        description: 'Only records with these values count, e.g. { "status": "confirmed" }.',
+        description:
+          'Only records with these values count, e.g. { "status": "confirmed" } or { "status": "confirmed | paid" }.',
       },
     },
   },
@@ -269,12 +270,7 @@ const setCapacity: Operation<{
     if (max === undefined)
       throw new OperationError('Say "max": a whole number, or a field like session.capacity.');
     const value: Record<string, YamlValue> = { per, max: /^\d+$/.test(max) ? Number(max) : max };
-    const conditions = Object.fromEntries(
-      Object.entries(where ?? {}).map(([k, v]) => [
-        k,
-        v === "true" ? true : v === "false" ? false : v,
-      ]),
-    );
+    const conditions = conditionArgs(where ?? {});
     if (Object.keys(conditions).length) value.where = conditions;
     if (spec.has(path)) spec.set(path, value);
     else spec.add(["models", model], "capacity", value);
