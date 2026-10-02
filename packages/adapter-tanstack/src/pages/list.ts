@@ -89,6 +89,10 @@ const ${fn} = createServerFn()
     options: `  validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => ${fn}({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
 `,
     placeholder,
     imports: {

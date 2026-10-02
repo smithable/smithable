@@ -1436,6 +1436,7 @@ export const classTypeUi: RecordUi<ClassTypeRow> = {
   label: "Class type",
   pluralLabel: "Class types",
   titleField: "name",
+  descriptionField: "summary",
   columns: ["name", "level", "durationMinutes"],
   fields: [
     {
@@ -2099,6 +2100,7 @@ export const messageUi: RecordUi<MessageRow> = {
   label: "Message",
   pluralLabel: "Messages",
   titleField: "name",
+  descriptionField: "message",
   columns: ["name", "email"],
   fields: [
     {
@@ -2352,7 +2354,8 @@ export const postUi: RecordUi<PostRow> = {
   label: "Post",
   pluralLabel: "Posts",
   titleField: "title",
-  columns: ["title", "address", "cover", "publishedOn", "status"],
+  descriptionField: "summary",
+  columns: ["title", "cover", "status", "address", "publishedOn"],
   fields: [
     {
       name: "title",
@@ -3247,6 +3250,10 @@ export const Route = createFileRoute("/admin/class-types/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchClassTypes({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminClassTypesPage,
 });
 
@@ -3491,6 +3498,10 @@ export const Route = createFileRoute("/admin/instructors/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchInstructors({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminInstructorsPage,
 });
 
@@ -3661,6 +3672,10 @@ export const Route = createFileRoute("/admin/messages/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchMessages({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminMessagesPage,
 });
 
@@ -3831,6 +3846,10 @@ export const Route = createFileRoute("/admin/posts/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchPosts({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: AdminPostsPage,
 });
 
@@ -5779,7 +5798,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.server.ts": "5a4cfb09 generated",
   "src/generated/booking.ts": "8175ba8a generated",
   "src/generated/class-type.server.ts": "0c5f5aa3 generated",
-  "src/generated/class-type.ts": "5d673490 generated",
+  "src/generated/class-type.ts": "6ef23c5a generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
@@ -5788,11 +5807,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.server.ts": "eaeb7083 generated",
   "src/generated/instructor.ts": "6a2671a0 generated",
   "src/generated/message.server.ts": "986a2bcd generated",
-  "src/generated/message.ts": "83e8b092 generated",
+  "src/generated/message.ts": "140e99ed generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
   "src/generated/post.server.ts": "7b4014ff generated",
-  "src/generated/post.ts": "56967f0a generated",
+  "src/generated/post.ts": "a9d056be generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.server.ts": "652c8d07 generated",
   "src/generated/session.ts": "789d2343 generated",
@@ -5806,7 +5825,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "5aa12d87 kit",
+  "src/kit/ModelTable.tsx": "0369d4b6 kit",
   "src/kit/PictureInput.tsx": "e5ee310f kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -5816,7 +5835,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "2ad37853 kit",
+  "src/kit/model.ts": "a8e4bc32 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/uploads.ts": "3f2db2ae kit",
@@ -5831,17 +5850,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
   "src/routes/admin/class-types/$id.tsx": "8c82275f generated",
-  "src/routes/admin/class-types/index.tsx": "15a93d9b generated",
+  "src/routes/admin/class-types/index.tsx": "a1bbdb49 generated",
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
   "src/routes/admin/index.tsx": "dc5e3939 generated",
   "src/routes/admin/instructors/$id.tsx": "20e8bd2a generated",
-  "src/routes/admin/instructors/index.tsx": "6540d251 generated",
+  "src/routes/admin/instructors/index.tsx": "66d0b7ff generated",
   "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
   "src/routes/admin/messages/$id.tsx": "4374122a generated",
-  "src/routes/admin/messages/index.tsx": "36770d87 generated",
+  "src/routes/admin/messages/index.tsx": "2ddc3153 generated",
   "src/routes/admin/messages/new.tsx": "6d8977f3 generated",
   "src/routes/admin/posts/$id.tsx": "99714c43 generated",
-  "src/routes/admin/posts/index.tsx": "d8771179 generated",
+  "src/routes/admin/posts/index.tsx": "b61f398f generated",
   "src/routes/admin/posts/new.tsx": "979f6005 generated",
   "src/routes/admin/sessions/$id.tsx": "6f5082d1 generated",
   "src/routes/admin/sessions/index.tsx": "73356889 generated",
@@ -6695,7 +6714,7 @@ export const customerUi: RecordUi<CustomerRow> = {
   label: "Customer",
   pluralLabel: "Customers",
   titleField: "name",
-  columns: ["name", "email", "phone", "segment", "creditLimit"],
+  columns: ["name", "segment", "email", "phone", "creditLimit"],
   fields: [
     {
       name: "name",
@@ -7819,6 +7838,10 @@ export const Route = createFileRoute("/customers/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchCustomers({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: CustomersPage,
 });
 
@@ -8009,6 +8032,10 @@ export const Route = createFileRoute("/orders/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchOrders({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: OrdersPage,
 });
 
@@ -8557,7 +8584,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.server.ts": "62145b59 generated",
-  "src/generated/customer.ts": "32926346 generated",
+  "src/generated/customer.ts": "958fa42a generated",
   "src/generated/hooks.ts": "88a49c58 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
@@ -8571,7 +8598,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "5aa12d87 kit",
+  "src/kit/ModelTable.tsx": "0369d4b6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/Users.tsx": "9f5a0cf9 kit",
@@ -8580,7 +8607,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "2ad37853 kit",
+  "src/kit/model.ts": "a8e4bc32 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -8593,12 +8620,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/customers/$id.tsx": "379e64db generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
-  "src/routes/customers/index.tsx": "91a7397a generated",
+  "src/routes/customers/index.tsx": "9797579e generated",
   "src/routes/customers/new.tsx": "297d905c generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "2a7ff8e1 generated",
-  "src/routes/orders/index.tsx": "ab85167a generated",
+  "src/routes/orders/index.tsx": "d5fa6fb2 generated",
   "src/routes/orders/new.tsx": "d433e790 generated",
   "src/routes/sign-in.tsx": "7b976381 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
@@ -9526,7 +9553,7 @@ export const businessProfileUi: RecordUi<BusinessProfileRow> = {
   label: "Business profile",
   pluralLabel: "Business profiles",
   titleField: "businessName",
-  columns: ["businessName", "vatNumber", "iban", "paymentTermDays"],
+  columns: ["businessName", "paymentTermDays", "vatNumber", "iban"],
   fields: [
     {
       name: "businessName",
@@ -10439,7 +10466,7 @@ export const invoiceLineUi: RecordUi<InvoiceLineRow> = {
   label: "Invoice line",
   pluralLabel: "Invoice lines",
   titleField: "description",
-  columns: ["invoiceId", "description", "quantity", "unitPrice", "amount"],
+  columns: ["description", "invoiceId", "quantity", "unitPrice", "amount"],
   fields: [
     {
       name: "invoiceId",
@@ -11841,7 +11868,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/access.test.ts": "55d5d46d generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/business-profile.server.ts": "795e7c7f generated",
-  "src/generated/business-profile.ts": "43f1dceb generated",
+  "src/generated/business-profile.ts": "b7543b25 generated",
   "src/generated/client.server.ts": "572a5439 generated",
   "src/generated/client.ts": "bf1aa633 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -11849,7 +11876,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.server.ts": "b4cd2486 generated",
-  "src/generated/invoice-line.ts": "9869af64 generated",
+  "src/generated/invoice-line.ts": "069ba994 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.server.ts": "53bf02b2 generated",
   "src/generated/invoice.ts": "212924a8 generated",
@@ -11860,7 +11887,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Landing.tsx": "2b3c644e kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "5aa12d87 kit",
+  "src/kit/ModelTable.tsx": "0369d4b6 kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
@@ -11870,7 +11897,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "2ad37853 kit",
+  "src/kit/model.ts": "a8e4bc32 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -12579,7 +12606,8 @@ export const itemUi: RecordUi<ItemRow> = {
   label: "Item",
   pluralLabel: "Items",
   titleField: "name",
-  columns: ["name", "kind", "link", "addedOn"],
+  descriptionField: "summary",
+  columns: ["name", "kind", "addedOn", "link"],
   fields: [
     {
       name: "name",
@@ -12997,6 +13025,10 @@ export const Route = createFileRoute("/items/")({
   validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => searchItems({ data: { q: deps.q } }),
+  // While a search loads, the page stays (and the box keeps its focus and text), never the
+  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: ItemsPage,
 });
 
@@ -13382,14 +13414,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "1bccea19 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.server.ts": "e4bf319c generated",
-  "src/generated/item.ts": "67d7217d generated",
+  "src/generated/item.ts": "f03bab09 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Landing.tsx": "2b3c644e kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "5aa12d87 kit",
+  "src/kit/ModelTable.tsx": "0369d4b6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/access.ts": "abceb487 kit",
@@ -13397,7 +13429,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "2ad37853 kit",
+  "src/kit/model.ts": "a8e4bc32 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -13411,7 +13443,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "19b18d69 generated",
   "src/routes/items/$id.tsx": "97e50061 generated",
-  "src/routes/items/index.tsx": "00fa6419 generated",
+  "src/routes/items/index.tsx": "df71a94d generated",
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/sign-in.tsx": "f37ca802 generated",
   "src/styles.css": "b9cb8065 kit",
