@@ -227,3 +227,48 @@ pages:
   expect(page).toContain('<ContactOwner\n        recipient="owner"');
   expect(gen.some((f) => f.path === "src/kit/ContactOwner.tsx")).toBe(true);
 });
+
+test("the catalogue as the start page: the site's frame at / and its records; a records section opens it", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Torget }
+models:
+  Item:
+    fields: { title: string!, category: furniture | other, price: money }
+pages:
+  catalogue:
+    route: /
+    crud: Item
+    search: [title]
+    filters: [category, price]
+  welcome:
+    landing:
+      hero: { button: catalogue }
+      latest: { records: Item, search: true, filters: [category, price], limit: 8 }
+`,
+  }).ir as SpecIR;
+  const open = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { read: [Item], pages: [catalogue, welcome] }\n",
+    },
+    spec,
+  ).auth as AuthIR;
+  const gen = generateApp(spec, { smithableVersion: "0.0.0", auth: open, content: emptyContent() });
+  const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
+  // Visitors see /, a record and the new form in the site's frame; not /sign-in or other pages.
+  expect(at("src/routes/__root.tsx")).toContain(
+    '(r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : pathname.startsWith(`${r}/`))',
+  );
+  expect(gen.some((f) => f.path === "src/generated/site.ts")).toBe(true);
+  // The section's box and chips lead to the list with the same address state; only what the
+  // list reads (its search, its choice filters: no price range here).
+  const landing = at("src/routes/welcome/index.tsx");
+  expect(landing).toContain('to: "/",');
+  expect(landing).toContain('search: { label: "Search items", placeholder: "Search by title" }');
+  expect(landing).toContain('name: "category"');
+  expect(landing).not.toContain('name: "price"');
+  expect(landing).toContain("href: `/${row.id}`,");
+  expect(landing).toContain(".slice(0, 8)");
+});
