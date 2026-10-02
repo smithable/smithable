@@ -74,8 +74,13 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
   const sites = ir.pages.filter((p) => publicArticles(p, { auth })).map((p) => p.route);
   // Other public pages (a schedule) have the site's frame for visitors, the app's for those
   // signed in; only in an app with sign-in and a site (its landing page or blog).
+  // A public catalogue at "/" (marketplace.md §2.5) is a site of its own, with or without a
+  // landing page.
+  const catalogue = ir.pages.some(
+    (p) => p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id),
+  );
   const visitorPages =
-    signIn && (ir.pages.some((p) => p.pattern.kind === "landing") || sites.length)
+    signIn && (ir.pages.some((p) => p.pattern.kind === "landing") || sites.length || catalogue)
       ? ir.pages
           .filter(
             (p) =>
@@ -84,6 +89,8 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
           )
           .map((p) => p.route)
       : [];
+  // A path under a visitor page; under a catalogue at "/", only its records and new form.
+  const under = `pathname.startsWith(\`\${r}/\`)`;
   const framedBySite = sites.length
     ? `landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`))`
     : "landingRoutes.includes(pathname)";
@@ -173,7 +180,7 @@ ${
           children
         ) : ${
           visitorPages.length
-            ? `!viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
+            ? `!viewer && visitorRoutes.some((r) => pathname === r || ${catalogue ? `(r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : ${under})` : under}) ? (
           <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
