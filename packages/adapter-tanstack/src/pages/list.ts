@@ -139,11 +139,10 @@ export function listParts(
       }
     : undefined;
   const cards = presentation?.view === "cards";
-  // Where a picture may be missing (cards, a picture column), the placeholder shows the page's icon.
-  const icon =
-    cards || model.fields.some((f) => f.type.kind === "scalar" && f.type.name === "picture")
-      ? LUCIDE[pageIcon(ux, page)]
-      : undefined;
+  // A model with pictures shows the page's icon where a record has none (cards, its column).
+  const icon = model.fields.some((f) => f.type.kind === "scalar" && f.type.name === "picture")
+    ? LUCIDE[pageIcon(ux, page)]
+    : undefined;
   // Inside a data page without a search, the list still loads the newest records only.
   const capped = within && !search;
 

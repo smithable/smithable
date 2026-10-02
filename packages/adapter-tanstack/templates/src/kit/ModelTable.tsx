@@ -166,13 +166,13 @@ export function ModelTable<R extends Row>({
             <Card
               className={cn(
                 "relative space-y-3 p-5 hover:bg-accent/40",
-                view === "cards" && "overflow-hidden pt-0",
+                view === "cards" && pictureField && "overflow-hidden pt-0",
               )}
             >
-              {/* Cards on every screen show the record's picture, or a placeholder without one. */}
+              {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
               {view === "cards" &&
-                (pictureField &&
-                formatValue(pictureField, displayValue(pictureField, row), app) !== "—" ? (
+                pictureField &&
+                (formatValue(pictureField, displayValue(pictureField, row), app) !== "—" ? (
                   <img
                     src={pictureSrc(pictureField, row)}
                     alt={formatValue(pictureField, displayValue(pictureField, row), app)}
