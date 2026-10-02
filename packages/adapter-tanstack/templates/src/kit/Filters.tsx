@@ -94,7 +94,7 @@ export function Filters({
           id={`${id}-panel`}
           className={cn("flex-wrap items-end gap-x-6 gap-y-3 md:flex", open ? "flex" : "hidden")}
         >
-          {filters.map((f) => (
+          {shown.map((f) => (
             <Filter
               key={f.name}
               filter={f}

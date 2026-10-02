@@ -244,13 +244,16 @@ export function searchCode(
       ? `data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined`
       : "undefined";
     const view = favourites === "all";
+    // A page of only the viewer's saved records may have nothing else to read from the address.
+    const usesData =
+      searched !== "undefined" || filtering.names.length || filtering.columns.length || view;
     const keys = ["q", "sort", ...filtering.names];
     return {
       fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
 const ${fn} = createServerFn()
   .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional() }))
-  .handler(async ({ data }) => {
+  .handler(async (${usesData ? "{ data }" : ""}) => {
     const viewer = await currentViewer();${
       favourites
         ? `
