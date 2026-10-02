@@ -46,7 +46,8 @@ until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
   sleep 10
   waited=$((waited + 10))
 done
-( while sleep 60; do touch "$lock"; done ) &
+# Its sleep, stopped at the release, would otherwise print "Terminated" after the outcome.
+( while sleep 60; do touch "$lock"; done ) 2>/dev/null &
 refresher=$!
 # Whether the head has checks listed. gh exits non-zero while any is pending (8) or has failed
 # (1), so its output, not its status, says whether there are any (pipefail would hide them).
