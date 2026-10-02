@@ -18,17 +18,17 @@ models:
       email: email!
       message: text!
 pages:
-  catalogue:
+  catalog:
     route: /
     crud: Item
     search: [title, description]
     filters: [category, price, condition, available, owner, createdAt]
     sortable: [price, createdAt, title]
-    favourites: true
+    favorites: true
     contact: { to: seller, keep: Message }
   saved:
     crud: Item
-    favourites: only
+    favorites: only
   mine:
     crud: Item
     contact: owner
@@ -36,5 +36,5 @@ pages:
   welcome:
     route: /welcome
     landing:
-      hero: { button: catalogue }
+      hero: { button: catalog }
       latest: { records: Item, search: true, filters: [category, price], limit: 8 }
