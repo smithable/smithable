@@ -1,6 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
   type AuthIR,
+  type Condition,
   camel,
   humanize,
   isPictures,
@@ -194,7 +195,7 @@ export function landingRoute(
           text=${attr(own.text)}`
               : ""
           }
-          cards={data.${camel(plural(model.name))}.slice(0, ${section.limit ?? 6}).map((row) => ({
+          cards={data.${camel(plural(model.name))}${kept(section.where)}.slice(0, ${section.limit ?? 6}).map((row) => ({
             key: row.id,
             title: String(row.${title}),${
               article
@@ -410,4 +411,14 @@ export const site: LandingSite = ${literal({
     ...(Object.keys(contact).length ? { contact } : {}),
   })};
 `;
+}
+
+/** A records section's `where` as a filter on the rows the viewer may read; none keeps them all. */
+function kept(where: Condition | undefined): string {
+  const conditions = Object.entries(where ?? {}).map(([key, value]) =>
+    Array.isArray(value)
+      ? `${JSON.stringify(value)}.includes(row.${key})`
+      : `row.${key} === ${JSON.stringify(value)}`,
+  );
+  return conditions.length ? `.filter((row) => ${conditions.join(" && ")})` : "";
 }

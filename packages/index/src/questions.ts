@@ -24,7 +24,7 @@ import {
   pageFor,
   verbOf,
 } from "./phrases.js";
-import { who, wordsFor } from "./summary.js";
+import { conditionWords, who, wordsFor } from "./summary.js";
 
 export interface Answer {
   text: string;
@@ -62,14 +62,7 @@ export function answerQuestion(
   const rolesOf = (rule: Allowed) =>
     rule.public
       ? rule.where
-        ? `Anyone, without signing in, for records where ${Object.entries(rule.where)
-            .map(
-              ([k, v]) =>
-                `${humanize(k).toLowerCase()} is ${typeof v === "boolean" ? (v ? "yes" : "no") : humanize(v).toLowerCase()}`,
-            )
-            .join(
-              " and ",
-            )}; otherwise ${who([...rule.roles, ...(rule.owner ? ["owner"] : [])]).toLowerCase()}`
+        ? `Anyone, without signing in, for records where ${conditionWords(rule.where)}; otherwise ${who([...rule.roles, ...(rule.owner ? ["owner"] : [])]).toLowerCase()}`
         : "Anyone, without signing in"
       : rule.roles.length || rule.owner
         ? capitalize(who([...rule.roles, ...(rule.owner ? ["owner"] : [])]))
@@ -115,14 +108,7 @@ export function answerQuestion(
       return {
         text: rule.public
           ? `Yes: anyone can see ${plural(model)}${
-              rule.where
-                ? ` where ${Object.entries(rule.where)
-                    .map(
-                      ([k, v]) =>
-                        `${humanize(k).toLowerCase()} is ${typeof v === "boolean" ? (v ? "yes" : "no") : humanize(v).toLowerCase()}`,
-                    )
-                    .join(" and ")}`
-                : ""
+              rule.where ? ` where ${conditionWords(rule.where)}` : ""
             } without signing in${create ? `, and add them` : ""}.`
           : `No: ${plural(model)} need sign-in; ${who([...rule.roles, ...(rule.owner ? ["owner"] : [])]).toLowerCase()} can see them.`,
         concepts: [`model:${model.name}`],
