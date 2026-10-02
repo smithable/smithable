@@ -448,6 +448,42 @@ test("addSection and removeSection change a landing page's sections, with their 
   expect(removed.ok && removed.files.content).not.toContain("Can I use my own invoice numbers?");
 });
 
+test("setShortcuts gives a hero up to four shortcuts to pages, and takes them away", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const file = (s: string) => raw[`../../../examples/invoicing/smithable${s}.yml`] as string;
+  const invoicing = { spec: file(""), auth: file(".auth"), content: file(".content") };
+  const set = applyOperation(invoicing, "setShortcuts", {
+    page: "home",
+    pages: ["invoices", "clients"],
+  });
+  expect(set.ok && set.files.spec).toContain(
+    "hero: { button: overview, shortcuts: [invoices, clients] }",
+  );
+  if (!set.ok) throw new Error(set.message);
+  const removed = applyOperation({ ...invoicing, ...set.files }, "setShortcuts", { page: "home" });
+  expect(removed.ok && removed.files.spec).not.toContain("shortcuts");
+  // A hero with no options yet gets them.
+  const landing = applyOperation(files, "addLandingPage", { page: "home" });
+  if (!landing.ok) throw new Error(landing.message);
+  const bare = applyOperation({ ...files, ...landing.files }, "setShortcuts", {
+    page: "home",
+    pages: ["customers"],
+  });
+  expect(bare.ok && bare.files.spec).toContain("shortcuts: [customers]");
+  const five = ["overview", "invoices", "clients", "settings", "welcome"];
+  expect(applyOperation(invoicing, "setShortcuts", { page: "home", pages: five }).ok).toBe(false);
+  expect(applyOperation(invoicing, "setShortcuts", { page: "home", pages: ["nowhere"] }).ok).toBe(
+    false,
+  );
+  expect(
+    applyOperation(invoicing, "setShortcuts", { page: "invoices", pages: ["clients"] }).ok,
+  ).toBe(false);
+});
+
 test("addLandingPage makes a public landing page with a hero and a footer", () => {
   const result = applyOperation(files, "addLandingPage", { page: "home" });
   expect(result).toMatchObject({ ok: true });

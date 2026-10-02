@@ -582,12 +582,59 @@ const removeSection: Operation<{ page: string; section: string }> = {
   },
 };
 
+const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
+  name: "setShortcuts",
+  summary:
+    "Give a landing page's hero up to four shortcuts to other pages, shown as round icons (no pages removes them).",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Landing page" }, { description: "e.g. home." }),
+      pages: refTo(
+        { ref: "page", label: "Shortcuts to" },
+        { description: "Up to four pages; their titles and icons are the shortcuts'." },
+        true,
+      ),
+    },
+  },
+  positional: ["page", "...pages"],
+  describe: ({ page, pages }) =>
+    pages?.length
+      ? `Give the ${page} hero shortcuts to ${pages.join(", ")}`
+      : `Remove the shortcuts from the ${page} hero`,
+  destructive: () => false,
+  apply({ spec }, { page, pages = [] }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const hero =
+      existing?.pattern.kind === "landing"
+        ? existing.pattern.sections.find((s) => s.kind === "hero")
+        : undefined;
+    if (!hero) throw new OperationError(`The ${page} page has no hero.`);
+    if (pages.length > 4) throw new OperationError("A hero has at most four shortcuts.");
+    const at = ["pages", page, "landing", hero.name];
+    const path = [...at, "shortcuts"];
+    if (pages.length === 0) {
+      if (spec.has(path)) spec.remove(path);
+    } else if (spec.has(path)) spec.set(path, pages);
+    else if (spec.get(at) == null) spec.set(at, { shortcuts: pages });
+    else spec.add(at, "shortcuts", pages);
+    return [];
+  },
+};
+
 /** Operations on pages of every pattern. */
 export const pageOperations: AnyOperation[] = [removePage];
 /** Operations of the crud pattern. */
 export const crudOperations: AnyOperation[] = [addPage, setSearch];
 /** Operations of the landing pattern. */
-export const landingOperations: AnyOperation[] = [addLandingPage, addSection, removeSection];
+export const landingOperations: AnyOperation[] = [
+  addLandingPage,
+  addSection,
+  removeSection,
+  setShortcuts,
+];
 /** Operations of the dashboard pattern. */
 export const dashboardOperations: AnyOperation[] = [addTile];
 /** Operations of the calendar pattern. */

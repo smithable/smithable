@@ -541,6 +541,14 @@
                   "type": "string",
                   "description": "The page the section's button opens."
                 },
+                "shortcuts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "description": "A hero's shortcuts: up to four pages, shown as round icons."
+                },
                 "limit": {
                   "type": "integer",
                   "minimum": 1
