@@ -111,21 +111,24 @@ export function ModelTable<R extends Row>({
   };
   const title = columns.find((f) => f.name === ui.titleField) ?? columns[0];
   // Cards view shows the picture on top, so not again among the details.
-  const others = columns.filter((f) => f !== title && !(view === "cards" && f.kind === "picture"));
+  const others = columns.filter(
+    (f) => f !== title && !(view === "cards" && (f.kind === "picture" || f.kind === "pictures")),
+  );
   const status = others.find((f) => f.kind === "choice");
   const amount = others.find((f) => numeric(f.kind));
   const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const description = ui.fields.find((f) => f.name === ui.descriptionField);
-  const pictureField = ui.fields.find((f) => f.kind === "picture");
+  const pictureField = ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
+  // A picture's address; for several pictures, the cover's (the first).
   const pictureSrc = (field: RecordFieldUi<R>, row: R) =>
-    `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}`;
+    `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}${field.kind === "pictures" ? "/0" : ""}`;
   const cell = (field: RecordFieldUi<R>, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
-    if (field.kind === "picture" && text === "—")
+    if ((field.kind === "picture" || field.kind === "pictures") && text === "—")
       return <PicturePlaceholder icon={icon} className="size-10 rounded-md border" />;
     // A picture as a thumbnail; its address is the record's, so it is as private as the record.
-    if (field.kind === "picture" && text !== "—" && ui.model)
+    if ((field.kind === "picture" || field.kind === "pictures") && text !== "—" && ui.model)
       return (
         <img
           src={pictureSrc(field, row)}

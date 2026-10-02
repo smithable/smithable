@@ -9,6 +9,7 @@ import {
   pascal,
   plural,
   type SpecIR,
+  storesPictures,
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
@@ -140,9 +141,7 @@ export function listParts(
     : undefined;
   const cards = presentation?.view === "cards";
   // A model with pictures shows the page's icon where a record has none (cards, its column).
-  const icon = model.fields.some((f) => f.type.kind === "scalar" && f.type.name === "picture")
-    ? LUCIDE[pageIcon(ux, page)]
-    : undefined;
+  const icon = model.fields.some(storesPictures) ? LUCIDE[pageIcon(ux, page)] : undefined;
   // Inside a data page without a search, the list still loads the newest records only.
   const capped = within && !search;
 
