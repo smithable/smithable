@@ -1,4 +1,4 @@
-import { validateAuth, validateContent, validateSpec } from "@smithable/core";
+import { emptyContent, validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
 import { summarize } from "./summary.js";
 
@@ -20,13 +20,13 @@ test("the CRM in plain language, with labels from the content file", () => {
   const sections = summarize(ir, auth, content);
   expect(sections.map((s) => s.concept)).toEqual([
     "app",
+    "pages",
     "model:Customer",
     "model:Order",
-    "pages",
     "action:mergeCustomers",
     "auth",
   ]);
-  expect(sections[1]?.sentences).toEqual([
+  expect(sections[2]?.sentences).toEqual([
     "Customers have:",
     "- a name (required)",
     "- an email (unique)",
@@ -40,7 +40,7 @@ test("the CRM in plain language, with labels from the content file", () => {
     "Only sales users and admins can change customers.",
     "Only admins can delete customers.",
   ]);
-  expect(sections[3]?.sentences).toEqual([
+  expect(sections[1]?.sentences).toEqual([
     "- Customers (lists customers; search by name or email; “Merge customers”)",
     "- Orders (lists orders; search by number or customer)",
     "- Team (who has access: invite people, change roles, remove users)",
@@ -103,4 +103,26 @@ models:
   expect(sections.find((s) => s.concept === "model:Seat")?.sentences).toContain(
     "At most 4 seats per session.",
   );
+});
+
+test("the pages come first, the home page first among them", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Class:
+    fields: { name: string! }
+pages:
+  classes: { crud: Class }
+  home:
+    route: /
+    landing:
+      hero: { button: classes }
+`,
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const sections = summarize(ir, undefined, emptyContent());
+  expect(sections[0]?.concept).toBe("pages");
+  expect(sections[0]?.sentences[0]).toMatch(/^- Home /);
 });
