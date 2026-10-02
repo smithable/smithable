@@ -122,3 +122,30 @@ test("setCapacity sets and removes a model's capacity", () => {
     applyOperation(files, "setCapacity", { model: "Booking", per: "startsAt", max: "3" }),
   ).toMatchObject({ ok: false });
 });
+
+test("a capacity may count several values, and refuses to lose one", () => {
+  const files = {
+    spec: spec("capacity: { per: session, max: 3, where: { status: [confirmed] } }"),
+  };
+  expect(
+    read("capacity: { per: session, max: 3, where: { status: [confirmed] } }").ir?.models[1]
+      ?.capacity?.where,
+  ).toEqual({ status: ["confirmed"] });
+  expect(codes("capacity: { per: session, max: 3, where: { status: [confirmed, paid] } }")).toEqual(
+    ["error invalid-capacity"],
+  );
+  expect(
+    applyOperation(files, "changeField", {
+      model: "Booking",
+      field: "status",
+      type: "held | canceled",
+    }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining("status is confirmed") });
+  const set = applyOperation({ spec: spec("") }, "setCapacity", {
+    model: "Booking",
+    per: "session",
+    max: "3",
+    where: { status: "confirmed | canceled" },
+  });
+  expect(set.ok && set.files.spec).toContain("        status: [confirmed, canceled]\n");
+});
