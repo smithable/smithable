@@ -1546,7 +1546,8 @@ async function browserFlow(base) {
     await expectText("empty required field says Required", "Required");
 
     await page.getByRole("textbox", { name: "Name *" }).fill("Mariehamn Marine AB");
-    await page.getByRole("textbox", { name: "Email" }).fill("nordic.timber.oy@example.com");
+    // Nordic Timber's email in the starter's samples/Customer.yml.
+    await page.getByRole("textbox", { name: "Email" }).fill("orders@nordictimber.example");
     await page.getByRole("textbox", { name: "Credit limit" }).fill("lots");
     await page.getByRole("button", { name: "Create customer" }).click();
     await expectText("a non-number amount says Enter a number", "Enter a number");
