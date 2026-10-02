@@ -1,6 +1,6 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customise a table, copy this file into src/custom/components/ and edit the copy.
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ImageIcon, type LucideIcon } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import {
@@ -35,6 +35,27 @@ interface ModelTableProps<R extends Row> {
   page?: string;
   /** Cards on wide screens too, instead of a table (a phone shows cards anyway). */
   view?: "table" | "cards";
+  /** The model's icon, shown where a picture is missing. */
+  icon?: LucideIcon;
+}
+
+/** Where a picture is missing: the theme's muted tone with the model's icon. */
+export function PicturePlaceholder({
+  icon: Icon = ImageIcon,
+  className,
+}: {
+  icon?: LucideIcon;
+  className?: string;
+}) {
+  return (
+    <div
+      aria-hidden
+      data-part="placeholder"
+      className={cn("flex items-center justify-center bg-muted text-muted-foreground", className)}
+    >
+      <Icon className="size-1/3 max-h-12 max-w-12 min-h-4 min-w-4" />
+    </div>
+  );
 }
 
 export function ModelTable<R extends Row>({
@@ -49,6 +70,7 @@ export function ModelTable<R extends Row>({
   below = {},
   page,
   view = "table",
+  icon,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
@@ -88,19 +110,25 @@ export function ModelTable<R extends Row>({
     );
   };
   const title = columns.find((f) => f.name === ui.titleField) ?? columns[0];
-  const others = columns.filter((f) => f !== title);
+  // Cards view shows the picture on top, so not again among the details.
+  const others = columns.filter((f) => f !== title && !(view === "cards" && f.kind === "picture"));
   const status = others.find((f) => f.kind === "choice");
   const amount = others.find((f) => numeric(f.kind));
   const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const description = ui.fields.find((f) => f.name === ui.descriptionField);
+  const pictureField = ui.fields.find((f) => f.kind === "picture");
+  const pictureSrc = (field: RecordFieldUi<R>, row: R) =>
+    `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}`;
   const cell = (field: RecordFieldUi<R>, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
+    if (field.kind === "picture" && text === "—")
+      return <PicturePlaceholder icon={icon} className="size-10 rounded-md border" />;
     // A picture as a thumbnail; its address is the record's, so it is as private as the record.
     if (field.kind === "picture" && text !== "—" && ui.model)
       return (
         <img
-          src={`/files/${ui.model.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}`}
+          src={pictureSrc(field, row)}
           alt={text}
           className="h-10 w-10 rounded-md border object-cover"
         />
@@ -135,7 +163,28 @@ export function ModelTable<R extends Row>({
       >
         {shown.map((row) => (
           <li key={row.id} data-part="row">
-            <Card className="relative space-y-3 p-5 hover:bg-accent/40">
+            <Card
+              className={cn(
+                "relative space-y-3 p-5 hover:bg-accent/40",
+                view === "cards" && "overflow-hidden pt-0",
+              )}
+            >
+              {/* Cards on every screen show the record's picture, or a placeholder without one. */}
+              {view === "cards" &&
+                (pictureField &&
+                formatValue(pictureField, displayValue(pictureField, row), app) !== "—" ? (
+                  <img
+                    src={pictureSrc(pictureField, row)}
+                    alt={formatValue(pictureField, displayValue(pictureField, row), app)}
+                    loading="lazy"
+                    className="-mx-5 aspect-[3/2] w-[calc(100%+2.5rem)] max-w-none object-cover"
+                  />
+                ) : (
+                  <PicturePlaceholder
+                    icon={icon}
+                    className="-mx-5 aspect-[3/2] w-[calc(100%+2.5rem)]"
+                  />
+                ))}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   {title && open(row, cell(title, row), "break-words text-base font-semibold")}
