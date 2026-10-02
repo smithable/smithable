@@ -37,6 +37,7 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/Filters.tsx": [
     "data-kit="filters"",
+    "data-part="saved-tabs"",
   ],
   "src/kit/Landing.tsx": [
     "data-kit="landing"",
@@ -59,6 +60,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="actions"",
   ],
   "src/kit/ModelTable.tsx": [
+    "data-part="save"",
     "data-part="placeholder"",
     "data-kit="model-table"",
     "data-part="empty"",
