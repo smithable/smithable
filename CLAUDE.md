@@ -18,7 +18,7 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   - `node scripts/bench-m12.mjs`: M12 first builds: ten descriptions through `smithable new --describe` with the configured model (see `docs/ai.md`). Ask before running with a paid model. Writes `docs/benchmarks/m12-first-builds-<model>.md`.
   - `node scripts/bench-m6.mjs`: the M6 exit check (Claude Code headless with only the Smithable MCP server). Uses the user's Claude usage; ask before running. Writes `docs/benchmarks/m6-mcp.md`.
   - `pnpm site`: builds docs.smithable.ai into `site/` (the pages in `docs/site/`, the spec reference and the JSON Schema), failing on a dead link. smithable-cloud's Docs workflow publishes it.
-  - `pnpm check`: lint + build + test + site + test:apps + test:studio. This is the CI gate and must pass before every commit.
+  - `pnpm check`: lint + build + test + site + test:apps + test:studio. This is the gate: it must pass locally before every commit that touches `packages/`, `apps/` or the scripts `check` runs; for a change to docs only, or to tooling scripts `check` does not run, CI's run of it on the pull request is the gate (it runs on every push and pull request), so several sessions can work at once without queuing on one machine's gate.
   - `pnpm schema`: regenerate `packages/core/schema/smithable.schema.json` after changing a section's schema. A test fails if it is stale.
 - App templates live in `packages/adapter-tanstack/templates/` as real files; `pnpm build` embeds them (and the example specs used as starters) via `scripts/embed.mjs`. Generated `*.gen.ts` files are never edited by hand.
 - The spec reference is `docs/spec/v0.1.md`. Update it together with any change to the spec grammar.
