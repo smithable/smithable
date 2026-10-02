@@ -25,7 +25,7 @@ const setTheme: Operation<{
 }> = {
   name: "setTheme",
   summary:
-    'Choose the theme preset, brand colour, font or density ("none" removes the brand colour or font).',
+    'Choose the theme preset, brand color, font or density ("none" removes the brand color or font).',
   schema: {
     type: "object",
     additionalProperties: false,
@@ -34,7 +34,7 @@ const setTheme: Operation<{
         type: "string",
         description: `A built-in theme (${THEME_PRESETS.join(", ")}) or one of the project's themes/<name>.yml.`,
       },
-      primary: { type: "string", description: 'A colour like "#2563eb", or "none".' },
+      primary: { type: "string", description: 'A color like "#2563eb", or "none".' },
       font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
       density: { type: "string", enum: ["comfortable", "compact"] },
       page: refTo(
@@ -127,7 +127,7 @@ const setFieldOrder: Operation<{ page: string; fields?: string[] }> = {
 const setTone: Operation<{ model: string; field: string; value: string; tone: string }> = {
   name: "setTone",
   summary:
-    "Give a choice value a colour by meaning, e.g. paid: success, overdue: warning (neutral: the default).",
+    "Give a choice value a color by meaning, e.g. paid: success, overdue: warning (neutral: the default).",
   schema: {
     type: "object",
     required: ["model", "field", "value", "tone"],
@@ -426,7 +426,7 @@ const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
       text: {
         type: "string",
         description:
-          "The theme file's text: smithableTheme: 0.1, a font, at least three colours per mode (see the spec, Themes). On the command line, --text @path reads a file.",
+          "The theme file's text: smithableTheme: 0.1, a font, at least three colors per mode (see the spec, Themes). On the command line, --text @path reads a file.",
       },
       use: { type: "boolean", description: "Also make it the app's theme." },
     },

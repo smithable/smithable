@@ -20,7 +20,7 @@ models:
   Booking:
     fields:
       session: Session! unique
-      status: confirmed | cancelled
+      status: confirmed | canceled
     capacity: { per: session, max: session.capacity, where: { status: confirmed } }
 pages:
   sessions: { crud: Session }

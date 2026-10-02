@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { contrast, hexOf } from "./colour.js";
+import { contrast, hexOf } from "./color.js";
 import { validateSpec } from "./spec.js";
 import { BUILT_IN_THEMES, checkContrast, parseTheme, themeNamed, themeThumbnail } from "./theme.js";
 import { validateUx } from "./ux.js";
@@ -28,7 +28,7 @@ test("the built-in themes read in both modes", () => {
   }
 });
 
-test("a theme of three colours per mode gets the rest derived, and reads", () => {
+test("a theme of three colors per mode gets the rest derived, and reads", () => {
   const { theme, diagnostics } = parse(forest);
   expect(diagnostics).toEqual([]);
   expect(theme).toMatchObject({

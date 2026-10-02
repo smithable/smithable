@@ -184,7 +184,7 @@ export const app: AppUi = ${literal(app)};
 `;
 }
 
-/** A simple icon with the app's initial, in the theme's primary colour. */
+/** A simple icon with the app's initial, in the theme's primary color. */
 function favicon(ir: SpecIR): string {
   const initial = (ir.app.name.match(/[A-Za-z0-9]/)?.[0] ?? "A").toUpperCase();
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -246,17 +246,17 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}${licencesReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
 ## Project structure
 
 ${structure}`;
 }
 
 /** What the app owner may do with the app, and the notices it carries, for the README. */
-function licencesReadme(): string {
-  return `## Licences
+function licensesReadme(): string {
+  return `## Licenses
 
-The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD license, which asks nothing of you, and the generated code carries no license of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licenses in \`node_modules/\`.
 
 `;
 }
@@ -287,7 +287,7 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-section\` | a landing section | its name, e.g. \`hero\` |
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
-For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colors are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
 `;
 }
@@ -409,7 +409,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // and the Saved view's tabs (§2.3).
         used: ({ ir, auth }) =>
           ir.pages.some(
-            (p) => p.filters?.length || p.sortable?.length || (hasSignIn(auth) && p.favourites),
+            (p) => p.filters?.length || p.sortable?.length || (hasSignIn(auth) && p.favorites),
           ),
       },
       {

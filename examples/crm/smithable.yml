@@ -31,7 +31,7 @@ models:
     fields:
       number: string! unique
       customer: Customer!
-      status: draft | placed | shipped | cancelled
+      status: draft | placed | shipped | canceled
       total: money!
       shippingMethod: standard | express
       shippingCost:

@@ -17,7 +17,7 @@ const examples = JSON.parse(
   derived: Record<string, string>;
 }[];
 
-/** Colours match when every 8-bit channel is within 1 (rounding differences). */
+/** Colors match when every 8-bit channel is within 1 (rounding differences). */
 const close = (a: string, b: string) =>
   hexToRgb(a).every((v, i) => Math.abs(v - (hexToRgb(b)[i] as number)) * 255 <= 1.01);
 
