@@ -1790,6 +1790,467 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "allow": [
+        "admin",
+        "staff",
+      ],
+      "custom": true,
+      "input": [
+        {
+          "name": "incident",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Incident",
+          },
+          "unique": false,
+        },
+      ],
+      "intent": "The cause is found; the incident moves to identified.",
+      "name": "identified",
+      "rules": [
+        {
+          "text": "The incident's status becomes identified, with an update saying so.",
+        },
+      ],
+    },
+    {
+      "allow": [
+        "admin",
+        "staff",
+      ],
+      "custom": true,
+      "input": [
+        {
+          "name": "incident",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Incident",
+          },
+          "unique": false,
+        },
+      ],
+      "intent": "A fix is out; the incident is watched before it is closed.",
+      "name": "monitoring",
+      "rules": [
+        {
+          "text": "The incident's status becomes monitoring, with an update saying so.",
+        },
+      ],
+    },
+    {
+      "allow": [
+        "admin",
+        "staff",
+      ],
+      "custom": true,
+      "input": [
+        {
+          "name": "incident",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Incident",
+          },
+          "unique": false,
+        },
+      ],
+      "intent": "The incident is over.",
+      "name": "resolve",
+      "rules": [
+        {
+          "text": "The incident's status becomes resolved and its resolvedAt is now.",
+        },
+        {
+          "text": "Its component is operational again.",
+        },
+      ],
+    },
+  ],
+  "app": {
+    "description": "Is it working? The state of our services, live.",
+    "name": "Northwind Status",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": "operational",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "operational",
+              "degraded",
+              "down",
+              "maintenance",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "incidents",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Incident",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Component",
+    },
+    {
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": "investigating",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "component",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Component",
+          },
+          "unique": false,
+        },
+        {
+          "name": "detectedAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "resolvedAt",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "summary",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "markdown",
+          },
+          "unique": false,
+        },
+        {
+          "name": "updates",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "IncidentUpdate",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Incident",
+    },
+    {
+      "fields": [
+        {
+          "name": "incident",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Incident",
+          },
+          "unique": false,
+        },
+        {
+          "name": "at",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "default": "investigating",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "message",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "IncidentUpdate",
+    },
+    {
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "component",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Component",
+          },
+          "unique": false,
+        },
+        {
+          "name": "startsAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "endsAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Maintenance",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "overview",
+        "incidents",
+        "updates",
+        "maintenance",
+        "components",
+        "team",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "history",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "records",
+            "model": "Component",
+            "name": "services",
+          },
+          {
+            "kind": "records",
+            "limit": 5,
+            "model": "Incident",
+            "name": "recent",
+          },
+          {
+            "kind": "records",
+            "limit": 3,
+            "model": "Maintenance",
+            "name": "planned",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/",
+    },
+    {
+      "id": "history",
+      "pattern": {
+        "body": "summary",
+        "date": "detectedAt",
+        "kind": "articles",
+        "model": "Incident",
+        "title": "title",
+      },
+      "route": "/history",
+    },
+    {
+      "actions": [
+        "identified",
+        "monitoring",
+        "resolve",
+      ],
+      "id": "incidents",
+      "pattern": {
+        "kind": "crud",
+        "model": "Incident",
+      },
+      "route": "/incidents",
+    },
+    {
+      "id": "updates",
+      "pattern": {
+        "kind": "crud",
+        "model": "IncidentUpdate",
+      },
+      "route": "/updates",
+    },
+    {
+      "access": [
+        "admin",
+      ],
+      "id": "components",
+      "pattern": {
+        "kind": "crud",
+        "model": "Component",
+      },
+      "route": "/components",
+    },
+    {
+      "id": "maintenance",
+      "pattern": {
+        "kind": "crud",
+        "model": "Maintenance",
+      },
+      "route": "/maintenance",
+    },
+    {
+      "id": "overview",
+      "pattern": {
+        "items": [
+          {
+            "kind": "stat",
+            "measure": "count",
+            "model": "Incident",
+            "name": "open",
+            "where": {
+              "status": "investigating",
+            },
+          },
+          {
+            "by": "detectedAt",
+            "kind": "chart",
+            "measure": "count",
+            "model": "Incident",
+            "name": "perMonth",
+          },
+          {
+            "kind": "list",
+            "limit": 5,
+            "model": "Incident",
+            "name": "latest",
+          },
+        ],
+        "kind": "dashboard",
+      },
+      "route": "/overview",
+    },
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
 {
   "actions": [
