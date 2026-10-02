@@ -4,11 +4,11 @@ Status: proposed 2026-10-02 by Fable, from Johan's direction: without good-looki
 
 ## 1. What people get
 
-- **"See it live"** on docs.smithable.ai and in the README: five example sites running permanently, each a published app on the hosted service, with real texts and photographs. A visitor opens one, signs in as an admin or a member with one click, adds and changes things, and sees the data come back to its seed within the hour.
+- **"See it live"** on docs.smithable.ai and in the README: six example sites running permanently, each a published app on the hosted service, with real texts and photographs. A visitor opens one, signs in as an admin or a member with one click, adds and changes things, and sees the data come back to its seed within the hour.
 - **"Open in Studio"** beside each: the sandbox the demo already offers, started from that example's spec, so the next step from looking is changing.
 - **For developers:** a sixty-second transcript on the getting-started page: a site made, changed and deployed from the command line, with what each command did.
 
-## 2. The five sites
+## 2. The six sites
 
 | Site | What it shows | Starter |
 |---|---|---|
@@ -17,6 +17,7 @@ Status: proposed 2026-10-02 by Fable, from Johan's direction: without good-looki
 | Torget | the marketplace (marketplace.md): catalogue, filters, favourites, contact the seller | marketplace |
 | a CRM | an internal tool: records, relations, a status flow, a dashboard, roles | crm |
 | Invoicely | per-user data, formulas, a settings page | invoicing |
+| a status page | components with a status, incidents with a flow and a timeline, planned maintenance; the public page from records sections (ROADMAP M16) | status, a new starter |
 
 The texts are written by hand for each (not "A short description of Hatha 2"); the photographs come from the image library (Johan's decision on scope and budget). The sites are the starters' specs, so every improvement to a starter shows on its site at the next release, and every site is also what `smithable new --starter` gives.
 
