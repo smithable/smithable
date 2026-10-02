@@ -1,3 +1,4 @@
+import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlEditor } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -299,7 +300,7 @@ const addTile: Operation<{
   tile: string;
   measure: "count" | "sum" | "average" | "list" | "query";
   of: string;
-  where?: Record<string, string | boolean>;
+  where?: Record<string, string | boolean | string[]>;
   by?: string;
   limit?: number;
 }> = {
@@ -324,7 +325,8 @@ const addTile: Operation<{
       },
       where: {
         type: "object",
-        description: 'Only records with these values, e.g. { "status": "sent" }.',
+        description:
+          'Only records with these values, e.g. { "status": "sent" } or { "status": "sent | overdue" }.',
       },
       by: { type: "string", description: "A date field: one bar per month." },
       limit: { type: "integer", minimum: 1, description: "For a list or query: how many records." },
@@ -337,7 +339,7 @@ const addTile: Operation<{
   apply({ spec }, { page, tile, measure, of, where, by, limit }, ir) {
     const value = {
       [measure]: of,
-      ...(where && Object.keys(where).length ? { where } : {}),
+      ...(where && Object.keys(where).length ? { where: conditionArgs(where) } : {}),
       ...(by ? { by } : {}),
       ...(limit ? { limit } : {}),
     };
@@ -657,6 +659,7 @@ const addSection: Operation<{
   page: string;
   section: string;
   records?: string;
+  where?: Record<string, string | boolean | string[]>;
   form?: string;
   button?: string;
   custom?: string;
@@ -677,6 +680,11 @@ const addSection: Operation<{
         { ref: "model", label: "Records of" },
         { description: "A model whose records the section shows as cards." },
       ),
+      where: {
+        type: "object",
+        description:
+          'With records: only those with these values, e.g. { "status": "investigating | identified" } or { "featured": "true" }.',
+      },
       form: refTo(
         { ref: "model", label: "Form for" },
         { description: "A contact section's form: the model visitors add." },
@@ -695,7 +703,7 @@ const addSection: Operation<{
   positional: ["page", "section"],
   describe: ({ page, section }) => `Add a ${section} section to the ${page} page`,
   destructive: () => false,
-  apply({ spec }, { page, section, records, form, button, custom }, ir) {
+  apply({ spec }, { page, section, records, where, form, button, custom }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
     if (!existing) throw new OperationError(`There is no page named "${page}".`);
     if (existing.pattern.kind !== "landing")
@@ -709,8 +717,11 @@ const addSection: Operation<{
       throw new OperationError(
         `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records.`,
       );
+    if (where && Object.keys(where).length && !records)
+      throw new OperationError('Only a section with records has a "where".');
     const options = {
       ...(records ? { records } : {}),
+      ...(where && Object.keys(where).length ? { where: conditionArgs(where) } : {}),
       ...(form ? { form } : {}),
       ...(button ? { button } : {}),
       ...(custom ? { custom } : {}),
@@ -746,6 +757,53 @@ const removeSection: Operation<{ page: string; section: string }> = {
       throw new OperationError("A landing page needs at least one section.");
     spec.remove(["pages", page, "landing", section]);
     return [{ kind: "remove-section", page, section }];
+  },
+};
+
+const setSectionWhere: Operation<{
+  page: string;
+  section: string;
+  where?: Record<string, string | boolean | string[]>;
+}> = {
+  name: "setSectionWhere",
+  summary:
+    "Show only some of a records section's records: those with these values (none shows every record).",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: refTo({ ref: "section", page: "page", label: "Section" }),
+      where: {
+        type: "object",
+        description:
+          'Field values a record must have, e.g. { "status": "investigating | identified" } or { "featured": "true" }; none shows every record.',
+      },
+    },
+  },
+  positional: ["page", "section", "...where"],
+  describe: ({ page, section, where }) =>
+    Object.keys(where ?? {}).length
+      ? `Show in the ${section} section of ${page} only records where ${conditionText(conditionArgs(where ?? {}))}`
+      : `Show every record in the ${section} section of ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, section, where }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const found =
+      existing?.pattern.kind === "landing"
+        ? existing.pattern.sections.find((s) => s.name === section)
+        : undefined;
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (!found.model)
+      throw new OperationError(`The ${section} section shows no records, so it has no "where".`);
+    const path = ["pages", page, "landing", section, "where"];
+    const conditions = conditionArgs(where ?? {});
+    if (!Object.keys(conditions).length) {
+      if (spec.has(path)) spec.remove(path);
+    } else if (spec.has(path)) spec.set(path, conditions);
+    else spec.add(["pages", page, "landing", section], "where", conditions);
+    return [];
   },
 };
 
@@ -808,6 +866,7 @@ export const landingOperations: AnyOperation[] = [
   addLandingPage,
   addSection,
   removeSection,
+  setSectionWhere,
   setShortcuts,
 ];
 /** Operations of the dashboard pattern. */
