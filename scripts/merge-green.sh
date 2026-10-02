@@ -33,8 +33,11 @@ trap release EXIT
 trap 'exit 130' INT TERM HUP
 waited=0
 until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
-  # A holder refreshes the lock every minute, so one untouched for an hour was left behind.
-  if [ -n "$(find "$lock" -mmin +60 2>/dev/null)" ]; then
+  # A holder refreshes the lock every minute, so one untouched for an hour was left behind; and
+  # one whose process on this machine is gone is stale at once.
+  holder=$(sed -n 's/.* pid \([0-9]*\)@\(.*\)$/\1 \2/p' "$lock" 2>/dev/null)
+  if [ -n "$(find "$lock" -mmin +60 2>/dev/null)" ] \
+    || { [ "${holder#* }" = "$(hostname)" ] && ! kill -0 "${holder%% *}" 2>/dev/null; }; then
     echo "Taking over a stale lock: $(cat "$lock" 2>/dev/null)"
     rm -f "$lock"
     continue
