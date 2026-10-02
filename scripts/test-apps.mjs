@@ -448,7 +448,7 @@ async function pictureFlow(dir, base) {
       .locator('img[src="/files/instructor/1/portrait"]:visible')
       .waitFor({ timeout: 10000 });
     await open(page, `${base}/instructors/1`);
-    const before = readdirSync(uploads).length;
+    const before = new Set(readdirSync(uploads));
     const chooser = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Replace" }).click();
     await (await chooser).setFiles(join(dir, "public", "images", "hero.webp"));
@@ -459,12 +459,16 @@ async function pictureFlow(dir, base) {
     await page.waitForURL(/\/instructors$/);
     await open(page, `${base}/instructors/1`);
     await page.getByRole("img", { name: "Emma at the studio" }).waitFor({ timeout: 10000 });
-    // The old file stays: other seeded instructors share it. The new one goes when removed.
-    if (readdirSync(uploads).length !== before + 1) throw new Error("the new file was not kept");
+    // The new file is kept and the old one, no other record's, is gone; the new one goes when
+    // removed.
+    const after = readdirSync(uploads);
+    if (!after.some((f) => !before.has(f))) throw new Error("the new file was not kept");
+    if (after.length !== before.size) throw new Error("the replaced file was not deleted");
     await page.getByRole("button", { name: "Remove" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.waitForURL(/\/instructors$/);
-    if (readdirSync(uploads).length !== before) throw new Error("the removed file was not deleted");
+    if (readdirSync(uploads).length !== before.size - 1)
+      throw new Error("the removed file was not deleted");
     console.log(
       "  ✓ browser: a portrait is served from its record, replaced from a file (scaled in the browser, checked on the server) and removed with its file; visitors and junk are refused",
     );
