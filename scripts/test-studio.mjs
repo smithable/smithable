@@ -707,7 +707,7 @@ try {
     await page.getByLabel("Logs").getByText("Generated").first().waitFor({ timeout: 30000 });
   });
   await step(
-    "a change whose regeneration fails is rolled back, and the preview comes back; so does a crashed one",
+    "a change whose regeneration fails is rolled back, and the preview comes back; so does a crashed one, and a page opened while it was down shows once it is up",
     async () => {
       const health = async () => {
         for (let i = 0; i < 60; i++) {
@@ -738,8 +738,11 @@ try {
       // A preview that stops by itself is started again.
       if (spawnSync("pkill", ["-f", `preview.vite.config.mjs --port ${port + 1}`]).status !== 0)
         throw new Error("no preview process to stop");
-      await new Promise((r) => setTimeout(r, 1500));
+      // One Go while it is down (the customers page, titled Clients by now): the preview waits
+      // ("Starting…") and opens the page once the server answers again, without a reload.
+      await openPreview("/customers");
       await health();
+      await preview.getByRole("heading", { name: "Clients", level: 1 }).waitFor({ timeout: 60000 });
     },
   );
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
