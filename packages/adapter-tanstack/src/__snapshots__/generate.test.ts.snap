@@ -4473,7 +4473,7 @@ import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards, Section, CallToAction, Contact } from "#/kit/Landing";
 import { listClassTypes } from "#/generated/class-type";
 import { listPosts } from "#/generated/post";
-import { Calendar, BookOpen, Layers } from "lucide-react";
+import { Calendar, BookOpen } from "lucide-react";
 import { Calculator } from "#/kit/Calculator";
 import { homeEstimateCalculatorUi } from "#/generated/home-estimate-calculator";
 import { app } from "#/generated/app";
@@ -4502,7 +4502,6 @@ function HomePage() {
       <RecordCards
           texts="pages.home.classes"
           id="classes"
-          icon={Layers}
           title="Class types"
           cards={data.classTypes.slice(0, 6).map((row) => ({
             key: row.id,
@@ -5833,11 +5832,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Calendar.tsx": "eb7327fb kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "b243f24a kit",
+  "src/kit/Landing.tsx": "b48d099b kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "cc5a519b kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/PictureInput.tsx": "e5ee310f kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -5886,7 +5885,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "a3446a1e generated",
+  "src/routes/index.tsx": "a24a6708 generated",
   "src/routes/instructors/$id.tsx": "186fe32d generated",
   "src/routes/instructors/index.tsx": "d5f0dc15 generated",
   "src/routes/instructors/new.tsx": "f5955aca generated",
@@ -8610,7 +8609,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "cc5a519b kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/Users.tsx": "9f5a0cf9 kit",
@@ -11897,9 +11896,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "c5b62089 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "b243f24a kit",
+  "src/kit/Landing.tsx": "b48d099b kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "cc5a519b kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
@@ -12914,7 +12913,6 @@ import { pageAccess } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
 import { listItems } from "#/generated/item";
-import { Package } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
@@ -12937,7 +12935,6 @@ function HomePage() {
       <RecordCards
           texts="pages.home.items"
           id="items"
-          icon={Package}
           title="Items"
           cards={data.items.slice(0, 6).map((row) => ({
             key: row.id,
@@ -13433,9 +13430,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "b243f24a kit",
+  "src/kit/Landing.tsx": "b48d099b kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "cc5a519b kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/access.ts": "abceb487 kit",
@@ -13455,7 +13452,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "f30f79c3 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "30f651f5 generated",
+  "src/routes/index.tsx": "19b18d69 generated",
   "src/routes/items/$id.tsx": "97e50061 generated",
   "src/routes/items/index.tsx": "df71a94d generated",
   "src/routes/items/new.tsx": "161171aa generated",

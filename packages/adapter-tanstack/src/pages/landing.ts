@@ -127,12 +127,13 @@ export function landingRoute(
         const picture = model.fields.find(
           (f) => f.type.kind === "scalar" && f.type.name === "picture",
         );
-        // A card without a picture shows the icon of the model's own list page.
+        // A card without a picture shows the icon of the model's own list page, when the model
+        // has pictures at all.
         const listPage = ir.pages.find(
           (p) => p.pattern.kind === "crud" && p.pattern.model === model.name,
         );
-        const icon = LUCIDE[listPage ? pageIcon(ux, listPage) : "list"];
-        imports.add("lucide-react", icon);
+        const icon = picture ? LUCIDE[listPage ? pageIcon(ux, listPage) : "list"] : undefined;
+        if (icon) imports.add("lucide-react", icon);
         const labels =
           choice?.type.kind === "choice"
             ? Object.fromEntries(
@@ -144,8 +145,7 @@ export function landingRoute(
             : undefined;
         return [
           `${open("RecordCards")}
-          id=${attr(section.name)}
-          icon={${icon}}
+          id=${attr(section.name)}${icon ? `\n          icon={${icon}}` : ""}
           title=${attr(own.title ?? n.pluralLabel)}${
             own.text
               ? `
