@@ -341,6 +341,58 @@ test("setFilters and setSortable add, change and remove a list's filters and sor
   expect(apply("setFilters", ["nowhere", "segment"])).toMatchObject({ ok: false });
 });
 
+test("setFavourites and setContact add, change and remove a page's favourites and contact block", () => {
+  const saved = ok("setFavourites", ["customers"]);
+  expect(changed(files.spec, saved.files.spec)).toEqual({
+    added: ["    favourites: true"],
+    removed: [],
+  });
+  const only = applyOperation({ ...files, spec: saved.files.spec }, "setFavourites", {
+    page: "customers",
+    mode: "only",
+  });
+  if (!only.ok) throw new Error(only.message);
+  expect(changed(saved.files.spec, only.files.spec)).toEqual({
+    added: ["    favourites: only"],
+    removed: ["    favourites: true"],
+  });
+  const off = applyOperation({ ...files, spec: only.files.spec }, "setFavourites", {
+    page: "customers",
+    mode: "off",
+  });
+  if (!off.ok) throw new Error(off.message);
+  expect(changed(only.files.spec, off.files.spec)).toEqual({
+    added: [],
+    removed: ["    favourites: only"],
+  });
+  // The CRM's customers have an account manager, a user: the contact block may mail them.
+  const owner = ok("setContact", ["customers", "owner"]);
+  expect(changed(files.spec, owner.files.spec)).toEqual({
+    added: ["    contact: owner"],
+    removed: [],
+  });
+  const manager = applyOperation({ ...files, spec: owner.files.spec }, "setContact", {
+    page: "customers",
+    to: "accountManager",
+  });
+  if (!manager.ok) throw new Error(manager.message);
+  expect(changed(owner.files.spec, manager.files.spec)).toEqual({
+    added: ["    contact: accountManager"],
+    removed: ["    contact: owner"],
+  });
+  const gone = applyOperation({ ...files, spec: manager.files.spec }, "setContact", {
+    page: "customers",
+  });
+  if (!gone.ok) throw new Error(gone.message);
+  expect(changed(manager.files.spec, gone.files.spec)).toEqual({
+    added: [],
+    removed: ["    contact: accountManager"],
+  });
+  // Not a user field; no such page.
+  expect(apply("setContact", ["customers", "name"])).toMatchObject({ ok: false });
+  expect(apply("setFavourites", ["nowhere"])).toMatchObject({ ok: false });
+});
+
 test("editSpec replaces the spec; removing a stored field is destructive; broken YAML is refused", () => {
   const added = applyOperation(files, "editSpec", {
     text: files.spec.replace("      notes: text\n", "      notes: text\n      website: url\n"),
