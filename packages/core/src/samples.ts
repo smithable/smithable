@@ -50,8 +50,10 @@ export function validateSamples(
     for (const error of doc.errors) ctx.error(null, "yaml", error.message);
     const name = file.path.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "");
     const model = ir.models.find((m) => m.name === name);
+    // A file or field that names what is no longer there (renamed, removed) is stale data: said,
+    // and left out, so it never blocks a change to the spec.
     if (!doc.errors.length && !model)
-      ctx.error(
+      ctx.warning(
         null,
         "unknown-model",
         `There is no model "${name}" for samples/${name}.yml.`,
@@ -100,7 +102,7 @@ export function validateSamples(
         const key = isScalar(keyNode) ? String(keyNode.value) : "";
         const field = fields.find((f) => f.name === key);
         if (!field) {
-          ctx.error(
+          ctx.warning(
             keyNode,
             "unknown-field",
             `${model.name} has no field "${key}" a sample can set.`,
