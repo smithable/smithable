@@ -1,7 +1,9 @@
-# Lint, build and unit tests, once per pull request and on every push to main. `pnpm check`
-# (which adds the generated apps and Studio in a real browser) stays the local gate before every
-# commit. A newer push to a pull request cancels its older run, since three sessions share the
-# Actions minutes.
+# The gate (the required status is this `check` job). A change to the engine, the examples, the
+# scripts `pnpm check` runs, the dependencies or this workflow runs the full `pnpm check`: lint,
+# build, units, site, the generated apps and Studio in a real browser. Anything else runs lint,
+# build, units and the site. Once per pull request and on every push to main; a push to main
+# whose tree the pull request already checked in full only gets the short run. A newer push to a
+# pull request cancels its older run, since three sessions share the Actions minutes.
 name: CI
 on:
   pull_request:
@@ -13,9 +15,30 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
-        with: { fetch-depth: 0 }   # the whole history, for the secrets scan
+        with: { fetch-depth: 0 }   # the whole history, for the secrets scan and the diff
+      - name: Full check or short run
+        id: scope
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/)'
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            full=true; why="no base to compare with"
+          elif git diff --name-only "$BASE" HEAD | grep -qE "$engine"; then
+            full=true; why="engine files changed"
+          else
+            full=false; why="no engine files changed"
+          fi
+          # A merge to main of an up-to-date pull request has the tree its pull request run checked.
+          if [ "$full" = true ] && [ "$GITHUB_EVENT_NAME" = push ] && git rev-parse -q --verify HEAD^2 >/dev/null \
+            && [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse HEAD^2^{tree})" ]; then
+            full=false; why="the pull request checked this tree in full"
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
       # pnpm first (the version package.json pins): setup-node caches for the package manager
       # package.json names, and needs it on the PATH to ask where its store is.
       - uses: pnpm/action-setup@v4
@@ -29,3 +52,26 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm site
+      # The full check's browser: Chromium cached per Playwright version, its system libraries
+      # installed each time (they live outside the cache).
+      - if: steps.scope.outputs.full == 'true'
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | tr " " -)" >> "$GITHUB_OUTPUT"
+      - if: steps.scope.outputs.full == 'true'
+        id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.scope.outputs.full == 'true' && steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.scope.outputs.full == 'true' && steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      # The generated apps commit with Git.
+      - if: steps.scope.outputs.full == 'true'
+        run: git config --global user.name CI && git config --global user.email ci@example.com
+      - if: steps.scope.outputs.full == 'true'
+        run: pnpm test:apps
+      - if: steps.scope.outputs.full == 'true'
+        run: pnpm test:studio
