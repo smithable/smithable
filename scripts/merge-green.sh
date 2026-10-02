@@ -44,9 +44,9 @@ for attempt in 1 2 3 4 5 6 7 8; do
       sleep 5
     done
   fi
-  # The workflow registers a new head's checks a minute or two after the push; none after five
-  # minutes is not green.
-  for _ in $(seq 30); do
+  # The workflow registers a new head's checks a minute or two after the push, longer when the
+  # runners are busy with other sessions' runs; none after fifteen minutes is not green.
+  for _ in $(seq 90); do
     gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . && break
     sleep 10
   done
