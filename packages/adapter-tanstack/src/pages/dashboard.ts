@@ -57,8 +57,10 @@ export function dashboardRoute(
     const model = modelNamed(ir, item.model);
     const field = model.fields.find((f) => f.name === item.field);
     const rows = rowsOf(item.model);
-    const conditions = Object.entries(item.where ?? {}).map(
-      ([key, value]) => `row.${key} === ${JSON.stringify(value)}`,
+    const conditions = Object.entries(item.where ?? {}).map(([key, value]) =>
+      Array.isArray(value)
+        ? `${JSON.stringify(value)}.includes(row.${key})`
+        : `row.${key} === ${JSON.stringify(value)}`,
     );
     const filtered = conditions.length
       ? `${rows}.filter((row) => ${conditions.join(" && ")})`

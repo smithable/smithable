@@ -1,6 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
   type AuthIR,
+  type Condition,
   type FieldIR,
   humanize,
   isPicture,
@@ -365,9 +366,20 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       per?.type.kind === "relation" && per.type.model === model.name && typeof c.max === "string"
     );
   });
+  /** One `where` entry as SQL: equality, or `inArray` for a list of choice values. */
+  const fits = (table: string, [k, v]: [string, string | boolean | string[]]) =>
+    Array.isArray(v)
+      ? `inArray(${table}.${k}, ${JSON.stringify(v)})`
+      : `eq(${table}.${k}, ${JSON.stringify(v)})`;
+  const listed = [
+    ...Object.values(access.read.where ?? {}),
+    ...Object.values(capacity?.where ?? {}),
+    ...holds.flatMap((m) => Object.values(m.capacity?.where ?? {})),
+  ].some(Array.isArray);
   const drizzle = [
     "and",
     "eq",
+    ...(listed ? ["inArray"] : []),
     "sql",
     ...(referenced && titleColumn !== "id" ? ["asc"] : []),
     ...(access.create.public || capped || capacity || holds.length ? ["count"] : []),
@@ -379,7 +391,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   // condition fits; an owner reads their own too.
   const publicWhere = access.read.where
     ? `and(${Object.entries(access.read.where)
-        .map(([k, v]) => `eq(${n.table}.${k}, ${JSON.stringify(v)})`)
+        .map((entry) => fits(n.table, entry))
         .join(", ")})`
     : undefined;
   const ownOrPublic = !signedIn
@@ -390,9 +402,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const capacityCounted = capacity
     ? [
         `eq(${n.table}.${capacity.per}Id, values.${capacity.per}Id)`,
-        ...Object.entries(capacity.where ?? {}).map(
-          ([k, v]) => `eq(${n.table}.${k}, ${JSON.stringify(v)})`,
-        ),
+        ...Object.entries(capacity.where ?? {}).map((entry) => fits(n.table, entry)),
       ]
     : [];
   const perField = capacity && model.fields.find((f) => f.name === capacity.per);
@@ -411,14 +421,12 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       if (taken >= ${capacityMax}) throw new Conflict("full");`
       : "";
   const holdChecks = holds.map((m) => {
-    const c = m.capacity as { per: string; max: string; where?: Record<string, string | boolean> };
+    const c = m.capacity as { per: string; max: string; where?: Condition };
     const tn = tableNames(m);
     const field = c.max.split(".")[1];
     const conditions = [
       `eq(${tn.table}.${c.per}Id, id)`,
-      ...Object.entries(c.where ?? {}).map(
-        ([k, v]) => `eq(${tn.table}.${k}, ${JSON.stringify(v)})`,
-      ),
+      ...Object.entries(c.where ?? {}).map((entry) => fits(tn.table, entry)),
     ];
     return `
       if (values.${field} != null) {
