@@ -2,7 +2,7 @@
 // on the long side and encodes WebP, so a phone's 12 MB photo never travels; the server checks
 // the file again (src/kit/uploads.ts). The form keeps the picture as JSON text, as its other
 // values are text, and stores { file, alt, width, height } on the record.
-import { ImagePlus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImagePlus, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
@@ -161,5 +161,201 @@ function parse(value: string): PictureValue | undefined {
     return parsed && typeof parsed.file === "string" ? parsed : undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** The pictures input (several pictures, the first the cover) for one field of `model`. */
+export function bindPictures(model: string, field: string, max: number) {
+  return (props: FieldControlProps) => (
+    <PicturesInput {...props} model={model} field={field} max={max} />
+  );
+}
+
+/**
+ * Several pictures as a strip: add (several at once), describe, move, remove; the first is the
+ * cover. The form keeps them as JSON text, a list of { file, alt, width, height }.
+ */
+export function PicturesInput({
+  id,
+  name,
+  value,
+  record,
+  onChange,
+  model,
+  field,
+  max,
+  ...aria
+}: FieldControlProps & { model: string; field: string; max: number }) {
+  const pictures = parseList(value);
+  // A stored picture is served by its place in the saved record, which moving does not change
+  // until the record is saved; a new one shows from the browser's copy.
+  const [stored] = useState(() => new Map(parseList(value).map((p, i) => [p.file, i])));
+  const [previews] = useState(() => new Map<string, string>());
+  const latest = useRef(pictures);
+  latest.current = pictures;
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string>();
+  const [dragged, setDragged] = useState<number>();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const set = (next: PictureValue[]) => onChange(next.length ? JSON.stringify(next) : "");
+  const move = (from: number, to: number) => {
+    const next = [...pictures];
+    const [moved] = next.splice(from, 1);
+    if (moved) next.splice(to, 0, moved);
+    set(next);
+  };
+
+  async function add(files: FileList | null) {
+    if (!files?.length) return;
+    setBusy(true);
+    setFailure(undefined);
+    try {
+      for (const file of [...files].slice(0, max - latest.current.length)) {
+        const webp = await toWebp(file);
+        const response = await fetch(`/files/${model}/${field}`, {
+          method: "POST",
+          headers: { "Content-Type": "image/webp" },
+          body: webp,
+        });
+        if (!response.ok) throw new Error((await response.text()) || "The picture was refused.");
+        const saved = (await response.json()) as Omit<PictureValue, "alt">;
+        previews.set(saved.file, URL.createObjectURL(webp));
+        latest.current = [...latest.current, { ...saved, alt: "" }];
+        set(latest.current);
+      }
+      if (files.length > max - pictures.length)
+        setFailure(`At most ${max} pictures; the rest were left out.`);
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : "The picture could not be added.");
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  const src = (p: PictureValue) =>
+    previews.get(p.file) ??
+    (record !== undefined && stored.has(p.file)
+      ? `/files/${model}/${record}/${field}/${stored.get(p.file)}`
+      : undefined);
+  return (
+    <div className="space-y-3" {...aria}>
+      {pictures.length > 0 && (
+        <ol className="grid gap-4 sm:grid-cols-2">
+          {pictures.map((p, i) => (
+            <li
+              key={p.file}
+              data-part="picture"
+              draggable
+              onDragStart={() => setDragged(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                if (dragged !== undefined && dragged !== i) move(dragged, i);
+                setDragged(undefined);
+              }}
+              className="space-y-2 rounded-md border p-3"
+            >
+              <div className="relative">
+                {src(p) ? (
+                  // Opens large: a link, so it works where the form is read only.
+                  <a href={src(p)} target="_blank" rel="noreferrer">
+                    <img
+                      src={src(p)}
+                      alt={p.alt}
+                      width={p.width}
+                      height={p.height}
+                      className="aspect-[3/2] w-full rounded-md object-cover"
+                    />
+                  </a>
+                ) : (
+                  <div className="flex aspect-[3/2] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground">
+                    {p.width}×{p.height}
+                  </div>
+                )}
+                {i === 0 && (
+                  <span className="absolute top-2 left-2 rounded-md bg-background px-2 py-0.5 text-xs font-semibold">
+                    Cover
+                  </span>
+                )}
+              </div>
+              <Label htmlFor={`${id}-alt-${i}`}>Description of picture {i + 1}</Label>
+              <Input
+                id={`${id}-alt-${i}`}
+                value={p.alt}
+                maxLength={200}
+                onChange={(e) =>
+                  set(pictures.map((q, j) => (j === i ? { ...q, alt: e.target.value } : q)))
+                }
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || i === 0}
+                  aria-label={`Move picture ${i + 1} earlier`}
+                  onClick={() => move(i, i - 1)}
+                >
+                  <ChevronLeft aria-hidden className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || i === pictures.length - 1}
+                  aria-label={`Move picture ${i + 1} later`}
+                  onClick={() => move(i, i + 1)}
+                >
+                  <ChevronRight aria-hidden className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={busy}
+                  aria-label={`Remove picture ${i + 1}`}
+                  onClick={() => set(pictures.filter((_, j) => j !== i))}
+                >
+                  <X aria-hidden className="size-4" /> Remove
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+      {pictures.length < max && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() => fileInput.current?.click()}
+        >
+          <ImagePlus aria-hidden className="size-4" />{" "}
+          {busy ? "Adding…" : pictures.length ? "Add pictures" : "Choose pictures"}
+        </Button>
+      )}
+      <input
+        ref={fileInput}
+        id={id}
+        name={name}
+        type="file"
+        accept="image/*"
+        multiple
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => add(e.target.files)}
+      />
+      {failure && (
+        <p role="alert" className="text-sm text-destructive">
+          {failure}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function parseList(value: string): PictureValue[] {
+  try {
+    const parsed = value ? (JSON.parse(value) as PictureValue[]) : [];
+    return Array.isArray(parsed) ? parsed.filter((p) => typeof p?.file === "string") : [];
+  } catch {
+    return [];
   }
 }

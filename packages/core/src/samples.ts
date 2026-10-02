@@ -7,7 +7,7 @@ import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } f
 import type { ContentIR } from "./content.js";
 import { ParseContext } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
-import type { FieldIR, ModelIR, SpecIR } from "./ir.js";
+import { type FieldIR, type ModelIR, PICTURES_MAX, type SpecIR } from "./ir.js";
 import { humanize } from "./naming.js";
 import { didYouMean } from "./suggest.js";
 
@@ -20,7 +20,7 @@ export interface SamplePicture {
  * A sample record's values as the seed writes them: money in cents, a reference as the
  * referenced record's number (from 1, in its file's order), a choice as its value.
  */
-export type SampleRecordValue = string | number | boolean | null | SamplePicture;
+export type SampleRecordValue = string | number | boolean | null | SamplePicture | SamplePicture[];
 export type SamplesIR = Record<string, Record<string, SampleRecordValue>[]>;
 
 /** The field that names a record: the first text field called like a name or title. */
@@ -157,8 +157,24 @@ function sampleValue(
   if (field.type.kind === "relation") {
     // The referenced record by its title, or by its number among the generated ones.
     const target = field.type.model;
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) return value;
+    if (target === "User") {
+      ctx.error(
+        node,
+        "invalid-value",
+        `"${field.name}" is a person who signs in; leave it empty in samples.`,
+      );
+      return undefined;
+    }
     const known = titles.get(target);
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      if (!known || value <= known.length) return value;
+      ctx.error(
+        node,
+        "unknown-record",
+        `samples/${target}.yml has ${known.length} records, not ${value}.`,
+      );
+      return undefined;
+    }
     const at = typeof value === "string" ? (known?.indexOf(value) ?? -1) : -1;
     if (at >= 0) return at + 1;
     ctx.error(
@@ -195,22 +211,44 @@ function sampleValue(
       return typeof value === "string" && DATETIME.test(value)
         ? value.replace(" ", "T")
         : wrong("a date and time, like 2026-10-05 08:00");
-    case "picture": {
-      // A file under public/images/samples/, with a description (or the record's title).
-      const title = row[titleField(model)];
-      if (typeof value === "string")
-        return {
-          picture: value,
-          alt: `A picture of ${typeof title === "string" ? title : model.name.toLowerCase()}`,
-        };
-      if (isMap(node)) {
-        const file = node.get("file");
-        const alt = node.get("alt");
-        if (typeof file === "string" && typeof alt === "string") return { picture: file, alt };
-      }
-      return wrong("a picture: a file name under public/images/samples/, or { file, alt }");
+    case "picture":
+      return (
+        samplePicture(node, model, row) ??
+        wrong("a picture: a file name under public/images/samples/, or { file, alt }")
+      );
+    case "pictures": {
+      // Several pictures: a list of them, at most the field's maximum.
+      const items = isSeq(node) ? (node.items as ParsedNode[]) : undefined;
+      const pictures = items?.map((item) => samplePicture(item, model, row));
+      if (!pictures || pictures.some((p) => !p))
+        return wrong(
+          "a list of pictures: file names under public/images/samples/, or { file, alt }",
+        );
+      if (pictures.length > (field.max ?? PICTURES_MAX))
+        return wrong(`at most ${field.max ?? PICTURES_MAX} pictures`);
+      return pictures as SamplePicture[];
     }
     default:
       return typeof value === "string" ? value : wrong("a text");
   }
+}
+
+/** A sample picture: a file under public/images/samples/, with a description (or the title). */
+function samplePicture(
+  node: ParsedNode,
+  model: ModelIR,
+  row: Record<string, SampleRecordValue>,
+): SamplePicture | undefined {
+  const title = row[titleField(model)];
+  if (isScalar(node) && typeof node.value === "string")
+    return {
+      picture: node.value,
+      alt: `A picture of ${typeof title === "string" ? title : model.name.toLowerCase()}`,
+    };
+  if (isMap(node)) {
+    const file = node.get("file");
+    const alt = node.get("alt");
+    if (typeof file === "string" && typeof alt === "string") return { picture: file, alt };
+  }
+  return undefined;
 }
