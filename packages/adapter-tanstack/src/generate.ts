@@ -418,7 +418,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     ],
     files: ({ ir, t, auth, ux, options }) => [
       generated("src/db/schema.ts", schemaModule(ir, auth)),
-      generated("src/db/seed.ts", seedModule(ir)),
+      generated("src/db/seed.ts", seedModule(ir, options)),
       ...(hasPictures(ir) ? [generated("src/generated/pictures.ts", picturesModule(ir, t))] : []),
       ...(ir.models.length
         ? [

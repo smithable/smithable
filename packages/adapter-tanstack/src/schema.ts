@@ -15,6 +15,7 @@ import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
   dataKey,
+  type GenerateOptions,
   HEADER,
   indent,
   literal,
@@ -154,7 +155,31 @@ export function column(field: FieldIR): { expr: string; uses: string } {
   return { expr, uses };
 }
 
-export function seedModule(ir: SpecIR): string {
+/**
+ * A model's rows for the seed: its sample file's (samples/<Model>.yml) when it has one, with a
+ * date and time read as written, or generated ones.
+ */
+function seedRows(model: ModelIR, options: Pick<GenerateOptions, "samples">) {
+  const own = options.samples?.[model.name];
+  if (!own) return sampleRows(model);
+  return own.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([name, value]) => {
+        const field = model.fields.find((f) => f.name === name);
+        return [
+          name,
+          field?.type.kind === "scalar" &&
+          field.type.name === "datetime" &&
+          typeof value === "string"
+            ? `${value}:00Z`
+            : value,
+        ];
+      }),
+    ),
+  );
+}
+
+export function seedModule(ir: SpecIR, options: Pick<GenerateOptions, "samples"> = {}): string {
   // A record that must refer to a user cannot be invented, nor can records that need it; nor
   // a person's place (a model with a capacity): every place stays free.
   const skipped = new Set<string>(ir.models.filter((m) => m.capacity).map((m) => m.name));
@@ -175,10 +200,15 @@ export function seedModule(ir: SpecIR): string {
     const n = tableNames(model);
     // A calendar's records are placed around the day the samples are loaded, never an empty week.
     const start = calendarStart(model, ir);
-    const rows = sampleRows(model).map((row, i) => {
+    const rows = seedRows(model, options).map((row, i) => {
       const entries = storedFields(model).map((field) => {
+        // A sample file's picture: its file under public/images/samples/, and its description.
+        const own = row[field.name];
+        if (isPicture(field) && own && typeof own === "object" && "picture" in own)
+          return `${dataKey(field)}: samplePicture(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(own.picture)}, ${JSON.stringify(own.alt)})`;
         const value = sampleLiteral(field, row[field.name]);
         // A sample picture from public/images/samples/, when the app ships any.
+        if (isPicture(field) && options.samples?.[model.name]) return `${dataKey(field)}: null`;
         if (isPicture(field)) {
           const title = Object.values(row).find((v) => typeof v === "string" && /\s/.test(v));
           return `${dataKey(field)}: samplePicture(${JSON.stringify(kebab(model.name))}, ${i % 3}, ${JSON.stringify(`A picture of ${title ?? `${humanize(model.name).toLowerCase()} ${i + 1}`}`)})`;

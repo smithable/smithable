@@ -14,7 +14,7 @@ import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { STARTER_ASSETS, STARTER_CODE, STARTERS } from "./starters.gen.js";
+import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
 
 /**
  * `smithable new <dir>`: a new project from a starter spec, with sample data. With
@@ -25,7 +25,7 @@ export async function create(
   dir: string,
   io: Io,
   starter: string | undefined,
-  options: { describe?: string; answers?: string; yes?: boolean } = {},
+  options: { describe?: string; answers?: string; yes?: boolean; sampleData?: boolean } = {},
 ): Promise<number> {
   let name = starter ?? (options.describe ? closestStarter(options.describe, STARTERS) : "crm");
   if (starter !== undefined && STARTERS[starter] === undefined) {
@@ -100,6 +100,14 @@ export async function create(
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       writeFileSync(join(dir, file), text);
     }
+  // Its sample records, for the plain starter (a drafted app's models may differ); none at all
+  // with --no-sample-data, which also leaves the database empty.
+  const sampleData = options.sampleData !== false;
+  if (!options.describe && sampleData)
+    for (const [file, text] of Object.entries(STARTER_SAMPLES[name] ?? {})) {
+      mkdirSync(dirname(join(dir, file)), { recursive: true });
+      writeFileSync(join(dir, file), text);
+    }
   // Its pictures, which a drafted app's texts may still use.
   for (const [file, data] of Object.entries(STARTER_ASSETS[name] ?? {})) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
@@ -107,7 +115,7 @@ export async function create(
   }
   const code = await generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
-  if (exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
+  if (sampleData && exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
   io.out(`\nCreated ${dir}. Start it with:\n\n  cd ${dir}\n  smithable run\n`);
   return 0;

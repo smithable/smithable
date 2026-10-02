@@ -70,7 +70,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     );
     return 1;
   }
-  const { ir, auth, content, ux, themes, plugins } = loadSpec(dir, io);
+  const { ir, auth, content, ux, themes, plugins, samples } = loadSpec(dir, io);
   if (!ir || !auth) return 1;
   const packages = declaredPackages(dir);
   if (typeof packages === "string") {
@@ -86,6 +86,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     ...(content ? { content } : {}),
     ...(ux ? { ux } : {}),
     ...(themes ? { themes } : {}),
+    ...(samples ? { samples } : {}),
   });
   const previous = readRecord(dir);
 
