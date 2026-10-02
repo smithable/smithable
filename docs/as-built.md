@@ -29,3 +29,24 @@ How each part was built, what was measured and what was tried and dropped. [ARCH
 ## Studio: the summary and its editing
 
 The summary lists a model's fields one per line under "Customers have:", gives pages and sign-in their own headings, and puts formulas in words (`formulaInWords`: "the quantity times the unit price", "0 if … , otherwise 5"). Builder speaks the summary's language everywhere: the change list, the status line, proposals and the forms' previews word each change with `describeChange` ("Customers: added a website (a web address)", from the operation each commit records in its `Smithable-Op` trailer), and the field panel shows a field as the summary lists it; Studio mode keeps the operations' own descriptions and the spec's shorthand. "Your app" is a map to the app's parts (docs/design/studio-v2.md §5): a click on a part opens its properties under it, the same panel Code mode's details show, where each control is an operation; the groups have add buttons that open the Change tab's forms filled in. "In my words" rewords a part for the session only (in the tab's `sessionStorage`) and never changes the app; a change that touches the part brings the generated sentences back, marked "updated"; Ctrl+Z (Cmd+Z) outside a text field undoes the last change, in Studio and in the preview (whose editor script passes it on); the spec editor saves through the `editSpec` operation, so an edit gets the same checks, migration, checkpoint and undo as any operation. The change trace is read from the operations' commits (`Smithable-Duration` records how long each took).
+
+## M16: the look fixes
+
+Johan set the booking starter beside a company site (el.ax) and found five visible differences; none needed a new construct.
+- **The cover hero:** `layout: cover` puts the picture across the width under a wash of the theme's primary, with the title and line in the primary's foreground color. On phones the wash is near-solid behind the text block, because the light end of the gradient left the text on the picture.
+- **Shortcuts:** up to four page references, drawn as round icons over the hero's lower edge, with each page's title as its label. A shortcut to a page visitors cannot open warns, but only when the landing page itself is public; a button into the app is a deliberate door to sign-in.
+- **Pictures on cards:** a card is 3:2 with `object-cover`. The placeholder (the theme's muted tone with the model's icon) appears only when the model has a picture field; a model without one keeps text cards, which otherwise read as unfinished.
+- **The site frame:** a header menu of the public pages in the spec's order, collapsing to a button on narrow screens; a footer in columns (the contact section's details, the pages, and a legal line), keeping the one-line footer when there is nothing to show. A public page that is not a landing page (the schedule) gives a visitor the site's header and footer, and someone signed in the app's shell.
+- **Scale and rhythm:** larger hero and section titles and less vertical air, which changed every app's output once on purpose. Each preset now has its own shape from the delivered tokens: radius, card borders, shadows (playful's tinted with the primary), heading weight and tracking, and density (corporate is compact unless the ux file says otherwise).
+
+## M16: sample data
+
+Starter records are project files, `samples/<Model>.yml`, rather than spec grammar. They are data, not behavior: changing them changes no generated code, so they need no §2.4 questions and stay out of the spec's schema, and an owner edits them like any file. A reference names a record by its title, and only against the referenced model's own file; without one, the record's number is used.
+- **Errors and warnings:** a wrong value or a reference to a record that isn't there is an error with its position, since seeding it would fail or mislead. A key for a field or model that no longer exists only warns and is left out, because a rename or removal must not block regeneration. Operations also rename or drop those keys themselves (#98), after main's tests showed `renameField` leaving `notes:` behind.
+- **The starters' tests:** the generated rows' names and order numbers that the tests click on were kept in the CRM's samples. Everything else is two real sentences per record.
+- `new --no-sample-data` leaves the folder and the seed out.
+
+## M16: the starters are the showcase
+
+There are no separate example specs for the live sites. The five showcase sites are the starters, published with demo sign-in ([design/showcase.md](design/showcase.md)), so every improvement to a starter shows on its site at the next release, and the effort goes into the starters' texts and pictures.
+
