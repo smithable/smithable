@@ -45,7 +45,7 @@ smithable deploy --target docker                # release checks, then the conta
 | `packages/ai` | Model providers, the AI policy, requests to operations |
 | `packages/cli` | The `smithable` command, the Studio server, the MCP server, deploy and backup targets |
 | `apps/studio` | Builder and Studio, one web app served by `smithable studio` |
-| `examples/` | The starters: a CRM, a booking site, an invoicing app, and records (things and what we know about them) |
+| `examples/` | The starters: a CRM, a booking site, an invoicing app, a marketplace (Torget), and records (things and what we know about them) |
 | `docs/` | [Vision](docs/VISION.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), the [spec reference](docs/spec/v0.1.md), [AI setup](docs/ai.md), [how things were built and measured](docs/as-built.md), benchmarks and research |
 
 ## Working on it
