@@ -36,6 +36,7 @@ From inside the project:
 smithable op addField Customer phone phone        # a deterministic change: spec, migration, forms, tables
 smithable ask "Customers should have a website"   # in your own words; confirmed before it applies
 smithable undo                                    # takes back the last change, database included
+smithable report                                  # after a failure: shows what a report would send
 ```
 
 Every change goes through an operation, which checks it, regenerates the code, migrates the database and commits a checkpoint, so each one can be undone. `smithable op` lists the operations.
