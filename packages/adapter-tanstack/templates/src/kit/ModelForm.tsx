@@ -1,5 +1,5 @@
 // Smithable app kit: a create/edit form for any model, validated with the model's Zod schema.
-// To customise a form, copy this file into src/custom/components/ and edit the copy.
+// To customize a form, copy this file into src/custom/components/ and edit the copy.
 import { Calculator, CircleAlert } from "lucide-react";
 import { useRef, useState } from "react";
 import type { z } from "zod";

@@ -135,7 +135,7 @@ export function landingRoute(
         );
         const icon = picture ? LUCIDE[listPage ? pageIcon(ux, listPage) : "list"] : undefined;
         if (icon) imports.add("lucide-react", icon);
-        // A catalogue's door (marketplace.md §2.5): the box and chips open the list page with the
+        // A catalog's door (marketplace.md §2.5): the box and chips open the list page with the
         // same address state, offering only what that page reads (its search, its choice filters).
         const searchLabels = (listPage?.search ?? []).map((name) => {
           const f = model.fields.find((x) => x.name === name);

@@ -16,7 +16,7 @@ When a request does need interpretation, the cheapest capable model gets a small
 
 ## The app is yours
 
-A generated app is a normal TanStack Start application with React, Tailwind, shadcn/ui, Drizzle and SQLite, written the way a developer who knows that stack would write it. It has no dependency on Smithable at build time or run time: no SDK, no runtime, no licence key. It ships as a container with a `/data` volume, carries its own tests, and runs anywhere a container runs.
+A generated app is a normal TanStack Start application with React, Tailwind, shadcn/ui, Drizzle and SQLite, written the way a developer who knows that stack would write it. It has no dependency on Smithable at build time or run time: no SDK, no runtime, no license key. It ships as a container with a `/data` volume, carries its own tests, and runs anywhere a container runs.
 
 When you want to continue without Smithable, `smithable detach` removes what only Smithable used, as one reviewable commit, and leaves an ordinary project behind. The app kit copied into every app is licensed under 0BSD, so a generated app owes nothing to this repository.
 
@@ -30,7 +30,7 @@ Everything on this site runs on your own machine, with no account: the engine, t
 
 ## Designed, not improvised
 
-Looks come from four designed themes in light and dark, a brand colour the palette is derived from with readable contrast, and a library of page patterns: lists, records, forms, dashboards, calendars, articles, calculators, landing pages. Presentation lives in `smithable.ux.yml`, apart from what the app does, so a change of look never touches a rule.
+Looks come from four designed themes in light and dark, a brand color the palette is derived from with readable contrast, and a library of page patterns: lists, records, forms, dashboards, calendars, articles, calculators, landing pages. Presentation lives in `smithable.ux.yml`, apart from what the app does, so a change of look never touches a rule.
 
 ## What it is not
 

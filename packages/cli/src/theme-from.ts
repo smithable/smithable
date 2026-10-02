@@ -1,6 +1,6 @@
 // `smithable theme --from <url>`: a theme from a site (from session C's scripts/theme-from.mjs).
 // A browser opens the page, its computed styles give the background, text, primary (the most
-// colourful filled button), cards, corners and font in light and dark; they become a theme file,
+// colorful filled button), cards, corners and font in light and dark; they become a theme file,
 // the other tokens derived as core derives them, made readable where they are not, and added
 // through the addTheme operation. Deterministic, no model. A theme has no layout: it copies how
 // a site looks, never how it is built.
@@ -10,7 +10,7 @@ import type { Io } from "./io.js";
 import { runOperation } from "./op.js";
 import { VERSION } from "./version.js";
 
-/** What a page looks like in one colour scheme, as its computed styles say. */
+/** What a page looks like in one color scheme, as its computed styles say. */
 export interface Look {
   background: string;
   foreground: string | null;
@@ -125,7 +125,7 @@ const FONT_MATCHES: [string, RegExp][] = [
 const L = (hex: string) => rgbToOklch(hexToRgb(hex));
 const isDark = (hex: string) => L(hex)[0] < 0.5;
 
-/** Lightness moved until the colour reaches `ratio` against `on`, its hue and chroma kept. */
+/** Lightness moved until the color reaches `ratio` against `on`, its hue and chroma kept. */
 function untilReadable(hex: string, on: string, ratio: number): string {
   let [l, c, h] = L(hex);
   const step = L(on)[0] > 0.5 ? -0.02 : 0.02;
@@ -158,12 +158,12 @@ export function themeFromLook(
   let other = dark;
   if (isDark(light.background)) {
     notes.push(
-      "The site is dark by default; its colours are the dark mode, the light mode is derived.",
+      "The site is dark by default; its colors are the dark mode, the light mode is derived.",
     );
     [base, other] = [undefined, light];
   }
   const primary = base?.primary ?? base?.link ?? other?.primary ?? other?.link;
-  if (!primary) notes.push("No coloured button or link found; the primary is a neutral blue.");
+  if (!primary) notes.push("No colored button or link found; the primary is a neutral blue.");
   const darkRead =
     other && isDark(other.background) && other.background !== base?.background ? other : undefined;
   let darkMode: Mode | undefined = darkRead
@@ -196,7 +196,7 @@ export function themeFromLook(
       foreground: hexOf(gamutMap([0.94, Math.min(c, 0.01), h])),
       primary: untilReadable(hexOf(gamutMap([0.72, Math.min(c, 0.16), h])), background, 4.5),
     };
-    if (base) notes.push("The site has no dark mode; it is derived from the light colours.");
+    if (base) notes.push("The site has no dark mode; it is derived from the light colors.");
   }
   // The primary is also the focus ring: it stands out from the page (3:1), and text reads (4.5:1).
   for (const mode of [lightMode, darkMode])
@@ -212,7 +212,7 @@ export function themeFromLook(
     notes.push(
       `The site's font "${family}" has no near match among the hosted fonts; using Inter.`,
     );
-  const colours = (mode: Mode) =>
+  const colors = (mode: Mode) =>
     Object.entries(mode)
       .map(([k, v]) => `  ${k}: "${v}"`)
       .join("\n");
@@ -235,9 +235,9 @@ font: ${font ?? "Inter"}                  # the site's: ${family ?? "unknown"}${
 radius: ${source.radius ?? 8}px
 shadow: ${source.shadowShare > 0.5 ? "soft" : "none"}
 light:
-${colours(lightMode)}
+${colors(lightMode)}
 dark:
-${colours(darkMode as Mode)}
+${colors(darkMode as Mode)}
 `;
   }
 }

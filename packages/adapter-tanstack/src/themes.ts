@@ -1,5 +1,5 @@
 // src/theme.css: the theme's tokens (docs/design/look.md §3) as CSS variables the app kit's
-// styles use, with the brand colour's changes on top and the ux file's density.
+// styles use, with the brand color's changes on top and the ux file's density.
 import {
   type Mode,
   type ThemeIR,
@@ -38,7 +38,7 @@ export function themeFont(ux: UxIR, themes: readonly ThemeIR[] = []): string {
   return ux.theme.font ?? themeOf(ux, themes).font;
 }
 
-/** The theme's colour tokens in one mode, with a brand colour applied when there is one. */
+/** The theme's color tokens in one mode, with a brand color applied when there is one. */
 function tokens(ux: UxIR, theme: ThemeIR, mode: Mode): Tokens {
   return tokensOf(theme, mode, ux.theme.primary ? brandColors(ux.theme.primary, theme, mode) : {});
 }
@@ -145,7 +145,7 @@ ${block(tokens(from, theme, "light"), "  ")}
       dark: `  ${selector} {
 ${block(tokens(from, theme, "dark"), "    ")}
   }`,
-      comment: `${theme.name}${from.theme.primary ? `, brand colour ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}`,
+      comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}`,
     };
   };
   const app = scope(":root", ux);
