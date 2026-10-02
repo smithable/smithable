@@ -537,6 +537,62 @@ async function favouritesFlow(base) {
 }
 
 /**
+ * Contact the owner: the admin adds a customer (and so owns it); a sales user writes from its
+ * page; the mail reaches the admin with the sender as reply-to, and the page never shows the
+ * admin's address.
+ */
+async function contactFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const outbox = join(dir, "data", "mail", "outbox");
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers/new`);
+    await page.getByRole("textbox", { name: "Name *" }).fill("Contact Test AB");
+    await page.getByRole("button", { name: "Create customer" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await page
+      .getByRole("button", { name: "Contact Test AB" })
+      .filter({ visible: true })
+      .first()
+      .click();
+    await page.waitForURL(/\/customers\/\d+$/);
+    const address = page.url();
+    await signInAs(page, base, "sales");
+    await open(page, address);
+    const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+    await page.getByRole("textbox", { name: "Message" }).fill("Is the spring order still on?");
+    await page.getByRole("button", { name: "Send" }).click();
+    await page.getByText("Your message is sent.").waitFor({ timeout: 10000 });
+    if ((await page.content()).includes("dev-admin@"))
+      throw new Error("the page shows the owner's address");
+    const mails = readdirSync(outbox).sort();
+    if (mails.length !== before + 1) throw new Error("no mail was sent");
+    // Mail bodies are quoted-printable: soft line breaks joined, so the text reads whole.
+    const mail = readFileSync(join(outbox, mails.at(-1)), "utf8").replace(/=\r?\n/g, "");
+    for (const part of [
+      /^To: dev-admin@/m,
+      /^Reply-To: .*dev-sales@/m,
+      /Contact Test AB/,
+      /Is the spring order still on\?/,
+      // The record's own address, once (not "customers//10").
+      /[^/]\/customers\/\d+$/m,
+    ])
+      if (!part.test(mail)) throw new Error(`the mail lacks ${part}:\n${mail.slice(0, 600)}`);
+    console.log(
+      "  ✓ browser: a sales user writes to a customer's owner from its page; the mail reaches the owner with the sender as reply-to, and the owner's address is never shown",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("contact flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
  * describes them and moves the second first; they are served in that order, the first as the
  * cover; removing one deletes its file and keeps the other.
@@ -2043,6 +2099,16 @@ for (const [index, example] of examples.entries()) {
           run("pnpm", ["typecheck"], dir);
         },
       );
+    // Contact the owner (marketplace.md §2.4): a customer's page mails the customer's owner.
+    if (example === "crm")
+      step(
+        "op setContact gives a customer's page a contact block for its owner, and the app type-checks",
+        () => {
+          const result = smithable(dir, "op", "setContact", "customers", "owner");
+          if (result.code !== 0) throw new Error(result.out);
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     // Several pictures on a record (marketplace.md §2.1): posts get a gallery by an operation.
     if (example === "booking")
       step("op addField gives posts a gallery of several pictures, and the app type-checks", () => {
@@ -2058,6 +2124,7 @@ for (const [index, example] of examples.entries()) {
         await browserFlow(base);
         await filtersFlow(base);
         await favouritesFlow(base);
+        await contactFlow(dir, base);
       }
       if (example === "booking") {
         await landingFlow(base);
@@ -2079,14 +2146,14 @@ for (const [index, example] of examples.entries()) {
     }
     // The CRM's later steps work on its customers page as the starter has it.
     if (example === "crm")
-      step("undo takes the list's filters, sort and hearts back off", () => {
-        for (let i = 0; i < 3; i++) {
+      step("undo takes the list's filters, sort, hearts and contact block back off", () => {
+        for (let i = 0; i < 4; i++) {
           const undone = smithable(dir, "undo");
           if (undone.code !== 0) throw new Error(undone.out);
         }
         const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-        if (spec.includes("filters:") || spec.includes("favourites:"))
-          throw new Error("the filters or favourites are still in the spec");
+        if (["filters:", "favourites:", "contact:"].some((key) => spec.includes(key)))
+          throw new Error("the filters, favourites or contact block are still in the spec");
       });
 
     step("regenerating changes nothing", () => {
