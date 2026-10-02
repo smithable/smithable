@@ -1,0 +1,26 @@
+smithable: 0.1
+app: { name: Torget, description: A place to sell things. }
+models:
+  Item:
+    fields:
+      title: string!
+      description: text!
+      photos: pictures
+      price: money
+      category: furniture | electronics | vehicles | other
+      condition: new | used
+      place: string
+      available: bool = true
+      seller: User
+pages:
+  catalogue:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [category, price, condition, available, seller, owner, createdAt]
+    sortable: [price, createdAt, title]
+  welcome:
+    route: /welcome
+    landing:
+      hero: { button: catalogue }
+      latest: { records: Item, search: true, filters: [category, price], limit: 8 }

@@ -30,6 +30,7 @@ export interface SummarySection {
 export const KINDS: Record<string, string> = {
   markdown: "formatted text",
   picture: "picture",
+  pictures: "pictures",
   int: "a whole number",
   decimal: "a number",
   money: "an amount",
@@ -68,14 +69,20 @@ export function summarize(
       const crud = pageModel(p);
       const model = crud === undefined ? undefined : modelNamed(crud);
       const title = content.pages[p.id]?.title ?? humanize(p.id);
-      const searched = (p.search ?? []).map((name) => {
-        const field = model?.fields.find((f) => f.name === name);
-        return model && field ? fieldLabel(model, field) : name;
-      });
+      const labels = (names: string[] | undefined) =>
+        (names ?? []).map((name) => {
+          const field = model?.fields.find((f) => f.name === name);
+          return model && field ? fieldLabel(model, field) : name;
+        });
+      const searched = labels(p.search);
+      const filtered = labels(p.filters);
+      const sorted = labels(p.sortable);
       const notes = [
         model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
         (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
         searched.length ? `search by ${list(searched, "or")}` : "",
+        filtered.length ? `filter by ${list(filtered, "or")}` : "",
+        sorted.length ? `sort by ${list(sorted, "or")}` : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         p.access ? `only for ${who(p.access)}` : "",
       ].filter(Boolean);

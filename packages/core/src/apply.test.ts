@@ -312,6 +312,35 @@ test("setSearch adds, changes and removes a page's search", () => {
   expect(apply("setSearch", ["customers", "creditLimit"])).toMatchObject({ ok: false });
 });
 
+test("setFilters and setSortable add, change and remove a list's filters and sort choice", () => {
+  const filtered = ok("setFilters", ["customers", "segment", "creditLimit"]);
+  expect(changed(files.spec, filtered.files.spec)).toEqual({
+    added: ["    filters: [segment, creditLimit]"],
+    removed: [],
+  });
+  const sorted = applyOperation({ ...files, spec: filtered.files.spec }, "setSortable", {
+    page: "customers",
+    fields: ["name", "creditLimit"],
+  });
+  if (!sorted.ok) throw new Error(sorted.message);
+  expect(changed(filtered.files.spec, sorted.files.spec)).toEqual({
+    added: ["    sortable: [name, creditLimit]"],
+    removed: [],
+  });
+  const gone = applyOperation({ ...files, spec: sorted.files.spec }, "setFilters", {
+    page: "customers",
+  });
+  if (!gone.ok) throw new Error(gone.message);
+  expect(changed(sorted.files.spec, gone.files.spec)).toEqual({
+    added: [],
+    removed: ["    filters: [segment, creditLimit]"],
+  });
+  // Text is searched, not filtered; a picture has no order; a page must exist.
+  expect(apply("setFilters", ["customers", "notes"])).toMatchObject({ ok: false });
+  expect(apply("setSortable", ["customers", "notes"])).toMatchObject({ ok: false });
+  expect(apply("setFilters", ["nowhere", "segment"])).toMatchObject({ ok: false });
+});
+
 test("editSpec replaces the spec; removing a stored field is destructive; broken YAML is refused", () => {
   const added = applyOperation(files, "editSpec", {
     text: files.spec.replace("      notes: text\n", "      notes: text\n      website: url\n"),

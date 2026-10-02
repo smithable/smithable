@@ -1,0 +1,26 @@
+smithable: 0.1
+app: { name: Torget }
+models:
+  Item:
+    fields:
+      title: string!
+      description: text
+      cover: picture unique                    # expect: invalid-field
+      photos: pictures
+      price: money
+      category: furniture | other
+pages:
+  catalogue:
+    crud: Item
+    filters: [description, photos, nope, category, category]   # expect: invalid-filter, invalid-filter, unknown-field, duplicate-field
+    sortable: [photos, description, owner]    # expect: invalid-sort, invalid-sort, unknown-field
+  home:
+    route: /
+    landing:
+      hero: { search: true }                  # expect: invalid-key
+      features: { filters: [category] }       # expect: invalid-key
+      latest: { records: Item, filters: [description] }   # expect: invalid-filter
+  overview:
+    dashboard:
+      items: { count: Item }
+    filters: [category]                       # expect: invalid-key

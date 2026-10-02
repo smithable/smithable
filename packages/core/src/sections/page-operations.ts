@@ -440,6 +440,60 @@ const setSearch: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
+/** An operation like setSearch for one of a list's other field lists (filters, sortable). */
+function listKeyOperation(
+  key: "filters" | "sortable",
+  summary: string,
+  label: string,
+  description: string,
+  describe: (page: string, fields: string[]) => string,
+): Operation<{ page: string; fields?: string[] }> {
+  return {
+    name: key === "filters" ? "setFilters" : "setSortable",
+    summary,
+    schema: {
+      type: "object",
+      required: ["page"],
+      additionalProperties: false,
+      properties: {
+        page: refTo({ ref: "page", label: "Page" }),
+        fields: refTo({ ref: "field", page: "page", label }, { description }, true),
+      },
+    },
+    positional: ["page", "...fields"],
+    describe: ({ page, fields }) => describe(page, fields ?? []),
+    destructive: () => false,
+    apply({ spec }, { page, fields = [] }, ir) {
+      if (!ir.pages.some((p) => p.id === page))
+        throw new OperationError(`There is no page named "${page}".`);
+      const path = ["pages", page, key];
+      if (fields.length === 0) {
+        if (spec.has(path)) spec.remove(path);
+      } else if (spec.has(path)) spec.set(path, fields);
+      else spec.add(["pages", page], key, fields);
+      return [];
+    },
+  };
+}
+
+const setFilters = listKeyOperation(
+  "filters",
+  "Let a page's list be filtered by these fields (choices, references, numbers, dates, yes/no), or remove the filters (no fields).",
+  "Filter by",
+  "Choice, reference, number, amount, date or yes/no fields of the page's model.",
+  (page, fields) =>
+    fields.length ? `Filter ${page} by ${fields.join(", ")}` : `Remove the filters from ${page}`,
+);
+
+const setSortable = listKeyOperation(
+  "sortable",
+  "Let a page's list be sorted by these fields from a Sort by control, or remove the choice (no fields).",
+  "Sort by",
+  "Stored fields of the page's model with an order: not pictures or long text.",
+  (page, fields) =>
+    fields.length ? `Sort ${page} by ${fields.join(", ")}` : `Remove the sort choice from ${page}`,
+);
+
 const removePage: Operation<{ page: string }> = {
   name: "removePage",
   summary: "Remove a page, from the menus too. Its records and their data stay.",
@@ -627,7 +681,7 @@ const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
 /** Operations on pages of every pattern. */
 export const pageOperations: AnyOperation[] = [removePage];
 /** Operations of the crud pattern. */
-export const crudOperations: AnyOperation[] = [addPage, setSearch];
+export const crudOperations: AnyOperation[] = [addPage, setSearch, setFilters, setSortable];
 /** Operations of the landing pattern. */
 export const landingOperations: AnyOperation[] = [
   addLandingPage,

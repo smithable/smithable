@@ -13,6 +13,7 @@ import { capitalize, kebab } from "../naming.js";
 import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
+import { checkFilterFields, checkSortableFields } from "./list-keys.js";
 import { NAME_PATTERN } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -68,6 +69,17 @@ export const pagesSection: SpecSection<"pages"> = {
           items: { type: "string" },
           description: "Fields the list can be searched by, e.g. [name, email].",
         },
+        filters: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Fields the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle.",
+        },
+        sortable: {
+          type: "array",
+          items: { type: "string" },
+          description: "Fields the list can be sorted by, either way, from a Sort by control.",
+        },
         ...textSchema,
       },
     },
@@ -116,8 +128,17 @@ function readPage(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["route", ...PATTERN_KINDS, "actions", "access", "search", ...TEXT_KEYS],
-    later: ["list", "calendar", "filters"],
+    allowed: [
+      "route",
+      ...PATTERN_KINDS,
+      "actions",
+      "access",
+      "search",
+      "filters",
+      "sortable",
+      ...TEXT_KEYS,
+    ],
+    later: ["list", "calendar"],
     content: ["title", "label", "heading"],
   });
   let route = `/${kebab(id)}`;
@@ -125,6 +146,8 @@ function readPage(
   let actions: string[] | undefined;
   let access: string[] | undefined;
   let search: { name: string; at: At }[] | undefined;
+  let filters: { name: string; at: At }[] | undefined;
+  let sortable: { name: string; at: At }[] | undefined;
   for (const { key, value } of known) {
     if (key === "route") {
       const r = readString(ctx, value, `The route of ${where}`);
@@ -147,6 +170,10 @@ function readPage(
       });
     } else if (key === "search") {
       search = readNameList(ctx, value, `the search of ${where}`);
+    } else if (key === "filters") {
+      filters = readNameList(ctx, value, `the filters of ${where}`);
+    } else if (key === "sortable") {
+      sortable = readNameList(ctx, value, `the sortable fields of ${where}`);
     } else if (key === "access") {
       access = readRoleList(ctx, value, `the access of ${where}`, false);
     } else if (key in PAGE_PATTERNS) {
@@ -175,7 +202,9 @@ function readPage(
   }
   const model = patternInfo({ id, route, pattern }).manages();
   if (!model)
-    for (const e of known.filter((e) => e.key === "actions" || e.key === "search"))
+    for (const e of known.filter((e) =>
+      ["actions", "search", "filters", "sortable"].includes(e.key),
+    ))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
   if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
     ctx.error(
@@ -192,6 +221,12 @@ function readPage(
     ...(model && actions?.length ? { actions } : {}),
     ...(access ? { access } : {}),
     ...(model && search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
+    ...(model && filters?.length
+      ? { filters: checkFilterFields(ctx, filters, model, parsed, where) }
+      : {}),
+    ...(model && sortable?.length
+      ? { sortable: checkSortableFields(ctx, sortable, model, parsed, where) }
+      : {}),
     ...readSemanticText(ctx, known),
   };
 }
