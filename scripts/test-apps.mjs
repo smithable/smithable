@@ -692,15 +692,20 @@ async function statusFlow(base) {
     const services = page.locator('[data-section="services"]');
     await services.getByText("Payments", { exact: true }).waitFor({ timeout: 10000 });
     await services.getByText("Degraded").waitFor();
+    // What is still going on, apart from what was resolved.
+    await page
+      .locator('[data-section="open"]')
+      .getByText("Card payments slow at checkout")
+      .waitFor();
     await page
       .locator('[data-section="recent"]')
-      .getByText("Card payments slow at checkout")
+      .getByText("Website unreachable for twenty minutes")
       .waitFor();
     await open(page, `${base}/history`);
     await page.getByRole("link", { name: "Website unreachable for twenty minutes" }).click();
     await page.getByText("A certificate renewal failed").first().waitFor({ timeout: 10000 });
     console.log(
-      "  ✓ browser: a visitor sees the services with their state, the recent incidents and an incident's story, without signing in",
+      "  ✓ browser: a visitor sees the services with their state, what is going on now, what was resolved and an incident's story, without signing in",
     );
 
     await signInAs(page, base, "admin");
@@ -712,18 +717,19 @@ async function statusFlow(base) {
     // Signed out again, the public page shows it.
     await page.context().clearCookies();
     await open(page, `${base}/`);
+    await services.getByText("Degraded").waitFor({ state: "detached", timeout: 10000 });
+    // Resolved, it leaves "going on now" for "recently resolved".
     await page
-      .locator("#services")
-      .getByText("Degraded")
-      .waitFor({ state: "detached", timeout: 10000 });
-    await page
-      .locator(
-        '[data-section="recent"] li, [data-section="recent"] article, [data-section="recent"] > * *',
-      )
-      .filter({ hasText: "Card payments slow at checkout" })
-      .filter({ hasText: "Resolved" })
-      .first()
+      .locator('[data-section="recent"]')
+      .getByText("Card payments slow at checkout")
       .waitFor({ timeout: 10000 });
+    if (
+      await page
+        .locator('[data-section="open"]')
+        .getByText("Card payments slow at checkout")
+        .count()
+    )
+      throw new Error("the resolved incident is still under going on now");
     console.log(
       "  ✓ browser: resolving an incident (its action) marks it resolved and its service working again, on the public page too",
     );
