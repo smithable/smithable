@@ -310,3 +310,29 @@ describe("what it leaves to a model", () => {
     expect(ops(request)).toBeUndefined();
   });
 });
+
+test("several lists of a model: the one at / takes a plain request, never My items or Saved", () => {
+  const spec = validateSpec(
+    {
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Torget }
+models:
+  Item:
+    fields: { title: string!, price: money, delivery: pickup | shipping }
+pages:
+  catalogue: { crud: Item, route: / }
+  myItems: { crud: Item, mine: true }
+  saved: { crud: Item, favourites: only }
+`,
+    },
+    { roles: ROLES },
+  ).ir;
+  if (!spec) throw new Error("invalid");
+  expect(matchRequest(spec, "let visitors sort items by price", ROLES)?.operations).toEqual([
+    { op: "setSortable", args: { page: "catalogue", fields: ["price"] } },
+  ]);
+  expect(matchRequest(spec, "let visitors filter items by delivery", ROLES)?.operations).toEqual([
+    { op: "setFilters", args: { page: "catalogue", fields: ["delivery"] } },
+  ]);
+});
