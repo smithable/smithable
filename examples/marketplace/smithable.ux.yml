@@ -1,0 +1,12 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: modern
+
+pages:
+  home:
+    sections:
+      hero: { layout: cover }
+  catalogue:
+    table: { view: cards }
