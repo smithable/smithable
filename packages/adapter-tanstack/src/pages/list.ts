@@ -15,6 +15,7 @@ import {
   type UxIR,
 } from "@smithable/core";
 import { actionNames } from "../actions.js";
+import { hasSignIn } from "../auth.js";
 import { savedToggle } from "../data.js";
 import {
   attr,
@@ -52,7 +53,14 @@ const AUTOMATIC: Record<string, { key: string; label: string }> = {
  * control for the kit's Filters, and the choices a reference filter offers. References to
  * people who sign in (owner) are not filters yet: listing them would show every user's name.
  */
-function filterCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, favourites?: Favourites) {
+function filterCode(
+  page: PageIR,
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  favourites?: Favourites,
+  ownOnly?: boolean,
+) {
   const n = names(model, t);
   const conditions: string[] = [];
   const controls: Record<string, unknown>[] = [];
@@ -70,7 +78,13 @@ function filterCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, favourit
       favourites === "only" ? savedOnly : `data.view === "saved" ? ${savedOnly} : undefined`,
     );
   }
+  // A page of only the viewer's own records (mine: true): always, so no Mine toggle there.
+  if (ownOnly) {
+    toggles = true;
+    conditions.push(`eq(${n.table}.${ownerKey(model)}, viewer?.id ?? "")`);
+  }
   for (const name of page.filters ?? []) {
+    if (name === "owner" && ownOnly) continue;
     // The owner: a "Mine" toggle for those signed in, never a list of people.
     if (name === "owner") {
       mine = true;
@@ -171,7 +185,7 @@ function filterCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, favourit
     options,
     modules,
     sorts,
-    names: [...(page.filters ?? [])],
+    names: (page.filters ?? []).filter((name) => !(ownOnly && name === "owner")),
     columns: (page.sortable ?? []).map((name) => {
       const field = model.fields.find((f) => f.name === name);
       const key = AUTOMATIC[name]?.key ?? (field ? dataKey(field) : name);
@@ -191,12 +205,13 @@ export function searchCode(
   ir: SpecIR,
   within?: Within,
   favourites?: Favourites,
+  ownOnly?: boolean,
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
   const filtering =
-    !within && (page.filters?.length || page.sortable?.length || favourites)
-      ? filterCode(page, model, t, ir, favourites)
+    !within && (page.filters?.length || page.sortable?.length || favourites || ownOnly)
+      ? filterCode(page, model, t, ir, favourites, ownOnly)
       : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -346,10 +361,13 @@ export function listParts(
   const component = `${pascal(page.id)}${within ? pascal(plural(model.name)) : ""}Page`;
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
-  const filtered = !within && (page.filters?.length || page.sortable?.length || favourites);
+  // Only the viewer's own records (mine: true), for apps with sign-in.
+  const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
+  const filtered =
+    !within && (page.filters?.length || page.sortable?.length || favourites || ownOnly);
   const search =
     page.search?.length || filtered
-      ? searchCode(page, model, t, ir, within, favourites)
+      ? searchCode(page, model, t, ir, within, favourites, ownOnly)
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;
   const searchable = Boolean(page.search?.length);
