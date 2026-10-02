@@ -858,6 +858,42 @@
             },
             "description": "Fields the list can be sorted by, either way, from a Sort by control."
           },
+          "favourites": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "const": "only"
+              }
+            ],
+            "description": "true: a heart on each record and a Saved view of the list; only: a list of the viewer's saved records."
+          },
+          "contact": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "to"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "to": {
+                    "type": "string",
+                    "description": "owner, or a user field of the model."
+                  },
+                  "keep": {
+                    "type": "string",
+                    "description": "A model a copy of each message is stored in."
+                  }
+                }
+              }
+            ],
+            "description": "A contact block on the record page that mails the record's owner (or the user a field names): owner, a field, or { to, keep }."
+          },
           "description": {
             "type": "string",
             "description": "What this is. Meaning for AI and developers; not shown to visitors."
