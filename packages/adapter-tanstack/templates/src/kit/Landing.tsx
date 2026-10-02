@@ -238,10 +238,14 @@ export function Section({
     <section
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
-      className="mx-auto max-w-6xl px-5 py-16"
+      className="mx-auto max-w-6xl px-5 py-12"
     >
       {title && (
-        <h2 id={`${id}-title`} className="text-2xl font-bold sm:text-3xl" {...mark(texts, "title")}>
+        <h2
+          id={`${id}-title`}
+          className="text-2xl leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[2rem]"
+          {...mark(texts, "title")}
+        >
           {title}
         </h2>
       )}
@@ -250,7 +254,7 @@ export function Section({
           {text}
         </p>
       )}
-      <div className={title || text ? "mt-10" : undefined}>{children}</div>
+      <div className={text ? "mt-8" : title ? "mt-6" : undefined}>{children}</div>
     </section>
   );
 }
@@ -323,7 +327,7 @@ export function Hero({
   const text = (
     <div>
       <h1
-        className="max-w-3xl text-4xl leading-tight font-bold sm:text-5xl"
+        className="max-w-3xl text-4xl leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-5xl lg:text-6xl"
         {...mark(texts, "title")}
       >
         {title}
@@ -831,9 +835,12 @@ export function CallToAction({
   texts?: string;
 }) {
   return (
-    <section {...sectionHooks(texts)} className="mx-auto max-w-6xl px-5 py-16">
+    <section {...sectionHooks(texts)} className="mx-auto max-w-6xl px-5 py-12">
       <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
-        <h2 className="text-2xl font-bold sm:text-3xl" {...mark(texts, "title")}>
+        <h2
+          className="text-2xl leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[2rem]"
+          {...mark(texts, "title")}
+        >
           {title}
         </h2>
         {text && (
