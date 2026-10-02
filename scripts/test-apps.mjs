@@ -321,14 +321,22 @@ async function calendarFlow(base) {
     if (process.env.CALENDAR_SHOTS)
       await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/month.png`, fullPage: true });
     await page.getByRole("button", { name: "Week" }).click();
-    // The app's name leads back to the landing page, whose hero says more follows.
-    await page.locator("aside").getByRole("link", { name: "Stillwater Yoga", exact: true }).click();
+    // A visitor sees the schedule in the site's frame, not the app's; the app's name leads back
+    // to the landing page, whose hero says more follows.
+    if (await page.locator('[data-kit="app-shell"]').count())
+      throw new Error("a visitor sees the public schedule in the app's frame");
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Stillwater Yoga", exact: true })
+      .click();
     await page.waitForURL(`${base}/`);
     await page.getByRole("link", { name: "More below" }).click();
     await page.waitForURL(/#/);
     // An admin clicks an empty hour: the new session's start is that hour.
     await signInAs(page, base, "admin");
     await open(page, `${base}/schedule`);
+    // Signed in, the same page is in the app's frame.
+    await page.locator('[data-kit="app-shell"]').waitFor({ timeout: 10000 });
     const slot = page.getByRole("button", { name: /^New session, .* at 07:00$/ }).first();
     const label = await slot.getAttribute("aria-label");
     await slot.click();
@@ -337,7 +345,7 @@ async function calendarFlow(base) {
     if (!starts.endsWith("T07:00"))
       throw new Error(`the new session starts at ${starts}, from ${label}`);
     console.log(
-      "  ✓ browser: the schedule shows this week's sessions to a visitor, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; an admin's click on an empty hour starts a new session then",
+      "  ✓ browser: the schedule shows this week's sessions to a visitor, in the site's frame, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; signed in, the schedule is in the app's frame, and an admin's click on an empty hour starts a new session then",
     );
   } catch (error) {
     console.log(
