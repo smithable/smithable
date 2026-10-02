@@ -19,6 +19,7 @@ pnpm install
 pnpm build
 node packages/cli/dist/bin.js new my-crm        # a CRM from the starter, with sample data
 node packages/cli/dist/bin.js new dogs --describe "a site to show my dogs"   # up to three questions, then a draft (needs a model, docs/ai.md)
+node packages/cli/dist/bin.js new cafe --from https://example.com            # a page as the description; --with-pictures takes its pictures
 cd my-crm && node ../packages/cli/dist/bin.js studio   # Builder and Studio in the browser
 ```
 
