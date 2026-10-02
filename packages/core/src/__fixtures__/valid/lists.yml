@@ -12,13 +12,26 @@ models:
       place: string
       available: bool = true
       seller: User
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
 pages:
   catalogue:
     route: /
     crud: Item
     search: [title, description]
-    filters: [category, price, condition, available, seller, owner, createdAt]
+    filters: [category, price, condition, available, owner, createdAt]
     sortable: [price, createdAt, title]
+    favourites: true
+    contact: { to: seller, keep: Message }
+  saved:
+    crud: Item
+    favourites: only
+  mine:
+    crud: Item
+    contact: owner
   welcome:
     route: /welcome
     landing:

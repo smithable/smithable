@@ -170,6 +170,17 @@ describe("the seven benchmark tasks", () => {
       { op: "setSortable", args: { page: "customers", fields: ["name", "creditLimit"] } },
     ]);
   });
+  test("Let people save customers as favourites; let visitors contact the account manager of a customer", () => {
+    expect(ops("Let people save customers as favourites.")).toEqual([
+      { op: "setFavourites", args: { page: "customers", mode: "on" } },
+    ]);
+    expect(ops("Let visitors contact the account manager of a customer.")).toEqual([
+      { op: "setContact", args: { page: "customers", to: "accountManager" } },
+    ]);
+    expect(ops("Let visitors contact the owner of a customer.")).toEqual([
+      { op: "setContact", args: { page: "customers", to: "owner" } },
+    ]);
+  });
   test("Show products first in the menu", () => {
     const o = ops("Show Products first in the menu.");
     expect(o).toEqual([

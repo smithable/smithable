@@ -418,6 +418,56 @@ async function bookingFlow(dir, base) {
 }
 
 /**
+ * A list's filters and sort (the CRM's customers, by operations): a segment chip, a credit range
+ * and a sort, all in the address and applied by the query; "Mine" for those signed in only.
+ */
+async function filtersFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const names = async () =>
+    (await page.locator('[data-part="row"] [data-field="name"]').allInnerTexts()).map((t) =>
+      t.trim(),
+    );
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers`);
+    await page.getByRole("button", { name: "Enterprise", exact: true }).click();
+    await page.waitForURL(/segment=enterprise/);
+    await page.getByRole("spinbutton", { name: "Credit limit from" }).fill("30000");
+    await page.waitForURL(/creditLimit=30000\.\./);
+    await page.getByLabel("Sort by").selectOption({ label: "Credit limit, high to low" });
+    await page.waitForURL(/sort=-creditLimit/);
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-part="row"] [data-field="name"]').length === 2,
+    );
+    const shown = await names();
+    if (shown.join() !== "Nordic Timber Oy,Helios Energy")
+      throw new Error(`the list shows ${shown.join()}`);
+    // The address alone gives the same list (a linked view).
+    await open(page, page.url());
+    if ((await names()).join() !== "Nordic Timber Oy,Helios Energy")
+      throw new Error("a reloaded view differs");
+    await page.getByRole("button", { name: "Remove the segment filter" }).click();
+    await page.waitForURL((url) => !url.searchParams.has("segment"));
+    // "Mine": the admin manages no customers; a visitor is not offered it at all.
+    // The box follows the address, which changes a moment after the click.
+    await page.getByRole("checkbox", { name: "Mine" }).click();
+    await page.waitForURL(/owner=mine/);
+    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: a list filters by a chip, a range and Mine and sorts by the address's order, applied by the query; a linked view gives the same list",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("filters flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
  * describes them and moves the second first; they are served in that order, the first as the
  * cover; removing one deletes its file and keeps the other.
@@ -1908,6 +1958,21 @@ for (const [index, example] of examples.entries()) {
         join(dir, "src/custom/styles.css"),
         '\n[data-page="customers"] [data-kit="model-table"] [data-part="header"] th { letter-spacing: 3px; }\n',
       );
+    // A list's filters and sort (marketplace.md §2.2): the CRM's customers get them by operations.
+    if (example === "crm")
+      step(
+        "op setFilters and setSortable give the customers list filters and a sort, and the app type-checks",
+        () => {
+          for (const args of [
+            ["setFilters", "customers", "segment", "creditLimit", "owner"],
+            ["setSortable", "customers", "creditLimit", "name"],
+          ]) {
+            const result = smithable(dir, "op", ...args);
+            if (result.code !== 0) throw new Error(result.out);
+          }
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     // Several pictures on a record (marketplace.md §2.1): posts get a gallery by an operation.
     if (example === "booking")
       step("op addField gives posts a gallery of several pictures, and the app type-checks", () => {
@@ -1919,7 +1984,10 @@ for (const [index, example] of examples.entries()) {
     try {
       const base = `http://localhost:${port + 100}`;
       await visualChecks(dir, base);
-      if (example === "crm") await browserFlow(base);
+      if (example === "crm") {
+        await browserFlow(base);
+        await filtersFlow(base);
+      }
       if (example === "booking") {
         await landingFlow(base);
         await calendarFlow(base);
@@ -1938,6 +2006,16 @@ for (const [index, example] of examples.entries()) {
     } finally {
       stop();
     }
+    // The CRM's later steps work on its customers page as the starter has it.
+    if (example === "crm")
+      step("undo takes the list's filters and sort back off", () => {
+        for (let i = 0; i < 2; i++) {
+          const undone = smithable(dir, "undo");
+          if (undone.code !== 0) throw new Error(undone.out);
+        }
+        if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("filters:"))
+          throw new Error("the filters are still in the spec");
+      });
 
     step("regenerating changes nothing", () => {
       const out = run("node", [cli, "generate", dir], repo);
