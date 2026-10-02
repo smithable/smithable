@@ -71,7 +71,11 @@ jobs:
       # The generated apps commit with Git.
       - if: steps.scope.outputs.full == 'true'
         run: git config --global user.name CI && git config --global user.email ci@example.com
+      # The examples one after another (the runner has two cores; four apps at once time out),
+      # and the generated apps install what an operation adds, so not with CI's frozen lockfile.
       - if: steps.scope.outputs.full == 'true'
-        run: pnpm test:apps
+        run: node scripts/test-apps.mjs
+        env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
       - if: steps.scope.outputs.full == 'true'
         run: pnpm test:studio
+        env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
