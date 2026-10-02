@@ -106,7 +106,7 @@
               "oneOf": [
                 {
                   "type": "string",
-                  "pattern": "^\\s*(?:(?:string|text|markdown|int|decimal|money|bool|date|datetime|email|phone|url|picture)!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|[A-Z][A-Za-z0-9]*!?(?:\\s+unique)?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$",
+                  "pattern": "^\\s*(?:(?:string|text|markdown|int|decimal|money|bool|date|datetime|email|phone|url|picture|pictures)!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|[A-Z][A-Za-z0-9]*!?(?:\\s+unique)?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$",
                   "description": "A type with optional \"!\" (required), \"unique\" and \"= default\", e.g. \"string!\" or \"int! = 60\". Or choices: \"draft | sent | paid\" (the first is the default)."
                 },
                 {
@@ -118,7 +118,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "pattern": "^\\s*(?:(?:string|text|markdown|int|decimal|money|bool|date|datetime|email|phone|url|picture)!?|[A-Z][A-Za-z0-9]*!?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$"
+                      "pattern": "^\\s*(?:(?:string|text|markdown|int|decimal|money|bool|date|datetime|email|phone|url|picture|pictures)!?|[A-Z][A-Za-z0-9]*!?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$"
                     },
                     "required": {
                       "type": "boolean"
@@ -537,6 +537,17 @@
                   "type": "string",
                   "description": "A model whose records the section shows."
                 },
+                "search": {
+                  "type": "boolean",
+                  "description": "A records section with a search box, leading to the model's list page."
+                },
+                "filters": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "A records section's filters (fields of the model), leading to its list page."
+                },
                 "button": {
                   "type": "string",
                   "description": "The page the section's button opens."
@@ -832,6 +843,20 @@
               "type": "string"
             },
             "description": "Fields the list can be searched by, e.g. [name, email]."
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Fields the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle."
+          },
+          "sortable": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Fields the list can be sorted by, either way, from a Sort by control."
           },
           "description": {
             "type": "string",
