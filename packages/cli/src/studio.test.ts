@@ -38,3 +38,10 @@ test("on the network, Studio does not start without a token unless told to run o
     if (saved !== undefined) process.env.SMITHABLE_STUDIO_TOKEN = saved;
   }
 });
+
+test("a crashed preview restarts at once a few times, then with a growing pause, never giving up", async () => {
+  const { previewRestartDelay } = await import("./studio.js");
+  expect([1, 2, 5].map(previewRestartDelay)).toEqual([1000, 1000, 1000]);
+  expect([6, 7, 8, 9].map(previewRestartDelay)).toEqual([10_000, 20_000, 40_000, 80_000]);
+  expect([10, 11, 50].map(previewRestartDelay)).toEqual([120_000, 120_000, 120_000]);
+});
