@@ -22,9 +22,11 @@ export const COMMANDS: Command[] = [
       'or --describe "a booking site for a yoga studio": a model may ask up to three questions,',
       'picks the starter to adapt, drafts the app, and you confirm the result. --answers "a; b"',
       "answers the questions in order; --yes asks nothing and creates the app directly;",
-      "--no-sample-data starts with an empty database (no samples/ folder, nothing seeded)",
+      "--no-sample-data starts with an empty database (no samples/ folder, nothing seeded).",
+      "--from <url> starts from a page: its text, menu and forms describe the app (needs a model);",
+      "--with-pictures also takes its pictures as sample pictures, after asking",
     ],
-    options: ["starter", "describe", "answers", "yes", "no-sample-data"],
+    options: ["starter", "describe", "answers", "yes", "no-sample-data", "from", "with-pictures"],
   },
   {
     name: "clarify",

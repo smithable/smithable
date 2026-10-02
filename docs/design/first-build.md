@@ -60,7 +60,7 @@ Decided 2026-10-02 (Johan): a site someone already has, or one like the site the
 
 ## 3. What is built
 
-Built: `clarify` (the questions, `--answers`, `--yes`, the hosted two-step form), the records starter, the draft as a batch of operations, the visible fallback and the demo allowance fix, and the docs (ARCHITECTURE §9, `docs/ai.md`, the README). Open: the benchmark run with scripted answers and a starter column, the evaluation in 2.7, and 2.8 (a page as the starting point; CLI first, then the hosted form).
+Built: `clarify` (the questions, `--answers`, `--yes`, the hosted two-step form), the records starter, the draft as a batch of operations, the visible fallback and the demo allowance fix, and the docs (ARCHITECTURE §9, `docs/ai.md`, the README). Open: the benchmark run with scripted answers and a starter column, the evaluation in 2.7, and 2.8's hosted form (the CLI's `new --from <url> [--with-pictures]` is built, 2026-10-02: robots.txt, the named agent, three same-site redirects, 2 MB and 15 s, a JavaScript-only page refused; pictures kept as the site serves them, JPEG, PNG or WebP up to 1 MB, since scaling and WebP encoding in Node would need a native library).
 
 ## 4. Out of scope
 
