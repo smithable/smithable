@@ -32,6 +32,7 @@ The hosted service is a separate, private repository, so none of this blocks the
 
 - **Leaving with everything, in one download:** the project page's "Download with history" gives the Git bundle only. The download becomes one file with the bundle, the live app's database (the consistent copy the backup already makes), its uploads and a short README (`git clone`, `pnpm install`, `smithable studio`, `smithable detach`); the staging copy when it exists; always available, including after unpublishing and during the notice period before removal. The beta terms' `[verify: the export path]` then names it. (`smithable-cloud/docs/legal/operations.md`, Export.)
 - The rest of `smithable-cloud/docs/legal/README.md`, "What the code still must do".
+- **Live example sites** ([showcase.md](showcase.md)): five published apps with demo sign-in and hourly resets, linked from the docs and the README, with real texts and photographs; and the sixty-second CLI example on the getting-started page. Without them the release has nothing to show a non-developer.
 
 ## At the launch (M16), beyond the flip
 
