@@ -5,7 +5,7 @@ import type { FieldIR, PageIR, SpecIR } from "./ir.js";
 import { capitalize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
-import { type ThemeIR, themeNamed, themeNames } from "./theme.js";
+import { type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
 
 /**
  * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
@@ -17,6 +17,8 @@ export interface UxIR {
     preset: string;
     /** A color like "#2563eb"; the preset derives its colors from it. */
     primary?: string;
+    /** A background color like "#f5efe6": a pale wash in light mode, a deep one in dark. */
+    background?: string;
     font?: string;
     density: "comfortable" | "compact";
   };
@@ -567,6 +569,7 @@ function readTheme(
   target: Partial<UxIR["theme"]>,
 ): void {
   let densityGiven = false;
+  let backgroundAt: ParsedNode | null = null;
   for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
     allowed: ["preset", "brand", "density"],
     later: ["radius", "darkMode"],
@@ -590,13 +593,19 @@ function readTheme(
         ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
     } else {
       for (const brand of checkKeys(ctx, mapEntries(ctx, entry.value, `"brand"`) ?? [], `"brand"`, {
-        allowed: ["primary", "font"],
+        allowed: ["primary", "background", "font"],
       })) {
         const text = readString(ctx, brand.value, `"${brand.key}"`);
         if (text === undefined) continue;
-        if (brand.key === "primary") {
-          if (/^#[0-9a-fA-F]{6}$/.test(text)) target.primary = text.toLowerCase();
-          else ctx.error(brand.value, "invalid-color", `"primary" must be a color like "#2563eb".`);
+        if (brand.key === "primary" || brand.key === "background") {
+          if (/^#[0-9a-fA-F]{6}$/.test(text)) target[brand.key] = text.toLowerCase();
+          else
+            ctx.error(
+              brand.value,
+              "invalid-color",
+              `"${brand.key}" must be a color like "#2563eb".`,
+            );
+          if (brand.key === "background") backgroundAt = brand.value;
         } else if ((FONTS as readonly string[]).includes(text)) {
           target.font = text;
         } else {
@@ -609,6 +618,16 @@ function readTheme(
         }
       }
     }
+  }
+  // A background the theme cannot keep readable (a color too loud for text) is said, not used.
+  const theme = themeNamed(target.preset ?? "modern", themes);
+  if (target.background && theme && !withBackground(theme, target.background)) {
+    ctx.warning(
+      backgroundAt,
+      "unreadable-background",
+      `On the background ${target.background}, the ${theme.name} theme's text would not read; it keeps its own background.`,
+    );
+    delete target.background;
   }
   // Without a density of its own, a theme's own (corporate is compact).
   const own = target.preset ? themeNamed(target.preset, themes)?.density : undefined;

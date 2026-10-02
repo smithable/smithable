@@ -14,6 +14,7 @@ export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
 export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
 export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
+export { conditionArgs, conditionText, readCondition } from "./condition.js";
 export type {
   ContentImage,
   ContentIR,
@@ -117,6 +118,7 @@ export {
   themeNames,
   themeThumbnail,
   tokensOf,
+  withBackground,
 } from "./theme.js";
 export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
 export {
