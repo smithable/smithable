@@ -5956,7 +5956,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "7d81e484 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "b81576e8 kit",
+  "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -8720,7 +8720,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "tests/smoke.spec.ts": "6101e15a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "b81576e8 kit",
+  "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -12047,7 +12047,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "tests/smoke.spec.ts": "52c9ba9c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "b81576e8 kit",
+  "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -14282,7 +14282,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "tests/smoke.spec.ts": "fe8c020e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "b81576e8 kit",
+  "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -15847,7 +15847,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "9cf8f87c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
-  "vite.config.ts": "b81576e8 kit",
+  "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
