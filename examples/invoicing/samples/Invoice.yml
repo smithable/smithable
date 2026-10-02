@@ -1,0 +1,6 @@
+- { number: 2026-001, client: Skerry Software, issuedOn: 2026-08-03, dueOn: 2026-09-02, status: paid }
+- { number: 2026-002, client: Kallio Design, issuedOn: 2026-08-17, dueOn: 2026-09-16, status: paid }
+- { number: 2026-003, client: Solstice Bakery, issuedOn: 2026-08-31, dueOn: 2026-09-30, status: overdue }
+- { number: 2026-004, client: Skerry Software, issuedOn: 2026-09-14, dueOn: 2026-10-14, status: sent }
+- { number: 2026-005, client: Fjord Analytics, issuedOn: 2026-09-28, dueOn: 2026-10-28, status: sent }
+- { number: 2026-006, client: Kallio Design, issuedOn: 2026-10-01, dueOn: 2026-10-31, status: draft }
