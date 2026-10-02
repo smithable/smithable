@@ -29,7 +29,7 @@ export function ReportDialog({ onClose }: { onClose: () => void }) {
         ? (result.message ?? "The report could not be sent.")
         : result.url
           ? "The issue opened on GitHub; attach the spec files there if you can."
-          : "Sent. Thank you.",
+          : (result.message ?? "Sent. Thank you."),
     );
   };
   return (

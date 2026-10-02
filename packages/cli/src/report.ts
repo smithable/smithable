@@ -106,7 +106,9 @@ export function reportText(report: Report): string {
  * Sends a report: to the service when hosted, else a GitHub issue link to open (the spec files
  * do not fit in a link; the issue asks for them).
  */
-export async function sendReport(report: Report): Promise<{ sent: true } | { url: string }> {
+export async function sendReport(
+  report: Report,
+): Promise<{ sent: true; message?: string } | { url: string }> {
   const target = process.env.SMITHABLE_REPORT_URL;
   if (target) {
     const response = await fetch(target, {
@@ -114,8 +116,17 @@ export async function sendReport(report: Report): Promise<{ sent: true } | { url
       headers: { "content-type": "application/json", "x-smithable-report": "1" },
       body: JSON.stringify(report),
     });
-    if (!response.ok) throw new Error(`The report was not accepted (${response.status}).`);
-    return { sent: true };
+    // The service says what happened in its own words ("Report 12 received", "too many today").
+    const message = await response
+      .json()
+      .then((answer: unknown) => {
+        const said = (answer as { message?: unknown } | null)?.message;
+        return typeof said === "string" ? said : undefined;
+      })
+      .catch(() => undefined);
+    if (!response.ok)
+      throw new Error(message ?? `The report was not accepted (${response.status}).`);
+    return { sent: true, message };
   }
   const body = [
     `Smithable ${report.smithable}, Node ${report.node}, ${report.platform}`,
@@ -212,7 +223,9 @@ export async function report(
   try {
     const result = await sendReport(built);
     io.out(
-      "sent" in result ? "Sent. Thank you.\n" : `Open this to file it on GitHub:\n${result.url}\n`,
+      "sent" in result
+        ? `${result.message ?? "Sent. Thank you."}\n`
+        : `Open this to file it on GitHub:\n${result.url}\n`,
     );
     return 0;
   } catch (error) {
