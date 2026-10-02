@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+# A status page: what works, what is being fixed, and what is planned. Visitors read it; the
+# team, invited, writes incidents and their updates.
+smithable: 0.1
+
+app:
+  name: Northwind Status
+  description: Is it working? The state of our services, live.
+  timezone: Europe/Mariehamn
+
+models:
+  Component:
+    fields:
+      name: string!
+      status: operational | degraded | down | maintenance
+      description: text
+      incidents: Incident[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      component: Component
+      detectedAt: datetime!
+      resolvedAt: datetime
+      summary: markdown
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+  Maintenance:
+    fields:
+      title: string!
+      component: Component
+      startsAt: datetime!
+      endsAt: datetime!
+      description: text
+
+actions:
+  identified:
+    custom: true
+    input: { incident: Incident! }
+    allow: [admin, staff]
+    intent: The cause is found; the incident moves to identified.
+    rules:
+      - The incident's status becomes identified, with an update saying so.
+  monitoring:
+    custom: true
+    input: { incident: Incident! }
+    allow: [admin, staff]
+    intent: A fix is out; the incident is watched before it is closed.
+    rules:
+      - The incident's status becomes monitoring, with an update saying so.
+  resolve:
+    custom: true
+    input: { incident: Incident! }
+    allow: [admin, staff]
+    intent: The incident is over.
+    rules:
+      - The incident's status becomes resolved and its resolvedAt is now.
+      - Its component is operational again.
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: history }
+      services: { records: Component }
+      recent: { records: Incident, limit: 5 }
+      planned: { records: Maintenance, limit: 3 }
+      footer: {}
+  history:
+    articles: { model: Incident, title: title, body: summary, date: detectedAt }
+  incidents:
+    crud: Incident
+    actions: [identified, monitoring, resolve]
+  updates: { crud: IncidentUpdate }
+  components: { crud: Component, access: [admin] }
+  maintenance: { crud: Maintenance }
+  overview:
+    dashboard:
+      open: { count: Incident, where: { status: investigating } }
+      perMonth: { count: Incident, by: detectedAt }
+      latest: { list: Incident, limit: 5 }
+  team: { users: manage }
+
+navigation:
+  main: [overview, incidents, updates, maintenance, components, team]

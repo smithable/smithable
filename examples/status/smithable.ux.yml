@@ -1,0 +1,10 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: minimal
+
+tones:
+  Component.status: { operational: success, degraded: warning, down: danger, maintenance: neutral }
+  Incident.status: { investigating: danger, identified: warning, monitoring: warning, resolved: success }
+  IncidentUpdate.status: { investigating: danger, identified: warning, monitoring: warning, resolved: success }

@@ -1,0 +1,20 @@
+# What visitors read. Derived from names when not given here.
+smithableContent: 0.1
+
+models:
+  IncidentUpdate: { label: Update }
+  Maintenance: { label: Planned maintenance }
+
+pages:
+  home:
+    hero:
+      title: Northwind service status
+      subtitle: The state of our services, updated by the team as things happen.
+      button: See past incidents
+    services: { title: Services }
+    recent: { title: Recent incidents }
+    planned: { title: Planned maintenance }
+  history:
+    title: Incident history
+  overview:
+    title: Overview
