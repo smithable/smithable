@@ -393,6 +393,21 @@ test("setFavourites and setContact add, change and remove a page's favourites an
   expect(apply("setFavourites", ["nowhere"])).toMatchObject({ ok: false });
 });
 
+test("setMine makes a page list only the viewer's own records, and back", () => {
+  const mine = ok("setMine", ["customers"]);
+  expect(changed(files.spec, mine.files.spec)).toEqual({ added: ["    mine: true"], removed: [] });
+  const off = applyOperation({ ...files, spec: mine.files.spec }, "setMine", {
+    page: "customers",
+    mode: "off",
+  });
+  if (!off.ok) throw new Error(off.message);
+  expect(changed(mine.files.spec, off.files.spec)).toEqual({
+    added: [],
+    removed: ["    mine: true"],
+  });
+  expect(apply("setMine", ["nowhere"])).toMatchObject({ ok: false });
+});
+
 test("editSpec replaces the spec; removing a stored field is destructive; broken YAML is refused", () => {
   const added = applyOperation(files, "editSpec", {
     text: files.spec.replace("      notes: text\n", "      notes: text\n      website: url\n"),

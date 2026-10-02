@@ -671,6 +671,23 @@ const RULES: Rule[] = [
     },
   },
   {
+    // "let people see only their own orders on the orders page", "the my items page shows only my items"
+    name: "mine",
+    match(text, scope) {
+      const m =
+        /^(?:let (?:users |people |members )?)?(?:see|show|list) only (?:their|my|your) own (?<target>.+?)(?: on (?:the )?(?<page>.+?)(?: page)?)?$/.exec(
+          text,
+        ) ??
+        /^(?:the )?(?<page>.+?) page (?:should )?(?:shows?|lists?) only (?:their|my|your) own (?<target>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const page = pageFor(scope.ir, m.groups.page ?? m.groups.target ?? "");
+      if (!page || page.pattern.kind !== "crud" || page.mine) return null;
+      return [{ op: "setMine", args: { page: page.id, mode: "on" } }];
+    },
+  },
+  {
     // "let people save items", "items can be saved as favourites", "add favourites to the catalogue page"
     name: "favourites",
     match(text, scope) {
