@@ -10,7 +10,7 @@ models:
       place: { label: Where }
 
 pages:
-  catalogue:
+  catalog:
     title: For sale
     subtitle: Second-hand things from people nearby.
   myItems:

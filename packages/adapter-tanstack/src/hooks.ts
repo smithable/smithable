@@ -1,7 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts): the hook points of a generated app
 // (ARCHITECTURE §6.3). After a record is created, changed or deleted, and once a day, the app
 // calls what src/custom/hooks.ts (and a plugin's hooks file) put there: the one place for
-// "when this happens, do that", so behaviour needs no new construct in the spec.
+// "when this happens, do that", so behavior needs no new construct in the spec.
 import type { SpecIR, SpecPlugin } from "@smithable/core";
 import { HEADER, names, type Texts } from "./shared.js";
 

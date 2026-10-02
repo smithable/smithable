@@ -1,9 +1,9 @@
-// A theme is data (docs/design/look.md §3): a font, a corner radius, a shadow and the colour
+// A theme is data (docs/design/look.md §3): a font, a corner radius, a shadow and the color
 // tokens the app kit uses, in light and dark mode. The four built-in presets are themes; a
 // project's own live in themes/<name>.yml and are checked like the built-ins: every pair of
 // text and background the kit puts together must read. A theme never ships CSS or code.
 import { isScalar, LineCounter, parseDocument } from "yaml";
-import { contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./colour.js";
+import { contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./color.js";
 import { checkKeys, mapEntries, ParseContext, readString } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
@@ -12,7 +12,7 @@ import { FONTS } from "./ux.js";
 
 export type Mode = "light" | "dark";
 
-/** The colour tokens the app kit's styles use (shadcn/ui's names), each a CSS colour. */
+/** The color tokens the app kit's styles use (shadcn/ui's names), each a CSS color. */
 export const TOKEN_NAMES = [
   "background",
   "foreground",
@@ -55,7 +55,7 @@ export interface ThemeIR {
   radius: string;
   shadow: string;
   density: "comfortable" | "compact";
-  /** The most chroma a brand colour keeps on this theme (quiet themes stay quiet). */
+  /** The most chroma a brand color keeps on this theme (quiet themes stay quiet). */
   chroma: number;
   light: Tokens;
   dark: Tokens;
@@ -67,7 +67,7 @@ export const SHADOWS = {
   soft: "0 1px 3px rgb(0 0 0 / 0.08)",
   raised: "0 4px 12px rgb(0 0 0 / 0.12)",
   small: "0 1px 2px rgb(0 0 0 / 0.05)",
-  /** A soft shadow tinted with the theme's primary colour. */
+  /** A soft shadow tinted with the theme's primary color. */
   tinted: "0 4px 12px color-mix(in oklch, var(--primary) 15%, transparent)",
 } as const;
 
@@ -130,13 +130,13 @@ export function themeNames(themes: readonly ThemeIR[] = []): string[] {
   return [...new Set([...BUILT_IN_THEMES.map((t) => t.name), ...themes.map((t) => t.name)])];
 }
 
-const COLOUR = /^(?:#[0-9a-f]{6}|oklch\([\d.]+ [\d.]+ [\d.]+\))$/i;
+const COLOR = /^(?:#[0-9a-f]{6}|oklch\([\d.]+ [\d.]+ [\d.]+\))$/i;
 const DARK_TEXT = "#101522";
 const LIGHT_TEXT = "#ffffff";
 
 /**
- * Parses a project's theme file. A theme can be as short as three colours per mode
- * (background, foreground, primary): the rest is derived as a brand colour is, and every pair
+ * Parses a project's theme file. A theme can be as short as three colors per mode
+ * (background, foreground, primary): the rest is derived as a brand color is, and every pair
  * the kit puts together is checked for contrast.
  */
 export function parseTheme(file: { path: string; text: string }): {
@@ -221,7 +221,7 @@ export function parseTheme(file: { path: string; text: string }): {
       ctx.error(
         root,
         "missing-key",
-        `A theme needs "${mode}" colours: at least background, foreground and primary.`,
+        `A theme needs "${mode}" colors: at least background, foreground and primary.`,
       );
       continue;
     }
@@ -230,18 +230,18 @@ export function parseTheme(file: { path: string; text: string }): {
         ctx.error(
           entry.keyNode,
           "unknown-key",
-          `Unknown colour "${entry.key}" in "${mode}".`,
+          `Unknown color "${entry.key}" in "${mode}".`,
           didYouMean(entry.key, TOKEN_NAMES),
         );
         continue;
       }
       const value = readString(ctx, entry.value, `"${entry.key}" in "${mode}"`);
       if (value === undefined) continue;
-      if (!COLOUR.test(value)) {
+      if (!COLOR.test(value)) {
         ctx.error(
           entry.value,
           "invalid-value",
-          `"${entry.key}" in "${mode}" is a colour like "#2f6b3a" or "oklch(0.51 0.23 277)".`,
+          `"${entry.key}" in "${mode}" is a color like "#2f6b3a" or "oklch(0.51 0.23 277)".`,
         );
         continue;
       }
@@ -275,33 +275,33 @@ export function parseTheme(file: { path: string; text: string }): {
   };
 }
 
-/** A colour moved towards another in OKLCH by a share of the way (0 stays, 1 arrives). */
+/** A color moved towards another in OKLCH by a share of the way (0 stays, 1 arrives). */
 function towards(from: string, to: string, share: number): string {
   const [l1, c1, h1] = rgbToOklch(hexToRgb(from));
   const [l2, c2, h2] = rgbToOklch(hexToRgb(to));
   return gamutMap([l1 + (l2 - l1) * share, c1 + (c2 - c1) * share, c1 < 0.02 ? h2 : h1]);
 }
 
-/** The text that reads best on a colour. */
+/** The text that reads best on a color. */
 const bestText = (bg: string) =>
   contrast(LIGHT_TEXT, bg) >= contrast(DARK_TEXT, bg) ? LIGHT_TEXT : DARK_TEXT;
 
-/** A colour on `bg` moved towards `towardsColour` until it reads at `ratio`. */
-function readable(colour: string, bg: string, towardsColour: string, ratio: number): string {
-  let out = colour;
-  for (let i = 0; i < 40 && contrast(out, bg) < ratio; i++) out = towards(out, towardsColour, 0.1);
+/** A color on `bg` moved towards `towardsColor` until it reads at `ratio`. */
+function readable(color: string, bg: string, towardsColor: string, ratio: number): string {
+  let out = color;
+  for (let i = 0; i < 40 && contrast(out, bg) < ratio; i++) out = towards(out, towardsColor, 0.1);
   return out;
 }
 
-/** A hue-rotated colour of the same lightness and chroma. */
-function rotate(colour: string, degrees: number): string {
-  const [l, c, h] = rgbToOklch(hexToRgb(colour));
+/** A hue-rotated color of the same lightness and chroma. */
+function rotate(color: string, degrees: number): string {
+  const [l, c, h] = rgbToOklch(hexToRgb(color));
   return gamutMap([l, Math.max(c, 0.08), (h + degrees) % 360]);
 }
 
 /**
- * Every token from the ones given, the way a brand colour derives its colours: the "-foreground"
- * of a colour is the text that reads on it, muted and secondary step the background towards
+ * Every token from the ones given, the way a brand color derives its colors: the "-foreground"
+ * of a color is the text that reads on it, muted and secondary step the background towards
  * the foreground, borders a step further, the accent tints the background with the primary,
  * and the charts spread around the primary's hue.
  */
@@ -405,7 +405,7 @@ ${half(theme.dark, 160)}
 `;
 }
 
-/** The theme's colours in one mode as written, with a brand colour's changes on top when given. */
+/** The theme's colors in one mode as written, with a brand color's changes on top when given. */
 export function tokensOf(theme: ThemeIR, mode: Mode, over: Partial<Tokens> = {}): Tokens {
   const out = {} as Tokens;
   for (const name of Object.keys(theme[mode]) as TokenName[])

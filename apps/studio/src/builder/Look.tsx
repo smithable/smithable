@@ -19,7 +19,7 @@ import { cx, Select } from "../ui";
 import type { Run } from "./ChangeForms";
 
 const TONE_CHOICES: [string, string][] = [
-  ["neutral", "Grey (neutral)"],
+  ["neutral", "Gray (neutral)"],
   ["success", "Green (good)"],
   ["warning", "Amber (needs attention)"],
   ["danger", "Red (a problem)"],
@@ -87,8 +87,8 @@ export function Look({
         </ul>
         <AddTheme run={run} />
       </Group>
-      <Group title="Colour">
-        <BrandColour primary={theme.primary} run={run} />
+      <Group title="Color">
+        <BrandColor primary={theme.primary} run={run} />
       </Group>
       <Group title="Font and density">
         <Segmented
@@ -158,7 +158,7 @@ export function Look({
         })}
       </Group>
       {choices.length > 0 && (
-        <Group title="Colours of choices">
+        <Group title="Colors of choices">
           {choices.map((c) => (
             <fieldset key={`${c.model}.${c.field}`} className="space-y-1">
               <legend className="text-sm font-medium">
@@ -168,7 +168,7 @@ export function Look({
                 <div key={value} className="flex items-center justify-between gap-3 text-sm">
                   <span>{humanize(value)}</span>
                   <Select
-                    aria-label={`Colour of ${humanize(value)}`}
+                    aria-label={`Color of ${humanize(value)}`}
                     value={ux.tones[`${c.model}.${c.field}`]?.[value] ?? "neutral"}
                     onChange={(e) =>
                       run("setTone", {
@@ -235,8 +235,8 @@ function Segmented({
   );
 }
 
-/** The brand colour: picked, applied when the picker closes; or back to the theme's own. */
-function BrandColour({ primary, run }: { primary?: string; run: Run }) {
+/** The brand color: picked, applied when the picker closes; or back to the theme's own. */
+function BrandColor({ primary, run }: { primary?: string; run: Run }) {
   const [picked, setPicked] = useState<string>();
   const shown = picked ?? primary ?? "#2563eb";
   const apply = () => {
@@ -247,7 +247,7 @@ function BrandColour({ primary, run }: { primary?: string; run: Run }) {
     <div className="flex flex-wrap items-center gap-3 text-sm">
       <input
         type="color"
-        aria-label="Brand colour"
+        aria-label="Brand color"
         value={shown}
         onChange={(e) => setPicked(e.target.value)}
         onBlur={apply}
@@ -256,7 +256,7 @@ function BrandColour({ primary, run }: { primary?: string; run: Run }) {
       <span className="font-mono text-xs">{primary ?? "the theme's own"}</span>
       {picked && picked !== primary && (
         <button type="button" className="text-xs font-medium text-accent" onClick={apply}>
-          Use this colour
+          Use this color
         </button>
       )}
       {primary && (
@@ -274,7 +274,7 @@ function BrandColour({ primary, run }: { primary?: string; run: Run }) {
 
 /**
  * A list page's columns: shown ones in order, each with an optional second line under its
- * value (another field, e.g. the phone under the email), and the rest greyed below to add back.
+ * value (another field, e.g. the phone under the email), and the rest grayed below to add back.
  */
 function Columns({
   page,
@@ -667,7 +667,7 @@ function AddTheme({ run }: { run: Run }) {
           </button>
         </div>
         <p className="text-xs text-neutral-500">
-          A theme is a file of colours and a font (see the spec, Themes); it is checked before it is
+          A theme is a file of colors and a font (see the spec, Themes); it is checked before it is
           added, and saved as themes/&lt;name&gt;.yml.
         </p>
       </form>

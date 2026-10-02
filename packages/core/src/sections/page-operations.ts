@@ -494,10 +494,10 @@ const setSortable = listKeyOperation(
     fields.length ? `Sort ${page} by ${fields.join(", ")}` : `Remove the sort choice from ${page}`,
 );
 
-const setFavourites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
-  name: "setFavourites",
+const setFavorites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
+  name: "setFavorites",
   summary:
-    "Let people save a page's records (a heart on each, and a Saved view), list only the viewer's saved ones (only), or remove favourites (off).",
+    "Let people save a page's records (a heart on each, and a Saved view), list only the viewer's saved ones (only), or remove favorites (off).",
   schema: {
     type: "object",
     required: ["page"],
@@ -515,7 +515,7 @@ const setFavourites: Operation<{ page: string; mode?: "on" | "only" | "off" }> =
   positional: ["page", "mode"],
   describe: ({ page, mode = "on" }) =>
     mode === "off"
-      ? `Remove favourites from ${page}`
+      ? `Remove favorites from ${page}`
       : mode === "only"
         ? `Make ${page} list the viewer's saved records`
         : `Let people save records on ${page}`,
@@ -523,14 +523,14 @@ const setFavourites: Operation<{ page: string; mode?: "on" | "only" | "off" }> =
   apply({ spec }, { page, mode = "on" }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    const path = ["pages", page, "favourites"];
+    const path = ["pages", page, "favorites"];
     if (mode === "off") {
       if (spec.has(path)) spec.remove(path);
       return [];
     }
     const value = mode === "only" ? "only" : true;
     if (spec.has(path)) spec.set(path, value);
-    else spec.add(["pages", page], "favourites", value);
+    else spec.add(["pages", page], "favorites", value);
     return [];
   },
 };
@@ -799,7 +799,7 @@ export const crudOperations: AnyOperation[] = [
   setSearch,
   setFilters,
   setSortable,
-  setFavourites,
+  setFavorites,
   setContact,
   setMine,
 ];

@@ -1,6 +1,6 @@
-// Colour maths for themes and the brand colour (docs/design/delivery/06-guidelines): sRGB,
+// Color maths for themes and the brand color (docs/design/delivery/06-guidelines): sRGB,
 // OKLCH, gamut mapping and WCAG contrast. Pure functions: the same input always gives the
-// same colour.
+// same color.
 const toLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
 const fromLinear = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
 
@@ -59,7 +59,7 @@ export function gamutMap([L, C, H]: Oklch): string {
   return rgbToHex(oklchToLinear([L, 0, H]).map(fromLinear) as Rgb);
 }
 
-/** WCAG contrast ratio of two colours. */
+/** WCAG contrast ratio of two colors. */
 export function contrast(a: string, b: string): number {
   const luminance = (hex: string) => {
     const [r, g, bl] = hexToRgb(hex).map(toLinear) as Rgb;
@@ -69,7 +69,7 @@ export function contrast(a: string, b: string): number {
   return (x + 0.05) / (y + 0.05);
 }
 
-/** A colour as hex: "#rrggbb" as it is, an "oklch(L C H)" string mapped into sRGB. */
+/** A color as hex: "#rrggbb" as it is, an "oklch(L C H)" string mapped into sRGB. */
 export function hexOf(value: string): string {
   if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase();
   const [L, C, H] = (/oklch\(([\d.]+) ([\d.]+) ([\d.]+)\)/.exec(value) ?? [])

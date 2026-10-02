@@ -306,7 +306,7 @@ export async function draftProjectByOperations(options: {
       refused = outcome.refused;
       const essential = refused.filter((r) => ESSENTIAL.has(r.step.op));
       if (essential.length === 0) {
-        // Refused extras (a text, a colour) are left out rather than failing the draft.
+        // Refused extras (a text, a color) are left out rather than failing the draft.
         if (done.length > 0)
           return { kind: "draft", files: toFiles(files), usage, operations: done };
         problem =
