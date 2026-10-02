@@ -4,6 +4,7 @@ import {
   checkKeys,
   mapEntries,
   type ParseContext,
+  readBoolean,
   readNameList,
   readRoleList,
   readString,
@@ -87,6 +88,11 @@ export const pagesSection: SpecSection<"pages"> = {
           items: { type: "string" },
           description: "Fields the list can be sorted by, either way, from a Sort by control.",
         },
+        mine: {
+          type: "boolean",
+          description:
+            "The page lists only the viewer's own records (my items, my orders); it needs sign-in.",
+        },
         favourites: {
           oneOf: [{ type: "boolean" }, { const: "only" }],
           description:
@@ -169,6 +175,7 @@ function readPage(
       "sortable",
       "favourites",
       "contact",
+      "mine",
       ...TEXT_KEYS,
     ],
     later: ["list", "calendar"],
@@ -182,6 +189,7 @@ function readPage(
   let filters: { name: string; at: At }[] | undefined;
   let sortable: { name: string; at: At }[] | undefined;
   let favourites: PageIR["favourites"] | undefined;
+  let mine = false;
   let contact: { to: string; keep?: string; toAt: At; keepAt?: At } | undefined;
   for (const { key, value } of known) {
     if (key === "route") {
@@ -209,6 +217,9 @@ function readPage(
       filters = readNameList(ctx, value, `the filters of ${where}`);
     } else if (key === "sortable") {
       sortable = readNameList(ctx, value, `the sortable fields of ${where}`);
+    } else if (key === "mine") {
+      const v = readBoolean(ctx, value, `"mine" in ${where}`);
+      if (v) mine = true;
     } else if (key === "favourites") {
       const v = isScalar(value) ? value.value : undefined;
       if (v === true) favourites = "all";
@@ -276,7 +287,7 @@ function readPage(
   const model = patternInfo({ id, route, pattern }).manages();
   if (!model)
     for (const e of known.filter((e) =>
-      ["actions", "search", "filters", "sortable", "favourites", "contact"].includes(e.key),
+      ["actions", "search", "filters", "sortable", "favourites", "contact", "mine"].includes(e.key),
     ))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
   if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
@@ -301,6 +312,7 @@ function readPage(
       ? { sortable: checkSortableFields(ctx, sortable, model, parsed, where) }
       : {}),
     ...(model && favourites ? { favourites } : {}),
+    ...(model && mine ? { mine: true as const } : {}),
     ...(model && contact ? checkContact(ctx, contact, model, parsed, where) : {}),
     ...readSemanticText(ctx, known),
   };
