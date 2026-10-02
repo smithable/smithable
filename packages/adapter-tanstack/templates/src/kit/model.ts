@@ -63,6 +63,8 @@ export interface ModelUi {
   pluralLabel: string;
   /** The field that names a record, e.g. "name". */
   titleField: string;
+  /** The long text a card shows under the record's name, e.g. its description. */
+  descriptionField?: string;
   /** Fields shown as table columns, in order. */
   columns: string[];
   fields: FieldUi[];
