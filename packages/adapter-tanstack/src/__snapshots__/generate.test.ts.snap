@@ -2855,6 +2855,8 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { LandingLayout } from "#/kit/Landing";
+import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
@@ -2924,6 +2926,8 @@ const menus: MenuUi[] = [
 const landingRoutes = ["/"];
 /** Public articles: their list and each article have the site's frame. */
 const siteRoutes = ["/blog"];
+/** Public pages that visitors see in the site's frame (signed in, the app's). */
+const visitorRoutes = ["/schedule"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -2997,6 +3001,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         )}
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
           children
+        ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+            <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
+          </LandingLayout>
         ) : (
           <AppShell appName={app.name} home={{ to: "/", access: pageAccess["home"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
@@ -5879,7 +5887,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "ac51d62d generated",
+  "src/routes/__root.tsx": "203a09f7 generated",
   "src/routes/admin/bookings/$id.tsx": "5ef57140 generated",
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
@@ -12868,6 +12876,8 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { LandingLayout } from "#/kit/Landing";
+import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
@@ -12887,6 +12897,8 @@ const menus: MenuUi[] = [
 ];
 
 const landingRoutes = ["/"];
+/** Public pages that visitors see in the site's frame (signed in, the app's). */
+const visitorRoutes = ["/items"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [["/items", "items"], ["/", "home"]];
@@ -12949,6 +12961,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         )}
         {landingRoutes.includes(pathname) ? (
           children
+        ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+            <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
+          </LandingLayout>
         ) : (
           <AppShell appName={app.name} home={{ to: "/", access: pageAccess["home"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
@@ -13514,7 +13530,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "f30f79c3 generated",
+  "src/routes/__root.tsx": "79fa83c4 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "ea1815c4 generated",
