@@ -4,10 +4,13 @@ import {
   type FieldIR,
   humanize,
   isPicture,
+  isPictures,
   kebab,
   type ModelIR,
   modelAccess,
+  PICTURES_MAX,
   type SpecIR,
+  storesPictures,
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
@@ -42,13 +45,7 @@ import {
  */
 function columnsOf(model: ModelIR, shown: FieldIR[]): FieldIR[] {
   const rank = (f: FieldIR) =>
-    f.name === titleField(model)
-      ? 0
-      : f.type.kind === "scalar" && f.type.name === "picture"
-        ? 1
-        : f.required
-          ? 2
-          : 3;
+    f.name === titleField(model) ? 0 : storesPictures(f) ? 1 : f.required ? 2 : 3;
   return shown
     .filter((f) => !(f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name)))
     .map((f, i) => ({ f, i }))
@@ -177,7 +174,7 @@ import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${model.fields.some(isPicture) ? 'import { bindPicture } from "#/kit/PictureInput";\n' : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -417,16 +414,26 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
     throw new AccessDenied(viewer !== null);`,
   );
-  const pictures = model.fields.filter(isPicture).map(dataKey);
+  const singles = model.fields.filter(isPicture).map(dataKey);
+  const pictureLists = model.fields.filter(isPictures).map(dataKey);
+  const pictures = [...singles, ...pictureLists];
   const selectOwner = `{ ${signedIn ? `${owner}: ${n.table}.${owner}` : `id: ${n.table}.id`}${pictures.map((k) => `, ${k}: ${n.table}.${k}`).join("")} }`;
-  // A replaced or removed picture's file goes, unless another record still shows the same one.
-  const dropPictures = (after: (key: string) => string) =>
-    pictures
-      .map(
+  // A replaced or removed picture's file goes, unless a record still shows the same one in any of
+  // the model's picture fields (files are named by their content, so they may be shared).
+  const stillShown = (_k: string, file: string) =>
+    `!!db.select({ id: ${n.table}.id }).from(${n.table}).where(sql\`${pictures.map((k) => `\${${n.table}.${k}} like \${\`%"file":"\${${file}}"%\`}`).join(" or ")}\`).get()`;
+  const dropPictures = (after: (key: string) => string, afterList: (key: string) => string) =>
+    [
+      ...singles.map(
         (k) =>
-          `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, !!db.select({ id: ${n.table}.id }).from(${n.table}).where(sql\`\${${n.table}.${k}} like \${\`%"file":"\${row.${k}.file}"%\`}\`).get());\n`,
-      )
-      .join("");
+          `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
+      ),
+      // Of several pictures, each one no longer among them.
+      ...pictureLists.map(
+        (k) =>
+          `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")});\n`,
+      ),
+    ].join("");
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table)])].sort().join(", ")} } from "#/db/schema";
@@ -582,7 +589,10 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
     } catch (error) {
       throw ${capacity || holds.length ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
     }
-${dropPictures((k) => `changed.${k}?.file`)}    await afterChange("afterUpdate", "${model.name}", changed, viewer);
+${dropPictures(
+  (k) => `changed.${k}?.file`,
+  (k) => `(changed.${k} ?? []).map((p) => p.file)`,
+)}    await afterChange("afterUpdate", "${model.name}", changed, viewer);
     return changed;
   },
 
@@ -599,7 +609,10 @@ ${dropPictures((k) => `changed.${k}?.file`)}    await afterChange("afterUpdate",
     } catch (error) {
       throw refusal(error);
     }
-${dropPictures(() => "undefined")}    await afterDelete("${model.name}", id, viewer);
+${dropPictures(
+  () => "undefined",
+  () => "([] as string[])",
+)}    await afterDelete("${model.name}", id, viewer);
   },
 ${
   referenced
@@ -677,6 +690,13 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
           ),
         }
       : {}),
+    ...(kind === "pictures"
+      ? {
+          input: code(
+            `bindPictures(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(field.name)}, ${field.max ?? PICTURES_MAX})`,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -730,6 +750,9 @@ export function refinement(field: FieldIR, visitors = false): string | undefined
     case "picture":
       // What src/kit/uploads.ts returned, plus the description a person wrote.
       return `z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })${optional}`;
+    case "pictures":
+      // Several of them, at most the field's maximum.
+      return `z.array(z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })).max(${field.max ?? PICTURES_MAX})${optional}`;
     default:
       return undefined;
   }

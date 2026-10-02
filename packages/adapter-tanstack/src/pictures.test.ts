@@ -87,3 +87,28 @@ test("a picture cannot be unique or have a default, and /files is reserved", () 
     expect.arrayContaining(["invalid-field", "reserved-route"]),
   );
 });
+
+test("several pictures: a JSON list, at most ten, the strip in the form, the n-th served", () => {
+  const several = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Market }
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+pages:
+  items: { crud: Item }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(several, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
+  expect(at("src/db/schema.ts")).toContain('photos: text({ mode: "json" }).$type<Picture[]>()');
+  expect(at("src/generated/item.ts")).toContain('input: bindPictures("item", "photos", 10)');
+  expect(at("src/generated/item.ts")).toContain(".max(10).nullish()");
+  expect(at("src/generated/pictures.ts")).toContain('"photos": { data: itemData');
+  expect(gen.some((f) => f.path === "src/routes/files/$model.$id.$field.$n.ts")).toBe(true);
+  // A removed picture's file goes unless a record still shows it.
+  expect(at("src/generated/item.server.ts")).toContain("for (const p of row.photos ?? [])");
+});

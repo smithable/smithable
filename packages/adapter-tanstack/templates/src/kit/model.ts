@@ -17,6 +17,8 @@ export type FieldKind =
   | "url"
   /** A stored picture with its description: { file, alt, width, height }. */
   | "picture"
+  /** Several stored pictures, the first the cover: a list of { file, alt, width, height }. */
+  | "pictures"
   | "choice"
   | "relation"
   /** A reference to a user who signs in. */

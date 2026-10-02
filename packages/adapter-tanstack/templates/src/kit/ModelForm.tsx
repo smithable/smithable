@@ -105,6 +105,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     (field.kind === "text" ||
       field.kind === "markdown" ||
       field.kind === "picture" ||
+      field.kind === "pictures" ||
       field.control === "textarea");
   const renderField = (field: FieldUi) => {
     const id = `field-${field.name}`;

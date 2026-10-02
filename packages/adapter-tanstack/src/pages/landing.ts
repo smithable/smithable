@@ -3,6 +3,7 @@ import {
   type AuthIR,
   camel,
   humanize,
+  isPictures,
   kebab,
   type LandingSection,
   type PageIR,
@@ -10,6 +11,7 @@ import {
   pascal,
   plural,
   type SpecIR,
+  storesPictures,
   type UxIR,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
@@ -125,9 +127,7 @@ export function landingRoute(
           (p) => p.pattern.kind === "articles" && p.pattern.model === model.name,
         );
         const address = article?.pattern.kind === "articles" ? article.pattern.address : undefined;
-        const picture = model.fields.find(
-          (f) => f.type.kind === "scalar" && f.type.name === "picture",
-        );
+        const picture = model.fields.find(storesPictures);
         // A card without a picture shows the icon of the model's own list page, when the model
         // has pictures at all.
         const listPage = ir.pages.find(
@@ -163,7 +163,12 @@ export function landingRoute(
             }${
               picture
                 ? `
-            picture: row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height } : undefined,`
+            picture: ${
+              isPictures(picture)
+                ? // Several pictures: the cover, the first.
+                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height } : undefined`
+                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height } : undefined`
+            },`
                 : ""
             }${
               summary
