@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+# Torget: a local marketplace. People sell things they no longer need; visitors browse.
+smithable: 0.1
+
+app:
+  name: Torget
+  description: Buy and sell second-hand things in your neighbourhood.
+  currency: EUR
+
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      price: money
+      category: furniture | bikes | electronics | sports | kids | other
+      condition: likeNew | good | worn
+      place: string
+      available: bool = true
+
+pages:
+  home:
+    route: /welcome
+    landing:
+      hero: { button: catalogue }
+      latest: { records: Item, search: true, filters: [category], limit: 6 }
+      footer: {}
+  catalogue:
+    route: /
+    crud: Item
+    search: [title, description, place]
+    filters: [category, price, condition, available]
+    sortable: [price, createdAt]
+    favourites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favourites: only
+
+navigation:
+  main: [catalogue, myItems, saved]

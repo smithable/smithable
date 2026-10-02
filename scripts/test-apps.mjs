@@ -593,6 +593,93 @@ async function contactFlow(dir, base) {
 }
 
 /**
+ * The marketplace starter (marketplace.md §4): a visitor starts on the catalogue in the site's
+ * frame, searches from the landing page's box, filters by category and price and sorts by price
+ * in the address, and is asked to sign in by a heart; a member sells an item and sees only it
+ * under My items, saves and unsaves another; an admin writes to the seller, and the mail reaches
+ * the seller's outbox with the admin as reply-to.
+ */
+async function marketplaceFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const outbox = join(dir, "data", "mail", "outbox");
+  const titles = async () =>
+    (await page.locator('[data-part="row"]').filter({ visible: true }).allInnerTexts()).map((t) =>
+      t.split("\n")[0].trim(),
+    );
+  try {
+    await open(page, `${base}/welcome`);
+    await page.getByRole("searchbox", { name: "Search items" }).fill("bike");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await page.waitForURL(/\/\?q=bike/);
+    if (await page.locator('[data-kit="app-shell"]').count())
+      throw new Error("a visitor sees the catalogue in the app's frame");
+    await page.getByText("City bike, seven gears").first().waitFor({ timeout: 10000 });
+    await open(page, `${base}/?category=bikes&price=100..400&sort=-price`);
+    const shown = await titles();
+    if (shown.join() !== "Road bike, 56 cm frame,City bike, seven gears")
+      throw new Error(`bikes from 100 to 400, dearest first, show ${shown.join()}`);
+    await page
+      .getByRole("button", { name: "Save Road bike, 56 cm frame" })
+      .filter({ visible: true })
+      .click();
+    await page.waitForURL(/\/sign-in\?redirect=/);
+    console.log(
+      "  ✓ browser: a visitor starts on the catalogue in the site's frame, searches from the landing page, filters and sorts in the address, and a heart asks them to sign in",
+    );
+
+    await signInAs(page, base, "member");
+    await open(page, `${base}/new`);
+    await page.getByRole("textbox", { name: "Title *" }).fill("Test lamp");
+    await page.getByRole("textbox", { name: "Description *" }).fill("A lamp for the test.");
+    await page.getByRole("button", { name: "Create item" }).click();
+    await page.waitForURL(`${base}/`);
+    await open(page, `${base}/my-items`);
+    if ((await titles()).join() !== "Test lamp")
+      throw new Error(`My items shows ${(await titles()).join()}`);
+    await open(page, `${base}/`);
+    await page.getByRole("button", { name: "Save Turntable" }).filter({ visible: true }).click();
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('[aria-label="Save Turntable"]')].some(
+        (b) => b.getAttribute("aria-pressed") === "true",
+      ),
+    );
+    await open(page, `${base}/saved`);
+    if ((await titles()).join() !== "Turntable")
+      throw new Error(`Saved shows ${(await titles()).join()}`);
+    await page.getByRole("button", { name: "Save Turntable" }).filter({ visible: true }).click();
+    await page.getByText("No saved items yet.").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: a member sells an item and sees only it under My items, and saves and unsaves another",
+    );
+
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/?q=Test%20lamp`);
+    await page.getByRole("button", { name: "Test lamp" }).filter({ visible: true }).first().click();
+    await page.waitForURL(/\/\d+$/);
+    const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+    await page.getByRole("textbox", { name: "Message" }).fill("Is the lamp still for sale?");
+    await page.getByRole("button", { name: "Send" }).click();
+    await page.getByText("Your message is sent.").waitFor({ timeout: 10000 });
+    const mails = readdirSync(outbox).sort();
+    if (mails.length !== before + 1) throw new Error("no mail was sent");
+    const mail = readFileSync(join(outbox, mails.at(-1)), "utf8").replace(/=\r?\n/g, "");
+    for (const part of [/^To: dev-member@/m, /^Reply-To: .*dev-admin@/m, /Test lamp/])
+      if (!part.test(mail)) throw new Error(`the mail lacks ${part}:\n${mail.slice(0, 600)}`);
+    console.log(
+      "  ✓ browser: an admin writes to an item's seller, and the mail reaches the seller",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("marketplace flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
  * describes them and moves the second first; they are served in that order, the first as the
  * cover; removing one deletes its file and keeps the other.
@@ -1997,7 +2084,8 @@ for (const [index, example] of examples.entries()) {
                 ? html.includes("<ol") && !/aria-label="New [a-z ]+, /.test(html)
                 : page.pattern.kind === "articles"
                   ? html.includes('data-kit="articles"') && !/>New [a-z ]+<\/a>/.test(html)
-                  : html.includes("<table") && !/>New [a-z ]+<\/a>/.test(html))
+                  : // A list, as a table or as cards.
+                    html.includes('data-kit="model-table"') && !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
         const what = !isPublic
           ? "needs sign-in"
@@ -2136,6 +2224,7 @@ for (const [index, example] of examples.entries()) {
         await pictureFlow(dir, base);
         await picturesFlow(dir, base);
       }
+      if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "invoicing") {
         await formulaFlow(base);
         await onboardingFlow(base);
