@@ -205,3 +205,28 @@ pages:
   expect(auth("")).toContain("contact-form-closed");
   expect(auth(", create: [Message]")).not.toContain("contact-form-closed");
 });
+
+test("a public page's shortcut to a page visitors cannot open is warned about", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Class:
+    fields: { name: string! }
+pages:
+  home: { route: /, landing: { hero: { button: classes, shortcuts: [classes] } } }
+  classes: { crud: Class }
+`,
+  }).ir;
+  const auth = (pages: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\nroles: { admin: {} }\npublic: { pages: [${pages}], read: [Class] }\n`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.code);
+  expect(auth("home")).toContain("shortcut-closed");
+  expect(auth("home, classes")).not.toContain("shortcut-closed");
+});
