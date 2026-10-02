@@ -2,7 +2,13 @@
   "name": "@smithable/ai",
   "version": "0.0.0",
   "description": "Smithable's AI layer: model providers, the AI policy, and turning a request into operations.",
-  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smithable/smithable.git",
+    "directory": "packages/ai"
+  },
+  "homepage": "https://smithable.ai",
   "type": "module",
   "exports": {
     ".": {
@@ -12,10 +18,19 @@
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "LICENSE",
+    "NOTICE"
   ],
   "dependencies": {
     "@smithable/core": "workspace:*",
     "@smithable/index": "workspace:*"
+  },
+  "scripts": {
+    "prepack": "node ../../scripts/prepack.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
