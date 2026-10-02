@@ -237,7 +237,13 @@ export function seedModule(ir: SpecIR, options: Pick<GenerateOptions, "samples">
           return `${dataKey(field)}: ${sample(own.picture, own.alt)}`;
         if (isPictures(field) && Array.isArray(own))
           return `${dataKey(field)}: [${own.map((p) => sample(p.picture, p.alt)).join(", ")}].filter((p) => p !== null)`;
-        const value = sampleLiteral(field, row[field.name]);
+        // A sample file's row without a field that has a default (one added since) gets the
+        // default, as the form would: a required choice cannot be empty.
+        const given =
+          own === undefined && options.samples?.[model.name] && field.default !== undefined
+            ? field.default
+            : own;
+        const value = sampleLiteral(field, given);
         // A sample picture from public/images/samples/, when the app ships any.
         if (storesPictures(field) && options.samples?.[model.name])
           return `${dataKey(field)}: null`;
