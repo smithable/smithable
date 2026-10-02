@@ -303,6 +303,10 @@ export function detailRoute(
   // A heart for the viewer's saved records (marketplace.md §2.3).
   const favourite = Boolean(auth && !within && page.favourites && hasFavourites(model, ir, auth));
   if (favourite) imports.set(n.module, [...(imports.get(n.module) ?? []), savedToggle(model)]);
+  const contact =
+    page.contact && auth && hasSignIn(auth) && !within
+      ? contactParts(page, model, t, ir)
+      : undefined;
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -337,8 +341,8 @@ ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(
 ${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-${sections.length || favourite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favourite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}
-export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
+${sections.length || favourite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favourite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
+${contact ? contact.fn : ""}export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -348,12 +352,11 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) =
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${options ? ", options" : ""}${favourite ? ", saved" : ""} } = Route.useLoaderData();
+  const { row, canWrite, canDelete${options ? ", options" : ""}${favourite ? ", saved" : ""} } = Route.useLoaderData();${contact || favourite ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favourite
       ? `
-  const { viewer } = Route.useRouteContext();
   const router = useRouter();
   // The heart saves the record for the viewer; a visitor signs in first and comes back.
   const toggleSaved = async () => {
@@ -404,9 +407,77 @@ ${
       </section>
 `
     : ""
-}${sections.join("\n")}
+}${contact ? `      ${contact.element}\n` : ""}${sections.join("\n")}
     </>
   );
 }
 `;
+}
+
+/**
+ * "Contact the owner" (marketplace.md §2.4): a server function that mails the record's owner (or
+ * the user a field names) through the kit's sendMail, with the record's title and link in the
+ * subject and the sender as reply-to, limited like other writes; the recipient's address never
+ * leaves the server. With `keep`, a copy is stored through that model's create rule.
+ */
+function contactParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
+  const contact = page.contact as { to: string; keep?: string };
+  const n = names(model, t);
+  const field = model.fields.find((f) => f.name === contact.to);
+  const key = contact.to === "owner" ? ownerKey(model) : `${contact.to}Id`;
+  const recipient = field
+    ? (t.field(model, field).label ?? humanize(field.name)).toLowerCase()
+    : "owner";
+  const title = titleField(model);
+  const keep = contact.keep ? modelNamed(ir, contact.keep) : undefined;
+  const kn = keep ? names(keep, t) : undefined;
+  // A kept copy: the keep model's name, email and message fields (it links to no other record).
+  const kept = keep
+    ? ["name", "email", "message"]
+        .filter((f) => keep.fields.some((k) => k.name === f))
+        .map((f) => `${f}: sender.${f}`)
+    : [];
+  return {
+    imports: `import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
+${kn && keep ? `import { ${kn.data} } from "#/generated/${kebab(keep.name)}.server";\n` : ""}import { ContactOwner } from "#/kit/ContactOwner";
+import { writeAllowed } from "#/kit/limit";
+import { sendMail } from "#/kit/mail";
+import { currentViewer } from "#/lib/viewer.server";
+`,
+    fn: `
+/** A message about this ${n.label.toLowerCase()} to its ${recipient}, by mail; their address stays here. */
+const contact${model.name} = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.int(), name: z.string().trim().min(1).max(200), email: z.email().max(200), message: z.string().trim().min(1).max(2000) }))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
+    const row = await ${n.data}.get(viewer, data.id);
+    if (!row) throw new Error("This ${n.label.toLowerCase()} is not there any more.");
+    const to = row.${key} ? db.select({ email: user.email }).from(user).where(eq(user.id, row.${key})).get() : undefined;
+    if (!to?.email) throw new Error("The ${recipient} cannot be reached.");
+    const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
+    const name = ${title === "id" ? `\`${n.label} #\${row.id}\`` : `String(row.${title})`};
+    const link = \`\${process.env.BETTER_AUTH_URL ?? ""}${page.route === "/" ? "" : page.route}/\${row.id}\`;
+    await sendMail({
+      to: to.email,
+      replyTo: \`\${sender.name} <\${sender.email}>\`,
+      subject: \`About “\${name}”\`,
+      text: \`\${sender.name} (\${sender.email}) wrote about “\${name}”:\\n\\n\${sender.message}\\n\\n\${link}\\n\`,
+    });${kn ? `\n    await ${kn.data}.create(viewer, { ${kept.join(", ")} });` : ""}
+    return { sent: true };
+  });
+
+`,
+    element: `<ContactOwner
+        recipient=${JSON.stringify(recipient)}
+        viewer={viewer}
+        onSend={(values) => contact${model.name}({ data: { id: row.id, ...values } })}
+      />`,
+  };
 }

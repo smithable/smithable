@@ -25,6 +25,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Calendar.tsx": [
     "data-kit="calendar"",
   ],
+  "src/kit/ContactOwner.tsx": [
+    "data-kit="contact-owner"",
+  ],
   "src/kit/Dashboard.tsx": [
     "data-kit="tile"",
   ],
