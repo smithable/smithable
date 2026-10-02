@@ -117,6 +117,7 @@ export {
   themeNames,
   themeThumbnail,
   tokensOf,
+  withBackground,
 } from "./theme.js";
 export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
 export {

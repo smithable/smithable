@@ -592,6 +592,15 @@ try {
         .getByText(/home page's theme/i)
         .first()
         .waitFor({ timeout: 60000 });
+      // A background of the owner's: picked, applied when the picker closes, in the CSS.
+      await page.getByLabel("Background", { exact: true }).fill("#f5efe6");
+      await page.getByLabel("Background", { exact: true }).blur();
+      await trace
+        .getByText(/background #f5efe6/i)
+        .first()
+        .waitFor({ timeout: 60000 });
+      if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
+        throw new Error("the ux file has no background");
       await page.getByRole("tab", { name: "Your app" }).click();
     },
   );
