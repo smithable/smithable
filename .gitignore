@@ -13,3 +13,8 @@ data/
 
 # The documentation site, built by pnpm site.
 /site/
+
+# Copied in before packing for npm (scripts/prepack.mjs)
+packages/*/LICENSE
+packages/*/NOTICE
+packages/cli/studio/

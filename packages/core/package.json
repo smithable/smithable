@@ -2,7 +2,13 @@
   "name": "@smithable/core",
   "version": "0.0.0",
   "description": "Smithable manifest schema, parser, validator, IR and semantic operations.",
-  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smithable/smithable.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://smithable.ai",
   "type": "module",
   "exports": {
     ".": {
@@ -14,12 +20,21 @@
   "files": [
     "dist",
     "!dist/**/*.test.*",
-    "schema"
+    "schema",
+    "LICENSE",
+    "NOTICE"
   ],
   "dependencies": {
     "yaml": "^2.9.1"
   },
   "devDependencies": {
     "ajv": "^8.20.0"
+  },
+  "scripts": {
+    "prepack": "node ../../scripts/prepack.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
