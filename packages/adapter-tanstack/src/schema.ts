@@ -19,6 +19,7 @@ import {
   dataKey,
   type GenerateOptions,
   HEADER,
+  hasFavourites,
   indent,
   literal,
   modelNamed,
@@ -82,6 +83,26 @@ export const ${n.table} = sqliteTable(
 );`
       : `export const ${n.table} = sqliteTable(${JSON.stringify(n.sqlTable)}, ${body});`;
   });
+  // Each viewer's own marks (marketplace.md §2.3): one per person and record, gone with either.
+  for (const model of ir.models.filter((m) => hasFavourites(m, ir, auth))) {
+    const n = tableNames(model);
+    imports.add("unique");
+    tables.push(`// The records people marked as favourites: each person's own, never shown to others.
+export const ${n.table}Favourites = sqliteTable(
+  ${JSON.stringify(`${n.sqlTable}_favourites`)},
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    recordId: integer()
+      .notNull()
+      .references(() => ${n.table}.id, { onDelete: "cascade" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [unique().on(t.userId, t.recordId)],
+);`);
+  }
   const relationBlocks = ir.models.flatMap((model) => {
     const n = tableNames(model);
     const entries = model.fields.flatMap((field) => {

@@ -94,7 +94,7 @@ export function Filters({
           id={`${id}-panel`}
           className={cn("flex-wrap items-end gap-x-6 gap-y-3 md:flex", open ? "flex" : "hidden")}
         >
-          {filters.map((f) => (
+          {shown.map((f) => (
             <Filter
               key={f.name}
               filter={f}
@@ -283,4 +283,35 @@ function describe(filter: FilterUi, value: string): string {
     .split(",")
     .map((v) => labels.get(v) ?? v)
     .join(", ");
+}
+
+/** All records or only the viewer's saved ones (marketplace.md §2.3): two tabs above the list. */
+export function SavedTabs({
+  saved,
+  onChange,
+}: {
+  saved: boolean;
+  onChange: (saved: boolean) => void;
+}) {
+  const tab = (active: boolean, label: string, value: boolean) => (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={() => onChange(value)}
+      className={cn(
+        "min-h-11 cursor-pointer rounded-md px-4 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active
+          ? "bg-background text-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div data-part="saved-tabs" className="mb-4 inline-flex gap-1 rounded-lg bg-muted p-1">
+      {tab(!saved, "All", false)}
+      {tab(saved, "Saved", true)}
+    </div>
+  );
 }
