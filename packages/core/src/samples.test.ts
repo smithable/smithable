@@ -88,6 +88,13 @@ test("mistakes are reported where they are: model, field, kind, required, refere
       "samples/ClassType.yml": "- { name: A, instructor: Emma Lindh }\n",
     })[0],
   ).toContain('samples/Instructor.yml has no record called "Emma Lindh"');
+  // A wrong value is one problem, not also a missing field.
+  expect(
+    check({
+      "samples/ClassType.yml": "- { name: Yin }\n",
+      "samples/Session.yml": "- { classType: Yinn, startsAt: 2026-10-05 08:00 }\n",
+    }).diagnostics,
+  ).toHaveLength(1);
   // Without the referenced model's file, a generated record by its number.
   expect(messages({ "samples/ClassType.yml": "- { name: A, instructor: Emma }\n" })[0]).toContain(
     "Instructor has no samples/Instructor.yml; refer to a generated instructor by its number",
