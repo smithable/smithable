@@ -74,6 +74,13 @@ export {
 } from "./patterns.js";
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
+export {
+  type SamplePicture,
+  type SampleRecordValue,
+  type SamplesIR,
+  titleField,
+  validateSamples,
+} from "./samples.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export { parseFieldShorthand } from "./sections/field-type.js";

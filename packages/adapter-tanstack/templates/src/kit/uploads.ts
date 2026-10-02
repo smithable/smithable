@@ -86,8 +86,9 @@ export const pictureTag = (picture: Picture) => `"${picture.file.slice(-29, -5)}
  * For `pnpm db:seed`: the n-th sample picture (public/images/samples/<n>.webp) as a record's
  * picture, copied into uploads/; null when the app has no sample pictures.
  */
-export function samplePicture(model: string, n: number, alt: string): Picture | null {
-  const source = join("public", "images", "samples", `${n}.webp`);
+export function samplePicture(model: string, n: number | string, alt: string): Picture | null {
+  // A starter's numbered pictures (0.webp, 1.webp, …), or a sample file's own by name.
+  const source = join("public", "images", "samples", typeof n === "number" ? `${n}.webp` : n);
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
   const picture = savePicture(model, bytes, alt);

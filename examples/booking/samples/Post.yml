@@ -1,0 +1,31 @@
+- title: Morning classes are back
+  address: morning-classes
+  summary: From October the studio opens at seven on weekdays. Start the day with Vinyasa or Hatha before work.
+  cover: { file: 1.webp, alt: A rolled-up yoga mat and a water bottle on a wooden floor by a window }
+  body: |
+    From October the studio opens at **seven** on weekdays.
+
+    - Monday and Wednesday: Hatha with Emma
+    - Tuesday and Thursday: Vinyasa with Oskar
+
+    Booking opens a week ahead, as always.
+  publishedOn: 2026-09-21
+  status: published
+- title: What to bring to your first class
+  address: first-class
+  summary: Comfortable clothes and a bottle of water are all you need. We lend mats, blocks and blankets for free.
+  cover: { file: 0.webp, alt: Three people stretching sideways in a bright room }
+  body: |
+    Come ten minutes early so we can show you around.
+
+    Wear something you can move in, and bring water. Mats, blocks and blankets are on the shelf by the door.
+  publishedOn: 2026-09-07
+  status: published
+- title: Summer sessions by the sea
+  address: summer-by-the-sea
+  summary: All of August we met on the shore at Lilla Holmen at sunset. Thank you to everyone who came along.
+  cover: { file: 2.webp, alt: A runner on a path by the sea at sunset }
+  body: |
+    Forty evenings, one cancelled for rain. We will be back next summer.
+  publishedOn: 2026-08-31
+  status: published

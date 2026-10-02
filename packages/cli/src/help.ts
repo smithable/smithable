@@ -21,9 +21,10 @@ export const COMMANDS: Command[] = [
       "Create a project from a starter (--starter crm|booking|invoicing|records, default crm),",
       'or --describe "a booking site for a yoga studio": a model may ask up to three questions,',
       'picks the starter to adapt, drafts the app, and you confirm the result. --answers "a; b"',
-      "answers the questions in order; --yes asks nothing and creates the app directly",
+      "answers the questions in order; --yes asks nothing and creates the app directly;",
+      "--no-sample-data starts with an empty database (no samples/ folder, nothing seeded)",
     ],
-    options: ["starter", "describe", "answers", "yes"],
+    options: ["starter", "describe", "answers", "yes", "no-sample-data"],
   },
   {
     name: "clarify",
