@@ -85,7 +85,11 @@ export function validateSamples(
     );
     samples[model.name] = items.flatMap((item, i) => {
       if (!isMap(item)) {
-        ctx.error(item, "expected-mapping", `Record ${i + 1} must be a mapping of fields to values.`);
+        ctx.error(
+          item,
+          "expected-mapping",
+          `Record ${i + 1} must be a mapping of fields to values.`,
+        );
         return [];
       }
       const row: Record<string, SampleRecordValue> = {};
@@ -105,12 +109,24 @@ export function validateSamples(
           );
           continue;
         }
-        const value = sampleValue(ctx, model, field, pair.value as ParsedNode, titles, content, row);
+        const value = sampleValue(
+          ctx,
+          model,
+          field,
+          pair.value as ParsedNode,
+          titles,
+          content,
+          row,
+        );
         if (value !== undefined) row[field.name] = value;
       }
       for (const field of fields)
         if (field.required && field.default === undefined && !(field.name in row))
-          ctx.error(item, "missing-field", `Record ${i + 1} of ${model.name} needs "${field.name}".`);
+          ctx.error(
+            item,
+            "missing-field",
+            `Record ${i + 1} of ${model.name} needs "${field.name}".`,
+          );
       return [row];
     });
     diagnostics.push(...ctx.diagnostics.filter((d) => !diagnostics.includes(d)));
@@ -145,7 +161,7 @@ function sampleValue(
       "unknown-record",
       known
         ? `samples/${target}.yml has no record called "${String(value)}".`
-        : `"${field.name}" names a ${target} by its title, which needs samples/${target}.yml; or give its number.`,
+        : `${target} has no samples/${target}.yml; refer to a generated ${humanize(target).toLowerCase()} by its number (1 for the first).`,
       known && typeof value === "string" ? didYouMean(value, known.filter(Boolean)) : undefined,
     );
     return undefined;
@@ -167,7 +183,9 @@ function sampleValue(
     case "bool":
       return typeof value === "boolean" ? value : wrong("true or false");
     case "date":
-      return typeof value === "string" && DATE.test(value) ? value : wrong("a date, like 2026-10-05");
+      return typeof value === "string" && DATE.test(value)
+        ? value
+        : wrong("a date, like 2026-10-05");
     case "datetime":
       return typeof value === "string" && DATETIME.test(value)
         ? value.replace(" ", "T")
@@ -176,7 +194,10 @@ function sampleValue(
       // A file under public/images/samples/, with a description (or the record's title).
       const title = row[titleField(model)];
       if (typeof value === "string")
-        return { picture: value, alt: `A picture of ${typeof title === "string" ? title : model.name.toLowerCase()}` };
+        return {
+          picture: value,
+          alt: `A picture of ${typeof title === "string" ? title : model.name.toLowerCase()}`,
+        };
       if (isMap(node)) {
         const file = node.get("file");
         const alt = node.get("alt");

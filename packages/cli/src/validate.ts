@@ -7,6 +7,7 @@ import {
   formatDiagnostic,
   hasErrors,
   parseTheme,
+  type SamplesIR,
   type SpecIR,
   type SpecPlugin,
   type ThemeIR,
@@ -14,6 +15,7 @@ import {
   validateAuth,
   validateContent,
   validateContext,
+  validateSamples,
   validateSpec,
   validateUx,
 } from "@smithable/core";
@@ -37,6 +39,8 @@ export function loadSpec(
   ux?: UxIR;
   /** The project's own themes (themes/<name>.yml). */
   themes?: ThemeIR[];
+  /** The project's sample records (samples/<Model>.yml). */
+  samples?: SamplesIR;
   plugins?: SpecPlugin[];
   path: string;
 } {
@@ -113,6 +117,20 @@ export function loadSpec(
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;
   }
+  // The project's sample records, seeded instead of generated ones.
+  const sampleFiles = projectFiles(dirname(path), "samples");
+  let samples: SamplesIR | undefined;
+  if (sampleFiles.length) {
+    const result = validateSamples(
+      sampleFiles.map((file) => ({ path: file, text: readFileSync(file, "utf8") })),
+      ir,
+      content,
+    );
+    print(result.diagnostics);
+    const bad = result.diagnostics.find((d) => d.severity === "error");
+    if (bad) return failed(join(dirname(path), "samples"), result.diagnostics);
+    samples = result.samples;
+  }
   const contextPath = join(dirname(path), "smithable.context.yml");
   if (existsSync(contextPath)) {
     const problems = validateContext({
@@ -130,6 +148,7 @@ export function loadSpec(
     ...(content ? { content } : {}),
     ...(ux ? { ux } : {}),
     ...(themes.length ? { themes } : {}),
+    ...(samples ? { samples } : {}),
   };
 }
 
@@ -143,7 +162,12 @@ export function projectThemes(dir: string): ThemeIR[] {
 
 /** The theme files of a project: themes/<name>.yml, in name order. */
 export function projectThemeFiles(dir: string): string[] {
-  const folder = join(dir, "themes");
+  return projectFiles(dir, "themes");
+}
+
+/** The YAML files in a project folder (themes/, samples/), in name order. */
+function projectFiles(dir: string, name: string): string[] {
+  const folder = join(dir, name);
   if (!existsSync(folder) || !statSync(folder).isDirectory()) return [];
   return readdirSync(folder)
     .filter((f) => /\.ya?ml$/.test(f))

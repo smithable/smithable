@@ -1,0 +1,21 @@
+# The studio's classes, as the starter shows them (docs/spec/v0.1.md, Sample data).
+- name: Foundations
+  summary: The basic postures, one at a time, with time to ask questions. A good first class if you have never done yoga.
+  level: beginner
+  durationMinutes: 60
+- name: Hatha
+  summary: Slow, steady postures held for a few breaths each. You leave stretched, warm and rested.
+  level: allLevels
+  durationMinutes: 75
+- name: Vinyasa
+  summary: Postures linked to the breath in a flowing sequence. Expect to move and to sweat a little.
+  level: allLevels
+  durationMinutes: 60
+- name: Yin
+  summary: Long, quiet holds on the floor that ease the joints and the mind. Bring warm socks.
+  level: allLevels
+  durationMinutes: 75
+- name: Power flow
+  summary: A strong, quick sequence for those who know the basic postures well. Arm balances and inversions included.
+  level: advanced
+  durationMinutes: 60
