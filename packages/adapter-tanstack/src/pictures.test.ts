@@ -200,3 +200,30 @@ pages:
   expect(open.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("Favourites");
   expect(open.find((f) => f.path === "src/routes/items/index.tsx")?.content).not.toContain("saved");
 });
+
+test("contact the owner: a server function that mails the owner, keeping a copy in its model", () => {
+  const market = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Market }
+models:
+  Item:
+    fields: { title: string! }
+  Message:
+    fields: { name: string!, email: email!, message: text! }
+pages:
+  items:
+    crud: Item
+    contact: { to: owner, keep: Message }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(market, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const page = gen.find((f) => f.path === "src/routes/items/$id.tsx")?.content ?? "";
+  expect(page).toContain("writeAllowed(viewer, getRequestHeaders());");
+  expect(page).toContain("where(eq(user.id, row.ownerId))");
+  expect(page).toContain(
+    "await messageData.create(viewer, { name: sender.name, email: sender.email, message: sender.message });",
+  );
+  expect(page).toContain('<ContactOwner\n        recipient="owner"');
+  expect(gen.some((f) => f.path === "src/kit/ContactOwner.tsx")).toBe(true);
+});
