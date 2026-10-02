@@ -219,6 +219,18 @@ export async function runTools(
 }
 
 /**
+ * A package's ES module entry (its exports' "import"), where `resolve` gives the CommonJS one:
+ * TanStack's CommonJS build warns of a circular require on every command that loads it.
+ */
+function esmEntry(from: string, name: string): string {
+  const load = createRequire(from);
+  const manifest = load.resolve(`${name}/package.json`);
+  const entry = JSON.parse(readFileSync(manifest, "utf8")).exports?.["."]?.import;
+  const file = typeof entry === "string" ? entry : entry?.default;
+  return file ? join(dirname(manifest), file) : load.resolve(name);
+}
+
+/**
  * Writes the route tree in this process with the app's own router generator (what `tsr
  * generate` runs; tsr.config.json is read the same way): about 0.05 s instead of 2 s for a
  * process in a sandbox. False if it can't be loaded here, so the caller runs tsr.
@@ -230,7 +242,7 @@ async function routeTree(dir: string, io: Io): Promise<boolean> {
     const cli = createRequire(join(root, "package.json")).resolve(
       "@tanstack/router-cli/package.json",
     );
-    generator = createRequire(cli).resolve("@tanstack/router-generator");
+    generator = esmEntry(cli, "@tanstack/router-generator");
   } catch {
     return false;
   }
@@ -291,7 +303,7 @@ export async function warmTools(dir: string): Promise<void> {
     load("drizzle-kit/api");
     await importSchema(load, join(root, "src/db/schema.ts"));
     const cli = load.resolve("@tanstack/router-cli/package.json");
-    await import(pathToFileURL(createRequire(cli).resolve("@tanstack/router-generator")).href);
+    await import(pathToFileURL(esmEntry(cli, "@tanstack/router-generator")).href);
   } catch {}
 }
 

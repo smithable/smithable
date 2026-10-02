@@ -3,6 +3,8 @@ export { clarifyProject, describedWith } from "./clarify.js";
 export type { Draft, SpecFiles } from "./draft.js";
 export { checkSpecFiles, closestStarter, draftProject, REFERENCE } from "./draft.js";
 export { BLANK, draftOperations, draftProjectByOperations } from "./draft-operations.js";
+export type { PickedPictures, PictureEntry } from "./pictures.js";
+export { pickPictures } from "./pictures.js";
 export type { Proposal, ProposedOperation } from "./propose.js";
 export { plainSchema, proposeChange } from "./propose.js";
 export type {

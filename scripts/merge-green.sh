@@ -7,6 +7,9 @@
 # another merge put the pull request behind while it waited. Branch protection requires the
 # `check` job, but an administrator's merge passes it by, so this script is the gate for Claude
 # sessions, which are allowed to run it and nothing else that merges.
+# One pull request at a time across both repositories and every session on this machine: the
+# lock ~/repos/.merge-lock (or $MERGE_LOCK) names the pull request, repository, session and time;
+# others wait for it, and one older than 60 minutes is taken as stale. SESSION names the caller.
 # Usage: scripts/merge-green.sh <pr-number> [--repo owner/name]
 set -euo pipefail
 pr="${1:?usage: merge-green.sh <pr-number> [--repo owner/name]}"
@@ -18,6 +21,29 @@ case "$state" in
   "OPEN false "*) ;;
   *) echo "Not merging #$pr: state, draft, mergeable = $state"; exit 1 ;;
 esac
+lock="${MERGE_LOCK:-$HOME/repos/.merge-lock}"
+me="#$pr ${repo[1]:-$(gh repo view --json nameWithOwner -q .nameWithOwner)} ${SESSION:-session $PPID} $(date -u +%FT%TZ) pid $$@$(hostname)"
+refresher=""
+release() {
+  [ -n "$refresher" ] && { pkill -P "$refresher" 2>/dev/null; kill "$refresher" 2>/dev/null; }
+  [ "$(cat "$lock" 2>/dev/null)" = "$me" ] && rm -f "$lock"
+  return 0
+}
+trap release EXIT
+waited=0
+until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
+  # A holder refreshes the lock every minute, so one untouched for an hour was left behind.
+  if [ -n "$(find "$lock" -mmin +60 2>/dev/null)" ]; then
+    echo "Taking over a stale lock: $(cat "$lock" 2>/dev/null)"
+    rm -f "$lock"
+    continue
+  fi
+  [ $((waited % 60)) = 0 ] && echo "Waiting for the merge lock, held by $(cat "$lock" 2>/dev/null)"
+  sleep 10
+  waited=$((waited + 10))
+done
+( while sleep 60; do touch "$lock"; done ) &
+refresher=$!
 head_sha() { gh pr view "$pr" "${repo[@]}" --json headRefOid -q .headRefOid; }
 merged() { [ "$(gh pr view "$pr" "${repo[@]}" --json state -q .state)" = MERGED ]; }
 refuse() {
@@ -44,9 +70,9 @@ for attempt in 1 2 3 4 5 6 7 8; do
       sleep 5
     done
   fi
-  # The workflow registers a new head's checks a minute or two after the push; none after five
-  # minutes is not green.
-  for _ in $(seq 30); do
+  # The workflow registers a new head's checks a minute or two after the push, longer when the
+  # runners are busy with other sessions' runs; none after fifteen minutes is not green.
+  for _ in $(seq 90); do
     gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . && break
     sleep 10
   done
