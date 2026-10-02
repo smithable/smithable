@@ -5504,13 +5504,19 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
-  --radius: 12px;
-  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  --radius: 10px;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --card-border: 1px;
+  --card-border-color: var(--border);
+  --button-radius: calc(var(--radius) - 2px);
+  --table-numbers: normal;
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -5811,8 +5817,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "1887e90e kit",
-  "src/components/ui/card.tsx": "0621c891 kit",
+  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
@@ -5849,7 +5855,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Calendar.tsx": "eb7327fb kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "c7e46789 kit",
+  "src/kit/Landing.tsx": "ed69991a kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
@@ -5920,8 +5926,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/index.tsx": "66e83ebc generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
   "src/routes/sign-in.tsx": "f37ca802 generated",
-  "src/styles.css": "b9cb8065 kit",
-  "src/theme.css": "595d2386 generated",
+  "src/styles.css": "767f1777 kit",
+  "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "7d81e484 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
@@ -8373,13 +8379,19 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
-  --radius: 12px;
-  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  --radius: 10px;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --card-border: 1px;
+  --card-border-color: var(--border);
+  --button-radius: calc(var(--radius) - 2px);
+  --table-numbers: normal;
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -8597,8 +8609,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "1887e90e kit",
-  "src/components/ui/card.tsx": "0621c891 kit",
+  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/actions/merge-customers.ts": "916a9b22 custom",
@@ -8657,8 +8669,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "d433e790 generated",
   "src/routes/sign-in.tsx": "7b976381 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
-  "src/styles.css": "b9cb8065 kit",
-  "src/theme.css": "595d2386 generated",
+  "src/styles.css": "767f1777 kit",
+  "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "6101e15a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
@@ -11627,13 +11639,19 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
-  --radius: 12px;
-  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  --radius: 10px;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --card-border: 1px;
+  --card-border-color: var(--border);
+  --button-radius: calc(var(--radius) - 2px);
+  --table-numbers: normal;
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -11895,8 +11913,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "1887e90e kit",
-  "src/components/ui/card.tsx": "0621c891 kit",
+  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
@@ -11925,7 +11943,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "c5b62089 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "c7e46789 kit",
+  "src/kit/Landing.tsx": "ed69991a kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
   "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
@@ -11963,8 +11981,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/settings/index.tsx": "ccb1cb37 generated",
   "src/routes/sign-in.tsx": "55d5455e generated",
   "src/routes/welcome/index.tsx": "d181401c generated",
-  "src/styles.css": "b9cb8065 kit",
-  "src/theme.css": "595d2386 generated",
+  "src/styles.css": "767f1777 kit",
+  "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "52c9ba9c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
@@ -13259,13 +13277,19 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
-  --radius: 12px;
-  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  --radius: 10px;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --card-border: 1px;
+  --card-border-color: var(--border);
+  --button-radius: calc(var(--radius) - 2px);
+  --table-numbers: normal;
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -13450,8 +13474,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "server.mjs": "11fdc40d kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "1887e90e kit",
-  "src/components/ui/card.tsx": "0621c891 kit",
+  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
@@ -13471,7 +13495,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "c7e46789 kit",
+  "src/kit/Landing.tsx": "ed69991a kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
   "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -13498,8 +13522,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/index.tsx": "df71a94d generated",
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/sign-in.tsx": "f37ca802 generated",
-  "src/styles.css": "b9cb8065 kit",
-  "src/theme.css": "595d2386 generated",
+  "src/styles.css": "767f1777 kit",
+  "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "9cf8f87c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",

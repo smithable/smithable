@@ -5,7 +5,7 @@ import type { FieldIR, PageIR, SpecIR } from "./ir.js";
 import { capitalize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
-import { type ThemeIR, themeNames } from "./theme.js";
+import { type ThemeIR, themeNamed, themeNames } from "./theme.js";
 
 /**
  * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
@@ -566,6 +566,7 @@ function readTheme(
   themes: readonly ThemeIR[] | undefined,
   target: Partial<UxIR["theme"]>,
 ): void {
+  let densityGiven = false;
   for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
     allowed: ["preset", "brand", "density"],
     later: ["radius", "darkMode"],
@@ -583,6 +584,7 @@ function readTheme(
       } else if (preset !== undefined) target.preset = preset;
     } else if (entry.key === "density") {
       const density = readString(ctx, entry.value, `"density"`);
+      densityGiven = true;
       if (density === "comfortable" || density === "compact") target.density = density;
       else if (density !== undefined)
         ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
@@ -609,6 +611,9 @@ function readTheme(
       }
     }
   }
+  // Without a density of its own, a theme's own (corporate is compact).
+  const own = target.preset ? themeNamed(target.preset, themes)?.density : undefined;
+  if (!densityGiven && own) target.density = own;
 }
 
 /** A form's groups: a list of { name, fields }, no field in two of them. */
