@@ -66,14 +66,52 @@ export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] 
 }
 
 /**
- * How each built-in preset sets its headings, beside its font, radius and shadow: the shape that
- * tells them apart besides colour. A project's own theme has the modern headings.
+ * The rest of each built-in preset's shape, beside its font, radius and shadow, so the four read
+ * as four at a glance: headings, card borders, buttons and table numbers. A project's own theme
+ * has the modern shape.
  */
-const HEADINGS: Record<string, { weight: number; tracking: string }> = {
-  modern: { weight: 700, tracking: "-0.02em" },
-  minimal: { weight: 600, tracking: "-0.01em" },
-  playful: { weight: 800, tracking: "-0.01em" },
-  corporate: { weight: 600, tracking: "0" },
+interface Shape {
+  weight: number;
+  tracking: string;
+  border: string;
+  borderColor: string;
+  button: string;
+  numbers: string;
+}
+const ROUNDED = "calc(var(--radius) - 2px)";
+const SHAPES: Record<string, Shape> = {
+  modern: {
+    weight: 700,
+    tracking: "-0.02em",
+    border: "1px",
+    borderColor: "var(--border)",
+    button: ROUNDED,
+    numbers: "normal",
+  },
+  minimal: {
+    weight: 600,
+    tracking: "-0.01em",
+    border: "1px",
+    borderColor: "var(--muted)",
+    button: ROUNDED,
+    numbers: "normal",
+  },
+  playful: {
+    weight: 800,
+    tracking: "-0.01em",
+    border: "0",
+    borderColor: "transparent",
+    button: "9999px",
+    numbers: "normal",
+  },
+  corporate: {
+    weight: 600,
+    tracking: "0",
+    border: "1px",
+    borderColor: "var(--border)",
+    button: ROUNDED,
+    numbers: "tabular-nums",
+  },
 };
 
 export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
@@ -86,8 +124,7 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
     const theme = themeOf(from, themes);
     const font = themeFont(from, themes);
     const density = DENSITY[from.theme.density];
-    const headings =
-      HEADINGS[theme.name] ?? (HEADINGS.modern as { weight: number; tracking: string });
+    const shape = SHAPES[theme.name] ?? (SHAPES.modern as Shape);
     return {
       light: `${selector} {
 ${block(tokens(from, theme, "light"), "  ")}
@@ -98,8 +135,12 @@ ${block(tokens(from, theme, "light"), "  ")}
   --row-height: ${density.row};
   --cell-padding: ${density.cell};
   --card-padding: ${density.card};
-  --heading-weight: ${headings.weight};
-  --heading-tracking: ${headings.tracking};
+  --heading-weight: ${shape.weight};
+  --heading-tracking: ${shape.tracking};
+  --card-border: ${shape.border};
+  --card-border-color: ${shape.borderColor};
+  --button-radius: ${shape.button};
+  --table-numbers: ${shape.numbers};
 }`,
       dark: `  ${selector} {
 ${block(tokens(from, theme, "dark"), "    ")}

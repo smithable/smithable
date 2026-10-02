@@ -66,17 +66,47 @@ export const SHADOWS = {
   none: "none",
   soft: "0 1px 3px rgb(0 0 0 / 0.08)",
   raised: "0 4px 12px rgb(0 0 0 / 0.12)",
+  small: "0 1px 2px rgb(0 0 0 / 0.05)",
+  /** A soft shadow tinted with the theme's primary colour. */
+  tinted: "0 4px 12px color-mix(in oklch, var(--primary) 15%, transparent)",
 } as const;
 
-/** Each built-in preset's font, corner radius, shadow and chroma cap (design delivery). */
+/**
+ * Each built-in preset's font, corner radius, shadow, chroma cap and density (the design
+ * delivery's, with the shapes that tell them apart at a glance, 2026-10-02).
+ */
 const FOUNDATIONS: Record<
   keyof typeof PRESET_TOKENS,
-  { font: string; radius: string; shadow: string; chroma: number }
+  { font: string; radius: string; shadow: string; chroma: number; density: ThemeIR["density"] }
 > = {
-  modern: { font: "Inter", radius: "12px", shadow: SHADOWS.soft, chroma: 0.22 },
-  minimal: { font: "Inter", radius: "4px", shadow: SHADOWS.none, chroma: 0.08 },
-  playful: { font: "Nunito Sans", radius: "18px", shadow: SHADOWS.soft, chroma: 0.22 },
-  corporate: { font: "Source Sans 3", radius: "4px", shadow: SHADOWS.none, chroma: 0.16 },
+  modern: {
+    font: "Inter",
+    radius: "10px",
+    shadow: SHADOWS.small,
+    chroma: 0.22,
+    density: "comfortable",
+  },
+  minimal: {
+    font: "Inter",
+    radius: "6px",
+    shadow: SHADOWS.none,
+    chroma: 0.08,
+    density: "comfortable",
+  },
+  playful: {
+    font: "Nunito Sans",
+    radius: "16px",
+    shadow: SHADOWS.tinted,
+    chroma: 0.22,
+    density: "comfortable",
+  },
+  corporate: {
+    font: "Source Sans 3",
+    radius: "4px",
+    shadow: SHADOWS.none,
+    chroma: 0.16,
+    density: "compact",
+  },
 };
 
 /** The four themes Smithable ships, from the design delivery's tokens. */
@@ -86,7 +116,6 @@ export const BUILT_IN_THEMES: readonly ThemeIR[] = (
   name,
   source: "built-in",
   ...FOUNDATIONS[name],
-  density: "comfortable",
   light: { ...PRESET_TOKENS[name].light },
   dark: { ...PRESET_TOKENS[name].dark },
 }));
