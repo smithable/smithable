@@ -1,0 +1,43 @@
+# Publishes the engine to npm: `smithable` (the CLI), `create-smithable` (npm create smithable)
+# and the packages under @smithable/. Only by hand (Actions → Publish → Run workflow), with the
+# version to publish, and a dry run unless that box is cleared. The version is stamped into the
+# packages for the build (scripts/set-version.mjs) and not committed. Provenance links each
+# package to this workflow run; the npm automation token is the NPM_TOKEN secret.
+name: Publish
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to publish, like 0.1.0
+        required: true
+      dry_run:
+        description: Pack and check only; publish nothing
+        type: boolean
+        default: true
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: node scripts/set-version.mjs "${{ inputs.version }}"
+      - run: pnpm build
+      - run: pnpm test
+      - name: Publish (or a dry run)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: |
+          if [ "${{ inputs.dry_run }}" != true ] && [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "The NPM_TOKEN secret is not set: nothing can be published." >&2
+            exit 1
+          fi
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+          pnpm -r --filter "./packages/*" publish --access public --no-git-checks \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
