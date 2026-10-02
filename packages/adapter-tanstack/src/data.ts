@@ -277,6 +277,10 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const capped = ir.pages.some(
     (p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name),
   );
+  // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
+  const ordered = ir.pages.some(
+    (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
+  );
   const title = (m: ModelIR) => {
     const f = titleField(m);
     return f === "id" ? "{ id: true }" : `{ id: true, ${f}: true }`;
@@ -485,12 +489,12 @@ ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    
     return found !== undefined;
   },
 
-  /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}. */
-  async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}) {
+  /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
+  async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}${ordered ? ", order?: SQL" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const rows = await db.query.${n.table}.findMany({
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
-      orderBy: (t, { desc }) => [desc(t.id)],${capped ? "\n      limit," : ""}
+      orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     });
     ${
       aggregatedLists(model).length

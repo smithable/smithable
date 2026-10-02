@@ -22,7 +22,7 @@ pages:
     route: /
     crud: Item
     search: [title, description]
-    filters: [category, price, condition, available, seller, owner, createdAt]
+    filters: [category, price, condition, available, owner, createdAt]
     sortable: [price, createdAt, title]
     favourites: true
     contact: { to: seller, keep: Message }
