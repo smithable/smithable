@@ -105,7 +105,11 @@ function listRoute(page: ArticlesPage, ctx: GenContext): string {
     .add("#/kit/Articles", "ArticleList")
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "allows", "guardPage");
-  if (framed) imports.add("#/kit/Landing", "LandingLayout").add("#/generated/app", "app");
+  if (framed)
+    imports
+      .add("#/kit/Landing", "LandingLayout")
+      .add("#/generated/app", "app")
+      .add("#/generated/site", "site");
   else imports.add("#/kit/AppShell", "PageHeader");
   const header = `<h1 className="mb-6 text-3xl font-bold">{${JSON.stringify(ctx.t.pageTitle(page.id))}}</h1>`;
   return `${HEADER}${imports.render()}${code}
@@ -144,7 +148,7 @@ function ArticlesPage() {
   return ${
     framed
       ? `(
-    <LandingLayout appName={app.name}>
+    <LandingLayout appName={app.name} site={site}>
       <div className="mx-auto max-w-6xl px-5 py-12">
         ${header}
         {list}
@@ -172,7 +176,11 @@ function articleRoute(page: ArticlesPage, ctx: GenContext): string {
     .add("#/kit/Articles", "ArticleView")
     .add("#/kit/access", "allows", "guardPage");
   imports.add("#/generated/pages", "pageAccess");
-  if (framed) imports.add("#/kit/Landing", "LandingLayout").add("#/generated/app", "app");
+  if (framed)
+    imports
+      .add("#/kit/Landing", "LandingLayout")
+      .add("#/generated/app", "app")
+      .add("#/generated/site", "site");
   // Those who may change it (and open the page records are changed on) get an Edit link.
   const owner = hasSignIn(ctx.auth) ? ", row.ownerId" : "";
   const edit = crud
@@ -245,7 +253,7 @@ function ArticlePage() {
   return ${
     framed
       ? `(
-    <LandingLayout appName={app.name}>
+    <LandingLayout appName={app.name} site={site}>
       <div className="px-5 py-12">{view}</div>
     </LandingLayout>
   );`
