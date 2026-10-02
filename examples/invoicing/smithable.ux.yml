@@ -4,7 +4,7 @@ smithableUx: 0.1
 theme:
   preset: modern
 
-# Status colours by meaning; values not listed are neutral.
+# Status colors by meaning; values not listed are neutral.
 tones:
   Invoice.status: { paid: success, overdue: warning }
 

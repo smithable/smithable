@@ -1,6 +1,6 @@
 // The design system's brand-input rules (docs/design/delivery/06-guidelines/brand-input-rules.md):
-// a brand colour replaces a preset's primary, ring, accent and chart-1 colours, keeping text
-// readable. Pure colour maths, so the same input always gives the same theme.
+// a brand color replaces a preset's primary, ring, accent and chart-1 colors, keeping text
+// readable. Pure color maths, so the same input always gives the same theme.
 import {
   clamp,
   contrast,
@@ -23,7 +23,7 @@ export interface BrandColors {
   "chart-1": string;
 }
 
-/** The colours a brand colour gives a theme in one mode, as hex. */
+/** The colors a brand color gives a theme in one mode, as hex. */
 export function brandColors(input: string, theme: ThemeIR, mode: Mode): BrandColors {
   const tokens = theme[mode];
   const [L, C0, H] = rgbToOklch(hexToRgb(input));
