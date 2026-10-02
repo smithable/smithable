@@ -506,6 +506,7 @@ export function RecordCards({
   cards,
   layout = "cards",
   icon,
+  door,
 }: {
   id: string;
   title?: string;
@@ -524,8 +525,17 @@ export function RecordCards({
   /** The model's icon, for a model with pictures: the placeholder where a record has none. */
   icon?: LucideIcon;
   texts?: string;
+  /**
+   * A catalogue's door: a search box and filter chips that open the model's list (`to`) with
+   * the same address state, e.g. /?q=sofa or /?category=furniture.
+   */
+  door?: {
+    to: string;
+    search?: { label: string; placeholder: string };
+    chips?: { name: string; label: string; options: { value: string; label: string }[] }[];
+  };
 }) {
-  if (cards.length === 0) return null;
+  if (cards.length === 0 && !door) return null;
   type CardItem = (typeof cards)[number];
   // The whole card or row opens it; the link is the title.
   const heading = (card: CardItem) =>
@@ -568,6 +578,39 @@ export function RecordCards({
   );
   return (
     <Section id={id} texts={texts} title={title} text={text}>
+      {door && (
+        <div data-part="door" className="mb-8 space-y-4">
+          {door.search && (
+            <search>
+              <form action={door.to} method="get" className="flex max-w-xl gap-2">
+                <input
+                  type="search"
+                  name="q"
+                  aria-label={door.search.label}
+                  placeholder={door.search.placeholder}
+                  className="h-control min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <button type="submit" className={buttonVariants()}>
+                  Search
+                </button>
+              </form>
+            </search>
+          )}
+          {door.chips?.map((chip) => (
+            <nav key={chip.name} aria-label={chip.label} className="flex flex-wrap gap-2">
+              {chip.options.map((option) => (
+                <a
+                  key={option.value}
+                  href={`${door.to}?${new URLSearchParams({ [chip.name]: option.value })}`}
+                  className="inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {option.label}
+                </a>
+              ))}
+            </nav>
+          ))}
+        </div>
+      )}
       {layout === "list" ? (
         <ul className="divide-y border-y">
           {cards.map((card) => (
