@@ -25,11 +25,12 @@ lock="${MERGE_LOCK:-$HOME/repos/.merge-lock}"
 me="#$pr ${repo[1]:-$(gh repo view --json nameWithOwner -q .nameWithOwner)} ${SESSION:-session $PPID} $(date -u +%FT%TZ) pid $$@$(hostname)"
 refresher=""
 release() {
-  [ -n "$refresher" ] && { pkill -P "$refresher" 2>/dev/null; kill "$refresher" 2>/dev/null; }
-  [ "$(cat "$lock" 2>/dev/null)" = "$me" ] && rm -f "$lock"
-  return 0
+  if [ "$(cat "$lock" 2>/dev/null)" = "$me" ]; then rm -f "$lock"; fi
+  if [ -n "$refresher" ]; then { pkill -P "$refresher"; kill "$refresher"; wait "$refresher"; } 2>/dev/null || true; fi
 }
 trap release EXIT
+# Stopped by a signal, the script still releases the lock (bash runs the EXIT trap only on exit).
+trap 'exit 130' INT TERM HUP
 waited=0
 until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
   # A holder refreshes the lock every minute, so one untouched for an hour was left behind.
@@ -44,6 +45,9 @@ until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
 done
 ( while sleep 60; do touch "$lock"; done ) &
 refresher=$!
+# Whether the head has checks listed. gh exits non-zero while any is pending (8) or has failed
+# (1), so its output, not its status, says whether there are any (pipefail would hide them).
+has_checks() { [ -n "$(gh pr checks "$pr" "${repo[@]}" 2>/dev/null || true)" ]; }
 head_sha() { gh pr view "$pr" "${repo[@]}" --json headRefOid -q .headRefOid; }
 merged() { [ "$(gh pr view "$pr" "${repo[@]}" --json state -q .state)" = MERGED ]; }
 refuse() {
@@ -74,14 +78,14 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # other sessions' runs fill the runners; a workflow run for the head means they are coming.
   # No run for the head after fifteen minutes is not green; a queued one is waited for, an hour.
   for i in $(seq 360); do
-    gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . && break
+    has_checks && break
     if [ "$i" -ge 90 ] && [ -z "$(gh run list "${repo[@]}" --commit "$(head_sha)" --json databaseId -q '.[].databaseId' 2>/dev/null)" ]; then
       refuse "no checks have run."
     fi
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its checks to start (runners busy?)"
     sleep 10
   done
-  gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . || refuse "its checks did not start within an hour."
+  has_checks || refuse "its checks did not start within an hour."
   # GitHub merges by itself the moment the checks pass (at once when they already have).
   gh pr merge "$pr" "${repo[@]}" --auto --merge --delete-branch >/dev/null
   if ! gh pr checks "$pr" "${repo[@]}" --watch --fail-fast >/dev/null; then
