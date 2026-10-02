@@ -52,8 +52,14 @@ test("a condition must name a choice value or a yes/no field", () => {
     "invalid-where",
   ]);
   expect(check("Post: { where: { pinned: [x] } }").diagnostics.map((d) => d.code)).toEqual([
+    "invalid-where",
+  ]);
+  expect(check("Post: { where: { status: [] } }").diagnostics.map((d) => d.code)).toEqual([
     "invalid-value",
   ]);
+  expect(
+    check("Post: { where: { status: [draft, draft] } }").diagnostics.map((d) => d.code),
+  ).toEqual(["invalid-where"]);
   expect(check("Post: { limit: 3 }").diagnostics.map((d) => d.code)).toEqual(["unknown-key"]);
 });
 
