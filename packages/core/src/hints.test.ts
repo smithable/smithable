@@ -83,3 +83,30 @@ defaultRole: sales
   });
   expect(colon.diagnostics.map((d) => d.hint)).toContain(hint);
 });
+
+test("shortcuts belong to a hero, at most four, each a page", () => {
+  const messages = (landing: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Class:
+    fields: { name: string! }
+pages:
+  classes: { crud: Class }
+  home:
+    route: /
+    landing:
+${landing}
+`,
+    }).diagnostics.map((d) => d.message);
+  expect(messages("      hero: { shortcuts: [classes] }")).toEqual([]);
+  expect(messages("      hero:\n      faq: { shortcuts: [classes] }")).toContain(
+    "Only a hero section has shortcuts.",
+  );
+  expect(
+    messages("      hero: { shortcuts: [classes, classes, classes, classes, classes] }"),
+  ).toContain("A hero has at most four shortcuts.");
+  expect(messages("      hero: { shortcuts: [nowhere] }").join(" ")).toContain("nowhere");
+});

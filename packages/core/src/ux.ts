@@ -115,7 +115,7 @@ export interface SectionLook {
 export const SECTION_LOOKS: Partial<
   Record<string, Record<string, readonly (string | number)[] | "text">>
 > = {
-  hero: { layout: ["split", "centered", "plain"], image: ["right", "left"] },
+  hero: { layout: ["split", "centered", "plain", "cover"], image: ["right", "left"] },
   features: { columns: [3, 2, 4] },
   records: { layout: ["cards", "list", "grid"] },
   testimonials: { layout: ["cards", "carousel", "one"] },

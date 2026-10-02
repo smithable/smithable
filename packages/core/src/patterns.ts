@@ -91,8 +91,11 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
  * What each landing section kind may be given: a button (the page it opens), a form (the model
  * visitors add a record of). `records: <Model>` makes a section of any name a records section.
  */
-export const LANDING_SECTIONS: Record<SectionKind, { button?: true; form?: true }> = {
-  hero: { button: true },
+export const LANDING_SECTIONS: Record<
+  SectionKind,
+  { button?: true; form?: true; shortcuts?: true }
+> = {
+  hero: { button: true, shortcuts: true },
   features: {},
   records: {},
   pricing: {},
@@ -202,6 +205,12 @@ const landing: PagePattern<"landing"> = {
       properties: {
         records: { type: "string", description: "A model whose records the section shows." },
         button: { type: "string", description: "The page the section's button opens." },
+        shortcuts: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 4,
+          description: "A hero's shortcuts: up to four pages, shown as round icons.",
+        },
         limit: { type: "integer", minimum: 1 },
         form: {
           type: "string",
@@ -768,7 +777,7 @@ function readLanding(
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
     const options = checkKeys(ctx, entries, sectionWhere, {
-      allowed: ["records", "button", "limit", "form", "calculator", "custom"],
+      allowed: ["records", "button", "shortcuts", "limit", "form", "calculator", "custom"],
       content: ["title", "subtitle", "text", "items"],
     });
     const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
@@ -814,6 +823,16 @@ function readLanding(
               "Use a model of its own for messages, e.g. Message with name, email and message.",
             );
         }
+      } else if (key === "shortcuts") {
+        if (!allows.shortcuts) {
+          ctx.error(optionKey, "invalid-key", "Only a hero section has shortcuts.");
+          continue;
+        }
+        const pages = readNameList(ctx, option, `"shortcuts" in ${sectionWhere}`);
+        if (pages.length > 4)
+          ctx.error(option, "invalid-value", "A hero has at most four shortcuts.");
+        for (const { name: page, at } of pages) ctx.reference("page", page, at);
+        section.shortcuts = pages.slice(0, 4).map((p) => p.name);
       } else if (key === "button") {
         const page = readString(ctx, option, `"button" in ${sectionWhere}`);
         if (page !== undefined) {
