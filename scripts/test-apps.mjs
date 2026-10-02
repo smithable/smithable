@@ -615,6 +615,24 @@ async function landingFlow(base) {
     if (await page.locator('[data-section="classes"] [data-part="placeholder"]').count())
       throw new Error("cards of a model without pictures show placeholders");
     console.log("  ✓ browser: cards of a model without pictures stay text cards");
+    // The site's frame: the public pages as a menu (a button on a phone), contact details below.
+    await page
+      .getByRole("banner")
+      .getByRole("navigation", { name: "Site" })
+      .getByRole("link", { name: "Blog" })
+      .waitFor({ timeout: 5000 });
+    await page
+      .getByRole("contentinfo")
+      .getByRole("link", { name: "+358 18 123 456" })
+      .waitFor({ timeout: 5000 });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "Menu" }).click();
+    await page.locator("#site-menu").getByRole("link", { name: "Blog" }).click();
+    await page.waitForURL(`${base}/blog`);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    console.log(
+      "  ✓ browser: the site's header lists its public pages (a menu button on a phone); the footer has its contact details",
+    );
     await open(page, base);
     await page.getByRole("button", { name: /^Open A rolled-up yoga mat/ }).click();
     const lightbox = page.getByRole("dialog");

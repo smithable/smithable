@@ -43,7 +43,8 @@ export function landingRoute(
     .add("@tanstack/react-router", "createFileRoute")
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "guardPage")
-    .add("#/kit/Landing", "LandingLayout");
+    .add("#/kit/Landing", "LandingLayout")
+    .add("#/generated/site", "site");
   const routeOf = (id: string | undefined) => ir.pages.find((p) => p.id === id)?.route;
   // Into the app: the first page in the navigation that is not a landing page.
   const appPage = ir.navigation
@@ -319,10 +320,45 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${loaders.length ? `  loader: 
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName=${attr(ir.app.name)} link={${header}}${footer}>
+    <LandingLayout appName=${attr(ir.app.name)} link={${header}}${footer} site={site}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );
 }
+`;
+}
+
+/**
+ * The public site's frame, shared by its landing pages and public blogs: the menu (the pages
+ * visitors may open, in the spec's order) and the contact details of the landing page's contact
+ * section, for the header and the footer.
+ */
+export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
+  const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
+  const home = landings.find((p) => auth.public.pages.includes(p.id)) ?? landings[0];
+  const menu = ir.pages
+    .filter(
+      (p) =>
+        auth.public.pages.includes(p.id) && p.pattern.kind !== "landing" && !p.route.includes("$"),
+    )
+    .map((p) => ({ to: p.route, label: t.pageTitle(p.id) }));
+  const section =
+    home?.pattern.kind === "landing"
+      ? home.pattern.sections.find((s) => s.kind === "contact")
+      : undefined;
+  const texts = home && section ? t.section(home.id, section.name) : undefined;
+  const contact = Object.fromEntries(
+    (["address", "phone", "email", "hours"] as const).flatMap((k) =>
+      texts?.[k] ? [[k, texts[k] as string]] : [],
+    ),
+  );
+  return `${HEADER}import type { LandingSite } from "#/kit/Landing";
+
+/** The public site's frame: the pages visitors may open, and how to reach the business. */
+export const site: LandingSite = ${literal({
+    ...(home ? { home: home.route } : {}),
+    menu,
+    ...(Object.keys(contact).length ? { contact } : {}),
+  })};
 `;
 }

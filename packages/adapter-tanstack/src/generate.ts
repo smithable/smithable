@@ -24,8 +24,10 @@ import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
+import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
+import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, rootRoute } from "./pages/root.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
@@ -352,6 +354,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
       generated("src/generated/pages.ts", pagesModule(ir, auth)),
+      // The public site's menu and contact details, for its landing pages and public blogs.
+      ...(ir.pages.some((p) => p.pattern.kind === "landing" || publicArticles(p, { auth }))
+        ? [generated("src/generated/site.ts", siteModule(ir, t, auth))]
+        : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
       generated("src/routes/__root.tsx", rootRoute(ir, t, auth, ux)),
       generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
