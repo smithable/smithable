@@ -1465,6 +1465,198 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
+{
+  "actions": [],
+  "app": {
+    "currency": "EUR",
+    "description": "Buy and sell second-hand things in your neighbourhood.",
+    "name": "Torget",
+  },
+  "extensions": {},
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "photos",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "pictures",
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "price",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "default": "furniture",
+          "name": "category",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "furniture",
+              "bikes",
+              "electronics",
+              "sports",
+              "kids",
+              "other",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": "likeNew",
+          "name": "condition",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "likeNew",
+              "good",
+              "worn",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "place",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": true,
+          "name": "available",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "bool",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Item",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "catalogue",
+        "myItems",
+        "saved",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "catalogue",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "filters": [
+              "category",
+            ],
+            "kind": "records",
+            "limit": 6,
+            "model": "Item",
+            "name": "latest",
+            "search": true,
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/welcome",
+    },
+    {
+      "contact": {
+        "to": "owner",
+      },
+      "favourites": "all",
+      "filters": [
+        "category",
+        "price",
+        "condition",
+        "available",
+      ],
+      "id": "catalogue",
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/",
+      "search": [
+        "title",
+        "description",
+        "place",
+      ],
+      "sortable": [
+        "price",
+        "createdAt",
+      ],
+    },
+    {
+      "id": "myItems",
+      "mine": true,
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/my-items",
+    },
+    {
+      "favourites": "only",
+      "id": "saved",
+      "pattern": {
+        "kind": "crud",
+        "model": "Item",
+      },
+      "route": "/saved",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
 {
   "actions": [],
