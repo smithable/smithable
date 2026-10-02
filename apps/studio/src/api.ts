@@ -59,6 +59,8 @@ export interface Result {
   output: string;
   /** A change that loses data: ask, then send it again confirmed. */
   needsConfirm?: boolean;
+  /** A failure: its report was sent (the person chose "always"), or can be offered. */
+  report?: "sent" | "offer";
 }
 
 /**
@@ -98,6 +100,13 @@ export const api = {
     call<Result>("/api/op", { name, args, confirm }),
   customize: (page: string) => call<Result>("/api/customize", { page }),
   undo: () => call<Result>("/api/undo", {}),
+  /** The report of the last failure, exactly as it would be sent, and the person's choice. */
+  report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
+  sendReport: (send: boolean, choice?: "always" | "never" | "ask") =>
+    call<{ ok: boolean; sent?: true; url?: string; message?: string }>("/api/report", {
+      send,
+      choice,
+    }),
   ask: (request: string) => call<Proposal>("/api/ask", { request }),
   applyProposal: (id: string) => call<Result>("/api/ask/apply", { id }),
   /** Calls `onEvent` for every change and log line the daemon reports. */
