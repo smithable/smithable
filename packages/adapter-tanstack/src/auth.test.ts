@@ -46,6 +46,19 @@ test("a provider's tokens are never stored: the account hooks null them on creat
     "update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) }",
   );
   expect(auth).toMatch(
-    /const NO_TOKENS = \{\n  accessToken: null,\n  refreshToken: null,\n  idToken: null,/,
+    /const NO_TOKENS = \{\n {2}accessToken: null,\n {2}refreshToken: null,\n {2}idToken: null,/,
   );
+});
+
+// A demo (DEMO_SIGN_IN=1) offers the role buttons in production too; nothing else changes.
+test("the demo sign-in is gated by DEMO_SIGN_IN at run time, beside the development gate", () => {
+  const files = crm();
+  const lib = files("src/lib/auth.ts");
+  expect(lib).toContain('export const demoSignIn = process.env.DEMO_SIGN_IN === "1";');
+  expect(lib).toContain("emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn }");
+  expect(lib).toContain('!(demoSignIn && email.startsWith("demo-"))');
+  const route = files("src/routes/sign-in.tsx");
+  expect(route).toContain("if (!import.meta.env.DEV && !demoSignIn)");
+  expect(route).toContain("devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}");
+  expect(files("src/routes/__root.tsx")).toContain('demo: process.env.DEMO_SIGN_IN === "1"');
 });
