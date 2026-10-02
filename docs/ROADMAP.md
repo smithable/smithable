@@ -286,7 +286,8 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 
 **Progress (2026-10-02):**
 - The five look fixes are built: a `cover` hero with shortcuts (#79), pictures on cards with a placeholder (#81), the site's header menu and footer columns (#83), scale and rhythm with each preset's own shape (#85), and public pages in the site's frame (#86).
-- The marketplace core is merged in part: the `pictures` type, filters and sort, a searchable records section, and the catalogue as the start page (#88). Favourites and contact come in core part 2. Of the adapter steps, several pictures on a record is merged (2.1, #99); list filters and a server-side sort are open (2.2, #100).
+- The marketplace core is merged: the `pictures` type, filters and sort, a searchable records section and the catalogue as the start page (#88), then favourites and contacting the owner (#103). Of the adapter steps, several pictures on a record (2.1, #99) and list filters with a server-side sort (2.2, #100) are merged; favourites, contact and the start page come next.
+- Demo sign-in for the showcase sites (`DEMO_SIGN_IN=1`, showcase.md §3) is in the engine (#104).
 - Sample data: `samples/<Model>.yml` is seeded instead of generated rows, and all four starters have real texts (#90, #91). Sample keys follow renames and removals (#98).
 - docs.smithable.ai is up, with the spec reference, the JSON Schema, getting started, AI setup, Why Smithable and the FAQ (#73–#75).
 - First builds from a page: `smithable new --from <url> [--with-pictures]` (§2.8, #87 and #96).
