@@ -284,6 +284,16 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 
 **Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO; [design/legal-decisions.md](design/legal-decisions.md)), with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps. The beta terms, privacy notice and DPA are drafts awaiting the decisions in `smithable-cloud/docs/legal/README.md` and a lawyer's review; the trademark is not filed; the release process and pricing are not started. The checklist for the flip is [design/public-release.md](design/public-release.md).
 
+**Progress (2026-10-02):**
+- The five look fixes are built: a `cover` hero with shortcuts (#79), pictures on cards with a placeholder (#81), the site's header menu and footer columns (#83), scale and rhythm with each preset's own shape (#85), and public pages in the site's frame (#86).
+- The marketplace core is merged in part: the `pictures` type, filters and sort, a searchable records section, and the catalogue as the start page (#88). Favourites and contact come in core part 2. Of the adapter steps, several pictures on a record is merged (2.1, #99); list filters and a server-side sort are open (2.2, #100).
+- Sample data: `samples/<Model>.yml` is seeded instead of generated rows, and all four starters have real texts (#90, #91). Sample keys follow renames and removals (#98).
+- docs.smithable.ai is up, with the spec reference, the JSON Schema, getting started, AI setup, Why Smithable and the FAQ (#73–#75).
+- First builds from a page: `smithable new --from <url> [--with-pictures]` (§2.8, #87 and #96).
+- A status page is decided as the sixth starter (#80).
+- CI runs the full check for engine changes, once per pull request (#93, #94). `main` is protected, and sessions merge through `scripts/merge-green.sh`, which brings a pull request up to date first (#89, #101).
+- The image library is ready for Johan's go: the script, the manifest and the pilot's 48 pictures in `smithable-images`. The theme tools are merged: the theme sheet, a theme from a site and rule-made candidates (#92, #95, #97).
+
 ---
 
 ## Later (not before M16)
