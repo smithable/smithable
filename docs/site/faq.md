@@ -32,7 +32,7 @@ On your machine, when you run Smithable yourself. On the hosted service, in Swed
 
 ## What can it build today?
 
-Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management. Four starters show the range: a CRM, a booking site, an invoicing app and a plain records app. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
+Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management; and marketplaces, with several pictures per record, filters and sorting on lists, favorites, "my" pages that show only your own records, and contacting a record's owner. Five starters show the range: a CRM, a booking site, an invoicing app, a marketplace (Torget) and a plain records app. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
 
 ## What happens when the spec cannot say what I need?
 
