@@ -1,6 +1,6 @@
 // Theme candidates by rule, not by a model: for each of ten families, a few primary hues, with
 // OKLCH lightness ladders for background, card, muted, border and accent in both modes (the
-// ladders the delivered presets use), an accent from a colour harmony, a font, a radius, a shadow
+// ladders the delivered presets use), an accent from a color harmony, a font, a radius, a shadow
 // and a density. Every candidate is checked like any theme (parseTheme: contrast included) and
 // the unreadable are dropped. Writes themes/<name>.yml and an overview of the thumbnails;
 // --sheets also runs the theme sheet on every survivor (a minute each), for judging by eye.
@@ -137,8 +137,8 @@ const FAMILIES = {
 const ok = (l, c, h) =>
   `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${(((h % 360) + 360) % 360).toFixed(1)})`;
 
-/** One candidate's colours in both modes, from a family and a primary hue. */
-function colours(f, hue) {
+/** One candidate's colors in both modes, from a family and a primary hue. */
+function colors(f, hue) {
   const sh = f.surfaceHue ?? hue; // the surfaces' hue: the primary's, or a paper or slate tone
   const dh = f.darkFollowsPrimary ? hue : sh;
   const accentHue = hue + f.harmony;
@@ -174,7 +174,7 @@ for (const family of wanted) {
   if (!f) throw new Error(`no family ${family}; there are ${Object.keys(FAMILIES).join(", ")}`);
   for (const [i, hue] of f.hues.entries()) {
     const name = f.hues.length > 1 ? `${family}-${i + 1}` : family;
-    const { light, dark } = colours(f, hue);
+    const { light, dark } = colors(f, hue);
     const block = (tokens) =>
       Object.entries(tokens)
         .map(([k, v]) => `  ${k}: "${v}"`)

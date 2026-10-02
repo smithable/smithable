@@ -9,7 +9,7 @@ const fields = (description: string) => ({
 });
 
 /**
- * Adds a custom action: what it takes and returns, and who may run it. Its behaviour is code in
+ * Adds a custom action: what it takes and returns, and who may run it. Its behavior is code in
  * src/custom/actions/, which `smithable code` starts as a stub.
  */
 const addAction: Operation<{
@@ -20,7 +20,7 @@ const addAction: Operation<{
   intent?: string;
 }> = {
   name: "addAction",
-  summary: "Add a custom action (its behaviour is code in src/custom/actions/).",
+  summary: "Add a custom action (its behavior is code in src/custom/actions/).",
   schema: {
     type: "object",
     required: ["action"],

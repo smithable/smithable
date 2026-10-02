@@ -243,13 +243,13 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
     },
   );
-  await step("colours of a choice and a page's icon, from the Look tab", async () => {
+  await step("colors of a choice and a page's icon, from the Look tab", async () => {
     await page.getByRole("button", { name: "Your app", exact: true }).first().click();
     await page.getByRole("tab", { name: "Look" }).click();
-    const choices = page.getByRole("region", { name: "Colours of choices" });
+    const choices = page.getByRole("region", { name: "Colors of choices" });
     await choices
       .getByRole("group", { name: "Status of Order" })
-      .getByLabel("Colour of Shipped")
+      .getByLabel("Color of Shipped")
       .selectOption("success");
     await trace
       .getByText("Show Order.status shipped as success")
@@ -518,7 +518,7 @@ try {
     await look("Font and density")
       .getByRole("button", { name: "Comfortable", pressed: true })
       .waitFor({ timeout: 60000 });
-    await look("Colours of choices").getByLabel("Colour of Draft").first().selectOption("warning");
+    await look("Colors of choices").getByLabel("Color of Draft").first().selectOption("warning");
     await trace.getByText(/draft/i).first().waitFor({ timeout: 60000 });
     // A second line under a column's value.
     await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
@@ -593,6 +593,27 @@ try {
         .first()
         .waitFor({ timeout: 60000 });
       await page.getByRole("tab", { name: "Your app" }).click();
+    },
+  );
+
+  await step(
+    "records from a CSV file: the preview shows them as they would land, Import adds them",
+    async () => {
+      await change("Records from a CSV file");
+      await page.getByLabel("Kind of record").selectOption("Customer");
+      await page.getByLabel("CSV file").setInputFiles({
+        name: "customers.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(
+          'Name,E-mail,Credit limit\nÅland Fish AB,fish@example.ax,"25 000,00"\nMarina Café,cafe@example.ax,1200\n',
+        ),
+      });
+      await page
+        .getByRole("status", { name: "Import preview" })
+        .getByText('"creditLimit":2500000')
+        .waitFor({ timeout: 60000 });
+      await page.getByRole("button", { name: "Import", exact: true }).click();
+      await status.getByText("2 added").waitFor({ timeout: 60000 });
     },
   );
 
