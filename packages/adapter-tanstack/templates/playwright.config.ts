@@ -9,6 +9,8 @@ export default defineConfig({
   testDir: "tests",
   fullyParallel: false,
   workers: 1,
+  // A page's first visit compiles it; on a busy machine that alone can take half a minute.
+  timeout: 60_000,
   reporter: "list",
   use: { baseURL: `http://localhost:${port}` },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
