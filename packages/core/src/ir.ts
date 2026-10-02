@@ -188,6 +188,10 @@ export interface PageIR extends SemanticText {
   filters?: string[];
   /** Fields of the model the list can be sorted by, either way, from a "Sort by" control. */
   sortable?: string[];
+  /** A heart on each record and a "Saved" view of the list ("all"), or a list of only the viewer's saved records ("only"). */
+  favourites?: "all" | "only";
+  /** A "contact" block on the record page that mails the record's owner, or the user a field of the model names; `keep` names a model a copy of each message is stored in. */
+  contact?: { to: string; keep?: string };
 }
 
 /**
