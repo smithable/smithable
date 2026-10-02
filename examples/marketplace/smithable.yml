@@ -4,7 +4,7 @@ smithable: 0.1
 
 app:
   name: Torget
-  description: Buy and sell second-hand things in your neighbourhood.
+  description: Buy and sell second-hand things in your neighborhood.
   currency: EUR
 
 models:
@@ -23,23 +23,23 @@ pages:
   home:
     route: /welcome
     landing:
-      hero: { button: catalogue }
+      hero: { button: catalog }
       latest: { records: Item, search: true, filters: [category], limit: 6 }
       footer: {}
-  catalogue:
+  catalog:
     route: /
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
     sortable: [price, createdAt]
-    favourites: true
+    favorites: true
     contact: owner
   myItems:
     crud: Item
     mine: true
   saved:
     crud: Item
-    favourites: only
+    favorites: only
 
 navigation:
-  main: [catalogue, myItems, saved]
+  main: [catalog, myItems, saved]

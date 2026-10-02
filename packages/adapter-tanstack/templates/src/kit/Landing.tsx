@@ -526,7 +526,7 @@ export function RecordCards({
   icon?: LucideIcon;
   texts?: string;
   /**
-   * A catalogue's door: a search box and filter chips that open the model's list (`to`) with
+   * A catalog's door: a search box and filter chips that open the model's list (`to`) with
    * the same address state, e.g. /?q=sofa or /?category=furniture.
    */
   door?: {

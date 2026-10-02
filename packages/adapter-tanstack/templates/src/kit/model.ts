@@ -32,7 +32,7 @@ export interface FieldUi {
   /** Computed by a formula: shown, never entered. */
   computed?: boolean;
   help?: string;
-  /** A choice's tone colours its badge by meaning; without one it is neutral. */
+  /** A choice's tone colors its badge by meaning; without one it is neutral. */
   choices?: { value: string; label: string; tone?: "success" | "warning" | "danger" }[];
   /** For a reference: the related record's key in a row, and the field that names it. */
   relation?: { key: string; titleField: string };
