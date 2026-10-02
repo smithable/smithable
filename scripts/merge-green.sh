@@ -33,7 +33,18 @@ for attempt in 1 2 3 4 5; do
     echo "Not merging #$pr: no checks have run."
     exit 1
   fi
-  if [ "$(gh pr view "$pr" "${repo[@]}" --json mergeStateStatus -q .mergeStateStatus)" = BEHIND ]; then
+  # GitHub says UNKNOWN for a few seconds after a push: wait for a real answer (up to a minute).
+  merge_state=UNKNOWN
+  for _ in $(seq 12); do
+    merge_state=$(gh pr view "$pr" "${repo[@]}" --json mergeStateStatus -q .mergeStateStatus)
+    [ "$merge_state" != UNKNOWN ] && break
+    sleep 5
+  done
+  if [ "$merge_state" = DIRTY ]; then
+    echo "Not merging #$pr: it has conflicts: rebase it."
+    exit 1
+  fi
+  if [ "$merge_state" = BEHIND ]; then
     echo "#$pr is behind main: updating it and checking again."
     gh pr update-branch "$pr" "${repo[@]}"
     sleep 15
