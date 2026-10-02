@@ -18,6 +18,7 @@ import { useId, useRef, useState } from "react";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
+import { PicturePlaceholder } from "./ModelTable";
 import { textMarker } from "./model";
 
 export interface LandingLink {
@@ -231,7 +232,8 @@ export function Hero({
       </section>
     );
   // Across the width: the primary washes over the picture where the text is, so the text keeps
-  // the theme's own contrast (primary against its foreground), checked like the rest.
+  // the theme's own contrast (primary against its foreground), checked like the rest; on a phone,
+  // where the text spans the picture, the wash is nearly solid.
   if (layout === "cover")
     return (
       <>
@@ -246,7 +248,7 @@ export function Hero({
           />
           <div
             aria-hidden
-            className="absolute inset-0 -z-10 bg-linear-to-t from-primary via-primary/90 to-primary/40 sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10"
+            className="absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10"
           />
           <div
             className={cn(
@@ -377,6 +379,7 @@ export function RecordCards({
   text,
   cards,
   layout = "cards",
+  icon,
 }: {
   id: string;
   title?: string;
@@ -392,6 +395,8 @@ export function RecordCards({
   }[];
   /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
   layout?: "cards" | "list" | "grid";
+  /** The model's icon, for a model with pictures: the placeholder where a record has none. */
+  icon?: LucideIcon;
   texts?: string;
 }) {
   if (cards.length === 0) return null;
@@ -408,8 +413,12 @@ export function RecordCards({
     ) : (
       card.title
     );
+  // A record without a picture gets the placeholder when its model has pictures (it is given
+  // an icon then), so the cards stay even; a model without pictures keeps text cards.
   const picture = (card: CardItem, className: string) =>
-    card.picture && (
+    !card.picture ? (
+      icon && <PicturePlaceholder icon={icon} className={className} />
+    ) : (
       <img
         src={card.picture.src}
         alt={card.picture.alt}
@@ -456,9 +465,7 @@ export function RecordCards({
           {cards.map((card) => (
             <li key={card.key} className="relative">
               <figure className="space-y-2">
-                {picture(card, "aspect-square w-full rounded-lg object-cover") ?? (
-                  <div aria-hidden className="aspect-square w-full rounded-lg bg-muted" />
-                )}
+                {picture(card, "aspect-square w-full rounded-lg object-cover")}
                 <figcaption className="font-semibold">{heading(card)}</figcaption>
               </figure>
             </li>

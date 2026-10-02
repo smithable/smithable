@@ -5,6 +5,7 @@ import {
   kebab,
   type ModelIR,
   type PageIR,
+  pageIcon,
   pascal,
   plural,
   type SpecIR,
@@ -30,6 +31,7 @@ import {
   tableNames,
   type Within,
 } from "../shared.js";
+import { LUCIDE } from "./root.js";
 
 /** A searchable list's server function and route options: the search text is in the URL. */
 export function searchCode(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, within?: Within) {
@@ -137,6 +139,10 @@ export function listParts(
       }
     : undefined;
   const cards = presentation?.view === "cards";
+  // A model with pictures shows the page's icon where a record has none (cards, its column).
+  const icon = model.fields.some((f) => f.type.kind === "scalar" && f.type.name === "picture")
+    ? LUCIDE[pageIcon(ux, page)]
+    : undefined;
   // Inside a data page without a search, the list still loads the newest records only.
   const capped = within && !search;
 
@@ -175,6 +181,7 @@ export function listParts(
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
   if (sort) view.add("#/kit/model", "sortRows");
   if (search) view.add("#/kit/SearchBox", "SearchBox");
+  if (icon) view.add("lucide-react", icon);
 
   const newest = `list${pascal(plural(model.name))}`;
   const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${capped ? newest : n.list}(),\n`}`;
@@ -214,7 +221,7 @@ ${
 }${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
         ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
-        rows={${sort ? `sortRows(rows, ${JSON.stringify(sort.field)}${sort.descending ? ", true" : ""})` : "rows"}}${cards ? '\n        view="cards"' : ""}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
+        rows={${sort ? `sortRows(rows, ${JSON.stringify(sort.field)}${sort.descending ? ", true" : ""})` : "rows"}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${search ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}` : ""}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
       />

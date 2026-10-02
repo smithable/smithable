@@ -3478,6 +3478,7 @@ import { instructorUi } from "#/generated/instructor";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
+import { Users } from "lucide-react";
 
 /** The instructors matching the search, among those the viewer may read. */
 const searchInstructors = createServerFn()
@@ -3532,6 +3533,7 @@ function AdminInstructorsPage() {
         ui={instructorUi}
         app={app}
         rows={rows}
+        icon={Users}
         emptyMessage={q ? \`No instructors match “\${q}”.\` : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/admin/instructors/$id", params: { id: String(row.id) } })}
@@ -3826,6 +3828,7 @@ import { postUi } from "#/generated/post";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
+import { BookOpen } from "lucide-react";
 
 /** The posts matching the search, among those the viewer may read. */
 const searchPosts = createServerFn()
@@ -3880,6 +3883,7 @@ function AdminPostsPage() {
         ui={postUi}
         app={app}
         rows={rows}
+        icon={BookOpen}
         emptyMessage={q ? \`No posts match “\${q}”.\` : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/admin/posts/$id", params: { id: String(row.id) } })}
@@ -4520,6 +4524,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.news"
           id="news"
+          icon={BookOpen}
           title="Posts"
           cards={data.posts.slice(0, 6).map((row) => ({
             key: row.id,
@@ -4616,6 +4621,7 @@ import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { Users } from "lucide-react";
 
 export const Route = createFileRoute("/instructors/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["instructors"], context.viewer, location.href),
@@ -4643,6 +4649,7 @@ function InstructorsPage() {
         page="instructors"
         app={app}
         rows={rows}
+        icon={Users}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/instructors/$id", params: { id: String(row.id) } })}
       />
@@ -5039,6 +5046,7 @@ import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/posts/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["posts"], context.viewer, location.href),
@@ -5066,6 +5074,7 @@ function PostsPage() {
         page="posts"
         app={app}
         rows={rows}
+        icon={BookOpen}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/posts/$id", params: { id: String(row.id) } })}
       />
@@ -5823,11 +5832,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Calendar.tsx": "eb7327fb kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "59a6a305 kit",
+  "src/kit/Landing.tsx": "b48d099b kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "0369d4b6 kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/PictureInput.tsx": "e5ee310f kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -5856,13 +5865,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
   "src/routes/admin/index.tsx": "dc5e3939 generated",
   "src/routes/admin/instructors/$id.tsx": "20e8bd2a generated",
-  "src/routes/admin/instructors/index.tsx": "66d0b7ff generated",
+  "src/routes/admin/instructors/index.tsx": "2691e6d9 generated",
   "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
   "src/routes/admin/messages/$id.tsx": "4374122a generated",
   "src/routes/admin/messages/index.tsx": "2ddc3153 generated",
   "src/routes/admin/messages/new.tsx": "6d8977f3 generated",
   "src/routes/admin/posts/$id.tsx": "99714c43 generated",
-  "src/routes/admin/posts/index.tsx": "b61f398f generated",
+  "src/routes/admin/posts/index.tsx": "0730905d generated",
   "src/routes/admin/posts/new.tsx": "979f6005 generated",
   "src/routes/admin/sessions/$id.tsx": "6f5082d1 generated",
   "src/routes/admin/sessions/index.tsx": "73356889 generated",
@@ -5876,9 +5885,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "219a7943 generated",
+  "src/routes/index.tsx": "a24a6708 generated",
   "src/routes/instructors/$id.tsx": "186fe32d generated",
-  "src/routes/instructors/index.tsx": "e892ed21 generated",
+  "src/routes/instructors/index.tsx": "d5f0dc15 generated",
   "src/routes/instructors/new.tsx": "f5955aca generated",
   "src/routes/messages/$id.tsx": "a7acfa05 generated",
   "src/routes/messages/index.tsx": "ad1eba19 generated",
@@ -5887,7 +5896,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/my-bookings/index.tsx": "8ebe5925 generated",
   "src/routes/my-bookings/new.tsx": "04696793 generated",
   "src/routes/posts/$id.tsx": "a07ee6e7 generated",
-  "src/routes/posts/index.tsx": "af87e890 generated",
+  "src/routes/posts/index.tsx": "563e2514 generated",
   "src/routes/posts/new.tsx": "4235b855 generated",
   "src/routes/schedule/index.tsx": "53cd29d3 generated",
   "src/routes/sessions/$id.tsx": "c9d1427b generated",
@@ -8600,7 +8609,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "0369d4b6 kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/Users.tsx": "9f5a0cf9 kit",
@@ -11887,9 +11896,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "c5b62089 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "59a6a305 kit",
+  "src/kit/Landing.tsx": "b48d099b kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "0369d4b6 kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
@@ -13421,9 +13430,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "5969e952 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "59a6a305 kit",
+  "src/kit/Landing.tsx": "b48d099b kit",
   "src/kit/ModelForm.tsx": "d7900d53 kit",
-  "src/kit/ModelTable.tsx": "0369d4b6 kit",
+  "src/kit/ModelTable.tsx": "feb2adcf kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "0c0aa148 kit",
   "src/kit/access.ts": "abceb487 kit",
