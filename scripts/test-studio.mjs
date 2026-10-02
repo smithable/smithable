@@ -12,8 +12,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { request } from "node:http";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { chromium } from "playwright";
 // The MCP SDK is the CLI's dependency.
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
@@ -690,6 +691,42 @@ try {
     if (!(await page.getByLabel("Logs").innerText()).includes("Generated"))
       throw new Error("no logs");
   });
+  await step(
+    "a change whose regeneration fails is rolled back, and the preview comes back; so does a crashed one",
+    async () => {
+      const health = async () => {
+        for (let i = 0; i < 60; i++) {
+          try {
+            if ((await fetch(`http://localhost:${port + 1}/health`)).ok) return;
+          } catch {}
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        throw new Error("the preview did not come back");
+      };
+      // Regenerating fails (on the beta it was the route generator; here a package that does
+      // not exist cannot be installed): the change is rolled back.
+      const answer = await (
+        await fetch(`http://localhost:${port}/api/op`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: JSON.stringify({
+            name: "setPackage",
+            args: { name: "smithable-no-such-package", version: "9.9.9" },
+          }),
+        })
+      ).json();
+      if (answer.ok || !answer.output.includes("Nothing was changed."))
+        throw new Error(`the failed change was not rolled back: ${answer.output}`);
+      if (readFileSync(join(dir, "smithable.context.yml"), "utf8").includes("no-such-package"))
+        throw new Error("the context file kept the failed change");
+      await health();
+      // A preview that stops by itself is started again.
+      if (spawnSync("pkill", ["-f", `preview.vite.config.mjs --port ${port + 1}`]).status !== 0)
+        throw new Error("no preview process to stop");
+      await new Promise((r) => setTimeout(r, 1500));
+      await health();
+    },
+  );
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
     // An unsaved edit in the spec editor is kept when the file changes under it.
     await page.getByRole("tab", { name: "smithable.yml" }).click();
