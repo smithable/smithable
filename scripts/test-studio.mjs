@@ -602,6 +602,27 @@ try {
     },
   );
 
+  await step(
+    "records from a CSV file: the preview shows them as they would land, Import adds them",
+    async () => {
+      await change("Records from a CSV file");
+      await page.getByLabel("Kind of record").selectOption("Customer");
+      await page.getByLabel("CSV file").setInputFiles({
+        name: "customers.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(
+          'Name,E-mail,Credit limit\nÅland Fish AB,fish@example.ax,"25 000,00"\nMarina Café,cafe@example.ax,1200\n',
+        ),
+      });
+      await page
+        .getByRole("status", { name: "Import preview" })
+        .getByText('"creditLimit":2500000')
+        .waitFor({ timeout: 60000 });
+      await page.getByRole("button", { name: "Import", exact: true }).click();
+      await status.getByText("2 added").waitFor({ timeout: 60000 });
+    },
+  );
+
   console.log("Studio mode");
   await step("the concept tree shows a concept with its rules and files", async () => {
     await page.locator("label", { hasText: /^Code$/ }).click();

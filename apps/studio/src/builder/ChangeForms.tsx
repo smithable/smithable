@@ -12,6 +12,7 @@ import {
 } from "@smithable/core";
 import { describeChange } from "@smithable/index";
 import { useState } from "react";
+import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
@@ -205,6 +206,7 @@ const CHANGES = [
   ["addSection", "A section on a landing page"],
   ["removeSection", "Remove a section"],
   ["addAction", "An action"],
+  ["importRecords", "Records from a CSV file"],
 ] as const;
 
 /** Operations whose form can hold everything a proposal gives them (the change box → the Change tab). */
@@ -246,6 +248,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
           />
         )}
         {change === "addModel" && <AddModel run={run} />}
+        {change === "importRecords" && <ImportRecords spec={spec} run={run} />}
         {change === "addPage" && <AddPage spec={spec} run={run} initial={initial} />}
         {change === "setSearch" && <SetSearch spec={spec} run={run} />}
         {change === "setAccess" && <SetAccess spec={spec} run={run} />}
@@ -635,6 +638,70 @@ function AddPage({ spec, run, initial }: FormProps) {
         </Label>
       )}
       <Submit label="Add page" disabled={!page} />
+    </Form>
+  );
+}
+
+/**
+ * Records from a spreadsheet: the file is read here and sent as text; a dry run shows the first
+ * rows as they would land and every problem, then Import adds them all (undo takes them back).
+ */
+function ImportRecords({ spec, run }: FormProps) {
+  const models = (spec.ir?.models ?? []).filter((m) => m.name !== "User");
+  const [model, setModel] = useState(models[0]?.name ?? "");
+  const [text, setText] = useState<string>();
+  const [preview, setPreview] = useState<{ ok: boolean; output: string }>();
+  const check = async (csv: string, name: string) => {
+    const result = await api.operation("importRecords", { model: name, text: csv, dryRun: true });
+    setPreview({ ok: result.ok, output: result.output.trim() });
+  };
+  return (
+    <Form
+      onSubmit={async () => {
+        if (text && (await run("importRecords", { model, text }))) {
+          setText(undefined);
+          setPreview(undefined);
+        }
+      }}
+    >
+      <Label text="Kind of record">
+        <Select
+          aria-label="Kind of record"
+          value={model}
+          onChange={(e) => {
+            setModel(e.target.value);
+            if (text) void check(text, e.target.value);
+          }}
+          options={models.map((m) => [m.name, humanize(m.name)])}
+        />
+      </Label>
+      <Label text="CSV file" hint="A header row; columns are matched to fields by name.">
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          aria-label="CSV file"
+          className="text-sm"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const csv = await file.text();
+            setText(csv);
+            await check(csv, model);
+          }}
+        />
+      </Label>
+      {preview && (
+        <pre
+          role="status"
+          aria-label="Import preview"
+          className={`max-h-64 overflow-auto rounded border p-2 text-xs whitespace-pre-wrap ${preview.ok ? "border-neutral-200 bg-white" : "border-red-200 bg-red-50 text-red-800"}`}
+        >
+          {preview.output}
+        </pre>
+      )}
+      <Button type="submit" disabled={!text || !preview?.ok}>
+        Import
+      </Button>
     </Form>
   );
 }
