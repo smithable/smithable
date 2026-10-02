@@ -51,5 +51,11 @@ test("concepts complete for inspect and code, and hooks is a code target", () =>
 
 test("outside a project, only what needs no spec completes", () => {
   expect(complete(["op", "addField"], "", mkdtempSync(join(tmpdir(), "empty-")))).toEqual([]);
-  expect(complete(["new", "--starter"], "", dir)).toEqual(["crm", "booking", "invoicing"]);
+  expect(complete(["new", "--starter"], "", dir)).toEqual([
+    "crm",
+    "booking",
+    "invoicing",
+    "marketplace",
+    "records",
+  ]);
 });
