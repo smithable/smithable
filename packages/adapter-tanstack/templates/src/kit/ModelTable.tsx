@@ -140,7 +140,7 @@ export function ModelTable<R extends Row>({
                 <div className="min-w-0 space-y-1">
                   {title && open(row, cell(title, row), "break-words text-base font-semibold")}
                   {secondary && <p className="break-words text-sm">{stacked(secondary, row)}</p>}
-                  {description && displayValue(description, row) && (
+                  {description && Boolean(displayValue(description, row)) && (
                     <p
                       data-part="description"
                       className="line-clamp-2 break-words text-sm text-muted-foreground"
