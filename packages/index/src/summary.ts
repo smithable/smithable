@@ -83,6 +83,7 @@ export function summarize(
         searched.length ? `search by ${list(searched, "or")}` : "",
         filtered.length ? `filter by ${list(filtered, "or")}` : "",
         sorted.length ? `sort by ${list(sorted, "or")}` : "",
+        p.mine ? "only the viewer's own records" : "",
         p.favourites === "only"
           ? "only the viewer's saved records"
           : p.favourites
