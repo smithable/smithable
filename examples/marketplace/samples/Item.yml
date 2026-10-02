@@ -1,98 +1,84 @@
-# What is for sale as the starter shows it (docs/spec/v0.1.md, Sample data). The pictures are in
-# public/images/samples/, from smithable-images (CC0).
+# What is for sale as the starter shows it (docs/spec/v0.1.md, Sample data). Photos follow with
+# the pictures from smithable-images (CC0).
 - title: Teak sideboard, 1960s
-  photos: [market-sideboard-1.webp, { file: market-sideboard-2.webp, alt: The sideboard's sliding doors and brass handles }]
   description: Three doors and two drawers, all running smoothly. A few light marks on top. 160 cm wide.
   price: 240
   category: furniture
   condition: good
   place: Mariehamn
 - title: Two oak dining chairs
-  photos: [market-chairs-1.webp]
   description: Solid oak with woven seats. Sold as a pair.
   price: 60
   category: furniture
   condition: good
   place: Jomala
 - title: Wool armchair
-  photos: [market-armchair-1.webp, { file: market-armchair-2.webp, alt: The armchair's grey wool seat up close }]
   description: Grey wool, birch legs. Very comfortable for reading.
   price: 120
   category: furniture
   condition: likeNew
   place: Mariehamn
 - title: Floor lamp with linen shade
-  photos: [market-lamp-1.webp]
   description: 150 cm tall, warm light. Bulb included.
   price: 25
   category: furniture
   condition: good
   place: Lemland
 - title: City bike, seven gears
-  photos: [market-city-bike-1.webp, { file: market-city-bike-2.webp, alt: The city bike's basket and front light }]
   description: Step-through frame, basket and lights. Serviced this spring.
   price: 180
   category: bikes
   condition: good
   place: Mariehamn
 - title: Balance bike
-  photos: [market-balance-bike-1.webp]
   description: Wooden balance bike for ages 2 to 4. Our youngest has outgrown it.
   price: 30
   category: kids
   condition: worn
   place: Finström
 - title: Road bike, 56 cm frame
-  photos: [market-road-bike-1.webp]
   description: Aluminium frame, 18 gears, new tyres.
   price: 350
   category: bikes
   condition: good
   place: Saltvik
 - title: Laptop, 14 inch
-  photos: [market-laptop-1.webp]
   description: 16 GB memory, 512 GB disk. Battery lasts about six hours. Charger included.
   price: 290
   category: electronics
   condition: good
   place: Mariehamn
 - title: Over-ear headphones
-  photos: [market-headphones-1.webp]
   description: Wireless, with noise cancelling. In the original box.
   price: 85
   category: electronics
   condition: likeNew
   place: Jomala
 - title: Turntable
-  photos: [market-turntable-1.webp, { file: market-turntable-2.webp, alt: The turntable's tonearm resting on a record }]
   description: Belt drive, new needle. Plays 33 and 45.
   price: 140
   category: electronics
   condition: good
   place: Mariehamn
 - title: Cross-country skis, 190 cm
-  photos: [market-skis-1.webp]
   description: Classic skis with bindings, poles included.
   price: 70
   category: sports
   condition: worn
   place: Sund
 - title: Sailing dinghy with trailer
-  photos: [market-dinghy-1.webp, { file: market-dinghy-2.webp, alt: The dinghy's mast and sail, folded }]
   description: Wooden dinghy, mast and sail, on a road trailer. Ready for the summer.
   price: 1200
   category: sports
   condition: good
   place: Eckerö
 - title: Car roof box
-  photos: [market-roof-box-1.webp]
   description: 400 litres, fits most roof bars. Key included.
   price: 110
   category: other
   condition: good
   place: Mariehamn
 - title: Box of children's books
-  photos: [market-books-1.webp]
   description: About thirty picture books in Swedish and English.
   price: 15
   category: kids
