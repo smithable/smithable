@@ -170,9 +170,9 @@ describe("the seven benchmark tasks", () => {
       { op: "setSortable", args: { page: "customers", fields: ["name", "creditLimit"] } },
     ]);
   });
-  test("Let people save customers as favourites; let visitors contact the account manager of a customer", () => {
-    expect(ops("Let people save customers as favourites.")).toEqual([
-      { op: "setFavourites", args: { page: "customers", mode: "on" } },
+  test("Let people save customers as favorites; let visitors contact the account manager of a customer", () => {
+    expect(ops("Let people save customers as favorites.")).toEqual([
+      { op: "setFavorites", args: { page: "customers", mode: "on" } },
     ]);
     expect(ops("Let visitors contact the account manager of a customer.")).toEqual([
       { op: "setContact", args: { page: "customers", to: "accountManager" } },
@@ -321,18 +321,18 @@ models:
   Item:
     fields: { title: string!, price: money, delivery: pickup | shipping }
 pages:
-  catalogue: { crud: Item, route: / }
+  catalog: { crud: Item, route: / }
   myItems: { crud: Item, mine: true }
-  saved: { crud: Item, favourites: only }
+  saved: { crud: Item, favorites: only }
 `,
     },
     { roles: ROLES },
   ).ir;
   if (!spec) throw new Error("invalid");
   expect(matchRequest(spec, "let visitors sort items by price", ROLES)?.operations).toEqual([
-    { op: "setSortable", args: { page: "catalogue", fields: ["price"] } },
+    { op: "setSortable", args: { page: "catalog", fields: ["price"] } },
   ]);
   expect(matchRequest(spec, "let visitors filter items by delivery", ROLES)?.operations).toEqual([
-    { op: "setFilters", args: { page: "catalogue", fields: ["delivery"] } },
+    { op: "setFilters", args: { page: "catalog", fields: ["delivery"] } },
   ]);
 });

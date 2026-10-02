@@ -44,12 +44,12 @@ pages:
 pages:
   catalogue:
     crud: Item
-    favourites: true            # a heart on each card and record; a "Saved" view
+    favorites: true            # a heart on each card and record; a "Saved" view
 ```
 
 - A signed-in viewer can mark a record and see "Saved" as a view of the same list (`?view=saved`); a visitor who clicks the heart is asked to sign in. The mark is the viewer's own: no counts, no "most liked", nothing shown to others.
 - Generated: a table `<model>_favourite (user_id, record_id, created_at)` with a unique pair, a server function `toggleFavourite`, the heart in `ModelTable`, cards and the record page, and an access test (a viewer can mark only records they may read; a removed record's marks go with it). Favourites follow the record into the one-file export and PITR like any table.
-- Also allowed as a dedicated page: `pages: saved: { crud: Item, favourites: only }` lists the viewer's marks.
+- Also allowed as a dedicated page: `pages: saved: { crud: Item, favorites: only }` lists the viewer's marks.
 
 ### 2.4 Contact the owner
 
@@ -77,11 +77,11 @@ pages:
 
 ## 4. The starter
 
-A fifth starter, **marketplace** ("Torget"): `Item` with `photos: pictures`, `title`, `description`, `price`, `category`, `condition`, `place`; `seller` is the owner; pages `catalogue` (`route: /`, search, filters, sortable, favourites, `contact: owner`), `myItems` (the viewer's own), `saved`; sign-in with Google and invitations off, self sign-up on; sample data with pictures. `test-apps` covers: filter by category and price in the address, sort by price, mark and unmark a favourite, send a contact message to the outbox, a visitor refused the heart.
+A fifth starter, **marketplace** ("Torget"): `Item` with `photos: pictures`, `title`, `description`, `price`, `category`, `condition`, `place`; `seller` is the owner; pages `catalog` (`route: /`, search, filters, sortable, favourites, `contact: owner`), `myItems` (the viewer's own), `saved`; sign-in with Google and invitations off, self sign-up on; sample data with pictures. `test-apps` covers: filter by category and price in the address, sort by price, mark and unmark a favourite, send a contact message to the outbox, a visitor refused the heart.
 
 ## 5. Steps
 
-1. **Core:** the `pictures` field type, the `filters`, `sortable`, `favourites` and `contact` page keys and the records section's `search`/`filters`, with checks, phrases ("let people filter items by category", "add favourites", "let visitors contact the seller"), index words and summaries; `route: /` on crud pages. Fable.
+1. **Core:** the `pictures` field type, the `filters`, `sortable`, `favorites` and `contact` page keys and the records section's `search`/`filters`, with checks, phrases ("let people filter items by category", "add favourites", "let visitors contact the seller"), index words and summaries; `route: /` on crud pages. Fable.
 2. **Adapter:** the pictures strip and viewer, the filter bar and sort control in `ModelTable` and the list route's query, the favourite table and heart, the contact block and its server function, the records section's search. Opus, one pull request per construct, in the order 2.1, 2.2, 2.4, 2.3, 2.5.
 3. **The starter and docs:** the marketplace starter, spec reference (fields, crud page keys, landing records section), ARCHITECTURE §10.4 and the kit list, ROADMAP. Opus.
 

@@ -801,7 +801,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
               "draft",
               "placed",
               "shipped",
-              "cancelled",
+              "canceled",
             ],
           },
           "unique": false,
@@ -1470,7 +1470,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
   "actions": [],
   "app": {
     "currency": "EUR",
-    "description": "Buy and sell second-hand things in your neighbourhood.",
+    "description": "Buy and sell second-hand things in your neighborhood.",
     "name": "Torget",
   },
   "extensions": {},
@@ -1571,7 +1571,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
     {
       "name": "main",
       "pages": [
-        "catalogue",
+        "catalog",
         "myItems",
         "saved",
       ],
@@ -1584,7 +1584,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         "kind": "landing",
         "sections": [
           {
-            "button": "catalogue",
+            "button": "catalog",
             "kind": "hero",
             "name": "hero",
           },
@@ -1610,14 +1610,14 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
       "contact": {
         "to": "owner",
       },
-      "favourites": "all",
+      "favorites": "all",
       "filters": [
         "category",
         "price",
         "condition",
         "available",
       ],
-      "id": "catalogue",
+      "id": "catalog",
       "pattern": {
         "kind": "crud",
         "model": "Item",
@@ -1643,7 +1643,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
       "route": "/my-items",
     },
     {
-      "favourites": "only",
+      "favorites": "only",
       "id": "saved",
       "pattern": {
         "kind": "crud",
@@ -1707,7 +1707,7 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
             "kind": "choice",
             "values": [
               "general",
-              "favourite",
+              "favorite",
               "archived",
             ],
           },
@@ -2638,7 +2638,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
     {
       "name": "main",
       "pages": [
-        "catalogue",
+        "catalog",
         "saved",
         "mine",
       ],
@@ -2650,7 +2650,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "keep": "Message",
         "to": "seller",
       },
-      "favourites": "all",
+      "favorites": "all",
       "filters": [
         "category",
         "price",
@@ -2659,7 +2659,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "owner",
         "createdAt",
       ],
-      "id": "catalogue",
+      "id": "catalog",
       "pattern": {
         "kind": "crud",
         "model": "Item",
@@ -2676,7 +2676,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
       ],
     },
     {
-      "favourites": "only",
+      "favorites": "only",
       "id": "saved",
       "pattern": {
         "kind": "crud",
@@ -2702,7 +2702,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "kind": "landing",
         "sections": [
           {
-            "button": "catalogue",
+            "button": "catalog",
             "kind": "hero",
             "name": "hero",
           },

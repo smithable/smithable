@@ -1,7 +1,7 @@
 - { number: ORD-1001, customer: Nordic Timber Oy, status: shipped, total: 4820, shippingMethod: standard, placedAt: 2026-09-02 09:15 }
 - { number: ORD-1002, customer: Skerry Software, status: shipped, total: 349, shippingMethod: express, placedAt: 2026-09-05 14:40 }
 - { number: ORD-1003, customer: Helios Energy, status: placed, total: 12600, shippingMethod: standard, placedAt: 2026-09-11 10:05 }
-- { number: ORD-1004, customer: Baltic Freight AB, status: cancelled, total: 2300, shippingMethod: express, placedAt: 2026-09-14 16:20 }
+- { number: ORD-1004, customer: Baltic Freight AB, status: canceled, total: 2300, shippingMethod: express, placedAt: 2026-09-14 16:20 }
 - { number: ORD-1005, customer: Visby Municipality, status: placed, total: 8450, shippingMethod: standard, placedAt: 2026-09-18 08:30 }
 - { number: ORD-1006, customer: Kallio Design, status: draft, total: 85, shippingMethod: standard, placedAt: 2026-09-22 11:00 }
 - { number: ORD-1007, customer: Arctic Outdoor Co, status: placed, total: 3150, shippingMethod: express, placedAt: 2026-09-25 13:45 }
