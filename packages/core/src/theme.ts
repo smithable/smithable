@@ -353,6 +353,47 @@ export function deriveTokens(
   return t;
 }
 
+/**
+ * A theme with a background color of the owner's (smithable.ux.yml's `theme.background`): in
+ * light mode a pale wash of it, in dark mode a deep one of the same hue, quiet enough for text,
+ * with the colors that sit on the background derived again (cards, muted, borders, accent) and
+ * the primary, the states and the charts kept. Undefined when the result would not read.
+ */
+export function withBackground(theme: ThemeIR, color: string): ThemeIR | undefined {
+  const [, c, h] = rgbToOklch(hexToRgb(hexOf(color)));
+  const chroma = Math.min(c, theme.chroma, 0.045);
+  const mode = (m: Mode): Tokens => {
+    const own = theme[m];
+    const background = gamutMap([m === "dark" ? 0.17 : 0.965, chroma, h]);
+    // The theme's text when it still reads, else the text that does.
+    const foreground =
+      contrast(hexOf(own.foreground), background) >= 7 ? own.foreground : bestText(background);
+    return deriveTokens(
+      {
+        background,
+        foreground,
+        primary: own.primary,
+        "primary-foreground": own["primary-foreground"],
+        ring: own.ring,
+        destructive: own.destructive,
+        "destructive-foreground": own["destructive-foreground"],
+        success: own.success,
+        "success-foreground": own["success-foreground"],
+        warning: own.warning,
+        "warning-foreground": own["warning-foreground"],
+        "chart-1": own["chart-1"],
+        "chart-2": own["chart-2"],
+        "chart-3": own["chart-3"],
+        "chart-4": own["chart-4"],
+        "chart-5": own["chart-5"],
+      },
+      m,
+    );
+  };
+  const out = { ...theme, light: mode("light"), dark: mode("dark") };
+  return checkContrast(out.light).length || checkContrast(out.dark).length ? undefined : out;
+}
+
 /** The pairs the kit puts together and the ratio each needs. */
 const PAIRS: [text: TokenName, on: TokenName, ratio: number][] = [
   ["foreground", "background", 4.5],
