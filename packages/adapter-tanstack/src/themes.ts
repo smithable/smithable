@@ -65,6 +65,17 @@ export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] 
   ];
 }
 
+/**
+ * How each built-in preset sets its headings, beside its font, radius and shadow: the shape that
+ * tells them apart besides colour. A project's own theme has the modern headings.
+ */
+const HEADINGS: Record<string, { weight: number; tracking: string }> = {
+  modern: { weight: 700, tracking: "-0.02em" },
+  minimal: { weight: 600, tracking: "-0.01em" },
+  playful: { weight: 800, tracking: "-0.01em" },
+  corporate: { weight: 600, tracking: "0" },
+};
+
 export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
   const block = (values: Record<string, string>, indent: string) =>
     Object.entries(values)
@@ -75,6 +86,8 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
     const theme = themeOf(from, themes);
     const font = themeFont(from, themes);
     const density = DENSITY[from.theme.density];
+    const headings =
+      HEADINGS[theme.name] ?? (HEADINGS.modern as { weight: number; tracking: string });
     return {
       light: `${selector} {
 ${block(tokens(from, theme, "light"), "  ")}
@@ -85,6 +98,8 @@ ${block(tokens(from, theme, "light"), "  ")}
   --row-height: ${density.row};
   --cell-padding: ${density.cell};
   --card-padding: ${density.card};
+  --heading-weight: ${headings.weight};
+  --heading-tracking: ${headings.tracking};
 }`,
       dark: `  ${selector} {
 ${block(tokens(from, theme, "dark"), "    ")}
