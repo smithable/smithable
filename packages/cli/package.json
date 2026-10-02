@@ -22,6 +22,7 @@
     "@smithable/adapter-tanstack": "workspace:*",
     "@smithable/ai": "workspace:*",
     "@smithable/core": "workspace:*",
-    "@smithable/index": "workspace:*"
+    "@smithable/index": "workspace:*",
+    "node-html-parser": "^9.0.4"
   }
 }

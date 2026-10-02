@@ -127,6 +127,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return create(dir, io, values.starter, {
         ...(values.describe ? { describe: values.describe } : {}),
         ...(values.answers ? { answers: values.answers } : {}),
+        ...(values.from ? { from: values.from } : {}),
+        withPictures: values["with-pictures"] === true,
         yes: values.yes === true,
         sampleData: values["no-sample-data"] !== true,
       });
@@ -234,6 +236,7 @@ const CONFIG = {
     version: { type: "boolean", short: "v" },
     force: { type: "boolean" },
     "no-sample-data": { type: "boolean" },
+    "with-pictures": { type: "boolean" },
     open: { type: "boolean" },
     starter: { type: "string" },
     describe: { type: "string" },
