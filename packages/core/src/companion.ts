@@ -4,11 +4,12 @@
 
 import type { ProjectFiles } from "./apply.js";
 import { validateAuth } from "./auth.js";
+import { lostValues } from "./condition.js";
 import { validateContent } from "./content.js";
 import { validateContext } from "./context-file.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { YamlEditor } from "./edit.js";
-import type { SpecIR } from "./ir.js";
+import type { Condition, SpecIR } from "./ir.js";
 import type { AnyOperation, Editors, Effect, Refusal } from "./operation.js";
 import { pageModel } from "./patterns.js";
 import { authOperations } from "./sections/auth-operations.js";
@@ -157,7 +158,7 @@ const auth: Companion = {
       if (!item || typeof item !== "object") continue;
       const [model, options] = Object.entries(item as Record<string, unknown>)[0] ?? [];
       if (model !== effect.model || !options || typeof options !== "object") continue;
-      const where = (options as { where?: Record<string, string | boolean> }).where ?? {};
+      const where = (options as { where?: Condition }).where ?? {};
       const field = effect.kind === "rename-field" ? effect.from : effect.field;
       if (!(field in where)) continue;
       if (effect.kind === "remove-field")
@@ -165,10 +166,10 @@ const auth: Companion = {
           refusal: `Visitors read ${model} only where ${field} fits; change "read" under "public" in smithable.auth.yml first.`,
         };
       if (effect.kind === "change-field") {
-        const wanted = where[field];
-        if (typeof wanted !== "string" || effect.choices.includes(wanted)) continue;
+        const lost = lostValues(where[field] as Condition[string], effect.choices);
+        if (!lost.length) continue;
         return {
-          refusal: `Visitors read ${model} only where ${field} is ${wanted}; change "read" under "public" in smithable.auth.yml first.`,
+          refusal: `Visitors read ${model} only where ${field} is ${lost.join(" or ")}; change "read" under "public" in smithable.auth.yml first.`,
         };
       }
       const renamed = Object.fromEntries(

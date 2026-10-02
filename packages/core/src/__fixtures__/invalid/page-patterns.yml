@@ -38,7 +38,7 @@ pages:
       money: { sum: Invoice.number }                       # expect: invalid-dashboard
       byMonth: { sum: Invoice.total, by: number }          # expect: invalid-dashboard
       latest: { list: Invoice, limit: 0 }                  # expect: invalid-value
-      odd: { count: Invoice, where: { paid: yes } }        # expect: invalid-dashboard
+      odd: { count: Invoice, where: { paid: yes } }        # expect: invalid-where
       chase: { query: chaseList }                          # expect: unknown-query
     search: [number]                                       # expect: invalid-key
   invoices:
