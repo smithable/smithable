@@ -204,6 +204,7 @@ export const modelsSection: SpecSection<"models"> = {
           keyNode,
           "reserved-name",
           `"${USER_MODEL}" is built in: it is the people who sign in, described in smithable.auth.yml.`,
+          `Every record already has an owner, the user who created it. To point at a user, add a field of type User (e.g. "seller: User"), or make that field the owner with "ownedBy".`,
         );
         continue;
       }
