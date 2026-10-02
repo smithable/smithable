@@ -166,9 +166,17 @@ const crud: PagePattern<"crud"> = {
   follow(spec, page, effect) {
     // The page's search, filters and sort follow a renamed field, or lose a removed one.
     const f = fieldEffect(effect);
-    if (f && page.pattern.model === f.model)
+    if (f && page.pattern.model === f.model) {
       for (const key of ["search", "filters", "sortable"])
         followInList(spec, ["pages", page.id, key], f.from, f.to, 3);
+      // The contact block's user field follows a rename; when the field goes, it mails the owner.
+      if (page.contact && page.contact.to === f.from) {
+        const short = ["pages", page.id, "contact"];
+        const long = [...short, "to"];
+        if (spec.has(long)) spec.set(long, f.to ?? "owner");
+        else if (spec.has(short)) spec.set(short, f.to ?? "owner");
+      }
+    }
     return undefined;
   },
 };
