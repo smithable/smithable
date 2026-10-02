@@ -1,7 +1,15 @@
-# Lint, build and unit tests on every push and pull request. `pnpm check` (which adds the
-# generated apps and Studio in a real browser) stays the local gate before every commit.
+# Lint, build and unit tests, once per pull request and on every push to main. `pnpm check`
+# (which adds the generated apps and Studio in a real browser) stays the local gate before every
+# commit. A newer push to a pull request cancels its older run, since three sessions share the
+# Actions minutes.
 name: CI
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   check:
     runs-on: ubuntu-latest
