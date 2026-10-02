@@ -114,3 +114,49 @@ test("mistakes are reported where they are: model, field, kind, required, refere
   const where = check({ "samples/Instructor.yml": "- name: A\n  age: 3\n" }).diagnostics[0];
   expect([where?.line, where?.column]).toEqual([2, 3]);
 });
+
+test("several pictures as a list, a number within the file's records, no people who sign in", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Market }
+models:
+  Seller:
+    fields: { name: string! }
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      seller: Seller
+      owner2: User
+pages:
+  items: { crud: Item }
+`,
+  }).ir;
+  if (!spec) throw new Error("the spec is invalid");
+  const run = (items: string) =>
+    validateSamples(
+      [
+        { path: "samples/Seller.yml", text: "- { name: Ada }\n- { name: Bo }\n" },
+        { path: "samples/Item.yml", text: items },
+      ],
+      spec,
+    );
+  const ok = run(
+    "- { title: Bike, photos: [a.webp, { file: b.webp, alt: The back wheel }], seller: 2 }\n",
+  );
+  expect(ok.diagnostics).toEqual([]);
+  expect(ok.samples.Item?.[0]?.photos).toEqual([
+    { picture: "a.webp", alt: "A picture of Bike" },
+    { picture: "b.webp", alt: "The back wheel" },
+  ]);
+  const messages = (items: string) => run(items).diagnostics.map((d) => d.message);
+  const eleven = Array.from({ length: 11 }, (_, i) => `p${i}.webp`).join(", ");
+  expect(messages(`- { title: Bike, photos: [${eleven}] }\n`)[0]).toContain("at most 10 pictures");
+  expect(messages("- { title: Bike, seller: 3 }\n")[0]).toContain(
+    "samples/Seller.yml has 2 records, not 3",
+  );
+  expect(messages("- { title: Bike, owner2: Ada }\n")[0]).toContain(
+    "a person who signs in; leave it empty",
+  );
+});
