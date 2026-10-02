@@ -449,7 +449,12 @@ try {
       // Navigating inside the app (opening an order) shows in the address.
       // A click before the reloaded page is ready does nothing: try again, a few times.
       for (let attempt = 1; ; attempt++) {
-        await preview.getByRole("button", { name: "ORD-1008" }).click();
+        // The table's title or a card's: whichever is visible (both exist; one is hidden by width).
+        await preview
+          .getByRole("button", { name: "ORD-1008" })
+          .filter({ visible: true })
+          .first()
+          .click();
         try {
           await page.waitForFunction(
             () =>
