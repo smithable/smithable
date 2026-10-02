@@ -1,0 +1,87 @@
+# What is for sale as the starter shows it (docs/spec/v0.1.md, Sample data). Photos follow with
+# the pictures from smithable-images (CC0).
+- title: Teak sideboard, 1960s
+  description: Three doors and two drawers, all running smoothly. A few light marks on top. 160 cm wide.
+  price: 240
+  category: furniture
+  condition: good
+  place: Mariehamn
+- title: Two oak dining chairs
+  description: Solid oak with woven seats. Sold as a pair.
+  price: 60
+  category: furniture
+  condition: good
+  place: Jomala
+- title: Wool armchair
+  description: Grey wool, birch legs. Very comfortable for reading.
+  price: 120
+  category: furniture
+  condition: likeNew
+  place: Mariehamn
+- title: Floor lamp with linen shade
+  description: 150 cm tall, warm light. Bulb included.
+  price: 25
+  category: furniture
+  condition: good
+  place: Lemland
+- title: City bike, seven gears
+  description: Step-through frame, basket and lights. Serviced this spring.
+  price: 180
+  category: bikes
+  condition: good
+  place: Mariehamn
+- title: Balance bike
+  description: Wooden balance bike for ages 2 to 4. Our youngest has outgrown it.
+  price: 30
+  category: kids
+  condition: worn
+  place: Finström
+- title: Road bike, 56 cm frame
+  description: Aluminium frame, 18 gears, new tyres.
+  price: 350
+  category: bikes
+  condition: good
+  place: Saltvik
+- title: Laptop, 14 inch
+  description: 16 GB memory, 512 GB disk. Battery lasts about six hours. Charger included.
+  price: 290
+  category: electronics
+  condition: good
+  place: Mariehamn
+- title: Over-ear headphones
+  description: Wireless, with noise cancelling. In the original box.
+  price: 85
+  category: electronics
+  condition: likeNew
+  place: Jomala
+- title: Turntable
+  description: Belt drive, new needle. Plays 33 and 45.
+  price: 140
+  category: electronics
+  condition: good
+  place: Mariehamn
+- title: Cross-country skis, 190 cm
+  description: Classic skis with bindings, poles included.
+  price: 70
+  category: sports
+  condition: worn
+  place: Sund
+- title: Sailing dinghy with trailer
+  description: Wooden dinghy, mast and sail, on a road trailer. Ready for the summer.
+  price: 1200
+  category: sports
+  condition: good
+  place: Eckerö
+- title: Car roof box
+  description: 400 litres, fits most roof bars. Key included.
+  price: 110
+  category: other
+  condition: good
+  place: Mariehamn
+- title: Box of children's books
+  description: About thirty picture books in Swedish and English.
+  price: 15
+  category: kids
+  condition: worn
+  place: Hammarland
+  available: false
