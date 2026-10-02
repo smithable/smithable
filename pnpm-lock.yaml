@@ -271,6 +271,12 @@ importers:
         specifier: ^8.20.0
         version: 8.20.0
 
+  packages/create-smithable:
+    dependencies:
+      smithable:
+        specifier: workspace:*
+        version: link:../cli
+
   packages/index:
     dependencies:
       '@smithable/core':
