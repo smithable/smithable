@@ -355,7 +355,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("src/generated/custom.ts", CUSTOM_PROPS),
       generated("src/generated/pages.ts", pagesModule(ir, auth)),
       // The public site's menu and contact details, for its landing pages and public blogs.
-      ...(ir.pages.some((p) => p.pattern.kind === "landing" || publicArticles(p, { auth }))
+      ...(ir.pages.some(
+        (p) =>
+          p.pattern.kind === "landing" ||
+          publicArticles(p, { auth }) ||
+          (p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id)),
+      )
         ? [generated("src/generated/site.ts", siteModule(ir, t, auth))]
         : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
