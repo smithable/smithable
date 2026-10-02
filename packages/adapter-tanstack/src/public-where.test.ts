@@ -56,3 +56,52 @@ public: { pages: [posts], read: [{ Post: { where: { status: published } } }] }
   expect(data).toContain("return sql`false`;");
   expect(data).not.toContain("or(");
 });
+
+test("a list of values reads as inArray, and a dashboard or landing section filters the rows", () => {
+  const status = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      open: { records: Incident, where: { status: [investigating, identified, monitoring] } }
+  overview:
+    dashboard:
+      open: { count: Incident, where: { status: [investigating, identified] } }
+  incidents: { crud: Incident }
+`,
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: `smithableAuth: 0.1
+signIn: none
+public: { pages: [home, incidents], read: [{ Incident: { where: { status: [investigating, resolved] } } }] }
+`,
+    },
+    status,
+  ).auth as AuthIR;
+  const files = generateApp(status, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const at = (path: string) => files.find((f) => f.path === path)?.content ?? "";
+  const data = at("src/generated/incident.server.ts");
+  expect(data).toContain('inArray(incidents.status, ["investigating","resolved"])');
+  expect(data).toMatch(/import \{ and, eq, inArray, sql/);
+  const test = at("src/generated/access.test.ts");
+  expect(test).toContain('where status is investigating or resolved"');
+  expect(test).toContain('insertIncident(null, {"status":"investigating"});');
+  expect(test).toContain('insertIncident(null, {"status":"identified"})');
+  expect(at("src/routes/index.tsx")).toContain(
+    '.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).slice(0, 6)',
+  );
+  expect(at("src/routes/overview/index.tsx")).toContain(
+    '.filter((row) => ["investigating","identified"].includes(row.status))',
+  );
+});
