@@ -12,6 +12,14 @@ import {
 import { validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
+import {
+  describePage,
+  downloadPictures,
+  fetchPage,
+  PageError,
+  readPage,
+  tooLittle,
+} from "./from-page.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
@@ -25,8 +33,48 @@ export async function create(
   dir: string,
   io: Io,
   starter: string | undefined,
-  options: { describe?: string; answers?: string; yes?: boolean; sampleData?: boolean } = {},
+  options: {
+    describe?: string;
+    answers?: string;
+    yes?: boolean;
+    sampleData?: boolean;
+    from?: string;
+    withPictures?: boolean;
+  } = {},
 ): Promise<number> {
+  // A page as the starting point: what it says is the description (first-build.md §2.8).
+  let pictures: { file: string; alt: string; bytes: Uint8Array }[] = [];
+  if (options.from) {
+    if (options.withPictures) {
+      const consent = await confirm(
+        io,
+        "These pictures belong to whoever made that site. Use them only for a site you own or have the right to make from it. Continue?",
+        options.yes === true,
+      );
+      if (consent !== true) return consent;
+    }
+    try {
+      const page = await fetchPage(options.from);
+      const reading = readPage(page.html, page.url);
+      if (tooLittle(reading))
+        throw new PageError(
+          `${page.url} shows almost nothing without JavaScript, so there is too little to go on. Describe the app instead: smithable new ${dir} --describe "…"`,
+        );
+      if (options.withPictures) {
+        const bytes = new Map<string, Uint8Array>();
+        const saved = await downloadPictures(reading, (file, data) => bytes.set(file, data));
+        pictures = saved.map((p) => ({ ...p, bytes: bytes.get(p.file) as Uint8Array }));
+      }
+      io.out(
+        `Read ${page.url}: ${reading.headings.length} headings, ${reading.navigation.length} menu links, ${reading.forms.length} forms${options.withPictures ? `, ${pictures.length} pictures` : ""}.\n`,
+      );
+      options = { ...options, describe: describePage(reading, pictures) };
+    } catch (error) {
+      if (!(error instanceof PageError)) throw error;
+      io.err(`${error.message}\n`);
+      return 1;
+    }
+  }
   let name = starter ?? (options.describe ? closestStarter(options.describe, STARTERS) : "crm");
   if (starter !== undefined && STARTERS[starter] === undefined) {
     io.err(`Unknown starter "${starter}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
@@ -108,6 +156,12 @@ export async function create(
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       writeFileSync(join(dir, file), text);
     }
+  // The page's pictures, as the project's sample pictures (never linked to the site).
+  for (const picture of pictures) {
+    const path = join(dir, "public", "images", "samples", picture.file);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, picture.bytes);
+  }
   // Its pictures, which a drafted app's texts may still use.
   for (const [file, data] of Object.entries(STARTER_ASSETS[name] ?? {})) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
