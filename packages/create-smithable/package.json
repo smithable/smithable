@@ -1,0 +1,31 @@
+{
+  "name": "create-smithable",
+  "version": "0.0.0",
+  "description": "npm create smithable: starts a Smithable app (smithable new).",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smithable/smithable.git",
+    "directory": "packages/create-smithable"
+  },
+  "homepage": "https://smithable.ai",
+  "type": "module",
+  "bin": {
+    "create-smithable": "./bin.js"
+  },
+  "files": [
+    "bin.js",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "prepack": "node ../../scripts/prepack.mjs"
+  },
+  "dependencies": {
+    "smithable": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
