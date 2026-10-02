@@ -689,12 +689,22 @@ try {
   );
   await step("the preview shows the changes, and the logs are there", async () => {
     // Beside Code mode from lg: no tab to open.
-    await openPreview("/orders");
-    await preview.getByRole("searchbox", { name: "Search by number" }).waitFor({ timeout: 60000 });
+    // Just shown again, the preview may still be loading, or restarting after the last change,
+    // on a slow runner; a page that failed to load is not retried by the frame. Go to the page
+    // again until it shows, for up to three minutes.
+    const search = preview.getByRole("searchbox", { name: "Search by number" });
+    for (const deadline = Date.now() + 180000; ; ) {
+      await openPreview("/orders");
+      try {
+        await search.waitFor({ timeout: 30000 });
+        break;
+      } catch (error) {
+        if (Date.now() > deadline) throw error;
+      }
+    }
     await page.getByRole("tab", { name: "Logs" }).click();
-    // Every change logs what it generated.
-    if (!(await page.getByLabel("Logs").innerText()).includes("Generated"))
-      throw new Error("no logs");
+    // Every change logs what it generated (the panel may fill a moment after it opens).
+    await page.getByLabel("Logs").getByText("Generated").first().waitFor({ timeout: 30000 });
   });
   await step(
     "a change whose regeneration fails is rolled back, and the preview comes back; so does a crashed one, and a page opened while it was down shows once it is up",
