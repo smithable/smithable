@@ -3,6 +3,7 @@
 // its own operations, and how its pages follow a change made elsewhere (a field renamed or
 // removed). A new pattern is one entry here; menus, icons, texts, access and the index ask it.
 import { isMap, isScalar as isScalarNode, isSeq, type ParsedNode } from "yaml";
+import { lostValues, readCondition } from "./condition.js";
 import {
   type At,
   checkKeys,
@@ -17,6 +18,7 @@ import type { YamlEditor } from "./edit.js";
 import {
   type CalculatorExample,
   type CalculatorIR,
+  type Condition,
   type DashboardItem,
   type FieldIR,
   type FieldValue,
@@ -225,6 +227,11 @@ const landing: PagePattern<"landing"> = {
           description:
             "A records section's filters (fields of the model), leading to its list page.",
         },
+        where: {
+          type: "object",
+          description:
+            "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }.",
+        },
         button: { type: "string", description: "The page the section's button opens." },
         shortcuts: {
           type: "array",
@@ -256,6 +263,36 @@ const landing: PagePattern<"landing"> = {
   parts: (p) => Object.fromEntries(p.sections.map((s) => [s.name, s.kind])),
   forms: (p) => p.sections.flatMap((s) => (s.form ? [s.form] : [])),
   operations: landingOperations,
+  follow(spec, page, effect) {
+    // A records section's condition follows a renamed field, and keeps the field and the values
+    // it names: losing them would silently show every record.
+    if (
+      effect.kind !== "rename-field" &&
+      effect.kind !== "remove-field" &&
+      effect.kind !== "change-field"
+    )
+      return undefined;
+    for (const section of page.pattern.sections) {
+      if (!section.where || section.model !== effect.model) continue;
+      const path = ["pages", page.id, "landing", section.name, "where"];
+      const field = effect.kind === "rename-field" ? effect.from : effect.field;
+      if (!(field in section.where)) continue;
+      const at = `the ${section.name} section of the ${page.id} page`;
+      if (effect.kind === "remove-field")
+        return {
+          refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} fits; change its "where" first.`,
+        };
+      if (effect.kind === "change-field") {
+        const lost = lostValues(section.where[field] as Condition[string], effect.choices);
+        if (lost.length)
+          return {
+            refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} is ${lost.join(" or ")}; change its "where" first.`,
+          };
+      }
+      if (effect.kind === "rename-field") spec.renameKey([...path, field], effect.to);
+    }
+    return undefined;
+  },
 };
 
 const dashboard: PagePattern<"dashboard"> = {
@@ -798,12 +835,18 @@ function readLanding(
       continue;
     }
     const entries = empty ? [] : (mapEntries(ctx, value, sectionWhere) ?? []);
-    const sectionFilters: { filters?: { name: string; at: At }[]; at?: At; searchAt?: At } = {};
+    const sectionFilters: {
+      filters?: { name: string; at: At }[];
+      at?: At;
+      searchAt?: At;
+      where?: ParsedNode | null;
+    } = {};
     const options = checkKeys(ctx, entries, sectionWhere, {
       allowed: [
         "records",
         "search",
         "filters",
+        "where",
         "button",
         "shortcuts",
         "limit",
@@ -843,6 +886,9 @@ function readLanding(
       } else if (key === "filters") {
         sectionFilters.filters = readNameList(ctx, option, `"filters" in ${sectionWhere}`);
         sectionFilters.at = optionKey;
+      } else if (key === "where") {
+        sectionFilters.where = option;
+        sectionFilters.at ??= optionKey;
       } else if (key === "form") {
         const model = readString(ctx, option, `"form" in ${sectionWhere}`);
         if (!allows.form) {
@@ -894,15 +940,26 @@ function readLanding(
         else if (limit !== undefined) section.limit = limit;
       }
     }
-    // A search box or filters belong to a records section: they lead to the model's list page.
-    if (sectionFilters.searchAt || sectionFilters.filters) {
+    // A search box, filters or a condition belong to a records section: the first two lead to the
+    // model's list page, the condition keeps some of its records (open incidents, featured items).
+    if (sectionFilters.searchAt || sectionFilters.filters || sectionFilters.where !== undefined) {
       if (!section.model) {
         ctx.error(
           sectionFilters.at ?? sectionFilters.searchAt ?? null,
           "invalid-key",
-          `Only a records section has a search box or filters (${sectionWhere} shows no records).`,
+          `Only a records section has a search box, filters or "where" (${sectionWhere} shows no records).`,
         );
-      } else if (sectionFilters.filters) {
+      } else if (sectionFilters.where !== undefined) {
+        const model = parsed.models?.find((m) => m.name === section.model);
+        const condition = readCondition(
+          ctx,
+          sectionFilters.where,
+          `"where" in ${sectionWhere}`,
+          model,
+        );
+        if (condition) section.where = condition;
+      }
+      if (section.model && sectionFilters.filters) {
         const checked = checkFilterFields(
           ctx,
           sectionFilters.filters,
@@ -1101,34 +1158,8 @@ function readDashboard(
     }
     for (const { key, value: option, keyNode: optionKey } of options) {
       if (key === "where") {
-        item.where = {};
-        for (const condition of mapEntries(ctx, option, `"where" in ${itemWhere}`) ?? []) {
-          const field = fieldOf(condition.key, condition.keyNode);
-          if (!field || !isScalarNode(condition.value)) continue;
-          const wanted = condition.value.value;
-          if (field.type.kind === "choice" && typeof wanted === "string") {
-            if (field.type.values.includes(wanted)) item.where[condition.key] = wanted;
-            else
-              ctx.error(
-                condition.value,
-                "unknown-value",
-                `${modelName}.${condition.key} has no value "${wanted}".`,
-                didYouMean(wanted, field.type.values),
-              );
-          } else if (
-            field.type.kind === "scalar" &&
-            field.type.name === "bool" &&
-            typeof wanted === "boolean"
-          ) {
-            item.where[condition.key] = wanted;
-          } else {
-            ctx.error(
-              condition.value,
-              "invalid-dashboard",
-              `"where" compares choice fields with one of their values, and yes/no fields with true or false.`,
-            );
-          }
-        }
+        const condition = readCondition(ctx, option, `"where" in ${itemWhere}`, model);
+        if (condition) item.where = condition;
       } else if (key === "by") {
         const by = readString(ctx, option, `"by" in ${itemWhere}`);
         const field = by === undefined ? undefined : fieldOf(by, option);
