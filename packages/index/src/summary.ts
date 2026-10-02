@@ -83,6 +83,12 @@ export function summarize(
         searched.length ? `search by ${list(searched, "or")}` : "",
         filtered.length ? `filter by ${list(filtered, "or")}` : "",
         sorted.length ? `sort by ${list(sorted, "or")}` : "",
+        p.favourites === "only"
+          ? "only the viewer's saved records"
+          : p.favourites
+            ? "records can be saved as favourites"
+            : "",
+        p.contact ? contactWords(p.contact, model, fieldLabel) : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         p.access ? `only for ${who(p.access)}` : "",
       ].filter(Boolean);
@@ -336,3 +342,17 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
   calculator: (p) =>
     `a calculator: ${list(p.calculator.fields.filter((f) => !f.formula).map((f) => humanize(f.name).toLowerCase()))} give ${list(p.calculator.fields.filter((f) => f.formula).map((f) => humanize(f.name).toLowerCase()))}`,
 };
+
+/** "contact the owner by mail", or the user field's label; with where a copy is kept. */
+function contactWords(
+  contact: NonNullable<PageIR["contact"]>,
+  model: ModelIR | undefined,
+  fieldLabel: (model: ModelIR, field: FieldIR) => string,
+): string {
+  const field = model?.fields.find((f) => f.name === contact.to);
+  const who =
+    contact.to === "owner" || !model || !field
+      ? "the owner"
+      : `the ${fieldLabel(model, field).toLowerCase()}`;
+  return `contact ${who} by mail${contact.keep ? ` (kept in ${contact.keep})` : ""}`;
+}
