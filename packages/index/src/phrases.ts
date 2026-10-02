@@ -157,7 +157,17 @@ export function pageFor(ir: SpecIR, phrase: string): PageIR | undefined {
   const byModel = model
     ? ir.pages.filter((p) => p.pattern.kind === "crud" && p.pattern.model === model.name)
     : [];
-  return byModel.length === 1 ? byModel[0] : undefined;
+  if (byModel.length <= 1) return byModel[0];
+  // Several lists of the model (a catalogue, my items, saved ones): the one at "/", else the
+  // one named after the model, else the only one that is not the viewer's own or saved records.
+  // key() is singular: "items" and "item" both name the Item model's page.
+  const named = key(model?.name ?? "");
+  const everyone = byModel.filter((p) => !p.mine && p.favourites !== "only");
+  return (
+    byModel.find((p) => p.route === "/") ??
+    byModel.find((p) => key(p.id) === named) ??
+    (everyone.length === 1 ? everyone[0] : undefined)
+  );
 }
 
 /** The field's type as the spec writes it, or undefined for a field shorthand cannot express. */
