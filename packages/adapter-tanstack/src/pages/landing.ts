@@ -135,6 +135,47 @@ export function landingRoute(
         );
         const icon = picture ? LUCIDE[listPage ? pageIcon(ux, listPage) : "list"] : undefined;
         if (icon) imports.add("lucide-react", icon);
+        // A catalogue's door (marketplace.md §2.5): the box and chips open the list page with the
+        // same address state, offering only what that page reads (its search, its choice filters).
+        const searchLabels = (listPage?.search ?? []).map((name) => {
+          const f = model.fields.find((x) => x.name === name);
+          return (f ? (t.field(model, f).label ?? humanize(f.name)) : name).toLowerCase();
+        });
+        const chips = (section.filters ?? []).flatMap((name) => {
+          const f = model.fields.find((x) => x.name === name);
+          if (f?.type.kind !== "choice" || !listPage?.filters?.includes(name)) return [];
+          const valueLabels = t.field(model, f).values ?? {};
+          return [
+            {
+              name,
+              label: t.field(model, f).label ?? humanize(f.name),
+              options: f.type.values.map((v) => ({
+                value: v,
+                label: valueLabels[v] ?? humanize(v),
+              })),
+            },
+          ];
+        });
+        const door =
+          listPage && ((section.search && searchLabels.length) || chips.length)
+            ? {
+                to: listPage.route,
+                ...(section.search && searchLabels.length
+                  ? {
+                      search: {
+                        label: `Search ${n.pluralLabel.toLowerCase()}`,
+                        placeholder: `Search by ${searchLabels.length > 1 ? `${searchLabels.slice(0, -1).join(", ")} or ${searchLabels.at(-1)}` : searchLabels[0]}`,
+                      },
+                    }
+                  : {}),
+                ...(chips.length ? { chips } : {}),
+              }
+            : undefined;
+        // Without an article, a card opens the record on a list page visitors may open.
+        const recordRoute =
+          !article && listPage && auth.public.pages.includes(listPage.id)
+            ? listPage.route
+            : undefined;
         const labels =
           choice?.type.kind === "choice"
             ? Object.fromEntries(
@@ -146,7 +187,7 @@ export function landingRoute(
             : undefined;
         return [
           `${open("RecordCards")}
-          id=${attr(section.name)}${icon ? `\n          icon={${icon}}` : ""}
+          id=${attr(section.name)}${icon ? `\n          icon={${icon}}` : ""}${door ? `\n          door={${literal(door)}}` : ""}
           title=${attr(own.title ?? n.pluralLabel)}${
             own.text
               ? `
@@ -159,7 +200,10 @@ export function landingRoute(
               article
                 ? `
             href: \`${article.route === "/" ? "" : article.route}/\${encodeURIComponent(${address ? `row.${address} || ` : ""}String(row.id))}\`,`
-                : ""
+                : recordRoute
+                  ? `
+            href: \`${recordRoute === "/" ? "" : recordRoute}/\${row.id}\`,`
+                  : ""
             }${
               picture
                 ? `
