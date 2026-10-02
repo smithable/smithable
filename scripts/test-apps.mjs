@@ -2245,6 +2245,46 @@ for (const [index, example] of examples.entries()) {
           throw new Error("the filters, favorites or contact block are still in the spec");
       });
 
+    // Records from a spreadsheet (importRecords): a dry run adds nothing, an import adds every
+    // row in one go, a file with a problem adds none and says where, undo takes an import back.
+    if (example === "crm")
+      step(
+        "importRecords: a dry run shows the converted rows, an import adds them, a bad file adds none, undo removes them",
+        () => {
+          const count =
+            "const{DatabaseSync}=require('node:sqlite');console.log(new DatabaseSync('data/db/app.db').prepare('select count(*) n from customers').get().n)";
+          const customers = () => Number(run("node", ["-e", count], dir).trim());
+          // Outside the project, as a download would be: the project stays clean for the checkpoint.
+          const files = mkdtempSync(join(tmpdir(), "smithable-import-"));
+          const imported = join(files, "imported.csv");
+          const broken = join(files, "broken.csv");
+          writeFileSync(
+            imported,
+            'Name,E-mail,Segment,Credit limit\nÅland Fish AB,fish@example.ax,Enterprise,"25 000,00"\nMarina Café,cafe@example.ax,smb,1200\n',
+          );
+          writeFileSync(broken, "Name,Credit limit\nGood AB,10\nBad AB,lots\n");
+          const importing = (file, ...more) =>
+            smithable(dir, "op", "importRecords", "Customer", "--from", file, ...more);
+          const before = customers();
+          const dry = importing(imported, "--dry-run");
+          if (
+            dry.code !== 0 ||
+            !dry.out.includes('"creditLimit":2500000') ||
+            customers() !== before
+          )
+            throw new Error(`the dry run: ${dry.out}`);
+          const bad = importing(broken);
+          if (bad.code === 0 || !bad.out.includes("line 3, Credit limit") || customers() !== before)
+            throw new Error(`the bad file: ${bad.out}`);
+          const done = importing(imported);
+          if (done.code !== 0 || customers() !== before + 2)
+            throw new Error(`the import: ${done.out}`);
+          const undone = smithable(dir, "undo");
+          if (undone.code !== 0 || customers() !== before) throw new Error(`undo: ${undone.out}`);
+          rmSync(files, { recursive: true });
+        },
+      );
+
     step("regenerating changes nothing", () => {
       const out = run("node", [cli, "generate", dir], repo);
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
