@@ -60,3 +60,32 @@ test("self-hosted, a prefilled GitHub issue; the choice is remembered for the pe
   setReportChoice("ask");
   expect(reportChoice()).toBeUndefined();
 });
+
+test("hosted, the service's own words: its thanks, or why it refused", async () => {
+  recordFailure(dir, "addPage", { page: "x" }, "Regenerating the app failed.");
+  const report = buildReport(dir);
+  if (!report) throw new Error("no report");
+  const { createServer } = await import("node:http");
+  let status = 201;
+  const server = createServer((_req, res) => {
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        message: status === 201 ? "Report 7 received. Thank you." : "Too many reports today.",
+      }),
+    );
+  });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as { port: number };
+  process.env.SMITHABLE_REPORT_URL = `http://localhost:${port}/reports/1`;
+  try {
+    expect(await sendReport(report)).toEqual({
+      sent: true,
+      message: "Report 7 received. Thank you.",
+    });
+    status = 429;
+    await expect(sendReport(report)).rejects.toThrow("Too many reports today.");
+  } finally {
+    server.close();
+  }
+});
