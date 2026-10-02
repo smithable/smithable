@@ -102,8 +102,14 @@ test("a landing page may have a theme of its own, set with setTheme --page; othe
     ir,
   );
   expect(read.diagnostics).toEqual([]);
-  expect(read.ux?.pages.home?.theme).toEqual({ preset: "playful", font: "Nunito Sans" });
+  // A preset brings its own density unless the file sets one: corporate is compact.
+  expect(read.ux?.pages.home?.theme).toEqual({
+    preset: "playful",
+    font: "Nunito Sans",
+    density: "comfortable",
+  });
   expect(read.ux?.theme.preset).toBe("corporate");
+  expect(read.ux?.theme.density).toBe("compact");
   const crud = validateUx(
     {
       path: "smithable.ux.yml",
