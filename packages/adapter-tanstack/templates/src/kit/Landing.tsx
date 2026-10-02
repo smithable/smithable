@@ -395,7 +395,7 @@ export function RecordCards({
   }[];
   /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
   layout?: "cards" | "list" | "grid";
-  /** The model's icon, on the placeholder where a record has no picture. */
+  /** The model's icon, for a model with pictures: the placeholder where a record has none. */
   icon?: LucideIcon;
   texts?: string;
 }) {
@@ -413,10 +413,11 @@ export function RecordCards({
     ) : (
       card.title
     );
-  // A record without a picture gets the placeholder, so the cards stay even.
+  // A record without a picture gets the placeholder when its model has pictures (it is given
+  // an icon then), so the cards stay even; a model without pictures keeps text cards.
   const picture = (card: CardItem, className: string) =>
     !card.picture ? (
-      <PicturePlaceholder icon={icon} className={className} />
+      icon && <PicturePlaceholder icon={icon} className={className} />
     ) : (
       <img
         src={card.picture.src}
