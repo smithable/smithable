@@ -2,7 +2,7 @@
 // administrator does with them: invite by email address, change a role, resend or withdraw an
 // invitation, remove a user. The rules (not yourself, the last administrator stays) are checked
 // on the server; this only shows their answers. A table from tablet width, cards on a phone.
-// To customise it, copy this file into src/custom/components/ and edit the copy.
+// To customize it, copy this file into src/custom/components/ and edit the copy.
 import { useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";

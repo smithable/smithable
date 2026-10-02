@@ -39,7 +39,7 @@ test("the companions follow a removed page and a retyped field", () => {
   expect(files.content).toMatch(/^ {2}orders:/m);
   expect(removed.files.content ?? "").not.toMatch(/^ {2}orders:/m);
 
-  // A choice that loses "cancelled" loses its tone; "shipped" keeps its.
+  // A choice that loses "canceled" loses its tone; "shipped" keeps its.
   const retyped = applyOperation(files, "changeField", {
     model: "Order",
     field: "status",

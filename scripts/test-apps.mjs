@@ -468,11 +468,11 @@ async function filtersFlow(base) {
 }
 
 /**
- * Favourites (marketplace.md §2.3): the admin saves a customer with its heart; the Saved view
+ * Favorites (marketplace.md §2.3): the admin saves a customer with its heart; the Saved view
  * lists only it, the record page shows it saved, another person's Saved view stays empty, and
  * unsaving on the record page empties the admin's.
  */
-async function favouritesFlow(base) {
+async function favoritesFlow(base) {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -530,7 +530,7 @@ async function favouritesFlow(base) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
-    failures.push("favourites flow");
+    failures.push("favorites flow");
   } finally {
     await browser.close();
   }
@@ -593,7 +593,7 @@ async function contactFlow(dir, base) {
 }
 
 /**
- * The marketplace starter (marketplace.md §4): a visitor starts on the catalogue in the site's
+ * The marketplace starter (marketplace.md §4): a visitor starts on the catalog in the site's
  * frame, searches from the landing page's box, filters by category and price and sorts by price
  * in the address, and is asked to sign in by a heart; a member sells an item and sees only it
  * under My items, saves and unsaves another; an admin writes to the seller, and the mail reaches
@@ -613,7 +613,7 @@ async function marketplaceFlow(dir, base) {
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await page.waitForURL(/\/\?q=bike/);
     if (await page.locator('[data-kit="app-shell"]').count())
-      throw new Error("a visitor sees the catalogue in the app's frame");
+      throw new Error("a visitor sees the catalog in the app's frame");
     await page.getByText("City bike, seven gears").first().waitFor({ timeout: 10000 });
     await open(page, `${base}/?category=bikes&price=100..400&sort=-price`);
     const shown = await titles();
@@ -625,7 +625,7 @@ async function marketplaceFlow(dir, base) {
       .click();
     await page.waitForURL(/\/sign-in\?redirect=/);
     console.log(
-      "  ✓ browser: a visitor starts on the catalogue in the site's frame, searches from the landing page, filters and sorts in the address, and a heart asks them to sign in",
+      "  ✓ browser: a visitor starts on the catalog in the site's frame, searches from the landing page, filters and sorts in the address, and a heart asks them to sign in",
     );
 
     await signInAs(page, base, "member");
@@ -2174,12 +2174,12 @@ for (const [index, example] of examples.entries()) {
     // A list's filters and sort (marketplace.md §2.2): the CRM's customers get them by operations.
     if (example === "crm")
       step(
-        "op setFilters, setSortable and setFavourites give the customers list filters, a sort and hearts, and the app type-checks",
+        "op setFilters, setSortable and setFavorites give the customers list filters, a sort and hearts, and the app type-checks",
         () => {
           for (const args of [
             ["setFilters", "customers", "segment", "creditLimit", "owner"],
             ["setSortable", "customers", "creditLimit", "name"],
-            ["setFavourites", "customers"],
+            ["setFavorites", "customers"],
           ]) {
             const result = smithable(dir, "op", ...args);
             if (result.code !== 0) throw new Error(result.out);
@@ -2211,7 +2211,7 @@ for (const [index, example] of examples.entries()) {
       if (example === "crm") {
         await browserFlow(base);
         await filtersFlow(base);
-        await favouritesFlow(base);
+        await favoritesFlow(base);
         await contactFlow(dir, base);
       }
       if (example === "booking") {
@@ -2241,8 +2241,8 @@ for (const [index, example] of examples.entries()) {
           if (undone.code !== 0) throw new Error(undone.out);
         }
         const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-        if (["filters:", "favourites:", "contact:"].some((key) => spec.includes(key)))
-          throw new Error("the filters, favourites or contact block are still in the spec");
+        if (["filters:", "favorites:", "contact:"].some((key) => spec.includes(key)))
+          throw new Error("the filters, favorites or contact block are still in the spec");
       });
 
     step("regenerating changes nothing", () => {
@@ -2447,7 +2447,7 @@ if (examples.includes("booking")) {
       },
     );
     await asyncStep(
-      "the closest starter, adapted by a model, is summarised in plain language and becomes the app",
+      "the closest starter, adapted by a model, is summarized in plain language and becomes the app",
       async () => {
         const result = await smithableAsync(
           dir,

@@ -21,7 +21,7 @@ import {
   dataKey,
   type GenContext,
   HEADER,
-  hasFavourites,
+  hasFavorites,
   type importList,
   lists,
   literal,
@@ -137,7 +137,7 @@ export const ${n.options} = createServerFn().handler(async () =>
 `
     : "";
   // A capacity: the reservation block's server functions (docs/design/booking.md): a
-  // record's places, and taking one in a step. Cancelling is the delete above.
+  // record's places, and taking one in a step. Canceling is the delete above.
   const capacity = hasSignIn(auth) ? model.capacity : undefined;
   const perModel = capacity && relationTarget(model, capacity.per, ir);
   const perData = perModel && names(perModel, t).data;
@@ -208,7 +208,7 @@ export const ${n.get} = createServerFn()
     if (!row) return null;
     return {
       row,${
-        hasFavourites(model, ir, auth)
+        hasFavorites(model, ir, auth)
           ? `
       saved: ${n.data}.saved(viewer).includes(id),`
           : ""
@@ -230,7 +230,7 @@ export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${n.data}.remove(await writer(), id));
 ${
-  hasFavourites(model, ir, auth)
+  hasFavorites(model, ir, auth)
     ? `
 /** Saves the record for the viewer, or unsaves it (their own mark); whether it is saved now. */
 export const ${savedToggle(model)} = createServerFn({ method: "POST" })
@@ -433,7 +433,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner}) }`
       : `{ ...values, ownerId: viewer?.id ?? null }`;
   const self = n.data;
-  const favourites = hasFavourites(model, ir, auth) ? `${n.table}Favourites` : undefined;
+  const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
   const referenceChecks = refs.map(
     (ref) =>
       `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
@@ -461,7 +461,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ].join("");
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
-import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favourites ? [favourites] : [])])].sort().join(", ")} } from "#/db/schema";
+import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favorites ? [favorites] : [])])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied, check, ${capacity || holds.length ? "Conflict, " : ""}type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
@@ -510,15 +510,15 @@ ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    
     return found !== undefined;
   },
 ${
-  favourites
+  favorites
     ? `
   /** The ${n.pluralLabel.toLowerCase()} the viewer saved, by id: their own marks, never anyone else's. */
   saved(viewer: Viewer | null): number[] {
     if (!viewer) return [];
     return db
-      .select({ id: ${favourites}.recordId })
-      .from(${favourites})
-      .where(eq(${favourites}.userId, viewer.id))
+      .select({ id: ${favorites}.recordId })
+      .from(${favorites})
+      .where(eq(${favorites}.userId, viewer.id))
       .all()
       .map((r) => r.id);
   },
@@ -526,9 +526,9 @@ ${
   /** Saves a ${n.label.toLowerCase()} the viewer may read, or unsaves it; whether it is saved now. */
   toggleSaved(viewer: Viewer | null, id: number): boolean {
     if (!viewer || !${self}.canRead(viewer, id)) throw new AccessDenied(viewer !== null);
-    const mark = and(eq(${favourites}.userId, viewer.id), eq(${favourites}.recordId, id));
-    if (db.delete(${favourites}).where(mark).run().changes) return false;
-    db.insert(${favourites}).values({ userId: viewer.id, recordId: id }).onConflictDoNothing().run();
+    const mark = and(eq(${favorites}.userId, viewer.id), eq(${favorites}.recordId, id));
+    if (db.delete(${favorites}).where(mark).run().changes) return false;
+    db.insert(${favorites}).values({ userId: viewer.id, recordId: id }).onConflictDoNothing().run();
     return true;
   },
 `

@@ -13,7 +13,7 @@ models:
   Booking:
     fields:
       session: Session! unique
-      status: confirmed | cancelled
+      status: confirmed | canceled
       paid: bool
     ${booking}
 pages:
