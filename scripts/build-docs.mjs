@@ -14,6 +14,8 @@ const REPO = "https://github.com/smithable/smithable/blob/main/";
 const PAGES = [
   { src: "docs/site/index.md", out: "index.html", nav: "Home" },
   { src: "docs/site/start.md", out: "start.html", nav: "Getting started" },
+  { src: "docs/site/why.md", out: "why.html", nav: "Why Smithable" },
+  { src: "docs/site/faq.md", out: "faq.html", nav: "Questions" },
   { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
   { src: "docs/ai.md", out: "ai.html", nav: "AI setup" },
 ];
