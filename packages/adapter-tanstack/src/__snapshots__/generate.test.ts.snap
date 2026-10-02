@@ -2784,6 +2784,13 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+/**
+ * A demo (DEMO_SIGN_IN=1 in the environment): the sign-in page offers every role without a
+ * provider, as development does, and the data is reset by whoever runs the demo. Never set it
+ * on a real app.
+ */
+export const demoSignIn = process.env.DEMO_SIGN_IN === "1";
+
 const NO_TOKENS = {
   accessToken: null,
   refreshToken: null,
@@ -2803,7 +2810,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
   // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV },
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -2954,6 +2961,7 @@ function pageOf(path: string): string | undefined {
 const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
+  demo: process.env.DEMO_SIGN_IN === "1",
 }));
 
 export const Route = createRootRoute({
@@ -2981,7 +2989,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf } = Route.useRouteContext();
+  const { viewer, asOf, demo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -2997,6 +3005,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {asOf && (
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
+        {demo && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
@@ -5420,25 +5433,26 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
-import { auth, configuredProviders, PROVIDERS } from "#/lib/auth";
+import { auth, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)) };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn };
 });
 
-/** Development only: signs in as a user with the role, without a provider. */
+/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV) throw new Error("Only available in development.");
-    const email = \`dev-\${role}@example.com\`;
-    const password = "dev-password";
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
+    const email = \`\${prefix}-\${role}@example.com\`;
+    const password = \`\${prefix}-password\`;
     if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`Dev \${role}\` } });
+      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -5454,7 +5468,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing } = Route.useLoaderData();
+  const { providers, missing, demo } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -5462,7 +5476,8 @@ function SignInPage() {
       appName={app.name}
       providers={providers}
       missing={missing}
-      devRoles={import.meta.env.DEV ? [...ROLES] : undefined}
+      devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}
+      demo={demo}
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
         if (error) throw new Error(error.message);
@@ -5872,7 +5887,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "0c0aa148 kit",
+  "src/kit/SignIn.tsx": "db074e7a kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -5884,11 +5899,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "64bcb759 generated",
+  "src/lib/auth.ts": "b9c81191 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "203a09f7 generated",
+  "src/routes/__root.tsx": "7b1e66d9 generated",
   "src/routes/admin/bookings/$id.tsx": "5ef57140 generated",
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
@@ -5935,7 +5950,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/$id.tsx": "c9d1427b generated",
   "src/routes/sessions/index.tsx": "66e83ebc generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
-  "src/routes/sign-in.tsx": "f37ca802 generated",
+  "src/routes/sign-in.tsx": "6ea03521 generated",
   "src/styles.css": "767f1777 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "7d81e484 generated",
@@ -7551,6 +7566,13 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+/**
+ * A demo (DEMO_SIGN_IN=1 in the environment): the sign-in page offers every role without a
+ * provider, as development does, and the data is reset by whoever runs the demo. Never set it
+ * on a real app.
+ */
+export const demoSignIn = process.env.DEMO_SIGN_IN === "1";
+
 const NO_TOKENS = {
   accessToken: null,
   refreshToken: null,
@@ -7570,7 +7592,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
   // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV },
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "sales", input: false },
@@ -7588,7 +7610,12 @@ export const auth = betterAuth({
       }
           const invited = db.select().from(invitation).where(eq(invitation.email, email)).get();
           const open = invited && invited.expiresAt.getTime() > Date.now() ? invited : undefined;
-          if (!open && !ADMINS.includes(email) && !(import.meta.env.DEV && email.startsWith("dev-"))) {
+          if (
+            !open &&
+            !ADMINS.includes(email) &&
+            !(import.meta.env.DEV && email.startsWith("dev-")) &&
+            !(demoSignIn && email.startsWith("demo-"))
+          ) {
             throw new APIError("FORBIDDEN", {
               message: invited
                 ? "Your invitation has expired. Ask an administrator for a new one."
@@ -7684,6 +7711,7 @@ function pageOf(path: string): string | undefined {
 const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
+  demo: process.env.DEMO_SIGN_IN === "1",
 }));
 
 export const Route = createRootRoute({
@@ -7711,7 +7739,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf } = Route.useRouteContext();
+  const { viewer, asOf, demo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -7727,6 +7755,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {asOf && (
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
+        {demo && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
@@ -8172,7 +8205,7 @@ import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
-import { auth, configuredProviders, PROVIDERS } from "#/lib/auth";
+import { auth, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","sales"] as const;
@@ -8194,19 +8227,21 @@ const signInOptions = createServerFn()
     return {
       providers,
       missing: PROVIDERS.filter((p) => !providers.includes(p)),
+      demo: demoSignIn,
       invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null,
     };
   });
 
-/** Development only: signs in as a user with the role, without a provider. */
+/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV) throw new Error("Only available in development.");
-    const email = \`dev-\${role}@acme.com\`;
-    const password = "dev-password";
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
+    const email = \`\${prefix}-\${role}@acme.com\`;
+    const password = \`\${prefix}-password\`;
     if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`Dev \${role}\` } });
+      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -8224,7 +8259,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, invitation } = Route.useLoaderData();
+  const { providers, missing, demo, invitation } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -8233,7 +8268,8 @@ function SignInPage() {
       providers={providers}
       missing={missing}
       invitation={invitation}
-      devRoles={import.meta.env.DEV ? [...ROLES] : undefined}
+      devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}
+      demo={demo}
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
         if (error) throw new Error(error.message);
@@ -8650,7 +8686,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ModelForm.tsx": "e32cc0a9 kit",
   "src/kit/ModelTable.tsx": "075c3489 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "0c0aa148 kit",
+  "src/kit/SignIn.tsx": "db074e7a kit",
   "src/kit/Users.tsx": "9f5a0cf9 kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -8662,11 +8698,11 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "48cad4e9 generated",
+  "src/lib/auth.ts": "c027d836 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "e6f687f6 generated",
+  "src/routes/__root.tsx": "f4cfa70c generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/customers/$id.tsx": "379e64db generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
@@ -8677,7 +8713,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/$id.tsx": "2a7ff8e1 generated",
   "src/routes/orders/index.tsx": "d5fa6fb2 generated",
   "src/routes/orders/new.tsx": "d433e790 generated",
-  "src/routes/sign-in.tsx": "7b976381 generated",
+  "src/routes/sign-in.tsx": "e5e71550 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
   "src/styles.css": "767f1777 kit",
   "src/theme.css": "f4cc6d16 generated",
@@ -10647,6 +10683,13 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+/**
+ * A demo (DEMO_SIGN_IN=1 in the environment): the sign-in page offers every role without a
+ * provider, as development does, and the data is reset by whoever runs the demo. Never set it
+ * on a real app.
+ */
+export const demoSignIn = process.env.DEMO_SIGN_IN === "1";
+
 const NO_TOKENS = {
   accessToken: null,
   refreshToken: null,
@@ -10666,7 +10709,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
   // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV },
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -10784,6 +10827,7 @@ function pageOf(path: string): string | undefined {
 const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
+  demo: process.env.DEMO_SIGN_IN === "1",
 }));
 
 export const Route = createRootRoute({
@@ -10811,7 +10855,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf } = Route.useRouteContext();
+  const { viewer, asOf, demo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -10827,6 +10871,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {asOf && (
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
+        {demo && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
         {landingRoutes.includes(pathname) ? (
@@ -11465,25 +11514,26 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
-import { auth, configuredProviders, PROVIDERS } from "#/lib/auth";
+import { auth, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)) };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn };
 });
 
-/** Development only: signs in as a user with the role, without a provider. */
+/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV) throw new Error("Only available in development.");
-    const email = \`dev-\${role}@example.com\`;
-    const password = "dev-password";
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
+    const email = \`\${prefix}-\${role}@example.com\`;
+    const password = \`\${prefix}-password\`;
     if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`Dev \${role}\` } });
+      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -11499,7 +11549,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing } = Route.useLoaderData();
+  const { providers, missing, demo } = Route.useLoaderData();
   const { redirect = "/welcome" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -11507,7 +11557,8 @@ function SignInPage() {
       appName={app.name}
       providers={providers}
       missing={missing}
-      devRoles={import.meta.env.DEV ? [...ROLES] : undefined}
+      devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}
+      demo={demo}
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
         if (error) throw new Error(error.message);
@@ -11958,7 +12009,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ModelTable.tsx": "075c3489 kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "0c0aa148 kit",
+  "src/kit/SignIn.tsx": "db074e7a kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -11970,11 +12021,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "5fcb3166 generated",
+  "src/lib/auth.ts": "3ccd3012 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "cea90d32 generated",
+  "src/routes/__root.tsx": "a040e73c generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/clients/$id.tsx": "d14d0660 generated",
   "src/routes/clients/index.tsx": "ee5cef45 generated",
@@ -11989,7 +12040,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/new.tsx": "c2112728 generated",
   "src/routes/overview/index.tsx": "66557c73 generated",
   "src/routes/settings/index.tsx": "ccb1cb37 generated",
-  "src/routes/sign-in.tsx": "55d5455e generated",
+  "src/routes/sign-in.tsx": "ced98d43 generated",
   "src/routes/welcome/index.tsx": "d181401c generated",
   "src/styles.css": "767f1777 kit",
   "src/theme.css": "f4cc6d16 generated",
@@ -12807,6 +12858,13 @@ const socialProviders = {
 /** The providers whose keys are set. */
 export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
 
+/**
+ * A demo (DEMO_SIGN_IN=1 in the environment): the sign-in page offers every role without a
+ * provider, as development does, and the data is reset by whoever runs the demo. Never set it
+ * on a real app.
+ */
+export const demoSignIn = process.env.DEMO_SIGN_IN === "1";
+
 const NO_TOKENS = {
   accessToken: null,
   refreshToken: null,
@@ -12826,7 +12884,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
   // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV },
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -12916,6 +12974,7 @@ function pageOf(path: string): string | undefined {
 const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
+  demo: process.env.DEMO_SIGN_IN === "1",
 }));
 
 export const Route = createRootRoute({
@@ -12943,7 +13002,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf } = Route.useRouteContext();
+  const { viewer, asOf, demo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const router = useRouter();
   const signOut = async () => {
@@ -12959,6 +13018,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {asOf && (
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
+          </p>
+        )}
+        {demo && (
+          <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
+            This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
         {landingRoutes.includes(pathname) ? (
@@ -13203,25 +13267,26 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
-import { auth, configuredProviders, PROVIDERS } from "#/lib/auth";
+import { auth, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)) };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn };
 });
 
-/** Development only: signs in as a user with the role, without a provider. */
+/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV) throw new Error("Only available in development.");
-    const email = \`dev-\${role}@example.com\`;
-    const password = "dev-password";
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
+    const email = \`\${prefix}-\${role}@example.com\`;
+    const password = \`\${prefix}-password\`;
     if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`Dev \${role}\` } });
+      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -13237,7 +13302,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing } = Route.useLoaderData();
+  const { providers, missing, demo } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -13245,7 +13310,8 @@ function SignInPage() {
       appName={app.name}
       providers={providers}
       missing={missing}
-      devRoles={import.meta.env.DEV ? [...ROLES] : undefined}
+      devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}
+      demo={demo}
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
         if (error) throw new Error(error.message);
@@ -13517,7 +13583,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ModelForm.tsx": "e32cc0a9 kit",
   "src/kit/ModelTable.tsx": "075c3489 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "0c0aa148 kit",
+  "src/kit/SignIn.tsx": "db074e7a kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -13528,18 +13594,18 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "de9c8331 kit",
-  "src/lib/auth.ts": "fd4a3af9 generated",
+  "src/lib/auth.ts": "1ee31371 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "79fa83c4 generated",
+  "src/routes/__root.tsx": "0b89282a generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "ea1815c4 generated",
   "src/routes/items/$id.tsx": "97e50061 generated",
   "src/routes/items/index.tsx": "df71a94d generated",
   "src/routes/items/new.tsx": "161171aa generated",
-  "src/routes/sign-in.tsx": "f37ca802 generated",
+  "src/routes/sign-in.tsx": "6ea03521 generated",
   "src/styles.css": "767f1777 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "9cf8f87c generated",
