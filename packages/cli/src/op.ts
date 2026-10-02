@@ -6,6 +6,7 @@ import {
   type Effect,
   findOperation,
   formatDiagnostic,
+  kebab,
   type OperationArgs,
   operationsFor,
   parseOperationArgs,
@@ -194,6 +195,7 @@ export async function runOperation(
     io.out(
       `${result.description}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
     );
+    if (operation.name === "addAction") io.out(actionNote(String(args.action)));
     return 0;
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);
@@ -201,6 +203,14 @@ export async function runOperation(
       `The change stopped halfway (${why}), so it was rolled back${snapshot ? ` to the database snapshot ${id}` : ""}.`,
     );
   }
+}
+
+/** A new custom action does nothing until its code is written: where, and what it can look like. */
+export function actionNote(action: string): string {
+  return `This action needs its code: src/custom/actions/${kebab(action)}.ts (until then it says it is not implemented). For example, to send a mail:
+  import { sendMail } from "#/kit/mail";
+  await sendMail({ to: "orders@example.com", subject: "New order", text: JSON.stringify(input) });
+`;
 }
 
 /** "Add field phone (phone) to Customer" → "add_field_phone_phone_to_customer". */
