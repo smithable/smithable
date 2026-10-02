@@ -70,13 +70,18 @@ for attempt in 1 2 3 4 5 6 7 8; do
       sleep 5
     done
   fi
-  # The workflow registers a new head's checks a minute or two after the push, longer when the
-  # runners are busy with other sessions' runs; none after fifteen minutes is not green.
-  for _ in $(seq 90); do
+  # A head's checks are listed only once a runner takes its job, which can take a long while when
+  # other sessions' runs fill the runners; a workflow run for the head means they are coming.
+  # No run for the head after fifteen minutes is not green; a queued one is waited for, an hour.
+  for i in $(seq 360); do
     gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . && break
+    if [ "$i" -ge 90 ] && [ -z "$(gh run list "${repo[@]}" --commit "$(head_sha)" --json databaseId -q '.[].databaseId' 2>/dev/null)" ]; then
+      refuse "no checks have run."
+    fi
+    [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its checks to start (runners busy?)"
     sleep 10
   done
-  gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . || refuse "no checks have run."
+  gh pr checks "$pr" "${repo[@]}" 2>/dev/null | grep -q . || refuse "its checks did not start within an hour."
   # GitHub merges by itself the moment the checks pass (at once when they already have).
   gh pr merge "$pr" "${repo[@]}" --auto --merge --delete-branch >/dev/null
   if ! gh pr checks "$pr" "${repo[@]}" --watch --fail-fast >/dev/null; then
