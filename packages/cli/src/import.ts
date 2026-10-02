@@ -154,16 +154,29 @@ export function insertImport(
   }
 }
 
-/** Whom imported records belong to: the first admin who has signed in, else no one. */
-export function importOwner(dir: string, auth: AuthIR): string | null {
-  if (!existsSync(databasePath(dir)) || !auth.admins.length) return null;
+/**
+ * Whom imported records belong to: the user given (by id or email: hosted, the service names who
+ * is importing), else the first admin who has signed in, else no one.
+ */
+export function importOwner(
+  dir: string,
+  auth: AuthIR,
+  wanted = process.env.SMITHABLE_IMPORT_OWNER,
+): { id: string; email: string } | null {
+  if (!existsSync(databasePath(dir))) return null;
   const db = new DatabaseSync(databasePath(dir), { readOnly: true });
+  const find = (sql: string, value: string) =>
+    db.prepare(sql).get(value) as { id: string; email: string } | undefined;
   try {
+    if (wanted)
+      return (
+        find(`SELECT id, email FROM "user" WHERE id = ?`, wanted) ??
+        find(`SELECT id, email FROM "user" WHERE lower(email) = lower(?)`, wanted) ??
+        null
+      );
     for (const email of auth.admins) {
-      const row = db.prepare(`SELECT id FROM "user" WHERE lower(email) = lower(?)`).get(email) as
-        | { id: string }
-        | undefined;
-      if (row) return row.id;
+      const row = find(`SELECT id, email FROM "user" WHERE lower(email) = lower(?)`, email);
+      if (row) return row;
     }
     return null;
   } catch {
