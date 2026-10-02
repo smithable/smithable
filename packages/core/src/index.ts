@@ -11,7 +11,7 @@ export {
 export { namesFor } from "./arguments.js";
 export type { AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
 export { AUTH_VERSION, PROVIDERS, validateAuth } from "./auth.js";
-export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./colour.js";
+export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
 export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
 export type {

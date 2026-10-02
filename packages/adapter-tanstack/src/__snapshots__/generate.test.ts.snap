@@ -72,11 +72,11 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-section\` | a landing section | its name, e.g. \`hero\` |
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
-For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colors are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
-## Licences
+## Licenses
 
-The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD license, which asks nothing of you, and the generated code carries no license of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licenses in \`node_modules/\`.
 
 
 ## Project structure
@@ -5830,9 +5830,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "e44ac00d kit",
-  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "91209877 generated",
+  "README.md": "b45d3b78 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "d5004d3e generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -5873,17 +5873,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.server.ts": "652c8d07 generated",
   "src/generated/session.ts": "789d2343 generated",
   "src/generated/site.ts": "9b0ce48a generated",
-  "src/kit/AppShell.tsx": "5969e952 kit",
+  "src/kit/AppShell.tsx": "ddc3a345 kit",
   "src/kit/Articles.tsx": "4d0a8e9d kit",
   "src/kit/Calculator.tsx": "d9039e3d kit",
   "src/kit/Calendar.tsx": "eb7327fb kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "034369a0 kit",
+  "src/kit/Landing.tsx": "5db15a72 kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "e32cc0a9 kit",
-  "src/kit/ModelTable.tsx": "075c3489 kit",
+  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -5893,7 +5893,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "9b4453c0 kit",
+  "src/kit/model.ts": "ba62bfa9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/uploads.ts": "9b671202 kit",
@@ -5951,7 +5951,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/index.tsx": "66e83ebc generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
   "src/routes/sign-in.tsx": "6ea03521 generated",
-  "src/styles.css": "767f1777 kit",
+  "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "7d81e484 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -6028,11 +6028,11 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-section\` | a landing section | its name, e.g. \`hero\` |
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
-For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colors are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
-## Licences
+## Licenses
 
-The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD license, which asks nothing of you, and the generated code carries no license of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licenses in \`node_modules/\`.
 
 
 ## Project structure
@@ -6232,7 +6232,7 @@ export const orders = sqliteTable("orders", {
   id: integer().primaryKey({ autoIncrement: true }),
   number: text().notNull().unique(),
   customerId: integer().notNull().references(() => customers.id, { onDelete: "restrict" }),
-  status: text({ enum: ["draft", "placed", "shipped", "cancelled"] }).notNull().default("draft"),
+  status: text({ enum: ["draft", "placed", "shipped", "canceled"] }).notNull().default("draft"),
   total: integer().notNull(),
   shippingMethod: text({ enum: ["standard", "express"] }).notNull().default("standard"),
   shippingCost: integer(),
@@ -6283,11 +6283,11 @@ if (db.select().from(orders).limit(1).all().length === 0) {
     { number: "ORD-1001", customerId: 1, status: "draft", total: 12000, shippingMethod: "standard", placedAt: new Date("2026-09-01T08:00:00.000Z") },
     { number: "ORD-1002", customerId: 2, status: "placed", total: 48000, shippingMethod: "express", placedAt: new Date("2026-09-02T10:00:00.000Z") },
     { number: "ORD-1003", customerId: 3, status: "shipped", total: 125000, shippingMethod: "standard", placedAt: new Date("2026-09-03T12:00:00.000Z") },
-    { number: "ORD-1004", customerId: 4, status: "cancelled", total: 230000, shippingMethod: "express", placedAt: new Date("2026-09-04T08:00:00.000Z") },
+    { number: "ORD-1004", customerId: 4, status: "canceled", total: 230000, shippingMethod: "express", placedAt: new Date("2026-09-04T08:00:00.000Z") },
     { number: "ORD-1005", customerId: 5, status: "draft", total: 7500, shippingMethod: "standard", placedAt: new Date("2026-09-05T10:00:00.000Z") },
     { number: "ORD-1006", customerId: 6, status: "placed", total: 96000, shippingMethod: "express", placedAt: new Date("2026-09-06T12:00:00.000Z") },
     { number: "ORD-1007", customerId: 7, status: "shipped", total: 340000, shippingMethod: "standard", placedAt: new Date("2026-09-07T08:00:00.000Z") },
-    { number: "ORD-1008", customerId: 8, status: "cancelled", total: 64000, shippingMethod: "express", placedAt: new Date("2026-09-08T10:00:00.000Z") },
+    { number: "ORD-1008", customerId: 8, status: "canceled", total: 64000, shippingMethod: "express", placedAt: new Date("2026-09-08T10:00:00.000Z") },
     ])
     .run();
 }
@@ -7178,7 +7178,7 @@ export const orderUi: RecordUi<OrderRow> = {
         { value: "draft", label: "Draft" },
         { value: "placed", label: "Placed" },
         { value: "shipped", label: "Shipped" },
-        { value: "cancelled", label: "Cancelled" },
+        { value: "canceled", label: "Canceled" },
       ],
       default: "draft",
       get: (row) => row.status,
@@ -8644,9 +8644,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "e44ac00d kit",
-  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "d1de41c1 generated",
+  "README.md": "901e417e generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "7bc75a08 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -8663,8 +8663,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
-  "src/db/schema.ts": "e76e2c31 generated",
-  "src/db/seed.ts": "9c9f2dc2 generated",
+  "src/db/schema.ts": "02a74c4d generated",
+  "src/db/seed.ts": "39cef010 generated",
   "src/generated/access.test.ts": "e0e88ab4 generated",
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
@@ -8675,25 +8675,25 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.server.ts": "91fe1f62 generated",
-  "src/generated/order.ts": "be9aecf7 generated",
+  "src/generated/order.ts": "5ede6c8d generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "de07ed11 generated",
   "src/generated/users.test.ts": "b04d6067 generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/AppShell.tsx": "5969e952 kit",
+  "src/kit/AppShell.tsx": "ddc3a345 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/ModelForm.tsx": "e32cc0a9 kit",
-  "src/kit/ModelTable.tsx": "075c3489 kit",
+  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
-  "src/kit/Users.tsx": "9f5a0cf9 kit",
+  "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "abceb487 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "9b4453c0 kit",
+  "src/kit/model.ts": "ba62bfa9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -8715,7 +8715,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "d433e790 generated",
   "src/routes/sign-in.tsx": "e5e71550 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
-  "src/styles.css": "767f1777 kit",
+  "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "6101e15a generated",
   "tsconfig.json": "802b1b64 kit",
@@ -8786,11 +8786,11 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-section\` | a landing section | its name, e.g. \`hero\` |
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
-For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colors are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
-## Licences
+## Licenses
 
-The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD license, which asks nothing of you, and the generated code carries no license of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licenses in \`node_modules/\`.
 
 
 ## Project structure
@@ -11963,9 +11963,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "e44ac00d kit",
-  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "d685038a generated",
+  "README.md": "3b839b97 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "351967e5 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -12000,13 +12000,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.ts": "212924a8 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
-  "src/kit/AppShell.tsx": "5969e952 kit",
+  "src/kit/AppShell.tsx": "ddc3a345 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
-  "src/kit/Dashboard.tsx": "c5b62089 kit",
+  "src/kit/Dashboard.tsx": "9da58466 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "034369a0 kit",
-  "src/kit/ModelForm.tsx": "e32cc0a9 kit",
-  "src/kit/ModelTable.tsx": "075c3489 kit",
+  "src/kit/Landing.tsx": "5db15a72 kit",
+  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
@@ -12016,7 +12016,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "9b4453c0 kit",
+  "src/kit/model.ts": "ba62bfa9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -12042,7 +12042,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/settings/index.tsx": "ccb1cb37 generated",
   "src/routes/sign-in.tsx": "ced98d43 generated",
   "src/routes/welcome/index.tsx": "d181401c generated",
-  "src/styles.css": "767f1777 kit",
+  "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "52c9ba9c generated",
   "tsconfig.json": "802b1b64 kit",
@@ -12055,7 +12055,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
 exports[`../../../examples/marketplace/smithable.yml > file list and generated code > README.md 1`] = `
 "# Torget
 
-Buy and sell second-hand things in your neighbourhood.
+Buy and sell second-hand things in your neighborhood.
 
 A [TanStack Start](https://tanstack.com/start) app with [Drizzle](https://orm.drizzle.team) and SQLite, generated by Smithable from \`smithable.yml\`.
 
@@ -12113,11 +12113,11 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-section\` | a landing section | its name, e.g. \`hero\` |
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
-For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colors are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
-## Licences
+## Licenses
 
-The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD license, which asks nothing of you, and the generated code carries no license of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licenses in \`node_modules/\`.
 
 
 ## Project structure
@@ -12305,9 +12305,9 @@ export const items = sqliteTable("items", {
     .$onUpdate(() => new Date()),
 });
 
-// The records people marked as favourites: each person's own, never shown to others.
-export const itemsFavourites = sqliteTable(
-  "items_favourites",
+// The records people marked as favorites: each person's own, never shown to others.
+export const itemsFavorites = sqliteTable(
+  "items_favorites",
   {
     id: integer().primaryKey({ autoIncrement: true }),
     userId: text()
@@ -12596,7 +12596,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
-import { items, itemsFavourites } from "#/db/schema";
+import { items, itemsFavorites } from "#/db/schema";
 import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 import { deletePicture } from "#/kit/uploads";
 import { afterChange, afterDelete } from "./hooks";
@@ -12631,9 +12631,9 @@ export const itemData = {
   saved(viewer: Viewer | null): number[] {
     if (!viewer) return [];
     return db
-      .select({ id: itemsFavourites.recordId })
-      .from(itemsFavourites)
-      .where(eq(itemsFavourites.userId, viewer.id))
+      .select({ id: itemsFavorites.recordId })
+      .from(itemsFavorites)
+      .where(eq(itemsFavorites.userId, viewer.id))
       .all()
       .map((r) => r.id);
   },
@@ -12641,9 +12641,9 @@ export const itemData = {
   /** Saves a item the viewer may read, or unsaves it; whether it is saved now. */
   toggleSaved(viewer: Viewer | null, id: number): boolean {
     if (!viewer || !itemData.canRead(viewer, id)) throw new AccessDenied(viewer !== null);
-    const mark = and(eq(itemsFavourites.userId, viewer.id), eq(itemsFavourites.recordId, id));
-    if (db.delete(itemsFavourites).where(mark).run().changes) return false;
-    db.insert(itemsFavourites).values({ userId: viewer.id, recordId: id }).onConflictDoNothing().run();
+    const mark = and(eq(itemsFavorites.userId, viewer.id), eq(itemsFavorites.recordId, id));
+    if (db.delete(itemsFavorites).where(mark).run().changes) return false;
+    db.insert(itemsFavorites).values({ userId: viewer.id, recordId: id }).onConflictDoNothing().run();
     return true;
   },
 
@@ -12878,7 +12878,7 @@ import type { Rule } from "#/kit/access";
 /** Who may open each page. */
 export const pageAccess = {
   home: { public: true, roles: ["admin", "member"], owner: false },
-  catalogue: { public: true, roles: ["admin", "member"], owner: false },
+  catalog: { public: true, roles: ["admin", "member"], owner: false },
   myItems: { public: false, roles: ["admin", "member"], owner: false },
   saved: { public: false, roles: ["admin", "member"], owner: false },
 } satisfies Record<string, Rule>;
@@ -12911,7 +12911,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import type { LandingSite } from "#/kit/Landing";
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
-export const site: LandingSite = { home: "/welcome", menu: [{ to: "/", label: "Catalogue" }] };
+export const site: LandingSite = { home: "/welcome", menu: [{ to: "/", label: "Catalog" }] };
 "
 `;
 
@@ -13052,7 +13052,7 @@ const contactItem = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/$id")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["catalogue"], context.viewer, location.href),
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["catalog"], context.viewer, location.href),
   loader: async ({ params }) => {
     const found = await getItem({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -13136,9 +13136,9 @@ const menus: MenuUi[] = [
     items: [
       {
         to: "/",
-        label: "Catalogue",
+        label: "Catalog",
         icon: Package,
-        access: pageAccess["catalogue"],
+        access: pageAccess["catalog"],
       },
       {
         to: "/my-items",
@@ -13165,7 +13165,7 @@ const pageRoutes: [string, string][] = [
   ["/my-items", "myItems"],
   ["/welcome", "home"],
   ["/saved", "saved"],
-  ["/", "catalogue"],
+  ["/", "catalog"],
 ];
 
 /** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
@@ -13237,7 +13237,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
-          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["catalogue"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
+          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["catalog"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
           </AppShell>
         )}
@@ -13296,17 +13296,17 @@ const searchItems = createServerFn()
   });
 
 export const Route = createFileRoute("/")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["catalogue"], context.viewer, location.href),
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["catalog"], context.viewer, location.href),
   validateSearch: z.object({ q: z.string().optional().catch(undefined), sort: z.string().optional().catch(undefined), category: z.string().optional().catch(undefined), price: z.string().optional().catch(undefined), condition: z.string().optional().catch(undefined), available: z.string().optional().catch(undefined), view: z.literal("saved").optional().catch(undefined) }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps: { q, sort, view, ...f } }) => searchItems({ data: { q, sort, view, f } }),
   // While a search or filter loads, the page stays (and its controls keep their focus).
   pendingMs: Number.POSITIVE_INFINITY,
   gcTime: 0,
-  component: CataloguePage,
+  component: CatalogPage,
 });
 
-function CataloguePage() {
+function CatalogPage() {
   const { rows, canCreate, saved } = Route.useLoaderData();
   const { q, sort, view, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
@@ -13329,8 +13329,8 @@ function CataloguePage() {
   return (
     <>
       <PageHeader
-        page="catalogue"
-        title="Catalogue"
+        page="catalog"
+        title="Catalog"
         actions={newButton}
       />
       <SearchBox
@@ -13384,7 +13384,7 @@ function CataloguePage() {
       />
       <ModelTable
         ui={itemUi}
-        page="catalogue"
+        page="catalog"
         app={app}
         rows={rows}
         icon={Package}
@@ -13580,7 +13580,7 @@ import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 
 export const Route = createFileRoute("/new")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["catalogue"], context.viewer, location.href),
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["catalog"], context.viewer, location.href),
   component: NewItemPage,
 });
 
@@ -13901,7 +13901,7 @@ function HomePage() {
       <Hero
           texts="pages.home.hero"
           title="Torget"
-          subtitle="Buy and sell second-hand things in your neighbourhood."
+          subtitle="Buy and sell second-hand things in your neighborhood."
           link={{ to: "/", label: "Get started" }}
           more
         />
@@ -14059,7 +14059,7 @@ async function visit(page: Page, route: string) {
 test("Home opens for a visitor", async ({ page }) => {
   await visit(page, "/welcome");
 });
-test("Catalogue opens for a visitor", async ({ page }) => {
+test("Catalog opens for a visitor", async ({ page }) => {
   await visit(page, "/");
 });
 test("My items needs sign-in", async ({ page }) => {
@@ -14204,9 +14204,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "e44ac00d kit",
-  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "bed2b306 generated",
+  "README.md": "578cabac generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "33a09c60 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -14222,25 +14222,25 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
-  "src/db/schema.ts": "6d40466d generated",
+  "src/db/schema.ts": "e1bd70c6 generated",
   "src/db/seed.ts": "088a3106 generated",
   "src/generated/access.test.ts": "337e6691 generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1bccea19 generated",
-  "src/generated/item.server.ts": "b6914d1f generated",
+  "src/generated/item.server.ts": "077e65c1 generated",
   "src/generated/item.ts": "3a5aae22 generated",
-  "src/generated/pages.ts": "f16fdc3c generated",
+  "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
-  "src/generated/site.ts": "488433a3 generated",
-  "src/kit/AppShell.tsx": "5969e952 kit",
+  "src/generated/site.ts": "b9832c55 generated",
+  "src/kit/AppShell.tsx": "ddc3a345 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/ContactOwner.tsx": "e30d77bd kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Filters.tsx": "e765045c kit",
-  "src/kit/Landing.tsx": "034369a0 kit",
-  "src/kit/ModelForm.tsx": "e32cc0a9 kit",
-  "src/kit/ModelTable.tsx": "075c3489 kit",
+  "src/kit/Landing.tsx": "5db15a72 kit",
+  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
@@ -14250,7 +14250,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "9b4453c0 kit",
+  "src/kit/model.ts": "ba62bfa9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/uploads.ts": "9b671202 kit",
@@ -14260,26 +14260,26 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/$id.tsx": "4b4afb83 generated",
-  "src/routes/__root.tsx": "0d15d6a0 generated",
+  "src/routes/$id.tsx": "f4ffe7cd generated",
+  "src/routes/__root.tsx": "43178e44 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "73695368 generated",
+  "src/routes/index.tsx": "006b36b4 generated",
   "src/routes/my-items/$id.tsx": "3862106e generated",
   "src/routes/my-items/index.tsx": "9a4a6f20 generated",
   "src/routes/my-items/new.tsx": "d4a511a0 generated",
-  "src/routes/new.tsx": "70e6e4a6 generated",
+  "src/routes/new.tsx": "b9d18340 generated",
   "src/routes/saved/$id.tsx": "e354b0ab generated",
   "src/routes/saved/index.tsx": "2b8999a4 generated",
   "src/routes/saved/new.tsx": "09d0880f generated",
   "src/routes/sign-in.tsx": "6ea03521 generated",
-  "src/routes/welcome/index.tsx": "dfb0310f generated",
-  "src/styles.css": "767f1777 kit",
+  "src/routes/welcome/index.tsx": "47192f34 generated",
+  "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "05976380 generated",
+  "tests/smoke.spec.ts": "fe8c020e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "c4a6bc96 kit",
@@ -14348,11 +14348,11 @@ Your own CSS goes in \`src/custom/styles.css\`, which is never overwritten and w
 | \`data-section\` | a landing section | its name, e.g. \`hero\` |
 | \`data-tone\` | a badge | \`neutral\`, \`success\`, \`warning\`, \`danger\` |
 
-For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colours are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
+For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: flex-start; }\`. The theme's colors are CSS variables (\`var(--primary)\`, see \`src/theme.css\`), and Tailwind's \`@apply\` works in the file too.
 
-## Licences
+## Licenses
 
-The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD licence, which asks nothing of you, and the generated code carries no licence of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licences in \`node_modules/\`.
+The app's code is yours: the app kit (\`src/kit/\`) comes under the Zero-Clause BSD license, which asks nothing of you, and the generated code carries no license of its own. The components in \`src/components/ui/\` are shadcn/ui's (MIT); their notice is in \`LICENSES/shadcn-ui.txt\` and travels with the container image. Libraries from npm keep their own licenses in \`node_modules/\`.
 
 
 ## Project structure
@@ -14525,7 +14525,7 @@ export const items = sqliteTable("items", {
   id: integer().primaryKey({ autoIncrement: true }),
   name: text().notNull(),
   summary: text(),
-  kind: text({ enum: ["general", "favourite", "archived"] }).notNull().default("general"),
+  kind: text({ enum: ["general", "favorite", "archived"] }).notNull().default("general"),
   link: text(),
   addedOn: text().notNull(),
   ownerId: text().references(() => user.id, { onDelete: "set null" }),
@@ -14548,13 +14548,13 @@ if (db.select().from(items).limit(1).all().length === 0) {
   db.insert(items)
     .values([
     { name: "Item 1", summary: "A short description of Item 1.", kind: "general", link: "https://example.com/item/1", addedOn: "2026-04-15" },
-    { name: "Item 2", summary: "A short description of Item 2.", kind: "favourite", link: "https://example.com/item/2", addedOn: "2026-05-08" },
+    { name: "Item 2", summary: "A short description of Item 2.", kind: "favorite", link: "https://example.com/item/2", addedOn: "2026-05-08" },
     { name: "Item 3", summary: "A short description of Item 3.", kind: "archived", link: "https://example.com/item/3", addedOn: "2026-05-31" },
     { name: "Item 4", summary: "A short description of Item 4.", kind: "general", link: "https://example.com/item/4", addedOn: "2026-06-23" },
-    { name: "Item 5", summary: "A short description of Item 5.", kind: "favourite", link: "https://example.com/item/5", addedOn: "2026-07-16" },
+    { name: "Item 5", summary: "A short description of Item 5.", kind: "favorite", link: "https://example.com/item/5", addedOn: "2026-07-16" },
     { name: "Item 6", summary: "A short description of Item 6.", kind: "archived", link: "https://example.com/item/6", addedOn: "2026-08-08" },
     { name: "Item 7", summary: "A short description of Item 7.", kind: "general", link: "https://example.com/item/7", addedOn: "2026-08-31" },
-    { name: "Item 8", summary: "A short description of Item 8.", kind: "favourite", link: "https://example.com/item/8", addedOn: "2026-09-23" },
+    { name: "Item 8", summary: "A short description of Item 8.", kind: "favorite", link: "https://example.com/item/8", addedOn: "2026-09-23" },
     ])
     .run();
 }
@@ -14984,7 +14984,7 @@ export const itemUi: RecordUi<ItemRow> = {
       required: true,
       choices: [
         { value: "general", label: "General" },
-        { value: "favourite", label: "Favourite" },
+        { value: "favorite", label: "Favorite" },
         { value: "archived", label: "Archived" },
       ],
       default: "general",
@@ -15315,7 +15315,7 @@ function HomePage() {
             title: String(row.name),
             href: \`/items/\${row.id}\`,
             text: row.summary ?? undefined,
-            badge: ({ general: "General", favourite: "Favourite", archived: "Archived" } as Record<string, string>)[row.kind],
+            badge: ({ general: "General", favorite: "Favorite", archived: "Archived" } as Record<string, string>)[row.kind],
           }))}
         />
     </LandingLayout>
@@ -15783,9 +15783,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
   "Dockerfile": "e44ac00d kit",
-  "LICENSES/README.md": "4212bfb4 kit",
+  "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "bb9a4095 generated",
+  "README.md": "bf00ccf2 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c42c8ab6 generated",
   "playwright.config.ts": "4cec8537 kit",
@@ -15801,23 +15801,23 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
-  "src/db/schema.ts": "b4f3f794 generated",
-  "src/db/seed.ts": "7387f4ce generated",
+  "src/db/schema.ts": "787ffbc7 generated",
+  "src/db/seed.ts": "fee52e69 generated",
   "src/generated/access.test.ts": "ea88ffb1 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1bccea19 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.server.ts": "e4bf319c generated",
-  "src/generated/item.ts": "f03bab09 generated",
+  "src/generated/item.ts": "a2dec615 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
-  "src/kit/AppShell.tsx": "5969e952 kit",
+  "src/kit/AppShell.tsx": "ddc3a345 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "034369a0 kit",
-  "src/kit/ModelForm.tsx": "e32cc0a9 kit",
-  "src/kit/ModelTable.tsx": "075c3489 kit",
+  "src/kit/Landing.tsx": "5db15a72 kit",
+  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
   "src/kit/access.ts": "abceb487 kit",
@@ -15825,7 +15825,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "9b4453c0 kit",
+  "src/kit/model.ts": "ba62bfa9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -15837,12 +15837,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "0b89282a generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "6755f806 generated",
+  "src/routes/index.tsx": "9b03a82e generated",
   "src/routes/items/$id.tsx": "97e50061 generated",
   "src/routes/items/index.tsx": "df71a94d generated",
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/sign-in.tsx": "6ea03521 generated",
-  "src/styles.css": "767f1777 kit",
+  "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "9cf8f87c generated",
   "tsconfig.json": "802b1b64 kit",

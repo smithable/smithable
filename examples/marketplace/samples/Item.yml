@@ -13,7 +13,7 @@
   condition: good
   place: Jomala
 - title: Wool armchair
-  description: Grey wool, birch legs. Very comfortable for reading.
+  description: Gray wool, birch legs. Very comfortable for reading.
   price: 120
   category: furniture
   condition: likeNew
@@ -37,7 +37,7 @@
   condition: worn
   place: Finström
 - title: Road bike, 56 cm frame
-  description: Aluminium frame, 18 gears, new tyres.
+  description: Aluminum frame, 18 gears, new tires.
   price: 350
   category: bikes
   condition: good
@@ -49,7 +49,7 @@
   condition: good
   place: Mariehamn
 - title: Over-ear headphones
-  description: Wireless, with noise cancelling. In the original box.
+  description: Wireless, with noise canceling. In the original box.
   price: 85
   category: electronics
   condition: likeNew

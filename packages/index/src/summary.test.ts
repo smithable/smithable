@@ -47,7 +47,7 @@ test("the CRM in plain language, with labels from the content file", () => {
   ]);
 });
 
-test("a plugin's section is summarised in its own words", () => {
+test("a plugin's section is summarized in its own words", () => {
   const text = `smithable: 0.1
 app: { name: Studio }
 models:
@@ -87,7 +87,7 @@ models:
   Booking:
     fields:
       session: Session! unique
-      status: confirmed | cancelled
+      status: confirmed | canceled
     capacity: { per: session, max: session.capacity, where: { status: confirmed } }
   Seat:
     fields:

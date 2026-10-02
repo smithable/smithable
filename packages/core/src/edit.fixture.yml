@@ -44,7 +44,7 @@ models:
     fields:
       session: Session!
       user: User!
-      status: confirmed | cancelled
+      status: confirmed | canceled
     unique: [session, user]           # a user books a session only once
     ownedBy: user
     access:
@@ -65,9 +65,9 @@ actions:
   cancelBooking:
     on: Booking
     when: { status: confirmed }
-    set: { status: cancelled }
+    set: { status: canceled }
     allow: [owner, admin]
-    confirm: true                     # ask before cancelling; wording in smithable.content.yml
+    confirm: true                     # ask before canceling; wording in smithable.content.yml
     rules:
       - Owners can cancel until 2 hours before the session starts; admins at any time.
 
