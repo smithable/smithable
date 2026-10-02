@@ -1,0 +1,20 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+
+signIn:
+  providers: [google]              # anyone with a Google account may sign up and sell
+
+defaultAccess: private             # people change only their own items
+
+roles:
+  admin: { description: Keeps the marketplace tidy. }
+  member: { description: Sells and saves items. }
+
+defaultRole: member
+admins: [owner@torget.ax]
+
+# ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
+# signing in. Never add models that contain personal or business data.
+public:
+  pages: [home, catalogue]         # the catalogue is the front door
+  read: [Item]                     # items, never who sells them: the owner is not shown
