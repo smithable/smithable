@@ -433,9 +433,16 @@ async function picturesFlow(dir, base) {
       throw new Error(`a post without pictures served one (${none.status()})`);
     await open(page, `${base}/posts/1`);
     const before = new Set(readdirSync(uploads));
-    const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "Choose pictures" }).click();
-    await (await chooser).setFiles([
+    // A click before the page's scripts are ready opens nothing: try again, a few times.
+    let chooser;
+    for (let attempt = 1; !chooser; attempt++) {
+      const opened = page.waitForEvent("filechooser", { timeout: 5000 });
+      await page.getByRole("button", { name: "Choose pictures" }).click();
+      chooser = await opened.catch((error) => {
+        if (attempt === 5) throw error;
+      });
+    }
+    await chooser.setFiles([
       join(dir, "public", "images", "hero.webp"),
       join(dir, "public", "images", "gallery", "coast.webp"),
     ]);
