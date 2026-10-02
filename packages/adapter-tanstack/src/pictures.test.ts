@@ -272,3 +272,23 @@ pages:
   expect(landing).toContain("href: `/${row.id}`,");
   expect(landing).toContain(".slice(0, 8)");
 });
+
+test("mine: a page of only the viewer's own records, the owner condition always on, no Mine toggle", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Torget }
+models:
+  Item:
+    fields: { title: string! }
+pages:
+  myItems: { crud: Item, mine: true, filters: [owner] }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(spec, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const list = gen.find((f) => f.path === "src/routes/my-items/index.tsx")?.content ?? "";
+  expect(list).toContain('eq(items.ownerId, viewer?.id ?? "")');
+  expect(list).not.toContain('kind: "mine"');
+  expect(list).not.toContain("<Filters");
+  expect(list).toContain("New item");
+});
