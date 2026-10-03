@@ -128,6 +128,14 @@ try {
     await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
     if (await alert.count()) throw new Error("the notice came back");
   });
+  await step("the preview says its records are samples, until dismissed", async () => {
+    const note = page.getByRole("note").filter({ hasText: "Your published app starts empty" });
+    await note.waitFor();
+    await note.getByRole("button", { name: "Dismiss" }).click();
+    await page.reload();
+    await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
+    if (await note.count()) throw new Error("the samples notice came back");
+  });
   await step("the preview runs the app, with the development sign-in", async () => {
     for (let attempt = 1; ; attempt++) {
       await page.waitForTimeout(2000);
