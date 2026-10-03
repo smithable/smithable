@@ -1,7 +1,78 @@
 smithableContent: 0.1
+models:
+  Team:
+    label: Equipo
+    pluralLabel: Equipos
+    fields:
+      name:
+        label: Nombre
+      description:
+        label: Descripción
+      sport:
+        label: Deporte
+        values:
+          football: Fútbol
+          futsal: Futsal
+          beachSoccer: Fútbol playa
+      founded:
+        label: Fundado
+  Player:
+    label: Jugador
+    pluralLabel: Jugadores
+    fields:
+      name:
+        label: Nombre
+      position:
+        label: Posición
+        values:
+          goalkeeper: Portero
+          defender: Defensa
+          midfielder: Centrocampista
+          forward: Delantero
+      team:
+        label: Equipo
+      number:
+        label: Número
+      birthDate:
+        label: Fecha de nacimiento
+  Match:
+    label: Partido
+    pluralLabel: Partidos
+    fields:
+      homeTeam:
+        label: Equipo local
+      awayTeam:
+        label: Equipo visitante
+      date:
+        label: Fecha y hora
+      location:
+        label: Ubicación
+      status:
+        label: Estado
+        values:
+          scheduled: Programado
+          played: Jugado
+          cancelled: Cancelado
+  Result:
+    label: Resultado
+    pluralLabel: Resultados
+    fields:
+      match:
+        label: Partido
+      homeScore:
+        label: Goles local
+      awayScore:
+        label: Goles visitante
+      scorers:
+        label: Goleadores
 pages:
+  teams:
+    title: Equipos
+  players:
+    title: Jugadores
+  matches:
+    title: Partidos
+  results:
+    title: Resultados
   home:
     hero:
-      image:
-        src: images/hero.webp
-        alt: A team standing at a whiteboard by a window over the harbour

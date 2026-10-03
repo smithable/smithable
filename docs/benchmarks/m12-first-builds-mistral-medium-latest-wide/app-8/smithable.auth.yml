@@ -1,4 +1,13 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-defaultAccess: shared
+defaultAccess: private
+roles:
+  admin:
+    description: Keeps the swap shelf tidy.
+  member:
+    description: Offers and claims items.
+defaultRole: member
+public:
+  pages: [catalog]
+  read: [Item]

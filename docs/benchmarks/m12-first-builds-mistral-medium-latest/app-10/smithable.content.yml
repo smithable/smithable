@@ -1,1 +1,65 @@
 smithableContent: 0.1
+models:
+  Recipe:
+    label: Recept
+    pluralLabel: Recept
+    fields:
+      name:
+        label: Namn
+      description:
+        label: Beskrivning
+      servings:
+        label: Portioner
+      prepTime:
+        label: Förberedelsetid (min)
+      cookTime:
+        label: Tillagningstid (min)
+      instructions:
+        label: Instruktioner
+      category:
+        label: Kategori
+        values:
+          breakfast: Frukost
+          lunch: Lunch
+          dinner: Middag
+          dessert: Efterrätt
+          snack: Mellanmål
+          drink: Dryck
+      difficulty:
+        label: Svårighetsgrad
+        values:
+          easy: Lätt
+          medium: Medel
+          hard: Svår
+      image:
+        label: Bild
+  Ingredient:
+    label: Ingrediens
+    pluralLabel: Ingredienser
+    fields:
+      name:
+        label: Namn
+      quantity:
+        label: Mängd
+      unit:
+        label: Enhet
+  ShoppingList:
+    label: Inköpslista
+    pluralLabel: Inköpslistor
+    fields:
+      name:
+        label: Namn
+      items:
+        label: Artiklar
+      status:
+        label: Status
+        values:
+          pending: Pågående
+          completed: Avslutad
+      dueDate:
+        label: Förfallodatum
+pages:
+  recipes:
+    title: Recept
+  shopping-lists:
+    title: Inköpslistor

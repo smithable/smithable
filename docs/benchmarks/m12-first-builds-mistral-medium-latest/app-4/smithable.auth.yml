@@ -1,11 +1,11 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-defaultAccess: shared
-roles:
-  member:
-    description: Can borrow and lend tools.
-defaultRole: member
+defaultAccess: private
 public:
   pages: [home]
   read: [Tool]
+roles:
+  member:
+    description: Lends and borrows tools.
+defaultRole: member

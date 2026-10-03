@@ -1,5 +1,7 @@
 {
   "description": "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa.",
-  "starter": "records",
+  "starter": "booking",
+  "wordStarter": "records",
+  "questions": [],
   "lang": "fi"
 }

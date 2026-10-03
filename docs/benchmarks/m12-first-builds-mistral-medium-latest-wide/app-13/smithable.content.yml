@@ -1,1 +1,26 @@
 smithableContent: 0.1
+models:
+  Fuel:
+    label: Fuel Entry
+    pluralLabel: Fuel Entries
+  Service:
+    label: Service Visit
+    pluralLabel: Service Visits
+  Cost:
+    label: Cost
+    pluralLabel: Costs
+    fields:
+      category:
+        label: Category
+        values:
+          fuel: Fuel
+          service: Service
+          insurance: Insurance
+          other: Other
+pages:
+  fuel:
+    title: Fuel
+  service:
+    title: Service
+  costs:
+    title: Costs

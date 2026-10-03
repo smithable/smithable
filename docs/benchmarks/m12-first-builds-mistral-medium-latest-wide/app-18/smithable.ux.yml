@@ -1,15 +1,18 @@
 smithableUx: 0.1
+pages:
+  offerter:
+    table:
+      sort: -validUntil
+  fakturor:
+    table:
+      sort: -dueDate
+  kunder:
+    table:
+      sort: name
 tones:
-  Invoice.status:
-    paid: success
-    sent: warning
   Quote.status:
     accepted: success
     rejected: danger
-pages:
-  customers:
-    icon: users
-  invoices:
-    icon: receipt
-  quotes:
-    icon: file
+  Invoice.status:
+    paid: success
+    overdue: danger

@@ -21,6 +21,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
+import { closestStarter } from "../packages/ai/dist/index.js";
+import { STARTERS } from "../packages/cli/dist/starters.gen.js";
 import {
   fitSamples,
   titleField,
@@ -88,7 +90,7 @@ function inLanguage(text, lang, description) {
 /** The visible texts of a content file: labels of models and fields, and every landing page's texts. */
 function contentTexts(dir, ir) {
   const text = read(dir, "smithable.content.yml");
-  if (!text) return { labels: "", landing: "" };
+  if (!text) return { labels: "", landing: "", counts: "no content file" };
   const strings = (node) =>
     typeof node === "string"
       ? [node]
@@ -101,14 +103,20 @@ function contentTexts(dir, ir) {
     ...Object.values(m?.fields ?? {}).map((f) => f?.label ?? ""),
   ]);
   const landings = (ir?.pages ?? []).filter((p) => p.pattern?.kind === "landing").map((p) => p.id);
+  // How much of the app has a text of its own: models and fields with a label, pages with a title.
+  const models = ir?.models ?? [];
+  const fields = models.flatMap((m) => m.fields.map((f) => [m.name, f.name]));
+  const pages = ir?.pages ?? [];
+  const counts = `models ${models.filter((m) => doc.models?.[m.name]?.label).length}/${models.length}, fields ${fields.filter(([m, f]) => doc.models?.[m]?.fields?.[f]?.label).length}/${fields.length}, pages ${pages.filter((p) => doc.pages?.[p.id]?.title).length}/${pages.length}`;
   return {
     labels: labels.filter(Boolean).join(" "),
     landing: landings.flatMap((id) => strings(doc.pages?.[id])).join(" "),
+    counts,
   };
 }
 
 /** The deterministic facts about one kept draft, against the starter it began from. */
-function score(dir, description, starter, lang) {
+function score(dir, description, starter, lang, meta = {}) {
   const draft = check(dir);
   const example = join(repo, "examples", starter);
   const base = existsSync(example) ? check(example) : undefined;
@@ -168,6 +176,11 @@ function score(dir, description, starter, lang) {
     reused: list(reused),
     samples: `${withSamples} / ${draft.ir?.models.length ?? 0}`,
     landing: `${mentionsPublic ? "mentions visitors" : "no mention"}; ${landing ? "landing page" : "no landing page"}`,
+    // The word-match starter (what `new --yes` used to pick) and the first step's questions.
+    wordStarter: meta.wordStarter,
+    questions: meta.questions
+      ? `${meta.questions.length}${lang && meta.questions.length ? ` (${lang}: ${inLanguage(meta.questions.join(" "), lang, description)})` : ""}`
+      : "–",
     ...(lang &&
       (() => {
         const texts = contentTexts(dir, draft.ir);
@@ -176,6 +189,7 @@ function score(dir, description, starter, lang) {
           nameLang: inLanguage(draft.ir?.app.name, lang, description),
           labelsLang: inLanguage(texts.labels, lang, description),
           landingLang: inLanguage(texts.landing, lang, description),
+          labelled: texts.counts,
         };
       })()),
   };
@@ -183,18 +197,24 @@ function score(dir, description, starter, lang) {
 
 function scorecard(rows) {
   const languages = rows.some((r) => r.lang);
-  const head = languages ? " Language | App name in it | Labels in it | Landing texts in it |" : "";
+  const head = languages
+    ? " Language | App name in it | Labels in it | Landing texts in it | With a text of their own |"
+    : "";
   const extra = (r) =>
     languages
       ? r.lang
-        ? ` ${r.lang} | ${r.nameLang} | ${r.labelsLang} | ${r.landingLang} |`
-        : " en | | | |"
+        ? ` ${r.lang} | ${r.nameLang} | ${r.labelsLang} | ${r.landingLang} | ${r.labelled} |`
+        : " en | | | | |"
       : "";
-  return `| # | Starter | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |${head}
-|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|" : ""}
-${rows.map((r, i) => `| ${r.n ?? i + 1} | ${r.starter} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
+  const starter = (r) =>
+    r.wordStarter && r.wordStarter !== r.starter
+      ? `${r.starter} (words: ${r.wordStarter})`
+      : r.starter;
+  return `| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |${head}
+|---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
+${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
 
-"Kept" counts the starter's models, pages and actions that the draft still has by name. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them." : ""}`;
+"Kept" counts the starter's models, pages and actions that the draft still has by name. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
 }
 
 const SCORE_START = "<!-- scorecard -->";
@@ -220,7 +240,7 @@ if (args.score) {
       ? JSON.parse(readFileSync(join(dir, app, "meta.json"), "utf8"))
       : tableStarters[n - 1];
     if (!meta) throw new Error(`no starter known for ${app}: no meta.json and no report row`);
-    return { n, ...score(join(dir, app), meta.description, meta.starter, meta.lang) };
+    return { n, ...score(join(dir, app), meta.description, meta.starter, meta.lang, meta) };
   });
   const table = `${SCORE_START}\n## Scorecard (scripts/bench-m12.mjs --score)\n\n${scorecard(rows)}\n${SCORE_END}`;
   if (report) {
@@ -328,6 +348,18 @@ rmSync(kept, { recursive: true, force: true });
 const rows = [];
 for (const [i, { text: description, lang }] of set.entries()) {
   const dir = join(root, `app-${i + 1}`);
+  // What the first step would ask: `new --yes` asks nothing, so the questions come from clarify.
+  const wordStarter = closestStarter(description, STARTERS);
+  const clarified = spawnSync("node", [cli, "clarify", "--json", description], {
+    cwd: repo,
+    encoding: "utf8",
+  });
+  let questions = [];
+  try {
+    questions = JSON.parse(clarified.stdout.trim().split("\n").at(-1)).questions.map(
+      (q) => q.question,
+    );
+  } catch {}
   const started = Date.now();
   const run = spawnSync("node", [cli, "new", dir, "--describe", description, "--yes"], {
     cwd: repo,
@@ -358,11 +390,12 @@ for (const [i, { text: description, lang }] of set.entries()) {
       .trim(),
     error: run.status === 0 ? "" : out.slice(-600),
   };
+  row.meta = { wordStarter, questions };
   rows.push(row);
   if (existsSync(join(kept, `app-${i + 1}`)))
     writeFileSync(
       join(kept, `app-${i + 1}`, "meta.json"),
-      `${JSON.stringify({ description, starter: row.starter, ...(lang && { lang }) }, null, 2)}\n`,
+      `${JSON.stringify({ description, starter: row.starter, wordStarter, questions, ...(lang && { lang }) }, null, 2)}\n`,
     );
   console.log(
     `${i + 1}. ${row.created ? "created" : "failed"} (${row.starter}) · ${row.tokens} tokens · ${row.currency}${row.cost}`,
@@ -372,7 +405,7 @@ for (const [i, { text: description, lang }] of set.entries()) {
 const yes = (v) => (v ? "yes" : "**no**");
 const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${new Date().toISOString().slice(0, 10)})
 
-The app descriptions, each started with \`smithable new --describe\` (the closest starter, adapted by the model; errors go back up to twice). Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, ${rows[0]?.currency ?? "€"}${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
+The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, ${rows[0]?.currency ?? "€"}${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
 
 | Description | Starter | Created | Type-checks | Tokens | Cost | Time |
 |---|---|---|---|---|---|---|
@@ -383,7 +416,7 @@ Each created app's four spec files are in [${slug}/](${slug}/), one folder per d
 ${SCORE_START}
 ## Scorecard (scripts/bench-m12.mjs --score)
 
-${scorecard(rows.map((r, i) => (existsSync(join(kept, `app-${i + 1}`, "smithable.yml")) ? { n: i + 1, ...score(join(kept, `app-${i + 1}`), r.description, r.starter, set[i].lang) } : null)).filter(Boolean))}
+${scorecard(rows.map((r, i) => (existsSync(join(kept, `app-${i + 1}`, "smithable.yml")) ? { n: i + 1, ...score(join(kept, `app-${i + 1}`), r.description, r.starter, set[i].lang, r.meta) } : null)).filter(Boolean))}
 ${SCORE_END}
 
 ## Summaries, for review

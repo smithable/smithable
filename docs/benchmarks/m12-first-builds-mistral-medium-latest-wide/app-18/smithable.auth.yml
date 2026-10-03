@@ -1,12 +1,11 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
 roles:
   admin:
-    description: Administratör med full tillgång.
-  accountant:
-    description: Hanerar fakturor och offerter.
-  worker:
-    description: Arbetare som ser sina uppgifter.
-defaultRole: worker
+    description: Administratör. Full åtkomst.
+  sales:
+    description: Säljare. Hanterar kunder, offerter och fakturor.
+defaultRole: sales

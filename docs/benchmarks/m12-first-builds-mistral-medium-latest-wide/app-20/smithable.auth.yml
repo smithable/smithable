@@ -1,15 +1,14 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-defaultAccess: shared
+defaultAccess: private
+public:
+  pages: [home, schedule]
+  read: [ClassType, Instructor, Session]
+  create: [Message]
 roles:
   admin:
-    description: Hallinnoi studioa ja varauksia.
-  teacher:
-    description: Ohjaa tunteja ja näkee omat varaukset.
+    description: Studiovastaava. Hallinnoi tunteja, ohjaajia ja varauksia.
   member:
-    description: Varaa tunteja.
+    description: Asiakas, joka varaa tunteja.
 defaultRole: member
-public:
-  pages: [home]
-  read: [Class]

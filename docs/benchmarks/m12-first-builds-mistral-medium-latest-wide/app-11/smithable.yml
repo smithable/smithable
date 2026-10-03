@@ -16,7 +16,7 @@ models:
       component: Component
       detectedAt: datetime!
       resolvedAt: datetime
-      summary: text
+      summary: markdown
       updates: IncidentUpdate[]
   IncidentUpdate:
     fields:
@@ -34,18 +34,16 @@ models:
 pages:
   incidents:
     crud: Incident
-    access: [admin, staff]
+    access: [staff]
   updates:
     crud: IncidentUpdate
-    access: [admin, staff]
+    access: [staff]
   components:
     crud: Component
     access: [admin]
   maintenance:
     crud: Maintenance
-    access: [admin, staff]
-  team:
-    users: manage
+    access: [staff]
   home:
     route: /
     landing:
@@ -57,41 +55,8 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: investigating
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
-navigation: [overview, incidents, updates, maintenance, components, team]
-actions:
-  identified:
-    custom: true
-    input:
-      incident: Incident!
-    allow: [admin, staff]
-    intent: The cause is found; the incident moves to identified.
-  monitoring:
-    custom: true
-    input:
-      incident: Incident!
-    allow: [admin, staff]
-    intent: A fix is out; the incident is watched before it is closed.
-  resolve:
-    custom: true
-    input:
-      incident: Incident!
-    allow: [admin, staff]
-    intent: The incident is over.
+  history:
+    crud: Incident
+  team:
+    users: manage
+navigation: [home, incidents, updates, maintenance, components, team]

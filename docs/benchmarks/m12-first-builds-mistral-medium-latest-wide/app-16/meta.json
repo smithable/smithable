@@ -1,4 +1,9 @@
 {
   "description": "Our allotment society: who has which plot, the waiting list and the yearly fee.",
-  "starter": "booking"
+  "starter": "records",
+  "wordStarter": "booking",
+  "questions": [
+    "Who can see the list of plots and the waiting list?",
+    "What details are recorded for each plot?"
+  ]
 }

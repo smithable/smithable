@@ -1,8 +1,7 @@
 smithable: 0.1
 app:
-  name: Town Flea Market
-  description: A local marketplace where anyone can post items for sale with photos and prices.
-  currency: USD
+  name: Flea Market
+  description: A town flea market site where anyone can post things to sell, with photos and a price.
 models:
   Item:
     fields:
@@ -15,13 +14,8 @@ models:
       place: string
       available: bool = true
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
   catalog:
-    route: /items
+    route: /
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
@@ -34,4 +28,9 @@ pages:
   saved:
     crud: Item
     favorites: only
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
 navigation: [catalog, myItems, saved]
