@@ -52,6 +52,30 @@ function checkType(type: string): void {
   if (!parsed.ok) throw new OperationError(parsed.message + (parsed.hint ? ` ${parsed.hint}` : ""));
 }
 
+/** A field as an operation is given it: the shorthand, or the long form of a computed field. */
+export type FieldArg = string | { type: string; formula: string };
+
+/** The JSON Schema of a FieldArg, for addModel's and addCalculatorPage's fields. */
+export const FIELD_ARG = {
+  anyOf: [
+    { type: "string" },
+    {
+      type: "object",
+      required: ["type", "formula"],
+      additionalProperties: false,
+      properties: { type: { type: "string" }, formula: { type: "string", minLength: 1 } },
+    },
+  ],
+  description:
+    'Field shorthand, e.g. "string!", or a computed field\'s long form, e.g. { "type": "money", "formula": "quantity * unitPrice" }.',
+};
+
+/** Checks a field given to an operation; a computed one's formula is checked with the spec. */
+export function checkFieldArg(name: string, value: FieldArg): void {
+  checkFieldName(name);
+  checkType(typeof value === "string" ? value : value.type);
+}
+
 /** The base type of a field, ignoring "!", "unique" and defaults: changing it can lose data. */
 function baseType(type: string): string {
   const parsed = parseFieldShorthand(type);
@@ -65,7 +89,7 @@ function fieldPath(m: string, f: string, ir?: SpecIR) {
     : ["models", m, "fields", f];
 }
 
-const addModel: Operation<{ model: string; fields: Record<string, string> }> = {
+const addModel: Operation<{ model: string; fields: Record<string, FieldArg> }> = {
   name: "addModel",
   summary: "Add a model with its fields.",
   schema: {
@@ -74,7 +98,7 @@ const addModel: Operation<{ model: string; fields: Record<string, string> }> = {
     additionalProperties: false,
     properties: {
       model: { ...name, description: "PascalCase name, e.g. Invoice." },
-      fields: { type: "object", minProperties: 1, additionalProperties: { type: "string" } },
+      fields: { type: "object", minProperties: 1, additionalProperties: FIELD_ARG },
     },
   },
   positional: ["model", "...fields"],
@@ -88,16 +112,13 @@ const addModel: Operation<{ model: string; fields: Record<string, string> }> = {
     }
     if (ir.models.some((m) => m.name === name))
       throw new OperationError(`Model "${name}" already exists.`);
-    for (const [f, type] of Object.entries(fields)) {
-      checkFieldName(f);
-      checkType(type);
-    }
+    for (const [f, value] of Object.entries(fields)) checkFieldArg(f, value);
     spec.add(["models"], name, { fields });
     return [];
   },
 };
 
-const addField: Operation<{ model: string; field: string; type: string }> = {
+const addField: Operation<{ model: string; field: string; type: string; formula?: string }> = {
   name: "addField",
   summary: "Add a field to a model.",
   schema: {
@@ -108,17 +129,22 @@ const addField: Operation<{ model: string; field: string; type: string }> = {
       model: refTo({ ref: "model", label: "Kind of record" }, name),
       field: { ...name, description: "camelCase name, e.g. phone." },
       type: { ...name, description: 'Field shorthand, e.g. "phone", "string!", "draft | sent".' },
+      formula: {
+        ...name,
+        description:
+          'A computed field: worked out from the record\'s other fields, never entered, e.g. "quantity * unitPrice" (the type is then its kind only, e.g. "money").',
+      },
     },
   },
   positional: ["model", "field", "...type"],
-  describe: ({ model, field, type }) => `Add field ${field} (${type}) to ${model}`,
+  describe: ({ model, field, type, formula }) =>
+    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}) to ${model}`,
   destructive: () => false,
-  apply({ spec }, { model: m, field: f, type }, ir) {
-    checkFieldName(f);
-    checkType(type);
+  apply({ spec }, { model: m, field: f, type, formula }, ir) {
+    checkFieldArg(f, formula ? { type, formula } : type);
     if (model(ir, m).fields.some((x) => x.name === f))
       throw new OperationError(`${m} already has a field named "${f}".`);
-    spec.add(fieldPath(m, f, ir).slice(0, -1), f, type);
+    spec.add(fieldPath(m, f, ir).slice(0, -1), f, formula ? { type, formula } : type);
     return [];
   },
 };

@@ -1019,3 +1019,55 @@ test("addAction takes what a model writes: add by model, JSON values and a list 
     "    when:\n      status: [investigating, identified]\n    set:\n      status: resolved\n      summary:\n    add:\n      IncidentUpdate:\n",
   );
 });
+
+test("addField --formula and addModel's long form add computed fields; a shorthand default that reads like a formula says how", () => {
+  const added = ok("addField", [
+    "Order",
+    "withShipping",
+    "money",
+    "--formula",
+    "total + shippingCost",
+  ]);
+  expect(added.files.spec).toContain(
+    "      withShipping:\n        type: money\n        formula: total + shippingCost\n",
+  );
+  const model = applyOperation(files, "addModel", {
+    model: "Line",
+    fields: {
+      quantity: "int!",
+      unitPrice: "money!",
+      amount: { type: "money", formula: "quantity * unitPrice" },
+    },
+  });
+  if (!model.ok) throw new Error(model.message);
+  expect(model.files.spec).toContain(
+    "      amount:\n        type: money\n        formula: quantity * unitPrice\n",
+  );
+  // A computed field is never entered: the parser's own refusal for one that is required.
+  expect(
+    applyOperation(files, "addModel", {
+      model: "Line",
+      fields: { quantity: "int!", amount: { type: "money!", formula: "quantity * 2" } },
+    }).ok,
+  ).toBe(false);
+  // A calculator's result, the same way.
+  const calculator = applyOperation(files, "addCalculatorPage", {
+    page: "split",
+    fields: {
+      bill: "money = 100",
+      people: "int = 2",
+      each: { type: "money", formula: "bill / people" },
+    },
+  });
+  if (!calculator.ok) throw new Error(calculator.message);
+  expect(calculator.files.spec).toContain("formula: bill / people");
+  // Written as a default, it is refused with the way out.
+  const slip = applyOperation(files, "addModel", {
+    model: "Line",
+    fields: { quantity: "int!", unitPrice: "money!", amount: "money = quantity * unitPrice" },
+  });
+  if (slip.ok) throw new Error("a default that is an expression was accepted");
+  expect(slip.diagnostics.map((d) => d.hint).join(" ")).toContain(
+    'A computed field is written with a formula: `addField Line amount money --formula "quantity * unitPrice"`.',
+  );
+});
