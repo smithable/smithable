@@ -70,6 +70,43 @@ const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
   },
 };
 
+const setAdmins: Operation<{ admins: string[] }> = {
+  name: "setAdmins",
+  summary:
+    "Say who the administrators are, by email address: they become admins when they first sign in, and may always sign in.",
+  schema: {
+    type: "object",
+    required: ["admins"],
+    additionalProperties: false,
+    properties: {
+      admins: {
+        type: "array",
+        items: { type: "string" },
+        description: "The administrators' email addresses, e.g. [you@your-domain].",
+      },
+    },
+  },
+  positional: ["...admins"],
+  describe: ({ admins }) =>
+    admins.length === 1
+      ? `Make ${admins[0]} the administrator`
+      : `Make ${admins.join(", ")} the administrators`,
+  destructive: () => false,
+  apply({ auth }, { admins }) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    if (auth.get(["signIn"]) === "none")
+      throw new OperationError("This app has no sign-in, so it has no administrators.");
+    const list = [...new Set(admins.map((a) => a.trim().toLowerCase()))];
+    const wrong = list.find((a) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a));
+    if (wrong !== undefined) throw new OperationError(`"${wrong}" is not an email address.`);
+    if (list.length === 0)
+      throw new OperationError("An app with sign-in needs at least one administrator.");
+    if (auth.has(["admins"])) auth.set(["admins"], list);
+    else auth.add([], "admins", list);
+    return [];
+  },
+};
+
 const ROLE_NAME = /^[a-z][A-Za-z0-9]*$/;
 
 const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string }> = {
@@ -235,6 +272,7 @@ const setPublicWhere: Operation<{
 export const authOperations: AnyOperation[] = [
   setSignUp,
   setDefaultAccess,
+  setAdmins,
   setRoles,
   setPublic,
   setPublicWhere,

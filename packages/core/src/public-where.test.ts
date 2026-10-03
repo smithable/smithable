@@ -219,3 +219,34 @@ test("new users are never administrators by default", () => {
     }),
   ).toMatchObject({ ok: false, message: expect.stringContaining("cannot all be administrators") });
 });
+
+test("email is a sign-in provider, and an app with sign-in has an administrator who can get in", () => {
+  const read = (text: string) => validateAuth({ path: "smithable.auth.yml", text }, ir);
+  const head = "smithableAuth: 0.1\ndefaultAccess: private\n";
+  const email = read(`${head}signIn: { providers: [email, google] }\n`);
+  expect(email.diagnostics).toEqual([]);
+  expect(email.auth?.signIn).toMatchObject({ providers: ["email", "google"] });
+  expect(
+    read(`${head}signIn: { providers: [magicLink] }\n`).diagnostics.map((d) => d.code),
+  ).toContain("not-yet-supported");
+  // Invited people only, and nobody to invite them.
+  expect(
+    read(`${head}signIn: { providers: [email], selfSignUp: false }\n`).diagnostics.map(
+      (d) => d.code,
+    ),
+  ).toContain("no-admin");
+  // An administrator nobody can be.
+  expect(
+    read(
+      `${head}signIn: { providers: [email] }\nadmins: [owner@northwind.example]\n`,
+    ).diagnostics.map((d) => `${d.severity} ${d.code}`),
+  ).toEqual(["warning example-admin"]);
+  const files = { spec, auth: auth("Post") };
+  const set = applyOperation(files, "setAdmins", { admins: ["Me@Mine.ax", "me@mine.ax"] });
+  expect(set.ok && set.files.auth).toContain("admins: [me@mine.ax]");
+  expect(applyOperation(files, "setAdmins", { admins: [] })).toMatchObject({ ok: false });
+  expect(applyOperation(files, "setAdmins", { admins: ["nobody"] })).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("not an email address"),
+  });
+});
