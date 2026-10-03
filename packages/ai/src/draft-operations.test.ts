@@ -72,5 +72,7 @@ test("a draft starts with the starter's access default and sees the starter as i
   );
   expect(prompts[0]).toContain("The crm starter, the example for this kind of app:");
   expect(prompts[0]).toContain("tasks: { crud: Task }");
+  // The starter's roles and access are part of the example: its auth file is shown too.
+  expect(prompts[0]).toContain("smithable.auth.yml:\n```yaml\nsmithableAuth: 0.1");
   expect(draftOperations().map((o) => o.name)).toContain("setDefaultAccess");
 });
