@@ -54,7 +54,12 @@ for (const [i, description] of DESCRIPTIONS.entries()) {
   const typecheck =
     existsSync(join(dir, "package.json")) &&
     spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" }).status === 0;
-  for (const spec of ["smithable.yml", "smithable.auth.yml", "smithable.ux.yml", "smithable.content.yml"])
+  for (const spec of [
+    "smithable.yml",
+    "smithable.auth.yml",
+    "smithable.ux.yml",
+    "smithable.content.yml",
+  ])
     if (existsSync(join(dir, spec))) {
       mkdirSync(join(kept, `app-${i + 1}`), { recursive: true });
       cpSync(join(dir, spec), join(kept, `app-${i + 1}`, spec));
