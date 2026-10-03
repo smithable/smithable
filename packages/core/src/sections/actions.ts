@@ -355,13 +355,13 @@ function readStandardAction(
     values.push({ field: key, value: converted.value });
   }
   if (!values.length) return undefined;
-  for (const v of values)
-    if ("value" in v && when?.[v.field] === v.value)
-      ctx.warning(
-        set.value,
-        "action-changes-nothing",
-        `${capitalize(where)} runs only when ${v.field} is ${String(v.value)} and sets it to ${String(v.value)}: the action leaves the record as it was.`,
-      );
+  // Only when every value is one the condition already requires does the action change nothing.
+  if (values.every((v) => "value" in v && when?.[v.field] === v.value))
+    ctx.warning(
+      set.value,
+      "action-changes-nothing",
+      `${capitalize(where)} runs only on records that already have the values it sets: it leaves the record as it was.`,
+    );
   const rules = byKey.get("rules");
   if (rules)
     ctx.warning(

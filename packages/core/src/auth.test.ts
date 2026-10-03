@@ -304,3 +304,36 @@ actions:
     },
   ]);
 });
+
+test("a standard action's allow narrows who may run it, and the record's owner still counts", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Booking:
+    fields: { status: booked | canceled }
+actions:
+  cancel:
+    on: Booking
+    when: { status: booked }
+    set: { status: canceled }
+    allow: [member]
+`,
+  }).ir as SpecIR;
+  const { auth, diagnostics } = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: {}, member: {}, guest: {} }\ndefaultRole: member\n",
+    },
+    ir,
+  );
+  // Members write their own bookings: allowed, a member cancels their own; a guest does not.
+  expect(actionAccess(ir.actions[0] as SpecIR["actions"][0], auth as AuthIR, ir.models)).toEqual({
+    public: false,
+    roles: ["admin"],
+    owner: true,
+    among: ["admin", "member"],
+  });
+  expect(diagnostics.filter((d) => d.code === "action-role-cannot-write")).toEqual([]);
+});
