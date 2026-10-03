@@ -2,6 +2,10 @@
   "description": "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.",
   "starter": "crm",
   "wordStarter": "records",
-  "questions": ["Kuka käyttää sovellusta?", "Mitä tietoja autosta tallennetaan?"],
+  "questions": [
+    "Kuka käyttää sovellusta?",
+    "Mitä tietoja autosta tallennetaan?",
+    "Miten laskut liitetään huoltotöihin?"
+  ],
   "lang": "fi"
 }

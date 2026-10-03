@@ -7,17 +7,3 @@ pages:
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
-  incidents:
-    title: Incidents
-  updates:
-    title: Incident Updates
-  components:
-    title: Components
-  maintenance:
-    title: Planned Maintenance
-  overview:
-    title: Overview
-  team:
-    title: Team
-  admin:
-    title: Admin

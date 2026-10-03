@@ -3,12 +3,12 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [hem, schema, boka-nu]
+  pages: [hem, schema]
   read: [Service, Stylist, Appointment]
-  create: [Booking, Message]
+  create: [Booking]
 roles:
   admin:
-    description: Salongsägare. Hanterar tjänster, frisörer och tider.
+    description: Salongsägare eller personal.
   customer:
     description: Kund som bokar tider.
 defaultRole: customer

@@ -47,16 +47,16 @@ models:
       session:
         label: Tunti
 pages:
+  class-types:
+    title: Tuntityypit
+  instructors:
+    title: Ohjaajat
   home:
     title: Joogastudio
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
-  class-types:
-    title: Tuntityypit
-  instructors:
-    title: Ohjaajat
   schedule:
     title: Aikataulu
   sessions:

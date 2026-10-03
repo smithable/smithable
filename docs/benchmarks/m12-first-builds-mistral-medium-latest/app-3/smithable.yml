@@ -18,13 +18,6 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
-  InvoiceLine:
-    fields:
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount: money
-      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -32,12 +25,25 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
-      total: money
       lines: InvoiceLine[]
+      total: money = SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount: money
 pages:
   clients:
     crud: Client
     search: [name, email]
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    search: [number, client]
+    filters: [status, client]
+    sortable: [issuedOn, dueOn, total, number]
   settings:
     crud: BusinessProfile
   team:
@@ -47,15 +53,10 @@ pages:
     landing:
       hero:
       footer:
-  invoices:
-    crud: Invoice
-    search: [number, client]
-    filters: [status, client]
-    sortable: [issuedOn, dueOn, total, number]
-  invoice-lines:
-    crud: InvoiceLine
   overview:
     crud: Invoice
+  invoice-lines:
+    crud: InvoiceLine
 actions:
   markSent:
     on: Invoice
@@ -71,4 +72,4 @@ actions:
     set:
       status: paid
     intent: The client paid the invoice.
-navigation: [overview, invoices, clients, settings, team]
+navigation: [overview, invoices, clients, settings, invoice-lines]

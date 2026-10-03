@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Web Shop Uptime
-  description: A public uptime page showing which services work, current outages and their updates.
+  description: Current status of our web shop services, outages and updates.
 models:
   Component:
     fields:
@@ -9,8 +9,6 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
-    access:
-      delete: [admin]
   Incident:
     fields:
       title: string!
@@ -21,7 +19,7 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
-      delete: [admin]
+      delete: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -29,7 +27,7 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
     access:
-      delete: [admin]
+      delete: [admin, staff]
   Maintenance:
     fields:
       title: string!
@@ -38,12 +36,10 @@ models:
       endsAt: datetime!
       description: text
     access:
-      delete: [admin]
+      delete: [admin, staff]
 pages:
   incidents:
     crud: Incident
-    search: [title, summary]
-    filters: [status, component]
     actions: [identified, monitoring, resolve]
   updates:
     crud: IncidentUpdate
@@ -63,12 +59,6 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
   team:
     users: manage
   admin:
@@ -84,7 +74,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: The cause is found and a fix is being worked on.
+        message:
     allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
@@ -97,7 +87,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is out. We are watching before we close this.
+        message:
     allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
@@ -111,6 +101,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved.
+        message:
     allow: [admin, staff]
     intent: The incident is over, with an update saying so. The component's state stays what the team sets.

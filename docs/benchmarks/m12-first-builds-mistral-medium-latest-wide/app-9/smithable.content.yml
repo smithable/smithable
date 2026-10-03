@@ -1,7 +1,29 @@
 smithableContent: 0.1
+models:
+  Album:
+    label: Album
+    pluralLabel: Albums
+    fields:
+      title:
+        label: Title
+      artist:
+        label: Artist
+      year:
+        label: Year
+      condition:
+        label: Condition
+        values:
+          mint: Mint
+          nearMint: Near Mint
+          good: Good
+          fair: Fair
+          poor: Poor
+      pricePaid:
+        label: Price Paid
+      coverImage:
+        label: Cover Image
+      notes:
+        label: Notes
 pages:
-  home:
-    hero:
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+  albums:
+    title: Albums
