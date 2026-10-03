@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { validateContent } from "./content.js";
-import { validateSamples } from "./samples.js";
+import type { SpecIR } from "./ir.js";
+import { fitSamples, validateSamples } from "./samples.js";
 import { validateSpec } from "./spec.js";
 
 const ir = validateSpec({
@@ -159,4 +160,45 @@ pages:
   expect(messages("- { title: Bike, owner2: Ada }\n")[0]).toContain(
     "a person who signs in; leave it empty",
   );
+});
+
+test("a starter's samples are fitted to an app drafted from it", () => {
+  const draft = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Service:
+    fields: { name: string!, state: operational | outage }
+  Incident:
+    fields:
+      title: string!
+      status: investigating | resolved
+      service: Service
+      severity: low | high
+pages:
+  incidents: { crud: Incident }
+  services: { crud: Service }
+`,
+  }).ir as SpecIR;
+  const fitted = fitSamples(
+    [
+      {
+        path: "samples/Service.yml",
+        text: "# the services\n- name: Website\n  state: operational\n  uptime: 99.9\n- name: API\n  state: degraded\n",
+      },
+      {
+        path: "samples/Incident.yml",
+        text: "- title: Website down\n  status: resolved\n  service: Website\n  resolvedAt: 2026-09-24 09:01\n- title: API slow\n  status: investigating\n  service: API\n- title: Checkout slow\n  status: monitoring\n",
+      },
+      { path: "samples/Maintenance.yml", text: "- title: Database upgrade\n" },
+    ],
+    draft,
+  );
+  // The model that went is left out; a field that went is dropped; a record whose value no
+  // longer exists goes, and with it the record that referred to it.
+  expect(fitted.map((f) => f.path)).toEqual(["samples/Service.yml", "samples/Incident.yml"]);
+  expect(fitted[0]?.text).toBe("- name: Website\n  state: operational\n");
+  expect(fitted[1]?.text).toBe("- title: Website down\n  status: resolved\n  service: Website\n");
+  expect(validateSamples(fitted, draft).diagnostics).toEqual([]);
 });
