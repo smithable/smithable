@@ -1,0 +1,8 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: private
+roles:
+  member:
+    description: A photographer managing their invoices.
+defaultRole: member

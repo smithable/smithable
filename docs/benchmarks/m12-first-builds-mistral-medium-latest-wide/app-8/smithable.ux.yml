@@ -1,0 +1,12 @@
+smithableUx: 0.1
+tones:
+  Item.status:
+    available: success
+    claimed: warning
+pages:
+  items:
+    table:
+      view: cards
+      columns: [name, status, offeredBy]
+      below:
+        name: description

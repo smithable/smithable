@@ -1,0 +1,36 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Boka tid hos oss
+    subtitle: Välj en tjänst och boka en tid som passar dig.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+models:
+  Appointment:
+    fields:
+      customerName:
+        label: Namn
+      customerEmail:
+        label: E-post
+      customerPhone:
+        label: Telefon
+      service:
+        label: Tjänst
+      date:
+        label: Datum
+      time:
+        label: Tid
+      status:
+        label: Status
+  Service:
+    fields:
+      name:
+        label: Namn
+      description:
+        label: Beskrivning
+      duration:
+        label: Varaktighet (minuter)
+      price:
+        label: Pris
