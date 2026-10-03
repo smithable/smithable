@@ -680,6 +680,70 @@ async function marketplaceFlow(dir, base) {
 }
 
 /**
+ * The status starter: a visitor sees the services with their state, the recent incidents and
+ * the history, without signing in; staff resolve an incident with its action, and the public
+ * page shows the incident resolved and its service working again.
+ */
+async function statusFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await open(page, `${base}/`);
+    const services = page.locator('[data-section="services"]');
+    await services.getByText("Payments", { exact: true }).waitFor({ timeout: 10000 });
+    await services.getByText("Degraded").waitFor();
+    // What is still going on, apart from what was resolved.
+    await page
+      .locator('[data-section="open"]')
+      .getByText("Card payments slow at checkout")
+      .waitFor();
+    await page
+      .locator('[data-section="recent"]')
+      .getByText("Website unreachable for twenty minutes")
+      .waitFor();
+    await open(page, `${base}/history`);
+    await page.getByRole("link", { name: "Website unreachable for twenty minutes" }).click();
+    await page.getByText("A certificate renewal failed").first().waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: a visitor sees the services with their state, what is going on now, what was resolved and an incident's story, without signing in",
+    );
+
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/incidents`);
+    await page.getByRole("link", { name: "Resolve" }).click();
+    await chooseRecord(page, "Incident *", "Card payments slow at checkout");
+    await page.getByRole("button", { name: "Resolve" }).click();
+    await page.waitForURL(`${base}/incidents`);
+    // Signed out again, the public page shows it.
+    await page.context().clearCookies();
+    await open(page, `${base}/`);
+    await services.getByText("Degraded").waitFor({ state: "detached", timeout: 10000 });
+    // Resolved, it leaves "going on now" for "recently resolved".
+    await page
+      .locator('[data-section="recent"]')
+      .getByText("Card payments slow at checkout")
+      .waitFor({ timeout: 10000 });
+    if (
+      await page
+        .locator('[data-section="open"]')
+        .getByText("Card payments slow at checkout")
+        .count()
+    )
+      throw new Error("the resolved incident is still under going on now");
+    console.log(
+      "  ✓ browser: resolving an incident (its action) marks it resolved and its service working again, on the public page too",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("status flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
  * describes them and moves the second first; they are served in that order, the first as the
  * cover; removing one deletes its file and keeps the other.
@@ -2225,6 +2289,7 @@ for (const [index, example] of examples.entries()) {
         await picturesFlow(dir, base);
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
+      if (example === "status") await statusFlow(base);
       if (example === "invoicing") {
         await formulaFlow(base);
         await onboardingFlow(base);
