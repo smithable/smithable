@@ -20,28 +20,24 @@ models:
     fields:
       customerName:
         label: Kundenname
-      customerEmail:
-        label: E-Mail
       customerPhone:
-        label: Telefon
+        label: Kundentelefon
       product:
         label: Produkt
       quantity:
         label: Menge
-      pickupDate:
-        label: Abholdatum
+      pickupTime:
+        label: Abholzeit
       status:
         label: Status
         values:
           pending: Ausstehend
-          confirmed: Bestätigt
+          ready: Bereit
           pickedUp: Abgeholt
           canceled: Storniert
-      notes:
-        label: Notizen
-  PickupTime:
-    label: Abholzeit
-    pluralLabel: Abholzeiten
+  PickupSlot:
+    label: Abholzeitfenster
+    pluralLabel: Abholzeitfenster
     fields:
       date:
         label: Datum
@@ -49,10 +45,8 @@ models:
         label: Beginn
       endTime:
         label: Ende
-      maxSlots:
-        label: Maximale Plätze
-      notes:
-        label: Notizen
+      maxPreOrders:
+        label: Maximale Vorbestellungen
 pages:
   produkte:
     title: Produkte

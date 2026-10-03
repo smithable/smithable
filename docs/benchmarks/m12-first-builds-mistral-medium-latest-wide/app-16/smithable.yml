@@ -1,44 +1,71 @@
 smithable: 0.1
 app:
-  name: Our Allotment Society
+  name: Allotment Society
   description: Manage plots, waiting list and yearly fees for the allotment society.
 models:
   Plot:
     fields:
       number: string! unique
       size: int
-      status: free | assigned | reserved
+      status: available | assigned | reserved
       holder: User
       notes: text
     access:
       delete: [admin]
+      write: [admin]
+      create: [admin]
   WaitingList:
     fields:
       name: string!
       email: email!
       phone: phone
       dateAdded: date! = TODAY()
-      notes: text
-    access:
-      delete: [admin]
-  Fee:
-    fields:
-      year: int! unique
-      amount: money!
-      dueDate: date
+      status: active | assigned | withdrawn
       notes: text
     access:
       delete: [admin]
       write: [admin]
+      create: [admin, member]
+  Fee:
+    fields:
+      year: int! unique
+      amount: money!
+      dueDate: date!
+      status: pending | paid
+      notes: text
+    access:
+      delete: [admin]
+      write: [admin]
+      create: [admin]
 pages:
   plots:
     crud: Plot
+    filters: [status]
+    search: [number, notes]
   waiting-list:
     crud: WaitingList
-    access: [admin]
+    filters: [status]
+    search: [name, email, notes]
+    actions: [assignFromWaitingList]
   fees:
     crud: Fee
-    access: [admin]
+    filters: [status, year]
+    actions: [markFeeAsPaid]
   team:
     users: manage
 navigation: [plots, waiting-list, fees, team]
+actions:
+  assignFromWaitingList:
+    on: WaitingList
+    when:
+      status: active
+    set:
+      status: assigned
+    intent: Assign a plot to this person from the waiting list.
+  markFeeAsPaid:
+    on: Fee
+    when:
+      status: pending
+    set:
+      status: paid
+    intent: Mark this yearly fee as paid.

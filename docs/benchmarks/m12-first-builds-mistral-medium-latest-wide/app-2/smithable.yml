@@ -9,8 +9,8 @@ models:
       email: email
       phone: phone
       company: string
-      status: new | contacted | qualified | lost
       source: referral | website | social | other
+      status: new | contacted | qualified | lost
       notes: text
       assignee: User
       followUpDate: date
@@ -21,7 +21,7 @@ models:
       name: string!
       lead: Lead!
       value: money
-      status: proposal | negotiation | closedWon | closedLost
+      status: proposal | negotiation | won | lost
       closeDate: date
       notes: text
       assignee: User
@@ -32,10 +32,41 @@ pages:
     crud: Lead
     search: [name, email, company]
     sortable: [name, followUpDate, createdAt]
+    actions: [qualifyLead, loseLead]
   deals:
     crud: Deal
     search: [name, lead]
     sortable: [name, value, closeDate, createdAt]
+    actions: [winDeal, loseDeal]
   team:
     users: manage
+actions:
+  qualifyLead:
+    on: Lead
+    when:
+      status: [new, contacted]
+    set:
+      status: qualified
+    intent: Mark a lead as qualified to move it to the next stage.
+  loseLead:
+    on: Lead
+    when:
+      status: [new, contacted, qualified]
+    set:
+      status: lost
+    intent: Mark a lead as lost.
+  winDeal:
+    on: Deal
+    when:
+      status: [proposal, negotiation]
+    set:
+      status: won
+    intent: Mark a deal as won.
+  loseDeal:
+    on: Deal
+    when:
+      status: [proposal, negotiation]
+    set:
+      status: lost
+    intent: Mark a deal as lost.
 navigation: [leads, deals, team]

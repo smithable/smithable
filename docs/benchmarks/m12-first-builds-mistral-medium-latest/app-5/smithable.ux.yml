@@ -2,4 +2,4 @@ smithableUx: 0.1
 pages:
   stock:
     table:
-      sort: -lastRestocked
+      sort: -expiryDate

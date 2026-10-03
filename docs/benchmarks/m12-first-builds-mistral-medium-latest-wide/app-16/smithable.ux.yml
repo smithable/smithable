@@ -1,1 +1,21 @@
 smithableUx: 0.1
+pages:
+  plots:
+    table:
+      sort: number
+  waiting-list:
+    table:
+      sort: dateAdded
+  fees:
+    table:
+      sort: -year
+tones:
+  Plot.status:
+    available: success
+    reserved: warning
+  WaitingList.status:
+    assigned: success
+    withdrawn: danger
+  Fee.status:
+    pending: warning
+    paid: success

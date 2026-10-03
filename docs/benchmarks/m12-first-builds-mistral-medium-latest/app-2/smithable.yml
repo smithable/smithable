@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Small Sales Team CRM
-  description: A CRM for a small sales team to manage companies, contacts, deals and follow-ups.
+  name: Sales CRM
+  description: A lightweight CRM for a small sales team to manage companies, contacts, deals, and follow-ups.
 models:
   Company:
     fields:
@@ -18,8 +18,8 @@ models:
       lastName: string!
       email: email
       phone: phone
-      position: string
       company: Company!
+      role: string
       notes: text
     access:
       delete: [admin]
@@ -29,7 +29,7 @@ models:
       company: Company!
       contact: Contact
       value: money
-      stage: prospect | qualified | proposal | negotiation | closedWon | closedLost
+      stage: lead | qualified | proposal | negotiation | closedWon | closedLost
       closeDate: date
       notes: text
     access:
@@ -37,27 +37,60 @@ models:
   FollowUp:
     fields:
       title: string!
-      deal: Deal!
+      company: Company!
+      contact: Contact
+      deal: Deal
       dueDate: date!
+      status: pending | completed | canceled
       notes: text
-      completed: bool = false
     access:
       delete: [admin]
 pages:
   companies:
     crud: Company
-    search: [name]
+    search: [name, industry]
   contacts:
     crud: Contact
     search: [firstName, lastName, email]
   deals:
     crud: Deal
-    search: [name, company]
-    filters: [stage, company, contact]
+    search: [name, company, stage]
+    filters: [company, stage, closeDate]
+    sortable: [value, closeDate, stage]
+    actions: [markDealWon, markDealLost]
   follow-ups:
     crud: FollowUp
-    search: [title, deal]
-    filters: [completed, dueDate, deal]
+    search: [title, company, status]
+    filters: [company, status, dueDate]
+    sortable: [dueDate, status]
+    actions: [completeFollowUp, cancelFollowUp]
   team:
     users: manage
+actions:
+  markDealWon:
+    on: Deal
+    when:
+      stage: negotiation
+    set:
+      stage: closedWon
+      closeDate: TODAY()
+  markDealLost:
+    on: Deal
+    when:
+      stage: negotiation
+    set:
+      stage: closedLost
+      closeDate: TODAY()
+  completeFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: completed
+  cancelFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: canceled
 navigation: [companies, contacts, deals, follow-ups, team]

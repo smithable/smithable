@@ -1,1 +1,40 @@
 smithableUx: 0.1
+pages:
+  blog:
+    icon: book
+  class-types:
+    icon: layers
+    table:
+      view: cards
+  instructors:
+    icon: users
+    table:
+      view: cards
+  posts:
+    icon: file
+    table:
+      sort: -publishedOn
+      columns: [title, publishedOn, status]
+  messages:
+    icon: mail
+  admin:
+    icon: settings
+  team:
+    icon: users
+  estimate:
+    icon: chart
+  schedule:
+    icon: calendar
+  sessions:
+    icon: calendar
+    table:
+      sort: -startsAt
+      columns: [classType, instructor, startsAt, capacity]
+      below:
+        classType: instructor
+        startsAt: capacity
+  my-bookings:
+    icon: cart
+    table:
+      below:
+        session: status

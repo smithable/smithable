@@ -4,7 +4,7 @@ app:
   description: A tool library where neighbors lend each other tools.
 pages:
   home:
-    route: /welcome
+    route: /
     landing:
       hero:
       footer:
@@ -12,23 +12,22 @@ pages:
         records: Tool
         where:
           available: true
+  myTools:
+    crud: Tool
+    mine: true
   tools:
-    route: /
     crud: Tool
     search: [name, description]
     filters: [category, condition, available]
     sortable: [name, createdAt]
     favorites: true
     contact: owner
-  myTools:
-    crud: Tool
-    mine: true
 models:
   Tool:
     fields:
       name: string!
       description: text!
       category: garden | power | hand | measuring | other
-      condition: likeNew | good | worn
+      condition: excellent | good | fair
       available: bool = true
 navigation: [tools, myTools]

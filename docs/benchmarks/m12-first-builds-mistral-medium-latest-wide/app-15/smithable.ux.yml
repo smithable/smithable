@@ -3,3 +3,4 @@ pages:
   sightings:
     table:
       sort: -date
+      columns: [species, place, date, observer]

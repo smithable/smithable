@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Invoicing for Freelancers
-  description: Invoicing app for freelancers to manage clients, invoices, and payments.
+  name: Freelance Invoicing
+  description: Invoicing for freelancers, with clients, invoices and payments.
   currency: EUR
 models:
   BusinessProfile:
@@ -18,29 +18,26 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount: money
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date!
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       total: money
       lines: InvoiceLine[]
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount: money
 pages:
-  overview:
-    crud: Invoice
-  invoices:
-    crud: Invoice
   clients:
     crud: Client
+    search: [name, email]
   settings:
     crud: BusinessProfile
   home:
@@ -48,11 +45,36 @@ pages:
     landing:
       hero:
       footer:
-      features:
-      pricing:
-      faq:
-      callToAction:
-        button: overview
-  dashboard:
+  team:
+    users: manage
+  admin:
+    data: all
+  invoices:
     crud: Invoice
-navigation: [dashboard, invoices, clients, settings]
+    actions: [markSent, markPaid]
+    search: [number, client]
+    filters: [status, client, issuedOn]
+    sortable: [number, issuedOn, dueOn, total, status]
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    route: /overview
+    landing:
+      hero:
+      footer:
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+navigation: [overview, invoices, clients, settings]

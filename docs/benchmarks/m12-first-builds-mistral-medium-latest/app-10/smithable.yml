@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Family Recipes
-  description: A recipe collection for a family, with ingredients and shopping lists.
+  description: A place to keep and share family recipes with ingredients and shopping lists.
 models:
   Recipe:
     fields:
@@ -11,43 +11,71 @@ models:
       prepTime: int
       cookTime: int
       instructions: text!
-      category: breakfast | lunch | dinner | dessert | snack
+      category: breakfast | lunch | dinner | dessert | snack | drink
       difficulty: easy | medium | hard
       image: url
     access:
       delete: [admin]
+      write: [admin]
+      create: [admin, member]
   Ingredient:
     fields:
       name: string!
       quantity: string
       unit: string
       recipe: Recipe!
+    access:
+      delete: [admin]
+      write: [admin, member]
+      create: [admin, member]
   ShoppingList:
     fields:
       name: string!
       date: date! = TODAY()
       status: pending | completed
-      items: ShoppingItem[]
+      recipe: Recipe
     access:
       delete: [admin]
+      write: [admin, member]
+      create: [admin, member]
   ShoppingItem:
     fields:
       name: string!
       quantity: string
       unit: string
-      purchased: bool = false
+      bought: bool = false
       shoppingList: ShoppingList!
     access:
       delete: [admin]
+      write: [admin, member]
+      create: [admin, member]
 pages:
   recipes:
     crud: Recipe
-    search: [name, description, category]
+    search: [name, description, category, difficulty]
     filters: [category, difficulty]
+    sortable: [name, servings, prepTime, cookTime]
   shopping-lists:
     crud: ShoppingList
     search: [name]
     filters: [status, date]
-  team:
-    users: manage
-navigation: [recipes, shopping-lists, team]
+    sortable: [name, date, status]
+    actions: [markCompleted]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      recipes:
+        records: Recipe
+        where:
+          category: [breakfast, lunch, dinner, dessert, snack, drink]
+actions:
+  markCompleted:
+    on: ShoppingList
+    when:
+      status: pending
+    set:
+      status: completed
+    intent: Mark a shopping list as completed.
+navigation: [recipes, shopping-lists]

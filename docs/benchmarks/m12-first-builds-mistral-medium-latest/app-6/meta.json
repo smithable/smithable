@@ -2,5 +2,5 @@
   "description": "A job board for a local union, with job posts and applications.",
   "starter": "marketplace",
   "wordStarter": "marketplace",
-  "questions": ["Who can post job offers?", "What can visitors see without signing in?"]
+  "questions": ["Who can post job listings?", "What can visitors see without signing in?"]
 }

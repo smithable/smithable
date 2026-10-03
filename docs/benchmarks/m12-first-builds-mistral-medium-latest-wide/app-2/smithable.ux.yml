@@ -2,14 +2,14 @@ smithableUx: 0.1
 pages:
   leads:
     table:
-      sort: followUpDate
+      sort: -followUpDate
   deals:
     table:
-      sort: -value
+      sort: -closeDate
 tones:
   Lead.status:
     qualified: success
     lost: danger
   Deal.status:
-    closedWon: success
-    closedLost: danger
+    won: success
+    lost: danger

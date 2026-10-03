@@ -3,83 +3,38 @@ models:
   Customer:
     label: Asiakas
     pluralLabel: Asiakkaat
-    fields:
-      name:
-        label: Nimi
-      email:
-        label: Sähköposti
-      phone:
-        label: Puhelinnumero
-      address:
-        label: Osoite
-      cars:
-        label: Autot
   Car:
     label: Auto
     pluralLabel: Autot
-    fields:
-      registrationNumber:
-        label: Rekisterinumero
-      make:
-        label: Merkki
-      model:
-        label: Malli
-      year:
-        label: Vuosimalli
-      customer:
-        label: Asiakas
-      serviceJobs:
-        label: Huoltotyöt
   ServiceJob:
     label: Huoltotö
     pluralLabel: Huoltotyöt
     fields:
-      description:
-        label: Kuvaus
       status:
-        label: Tila
         values:
           pending: Odottaa
           inProgress: Käynnissä
           completed: Valmis
           cancelled: Peruutettu
-      car:
-        label: Auto
-      startDate:
-        label: Alkamispäivä
-      endDate:
-        label: Päätöspäivä
-      notes:
-        label: Muistiinpanot
-      invoice:
-        label: Lasku
   Invoice:
     label: Lasku
     pluralLabel: Laskut
     fields:
-      number:
-        label: Laskun numero
-      customer:
-        label: Asiakas
-      issuedOn:
-        label: Laskutuspäivä
-      dueOn:
-        label: Eräpäivä
       status:
-        label: Tila
         values:
           draft: Luonnos
           sent: Lähetetty
           paid: Maksettu
           overdue: Myöhässä
-      total:
-        label: Yhteensä
+  InvoiceLine:
+    label: Laskurivi
+    pluralLabel: Laskurivit
 pages:
-  asiakkaat:
+  customers:
     title: Asiakkaat
-  autot:
+  cars:
     title: Autot
-  huoltotyot:
+  service-jobs:
     title: Huoltotyöt
-  laskut:
+  invoices:
     title: Laskut
