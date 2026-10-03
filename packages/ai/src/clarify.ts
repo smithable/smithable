@@ -1,6 +1,8 @@
 // Before the first draft (docs/design/first-build.md, 2.1): one cheap call reads the
 // description, picks the starter that is the best example for it, and asks at most three
 // questions when the description leaves the app's shape open. A clear description gets none.
+
+import { languageNote } from "./language.js";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export interface Question {
@@ -63,7 +65,7 @@ export async function clarifyProject(options: {
         `- ${n}: ${options.starters[n]?.description ?? ""} Records: ${options.starters[n]?.models.join(", ")}.`,
     )
     .join("\n");
-  const user = `Description: ${options.description}\n\nStarters:\n${list}`;
+  const user = `Description: ${options.description}${languageNote(options.description)}\n\nStarters:\n${list}`;
   try {
     const answer = (await completeJson(
       provider,
