@@ -17,6 +17,8 @@ export interface Rule {
   owner: boolean;
   /** Reading only: the records anyone may read, when not all (e.g. { status: "published" }). */
   where?: Readonly<Record<string, string | boolean | readonly string[]>>;
+  /** Only users with one of these roles, whichever way they qualify (a standard action's allow). */
+  among?: readonly string[];
 }
 
 export interface ModelAccess {
@@ -53,6 +55,7 @@ export function refusal(error: unknown): Error {
 export function allows(rule: Rule, viewer: Viewer | null, ownerId?: string | null): boolean {
   if (rule.public) return true;
   if (!viewer) return false;
+  if (rule.among && !rule.among.includes(viewer.role)) return false;
   if (rule.roles.includes(viewer.role)) return true;
   return rule.owner && ownerId != null && ownerId === viewer.id;
 }

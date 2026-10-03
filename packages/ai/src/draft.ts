@@ -11,6 +11,7 @@ import {
   validateUx,
   words,
 } from "@smithable/core";
+import { languageNote } from "./language.js";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export type SpecFiles = Record<string, string>;
@@ -191,7 +192,7 @@ export async function draftProject(options: {
   const example = FILES.filter((f) => options.starter[f])
     .map((f) => `${f}:\n${fenced(options.starter[f] as string)}`)
     .join("\n\n");
-  const user = `Description: ${options.description}\n\nExample project:\n${example}\n\nJSON Schema of smithable.yml:\n${JSON.stringify(buildJsonSchema())}`;
+  const user = `Description: ${options.description}${languageNote(options.description)}\n\nExample project:\n${example}\n\nJSON Schema of smithable.yml:\n${JSON.stringify(buildJsonSchema())}`;
   let problem = "";
   for (const provider of [...options.providers].reverse()) {
     let prompt = user;

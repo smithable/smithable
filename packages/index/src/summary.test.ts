@@ -186,3 +186,39 @@ pages:
   expect(text).toContain("a date (from)");
   expect(text).not.toContain("an at");
 });
+
+test("a standard action in words: for which records, and what it sets", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      resolvedAt: datetime
+      pinned: bool
+actions:
+  resolve:
+    on: Incident
+    when: { status: [investigating, identified, monitoring] }
+    set: { status: resolved, resolvedAt: NOW(), pinned: false }
+    allow: [staff]
+    intent: The incident is over.
+  pin:
+    on: Incident
+    set: { pinned: true }
+`,
+  }).ir;
+  if (!ir) throw new Error("invalid spec");
+  const sections = summarize(ir, undefined, emptyContent());
+  expect(sections.find((s) => s.concept === "action:resolve")?.sentences).toEqual([
+    "For an incident that is investigating, identified or monitoring; sets status to resolved, resolved at to now and pinned to no.",
+    "The incident is over.",
+    "Only staff users and admins can use it.",
+  ]);
+  expect(sections.find((s) => s.concept === "action:pin")?.sentences).toEqual([
+    "Sets pinned to yes.",
+  ]);
+});
