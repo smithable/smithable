@@ -38,6 +38,38 @@ const setSignUp: Operation<{ who: "anyone" | "invited" }> = {
   },
 };
 
+const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
+  name: "setDefaultAccess",
+  summary:
+    "Choose the default access to records: shared (a team sees and changes everything; smithable.yml lists the exceptions) or private (each person sees only their own records).",
+  schema: {
+    type: "object",
+    required: ["access"],
+    additionalProperties: false,
+    properties: {
+      access: {
+        type: "string",
+        enum: ["shared", "private"],
+        description: "shared: everyone signed in sees everything; private: only their own records.",
+      },
+    },
+  },
+  positional: ["access"],
+  describe: ({ access }) =>
+    access === "shared"
+      ? "Everyone signed in sees and changes every record"
+      : "Everyone sees and changes only their own records",
+  destructive: () => false,
+  apply({ auth }, { access }) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    if (auth.get(["signIn"]) === "none")
+      throw new OperationError("This app has no sign-in, so there is nobody to share with.");
+    if (auth.has(["defaultAccess"])) auth.set(["defaultAccess"], access);
+    else auth.add([], "defaultAccess", access);
+    return [];
+  },
+};
+
 const ROLE_NAME = /^[a-z][A-Za-z0-9]*$/;
 
 const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string }> = {
@@ -194,4 +226,10 @@ const setPublicWhere: Operation<{
   },
 };
 
-export const authOperations: AnyOperation[] = [setSignUp, setRoles, setPublic, setPublicWhere];
+export const authOperations: AnyOperation[] = [
+  setSignUp,
+  setDefaultAccess,
+  setRoles,
+  setPublic,
+  setPublicWhere,
+];

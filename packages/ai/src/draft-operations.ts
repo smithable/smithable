@@ -23,6 +23,25 @@ export const BLANK: SpecFiles = {
   "smithable.ux.yml": "smithableUx: 0.1\n",
 };
 
+/**
+ * The empty app a draft starts from, with the starter's default access (a team's starter is
+ * shared, a members' one private) so a draft that says nothing about access gets the right one.
+ */
+export function blankFor(starter?: SpecFiles): SpecFiles {
+  const access = /^defaultAccess:\s*(shared|private)\b/m.exec(
+    starter?.["smithable.auth.yml"] ?? "",
+  );
+  return access
+    ? {
+        ...BLANK,
+        "smithable.auth.yml": (BLANK["smithable.auth.yml"] as string).replace(
+          "defaultAccess: private",
+          `defaultAccess: ${access[1]}`,
+        ),
+      }
+    : BLANK;
+}
+
 /** Operations a first draft never needs: they change or undo what a draft has not made yet. */
 const NOT_FOR_DRAFTS = new Set([
   "editSpec",
@@ -40,7 +59,8 @@ export function draftOperations(): AnyOperation[] {
 }
 
 const GUIDANCE = `You design the first version of a web app as a list of Smithable operations, applied in order to an empty app. Smithable generates the whole app from the result.
-Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts.
+Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess shared when a team works on the same records (private, the default, when each person sees only their own); setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts.
+When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, actions and access that fit the description, under the same names, leave out what does not fit, and add what the description needs.
 Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic.`;
 
@@ -260,6 +280,8 @@ const MAX_ROUNDS = 4;
 export async function draftProjectByOperations(options: {
   description: string;
   providers: Provider[];
+  /** The closest starter (clarify's choice): the example of shape, and the access default. */
+  starter?: { name: string; files: SpecFiles };
   operations?: AnyOperation[];
 }): Promise<Draft & { operations?: Step[] }> {
   const usage: Usage[] = [];
@@ -269,10 +291,14 @@ export async function draftProjectByOperations(options: {
   const system = `${GUIDANCE}\n\nOperations:\n${describeOperations(operations)}\n\nAnswer with JSON only: {"operations": [{"op": "<name>", "args": {...}}, ...]}.`;
   const schema = answerSchema(operations);
   let problem = "";
+  const example = options.starter?.files["smithable.yml"];
+  const shape = example
+    ? `\n\nThe ${options.starter?.name} starter, the example for this kind of app:\n\`\`\`yaml\n${example.trim()}\n\`\`\``
+    : "";
   for (const provider of [...options.providers].reverse()) {
-    let files = toProject(BLANK);
+    let files = toProject(blankFor(options.starter?.files));
     const done: Step[] = [];
-    let prompt = `Description: ${options.description}`;
+    let prompt = `Description: ${options.description}${shape}`;
     let round = 0;
     let refused: { step: Step; message: string }[] = [];
     while (round < MAX_ROUNDS) {
