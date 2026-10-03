@@ -7,7 +7,6 @@ import {
   humanize,
   kebab,
   type ModelIR,
-  modelAccess,
   type PageIR,
   pageModel,
   pascal,
@@ -147,17 +146,6 @@ export function names(model: ModelIR, t: Texts) {
 /** The column holding a record's owner: the automatic owner, or the model's ownedBy field. */
 export function ownerKey(model: ModelIR): string {
   return model.ownedBy ? `${model.ownedBy}Id` : "ownerId";
-}
-
-/** Records only their owners read (for some role): then "unique" means unique per owner. */
-export function uniquePerOwner(model: ModelIR, auth: AuthIR): boolean {
-  const read = modelAccess(model, auth).read;
-  return (
-    hasSignIn(auth) &&
-    read.owner &&
-    !read.public &&
-    auth.roles.some((r) => !read.roles.includes(r.name))
-  );
 }
 
 /** Fields that refer to a user, e.g. an account manager. */
