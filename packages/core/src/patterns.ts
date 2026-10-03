@@ -330,7 +330,19 @@ const dashboard: PagePattern<"dashboard"> = {
   queries: (p) => p.items.flatMap((i) => (i.query ? [i.query] : [])),
   operations: dashboardOperations,
   follow(spec, page, effect) {
-    // A tile follows a renamed field; a removal is refused while a tile counts on the field.
+    // A tile follows a renamed field; a removal is refused while a tile counts on the field, and
+    // so is a retyped field that loses a value a tile's "where" names.
+    if (effect.kind === "change-field") {
+      for (const item of page.pattern.items) {
+        const wanted = item.model === effect.model ? item.where?.[effect.field] : undefined;
+        const lost = wanted === undefined ? [] : lostValues(wanted, effect.choices);
+        if (lost.length)
+          return {
+            refusal: `The "${item.name}" tile of the ${page.id} page counts ${effect.model} records where ${effect.field} is ${lost.join(" or ")}; change its "where" first.`,
+          };
+      }
+      return undefined;
+    }
     const f = fieldEffect(effect);
     if (!f) return undefined;
     for (const item of page.pattern.items) {
