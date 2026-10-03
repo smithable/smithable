@@ -22,6 +22,11 @@ models:
       order: Order!
       qty: int
       note: text!
+  Shipment:
+    fields:
+      order: Order!
+      customer: Customer!
+      note: text
 actions:
   merge:                           # expect: missing-key
     input: { keep: Customer! }
@@ -59,6 +64,10 @@ actions:
     on: Order
     add:
       Line: { qty: 1 }             # expect: invalid-add
+  addOther:
+    on: Order
+    add:
+      Shipment: { note: x }        # expect: invalid-add
   addBack:
     on: Order
     add:
