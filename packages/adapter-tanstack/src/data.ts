@@ -176,7 +176,7 @@ import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-${model.fields.some(isMarkdown) ? 'import { MarkdownEditor } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -746,7 +746,7 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
       : {}),
     ...(field.min !== undefined && kind !== "string" && kind !== "text" ? { min: field.min } : {}),
     ...(field.max !== undefined && kind !== "string" && kind !== "text" ? { max: field.max } : {}),
-    ...(kind === "markdown" ? { input: code("MarkdownEditor") } : {}),
+    ...(kind === "markdown" ? { input: code("MarkdownEditor"), view: code("MarkdownText") } : {}),
     ...(kind === "picture"
       ? {
           input: code(
