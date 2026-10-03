@@ -124,7 +124,8 @@ function score(dir, description, starter, lang, meta = {}) {
   const kept = (key) => {
     const from = names(base?.ir, key);
     const now = names(draft.ir, key);
-    return `${[...from].filter((n) => now.has(n)).length} / ${from.size}`;
+    // What the draft kept of the starter's, and how many it has in all (none is a failed draft).
+    return `${[...from].filter((n) => now.has(n)).length} / ${from.size} (has ${now.size})`;
   };
   // The starter's name and its sample records' titles, found again in the draft's texts.
   const texts =
@@ -214,7 +215,7 @@ function scorecard(rows) {
 |---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
 ${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
 
-"Kept" counts the starter's models, pages and actions that the draft still has by name. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
+"Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
 }
 
 const SCORE_START = "<!-- scorecard -->";
