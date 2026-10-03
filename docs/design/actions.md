@@ -1,6 +1,6 @@
 # Standard actions: a button that changes a record, without code
 
-Status: 2026-10-03, proposed by Fable. The spec has reserved `on`, `when` and `set` since 0.1 ("Standard actions that change a record without code come in a later version"), and ARCHITECTURE §3 already says whose access they follow. This fills them in. It adds a construct to the spec, so merging this document is the go-ahead for step 1.
+Status: 2026-10-03, proposed by Fable; Johan said go the same day and asked for more than `set` (section 3 has what he asked for and the order it comes in). The spec has reserved `on`, `when` and `set` since 0.1 ("Standard actions that change a record without code come in a later version"), and ARCHITECTURE §3 already says whose access they follow. This fills them in. It adds a construct to the spec, so merging this document is the go-ahead for step 1.
 
 ## 1. Why now
 
@@ -28,7 +28,7 @@ actions:
 - `on` names a model. The action runs on one record of it.
 - `set` gives fields of that model their new values: a literal the field accepts (a choice value, `true`, a number, a text), or a formula from the existing library evaluated on the record as it is before the change (`NOW()`, `TODAY()`, `DATEADD(TODAY(), 14, "day")`, `(total * 0.25)`). The rule is the one a field's default follows: a value with parentheses is a formula, anything else a literal. At least one field. Not settable: computed fields, references, lists, pictures and the automatic fields (`owner`, `createdAt`, `updatedAt`).
 - `when` (optional) is a condition as everywhere else (`packages/core/src/condition.ts`): choice values, one or a list, and yes/no fields. The button is shown only on a record it fits, and the server refuses the action on one it does not ("This incident is already resolved" becomes the general "This cannot be done now").
-- A standard action has no `input` and no `output` in this version, and no `custom`. `custom: true` and `on`/`set` exclude each other.
+- A standard action has no `input` and no `output`, and no `custom` (what it asks the person for comes with section 3, step 1). `custom: true` and `on`/`set` exclude each other.
 - `allow`, `intent` and `rules` work as for custom actions. `rules` on a standard action are documentation only; a warning says so when one is given, so nobody believes a sentence is enforced.
 
 **Access.** As ARCHITECTURE §3 says: a standard action follows the model's write access (whoever may edit the record may run it), and `allow` narrows it to roles. It never widens: a role in `allow` that may not write the record still cannot run it, and the validator warns about such a role.
@@ -45,13 +45,22 @@ actions:
 
 **Following changes.** A renamed field is renamed in `when` and `set` (keys, and inside formulas with `renameInFormula`); a renamed model in `on`. Removing a field or a choice value the action names is refused, naming the action, as for the other conditions (`lostValues`). Removing the model removes its standard actions with it, listed in the confirmation.
 
-## 3. What it leaves out, on purpose
+## 3. What comes after `set`, in this order
 
-- **Adding a related record** (the status starter's "with an update saying so") and **changing a referenced record** (its component back to operational). Both are real and both are next (section 5), but each is a second construct, and `set` alone already gives a working incident flow: the status moves and `resolvedAt` is set.
-- **Input** ("cancel, with a reason"). It needs the reason in `set` as a name, which the formula scope does not have yet.
-- **The viewer as a value** ("assign to me"). One word in the formula library, `ME()`, typed as a user; it needs the user in the evaluation context of the kit. Next to input, the most asked for.
+Johan's input (2026-10-03): spec-only actions should also be able to create and delete, ask the person for a value, copy a record ("clone"), work on several selected rows of a list, and show only to those who may run them. All of it fits, as further keys of the same action rather than as sub-actions with their own parameters: one action stays one thing a person does, said in one line of YAML. Each step below is its own small decision when its turn comes.
+
+1. **Ask for a value.** A field in `set` with no value is asked for when the button is pressed: `set: { status: canceled, cancelReason: }` opens a dialog with the field's own control (its label, its help, required as the field is) and Cancel. Several fields may be asked at once. This is the "input" of a standard action, with nothing new to learn.
+2. **Copy.** `copy: { status: draft, issuedOn: TODAY() }` on an action makes a new record from the one it runs on: every stored field copied, the ones named set (or asked for, as above), unique fields and the automatic ones left to the new record. "Duplicate invoice", "Repeat this booking", Johan's "clone a dog". The person lands on the new record.
+3. **Add a related record.** `add: { IncidentUpdate: { status: resolved, message: } }` creates a record of a model that refers to this one, linked to it, in the same transaction as `set`. The status page's "with an update saying so"; a payment on an invoice; a note on a customer.
+4. **Selected rows.** A list gets checkboxes when its page offers actions; a standard action runs on every selected record its `when` fits and the person may change, all or none, and says how many it changed. Delete joins it as a built-in action on the selection ("Delete 3 customers?"). "All records matching a condition" is then the list's filter plus select all, with no new expression language (`dogs[age > 13]` is the filter `age > 13` and the checkbox in the header).
+5. **The viewer as a value:** `ME()` in a formula, for "assign to me".
+
+Left out, on purpose:
+
+- **Changing a referenced record** (the incident's component back to operational). The other record's own action, or a formula on it, says it better; custom code otherwise.
+- **Several steps in one action**, conditions between them, loops. That is a workflow language; a custom action is the honest tool.
 - **Automatic rules** (when an edit changes the status, set the time). A different thing: an action is a button someone presses. The same `set` grammar would serve a later `on change`.
-- **Confirmation and undo.** The button acts at once and the page shows the record's new state. A confirm text can be content later.
+- **Undo.** The button acts at once and the page shows the record's new state.
 
 ## 4. Operations, words, drafts
 
@@ -65,6 +74,6 @@ actions:
 1. **Core (Fable):** the grammar and IR (`ActionIR` becomes custom or standard), validation, follow, `addAction`'s standard form, the summary sentence, the schema, the spec reference, the draft guidance. Tests in core. The adapter refuses nothing yet: a standard action generates no button until step 2, and a test pins that it generates no stub either.
 2. **Adapter (A):** the server function, the button on the record page and the row menu, the generated access test (who may run it, and that it is refused when the condition does not fit), a browser step in test-apps.
 3. **Starters (A, C):** the status starter's three actions become standard (its custom code keeps only what `set` cannot say, or goes); invoicing gets "mark as sent" and "mark as paid", booking "cancel".
-4. **Then, each its own decision:** `ME()`, input, `add` (a related record), a referenced record's field.
+4. **Then section 3, in its order:** asking for a value, `copy`, `add`, selected rows, `ME()`.
 
 Exit for steps 1–3: the status starter has no custom action code, its incident flow works in the browser test, and a first build from "a status page for our API" keeps working resolve buttons.
