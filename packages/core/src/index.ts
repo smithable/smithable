@@ -87,6 +87,7 @@ export {
   readRecords,
 } from "./records.js";
 export {
+  fitSamples,
   type SamplePicture,
   type SampleRecordValue,
   type SamplesIR,

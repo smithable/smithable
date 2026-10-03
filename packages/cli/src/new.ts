@@ -9,7 +9,7 @@ import {
   draftProjectByOperations,
   type Question,
 } from "@smithable/ai";
-import { validateAuth, validateContent, validateSpec } from "@smithable/core";
+import { fitSamples, validateAuth, validateContent, validateSpec } from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
 import {
@@ -152,13 +152,26 @@ export async function create(
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       writeFileSync(join(dir, file), text);
     }
-  // Its sample records, for the plain starter (a drafted app's models may differ); none at all
-  // with --no-sample-data, which also leaves the database empty.
+  // Its sample records; none at all with --no-sample-data, which also leaves the database empty.
   const sampleData = options.sampleData !== false;
-  if (!options.describe && sampleData)
-    for (const [file, text] of Object.entries(STARTER_SAMPLES[name] ?? {})) {
-      mkdirSync(dirname(join(dir, file)), { recursive: true });
-      writeFileSync(join(dir, file), text);
+  // A drafted app keeps the starter's records for the models and fields it kept (fitSamples);
+  // the rest get generated rows.
+  const starterSamples = Object.entries(STARTER_SAMPLES[name] ?? {}).map(([path, text]) => ({
+    path,
+    text,
+  }));
+  const drafted = options.describe
+    ? validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir
+    : undefined;
+  const samples = !options.describe
+    ? starterSamples
+    : drafted
+      ? fitSamples(starterSamples, drafted)
+      : [];
+  if (sampleData)
+    for (const { path, text } of samples) {
+      mkdirSync(dirname(join(dir, path)), { recursive: true });
+      writeFileSync(join(dir, path), text);
     }
   // The page's pictures (as sample pictures, never linked to the site) or the library's.
   for (const picture of pictures) {
