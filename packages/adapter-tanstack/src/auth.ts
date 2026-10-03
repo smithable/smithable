@@ -208,9 +208,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
 ${
   refuses
     ? `        // Who may not join gets no mail, and the page says the same either way.
@@ -498,7 +505,7 @@ export function signInReadme(ir: SpecIR, auth: AuthIR): string {
     if (p === "email")
       return `### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.`;
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.`;
     const [id, secret] = ENV[p] as [string, string];
     const console =
       p === "google"
