@@ -116,3 +116,65 @@ test("a shared draft with open sign-up is made invite-only, with a team page", a
   expect(own.files["smithable.auth.yml"]).not.toContain("selfSignUp");
   expect(own.operations?.map((o) => o.op)).toEqual(["setApp", "addModel", "addPage"]);
 });
+
+const answering = (answer: unknown): Provider => ({
+  name: "fake",
+  tier: "frontier",
+  location: "eu",
+  price: { input: 1, output: 3 },
+  async complete() {
+    return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
+  },
+});
+
+test("an action still refused after the last round is dropped and named, not the draft", async () => {
+  const draft = await draftProjectByOperations({
+    description: "event registration",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Events" } },
+          { op: "addModel", args: { model: "Talk", fields: { title: "string!" } } },
+          { op: "addPage", args: { page: "talks", model: "Talk" } },
+          { op: "addAction", args: { action: "register", on: "Talk", set: { seats: "1" } } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  expect(draft.files["smithable.yml"]).not.toContain("register");
+  expect(draft.dropped).toHaveLength(1);
+  expect(draft.dropped?.[0]).toMatch(/^addAction register: /);
+});
+
+test("a total over a list added in the same model follows the list", async () => {
+  const draft = await draftProjectByOperations({
+    description: "invoices",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Invoices" } },
+          {
+            op: "addModel",
+            args: {
+              model: "Invoice",
+              fields: {
+                number: "string!",
+                lines: "InvoiceLine[]",
+                total: "money = SUM(lines.amount)",
+              },
+            },
+          },
+          {
+            op: "addModel",
+            args: { model: "InvoiceLine", fields: { invoice: "Invoice!", amount: "money!" } },
+          },
+          { op: "addPage", args: { page: "invoices", model: "Invoice" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  expect(draft.files["smithable.yml"]).toContain("SUM(lines.amount)");
+  expect(checkSpecFiles(draft.files)).toEqual([]);
+});
