@@ -24,6 +24,7 @@ import {
   conditionFits,
   type FieldExample,
   type FieldIR,
+  type FieldType,
   type FieldValue,
   type ModelAccessIR,
   type ModelIR,
@@ -546,6 +547,17 @@ function scalarValue(ctx: ParseContext, node: ParsedNode | null): FieldValue | n
   return null;
 }
 
+/**
+ * A default that reads like an expression (an operator between names, e.g. quantity * unitPrice)
+ * was meant as a computed field: say how one is written.
+ */
+function computedHint(where: string, type: FieldType, raw: FieldValue): string | undefined {
+  const names = /"(\w+)\.(\w+)"/.exec(where);
+  if (!names || type.kind !== "scalar" || typeof raw !== "string") return undefined;
+  if (!/[A-Za-z]\w*\s*[-+*/]\s*\S|\S\s*[-+*/]\s*[A-Za-z]/.test(raw)) return undefined;
+  return `A computed field is written with a formula: \`addField ${names[1]} ${names[2]} ${type.name} --formula "${raw}"\`.`;
+}
+
 /** Builds a field from its shorthand, converting the default from shorthand text or a long-form value. */
 function buildField(
   ctx: ParseContext,
@@ -608,7 +620,12 @@ function buildField(
   }
   const converted = parseDefault(shorthand.type, raw);
   if (!converted.ok) {
-    ctx.error(rawAt, converted.code, `${capitalize(where)}: ${converted.message}`, converted.hint);
+    ctx.error(
+      rawAt,
+      converted.code,
+      `${capitalize(where)}: ${converted.message}`,
+      computedHint(where, shorthand.type, raw) ?? converted.hint,
+    );
     return undefined;
   }
   field.default = converted.value;

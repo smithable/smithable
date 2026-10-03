@@ -3,6 +3,7 @@ import { checkSpecFiles } from "./draft.js";
 import {
   BLANK,
   blankFor,
+  computedField,
   draftOperations,
   draftProjectByOperations,
   repairFieldShorthand,
@@ -235,4 +236,46 @@ test("invite-only asked before the team page gets the team page first", async ()
   expect(draft.files["smithable.auth.yml"]).toContain("selfSignUp: false");
   expect(draft.files["smithable.yml"]).toContain("users: manage");
   expect(draft.dropped).toBeUndefined();
+});
+
+test("a value worked out from other fields, written as a default, becomes a computed field", async () => {
+  const draft = await draftProjectByOperations({
+    description: "invoices",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Invoices" } },
+          {
+            op: "addModel",
+            args: {
+              model: "InvoiceLine",
+              fields: {
+                quantity: "int!",
+                unitPrice: "money!",
+                amount: "money! = quantity * unitPrice",
+                addedOn: "date = TODAY()",
+              },
+            },
+          },
+          { op: "addPage", args: { page: "lines", model: "InvoiceLine" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  expect(draft.files["smithable.yml"]).toContain(
+    "      amount:\n        type: money\n        formula: quantity * unitPrice\n",
+  );
+  expect(draft.files["smithable.yml"]).toContain("addedOn: date = TODAY()");
+  expect(checkSpecFiles(draft.files)).toEqual([]);
+});
+
+test("only a default naming the model's other fields is a formula", () => {
+  expect(computedField("money = quantity * unitPrice", ["quantity", "unitPrice"])).toEqual({
+    type: "money",
+    formula: "quantity * unitPrice",
+  });
+  expect(computedField("date = TODAY()", ["quantity"])).toBeUndefined();
+  expect(computedField("int! = 12", ["quantity"])).toBeUndefined();
+  expect(computedField("low | high", ["quantity"])).toBeUndefined();
 });
