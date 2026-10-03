@@ -6,6 +6,4 @@ defaultAccess: shared
 roles:
   admin:
     description: Manages the guest list and seating plan.
-public:
-  pages: [home]
 admins: [johan@smithable.ai]

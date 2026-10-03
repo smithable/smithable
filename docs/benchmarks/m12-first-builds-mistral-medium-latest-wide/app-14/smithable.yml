@@ -9,7 +9,7 @@ models:
       email: email
       phone: phone
       attending: yes | no | maybe
-      mealChoice: chicken | beef | fish | vegetarian
+      mealChoice: vegetarian | meat | fish | vegan
       tableNumber: int
       notes: text
       group: string
@@ -18,12 +18,8 @@ models:
 pages:
   guests:
     crud: Guest
-    search: [name, email, group]
-    access: [admin]
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
+    search: [name, email, notes]
+    filters: [attending, mealChoice, tableNumber]
   team:
     users: manage
+navigation: [guests, team]

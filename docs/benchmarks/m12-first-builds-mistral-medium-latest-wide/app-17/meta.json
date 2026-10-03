@@ -3,5 +3,6 @@
   "starter": "booking",
   "wordStarter": "records",
   "questions": [],
+  "dropped": "book",
   "lang": "sv"
 }

@@ -4,10 +4,10 @@ pages:
     table:
       columns: [title, artist, year, condition, pricePaid]
       sort: title
-    icon: file
 tones:
   Album.condition:
     mint: success
     nearMint: success
-    fair: warning
+    good: warning
+    fair: danger
     poor: danger

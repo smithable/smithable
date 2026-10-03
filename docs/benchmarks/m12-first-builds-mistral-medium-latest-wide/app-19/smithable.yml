@@ -4,8 +4,8 @@ app:
   description: En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.
   currency: SEK
 pages:
-  home:
-    route: /welcome
+  hem:
+    route: /
     landing:
       hero:
       footer:
@@ -13,17 +13,20 @@ pages:
         records: Item
         where:
           available: true
-  catalog:
-    route: /
+  katalog:
+    route: /katalog
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
     sortable: [price, createdAt]
     favorites: true
     contact: owner
-  myItems:
+  mina-saker:
     crud: Item
     mine: true
+  sparade:
+    crud: Item
+    favorites: only
 models:
   Item:
     fields:
@@ -31,7 +34,8 @@ models:
       photos: pictures
       description: text!
       price: money
-      category: klaeder | moebler | leksaker | elektronik | boecker | sport | annat
-      condition: ny | naestanNy | bra | sliten
+      category: klaeder | moebler | leksaker | elektronik | boecker | sport | oevrigt
+      condition: ny | somNy | bra | sliten
       place: string
       available: bool = true
+navigation: [katalog, mina-saker, sparade]

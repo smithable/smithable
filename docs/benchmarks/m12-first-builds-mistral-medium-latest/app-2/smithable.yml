@@ -13,6 +13,7 @@ models:
       accountManager: User
     access:
       delete: [admin]
+      write: [sales]
   Contact:
     fields:
       firstName: string!
@@ -24,90 +25,79 @@ models:
       notes: text
     access:
       delete: [admin]
+      write: [sales]
   Deal:
     fields:
       name: string!
       company: Company!
+      contact: Contact
       value: money!
       stage: lead | qualified | proposal | negotiation | closedWon | closedLost
       closeDate: date
       notes: text
-      contact: Contact
     access:
       delete: [admin]
+      write: [sales]
   FollowUp:
     fields:
       title: string!
+      deal: Deal!
       dueDate: date!
       status: pending | completed | canceled
       notes: text
-      deal: Deal!
     access:
       delete: [admin]
+      write: [sales]
 pages:
   companies:
     crud: Company
     search: [name, email]
-  team:
-    users: manage
   contacts:
     crud: Contact
-    search: [firstName, lastName, email, company]
+    search: [firstName, lastName, email]
   deals:
     crud: Deal
-    search: [name, company, stage]
-    filters: [stage, company, owner]
-    sortable: [value, closeDate, createdAt]
-    actions: [qualify, sendProposal, startNegotiation, closeWon, closeLost]
+    search: [name, company]
+    filters: [stage, company, contact]
+    sortable: [value, closeDate, stage]
+    actions: [markWon, markLost]
   follow-ups:
     crud: FollowUp
-    search: [title, status]
-    filters: [status, dueDate, deal, owner]
-    sortable: [dueDate, createdAt]
-    actions: [complete, cancel]
+    search: [title, deal]
+    filters: [status, dueDate, deal]
+    sortable: [dueDate, status]
+    actions: [completeFollowUp, cancelFollowUp]
+  team:
+    users: manage
 actions:
-  qualify:
-    on: Deal
-    when:
-      stage: lead
-    set:
-      stage: qualified
-  sendProposal:
-    on: Deal
-    when:
-      stage: qualified
-    set:
-      stage: proposal
-  startNegotiation:
-    on: Deal
-    when:
-      stage: proposal
-    set:
-      stage: negotiation
-  closeWon:
+  markWon:
     on: Deal
     when:
       stage: negotiation
     set:
       stage: closedWon
       closeDate: TODAY()
-  closeLost:
+    intent: Mark a deal as won.
+  markLost:
     on: Deal
     when:
       stage: negotiation
     set:
       stage: closedLost
       closeDate: TODAY()
-  complete:
+    intent: Mark a deal as lost.
+  completeFollowUp:
     on: FollowUp
     when:
       status: pending
     set:
       status: completed
-  cancel:
+    intent: Mark a follow-up as completed.
+  cancelFollowUp:
     on: FollowUp
     when:
       status: pending
     set:
       status: canceled
+    intent: Cancel a follow-up.
 navigation: [companies, contacts, deals, follow-ups, team]

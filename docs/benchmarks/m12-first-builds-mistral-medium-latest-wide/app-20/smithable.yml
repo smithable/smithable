@@ -30,7 +30,6 @@ models:
       placesLeft: int = capacity - COUNT(bookings)
     access:
       create: [admin]
-      delete: [admin]
   Booking:
     fields:
       session: Session!
@@ -38,9 +37,6 @@ models:
     capacity:
       per: session
       max: session.capacity
-    access:
-      create: [member, admin]
-      delete: [member, admin]
 pages:
   class-types:
     crud: ClassType
@@ -54,8 +50,6 @@ pages:
   my-bookings:
     crud: Booking
     access: [member, admin]
-    mine: true
-    actions: [cancelBooking]
   schedule:
     calendar:
       model: Session
@@ -67,10 +61,5 @@ pages:
       footer:
       classes:
         records: ClassType
-navigation: [schedule, my-bookings]
-actions:
-  cancelBooking:
-    on: Booking
-    copy:
-    allow: [member, admin]
-    intent: Peru varaus.
+      callToAction:
+        button: schedule

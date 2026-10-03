@@ -1,16 +1,16 @@
 smithableUx: 0.1
 pages:
+  schema:
+    icon: calendar
+    table:
+      view: cards
   tjanster:
     icon: tag
-    table:
-      view: cards
   stylister:
     icon: users
-    table:
-      view: cards
   tider:
     icon: calendar
   mina-bokningar:
-    icon: briefcase
-  schema:
-    icon: calendar
+    icon: list
+    form:
+      fieldOrder: [appointment, customerName, customerEmail, customerPhone]

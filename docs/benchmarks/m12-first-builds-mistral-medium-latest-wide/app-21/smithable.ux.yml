@@ -2,18 +2,24 @@ smithableUx: 0.1
 pages:
   asiakkaat:
     icon: users
+    form:
+      columns: 2
   autot:
     icon: truck
+    form:
+      columns: 2
   huoltotyot:
     icon: clipboard
-    table:
-      sort: -startDate
+    form:
+      columns: 2
   laskut:
     icon: receipt
-    table:
-      sort: -issueDate
+    form:
+      columns: 2
   palvelut:
     icon: settings
+    form:
+      columns: 2
 tones:
   WorkOrder.status:
     completed: success
