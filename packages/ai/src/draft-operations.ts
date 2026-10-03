@@ -137,12 +137,14 @@ const fieldStep = (model: unknown, field: string, value: unknown): Step => ({
 
 const AUTOMATIC_FIELDS = ["id", "owner", "createdAt", "updatedAt"];
 
-function repaired(step: Step): Step | undefined {
+export function repaired(step: Step): Step | undefined {
   if (step.op === "addModel" && step.args.fields && typeof step.args.fields === "object") {
-    // Every model already has these: declaring them is a slip, left out.
+    // Every model already has these: declaring them is a slip, left out. An owner that refers
+    // to another model (a car's owner, a customer) is meant differently: its refusal goes back.
     const given = Object.fromEntries(
       Object.entries(step.args.fields as Record<string, unknown>).filter(
-        ([k]) => !AUTOMATIC_FIELDS.includes(k),
+        ([k, v]) =>
+          !AUTOMATIC_FIELDS.includes(k) || (k === "owner" && !/^User!?$/.test(String(v).trim())),
       ),
     );
     const fields = Object.fromEntries(
@@ -198,7 +200,7 @@ function answerSchema(operations: AnyOperation[]): object {
   };
 }
 
-type Step = { op: string; args: OperationArgs };
+export type Step = { op: string; args: OperationArgs };
 
 /** Operations a draft cannot do without; the others are extras a draft may drop. */
 const ESSENTIAL = new Set([
@@ -320,7 +322,7 @@ function applyAll(
         const fields = step.args.fields as Record<string, string>;
         const needs = Object.entries(fields).filter(([, type]) =>
           noList
-            ? new RegExp(`\\b${noList}\\b`).test(fieldText(type))
+            ? new RegExp(`\\b${noList}\\b`).test(fieldText(type).split("=").slice(1).join("="))
             : fieldText(type).includes(`= ${expression}`) ||
               fieldText(type).includes(`=${expression}`),
         );
