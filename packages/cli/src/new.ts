@@ -9,7 +9,13 @@ import {
   draftProjectByOperations,
   type Question,
 } from "@smithable/ai";
-import { fitSamples, validateAuth, validateContent, validateSpec } from "@smithable/core";
+import {
+  fitSamples,
+  validateAuth,
+  validateContent,
+  validateSpec,
+  YamlEditor,
+} from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
 import {
@@ -22,7 +28,7 @@ import {
 } from "./from-page.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { addLibraryPictures } from "./pictures.js";
+import { addLibraryPictures, dropMissingPictures } from "./pictures.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
 
 /**
@@ -41,6 +47,8 @@ export async function create(
     sampleData?: boolean;
     from?: string;
     withPictures?: boolean;
+    /** The app's name as someone typed it (the hosted form): it wins over a draft's own. */
+    name?: string;
   } = {},
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
@@ -143,6 +151,7 @@ export async function create(
     if (ir && pictures.length === 0 && process.env.SMITHABLE_NO_PICTURES !== "1")
       pictures = await addLibraryPictures({ description, ir, files, io });
   }
+  if (options.name?.trim()) files = named(files, options.name.trim());
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
@@ -189,6 +198,7 @@ export async function create(
     mkdirSync(dirname(join(dir, file)), { recursive: true });
     writeFileSync(join(dir, file), Buffer.from(data, "base64"));
   }
+  if (options.describe) dropMissingPictures(dir, io);
   const code = await generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
   if (sampleData && exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
@@ -269,4 +279,12 @@ async function askQuestions(
     prompt.close();
   }
   return answers;
+}
+
+/** The project's files with the app named `name` (a name someone typed wins over a draft's). */
+export function named(files: Record<string, string>, name: string): Record<string, string> {
+  const spec = new YamlEditor(files["smithable.yml"] ?? "");
+  if (!spec.has(["app", "name"])) return files;
+  spec.set(["app", "name"], name);
+  return { ...files, "smithable.yml": spec.text };
 }
