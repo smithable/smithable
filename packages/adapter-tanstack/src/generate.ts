@@ -355,14 +355,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("src/generated/custom.ts", CUSTOM_PROPS),
       generated("src/generated/pages.ts", pagesModule(ir, auth)),
       // The public site's menu and contact details, for its landing pages and public blogs.
-      ...(ir.pages.some(
-        (p) =>
-          p.pattern.kind === "landing" ||
-          publicArticles(p, { auth }) ||
-          (p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id)),
-      )
-        ? [generated("src/generated/site.ts", siteModule(ir, t, auth))]
-        : []),
+      ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
       generated("src/routes/__root.tsx", rootRoute(ir, t, auth, ux)),
       generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
@@ -489,7 +482,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         ? [
             {
               files: g.kit,
-              used: ({ ir }) =>
+              used: ({ ir, auth }) =>
+                // The site's frame (LandingLayout) is the landing kit's: a public blog or
+                // catalog uses it without a landing page.
+                (kind === "landing" && hasSite(ir, auth)) ||
                 ir.pages.some(
                   (p) =>
                     p.pattern.kind === kind ||
@@ -576,3 +572,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       }),
   },
 ];
+
+/** Whether the app has a public site: a landing page, a public blog, or a public catalog at "/". */
+function hasSite(ir: SpecIR, auth: AuthIR): boolean {
+  return ir.pages.some(
+    (p) =>
+      p.pattern.kind === "landing" ||
+      publicArticles(p, { auth }) ||
+      (p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id)),
+  );
+}

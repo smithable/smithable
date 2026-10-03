@@ -29,7 +29,7 @@ import {
 } from "./from-page.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { addLibraryPictures, dropMissingPictures } from "./pictures.js";
+import { addLibraryPictures, dropMissingPictures, writePictures } from "./pictures.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
 
 /**
@@ -56,6 +56,7 @@ export async function create(
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
   let pictures: { file: string; alt: string; bytes: Uint8Array }[] = [];
+  let fromPage = false;
   if (options.from) {
     if (options.withPictures) {
       const consent = await confirm(
@@ -76,6 +77,7 @@ export async function create(
         const bytes = new Map<string, Uint8Array>();
         const saved = await downloadPictures(reading, (file, data) => bytes.set(file, data));
         pictures = saved.map((p) => ({ ...p, bytes: bytes.get(p.file) as Uint8Array }));
+        fromPage = pictures.length > 0;
       }
       io.out(
         `Read ${page.url}: ${reading.headings.length} headings, ${reading.navigation.length} menu links, ${reading.forms.length} forms${options.withPictures ? `, ${pictures.length} pictures` : ""}.\n`,
@@ -155,7 +157,7 @@ export async function create(
     const confirmed = await confirm(io, "\nCreate this app?", options.yes === true);
     if (confirmed !== true) return confirmed;
     // Pictures from the Smithable image library, unless the page's own came with --with-pictures.
-    if (ir && pictures.length === 0 && process.env.SMITHABLE_NO_PICTURES !== "1")
+    if (ir && !fromPage && process.env.SMITHABLE_NO_PICTURES !== "1")
       pictures = await addLibraryPictures({ description, ir, files, io });
   }
   if (options.name?.trim()) files = named(files, options.name.trim());
@@ -197,17 +199,12 @@ export async function create(
       mkdirSync(dirname(join(dir, path)), { recursive: true });
       writeFileSync(join(dir, path), text);
     }
-  // The page's pictures (as sample pictures, never linked to the site) or the library's.
-  for (const picture of pictures) {
-    const path = join(
-      dir,
-      "public",
-      "images",
-      picture.file.includes("/") ? picture.file : `samples/${picture.file}`,
-    );
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, picture.bytes);
-  }
+  // The page's pictures as sample pictures (never linked to the site); the library's where its
+  // list says (samples/<n>.webp, and hero.webp, which the texts name as images/hero.webp).
+  writePictures(
+    dir,
+    pictures.map((p) => (fromPage ? { ...p, file: `samples/${p.file}` } : p)),
+  );
   // Its pictures, which a drafted app's texts may still use.
   for (const [file, data] of Object.entries(STARTER_ASSETS[name] ?? {})) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
