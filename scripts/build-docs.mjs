@@ -1,9 +1,10 @@
 // Builds docs.smithable.ai into site/: the pages in docs/site and the spec reference as HTML,
 // and the JSON Schema at the address its $id names. Fails on a link to a page, heading or
-// repository file that does not exist, so the site never ships a dead link.
+// repository file that does not exist, so the site never ships a dead link. A picture in a page
+// (a file under docs/site) is copied into the site at the same path; a missing one fails too.
 // Links between pages start at the root, so the 404 page works at any address.
 // Usage: node scripts/build-docs.mjs [out dir]
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { Marked } from "marked";
 
@@ -14,6 +15,7 @@ const REPO = "https://github.com/smithable/smithable/blob/main/";
 const PAGES = [
   { src: "docs/site/index.md", out: "index.html", nav: "Home" },
   { src: "docs/site/start.md", out: "start.html", nav: "Getting started" },
+  { src: "docs/site/starters.md", out: "starters.html", nav: "Starters" },
   { src: "docs/site/why.md", out: "why.html", nav: "Why Smithable" },
   { src: "docs/site/faq.md", out: "faq.html", nav: "Questions" },
   { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
@@ -105,6 +107,7 @@ pre{background:var(--code);padding:1rem;border-radius:6px;overflow-x:auto;line-h
 pre code{background:none;padding:0}
 table{border-collapse:collapse;display:block;overflow-x:auto;margin:1rem 0}
 th,td{border:1px solid var(--line);padding:.4rem .6rem;text-align:left;vertical-align:top}
+img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px}
 footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding:1rem;text-align:center}
 `;
 
@@ -149,6 +152,18 @@ for (const page of PAGES) {
     renderer: {
       heading({ tokens, depth, text }) {
         return `<h${depth} id="${ids.get(text)?.shift() ?? slug(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+      },
+      // A picture next to the page, copied into the site; its path stays as written.
+      image({ href, text }) {
+        const file = resolve(root, dirname(page.src), href);
+        if (/^[a-z]+:/.test(href) || !existsSync(file)) {
+          problems.push(`${page.src}: picture ${href} does not exist`);
+        } else {
+          const to = join(out, relative(join(root, "docs/site"), file));
+          mkdirSync(dirname(to), { recursive: true });
+          copyFileSync(file, to);
+        }
+        return `<img src="${esc(href)}" alt="${esc(text)}" loading="lazy">`;
       },
       link({ href, title, tokens }) {
         return `<a href="${esc(target(page, href))}"${title ? ` title="${esc(title)}"` : ""}>${this.parser.parseInline(tokens)}</a>`;
