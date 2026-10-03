@@ -12,33 +12,26 @@ models:
       salary: money
       type: fullTime | partTime | contract | temporary
       status: open | closed
-      postedAt: date = TODAY()
-    access:
-      delete: [admin]
+      postedAt: datetime = NOW()
   Application:
     fields:
       jobPost: JobPost!
       name: string!
       email: email!
       phone: phone
-      resume: text
+      resume: url
       coverLetter: text
-      status: submitted | reviewed | shortlisted | rejected
-    access:
-      delete: [admin]
+      status: submitted | reviewed | shortlisted | rejected | hired
+      appliedAt: datetime = NOW()
 pages:
   jobs:
     route: /
     crud: JobPost
     search: [title, description, company, location]
-    filters: [type, status]
+    filters: [type, status, salary]
     sortable: [postedAt, salary]
-    actions: [closeJob]
-  applications:
-    crud: Application
-    search: [name, email]
-    filters: [jobPost, status]
-    actions: [reviewApplication, shortlistApplication, rejectApplication]
+    favorites: true
+    contact: owner
   home:
     route: /home
     landing:
@@ -48,33 +41,6 @@ pages:
         records: JobPost
         where:
           status: open
-actions:
-  closeJob:
-    on: JobPost
-    when:
-      status: open
-    set:
-      status: closed
-    allow: [admin]
-  reviewApplication:
-    on: Application
-    when:
-      status: submitted
-    set:
-      status: reviewed
-    allow: [admin]
-  shortlistApplication:
-    on: Application
-    when:
-      status: [reviewed, shortlisted]
-    set:
-      status: shortlisted
-    allow: [admin]
-  rejectApplication:
-    on: Application
-    when:
-      status: [reviewed, shortlisted]
-    set:
-      status: rejected
-    allow: [admin]
+  applications:
+    crud: Application
 navigation: [jobs, applications]

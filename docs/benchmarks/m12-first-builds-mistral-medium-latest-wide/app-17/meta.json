@@ -3,6 +3,6 @@
   "starter": "booking",
   "wordStarter": "records",
   "questions": [],
-  "dropped": "book",
+  "dropped": "Appointment.placesLeft",
   "lang": "sv"
 }

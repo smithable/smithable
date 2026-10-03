@@ -5,9 +5,7 @@ defaultAccess: private
 public:
   pages: [home]
 roles:
-  admin:
-    description: Keeps the tool library tidy.
   member:
-    description: Lends and borrows tools.
+    description: A freelancer using the app.
 defaultRole: member
 admins: [johan@smithable.ai]

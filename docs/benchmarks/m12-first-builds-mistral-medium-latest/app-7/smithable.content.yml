@@ -1,72 +1,7 @@
 smithableContent: 0.1
-models:
-  Team:
-    label: Team
-    pluralLabel: Teams
-    fields:
-      sport:
-        label: Sport
-        values:
-          football: Football
-          futsal: Futsal
-          beach: Beach Soccer
-      founded:
-        label: Founded
-      logo:
-        label: Logo
-  Player:
-    label: Player
-    pluralLabel: Players
-    fields:
-      position:
-        label: Position
-        values:
-          goalkeeper: Goalkeeper
-          defender: Defender
-          midfielder: Midfielder
-          forward: Forward
-      number:
-        label: Number
-      team:
-        label: Team
-      birthDate:
-        label: Birth Date
-      nationality:
-        label: Nationality
-      photo:
-        label: Photo
-  Match:
-    label: Match
-    pluralLabel: Matches
-    fields:
-      homeTeam:
-        label: Home Team
-      awayTeam:
-        label: Away Team
-      date:
-        label: Date
-      location:
-        label: Location
-      status:
-        label: Status
-        values:
-          scheduled: Scheduled
-          played: Played
-          canceled: Canceled
-      homeScore:
-        label: Home Score
-      awayScore:
-        label: Away Score
 pages:
   home:
-    title: Football Club
     hero:
       image:
         src: images/hero.webp
         alt: A team standing at a whiteboard by a window over the harbour
-  teams:
-    title: Teams
-  players:
-    title: Players
-  matches:
-    title: Matches

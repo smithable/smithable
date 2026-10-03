@@ -9,8 +9,6 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
-    access:
-      delete: [admin]
   Incident:
     fields:
       title: string!
@@ -21,15 +19,13 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
-      delete: [admin, staff]
+      write: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
-    access:
-      delete: [admin, staff]
   Maintenance:
     fields:
       title: string!
@@ -37,18 +33,19 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-    access:
-      delete: [admin, staff]
 pages:
   incidents:
     crud: Incident
+    access: [admin, staff]
   updates:
     crud: IncidentUpdate
+    access: [admin, staff]
   components:
     crud: Component
     access: [admin]
   maintenance:
     crud: Maintenance
+    access: [admin, staff]
   home:
     route: /
     landing:
@@ -60,19 +57,13 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
+  history:
+    crud: Incident
   team:
     users: manage
   admin:
     data: all
-  overview:
-    crud: Incident
-navigation: [overview, incidents, updates, maintenance, components, team, admin]
+navigation: [home, history, incidents, updates, maintenance, components, admin, team]
 actions:
   identified:
     on: Incident
@@ -85,6 +76,7 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
+    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -97,6 +89,7 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
+    allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -110,4 +103,5 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    intent: The incident is over, with an update saying so.
+    allow: [admin, staff]
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.

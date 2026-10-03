@@ -1,4 +1,14 @@
 smithableUx: 0.1
+pages:
+  plots:
+    table:
+      sort: number
+  waiting-list:
+    table:
+      sort: dateAdded
+  fees:
+    table:
+      sort: -year
 tones:
   Plot.status:
     available: success
@@ -9,17 +19,3 @@ tones:
   Fee.status:
     pending: warning
     paid: success
-    overdue: danger
-pages:
-  plots:
-    table:
-      sort: number
-      columns: [number, size, status, holder]
-  waiting-list:
-    table:
-      sort: dateAdded
-      columns: [name, email, phone, dateAdded, status]
-  fees:
-    table:
-      sort: -year
-      columns: [year, amount, dueDate, status]

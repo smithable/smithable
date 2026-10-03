@@ -14,7 +14,7 @@ models:
           accepted: Accepterad
           rejected: Avvisad
       total:
-        label: Totalt belopp
+        label: Totalt
       validUntil:
         label: Giltig till
       notes:
@@ -37,7 +37,7 @@ models:
           paid: Betald
           overdue: Försenad
       total:
-        label: Totalt belopp
+        label: Totalt
       dueDate:
         label: Förfallodatum
       paidAt:
@@ -57,10 +57,11 @@ models:
       phone:
         label: Telefon
       segment:
-        label: Typ
+        label: Segment
         values:
           private: Privat
           company: Företag
+          municipality: Kommun
       notes:
         label: Anteckningar
       accountManager:

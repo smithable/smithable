@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Min Frisörsalong
-  description: Bokningssystem för frisörsalong där kunder kan boka tid själva på nätet.
+  description: Onlinebokning för frisörsalong där kunder kan boka tid själva.
   currency: SEK
   timezone: Europe/Stockholm
 models:
@@ -12,57 +12,61 @@ models:
       durationMinutes: int! = 30
       price: money!
     access:
-      delete: [admin]
-      read: [admin]
       create: [admin]
       write: [admin]
+      delete: [admin]
   Stylist:
     fields:
       name: string!
       bio: text
       portrait: picture
     access:
-      delete: [admin]
-      read: [admin]
       create: [admin]
       write: [admin]
+      delete: [admin]
+  Booking:
+    fields:
+      customerName: string!
+      customerEmail: email!
+      customerPhone: phone
+      appointment: Appointment! unique
+    access:
+      read: [owner]
+      write: [owner]
+      delete: [owner]
+      create: [customer]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
   Appointment:
     fields:
       service: Service!
       stylist: Stylist!
       startsAt: datetime!
       capacity: int! = 1
-      bookings: Booking[]
     access:
-      delete: [admin]
-      read: [admin]
       create: [admin]
       write: [admin]
-  Booking:
-    fields:
-      appointment: Appointment! unique
-      customerName: string!
-      customerEmail: email!
-      customerPhone: phone
-    capacity:
-      per: appointment
-      max: appointment.capacity
+      delete: [admin]
 pages:
   tjanster:
     crud: Service
     access: [admin]
-  stylister:
+  frisorer:
     crud: Stylist
-    access: [admin]
-  tider:
-    crud: Appointment
     access: [admin]
   mina-bokningar:
     crud: Booking
-  schema:
-    calendar:
-      model: Appointment
-      starts: startsAt
+    access: [customer]
+  meddelanden:
+    crud: Message
+    access: [admin]
   hem:
     route: /
     landing:
@@ -70,7 +74,15 @@ pages:
       footer:
       tjanster:
         records: Service
-      stylister:
+      frisorer:
         records: Stylist
-      callToAction:
-        button: schema
+      contact:
+        form: Message
+  tider:
+    crud: Appointment
+    access: [admin]
+  schema:
+    calendar:
+      model: Appointment
+      starts: startsAt
+navigation: [hem, schema, mina-bokningar]
