@@ -346,7 +346,8 @@ export function detailRoute(
         />
       </section>`;
   });
-  const router = favorite || offered.length > 0;
+  // A copy opens the new record instead of reloading this one: it needs no router.
+  const router = favorite || offered.some((a) => !a.copy);
   const viewer = contact || favorite || offered.length > 0;
   const buttons = [
     ...offered.map(
