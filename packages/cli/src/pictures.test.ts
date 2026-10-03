@@ -178,6 +178,13 @@ test("a picture the texts name but the project does not have is left out", async
   expect(text).toContain("title: Hello");
   expect(text).toContain("images/kept.webp");
   expect(out.join("")).toContain("Left out a picture");
+  // A hero whose only key was its picture goes with it: an empty "hero:" is not valid.
+  writeFileSync(
+    join(dir, "smithable.content.yml"),
+    "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: A view }\n",
+  );
+  dropMissingPictures(dir, { out: () => {}, err: () => {} });
+  expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toBe("smithableContent: 0.1\n");
 });
 
 test("a name someone typed names the app, over the starter's or the draft's own", async () => {

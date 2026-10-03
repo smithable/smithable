@@ -779,3 +779,10 @@ test("a boolean argument is a bare flag on the command line", () => {
     use: false,
   });
 });
+
+test("an operation whose name is not text is refused, not thrown", () => {
+  expect(applyOperation(files, 42 as unknown as string, {})).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("must be text"),
+  });
+});
