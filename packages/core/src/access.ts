@@ -87,13 +87,29 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
   if (!model || action.custom)
     return { public: false, roles: withAdmin(action.allow ?? everyone, everyone), owner: false };
   const write = modelAccess(model, auth).write;
-  // Adding a related record also needs the right to create one (§7): only roles that may.
+  // Adding a related record also needs the right to create one (§7), and a copy that of its
+  // lists' records (§8): only roles that may.
   let among = action.allow && withAdmin(action.allow, everyone);
-  for (const add of action.add ?? []) {
-    const added = models.find((m) => m.name === add.model);
+  const lists = (action.with ?? []).map(
+    (l) => (model.fields.find((f) => f.name === l)?.type as { model?: string } | undefined)?.model,
+  );
+  for (const name of [...(action.add ?? []).map((a) => a.model), ...lists]) {
+    const added = models.find((m) => m.name === name);
     const create = added && modelAccess(added, auth).create;
     if (!create || create.public) continue;
     among = (among ?? everyone).filter((r) => create.roles.includes(r));
+  }
+  // A copy changes nothing: it needs to read the record (its data function checks) and to
+  // create one like it, not to write the original.
+  if (action.copy) {
+    const create = modelAccess(model, auth).create;
+    const roles = create.public ? everyone : create.roles;
+    return {
+      public: false,
+      roles: among ? roles.filter((r) => among?.includes(r)) : roles,
+      owner: false,
+      ...(among ? { among } : {}),
+    };
   }
   return {
     public: false,
