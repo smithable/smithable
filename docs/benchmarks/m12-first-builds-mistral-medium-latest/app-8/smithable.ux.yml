@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  talks:
+    table:
+      sort: startTime
+  speakers:
+    table:
+      sort: name
+  attendees:
+    table:
+      sort: name
+tones:
+  Talk.status:
+    published: success
+    cancelled: danger

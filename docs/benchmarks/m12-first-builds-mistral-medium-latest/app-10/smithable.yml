@@ -1,0 +1,43 @@
+smithable: 0.1
+app:
+  name: Family Recipes
+  description: A private collection of family recipes with ingredients and shopping lists.
+models:
+  Recipe:
+    fields:
+      name: string!
+      description: text
+      servings: int = 4
+      prepTime: int
+      cookTime: int
+      category: breakfast | lunch | dinner | dessert | snack
+      difficulty: easy | medium | hard
+      instructions: text!
+    access:
+      delete: [owner]
+  Ingredient:
+    fields:
+      name: string!
+      quantity: string
+      unit: string
+      recipe: Recipe!
+    access:
+      delete: [owner]
+  ShoppingList:
+    fields:
+      name: string!
+      date: date! = TODAY()
+      status: pending | completed
+      recipe: Recipe
+    access:
+      delete: [owner]
+pages:
+  recipes:
+    crud: Recipe
+    search: [name, description, category]
+    filters: [category, difficulty]
+  ingredients:
+    crud: Ingredient
+  shopping-lists:
+    crud: ShoppingList
+navigation: [recipes, shopping-lists]
