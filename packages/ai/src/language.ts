@@ -8,11 +8,11 @@ const ENGLISH = new Set(
   ),
 );
 
-/** Whether a description is written in English: a fifth of its words or more are short English ones. */
+/** Whether a description is written in English: a sixth of its words or more are short English ones. */
 export function writtenInEnglish(text: string): boolean {
   const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
   if (words.length < 5) return false;
-  return words.filter((w) => ENGLISH.has(w)).length / words.length >= 0.2;
+  return words.filter((w) => ENGLISH.has(w)).length / words.length >= 0.15;
 }
 
 /** What the prompts say about the language, when a word count can tell; else nothing. */
