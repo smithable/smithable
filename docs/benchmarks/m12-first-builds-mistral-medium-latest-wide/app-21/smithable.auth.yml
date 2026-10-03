@@ -1,9 +1,6 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-defaultAccess: private
-roles:
-  member:
-    description: Autokorjaamon työntekijä.
-defaultRole: member
+  selfSignUp: false
+defaultAccess: shared
 admins: [johan@smithable.ai]

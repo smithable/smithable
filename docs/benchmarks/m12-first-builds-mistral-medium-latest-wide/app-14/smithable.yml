@@ -9,15 +9,14 @@ models:
       email: email
       phone: phone
       attending: yes | no | maybe
-      mealChoice: vegetarian | meat | vegan | glutenFree
+      mealChoice: vegetarian | meat | fish | vegan | glutenFree
       tableNumber: int
       notes: text
       group: string
 pages:
   guests:
     crud: Guest
-    search: [name, email, group]
-    sortable: [name, tableNumber, attending]
+    search: [name, email, group, notes]
   team:
     users: manage
 navigation: [guests, team]

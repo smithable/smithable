@@ -2,8 +2,5 @@
   "description": "A sales pipeline for our six-person web agency: leads, deals and who follows up when.",
   "starter": "crm",
   "wordStarter": "crm",
-  "questions": [
-    "What details should each lead and deal record include?",
-    "Who can view the pipeline?"
-  ]
+  "questions": ["What are the main kinds of records in the pipeline?", "Who can see the pipeline?"]
 }
