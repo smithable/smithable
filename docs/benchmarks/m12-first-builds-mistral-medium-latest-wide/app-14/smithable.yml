@@ -9,17 +9,40 @@ models:
       email: email
       phone: phone
       attending: yes | no | maybe
-      mealChoice: vegetarian | meat | fish | vegan
+      mealChoice: vegetarian | standard | vegan | glutenFree
       tableNumber: int
       notes: text
       group: string
     access:
       delete: [admin]
+      write: [admin, owner]
 pages:
   guests:
     crud: Guest
-    search: [name, email, notes]
-    filters: [attending, mealChoice, tableNumber]
+    access: [admin]
+    search: [name, email, group]
+    sortable: [name, tableNumber, attending]
+    actions: [confirmAttendance, declineAttendance]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
   team:
     users: manage
+actions:
+  confirmAttendance:
+    on: Guest
+    when:
+      attending: maybe
+    set:
+      attending: yes
+    intent: Confirm the guest's attendance.
+  declineAttendance:
+    on: Guest
+    when:
+      attending: maybe
+    set:
+      attending: no
+    intent: Decline the invitation.
 navigation: [guests, team]

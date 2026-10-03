@@ -3,7 +3,7 @@
   "starter": "marketplace",
   "wordStarter": "invoicing",
   "questions": [
-    "Who can see the items on the swap shelf?",
-    "Can colleagues comment on or discuss items before claiming them?"
+    "Who can see the items without signing in?",
+    "What details does each item record include?"
   ]
 }

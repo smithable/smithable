@@ -32,7 +32,7 @@ models:
       name: string!
       email: email unique
       phone: phone
-      segment: private | company
+      segment: private | company | municipality
       notes: text
       accountManager: User
     access:
@@ -41,64 +41,56 @@ pages:
   offerter:
     crud: Quote
     sortable: [number, total, validUntil, createdAt]
-    actions: [sendQuote, acceptQuote, rejectQuote, createInvoiceFromQuote]
+    actions: [acceptQuote, rejectQuote, sendQuote]
     search: [number, customer]
     filters: [status, customer]
   fakturor:
     crud: Invoice
     sortable: [number, total, dueDate, createdAt]
-    actions: [sendInvoice, markPaid]
+    actions: [markInvoicePaid, sendInvoice]
     search: [number, customer]
     filters: [status, customer]
-  anvandare:
+  team:
     users: manage
   kunder:
     crud: Customer
     search: [name, email]
     sortable: [name, createdAt]
 actions:
-  sendQuote:
-    on: Quote
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: Skicka offert till kund.
   acceptQuote:
     on: Quote
     when:
       status: sent
     set:
       status: accepted
-    intent: Acceptera offert.
+    intent: Acceptera en offert.
   rejectQuote:
     on: Quote
     when:
       status: sent
     set:
       status: rejected
-    intent: Avvisa offert.
+    intent: Avvisa en offert.
+  markInvoicePaid:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: paid
+      paidAt: NOW()
+    intent: Markera en faktura som betald.
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka en offert till kunden.
   sendInvoice:
     on: Invoice
     when:
       status: draft
     set:
       status: sent
-    intent: Skicka faktura till kund.
-  markPaid:
-    on: Invoice
-    when:
-      status: [sent, overdue]
-    set:
-      status: paid
-      paidAt: NOW()
-    intent: Markera faktura som betald.
-  createInvoiceFromQuote:
-    on: Quote
-    when:
-      status: accepted
-    copy:
-      status: draft
-      number:
-    intent: Skapa faktura från accepterad offert.
-navigation: [kunder, offerter, fakturor, anvandare]
+    intent: Skicka en faktura till kunden.
+navigation: [kunder, offerter, fakturor, team]
