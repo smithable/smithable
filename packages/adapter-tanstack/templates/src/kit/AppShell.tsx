@@ -233,7 +233,10 @@ export function PageHeader({
         )}
       </div>
       {actions && (
-        <div data-part="actions" className="flex flex-wrap items-center gap-2 max-sm:[&>*]:flex-1">
+        <div
+          data-part="actions"
+          className="flex flex-wrap items-center gap-2 max-sm:[&>*:not([data-part=save])]:flex-1"
+        >
           {actions}
         </div>
       )}
