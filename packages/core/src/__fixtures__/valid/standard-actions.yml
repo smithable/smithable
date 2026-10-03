@@ -10,6 +10,14 @@ models:
       followUp: date
       pinned: bool
       severity: int
+      note: text
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
 actions:
   resolve:
     on: Incident
@@ -21,6 +29,13 @@ actions:
       pinned: false
     allow: [admin]
     intent: The incident is over.
+    add:
+      IncidentUpdate: { at: NOW(), status: resolved, message: This incident is resolved. }
+  annotate:
+    on: Incident
+    set: { note: }
+    add:
+      IncidentUpdate: { at: NOW(), status: investigating, message: }
   escalate:
     on: Incident
     when: { pinned: false }
@@ -28,4 +43,4 @@ actions:
 pages:
   incidents:
     crud: Incident
-    actions: [resolve, escalate]
+    actions: [resolve, escalate, annotate]

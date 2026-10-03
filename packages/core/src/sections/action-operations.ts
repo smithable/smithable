@@ -20,6 +20,7 @@ const addAction: Operation<{
   on?: string;
   when?: Record<string, string>;
   set?: Record<string, string>;
+  add?: Record<string, string>;
   input?: Record<string, string>;
   output?: Record<string, string>;
   allow?: string[];
@@ -42,7 +43,10 @@ const addAction: Operation<{
         'Only for records with these values, e.g. { status: "investigating | identified" }.',
       ),
       set: fields(
-        'The new values: a value or a formula, e.g. { status: resolved, resolvedAt: "NOW()" }.',
+        'The new values: a value, a formula, or nothing to ask the person, e.g. { status: canceled, cancelReason: "" }.',
+      ),
+      add: fields(
+        'A related record to create, as Model.field pairs, e.g. { "IncidentUpdate.status": resolved, "IncidentUpdate.at": "NOW()" }.',
       ),
       input: fields(
         'A custom action: the values it needs, as field shorthand, e.g. { keep: "Customer!" }.',
@@ -61,7 +65,7 @@ const addAction: Operation<{
   destructive: () => false,
   apply(
     { spec },
-    { action, on, when = {}, set = {}, input = {}, output = {}, allow = [], intent },
+    { action, on, when = {}, set = {}, add = {}, input = {}, output = {}, allow = [], intent },
     ir,
   ) {
     if (!FIELD_NAME_PATTERN.test(action))
@@ -75,7 +79,7 @@ const addAction: Operation<{
       ...(intent?.trim() ? { intent: intent.trim() } : {}),
     };
     if (!on) {
-      if (Object.keys(set).length || Object.keys(when).length)
+      if (Object.keys(set).length || Object.keys(when).length || Object.keys(add).length)
         throw new OperationError(
           `A standard action needs "on": the model whose record it changes.`,
         );
@@ -93,13 +97,15 @@ const addAction: Operation<{
       );
     const model = ir.models.find((m) => m.name === on);
     if (!model) throw new OperationError(`There is no model named "${on}".`);
-    if (!Object.keys(set).length)
+    if (!Object.keys(set).length && !Object.keys(add).length)
       throw new OperationError(
-        `A standard action needs "set": at least one field and its new value.`,
+        `A standard action needs "set" (the new values), "add" (a related record) or both.`,
       );
-    // Command-line values are text: a yes/no or a number becomes one, as the field holds it.
-    const typed = (field: string, value: string): string | number | boolean => {
-      const type = model.fields.find((f) => f.name === field)?.type;
+    // Command-line values are text: a yes/no or a number becomes one, as the field holds it;
+    // nothing means the person is asked for it.
+    const typed = (field: string, value: string, of = model): string | number | boolean | null => {
+      if (value === "") return null;
+      const type = of.fields.find((f) => f.name === field)?.type;
       if (value.includes("(") || type?.kind !== "scalar") return value;
       if (type.name === "bool" && (value === "true" || value === "false")) return value === "true";
       if (
@@ -110,10 +116,22 @@ const addAction: Operation<{
         return Number(value);
       return value;
     };
+    // "IncidentUpdate.status=resolved": the records to add, grouped by model.
+    const added: Record<string, Record<string, string | number | boolean | null>> = {};
+    for (const [key, value] of Object.entries(add)) {
+      const [name, field] = key.split(".");
+      const target = ir.models.find((m) => m.name === name);
+      if (!name || !field || !target)
+        throw new OperationError(`"${key}" in "add" must be Model.field, with a model of the app.`);
+      added[name] = { ...added[name], [field]: typed(field, value, target) };
+    }
     spec.add(["actions"], action, {
       on,
       ...(Object.keys(when).length ? { when: conditionArgs(when) } : {}),
-      set: Object.fromEntries(Object.entries(set).map(([k, v]) => [k, typed(k, v)])),
+      ...(Object.keys(set).length
+        ? { set: Object.fromEntries(Object.entries(set).map(([k, v]) => [k, typed(k, v)])) }
+        : {}),
+      ...(Object.keys(added).length ? { add: added } : {}),
       ...text,
     });
     // One operation gives a working button: on the model's crud page, when there is just one.
