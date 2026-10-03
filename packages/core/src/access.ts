@@ -84,13 +84,20 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
   const everyone = auth.roles.map((r) => r.name);
   if (auth.signIn === "none") return { public: false, roles: [], owner: false };
   const model = action.custom ? undefined : models.find((m) => m.name === action.on);
-  if (!model)
+  if (!model || action.custom)
     return { public: false, roles: withAdmin(action.allow ?? everyone, everyone), owner: false };
   const write = modelAccess(model, auth).write;
-  const among = action.allow && withAdmin(action.allow, everyone);
+  // Adding a related record also needs the right to create one (§7): only roles that may.
+  let among = action.allow && withAdmin(action.allow, everyone);
+  for (const add of action.add ?? []) {
+    const added = models.find((m) => m.name === add.model);
+    const create = added && modelAccess(added, auth).create;
+    if (!create || create.public) continue;
+    among = (among ?? everyone).filter((r) => create.roles.includes(r));
+  }
   return {
     public: false,
-    roles: among ? write.roles.filter((r) => among.includes(r)) : write.roles,
+    roles: among ? write.roles.filter((r) => among?.includes(r)) : write.roles,
     owner: write.owner,
     ...(among ? { among } : {}),
   };

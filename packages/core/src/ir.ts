@@ -314,13 +314,24 @@ export interface StandardActionIR extends ActionBase {
   output?: undefined;
   on: string;
   when?: Condition;
-  /** The new values, in the order written: a literal, or a formula on the record as it was. */
+  /** The new values, in the order written: a literal, a formula on the record as it was, or asked for. */
   set: ActionValueIR[];
+  /** Related records created with the change, one per model (docs/design/actions.md §7). */
+  add?: ActionAddIR[];
 }
 
 export type ActionValueIR =
   | { field: string; value: FieldValue }
-  | { field: string; formula: Expr; text: string };
+  | { field: string; formula: Expr; text: string }
+  /** The person is asked for it when they press the button (§6). */
+  | { field: string; asked: true };
+
+/** A record of `model` created by a standard action, its `reference` filled with the action's record. */
+export interface ActionAddIR {
+  model: string;
+  reference: string;
+  values: ActionValueIR[];
+}
 
 export interface MenuIR {
   name: string;

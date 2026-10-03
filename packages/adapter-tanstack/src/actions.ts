@@ -6,6 +6,7 @@ import {
   type FieldIR,
   humanize,
   kebab,
+  type ModelIR,
   type PageIR,
   pascal,
   type QueryIR,
@@ -95,6 +96,8 @@ export function actionNames(action: ActionIR) {
     ui: `${action.name}Ui`,
     access: `${action.name}Access`,
     fits: `${action.name}Fits`,
+    asks: `${action.name}Asks`,
+    askUi: `${action.name}AskUi`,
     run: `run${type}`,
     module: `#/generated/actions/${kebab(action.name)}`,
     custom: `#/custom/actions/${kebab(action.name)}`,
@@ -193,6 +196,22 @@ export function fitsCode(action: StandardActionIR): string {
  * functions (so access and the public condition apply), checks its condition, works out the new
  * values on the record as it was and saves them with the same update the edit form uses.
  */
+/** The values a standard action asks for: the record's own, then each added record's (`Model.field`). */
+export function askedFields(
+  action: StandardActionIR,
+): { model: string; field: string; key: string }[] {
+  return [
+    ...action.set
+      .filter((v) => "asked" in v)
+      .map((v) => ({ model: action.on, field: v.field, key: v.field })),
+    ...(action.add ?? []).flatMap((a) =>
+      a.values
+        .filter((v) => "asked" in v)
+        .map((v) => ({ model: a.model, field: v.field, key: `${a.model}.${v.field}` })),
+    ),
+  ];
+}
+
 export function standardActionModule(
   action: StandardActionIR,
   ir: SpecIR,
@@ -202,39 +221,71 @@ export function standardActionModule(
   const a = actionNames(action);
   const n = names(modelNamed(ir, action.on), t);
   const when = Object.keys(action.when ?? {});
+  const asked = askedFields(action);
+  const models = [...new Set(asked.map((x) => x.model))].map((m) => names(modelNamed(ir, m), t));
+  const named = (m: string) => names(modelNamed(ir, m), t);
+  const asks = asked.length
+    ? `
+/** What the "${action.name}" action asks for when its button is pressed. */
+export const ${a.asks} = z.object({
+${asked.map((x) => `  ${JSON.stringify(x.key)}: ${named(x.model).schema}.shape.${x.field},`).join("\n")}
+});
+
+/** The dialog's fields: the ${n.label.toLowerCase()}'s own, then each added record's under its heading. */
+export const ${a.askUi}: ModelUi = {
+  label: ${JSON.stringify(humanize(action.name))},
+  pluralLabel: ${JSON.stringify(humanize(action.name))},
+  titleField: "id",
+  columns: [],
+  fields: [
+${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)})${x.key === x.field ? "" : `.map((f) => ({ ...f, name: ${JSON.stringify(x.key)} }))`},`).join("\n")}
+  ],
+  sections: ${literal(
+    [...new Set(asked.filter((x) => x.key !== x.field).map((x) => x.model))].map((m) => ({
+      name: m,
+      title: named(m).label,
+      fields: asked.filter((x) => x.model === m && x.key !== x.field).map((x) => x.key),
+    })),
+  )},
+};
+`
+    : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { Rule } from "#/kit/access";
-import { currentViewer } from "#/lib/viewer.server";
+${models.map((m) => `import { ${m.schema}, ${m.ui} } from "${m.module}";\n`).join("")}import type { Rule } from "#/kit/access";
+${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { ${a.run} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.allow ? ", among the roles it allows" : ""}. */
+/** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.allow ? ", among the roles it allows" : ""}${action.add ? ", and may create what it adds" : ""}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** Whether the "${action.name}" action fits the ${n.label.toLowerCase()}: it is offered and allowed only then. */
 export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `${f}?: unknown`).join("; ")}${when.length ? " " : ""}}): boolean {
   return ${fitsCode(action)};
 }
-
+${asks}
 export const ${action.name} = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => ${a.run}(await currentViewer(), id));
+  .validator(${asked.length ? `z.object({ id: z.number().int(), values: ${a.asks} })` : "z.number().int()"})
+  .handler(async ({ data }) => ${a.run}(await currentViewer(), ${asked.length ? "data.id, data.values" : "data"}));
 `;
 }
 
 /**
  * What a standard action does, on the server: loads the record through the model's data
  * functions (so access and the public condition apply), checks the condition, works out the new
- * values on the record as it was and saves them with the same update the edit form uses.
+ * values on the record as it was (the asked ones as given) and saves them: with the edit's
+ * update, or, when it adds related records, in one transaction with their inserts.
  */
 export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Texts): string {
   const a = actionNames(action);
   const model = modelNamed(ir, action.on);
   const n = names(model, t);
   const { compile, stored, imports } = formulaCompiler(model, ir);
-  const values = action.set.map((v) => {
-    const field = model.fields.find((f) => f.name === v.field) as FieldIR;
+  // A value as code: a literal or a formula on the record ("row"), or what was asked.
+  const valueCode = (target: ModelIR, v: StandardActionIR["set"][number], key: string) => {
+    const field = target.fields.find((f) => f.name === v.field) as FieldIR;
     const scalar = field.type.kind === "scalar" ? field.type.name : field.type.kind;
+    if ("asked" in v) return `${field.name}: asked[${JSON.stringify(key)}],`;
     const code =
       "formula" in v
         ? stored(field, compile(v.formula, model, "row"))
@@ -243,28 +294,66 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
           : JSON.stringify(v.value);
     // A date and time is stored as a Date; formulas and literals give its ISO text.
     return `${field.name}: ${scalar === "datetime" ? `new Date(${code})` : code},`;
+  };
+  const values = action.set.map((v) => valueCode(model, v, v.field));
+  const adds = (action.add ?? []).map((add) => {
+    const target = modelNamed(ir, add.model);
+    return {
+      add,
+      target,
+      tn: names(target, t),
+      values: add.values.map((v) => valueCode(target, v, `${add.model}.${v.field}`)),
+    };
   });
-  const usesF = values.some((v) => v.includes("F."));
-  return `${HEADER}import { AccessDenied, check, type Viewer } from "#/kit/access";
+  const all = [...values, ...adds.flatMap((x) => x.values)];
+  const usesF = all.some((v) => v.includes("F."));
+  const asked = askedFields(action).length > 0;
+  const changes = `  // The new values are worked out on the ${n.label.toLowerCase()} as it was${asked ? ", the asked ones as given" : ""}.
+  const values = ${n.schema}.parse({
+    ...row,
+${values.map((v) => `    ${v}`).join("\n")}
+  });`;
+  const body = adds.length
+    ? `${changes}
+${adds
+  .map(
+    ({ add, tn }, i) => `  check(${tn.access}.create, viewer);
+  const added${i} = ${tn.schema}.parse({
+    ${dataKeyOf(add.reference)}: id,
+${adds[i]?.values.map((v) => `    ${v}`).join("\n")}
+  });`,
+  )
+  .join("\n")}
+  // One transaction: the change and the records it adds, or nothing.
+  const { changed, inserted } = db.transaction((tx) => ({
+    changed: tx.update(${n.table}).set(values).where(eq(${n.table}.id, id)).returning().get(),
+    inserted: [
+${adds.map(({ target, tn }, i) => `      tx.insert(${tn.table}).values({ ...added${i}, ${ownerKey(target)}: viewer?.id ?? null }).returning().get(),`).join("\n")}
+    ] as const,
+  }));
+  await afterChange("afterUpdate", ${JSON.stringify(model.name)}, changed, viewer);
+${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringify(target.name)}, inserted[${i}], viewer);`).join("\n")}
+  return changed;`
+    : `${changes}
+  return ${n.data}.update(viewer, id, values);`;
+  return `${HEADER}${adds.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\n' : ""}${adds.length ? `import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";\n` : ""}import { AccessDenied, check, type Viewer } from "#/kit/access";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { ${n.schema} } from "${n.module}";
 import { ${n.data} } from "${n.module}.server";
-import { ${a.access}, ${a.fits} } from "./${kebab(action.name)}";
-
-/** Runs the "${action.name}" action on the ${n.label.toLowerCase()} as the viewer. */
-export async function ${a.run}(viewer: Viewer | null, id: number) {
+${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}${adds.length ? 'import { afterChange } from "#/generated/hooks";\n' : ""}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${asked ? 'import type { z } from "zod";\n' : ""}
+/** Runs the "${action.name}" action on the ${n.label.toLowerCase()} as the viewer${asked ? ", with what was asked" : ""}. */
+export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, asked: z.output<typeof ${a.asks}>` : ""}) {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(${a.access}, viewer, row.${ownerKey(model)});
   if (!${a.fits}(row)) throw new Error("This cannot be done now.");
-  // The new values are worked out on the ${n.label.toLowerCase()} as it was, then saved as an edit.
-  const values = ${n.schema}.parse({
-    ...row,
-${values.map((v) => `    ${v}`).join("\n")}
-  });
-  return ${n.data}.update(viewer, id, values);
+${body}
 }
 `;
 }
+
+/** A reference's key in a record, e.g. incidentId. */
+const dataKeyOf = (reference: string) => `${reference}Id`;
 
 /** The type of a query's result: records as the returned model's data functions give them. */
 export function queryContract(query: QueryIR, ir: SpecIR, t: Texts): string {
