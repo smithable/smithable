@@ -1,10 +1,12 @@
 # The gate. The required status is the `check` job, which only reports on the jobs it needs.
-# A change to the engine, the examples, the scripts `pnpm check` runs, the dependencies or this
-# workflow runs the full check as parallel jobs: lint, build, units and the site; one job per
-# example (scripts/test-apps.mjs <example>); and Studio in a real browser. Anything else runs lint,
-# build, units and the site. Once per pull request and on every push to main; a push to main
-# whose tree the pull request already checked in full only gets the short run. A newer push to a
-# pull request cancels its older run, since several sessions share the Actions minutes.
+# Every pull request runs lint, build, units and the site. The example apps (one job each, through
+# scripts/test-apps.mjs <example>) and Studio in a real browser run too when the repository
+# variable FULL_CI is "true" and the change touches the engine, the examples, the scripts
+# `pnpm check` runs, the dependencies or this workflow. While the repository is private FULL_CI
+# is off and the local `pnpm check` is the gate for engine changes (CLAUDE.md); at the public
+# flip it is switched on, with no edit here. A push to main whose tree its pull request already
+# checked runs nothing beyond the scope job; one that differs (an administrator's merge) gets lint,
+# build, units and the site. A newer push to a pull request cancels its older run.
 name: CI
 on:
   pull_request:
@@ -18,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       full: ${{ steps.scope.outputs.full }}
+      basics: ${{ steps.scope.outputs.basics }}
       examples: ${{ steps.scope.outputs.examples }}
     steps:
       - uses: actions/checkout@v5
@@ -26,6 +29,7 @@ jobs:
         id: scope
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          FULL_CI: ${{ vars.FULL_CI }}
         run: |
           engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
           if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -35,17 +39,23 @@ jobs:
           else
             full=false; why="no engine files changed"
           fi
-          # A merge to main of an up-to-date pull request has the tree its pull request run checked.
-          if [ "$full" = true ] && [ "$GITHUB_EVENT_NAME" = push ] && git rev-parse -q --verify HEAD^2 >/dev/null \
-            && [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse HEAD^2^{tree})" ]; then
-            full=false; why="the pull request checked this tree in full"
+          if [ "$full" = true ] && [ "$FULL_CI" != true ]; then
+            full=false; why="$why, but FULL_CI is off: the local pnpm check is the gate"
           fi
-          echo "full=$full" >> "$GITHUB_OUTPUT"
+          # A merge to main of an up-to-date pull request has the tree its pull request run checked.
+          basics=true
+          if [ "$GITHUB_EVENT_NAME" = push ] && git rev-parse -q --verify HEAD^2 >/dev/null \
+            && [ "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse 'HEAD^2^{tree}')" ]; then
+            full=false; basics=false; why="the pull request checked this tree"
+          fi
           # Every example gets its own job, so a new starter is tested without editing this file.
-          echo "examples=$(ls -d examples/*/ | xargs -n1 basename | jq -Rcs 'split("\n") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+          examples=$(find examples -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -Rcs 'split("\n") | map(select(. != ""))')
+          { echo "full=$full"; echo "basics=$basics"; echo "examples=$examples"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
 
   lint-build-units:
+    needs: scope
+    if: needs.scope.outputs.basics == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -93,7 +103,7 @@ jobs:
   # The required status: green when every job it needs passed, or was skipped on the short run.
   check:
     needs: [scope, lint-build-units, apps, studio]
-    if: always()
+    if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed
