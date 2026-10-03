@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Cleaning Invoices
-  description: A shared place for our cleaning company to manage monthly household invoices.
+  description: A shared place for our cleaning company to manage monthly invoices to households.
   currency: EUR
 models:
   Client:
@@ -20,20 +20,23 @@ models:
     fields:
       number: string! unique
       client: Client!
-      issuedOn: date!
-      dueOn: date
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       total: money
       lines: InvoiceLine[]
-      amount: money = SUM(lines.amount)
 pages:
   clients:
     crud: Client
     search: [name, address]
+    sortable: [name]
   invoices:
     crud: Invoice
-    search: [number]
-    filters: [status, client, issuedOn]
+    search: [number, client]
+    filters: [client, status, issuedOn, dueOn]
+    sortable: [number, issuedOn, dueOn, total]
+  invoice-lines:
+    crud: InvoiceLine
   team:
     users: manage
-navigation: [invoices, clients, team]
+navigation: [invoices, clients, invoice-lines, team]

@@ -5,12 +5,11 @@ pages:
       sort: followUpDate
   deals:
     table:
-      sort: -closeDate
+      sort: -value
 tones:
   Lead.status:
     qualified: success
     lost: danger
   Deal.status:
-    negotiation: warning
-    won: success
-    lost: danger
+    closedWon: success
+    closedLost: danger

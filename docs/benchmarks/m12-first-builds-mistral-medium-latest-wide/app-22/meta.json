@@ -3,8 +3,8 @@
   "starter": "crm",
   "wordStarter": "records",
   "questions": [
-    "Wer kann die Vorbestellungen sehen und verwalten?",
-    "Was enthält eine Vorbestellung neben den Produkten?"
+    "Wer kann Vorbestellungen aufgeben?",
+    "Was soll für jedes Produkt gespeichert werden?"
   ],
   "lang": "de"
 }

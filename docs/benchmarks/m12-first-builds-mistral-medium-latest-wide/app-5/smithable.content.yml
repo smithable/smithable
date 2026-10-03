@@ -1,8 +1,25 @@
 smithableContent: 0.1
+pages:
+  home:
+    title: Photography Invoicing
+    subtitle: Manage clients, shoots, and track unpaid invoices for your photography work.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+  invoices:
+    title: Invoices
+  shoots:
+    title: Shoots
+  clients:
+    title: Clients
 models:
   Client:
     label: Client
     pluralLabel: Clients
+  Shoot:
+    label: Shoot
+    pluralLabel: Shoots
   Invoice:
     label: Invoice
     pluralLabel: Invoices
@@ -16,10 +33,3 @@ models:
   InvoiceLine:
     label: Invoice Line
     pluralLabel: Invoice Lines
-pages:
-  clients:
-    title: Clients
-  invoices:
-    title: Invoices
-  invoice-lines:
-    title: Invoice Lines

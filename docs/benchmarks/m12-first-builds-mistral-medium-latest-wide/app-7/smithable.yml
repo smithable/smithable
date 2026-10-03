@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Flea Market
-  description: A town flea market site where anyone can post things to sell, with photos and a price.
+  name: Town Flea Market
+  description: A local marketplace where anyone can post items to sell with photos and prices.
 models:
   Item:
     fields:
@@ -33,4 +33,8 @@ pages:
     landing:
       hero:
       footer:
+      latest:
+        records: Item
+        where:
+          available: true
 navigation: [catalog, myItems, saved]

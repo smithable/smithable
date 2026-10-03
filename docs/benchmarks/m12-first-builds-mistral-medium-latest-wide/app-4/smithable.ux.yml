@@ -1,11 +1,10 @@
 smithableUx: 0.1
 pages:
-  pupils:
-    table:
-      sort: name
   lessons:
+    form:
+      sections: [{ name: schedule, fields: [dayOfWeek, startTime, durationMinutes] }, { name: practice, fields: [practiceFocus] }]
     table:
       sort: dayOfWeek
-  practices:
-    table:
-      sort: -date
+      columns: [pupil, dayOfWeek, startTime, durationMinutes]
+      below:
+        pupil: practiceFocus
