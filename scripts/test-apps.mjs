@@ -720,6 +720,11 @@ async function statusFlow(base) {
     const services = page.locator('[data-section="services"]');
     await services.getByText("Payments", { exact: true }).waitFor({ timeout: 10000 });
     await services.getByText("Degraded").waitFor();
+    // The starter's own section (src/custom/sections/Uptime.tsx): 90 days of each service.
+    await page
+      .locator('[data-section="uptime"]')
+      .getByRole("img", { name: /^Payments: \d+\.\d\d% up over the last 90 days$/ })
+      .waitFor({ timeout: 10000 });
     // What is still going on, apart from what was resolved.
     await page
       .locator('[data-section="open"]')
@@ -733,7 +738,7 @@ async function statusFlow(base) {
     await page.getByRole("link", { name: "Website unreachable for twenty minutes" }).click();
     await page.getByText("A certificate renewal failed").first().waitFor({ timeout: 10000 });
     console.log(
-      "  ✓ browser: a visitor sees the services with their state, what is going on now, what was resolved and an incident's story, without signing in",
+      "  ✓ browser: a visitor sees the services with their state and 90 days of uptime (the starter's own section), what is going on now, what was resolved and an incident's story, without signing in",
     );
 
     await signInAs(page, base, "admin");
