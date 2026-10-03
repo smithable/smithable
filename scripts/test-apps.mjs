@@ -1202,7 +1202,7 @@ async function copyFlow(base) {
     // An action on a record's own page: the form shows the record as the action left it, so
     // "Save changes" afterwards cannot quietly undo it.
     await open(page, `${base}/invoices`);
-    await page.locator("tbody tr", { hasText: "2026-006" }).getByRole("cell").first().click();
+    await page.getByRole("cell", { name: "2026-006", exact: true }).click();
     await page.waitForURL(/\/invoices\/\d+$/);
     await page.getByRole("button", { name: "Mark sent" }).click();
     await page
