@@ -697,8 +697,21 @@ test("a removal leaves onboarding steps without the field, and is refused while 
   });
   if (!iban.ok) throw new Error(iban.message);
   expect(iban.files.spec).toContain("payment: [paymentTermDays]");
+  // The status is used by the starter's standard actions first, and by a tile without them.
   expect(
     applyOperation(invoicing, "removeField", { model: "Invoice", field: "status" }),
+  ).toMatchObject({
+    ok: false,
+    message: 'The action "markSent" uses Invoice.status; change or remove the action first.',
+  });
+  const withoutActions = {
+    ...invoicing,
+    spec: invoicing.spec
+      .replace(/\nactions:\n[\s\S]*?\n\n/, "\n")
+      .replace("    actions: [markSent, markPaid]\n", ""),
+  };
+  expect(
+    applyOperation(withoutActions, "removeField", { model: "Invoice", field: "status" }),
   ).toMatchObject({
     ok: false,
     message:

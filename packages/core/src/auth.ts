@@ -282,6 +282,17 @@ export function validateAuth(
         "Only invited people and administrators may sign in, and there is no administrator: nobody can sign in.",
         `Name one under "admins" (smithable op setAdmins you@your-domain).`,
       );
+    // An admin outside allowedDomains may sign in (admins always can), but the domains were
+    // likely a starter's and keep everyone else from the admin's own domain out.
+    const domains = auth.signIn.allowedDomains;
+    for (const address of auth.admins)
+      if (domains && !domains.includes(address.split("@")[1] ?? ""))
+        ctx.warning(
+          admins?.value ?? root,
+          "admin-outside-domains",
+          `${address} is an administrator outside allowedDomains (${domains.join(", ")}): they may sign in, but nobody else from their domain may.`,
+          `Change "allowedDomains" under "signIn" to your people's domains, or remove it.`,
+        );
     for (const address of auth.admins)
       if (RESERVED_DOMAIN.test(address.split("@")[1] ?? ""))
         ctx.warning(

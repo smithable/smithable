@@ -56,6 +56,18 @@ models:
           - input: { quantity: 0.5, unitPrice: 19.99 }
             expected: 10
 
+actions:
+  markSent:
+    on: Invoice
+    when: { status: draft }
+    set: { status: sent }
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when: { status: [sent, overdue] }
+    set: { status: paid }
+    intent: The client paid the invoice.
+
 pages:
   home:
     route: /
@@ -74,6 +86,7 @@ pages:
       latest: { list: Invoice, limit: 5 }
   invoices:
     crud: Invoice
+    actions: [markSent, markPaid]
   clients:
     crud: Client
   invoice-lines:
