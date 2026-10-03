@@ -26,7 +26,7 @@ actions:
 ```
 
 - `on` names a model. The action runs on one record of it.
-- `set` gives fields of that model their new values: a literal the field accepts (a choice value, `true`, a number, a text), or a formula from the existing library evaluated on the record as it is before the change (`NOW()`, `TODAY()`, `DATEADD(TODAY(), 14, "day")`, `total * 0.25`, another field). At least one field. Not settable: computed fields, references, lists, pictures and the automatic fields (`owner`, `createdAt`, `updatedAt`).
+- `set` gives fields of that model their new values: a literal the field accepts (a choice value, `true`, a number, a text), or a formula from the existing library evaluated on the record as it is before the change (`NOW()`, `TODAY()`, `DATEADD(TODAY(), 14, "day")`, `(total * 0.25)`). The rule is the one a field's default follows: a value with parentheses is a formula, anything else a literal. At least one field. Not settable: computed fields, references, lists, pictures and the automatic fields (`owner`, `createdAt`, `updatedAt`).
 - `when` (optional) is a condition as everywhere else (`packages/core/src/condition.ts`): choice values, one or a list, and yes/no fields. The button is shown only on a record it fits, and the server refuses the action on one it does not ("This incident is already resolved" becomes the general "This cannot be done now").
 - A standard action has no `input` and no `output` in this version, and no `custom`. `custom: true` and `on`/`set` exclude each other.
 - `allow`, `intent` and `rules` work as for custom actions. `rules` on a standard action are documentation only; a warning says so when one is given, so nobody believes a sentence is enforced.
