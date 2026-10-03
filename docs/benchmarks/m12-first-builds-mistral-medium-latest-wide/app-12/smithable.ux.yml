@@ -7,21 +7,5 @@ tones:
   Incident.status:
     investigating: warning
     identified: warning
+    monitoring: warning
     resolved: success
-pages:
-  home:
-    icon: home
-  overview:
-    icon: chart
-  team:
-    icon: users
-  components:
-    table:
-      view: cards
-  maintenance:
-    table:
-      view: cards
-      sort: startsAt
-  incidents:
-    table:
-      sort: -detectedAt

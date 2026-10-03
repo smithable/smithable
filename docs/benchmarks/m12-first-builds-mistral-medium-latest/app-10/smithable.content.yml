@@ -2,64 +2,73 @@ smithableContent: 0.1
 models:
   Recipe:
     label: Recept
-    pluralLabel: Recept
+    pluralLabel: Recepten
     fields:
       name:
-        label: Namn
+        label: Naam
       description:
-        label: Beskrivning
+        label: Beschrijving
       servings:
-        label: Portioner
+        label: Porties
       prepTime:
-        label: Förberedelsetid (min)
+        label: Voorbereidingstijd (min)
       cookTime:
-        label: Tillagningstid (min)
+        label: Kooktijd (min)
       instructions:
-        label: Instruktioner
+        label: Instructies
       category:
-        label: Kategori
+        label: Categorie
         values:
-          breakfast: Frukost
+          breakfast: Ontbijt
           lunch: Lunch
-          dinner: Middag
-          dessert: Efterrätt
-          snack: Mellanmål
-          drink: Dryck
+          dinner: Diner
+          dessert: Toetje
+          snack: Tussendoortje
       difficulty:
-        label: Svårighetsgrad
+        label: Moeilijkheidsgraad
         values:
-          easy: Lätt
-          medium: Medel
-          hard: Svår
+          easy: Makkelijk
+          medium: Gemiddeld
+          hard: Moeilijk
       image:
-        label: Bild
+        label: Afbeelding
   Ingredient:
-    label: Ingrediens
-    pluralLabel: Ingredienser
+    label: Ingrediënt
+    pluralLabel: Ingrediënten
     fields:
       name:
-        label: Namn
+        label: Naam
       quantity:
-        label: Mängd
+        label: Hoeveelheid
       unit:
-        label: Enhet
+        label: Eenheid
   ShoppingList:
-    label: Inköpslista
-    pluralLabel: Inköpslistor
+    label: Boodschappenlijst
+    pluralLabel: Boodschappenlijsten
     fields:
       name:
-        label: Namn
-      items:
-        label: Artiklar
+        label: Naam
+      date:
+        label: Datum
       status:
         label: Status
         values:
-          pending: Pågående
-          completed: Avslutad
-      dueDate:
-        label: Förfallodatum
+          pending: In afwachting
+          completed: Voltooid
+  ShoppingItem:
+    label: Boodschappenitem
+    pluralLabel: Boodschappenitems
+    fields:
+      name:
+        label: Naam
+      quantity:
+        label: Hoeveelheid
+      unit:
+        label: Eenheid
+      purchased:
+        label: Aangekocht
 pages:
   recipes:
-    title: Recept
+    title: Recepten
   shopping-lists:
-    title: Inköpslistor
+    title: Boodschappenlijsten

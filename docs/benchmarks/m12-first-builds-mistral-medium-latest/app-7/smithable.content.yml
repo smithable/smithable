@@ -12,8 +12,8 @@ models:
         label: Deporte
         values:
           football: Fútbol
-          futsal: Futsal
-          beachSoccer: Fútbol playa
+          futsal: Fútbol Sala
+          beachSoccer: Fútbol Playa
       founded:
         label: Fundado
   Player:
@@ -76,3 +76,6 @@ pages:
     title: Resultados
   home:
     hero:
+      image:
+        src: images/hero.webp
+        alt: A team standing at a whiteboard by a window over the harbour

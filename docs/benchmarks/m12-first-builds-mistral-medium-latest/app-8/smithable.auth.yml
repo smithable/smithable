@@ -6,7 +6,10 @@ defaultAccess: shared
 roles:
   organizer:
     description: Manages conference talks, speakers, and registrations.
-defaultRole: organizer
+  attendee:
+    description: A conference participant who registers for talks.
+defaultRole: attendee
 public:
-  pages: [home, talks]
+  pages: [home]
   read: [Talk, Speaker]
+admins: [johan@smithable.ai]

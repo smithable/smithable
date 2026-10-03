@@ -10,42 +10,36 @@ models:
         label: Beschreibung
       price:
         label: Preis
-      stock:
-        label: Bestand
-      unit:
-        label: Einheit
-        values:
-          piece: Stück
-          kg: Kilogramm
-          liter: Liter
       category:
         label: Kategorie
+      available:
+        label: Verfügbar
   PreOrder:
     label: Vorbestellung
     pluralLabel: Vorbestellungen
     fields:
       customerName:
         label: Kundenname
+      customerEmail:
+        label: E-Mail
       customerPhone:
-        label: Kundentelefon
+        label: Telefon
       product:
         label: Produkt
       quantity:
         label: Menge
-      orderDate:
-        label: Bestelldatum
       pickupDate:
         label: Abholdatum
       status:
         label: Status
         values:
           pending: Ausstehend
-          ready: Bereit
+          confirmed: Bestätigt
           pickedUp: Abgeholt
           canceled: Storniert
       notes:
         label: Notizen
-  PickupSlot:
+  PickupTime:
     label: Abholzeit
     pluralLabel: Abholzeiten
     fields:
@@ -55,8 +49,8 @@ models:
         label: Beginn
       endTime:
         label: Ende
-      maxPreOrders:
-        label: Max. Vorbestellungen
+      maxSlots:
+        label: Maximale Plätze
       notes:
         label: Notizen
 pages:

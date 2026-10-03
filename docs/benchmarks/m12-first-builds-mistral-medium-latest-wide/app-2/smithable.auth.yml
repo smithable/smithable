@@ -7,3 +7,4 @@ roles:
   sales:
     description: Works with leads and deals.
 defaultRole: sales
+admins: [johan@smithable.ai]

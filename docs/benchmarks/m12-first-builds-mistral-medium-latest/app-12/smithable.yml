@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Web Shop Status
-  description: Live status of our web shop services, outages and updates.
+  description: A public uptime page showing which services work, outages and their updates.
 models:
   Component:
     fields:
@@ -34,13 +34,16 @@ models:
 pages:
   incidents:
     crud: Incident
+    access: [admin, staff]
   updates:
     crud: IncidentUpdate
+    access: [admin, staff]
   components:
     crud: Component
     access: [admin]
   maintenance:
     crud: Maintenance
+    access: [admin, staff]
   home:
     route: /
     landing:
@@ -54,6 +57,8 @@ pages:
           status: [investigating, identified, monitoring]
   team:
     users: manage
+  admin:
+    data: all
 actions:
   identified:
     custom: true
@@ -73,4 +78,3 @@ actions:
       incident: Incident!
     intent: The incident is over.
     allow: [admin, staff]
-navigation: [incidents, updates, components, maintenance, team]

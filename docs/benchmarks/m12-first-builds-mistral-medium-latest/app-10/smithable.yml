@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Family Recipes
-  description: A private collection of family recipes with ingredients and shopping lists.
+  description: A recipe collection for a family, with ingredients and shopping lists.
 models:
   Recipe:
     fields:
@@ -11,7 +11,7 @@ models:
       prepTime: int
       cookTime: int
       instructions: text!
-      category: breakfast | lunch | dinner | dessert | snack | drink
+      category: breakfast | lunch | dinner | dessert | snack
       difficulty: easy | medium | hard
       image: url
     access:
@@ -25,17 +25,29 @@ models:
   ShoppingList:
     fields:
       name: string!
-      recipe: Recipe
-      items: text!
+      date: date! = TODAY()
       status: pending | completed
-      dueDate: date
+      items: ShoppingItem[]
+    access:
+      delete: [admin]
+  ShoppingItem:
+    fields:
+      name: string!
+      quantity: string
+      unit: string
+      purchased: bool = false
+      shoppingList: ShoppingList!
     access:
       delete: [admin]
 pages:
   recipes:
     crud: Recipe
-    search: [name, description, category, difficulty]
+    search: [name, description, category]
     filters: [category, difficulty]
   shopping-lists:
     crud: ShoppingList
-navigation: [recipes, shopping-lists]
+    search: [name]
+    filters: [status, date]
+  team:
+    users: manage
+navigation: [recipes, shopping-lists, team]

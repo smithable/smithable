@@ -13,8 +13,8 @@ models:
       price:
         label: Pris
   Stylist:
-    label: Stylist
-    pluralLabel: Stylister
+    label: Frisör
+    pluralLabel: Frisörer
     fields:
       name:
         label: Namn
@@ -32,8 +32,20 @@ models:
         label: E-post
       customerPhone:
         label: Telefon
+      notes:
+        label: Anteckningar
       appointment:
         label: Tid
+  Message:
+    label: Meddelande
+    pluralLabel: Meddelanden
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      message:
+        label: Meddelande
   Appointment:
     label: Tid
     pluralLabel: Tider
@@ -41,25 +53,14 @@ models:
       service:
         label: Tjänst
       stylist:
-        label: Stylist
+        label: Frisör
       startsAt:
         label: Starttid
       capacity:
         label: Kapacitet
 pages:
   hem:
-    title: Min Frisörsalong
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
-  tjanster:
-    title: Tjänster
-  stylister:
-    title: Stylister
-  mina-bokningar:
-    title: Mina bokningar
-  tider:
-    title: Tider
-  schema:
-    title: Schema

@@ -3,18 +3,6 @@ app:
   name: Union Job Board
   description: A job board for a local union to post jobs and receive applications.
 models:
-  Application:
-    fields:
-      name: string!
-      email: email!
-      phone: phone
-      resume: text
-      coverLetter: text
-      status: submitted | reviewed | interviewed | hired | rejected
-      job: Job!
-    access:
-      create: [member, employer, admin]
-      read: [employer, admin, owner]
   Job:
     fields:
       title: string!
@@ -23,25 +11,43 @@ models:
       location: string
       salary: money
       type: fullTime | partTime | contract | temporary
-      status: open | closed
-      postedAt: date = 2025-01-01
+      status: open | filled | expired
+      postedAt: date!
     access:
-      create: [employer, admin]
-      delete: [employer, admin]
+      create: [employer]
+      delete: [employer, owner]
+  Application:
+    fields:
+      job: Job!
+      name: string!
+      email: email!
+      phone: phone
+      resume: text
+      coverLetter: text
+      status: submitted | reviewed | interviewed | hired | rejected
+    access:
+      create: [member]
+      read: [employer, owner]
 pages:
-  applications:
-    crud: Application
-    access: [employer, admin]
   jobs:
     route: /
     crud: Job
-    access: [employer, member, admin]
     search: [title, description, company, location]
-    filters: [type, status, salary]
     sortable: [postedAt, salary]
-  myJobs:
-    route: /my-jobs
-    crud: Job
-    access: [employer, admin]
-    mine: true
-navigation: [jobs, myJobs, applications]
+  applications:
+    crud: Application
+    search: [name, email]
+    filters: [job, status]
+    access: [employer]
+  home:
+    route: /home
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Job
+        where:
+          status: open
+  team:
+    users: manage
+navigation: [jobs, applications, team]
