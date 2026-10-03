@@ -706,7 +706,7 @@ ${dropPictures(
   () => "([] as string[])",
 ).replace(/^ {4}/gm, "      ")}      await afterDelete("${model.name}", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 ${
   referenced

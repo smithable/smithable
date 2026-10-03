@@ -1174,7 +1174,7 @@ export const bookingData = {
     for (const row of rows) {
       await afterDelete("Booking", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -1420,7 +1420,7 @@ export const classTypeData = {
     for (const row of rows) {
       await afterDelete("ClassType", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -1905,7 +1905,7 @@ export const instructorData = {
       if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, !!db.select({ id: instructors.id }).from(instructors).where(sql\`\${instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
       await afterDelete("Instructor", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -2178,7 +2178,7 @@ export const messageData = {
     for (const row of rows) {
       await afterDelete("Message", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -2465,7 +2465,7 @@ export const postData = {
       if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, !!db.select({ id: posts.id }).from(posts).where(sql\`\${posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
       await afterDelete("Post", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -2792,7 +2792,7 @@ export const sessionData = {
     for (const row of rows) {
       await afterDelete("Session", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /** Choices for fields that refer to a session: the ones the viewer may read. */
@@ -6304,25 +6304,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "d49bc7e4 generated",
   "src/generated/access.test.ts": "0ad49bc4 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "c982e9d6 generated",
+  "src/generated/booking.server.ts": "086792b6 generated",
   "src/generated/booking.ts": "9ec9d400 generated",
-  "src/generated/class-type.server.ts": "92702661 generated",
+  "src/generated/class-type.server.ts": "65974591 generated",
   "src/generated/class-type.ts": "acadda4f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "3769a0bf generated",
-  "src/generated/instructor.server.ts": "e3de405d generated",
+  "src/generated/instructor.server.ts": "a62a1ead generated",
   "src/generated/instructor.ts": "dd86d8e3 generated",
-  "src/generated/message.server.ts": "1539a93c generated",
+  "src/generated/message.server.ts": "ae6ef6a4 generated",
   "src/generated/message.ts": "7f5e91c2 generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
-  "src/generated/post.server.ts": "e293e5b0 generated",
+  "src/generated/post.server.ts": "593d3e08 generated",
   "src/generated/post.ts": "cd2cc271 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "c9f48faf generated",
+  "src/generated/session.server.ts": "467295b9 generated",
   "src/generated/session.ts": "63803330 generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -7186,7 +7186,7 @@ export const customerData = {
     for (const row of rows) {
       await afterDelete("Customer", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -7621,7 +7621,7 @@ export const orderData = {
     for (const row of rows) {
       await afterDelete("Order", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -9366,12 +9366,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "bc9ceb14 generated",
+  "src/generated/customer.server.ts": "11dbd27a generated",
   "src/generated/customer.ts": "e4cd5bb6 generated",
   "src/generated/hooks.ts": "88a49c58 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "b00a950c generated",
+  "src/generated/order.server.ts": "edb31654 generated",
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "de07ed11 generated",
@@ -10240,7 +10240,7 @@ describe("the markSent action", () => {
     const fitting = insertInvoice(viewer.id, {"status":"draft"});
     const notFitting = insertInvoice(viewer.id, {"status":"sent"});
     const notFittingBefore = JSON.stringify(db.select().from(invoices).where(eq(invoices.id, notFitting.id)).get());
-    expect(await runMarkSentMany(viewer, [fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(await runMarkSentMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(invoices).where(eq(invoices.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertInvoice(viewer.id, {"status":"draft"});
     const againBefore = JSON.stringify(db.select().from(invoices).where(eq(invoices.id, again.id)).get());
@@ -10294,7 +10294,7 @@ describe("the markPaid action", () => {
     const fitting = insertInvoice(viewer.id, {"status":"sent"});
     const notFitting = insertInvoice(viewer.id, {"status":"draft"});
     const notFittingBefore = JSON.stringify(db.select().from(invoices).where(eq(invoices.id, notFitting.id)).get());
-    expect(await runMarkPaidMany(viewer, [fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(await runMarkPaidMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(invoices).where(eq(invoices.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertInvoice(viewer.id, {"status":"sent"});
     const againBefore = JSON.stringify(db.select().from(invoices).where(eq(invoices.id, again.id)).get());
@@ -10347,7 +10347,9 @@ export async function runMarkPaid(viewer: Viewer | null, id: number) {
  */
 export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
   const plans: ReturnType<typeof plan>[] = [];
-  for (const id of ids) {
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
     const row = await invoiceData.get(viewer, id);
     if (!row || !allows(markPaidAccess, viewer, row.ownerId) || !markPaidFits(row)) continue;
     try {
@@ -10367,7 +10369,7 @@ export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
     await afterChange("afterUpdate", "Invoice", w.changed, viewer);
 
   }
-  return { changed: plans.length, skipped: ids.length - plans.length };
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 "
 `;
@@ -10377,6 +10379,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runMarkPaid, runMarkPaidMany } from "./mark-paid.server";
 
@@ -10388,14 +10392,21 @@ export function markPaidFits(row: { status?: unknown }): boolean {
   return ["sent","overdue"].includes(String(row.status));
 }
 
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const markPaid = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => runMarkPaid(await currentViewer(), data));
+  .handler(async ({ data }) => runMarkPaid(await writer(), data));
 
 /** The "markPaid" action on the chosen invoices (at most 1,000 at once). */
 export const markPaidMany = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
-  .handler(async ({ data }) => runMarkPaidMany(await currentViewer(), data.ids));
+  .handler(async ({ data }) => runMarkPaidMany(await writer(), data.ids));
 "
 `;
 
@@ -10441,7 +10452,9 @@ export async function runMarkSent(viewer: Viewer | null, id: number) {
  */
 export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
   const plans: ReturnType<typeof plan>[] = [];
-  for (const id of ids) {
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
     const row = await invoiceData.get(viewer, id);
     if (!row || !allows(markSentAccess, viewer, row.ownerId) || !markSentFits(row)) continue;
     try {
@@ -10461,7 +10474,7 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
     await afterChange("afterUpdate", "Invoice", w.changed, viewer);
 
   }
-  return { changed: plans.length, skipped: ids.length - plans.length };
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 "
 `;
@@ -10471,6 +10484,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runMarkSent, runMarkSentMany } from "./mark-sent.server";
 
@@ -10482,14 +10497,21 @@ export function markSentFits(row: { status?: unknown }): boolean {
   return row.status === "draft";
 }
 
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const markSent = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => runMarkSent(await currentViewer(), data));
+  .handler(async ({ data }) => runMarkSent(await writer(), data));
 
 /** The "markSent" action on the chosen invoices (at most 1,000 at once). */
 export const markSentMany = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
-  .handler(async ({ data }) => runMarkSentMany(await currentViewer(), data.ids));
+  .handler(async ({ data }) => runMarkSentMany(await writer(), data.ids));
 "
 `;
 
@@ -10622,7 +10644,7 @@ export const businessProfileData = {
     for (const row of rows) {
       await afterDelete("BusinessProfile", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -10870,7 +10892,7 @@ export const clientData = {
     for (const row of rows) {
       await afterDelete("Client", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -11286,7 +11308,7 @@ export const invoiceData = {
     for (const row of rows) {
       await afterDelete("Invoice", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -11633,7 +11655,7 @@ export const invoiceLineData = {
     for (const row of rows) {
       await afterDelete("InvoiceLine", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -13380,24 +13402,24 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "1c9724c9 generated",
   "src/db/seed.ts": "d388638c generated",
-  "src/generated/access.test.ts": "dc906dc3 generated",
-  "src/generated/actions/mark-paid.server.ts": "8f94e69d generated",
-  "src/generated/actions/mark-paid.ts": "a734411b generated",
-  "src/generated/actions/mark-sent.server.ts": "c67db0ad generated",
-  "src/generated/actions/mark-sent.ts": "427cc671 generated",
+  "src/generated/access.test.ts": "422fd9db generated",
+  "src/generated/actions/mark-paid.server.ts": "2980bd04 generated",
+  "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
+  "src/generated/actions/mark-sent.server.ts": "f16afcbc generated",
+  "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "ea18691c generated",
+  "src/generated/business-profile.server.ts": "5962dbc4 generated",
   "src/generated/business-profile.ts": "2abbba11 generated",
-  "src/generated/client.server.ts": "48459d1e generated",
+  "src/generated/client.server.ts": "c4f63994 generated",
   "src/generated/client.ts": "262b8aa5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "753913b6 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "654a81bd generated",
+  "src/generated/invoice-line.server.ts": "aed5571b generated",
   "src/generated/invoice-line.ts": "ad44efd2 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "e75c20cb generated",
+  "src/generated/invoice.server.ts": "8d19fb53 generated",
   "src/generated/invoice.ts": "a7bbf4f2 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -14133,7 +14155,7 @@ export const itemData = {
       for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, !!db.select({ id: items.id }).from(items).where(sql\`\${items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
       await afterDelete("Item", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -15850,7 +15872,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1bccea19 generated",
-  "src/generated/item.server.ts": "17ccdacc generated",
+  "src/generated/item.server.ts": "9af05a94 generated",
   "src/generated/item.ts": "53aaac1e generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
@@ -16568,7 +16590,7 @@ export const itemData = {
     for (const row of rows) {
       await afterDelete("Item", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -17603,7 +17625,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1bccea19 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "837aec8d generated",
+  "src/generated/item.server.ts": "6e9e840b generated",
   "src/generated/item.ts": "f20dc810 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -18472,7 +18494,7 @@ describe("the identified action", () => {
     const fitting = insertIncident(viewer.id, {"status":"investigating"});
     const notFitting = insertIncident(viewer.id, {"status":"identified"});
     const notFittingBefore = JSON.stringify(db.select().from(incidents).where(eq(incidents.id, notFitting.id)).get());
-    expect(await runIdentifiedMany(viewer, [fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(await runIdentifiedMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(incidents).where(eq(incidents.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertIncident(viewer.id, {"status":"investigating"});
     const againBefore = JSON.stringify(db.select().from(incidents).where(eq(incidents.id, again.id)).get());
@@ -18524,7 +18546,7 @@ describe("the monitoring action", () => {
     const fitting = insertIncident(viewer.id, {"status":"investigating"});
     const notFitting = insertIncident(viewer.id, {"status":"monitoring"});
     const notFittingBefore = JSON.stringify(db.select().from(incidents).where(eq(incidents.id, notFitting.id)).get());
-    expect(await runMonitoringMany(viewer, [fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(await runMonitoringMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(incidents).where(eq(incidents.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertIncident(viewer.id, {"status":"investigating"});
     const againBefore = JSON.stringify(db.select().from(incidents).where(eq(incidents.id, again.id)).get());
@@ -18576,7 +18598,7 @@ describe("the resolve action", () => {
     const fitting = insertIncident(viewer.id, {"status":"investigating"});
     const notFitting = insertIncident(viewer.id, {"status":"resolved"});
     const notFittingBefore = JSON.stringify(db.select().from(incidents).where(eq(incidents.id, notFitting.id)).get());
-    expect(await runResolveMany(viewer, [fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(await runResolveMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(incidents).where(eq(incidents.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertIncident(viewer.id, {"status":"investigating"});
     const againBefore = JSON.stringify(db.select().from(incidents).where(eq(incidents.id, again.id)).get());
@@ -18648,7 +18670,9 @@ export async function runIdentified(viewer: Viewer | null, id: number) {
 export async function runIdentifiedMany(viewer: Viewer | null, ids: number[]) {
   check(incidentUpdateAccess.create, viewer);
   const plans: ReturnType<typeof plan>[] = [];
-  for (const id of ids) {
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
     const row = await incidentData.get(viewer, id);
     if (!row || !allows(identifiedAccess, viewer, row.ownerId) || !identifiedFits(row)) continue;
     try {
@@ -18668,7 +18692,7 @@ export async function runIdentifiedMany(viewer: Viewer | null, ids: number[]) {
     await afterChange("afterUpdate", "Incident", w.changed, viewer);
     await afterChange("afterCreate", "IncidentUpdate", w.inserted[0], viewer);
   }
-  return { changed: plans.length, skipped: ids.length - plans.length };
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 "
 `;
@@ -18678,6 +18702,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runIdentified, runIdentifiedMany } from "./identified.server";
 
@@ -18694,14 +18720,21 @@ export function identifiedFits(row: { status?: unknown }): boolean {
   return row.status === "investigating";
 }
 
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const identified = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => runIdentified(await currentViewer(), data));
+  .handler(async ({ data }) => runIdentified(await writer(), data));
 
 /** The "identified" action on the chosen incidents (at most 1,000 at once). */
 export const identifiedMany = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
-  .handler(async ({ data }) => runIdentifiedMany(await currentViewer(), data.ids));
+  .handler(async ({ data }) => runIdentifiedMany(await writer(), data.ids));
 "
 `;
 
@@ -18766,7 +18799,9 @@ export async function runMonitoring(viewer: Viewer | null, id: number) {
 export async function runMonitoringMany(viewer: Viewer | null, ids: number[]) {
   check(incidentUpdateAccess.create, viewer);
   const plans: ReturnType<typeof plan>[] = [];
-  for (const id of ids) {
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
     const row = await incidentData.get(viewer, id);
     if (!row || !allows(monitoringAccess, viewer, row.ownerId) || !monitoringFits(row)) continue;
     try {
@@ -18786,7 +18821,7 @@ export async function runMonitoringMany(viewer: Viewer | null, ids: number[]) {
     await afterChange("afterUpdate", "Incident", w.changed, viewer);
     await afterChange("afterCreate", "IncidentUpdate", w.inserted[0], viewer);
   }
-  return { changed: plans.length, skipped: ids.length - plans.length };
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 "
 `;
@@ -18796,6 +18831,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runMonitoring, runMonitoringMany } from "./monitoring.server";
 
@@ -18812,14 +18849,21 @@ export function monitoringFits(row: { status?: unknown }): boolean {
   return ["investigating","identified"].includes(String(row.status));
 }
 
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const monitoring = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => runMonitoring(await currentViewer(), data));
+  .handler(async ({ data }) => runMonitoring(await writer(), data));
 
 /** The "monitoring" action on the chosen incidents (at most 1,000 at once). */
 export const monitoringMany = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
-  .handler(async ({ data }) => runMonitoringMany(await currentViewer(), data.ids));
+  .handler(async ({ data }) => runMonitoringMany(await writer(), data.ids));
 "
 `;
 
@@ -18885,7 +18929,9 @@ export async function runResolve(viewer: Viewer | null, id: number) {
 export async function runResolveMany(viewer: Viewer | null, ids: number[]) {
   check(incidentUpdateAccess.create, viewer);
   const plans: ReturnType<typeof plan>[] = [];
-  for (const id of ids) {
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
     const row = await incidentData.get(viewer, id);
     if (!row || !allows(resolveAccess, viewer, row.ownerId) || !resolveFits(row)) continue;
     try {
@@ -18905,7 +18951,7 @@ export async function runResolveMany(viewer: Viewer | null, ids: number[]) {
     await afterChange("afterUpdate", "Incident", w.changed, viewer);
     await afterChange("afterCreate", "IncidentUpdate", w.inserted[0], viewer);
   }
-  return { changed: plans.length, skipped: ids.length - plans.length };
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 "
 `;
@@ -18915,6 +18961,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runResolve, runResolveMany } from "./resolve.server";
 
@@ -18931,14 +18979,21 @@ export function resolveFits(row: { status?: unknown }): boolean {
   return ["investigating","identified","monitoring"].includes(String(row.status));
 }
 
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const resolve = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => runResolve(await currentViewer(), data));
+  .handler(async ({ data }) => runResolve(await writer(), data));
 
 /** The "resolve" action on the chosen incidents (at most 1,000 at once). */
 export const resolveMany = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
-  .handler(async ({ data }) => runResolveMany(await currentViewer(), data.ids));
+  .handler(async ({ data }) => runResolveMany(await writer(), data.ids));
 "
 `;
 
@@ -19074,7 +19129,7 @@ export const componentData = {
     for (const row of rows) {
       await afterDelete("Component", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -19462,7 +19517,7 @@ export const incidentData = {
     for (const row of rows) {
       await afterDelete("Incident", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
   /**
@@ -19765,7 +19820,7 @@ export const incidentUpdateData = {
     for (const row of rows) {
       await afterDelete("IncidentUpdate", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -20021,7 +20076,7 @@ export const maintenanceData = {
     for (const row of rows) {
       await afterDelete("Maintenance", row.id, viewer);
     }
-    return { deleted: rows.length, skipped: ids.length - rows.length };
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 };
 "
@@ -22492,23 +22547,23 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "0bc522d3 generated",
   "src/db/seed.ts": "fa375893 generated",
-  "src/generated/access.test.ts": "69e723c9 generated",
-  "src/generated/actions/identified.server.ts": "5337ba40 generated",
-  "src/generated/actions/identified.ts": "b82f36e6 generated",
-  "src/generated/actions/monitoring.server.ts": "768b37ee generated",
-  "src/generated/actions/monitoring.ts": "862911c2 generated",
-  "src/generated/actions/resolve.server.ts": "0819f019 generated",
-  "src/generated/actions/resolve.ts": "1b8931e2 generated",
+  "src/generated/access.test.ts": "659f6feb generated",
+  "src/generated/actions/identified.server.ts": "082ed471 generated",
+  "src/generated/actions/identified.ts": "4baad691 generated",
+  "src/generated/actions/monitoring.server.ts": "d99b9c93 generated",
+  "src/generated/actions/monitoring.ts": "44cd9703 generated",
+  "src/generated/actions/resolve.server.ts": "ed8d22a8 generated",
+  "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "fe9b2ee8 generated",
+  "src/generated/component.server.ts": "9cae6ab6 generated",
   "src/generated/component.ts": "c47f2a48 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "84c092d9 generated",
-  "src/generated/incident-update.server.ts": "ef67bc62 generated",
+  "src/generated/incident-update.server.ts": "87364642 generated",
   "src/generated/incident-update.ts": "0e7d4c32 generated",
-  "src/generated/incident.server.ts": "2c16a862 generated",
+  "src/generated/incident.server.ts": "eddeb150 generated",
   "src/generated/incident.ts": "ca312beb generated",
-  "src/generated/maintenance.server.ts": "470e5382 generated",
+  "src/generated/maintenance.server.ts": "0cc77b22 generated",
   "src/generated/maintenance.ts": "ce9b2f03 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",

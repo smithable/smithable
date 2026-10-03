@@ -309,7 +309,7 @@ ${counter}    const viewer = signedIn(${JSON.stringify(runner)});
 ${counter}    const viewer = signedIn(${JSON.stringify(runner)});
     const fitting = insert${model.name}(viewer.id, ${values});
     const notFitting = insert${model.name}(viewer.id, ${JSON.stringify({ ...readable, ...fits, [field]: other })});
-${strangers ? `    const others = insert${model.name}(stranger.id, ${values});\n` : ""}${before("notFitting")}    expect(await ${run}Many(viewer, [fitting.id, notFitting.id${strangers ? ", others.id" : ""}]${asked})).toEqual({ changed: 1, skipped: ${strangers ? 2 : 1} });
+${strangers ? `    const others = insert${model.name}(stranger.id, ${values});\n` : ""}${before("notFitting")}    expect(await ${run}Many(viewer, [fitting.id, fitting.id, notFitting.id${strangers ? ", others.id" : ""}]${asked})).toEqual({ changed: 1, skipped: ${strangers ? 2 : 1} });
 ${unchanged("notFitting")}    const again = insert${model.name}(viewer.id, ${values});
 ${before("again")}    await ${run}Many(null, [again.id]${asked}).catch(() => undefined);
 ${unchanged("again")}  });`);
