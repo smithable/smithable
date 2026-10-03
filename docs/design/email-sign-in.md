@@ -34,6 +34,7 @@ It is not a new construct: the value was reserved, and the five questions were a
 - **`setAdmins <address…>`**, an operation on the auth file (rule 2: the file is the truth, and the summary says who the admins are). Refused when it would leave an app with sign-in and no admin.
 - **`smithable new` sets it.** `--admin <address>` or, without it, the Git user's address; the starter's sample address never survives into a new project. The hosted service passes the owner's address when it creates the project, and again through `setAdmins` when a project changes hands.
 - **Starters keep a sample address only on `.example`** (`owner@northwind.example`), which nobody can receive mail at.
+- **Demo sign-in** (`DEMO_SIGN_IN=1`, the showcase sites) is a separate path: it turns on the address-and-password endpoint its buttons use, so there a visitor could also sign up as a sample admin. That gives nothing the "Try it as admin" button does not give by design, and the hourly reset removes it; the variable is only ever set on showcase apps, and their seeds are rebuilt once the starters' admins move to `.example`.
 - **The validator** warns when `admins` is empty with sign-in on ("nobody can manage users"), and errors at release when an address is on a starter's sample domain.
 
 ## 4. What a first publish carries
