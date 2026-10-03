@@ -1,0 +1,4 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
