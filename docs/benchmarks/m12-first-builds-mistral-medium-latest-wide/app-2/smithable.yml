@@ -1,0 +1,37 @@
+smithable: 0.1
+app:
+  name: Web Agency CRM
+  description: A sales pipeline for a six-person web agency to track leads, deals, and follow-ups.
+models:
+  Lead:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      company: string
+      status: new | contacted | qualified | lost
+      source: referral | website | social | other
+      notes: text
+      assignee: User
+      followUpDate: date
+  Deal:
+    fields:
+      name: string!
+      lead: Lead!
+      value: money
+      status: proposal | negotiation | won | lost
+      closeDate: date
+      notes: text
+      assignee: User
+pages:
+  leads:
+    crud: Lead
+    search: [name, email, company]
+    sortable: [name, followUpDate, createdAt]
+  deals:
+    crud: Deal
+    search: [name, lead]
+    sortable: [name, value, closeDate, createdAt]
+  team:
+    users: manage
+navigation: [leads, deals, team]

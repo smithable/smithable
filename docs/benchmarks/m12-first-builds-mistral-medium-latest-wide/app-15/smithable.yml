@@ -1,0 +1,15 @@
+smithable: 0.1
+app:
+  name: Birdwatching Club
+  description: Track bird sightings for our birdwatching club.
+models:
+  Sighting:
+    fields:
+      species: string!
+      place: string!
+      date: date!
+      observer: User!
+pages:
+  sightings:
+    crud: Sighting
+    search: [species, place]
