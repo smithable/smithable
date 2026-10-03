@@ -5,12 +5,23 @@ models:
   Customer:
     fields:
       name: string!
+      status: lead | active | lost
+      active: bool
+      total:
+        type: money
+        formula: 2 * 3
+      since: date
+      logo: picture
+      notes: text
+  Order:
+    fields:
+      ref: string
 actions:
   merge:                           # expect: missing-key
     input: { keep: Customer! }
   archive:
     custom: true
-    on: Customer                   # expect: not-yet-supported
+    on: Customer                   # expect: invalid-action
   notify:
     custom: true
     input:
@@ -19,7 +30,38 @@ actions:
       when: date = 2026-01-01      # expect: invalid-field
   Export:                          # expect: invalid-name
     custom: true
+  win:
+    on: Custmer                    # expect: unknown-model
+    set: { status: active }
+  activate:
+    on: Customer
+    when: { status: leed }         # expect: unknown-value
+    set:
+      status: actve                # expect: invalid-default
+      total: 10                    # expect: invalid-set
+      logo: x                      # expect: invalid-set
+      nmae: x                      # expect: unknown-field
+      since: NOW() & "x"           # expect: invalid-formula
+      notes:                       # expect: invalid-set
+  half:
+    on: Customer                   # expect: missing-key
+  withInput:
+    on: Customer
+    set: { status: lost }
+    input: { why: text }           # expect: invalid-action
+  again:
+    on: Customer
+    when: { status: lost }
+    set: { status: lost }          # expect: action-changes-nothing
+    rules:                         # expect: rules-not-enforced
+      - Only lost customers.
 pages:
+  leads:
+    crud: Customer
+    actions: [again]
+  other:
+    crud: Order
+    actions: [again]               # expect: invalid-action
   customers:
     crud: Customer
     actions: [notfy]               # expect: unknown-action

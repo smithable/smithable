@@ -225,6 +225,23 @@ pages:
   expect(files.find((f) => f.path === "src/routes/__root.tsx")?.content).toContain(
     "!viewer && visitorRoutes.some(",
   );
+
+test("a standard action generates nothing yet, and never a stub to implement", () => {
+  const spec = `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields: { title: string!, status: open | resolved }
+actions:
+  resolve:
+    on: Incident
+    when: { status: open }
+    set: { status: resolved }
+pages:
+  incidents: { crud: Incident, actions: [resolve] }
+`;
+  const paths = generateApp(ir("smithable.yml", spec), options).map((f) => f.path);
+  expect(paths.filter((p) => p.includes("resolve"))).toEqual([]);
 });
 
 /** FNV-1a over the text: enough to notice any change, and runs anywhere. */

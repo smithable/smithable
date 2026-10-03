@@ -3643,3 +3643,183 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
   "specVersion": "0.1",
 }
 `;
+
+exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
+{
+  "actions": [
+    {
+      "allow": [
+        "admin",
+      ],
+      "custom": false,
+      "input": [],
+      "intent": "The incident is over.",
+      "name": "resolve",
+      "on": "Incident",
+      "set": [
+        {
+          "field": "status",
+          "value": "resolved",
+        },
+        {
+          "field": "resolvedAt",
+          "formula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
+          "text": "NOW()",
+        },
+        {
+          "field": "followUp",
+          "formula": {
+            "args": [
+              {
+                "args": [],
+                "kind": "call",
+                "name": "TODAY",
+              },
+              {
+                "kind": "number",
+                "value": 14,
+              },
+              {
+                "kind": "text",
+                "value": "day",
+              },
+            ],
+            "kind": "call",
+            "name": "DATEADD",
+          },
+          "text": "DATEADD(TODAY(), 14, "day")",
+        },
+        {
+          "field": "pinned",
+          "value": false,
+        },
+      ],
+      "when": {
+        "status": [
+          "investigating",
+          "identified",
+          "monitoring",
+        ],
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "escalate",
+      "on": "Incident",
+      "set": [
+        {
+          "field": "pinned",
+          "value": true,
+        },
+        {
+          "field": "severity",
+          "value": 1,
+        },
+      ],
+      "when": {
+        "pinned": false,
+      },
+    },
+  ],
+  "app": {
+    "name": "Standard actions",
+  },
+  "extensions": {},
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": "investigating",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "resolvedAt",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "followUp",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "name": "pinned",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "bool",
+          },
+          "unique": false,
+        },
+        {
+          "name": "severity",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Incident",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "incidents",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "actions": [
+        "resolve",
+        "escalate",
+      ],
+      "id": "incidents",
+      "pattern": {
+        "kind": "crud",
+        "model": "Incident",
+      },
+      "route": "/incidents",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
