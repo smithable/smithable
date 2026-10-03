@@ -17,7 +17,7 @@ export interface Clarification {
 }
 
 const SYSTEM = `Someone describes an app they want in one or two sentences. Smithable will draft it from a starter app that serves as the example of the format, adapted to the description.
-Two jobs: pick the starter that is the best example for this description (one whose kind of records and pages are closest; "records" when none fits), and ask at most three short questions, only about what changes the app's shape and the description leaves open: who uses it (only the person, a team, anyone on the internet), what visitors may see without signing in, what the main kinds of records are and what they hold. Never ask about looks, colors or names. Give each question two to four suggested answers. When the description already says enough, ask nothing.
+Two jobs: pick the starter that is the best example for this description (one whose kind of records and pages are closest; "records" when none fits), and ask at most three short questions, only about what changes the app's shape and the description leaves open: who uses it (only the person, a team, anyone on the internet), what visitors may see without signing in, what the main kinds of records are and what they hold. Read the description closely first: what it already says is settled, and asking it again is a mistake (if it says only the team posts, never ask who may post). Never ask about looks, colors or names. Give each question two to four suggested answers. When the description already says enough, ask nothing.
 Answer with JSON only: {"starter": "<name>", "questions": [{"question": "...", "options": ["...", "..."]}]}.`;
 
 const schema = (starters: string[]) => ({
