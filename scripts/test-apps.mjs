@@ -627,6 +627,17 @@ async function marketplaceFlow(dir, base) {
     console.log(
       "  ✓ browser: a visitor starts on the catalog in the site's frame, searches from the landing page, filters and sorts in the address, and a heart asks them to sign in",
     );
+    // A visitor who may only read gets the item as a page, not a disabled form.
+    await open(page, `${base}/1`);
+    const record = page.locator('[data-kit="model-form"]');
+    await record.locator('[data-part="pictures"] img').first().waitFor({ timeout: 10000 });
+    const controls = await record
+      .locator("input, textarea, select, button:not([type=button])")
+      .count();
+    if (controls) throw new Error(`a visitor's item page has ${controls} form controls`);
+    if (await page.getByRole("button", { name: /Remove|Add pictures/ }).count())
+      throw new Error("a visitor's item page offers to change its pictures");
+    console.log("  ✓ browser: a visitor sees an item's pictures and texts, without form controls");
 
     await signInAs(page, base, "member");
     await open(page, `${base}/new`);
