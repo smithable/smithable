@@ -1,14 +1,14 @@
 smithable: 0.1
 app:
   name: Swap Shelf
-  description: "A swap shelf for our office: colleagues offer things they no longer need and others claim them."
+  description: Colleagues offer things they no longer need and others claim them.
 models:
   Item:
     fields:
       title: string!
       photos: pictures
       description: text!
-      category: furniture | bikes | electronics | sports | kids | other
+      category: office | electronics | furniture | books | other
       condition: likeNew | good | worn
       available: bool = true
 pages:
@@ -26,6 +26,13 @@ pages:
   saved:
     crud: Item
     favorites: only
-  team:
-    users: manage
-navigation: [catalog, myItems, saved, team]
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+        where:
+          available: true
+navigation: [catalog, myItems, saved]

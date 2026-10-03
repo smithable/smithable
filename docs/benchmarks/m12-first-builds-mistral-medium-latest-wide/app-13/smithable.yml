@@ -8,34 +8,28 @@ models:
       date: date!
       odometer: int!
       liters: decimal!
-      pricePerLiter: decimal!
-      totalCost: money
+      cost: money
       notes: text
-  Cost:
-    fields:
-      date: date!
-      amount: money!
-      category: fuel | maintenance | insurance | tax | other
-      description: string!
-      receipt: url
   Service:
     fields:
       date: date!
       odometer: int!
-      type: oilChange | tireRotation | brakeService | inspection | other
+      description: string!
       cost: money
       notes: text
-      serviceProvider: string
+  Cost:
+    fields:
+      date: date!
+      description: string!
+      amount: money!
+      category: fuel | service | other
+      notes: text
 pages:
   fuel:
     crud: Fuel
-    search: [notes]
-  costs:
-    crud: Cost
-    search: [description]
-    filters: [category]
   service:
     crud: Service
-    search: [notes, serviceProvider]
-    filters: [type]
-navigation: [fuel, service, costs]
+  costs:
+    crud: Cost
+  team:
+    users: manage

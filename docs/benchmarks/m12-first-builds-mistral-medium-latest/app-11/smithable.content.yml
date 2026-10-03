@@ -50,7 +50,7 @@ models:
         label: Message
   Maintenance:
     label: Maintenance
-    pluralLabel: Maintenances
+    pluralLabel: Maintenance
     fields:
       title:
         label: Title
@@ -65,18 +65,21 @@ models:
 pages:
   home:
     title: API Status
+    subtitle: Live status of our API services, incidents and planned maintenance.
     hero:
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
+  history:
+    title: Incident History
   incidents:
     title: Incidents
   updates:
-    title: Updates
+    title: Incident Updates
   components:
     title: Components
   maintenance:
-    title: Maintenance
+    title: Planned Maintenance
   overview:
     title: Overview
   team:

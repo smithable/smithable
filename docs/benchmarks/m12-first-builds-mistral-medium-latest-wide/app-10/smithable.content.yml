@@ -9,27 +9,22 @@ models:
       description:
         label: Description
       category:
-        label: Type
-        values:
-          artifact: Artifact
-          document: Document
-          photograph: Photograph
+        label: Category
       period:
-        label: Era
-      origin:
-        label: Origin
+        label: Historical Period
+      image:
+        label: Image URL
       story:
         label: Story
-      image:
-        label: Image
+      status:
+        label: Display Status
+        values:
+          onDisplay: On Display
+          inStorage: In Storage
+          onLoan: On Loan
 pages:
   home:
-    title: Local Museum
-    subtitle: Explore our collection of historical objects and their stories.
     hero:
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
-  artifacts:
-    title: Objects
-    subtitle: Browse the museum's collection

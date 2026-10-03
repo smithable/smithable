@@ -21,7 +21,9 @@ models:
       startsAt: datetime!
       customerName: string!
       customerEmail: email!
-      status: pending | confirmed | cancelled | completed
+      customerPhone: phone
+      status: booked | confirmed | canceled | completed
+      notes: text
 pages:
   stylists:
     crud: Stylist
@@ -32,8 +34,7 @@ pages:
   appointments:
     crud: Appointment
     access: [admin]
-    filters: [status, stylist, service]
-    search: [customerName, customerEmail]
+    actions: [confirmAppointment, cancelAppointment, completeAppointment]
   home:
     route: /
     landing:
@@ -43,8 +44,35 @@ pages:
         records: Service
       stylists:
         records: Stylist
+  schedule:
+    calendar:
+      model: Appointment
+      starts: startsAt
   team:
     users: manage
   admin:
     data: all
-navigation: [home, appointments, stylists, services, admin]
+navigation: [home, schedule, appointments, stylists, services, admin, team]
+actions:
+  confirmAppointment:
+    on: Appointment
+    when:
+      status: booked
+    set:
+      status: confirmed
+    intent: Confirm a booked appointment.
+  cancelAppointment:
+    on: Appointment
+    when:
+      status: [booked, confirmed]
+    set:
+      status: canceled
+      notes:
+    intent: Cancel an appointment.
+  completeAppointment:
+    on: Appointment
+    when:
+      status: confirmed
+    set:
+      status: completed
+    intent: Mark an appointment as completed.

@@ -1,9 +1,10 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
   selfSignUp: false
 defaultAccess: shared
-public:
-  pages: [sightings]
-  read: [Sighting]
+roles:
+  member:
+    description: Member of the birdwatching club.
+defaultRole: member
 admins: [johan@smithable.ai]

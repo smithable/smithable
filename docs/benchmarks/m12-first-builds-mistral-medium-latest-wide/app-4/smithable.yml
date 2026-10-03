@@ -8,18 +8,30 @@ models:
       name: string!
       email: email
       phone: phone
-      notes: text
+    access:
+      delete: [teacher]
   Lesson:
     fields:
       pupil: Pupil!
       dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
-      startTime: string!
-      durationMinutes: int! = 60
-      practiceFocus: text
+      time: string!
+      durationMinutes: int! = 30
+      notes: text
+    access:
+      delete: [teacher]
+  Practice:
+    fields:
+      lesson: Lesson!
+      date: date!
+      piece: string!
+      minutes: int
+      notes: text
+    access:
+      delete: [teacher]
 pages:
   pupils:
     crud: Pupil
-    search: [name, email, phone]
   lessons:
     crud: Lesson
-    search: [practiceFocus]
+  practices:
+    crud: Practice

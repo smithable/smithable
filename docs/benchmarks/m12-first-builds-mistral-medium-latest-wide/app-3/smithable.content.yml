@@ -12,20 +12,27 @@ models:
     fields:
       status:
         values:
-          pending: Pending
+          booked: Booked
           confirmed: Confirmed
-          cancelled: Cancelled
+          canceled: Canceled
           completed: Completed
 pages:
   home:
     title: Welcome to Our Hair Salon
+    subtitle: Book your perfect haircut or styling session with our expert stylists.
     hero:
       image:
         src: images/hero.webp
         alt: A hair salon with mirrors, chairs and plants in daylight
+  schedule:
+    title: Schedule
   appointments:
-    title: Book an Appointment
+    title: My Appointments
   stylists:
-    title: Our Stylists
+    title: Stylists
   services:
-    title: Our Services
+    title: Services
+  admin:
+    title: Admin
+  team:
+    title: Team

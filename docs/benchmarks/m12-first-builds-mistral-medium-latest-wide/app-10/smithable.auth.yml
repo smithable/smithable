@@ -1,8 +1,14 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: private
 public:
   pages: [home, artifacts]
   read: [Artifact]
+roles:
+  admin:
+    description: Manages the museum collection.
+  curator:
+    description: Adds and edits objects and stories.
+defaultRole: curator
 admins: [johan@smithable.ai]
