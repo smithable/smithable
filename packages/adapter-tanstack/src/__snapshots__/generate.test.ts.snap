@@ -5983,7 +5983,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "3067018d kit",
-  "src/kit/ModelTable.tsx": "ec20cf4d kit",
+  "src/kit/ModelTable.tsx": "191c6b85 kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -8908,7 +8908,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/ModelForm.tsx": "3067018d kit",
-  "src/kit/ModelTable.tsx": "ec20cf4d kit",
+  "src/kit/ModelTable.tsx": "191c6b85 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
@@ -12350,7 +12350,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Landing.tsx": "d25b6dac kit",
   "src/kit/ModelForm.tsx": "3067018d kit",
-  "src/kit/ModelTable.tsx": "ec20cf4d kit",
+  "src/kit/ModelTable.tsx": "191c6b85 kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
@@ -13437,8 +13437,8 @@ function ItemPage() {
   const { row, canWrite, canDelete, saved } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/" });
   const router = useRouter();
+  const back = () => navigate({ to: "/" });
   // The heart saves the record for the viewer; a visitor signs in first and comes back.
   const toggleSaved = async () => {
     if (!viewer) {
@@ -14009,8 +14009,8 @@ function ItemPage() {
   const { row, canWrite, canDelete, saved } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/saved" });
   const router = useRouter();
+  const back = () => navigate({ to: "/saved" });
   // The heart saves the record for the viewer; a visitor signs in first and comes back.
   const toggleSaved = async () => {
     if (!viewer) {
@@ -14698,7 +14698,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Filters.tsx": "b6f63aa9 kit",
   "src/kit/Landing.tsx": "d25b6dac kit",
   "src/kit/ModelForm.tsx": "3067018d kit",
-  "src/kit/ModelTable.tsx": "ec20cf4d kit",
+  "src/kit/ModelTable.tsx": "191c6b85 kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
@@ -14718,7 +14718,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/$id.tsx": "f4ffe7cd generated",
+  "src/routes/$id.tsx": "cd71cd0d generated",
   "src/routes/__root.tsx": "d5881835 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
@@ -14730,7 +14730,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/my-items/index.tsx": "9a4a6f20 generated",
   "src/routes/my-items/new.tsx": "d4a511a0 generated",
   "src/routes/new.tsx": "b9d18340 generated",
-  "src/routes/saved/$id.tsx": "e354b0ab generated",
+  "src/routes/saved/$id.tsx": "caf0ef41 generated",
   "src/routes/saved/index.tsx": "2b8999a4 generated",
   "src/routes/saved/new.tsx": "09d0880f generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
@@ -16386,7 +16386,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Landing.tsx": "d25b6dac kit",
   "src/kit/ModelForm.tsx": "3067018d kit",
-  "src/kit/ModelTable.tsx": "ec20cf4d kit",
+  "src/kit/ModelTable.tsx": "191c6b85 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "ac916cfe kit",
@@ -20755,7 +20755,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "3067018d kit",
-  "src/kit/ModelTable.tsx": "ec20cf4d kit",
+  "src/kit/ModelTable.tsx": "191c6b85 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",

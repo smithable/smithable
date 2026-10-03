@@ -1,5 +1,6 @@
 import {
   type AuthIR,
+  actionAccess,
   camel,
   conditionText,
   type FieldIR,
@@ -7,8 +8,10 @@ import {
   type ModelAllowed,
   type ModelIR,
   modelAccess,
+  pascal,
   plural,
   type SpecIR,
+  type StandardActionIR,
   USER_MODEL,
 } from "@smithable/core";
 import { aggregatedLists } from "./formulas.js";
@@ -221,8 +224,66 @@ ${Object.entries(expected(access, role))
 ${tests.join("\n\n")}
 });`;
   });
+  // A standard action: who may run it on others' records and on their own (whoever may edit,
+  // narrowed by "allow"), and that it is refused on a record its condition does not fit.
+  const standard = ir.actions.filter((a): a is StandardActionIR => !a.custom);
+  for (const action of standard) {
+    const model = ir.models.find((m) => m.name === action.on) as ModelIR;
+    const access = modelAccess(model, auth);
+    const allowed = actionAccess(action, auth, ir.models);
+    const run = `run${pascal(action.name)}`;
+    // A record the condition fits (a list of values fits with its first one), and one it does not.
+    const fits = Object.fromEntries(
+      Object.entries(action.when ?? {}).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
+    );
+    const readable = access.read.where
+      ? Object.fromEntries(
+          Object.entries(access.read.where).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
+        )
+      : {};
+    const values = JSON.stringify({ ...readable, ...fits });
+    const tests = roles.map((role) => {
+      const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
+      const can = expected(access, role);
+      const listed = role !== null && allowed.roles.includes(role);
+      return `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
+    const viewer = ${viewer};
+    const others = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${values});
+${
+  role !== null
+    ? `    const own = insert${model.name}(viewer.id, ${values});
+`
+    : ""
+}    expect({
+      others: await can(() => ${run}(viewer, others.id)),
+      own: ${role !== null ? `await can(() => ${run}(viewer, own.id))` : "false"},
+    }).toEqual({ others: ${can.readOthers && listed}, own: ${can.readOwn && (listed || allowed.owner)} });
+  });`;
+    });
+    const [field, wanted] = Object.entries(action.when ?? {})[0] ?? [];
+    const flipped = model.fields.find((f) => f.name === field);
+    const other =
+      flipped?.type.kind === "choice"
+        ? flipped.type.values.find((v) => !(Array.isArray(wanted) ? wanted : [wanted]).includes(v))
+        : typeof wanted === "boolean"
+          ? !wanted
+          : undefined;
+    const runner = roles.find((role) => role !== null && allowed.roles.includes(role));
+    if (field !== undefined && other !== undefined && runner)
+      tests.push(`  test("refused on a record where ${field} is not ${Array.isArray(wanted) ? wanted.join(" or ") : String(wanted)}", async () => {
+    const viewer = signedIn(${JSON.stringify(runner)});
+    const record = insert${model.name}(viewer.id, ${JSON.stringify({ ...readable, ...fits, [field]: other })});
+    await expect(${run}(viewer, record.id)).rejects.toThrow("This cannot be done now.");
+  });`);
+    describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
+${tests.join("\n\n")}
+});`);
+  }
   const imports = [
     ...ir.models.map((m) => `import { ${camel(m.name)}Data } from "./${kebab(m.name)}.server";`),
+    ...standard.map(
+      (a) => `import { run${pascal(a.name)} } from "./actions/${kebab(a.name)}.server";`,
+    ),
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
 // "Own" records are owned by the user; "others" by someone else.
