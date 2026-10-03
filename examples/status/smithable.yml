@@ -24,6 +24,7 @@ models:
       resolvedAt: datetime
       summary: markdown
       updates: IncidentUpdate[]
+    access: { write: [admin, staff] }   # any of the team moves any incident on
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -40,27 +41,29 @@ models:
 
 actions:
   identified:
-    custom: true
-    input: { incident: Incident! }
+    on: Incident
+    when: { status: investigating }
+    set: { status: identified }
+    add:
+      IncidentUpdate: { at: NOW(), status: identified, message: The cause is found and a fix is being worked on. }
     allow: [admin, staff]
-    intent: The cause is found; the incident moves to identified.
-    rules:
-      - The incident's status becomes identified, with an update saying so.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
-    custom: true
-    input: { incident: Incident! }
+    on: Incident
+    when: { status: [investigating, identified] }
+    set: { status: monitoring }
+    add:
+      IncidentUpdate: { at: NOW(), status: monitoring, message: A fix is out. We are watching before we close this. }
     allow: [admin, staff]
-    intent: A fix is out; the incident is watched before it is closed.
-    rules:
-      - The incident's status becomes monitoring, with an update saying so.
+    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
-    custom: true
-    input: { incident: Incident! }
+    on: Incident
+    when: { status: [investigating, identified, monitoring] }
+    set: { status: resolved, resolvedAt: NOW() }
+    add:
+      IncidentUpdate: { at: NOW(), status: resolved, message: This incident is resolved. }
     allow: [admin, staff]
-    intent: The incident is over.
-    rules:
-      - The incident's status becomes resolved and its resolvedAt is now.
-      - Its component is operational again.
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.
 
 pages:
   home:

@@ -738,14 +738,13 @@ async function statusFlow(base) {
 
     await signInAs(page, base, "admin");
     await open(page, `${base}/incidents`);
-    await page.getByRole("link", { name: "Resolve" }).click();
-    await chooseRecord(page, "Incident *", "Card payments slow at checkout");
-    await page.getByRole("button", { name: "Resolve" }).click();
-    await page.waitForURL(`${base}/incidents`);
+    // A standard action: the row's button resolves it and adds an update saying so.
+    const card = page.locator("tr", { hasText: "Card payments slow at checkout" });
+    await card.getByRole("button", { name: "Resolve" }).click();
+    await card.getByText("Resolved").waitFor({ timeout: 10000 });
     // Signed out again, the public page shows it.
     await page.context().clearCookies();
     await open(page, `${base}/`);
-    await services.getByText("Degraded").waitFor({ state: "detached", timeout: 10000 });
     // Resolved, it leaves "going on now" for "recently resolved".
     await page
       .locator('[data-section="recent"]')
@@ -759,7 +758,7 @@ async function statusFlow(base) {
     )
       throw new Error("the resolved incident is still under going on now");
     console.log(
-      "  ✓ browser: resolving an incident (its action) marks it resolved and its service working again, on the public page too",
+      "  ✓ browser: resolving an incident (its standard action) marks it resolved, on the public page too",
     );
 
     // The standard action: a button only on the rows it fits; pressed, the record changes.
@@ -767,6 +766,10 @@ async function statusFlow(base) {
     await open(page, `${base}/incidents`);
     const row = page.locator("tr", { hasText: "Card payments slow at checkout" });
     await row.getByRole("button", { name: "Reopen" }).click();
+    // It asks for the update's message in a dialog first.
+    const dialog = page.getByRole("dialog", { name: "Reopen" });
+    await dialog.getByLabel("Message").fill("The errors are back; we are looking again.");
+    await dialog.getByRole("button", { name: "Reopen" }).click();
     await row.getByText("Investigating").waitFor({ timeout: 10000 });
     await row.getByRole("button", { name: "Reopen" }).waitFor({ state: "detached" });
     const fits = await page
@@ -774,8 +777,13 @@ async function statusFlow(base) {
       .getByRole("button", { name: "Reopen" })
       .count();
     if (fits !== 1) throw new Error("the resolved incident has no Reopen button");
+    // The update it added, with the message typed, is in the incident's updates.
+    await row.getByRole("button", { name: "Card payments slow at checkout" }).click();
+    // The newest update, last in the incident's list, carries it (its own page shows the message).
+    await page.locator("section", { hasText: "Updates" }).locator("tbody tr").last().click();
+    await page.getByText("The errors are back; we are looking again.").waitFor({ timeout: 10000 });
     console.log(
-      "  ✓ browser: a standard action's button is on the rows it fits, and pressing it reopens the incident",
+      "  ✓ browser: a standard action's button is on the rows it fits; it asks for a message, reopens the incident and adds the update",
     );
   } catch (error) {
     console.log(
@@ -2333,6 +2341,12 @@ for (const [index, example] of examples.entries()) {
             "status=resolved",
             "--set",
             "status=investigating",
+            "--add",
+            "IncidentUpdate.at=NOW()",
+            "--add",
+            "IncidentUpdate.status=investigating",
+            "--add",
+            "IncidentUpdate.message=",
           );
           if (added.code !== 0) throw new Error(added.out);
           if (existsSync(join(dir, "src/custom/actions/reopen.ts")))

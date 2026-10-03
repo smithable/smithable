@@ -1834,85 +1834,155 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
 {
   "actions": [
     {
+      "add": [
+        {
+          "model": "IncidentUpdate",
+          "reference": "incident",
+          "values": [
+            {
+              "field": "at",
+              "formula": {
+                "args": [],
+                "kind": "call",
+                "name": "NOW",
+              },
+              "text": "NOW()",
+            },
+            {
+              "field": "status",
+              "value": "identified",
+            },
+            {
+              "field": "message",
+              "value": "The cause is found and a fix is being worked on.",
+            },
+          ],
+        },
+      ],
       "allow": [
         "admin",
         "staff",
       ],
-      "custom": true,
-      "input": [
-        {
-          "name": "incident",
-          "required": true,
-          "type": {
-            "kind": "relation",
-            "many": false,
-            "model": "Incident",
-          },
-          "unique": false,
-        },
-      ],
-      "intent": "The cause is found; the incident moves to identified.",
+      "custom": false,
+      "input": [],
+      "intent": "The cause is found; the incident moves to identified, with an update saying so.",
       "name": "identified",
-      "rules": [
+      "on": "Incident",
+      "set": [
         {
-          "text": "The incident's status becomes identified, with an update saying so.",
+          "field": "status",
+          "value": "identified",
         },
       ],
+      "when": {
+        "status": "investigating",
+      },
     },
     {
+      "add": [
+        {
+          "model": "IncidentUpdate",
+          "reference": "incident",
+          "values": [
+            {
+              "field": "at",
+              "formula": {
+                "args": [],
+                "kind": "call",
+                "name": "NOW",
+              },
+              "text": "NOW()",
+            },
+            {
+              "field": "status",
+              "value": "monitoring",
+            },
+            {
+              "field": "message",
+              "value": "A fix is out. We are watching before we close this.",
+            },
+          ],
+        },
+      ],
       "allow": [
         "admin",
         "staff",
       ],
-      "custom": true,
-      "input": [
-        {
-          "name": "incident",
-          "required": true,
-          "type": {
-            "kind": "relation",
-            "many": false,
-            "model": "Incident",
-          },
-          "unique": false,
-        },
-      ],
-      "intent": "A fix is out; the incident is watched before it is closed.",
+      "custom": false,
+      "input": [],
+      "intent": "A fix is out; the incident is watched before it is closed, with an update saying so.",
       "name": "monitoring",
-      "rules": [
+      "on": "Incident",
+      "set": [
         {
-          "text": "The incident's status becomes monitoring, with an update saying so.",
+          "field": "status",
+          "value": "monitoring",
         },
       ],
+      "when": {
+        "status": [
+          "investigating",
+          "identified",
+        ],
+      },
     },
     {
+      "add": [
+        {
+          "model": "IncidentUpdate",
+          "reference": "incident",
+          "values": [
+            {
+              "field": "at",
+              "formula": {
+                "args": [],
+                "kind": "call",
+                "name": "NOW",
+              },
+              "text": "NOW()",
+            },
+            {
+              "field": "status",
+              "value": "resolved",
+            },
+            {
+              "field": "message",
+              "value": "This incident is resolved.",
+            },
+          ],
+        },
+      ],
       "allow": [
         "admin",
         "staff",
       ],
-      "custom": true,
-      "input": [
-        {
-          "name": "incident",
-          "required": true,
-          "type": {
-            "kind": "relation",
-            "many": false,
-            "model": "Incident",
-          },
-          "unique": false,
-        },
-      ],
-      "intent": "The incident is over.",
+      "custom": false,
+      "input": [],
+      "intent": "The incident is over, with an update saying so. The component's state stays what the team sets.",
       "name": "resolve",
-      "rules": [
+      "on": "Incident",
+      "set": [
         {
-          "text": "The incident's status becomes resolved and its resolvedAt is now.",
+          "field": "status",
+          "value": "resolved",
         },
         {
-          "text": "Its component is operational again.",
+          "field": "resolvedAt",
+          "formula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
+          "text": "NOW()",
         },
       ],
+      "when": {
+        "status": [
+          "investigating",
+          "identified",
+          "monitoring",
+        ],
+      },
     },
   ],
   "app": {
@@ -1971,6 +2041,12 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
       "name": "Component",
     },
     {
+      "access": {
+        "write": [
+          "admin",
+          "staff",
+        ],
+      },
       "fields": [
         {
           "name": "title",
@@ -3688,6 +3764,31 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
 {
   "actions": [
     {
+      "add": [
+        {
+          "model": "IncidentUpdate",
+          "reference": "incident",
+          "values": [
+            {
+              "field": "at",
+              "formula": {
+                "args": [],
+                "kind": "call",
+                "name": "NOW",
+              },
+              "text": "NOW()",
+            },
+            {
+              "field": "status",
+              "value": "resolved",
+            },
+            {
+              "field": "message",
+              "value": "This incident is resolved.",
+            },
+          ],
+        },
+      ],
       "allow": [
         "admin",
       ],
@@ -3745,6 +3846,43 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
           "monitoring",
         ],
       },
+    },
+    {
+      "add": [
+        {
+          "model": "IncidentUpdate",
+          "reference": "incident",
+          "values": [
+            {
+              "field": "at",
+              "formula": {
+                "args": [],
+                "kind": "call",
+                "name": "NOW",
+              },
+              "text": "NOW()",
+            },
+            {
+              "field": "status",
+              "value": "investigating",
+            },
+            {
+              "asked": true,
+              "field": "message",
+            },
+          ],
+        },
+      ],
+      "custom": false,
+      "input": [],
+      "name": "annotate",
+      "on": "Incident",
+      "set": [
+        {
+          "asked": true,
+          "field": "note",
+        },
+      ],
     },
     {
       "custom": false,
@@ -3833,8 +3971,75 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "note",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "updates",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "IncidentUpdate",
+          },
+          "unique": false,
+        },
       ],
       "name": "Incident",
+    },
+    {
+      "fields": [
+        {
+          "name": "incident",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Incident",
+          },
+          "unique": false,
+        },
+        {
+          "name": "at",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "default": "investigating",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "message",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "IncidentUpdate",
     },
   ],
   "navigation": [
@@ -3850,6 +4055,7 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
       "actions": [
         "resolve",
         "escalate",
+        "annotate",
       ],
       "id": "incidents",
       "pattern": {

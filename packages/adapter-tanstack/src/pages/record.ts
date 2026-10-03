@@ -10,8 +10,10 @@ import {
   pageModel,
   pascal,
   type SpecIR,
+  type StandardActionIR,
   type UxIR,
 } from "@smithable/core";
+import { askedFields } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { reserveElement, savedToggle } from "../data.js";
 import {
@@ -311,6 +313,7 @@ export function detailRoute(
       action.name,
       `${action.name}Access`,
       `${action.name}Fits`,
+      ...(askedFields(action).length ? [`${action.name}AskUi`, `${action.name}Asks`] : []),
     ]);
   const contact =
     page.contact && auth && hasSignIn(auth) && !within
@@ -349,13 +352,7 @@ export function detailRoute(
     ...offered.map(
       (a) =>
         `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row) && (
-              <ActionButton
-                label=${attr(humanize(a.name))}
-                onRun={async () => {
-                  await ${a.name}({ data: row.id });
-                  await router.invalidate();
-                }}
-              />
+              ${actionButton(a, "row")}
             )}`,
     ),
     ...(favorite
@@ -516,4 +513,21 @@ const contact${model.name} = createServerFn({ method: "POST" })
         onSend={(values) => contact${model.name}({ data: { id: row.id, ...values } })}
       />`,
   };
+}
+
+/** A standard action's button on a record: it acts at once, or asks first in a dialog. */
+export function actionButton(action: StandardActionIR, row: string): string {
+  const asks = askedFields(action).length > 0;
+  return `<ActionButton
+                label=${attr(humanize(action.name))}${
+                  asks
+                    ? `
+                ask={{ ui: ${action.name}AskUi, schema: ${action.name}Asks, initial: ${row}, app }}`
+                    : ""
+                }
+                onRun={async (${asks ? "values" : ""}) => {
+                  await ${action.name}({ data: ${asks ? `{ id: ${row}.id, values: values as never }` : `${row}.id`} });
+                  await router.invalidate();
+                }}
+              />`;
 }

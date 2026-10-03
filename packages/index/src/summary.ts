@@ -203,24 +203,60 @@ export function summarize(
         "or",
       );
     });
-    const sets = action.set.map((v) => {
-      const f = field(v.field);
-      const name = f ? fieldLabel(model, f) : v.field;
+    // A value in words, on the model it is written to: "status to resolved", "the cancel reason".
+    const valueWords = (target: ModelIR, v: StandardActionIR["set"][number]) => {
+      const f = target.fields.find((x) => x.name === v.field);
+      const name = f ? fieldLabel(target, f) : v.field;
+      if ("asked" in v) return { asked: name };
       const value =
         "formula" in v
           ? words(model, v.formula)
           : f?.type.kind === "choice"
-            ? choice(model, f, String(v.value))
+            ? choice(target, f, String(v.value))
             : typeof v.value === "boolean"
               ? v.value
                 ? "yes"
                 : "no"
               : String(v.value);
-      return `${name} to ${value}`;
+      return { set: `${name} to ${value}`, pair: `${name} ${value}` };
+    };
+    const own = action.set.map((v) => valueWords(model, v));
+    const sets = own.flatMap((w) => ("set" in w && w.set ? [w.set] : []));
+    const asked = [
+      ...own.flatMap((w) => ("asked" in w && w.asked ? [w.asked] : [])),
+      ...(action.add ?? []).flatMap((a) => {
+        const target = modelNamed(a.model);
+        return target
+          ? a.values.flatMap((v) => {
+              const w = valueWords(target, v);
+              return "asked" in w && w.asked
+                ? [`the ${label(target).toLowerCase()}'s ${w.asked}`]
+                : [];
+            })
+          : [];
+      }),
+    ];
+    const adds = (action.add ?? []).flatMap((a) => {
+      const target = modelNamed(a.model);
+      if (!target) return [];
+      const given = a.values.flatMap((v) => {
+        const w = valueWords(target, v);
+        return "pair" in w && w.pair ? [w.pair] : [];
+      });
+      return [
+        `${article(label(target).toLowerCase())}${given.length ? ` (${given.join(", ")})` : ""}`,
+      ];
     });
     const item = label(model).toLowerCase();
+    const does = [
+      ...(sets.length ? [`sets ${list(sets)}`] : []),
+      ...(asked.length
+        ? [`asks for ${list(asked.map((a) => (a.startsWith("the ") ? a : `the ${a}`)))}`]
+        : []),
+      ...(adds.length ? [`adds ${list(adds)}`] : []),
+    ].join("; ");
     return [
-      `${when.length ? `For ${article(item)} that is ${list(when)}; sets` : "Sets"} ${list(sets)}.`,
+      `${when.length ? `For ${article(item)} that is ${list(when)}; ${does}` : `${does.charAt(0).toUpperCase()}${does.slice(1)}`}.`,
       ...(action.intent ? [action.intent] : []),
     ];
   };
