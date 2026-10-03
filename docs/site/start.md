@@ -93,7 +93,7 @@ smithable undo                                    # takes back the last change, 
 smithable report                                  # after a failure: shows what a report would send
 ```
 
-Every change goes through an operation, which checks it, regenerates the code, migrates the database and commits a checkpoint, so each one can be undone. `smithable op` lists the operations.
+Every change goes through an operation, which checks it, regenerates the code, migrates the database and commits a checkpoint, so each one can be undone. `smithable op` lists the operations. [Change an app without writing code](change.md) walks through five of them on the status starter.
 
 ## With an AI agent
 
