@@ -288,17 +288,22 @@ export function validateAuth(
     // A domain nobody has: only administrators and invited people can ever sign in.
     const domains = auth.signIn.allowedDomains;
     const sample = domains?.filter(reservedDomain) ?? [];
+    const allSample = sample.length > 0 && sample.length === domains?.length;
     if (sample.length)
       ctx.warning(
         signIn?.keyNode ?? root,
         "example-domain",
-        `Only ${sample.join(" and ")} accounts may sign up, and nobody has one: only administrators and invited people can sign in.`,
-        `Change "allowedDomains" under "signIn" to your people's domains, or remove it.`,
+        allSample
+          ? `Only ${sample.join(" and ")} accounts may sign up, and nobody has one: only administrators and invited people can sign in.`
+          : `${sample.join(" and ")} in allowedDomains ${sample.length > 1 ? "are domains" : "is a domain"} nobody has an account at: remove ${sample.length > 1 ? "them" : "it"}.`,
+        allSample
+          ? `Change "allowedDomains" under "signIn" to your people's domains, or remove it.`
+          : undefined,
       );
     // An admin outside allowedDomains may sign in (admins always can), but the domains were
     // likely a starter's and keep everyone else from the admin's own domain out.
     for (const address of auth.admins)
-      if (domains && !sample.length && !domains.includes(address.split("@")[1] ?? ""))
+      if (domains && !allSample && !domains.includes(address.split("@")[1] ?? ""))
         ctx.warning(
           admins?.value ?? root,
           "admin-outside-domains",
