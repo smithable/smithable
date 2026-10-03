@@ -6,30 +6,26 @@ models:
   Plot:
     fields:
       number: string! unique
-      size: string
+      size: int
       status: free | assigned | reserved
       holder: User
-      yearlyFee: money
       notes: text
     access:
       delete: [admin]
-      write: [admin, owner]
   WaitingList:
     fields:
       name: string!
       email: email!
       phone: phone
       dateAdded: date! = TODAY()
-      status: active | assigned | withdrawn
       notes: text
     access:
       delete: [admin]
-      write: [admin]
   Fee:
     fields:
       year: int! unique
       amount: money!
-      dueDate: date!
+      dueDate: date
       notes: text
     access:
       delete: [admin]
@@ -37,14 +33,12 @@ models:
 pages:
   plots:
     crud: Plot
-    search: [number, holder]
-    filters: [status]
   waiting-list:
     crud: WaitingList
-    search: [name, email]
-    filters: [status]
+    access: [admin]
   fees:
     crud: Fee
+    access: [admin]
   team:
     users: manage
 navigation: [plots, waiting-list, fees, team]

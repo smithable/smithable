@@ -40,6 +40,8 @@ models:
         label: Totalt
       dueDate:
         label: Förfallodatum
+      paidAt:
+        label: Betaldatum
       notes:
         label: Anteckningar
       customer:
@@ -71,3 +73,5 @@ pages:
     title: Fakturor
   kunder:
     title: Kunder
+  anvandare:
+    title: Användare

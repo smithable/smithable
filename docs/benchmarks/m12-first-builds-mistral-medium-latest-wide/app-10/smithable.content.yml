@@ -15,7 +15,7 @@ models:
           document: Document
           photograph: Photograph
       period:
-        label: Period
+        label: Era
       origin:
         label: Origin
       story:
@@ -24,9 +24,12 @@ models:
         label: Image
 pages:
   home:
-    title: Local Museum Collection
-    subtitle: Browse our objects and their stories
+    title: Local Museum
+    subtitle: Explore our collection of historical objects and their stories.
     hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
   artifacts:
     title: Objects
-    subtitle: Explore the museum's collection
+    subtitle: Browse the museum's collection

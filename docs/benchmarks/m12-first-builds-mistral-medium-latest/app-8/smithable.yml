@@ -6,7 +6,7 @@ models:
   Talk:
     fields:
       title: string!
-      summary: text
+      description: text
       startsAt: datetime!
       endsAt: datetime!
       room: string
@@ -14,18 +14,17 @@ models:
       speaker: Speaker!
       registrations: Registration[]
     access:
-      delete: [organizer]
       create: [organizer]
+      delete: [organizer]
   Speaker:
     fields:
       name: string!
       bio: text
-      photo: picture
       email: email!
-      company: string
+      photo: picture
     access:
-      delete: [organizer]
       create: [organizer]
+      delete: [organizer]
   Attendee:
     fields:
       name: string!
@@ -33,29 +32,29 @@ models:
       company: string
       dietaryRestrictions: text
     access:
+      create: [organizer, attendee]
       delete: [organizer]
-      create: [organizer]
   Registration:
     fields:
       talk: Talk!
       attendee: Attendee!
-      status: registered | attended | cancelled
+      registeredAt: datetime!
     capacity:
       per: talk
       max: talk.capacity
+    access:
+      create: [organizer, attendee]
+      delete: [organizer, owner]
 pages:
   talks:
     crud: Talk
-    search: [title, summary, room]
+    access: [organizer]
   speakers:
     crud: Speaker
-    search: [name, company]
+    access: [organizer]
   attendees:
     crud: Attendee
-    search: [name, email, company]
-  registrations:
-    crud: Registration
-    filters: [talk, status]
+    access: [organizer]
   home:
     route: /
     landing:
@@ -68,3 +67,10 @@ pages:
       contact:
   team:
     users: manage
+  admin:
+    data: all
+  registrations:
+    crud: Registration
+    access: [organizer, attendee]
+    mine: true
+navigation: [talks, speakers, registrations]

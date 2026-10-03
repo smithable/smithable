@@ -5,19 +5,19 @@ models:
     pluralLabel: Services
     fields:
       name:
-        label: Service Name
+        label: Name
       status:
         label: Status
         values:
           operational: Operational
-          degraded: Degraded Performance
-          down: Unavailable
-          maintenance: Under Maintenance
+          degraded: Degraded
+          down: Down
+          maintenance: Maintenance
       description:
         label: Description
   Incident:
-    label: Service Disruption
-    pluralLabel: Service Disruptions
+    label: Incident
+    pluralLabel: Incidents
     fields:
       title:
         label: Title
@@ -29,11 +29,11 @@ models:
           monitoring: Monitoring
           resolved: Resolved
       component:
-        label: Affected Service
+        label: Service
       detectedAt:
-        label: Detected At
+        label: Detected at
       resolvedAt:
-        label: Resolved At
+        label: Resolved at
       summary:
         label: Summary
   IncidentUpdate:
@@ -43,38 +43,41 @@ models:
       incident:
         label: Incident
       at:
-        label: Time
+        label: At
       status:
         label: Status
       message:
         label: Message
   Maintenance:
-    label: Planned Maintenance
-    pluralLabel: Planned Maintenances
+    label: Maintenance
+    pluralLabel: Maintenances
     fields:
       title:
         label: Title
       component:
-        label: Affected Service
+        label: Service
       startsAt:
-        label: Starts At
+        label: Starts at
       endsAt:
-        label: Ends At
+        label: Ends at
       description:
         label: Description
 pages:
   home:
     title: Service Status
-    subtitle: Check the current status of our municipality's online services.
+    subtitle: Check the current status and outages of our municipality's online services.
     hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
   incidents:
-    title: Service Disruptions
+    title: Incidents
   updates:
     title: Updates
   components:
     title: Services
   maintenance:
-    title: Planned Maintenance
+    title: Maintenances
   overview:
     title: Overview
   team:

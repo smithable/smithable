@@ -6,3 +6,4 @@ defaultAccess: shared
 public:
   pages: [sightings]
   read: [Sighting]
+admins: [johan@smithable.ai]

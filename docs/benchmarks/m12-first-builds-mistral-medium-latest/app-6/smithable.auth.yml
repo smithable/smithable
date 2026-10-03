@@ -1,12 +1,15 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-defaultAccess: private
+  selfSignUp: false
+defaultAccess: shared
 roles:
-  admin:
-    description: Manages the job board.
   employer:
-    description: Posts job listings.
+    description: Posts job openings.
   member:
     description: Applies to jobs.
 defaultRole: member
+public:
+  pages: [home, jobs]
+  read: [{ Job: { where: { status: open } } }]
+admins: [johan@smithable.ai]
