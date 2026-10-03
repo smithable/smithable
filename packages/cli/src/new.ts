@@ -143,6 +143,11 @@ export async function create(
       return 1;
     }
     files = draft.files;
+    // An action the model could not get right is left out and said, rather than failing the draft.
+    if (draft.dropped?.length)
+      io.out(
+        `Left out, since it could not be made valid:\n${draft.dropped.map((d) => `  ${d}\n`).join("")}`,
+      );
     const auth = validateAuth({
       path: "smithable.auth.yml",
       text: files["smithable.auth.yml"] ?? "",
