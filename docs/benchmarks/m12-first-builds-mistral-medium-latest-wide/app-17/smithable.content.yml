@@ -1,14 +1,30 @@
 smithableContent: 0.1
-pages:
-  home:
-    title: Boka tid hos oss
-    subtitle: Välj en tjänst och boka en tid som passar dig.
-    hero:
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
 models:
-  Appointment:
+  Service:
+    label: Tjänst
+    pluralLabel: Tjänster
+    fields:
+      name:
+        label: Namn
+      description:
+        label: Beskrivning
+      durationMinutes:
+        label: Varaktighet (minuter)
+      price:
+        label: Pris
+  Stylist:
+    label: Stylist
+    pluralLabel: Stylister
+    fields:
+      name:
+        label: Namn
+      bio:
+        label: Biografi
+      portrait:
+        label: Porträtt
+  Booking:
+    label: Bokning
+    pluralLabel: Bokningar
     fields:
       customerName:
         label: Namn
@@ -16,21 +32,34 @@ models:
         label: E-post
       customerPhone:
         label: Telefon
+      appointment:
+        label: Tid
+  Appointment:
+    label: Tid
+    pluralLabel: Tider
+    fields:
       service:
         label: Tjänst
-      date:
-        label: Datum
-      time:
-        label: Tid
-      status:
-        label: Status
-  Service:
-    fields:
-      name:
-        label: Namn
-      description:
-        label: Beskrivning
-      duration:
-        label: Varaktighet (minuter)
-      price:
-        label: Pris
+      stylist:
+        label: Stylist
+      startsAt:
+        label: Starttid
+      capacity:
+        label: Kapacitet
+pages:
+  hem:
+    title: Min Frisörsalong
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+  tjanster:
+    title: Tjänster
+  stylister:
+    title: Stylister
+  mina-bokningar:
+    title: Mina bokningar
+  tider:
+    title: Tider
+  schema:
+    title: Schema

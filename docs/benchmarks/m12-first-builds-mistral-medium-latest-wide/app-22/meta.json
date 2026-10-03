@@ -1,5 +1,10 @@
 {
   "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
-  "starter": "records",
+  "starter": "crm",
+  "wordStarter": "records",
+  "questions": [
+    "Wer kann die Vorbestellungen sehen und verwalten?",
+    "Was enthält eine Vorbestellung neben den Produkten?"
+  ],
   "lang": "de"
 }

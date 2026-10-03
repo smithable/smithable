@@ -1,4 +1,6 @@
 {
   "description": "My vinyl record collection: albums, artists, condition and what I paid.",
-  "starter": "crm"
+  "starter": "records",
+  "wordStarter": "crm",
+  "questions": []
 }

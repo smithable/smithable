@@ -1,1 +1,28 @@
 smithableContent: 0.1
+models:
+  Album:
+    label: Album
+    pluralLabel: Albums
+    fields:
+      title:
+        label: Title
+      artist:
+        label: Artist
+      releaseYear:
+        label: Release Year
+      condition:
+        label: Condition
+        values:
+          mint: Mint
+          nearMint: Near Mint
+          veryGood: Very Good
+          good: Good
+          fair: Fair
+          poor: Poor
+      pricePaid:
+        label: Price Paid
+      summary:
+        label: Summary
+pages:
+  albums:
+    title: Albums

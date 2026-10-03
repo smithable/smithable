@@ -1,27 +1,31 @@
 smithable: 0.1
 app:
   name: Tool Library
-  description: A place where neighbors lend each other tools.
+  description: A tool library where neighbors lend each other tools.
 pages:
   home:
     route: /
     landing:
       hero:
       footer:
-      tools:
+      latest:
         records: Tool
-        where:
-          available: true
+  myTools:
+    crud: Tool
+    mine: true
   tools:
     crud: Tool
-    search: [name, description, category, location]
-    sortable: [name, category, condition, available]
+    search: [name, description]
+    filters: [category, condition, available]
+    sortable: [name, createdAt]
+    favorites: true
+    contact: owner
 models:
   Tool:
     fields:
       name: string!
-      description: text
-      category: string
-      condition: new | good | worn | broken
+      description: text!
+      category: garden | power | hand | measuring | other
+      condition: likeNew | good | worn
       available: bool = true
-      location: string
+navigation: [tools, myTools]

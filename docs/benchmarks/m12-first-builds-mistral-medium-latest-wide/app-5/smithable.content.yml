@@ -1,1 +1,25 @@
 smithableContent: 0.1
+models:
+  Client:
+    label: Client
+    pluralLabel: Clients
+  Invoice:
+    label: Invoice
+    pluralLabel: Invoices
+    fields:
+      status:
+        values:
+          draft: Draft
+          sent: Sent
+          paid: Paid
+          overdue: Overdue
+  InvoiceLine:
+    label: Invoice Line
+    pluralLabel: Invoice Lines
+pages:
+  clients:
+    title: Clients
+  invoices:
+    title: Invoices
+  invoice-lines:
+    title: Invoice Lines

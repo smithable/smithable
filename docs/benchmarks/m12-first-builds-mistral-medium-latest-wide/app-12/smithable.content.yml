@@ -1,7 +1,81 @@
 smithableContent: 0.1
+models:
+  Component:
+    label: Service
+    pluralLabel: Services
+    fields:
+      name:
+        label: Service Name
+      status:
+        label: Status
+        values:
+          operational: Operational
+          degraded: Degraded Performance
+          down: Unavailable
+          maintenance: Under Maintenance
+      description:
+        label: Description
+  Incident:
+    label: Service Disruption
+    pluralLabel: Service Disruptions
+    fields:
+      title:
+        label: Title
+      status:
+        label: Status
+        values:
+          investigating: Investigating
+          identified: Identified
+          monitoring: Monitoring
+          resolved: Resolved
+      component:
+        label: Affected Service
+      detectedAt:
+        label: Detected At
+      resolvedAt:
+        label: Resolved At
+      summary:
+        label: Summary
+  IncidentUpdate:
+    label: Update
+    pluralLabel: Updates
+    fields:
+      incident:
+        label: Incident
+      at:
+        label: Time
+      status:
+        label: Status
+      message:
+        label: Message
+  Maintenance:
+    label: Planned Maintenance
+    pluralLabel: Planned Maintenances
+    fields:
+      title:
+        label: Title
+      component:
+        label: Affected Service
+      startsAt:
+        label: Starts At
+      endsAt:
+        label: Ends At
+      description:
+        label: Description
 pages:
   home:
+    title: Service Status
+    subtitle: Check the current status of our municipality's online services.
     hero:
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+  incidents:
+    title: Service Disruptions
+  updates:
+    title: Updates
+  components:
+    title: Services
+  maintenance:
+    title: Planned Maintenance
+  overview:
+    title: Overview
+  team:
+    title: Team

@@ -1,40 +1,74 @@
 smithable: 0.1
 app:
-  name: Frisörsalong Bokning
-  description: Ett system för kunder att boka tid hos frisören på nätet.
+  name: Min Frisörsalong
+  description: Onlinebokning för frisörsalong där kunder kan boka tid själva.
+  currency: SEK
   timezone: Europe/Stockholm
 models:
-  Appointment:
-    fields:
-      customerName: string!
-      customerEmail: email!
-      customerPhone: phone
-      service: string!
-      date: date!
-      time: string!
-      status: booked | confirmed | cancelled | completed
-      notes: text
   Service:
     fields:
       name: string!
       description: text
-      duration: int!
+      durationMinutes: int! = 30
       price: money!
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+      portrait: picture
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Booking:
+    fields:
+      customerName: string!
+      customerEmail: email!
+      customerPhone: phone
+      appointment: Appointment! unique
+    capacity:
+      per: appointment
+      max: appointment.capacity
+  Appointment:
+    fields:
+      service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      capacity: int! = 1
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
 pages:
-  appointments:
-    crud: Appointment
-    access: [admin]
-    search: [customerName, customerEmail, service]
-  services:
+  tjanster:
     crud: Service
     access: [admin]
-  home:
+  stylister:
+    crud: Stylist
+    access: [admin]
+  mina-bokningar:
+    crud: Booking
+    mine: true
+  hem:
     route: /
     landing:
       hero:
       footer:
-      services:
+      tjanster:
         records: Service
-      contact:
-        form: Appointment
-navigation: [appointments, services]
+      stylister:
+        records: Stylist
+      callToAction:
+        button: schema
+  tider:
+    crud: Appointment
+    access: [admin]
+  schema:
+    calendar:
+      model: Appointment
+      starts: startsAt
+navigation: [hem, schema, mina-bokningar]

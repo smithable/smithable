@@ -1,10 +1,5 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
-roles:
-  mechanic:
-    description: Suorittaa huoltotöitä.
-  accountant:
-    description: Hoitaa laskutusta.
-defaultRole: mechanic

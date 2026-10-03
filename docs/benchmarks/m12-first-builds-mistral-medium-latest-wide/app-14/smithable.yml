@@ -1,18 +1,25 @@
 smithable: 0.1
 app:
-  name: Wedding Guest List
-  description: Manage wedding guests, RSVPs, and seating arrangements with meal choices.
+  name: Our Wedding
+  description: Manage the guest list and seating plan for our wedding, with RSVPs and meal choices.
 models:
   Guest:
     fields:
       name: string!
       email: email
       phone: phone
-      rsvpStatus: notResponded | attending | notAttending
-      mealChoice: vegetarian | standard | glutenFree
-      tableNumber: string
+      attending: yes | no | maybe
+      mealChoice: vegetarian | meat | fish
+      tableNumber: int
       notes: text
+      seatingGroup: string
+    access:
+      delete: [admin]
+      write: [admin, owner]
 pages:
   guests:
     crud: Guest
-    search: [name, email, phone]
+    access: [admin]
+    search: [name, email, seatingGroup]
+  team:
+    users: manage

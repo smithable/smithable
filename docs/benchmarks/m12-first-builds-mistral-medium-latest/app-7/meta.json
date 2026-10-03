@@ -1,4 +1,6 @@
 {
   "description": "A football club's site: teams, players, matches and results.",
-  "starter": "records"
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": []
 }

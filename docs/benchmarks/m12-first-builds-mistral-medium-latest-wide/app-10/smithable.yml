@@ -6,21 +6,25 @@ models:
   Artifact:
     fields:
       name: string!
-      description: text!
-      category: paintings | sculptures | ceramics | textiles | jewelry | other
-      era: string
+      description: text
+      category: artifact | document | photograph
+      period: string
       origin: string
-      photos: pictures
       story: text
+      image: url
 pages:
   artifacts:
-    route: /
     crud: Artifact
-    search: [name, description, era, origin, story]
-    sortable: [name, era, createdAt]
+    search: [name, description, story]
+    sortable: [name, period, createdAt]
+    filters: [category]
   home:
-    route: /welcome
+    route: /
     landing:
       hero:
       footer:
-navigation: [artifacts]
+      featured:
+        records: Artifact
+        where:
+          category: artifact
+navigation: [home, artifacts]

@@ -3,6 +3,10 @@ pages:
   recipes:
     table:
       sort: name
-    icon: book
   shopping-lists:
-    icon: cart
+    table:
+      sort: -dueDate
+tones:
+  ShoppingList.status:
+    completed: success
+    pending: warning

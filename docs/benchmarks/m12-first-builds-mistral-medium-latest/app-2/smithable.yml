@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Sales CRM
-  description: A lightweight CRM for a small sales team to manage companies, contacts, deals, and follow-ups.
+  name: Small Sales CRM
+  description: A CRM for a small sales team to manage companies, contacts, deals and follow-ups.
 models:
   Company:
     fields:
@@ -13,40 +13,41 @@ models:
       accountManager: User
     access:
       delete: [admin]
+      write: [sales]
   Contact:
     fields:
       firstName: string!
       lastName: string!
       email: email
       phone: phone
-      company: Company!
       role: decisionMaker | influencer | endUser
+      company: Company!
       notes: text
     access:
       delete: [admin]
+      write: [sales]
   Deal:
     fields:
       name: string!
       company: Company!
       contact: Contact
-      value: money
-      stage: lead | qualified | proposal | negotiation | closedWon | closedLost
+      value: money!
+      stage: prospecting | qualification | proposal | negotiation | closedWon | closedLost
       closeDate: date
       notes: text
     access:
       delete: [admin]
+      write: [sales]
   FollowUp:
     fields:
       title: string!
-      company: Company!
-      contact: Contact
-      deal: Deal
+      deal: Deal!
       dueDate: date!
       status: pending | completed | canceled
       notes: text
-      assignee: User
     access:
       delete: [admin]
+      write: [sales]
 pages:
   companies:
     crud: Company
@@ -57,11 +58,12 @@ pages:
   deals:
     crud: Deal
     search: [name, company]
-    filters: [stage, company, closeDate]
+    filters: [stage, company]
     sortable: [value, closeDate, stage]
   follow-ups:
     crud: FollowUp
-    search: [title, company, contact]
+    search: [title, deal]
+    filters: [status, dueDate, deal]
     sortable: [dueDate, status]
   team:
     users: manage
