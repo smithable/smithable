@@ -1,6 +1,6 @@
 # Logs: who did what, what the app did, and one id for a request
 
-Status: 2026-10-04, proposed by Fable from Johan's requirements: access logs, app logs and audit logs; every create, change, delete and action linked to a person, with the client's details; everything written for one request carrying the same trace id; OpenTelemetry later. Nothing here adds to the spec: every app gets it, the same way, with nothing to configure. Section 7 lists what Johan decides.
+Status: 2026-10-04, proposed by Fable from Johan's requirements: access logs, app logs and audit logs; every create, change, delete and action linked to a person, with the client's details; everything written for one request carrying the same trace id; OpenTelemetry later. Nothing here adds to the spec: every app gets it, the same way, with nothing to configure. Johan decided on 2026-10-04 (section 7): yes to all four, with one change: what touches security is logged with its values.
 
 ## 1. What is logged today
 
@@ -34,7 +34,8 @@ A table in the app's own database, written in the same transaction as the change
 
 - **A line says:** when; the trace id; who (the user, or the key by its name, or the incoming call by its name, or "the app" for a daily job); the role they acted with; the client's address and browser; what was done (created, changed, deleted, the action's name, or copied from which record); to which model and record, with the record's title at that moment (so a deleted record can still be named); and for a change, which fields changed.
 - **Also audited, beyond records:** signing in and out, a failed sign-in, an invitation sent and accepted, a role changed, a user removed, a key or a secret made or revoked, an export of the data, the import of a file.
-- **Old and new values are not stored** in the first version: only the names of the fields that changed. Values would put a second copy of personal data where deleting a record cannot reach it. A model can ask for them later (section 6).
+- **For a record, old and new values are not stored** in the first version: only the names of the fields that changed. Values would put a second copy of personal data where deleting a record cannot reach it. A model can ask for them later (section 6).
+- **For anything that touches security, the values are stored** (Johan's decision): a line must say what was changed to what, not only that something changed. "Role changed" is not enough; "Anna made Erik an admin (was member)" is. So: a role change records the person, the old role and the new one; an invitation its address and role; a user removed, who; a key made or revoked, its name, role and end date; a change of who may sign in, the old and the new setting; an export, what it contained. Never a secret: not a key, not a sign-in code, not a password, not a target's secret, only that one was made, used or replaced.
 - **Reading it:** the administrator's data page gets "Activity": the lines newest first, filtered by person, by record, by what was done and by time; a record's page shows its own history to those who may see everything about it (administrators at first). The table is part of the export, so leaving takes it along.
 - **It cannot be edited** through the app: no page, operation, API or tool writes to it or deletes from it, and the generated access test proves that for every role.
 - **Keeping:** the client's address and browser are blanked after 90 days (the access-log period); the line itself, who did what to which record, is kept 12 months and then removed by the daily job. Both periods are settings.
@@ -55,9 +56,9 @@ A table in the app's own database, written in the same transaction as the change
 - **Values in the audit log** for a model that needs them (`audit: values` on the model): what a field was and became, with those lines deleted when the record's person asks to be forgotten.
 - **Alerts** on the app log (an error rate), for the hosted service's alarms.
 
-## 7. Decisions for Johan
+## 7. Decided (Johan, 2026-10-04)
 
-1. **On in every app, nothing to switch off and nothing in the spec.** Recommended: a log that can be turned off is not there on the day it is needed.
-2. **The audit log stores which fields changed, not their old and new values,** in the first version. Recommended, for the personal-data reason in 3.3; say if you want values from the start.
-3. **Keeping:** client details 90 days, audit lines 12 months, both as settings. Recommended; these follow your earlier retention decisions.
-4. **Order: this before the API.** The trace id and the audit line are what make a key's actions accountable, so the adapter builds logging first and the API on top. The core of the API step, which needs no logging, is being built now.
+1. **On in every app, nothing to switch off and nothing in the spec.**
+2. **A record's change stores which fields changed, not their values; what touches security stores its values, never a secret** (3.3).
+3. **Keeping:** client details 90 days, audit lines 12 months, both as settings.
+4. **Order: this before the API's routes,** so a key's actions are accountable from the first version.
