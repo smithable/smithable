@@ -16,6 +16,12 @@ models:
   Order:
     fields:
       ref: string
+      lines: Line[]
+  Line:
+    fields:
+      order: Order!
+      qty: int
+      note: text!
 actions:
   merge:                           # expect: missing-key
     input: { keep: Customer! }
@@ -42,9 +48,23 @@ actions:
       logo: x                      # expect: invalid-set
       nmae: x                      # expect: unknown-field
       since: NOW() & "x"           # expect: invalid-formula
-      notes:                       # expect: invalid-set
+      notes:                       # asked for
   half:
     on: Customer                   # expect: missing-key
+  addToNothing:
+    on: Customer
+    add:
+      Order: { ref: x }            # expect: invalid-add
+  addMissing:
+    on: Order
+    add:
+      Line: { qty: 1 }             # expect: invalid-add
+  addBack:
+    on: Order
+    add:
+      Line:
+        order: 1                   # expect: invalid-add
+        note: x
   withInput:
     on: Customer
     set: { status: lost }

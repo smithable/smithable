@@ -222,3 +222,30 @@ actions:
     "Sets pinned to yes.",
   ]);
 });
+
+test("a standard action that asks and adds, in words", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields: { title: string!, status: open | resolved, note: text, updates: "Update[]" }
+  Update:
+    fields: { incident: Incident!, message: text!, at: datetime! }
+actions:
+  resolve:
+    on: Incident
+    when: { status: open }
+    set: { status: resolved, note: }
+    add:
+      Update: { at: NOW(), message: }
+`,
+  }).ir;
+  if (!ir) throw new Error("invalid spec");
+  expect(
+    summarize(ir, undefined, emptyContent()).find((s) => s.concept === "action:resolve")?.sentences,
+  ).toEqual([
+    "For an incident that is open; sets status to resolved; asks for the note and the update's message; adds an update (at now).",
+  ]);
+});

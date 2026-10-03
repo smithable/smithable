@@ -14,7 +14,7 @@ import {
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
-import { actionNames } from "../actions.js";
+import { actionNames, askedFields } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { savedToggle } from "../data.js";
 import {
@@ -39,6 +39,7 @@ import {
   tableNames,
   type Within,
 } from "../shared.js";
+import { actionButton } from "./record.js";
 import { LUCIDE } from "./root.js";
 
 type Favorites = PageIR["favorites"];
@@ -429,7 +430,13 @@ export function listParts(
   // Standard actions: a button in each row they fit, for viewers who may run them.
   const offered = within ? [] : standardActions(page, ir);
   for (const a of offered)
-    view.add(actionNames(a).module, a.name, actionNames(a).access, actionNames(a).fits);
+    view.add(
+      actionNames(a).module,
+      a.name,
+      actionNames(a).access,
+      actionNames(a).fits,
+      ...(askedFields(a).length ? [actionNames(a).askUi, actionNames(a).asks] : []),
+    );
   if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
   if (offered.length) view.add("@tanstack/react-router", "useRouter");
   view.add("#/generated/app", "app").add(n.module, n.ui);
@@ -531,13 +538,7 @@ ${
                 (
                   a,
                 ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row) && (
-              <ActionButton
-                label=${attr(humanize(a.name))}
-                onRun={async () => {
-                  await ${a.name}({ data: row.id });
-                  await router.invalidate();
-                }}
-              />
+              ${actionButton(a, "row")}
             )}`,
               )
               .join("\n            ")}
