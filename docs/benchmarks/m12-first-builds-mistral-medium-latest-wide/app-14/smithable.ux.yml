@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  guests:
+    table:
+      sort: name
+      columns: [name, email, rsvpStatus, mealChoice, tableNumber]
+tones:
+  Guest.rsvpStatus:
+    attending: success
+    notAttending: danger
+    notResponded: warning

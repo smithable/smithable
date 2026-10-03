@@ -1,0 +1,11 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
+public:
+  pages: [home]
+  read: [Stylist, Service]
+roles:
+  admin:
+    description: Manages stylists, services, and appointments.
+defaultRole: admin

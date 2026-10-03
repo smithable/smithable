@@ -1,0 +1,20 @@
+smithableUx: 0.1
+pages:
+  products:
+    table:
+      sort: name
+    icon: package
+  pre-orders:
+    table:
+      sort: -orderDate
+    icon: cart
+  pickup-times:
+    table:
+      sort: date
+    icon: calendar
+tones:
+  PreOrder.status:
+    completed: success
+    cancelled: danger
+    confirmed: success
+    pending: warning

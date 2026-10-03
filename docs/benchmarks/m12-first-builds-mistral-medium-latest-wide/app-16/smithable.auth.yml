@@ -1,0 +1,10 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
+roles:
+  admin:
+    description: Society administrator. Manages plots, members, and fees.
+  member:
+    description: Allotment member. Can view their own assignments and payments.
+defaultRole: member

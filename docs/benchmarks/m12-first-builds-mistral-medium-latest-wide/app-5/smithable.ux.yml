@@ -1,0 +1,13 @@
+smithableUx: 0.1
+pages:
+  invoices:
+    table:
+      sort: -issuedOn
+      columns: [number, client, issuedOn, dueOn, status, total]
+    form:
+      columns: 2
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+    sent: warning
