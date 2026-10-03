@@ -72,4 +72,4 @@ Each change is a Git commit, so `git log` lists them, and `smithable undo` takes
 
 ## In your own words
 
-The same changes can be asked for in a sentence. `smithable ask` shows the operation it would run and applies it with `--yes`; a wording rule understands many sentences without a model, and the rest go to the model you set up ([AI setup](../ai.md)). `smithable op` lists every operation, and `smithable op <name> --help` explains one.
+The same changes can be asked for in a sentence. `smithable ask` shows the operation it would run and applies it with `--yes`; a wording rule understands many sentences without a model, and the rest go to the model you set up ([AI setup](../ai.md)). `smithable op` lists every operation, `smithable op <name> --help` explains one, and the [operations reference](operations.md) describes them all, with their arguments and an example.
