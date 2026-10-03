@@ -414,6 +414,7 @@ function ${component}() {
             : `<PageHeader title={${heading}} />`
       }
       <ModelForm
+        key={String(row.updatedAt)}
         ui={${n.ui}}
         app={app}
         schema={${n.schema}}${order}
