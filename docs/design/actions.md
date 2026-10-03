@@ -161,7 +161,7 @@ actions:
 - `identified`, `monitoring` and `resolve` become standard: each sets the status and adds an IncidentUpdate with the status and its message.
 - `src/custom/actions/` goes.
 - One thing the custom code does is left out on purpose: resolving no longer sets the incident's component back to operational. That changes a referenced record. A component's state becomes what the team sets, which is also what the landing shows.
-- **Decision for Fable:** accept that, or keep `resolve` custom until something later says it.
+- **Decided (Fable, 2026-10-03):** accepted. A component can have a second incident open, so resolving one must not mark it operational; its state is what the team sets.
 
 **Steps:**
 1. Core: `set` takes null as asked; `add` in the grammar and IR, validation, follow, access with create, the operation's `--add`, the summary, the schema and the spec reference.
@@ -171,3 +171,69 @@ actions:
    - the access test cases (asked values validated; add refused without create);
    - a browser step.
 3. The status starter on standard actions without custom code; its browser flow stays green.
+
+## 8. §3 step 2: copy
+
+Status: 2026-10-03, by Fable. "Duplicate this invoice", "Repeat this booking", Johan's "clone a dog".
+
+```yaml
+actions:
+  duplicate:
+    on: Invoice
+    copy: { status: draft, issuedOn: TODAY(), number: }   # what differs; number is asked for
+    with: [lines]                                          # its lines come along
+  repeat:
+    on: Booking
+    when: { status: [confirmed, done] }
+    copy: { status: confirmed, startsAt: }
+```
+
+- **The grammar:** `copy` makes a new record of the action's model from the record it runs on. Its map says what differs, with values as in `set`: a literal, a formula on the original, or nothing to ask for it; `copy: {}` copies as is. `with` (optional) names lists of the model (`lines: InvoiceLine[]`) whose records are copied too, each pointing at the new record. An action has `copy`, or `set` and `add`, never both: it changes this record or makes a new one. `when` works as always.
+- **What is copied:** every stored field of the record, references included. Not copied: computed fields (they compute), the automatic fields (the copy is owned by whoever pressed the button and is created now), pictures (a picture is a file that belongs to one record; the copy starts without), and unique fields (two records cannot share the value).
+- **What the person sees:** the button; the dialog when something is asked, with the asked fields starting at the original's values; then the new record's page, so what was copied can be looked over and changed.
+- **Validation:**
+  - Keys of `copy` are settable fields, as in `set`; here a reference may not be named either (it is copied).
+  - A unique field that is required must be in `copy` with a formula or asked for: "A copy needs its own number (it is unique): give it in copy, or ask for it."
+  - A required picture cannot be copied: such a model cannot be copied by an action yet.
+  - `with` names lists of the model. The listed model's own unique and picture rules apply the same way, except that nothing can be asked for a list's records: a required unique field there is an error.
+  - `copy` with `set` or `add` is an error.
+- **Access:** making a copy needs the right to read the record and to create one of the model, and to create the records of each list in `with`; `allow` narrows it to roles, through `among` as for the other actions. Write access to the original is not needed: it is not changed.
+- **What runs:** one transaction: the new record through the data functions' create (validation, capacity, hooks as for any create), then the lists' records. A refusal anywhere leaves nothing behind.
+- **Follow:** a renamed field is renamed in `copy` (keys and formulas) and a renamed list in `with`; removing a field named in `copy`, or a list named in `with`, is refused while the action names it; a choice value used in `copy` cannot go.
+- **The operation:** `addAction duplicate --on Invoice --copy status=draft --copy number= --with lines`. `--copy` alone (no pair) copies as is.
+- **Summary:** "Makes a copy of an invoice with status draft and issued on today, asking for the number; its lines are copied too."
+- **Left out:** copying to another model, lists of lists (only the lists named, one level), choosing which of a list's records come along, and copying pictures.
+
+## 9. §3 step 4: selected rows, and delete
+
+Status: 2026-10-03, by Fable. Johan: check items with a checkbox, or select like in a spreadsheet; delete what is selected; "all dogs older than 13" as a future thing. This step adds no grammar: the actions are the ones already written, and "all that match" is the list's own filter.
+
+- **Where:** a crud page's table gets a checkbox per row and one in the header when the page offers at least one standard action or the viewer may delete records of the model. A page shown as cards gets the checkbox in the card's corner. Nothing to configure; a ux key to turn it off waits for someone who needs it.
+- **Selecting:** a click on a checkbox; shift-click selects the range between two; the header's checkbox selects the rows shown. When the list has more records than are shown, a line appears: "All 25 on this page are selected. Select all 132 that match." That is the list with its current search and filters, which is how "every dog older than 13" is said: filter by age, select all.
+- **The bar:** with a selection, a bar over the table says how many are selected and offers each of the page's standard actions that fits at least one of them and that the viewer may run, with the count it applies to ("Resolve (3)"), and Delete when the viewer may delete at least one. Copy actions are not offered: a copy is looked over one at a time.
+- **Running one:** the action runs on the selected records its `when` fits and the viewer may run it on; the others are skipped and counted ("3 resolved, 1 skipped: already resolved"). Asked values are asked once, in the same dialog, starting empty, and go to every record. `add` adds its record to each.
+- **All or none:** one transaction. If one record is refused (a validation, a capacity), nothing changes and the message names the record and the reason.
+- **Delete:** a confirmation that says how many and what ("Delete 3 customers? This cannot be undone."). Records that cannot be deleted (still referred to) are named before anything is deleted, and nothing is.
+- **Access:** the server runs each record through the same check as the single action or delete; the selection is ids, never trusted. "All that match" is evaluated again on the server with the filters, within what the viewer may read, up to 1,000 records; more than that is refused with the count, so nobody changes ten thousand records by one click.
+- **Tests:** the generated access test runs an action over a mixed selection (fits, does not fit, not the viewer's) and checks the counts and that a refusal changes nothing; a browser step selects two rows and resolves them.
+- **Left out:** selection across pages other than "all that match", drag selection, keyboard-only range selection beyond shift-click, exporting the selection, and a condition language (`dogs[age > 13]`): the filter says it.
+
+## 10. §3 step 5: the viewer as a value
+
+Status: 2026-10-03, by Fable. "Assign to me", "approved by".
+
+```yaml
+actions:
+  take:
+    on: Ticket
+    when: { status: open }
+    set: { assignee: ME(), status: inProgress }
+```
+
+- **The grammar:** `ME()` as a whole value in `set`, `add` or `copy`, for a field that refers to `User`. It is the person who pressed the button. This is the one case where an action sets a reference.
+- **Validation:** only on a `User` field ("ME() is a person: assignee must refer to User"); not inside a larger formula, not in `when`, and not in a field's default (the owner already records who created a record).
+- **What runs:** the server puts in the signed-in user's id. An action with `ME()` is never offered to a visitor.
+- **Summary:** "sets assignee to whoever presses it".
+- **Left out:** comparing with the viewer ("only when it is assigned to me"), which is access by a field and belongs with the access rules, not with actions.
+
+**Order to build:** §10 is small and can ride with §8; §9 is the adapter's and the kit's alone and comes last. Core pull requests come to Fable as before.
