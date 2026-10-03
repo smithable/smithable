@@ -2,8 +2,4 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-roles:
-  member:
-    description: A freelance translator using the app.
-defaultRole: member
 admins: [johan@smithable.ai]

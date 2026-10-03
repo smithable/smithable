@@ -32,13 +32,16 @@ pages:
   teams:
     crud: Team
     search: [name, description]
+    sortable: [name, founded]
   players:
     crud: Player
     search: [name, position, nationality]
+    filters: [team, position]
+    sortable: [name, number, birthDate]
   matches:
     crud: Match
     search: [location]
-    filters: [status, date, homeTeam, awayTeam]
+    filters: [homeTeam, awayTeam, status, date]
     sortable: [date, homeScore, awayScore]
   home:
     route: /
@@ -47,8 +50,4 @@ pages:
       footer:
       teams:
         records: Team
-      matches:
-        records: Match
-        where:
-          status: played
 navigation: [home, teams, players, matches]

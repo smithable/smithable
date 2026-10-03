@@ -4,7 +4,6 @@ signIn:
 defaultAccess: private
 public:
   pages: [home]
-  read: [Tool]
 roles:
   admin:
     description: Keeps the tool library tidy.

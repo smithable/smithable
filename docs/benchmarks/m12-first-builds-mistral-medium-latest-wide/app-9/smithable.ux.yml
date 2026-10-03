@@ -2,12 +2,12 @@ smithableUx: 0.1
 pages:
   albums:
     table:
-      columns: [title, artist, releaseYear, condition, pricePaid]
-      sort: -releaseYear
+      columns: [title, artist, year, condition, pricePaid]
+      sort: title
+    icon: file
 tones:
   Album.condition:
     mint: success
     nearMint: success
-    good: warning
-    fair: danger
+    fair: warning
     poor: danger

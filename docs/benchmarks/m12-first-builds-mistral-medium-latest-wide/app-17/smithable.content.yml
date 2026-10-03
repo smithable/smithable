@@ -6,42 +6,22 @@ models:
     fields:
       name:
         label: Namn
-      summary:
+      description:
         label: Beskrivning
       durationMinutes:
         label: Varaktighet (minuter)
       price:
         label: Pris
   Stylist:
-    label: Frisör
-    pluralLabel: Frisörer
+    label: Stylist
+    pluralLabel: Stylister
     fields:
       name:
         label: Namn
       bio:
-        label: Om mig
-  Booking:
-    label: Bokning
-    pluralLabel: Bokningar
-    fields:
-      customerName:
-        label: Namn
-      customerEmail:
-        label: E-post
-      customerPhone:
-        label: Telefon
-      appointment:
-        label: Tid
-  Message:
-    label: Meddelande
-    pluralLabel: Meddelanden
-    fields:
-      name:
-        label: Namn
-      email:
-        label: E-post
-      message:
-        label: Meddelande
+        label: Om stylisten
+      portrait:
+        label: Bild
   Appointment:
     label: Tid
     pluralLabel: Tider
@@ -49,30 +29,37 @@ models:
       service:
         label: Tjänst
       stylist:
-        label: Frisör
+        label: Stylist
       startsAt:
         label: Starttid
       capacity:
         label: Kapacitet
+  Booking:
+    label: Bokning
+    pluralLabel: Bokningar
+    fields:
+      appointment:
+        label: Tid
+      customerName:
+        label: Namn
+      customerEmail:
+        label: E-post
+      customerPhone:
+        label: Telefon
 pages:
   hem:
-    title: Välkommen till Min Frisörsalong
-    subtitle: Boka din tid online enkelt och smidigt
+    title: Min Frisörsalong
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
-  boka-nu:
-    title: Boka tid
-  mina-bokningar:
-    title: Mina bokningar
   tjanster:
     title: Tjänster
-  frisorer:
-    title: Frisörer
-  admin:
-    title: Admin
-  team:
-    title: Användare
+  stylister:
+    title: Stylister
+  tider:
+    title: Tider
+  mina-bokningar:
+    title: Mina bokningar
   schema:
     title: Schema

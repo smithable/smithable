@@ -5,7 +5,7 @@ signIn:
 defaultAccess: shared
 public:
   pages: [home]
-  read: [Component, Incident, IncidentUpdate, Maintenance]
+  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 roles:
   admin:
     description: Runs the uptime page and the team.
