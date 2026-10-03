@@ -18,6 +18,7 @@ import {
   valueTypeOf,
 } from "../formula.js";
 import type {
+  ActionAddIR,
   ActionIR,
   ActionValueIR,
   FieldIR,
@@ -59,7 +60,10 @@ export const actionsSection: SpecSection<"actions"> = {
     additionalProperties: {
       type: "object",
       description: "Custom (custom: true, with input and output) or standard (on, when, set).",
-      oneOf: [{ required: ["custom"] }, { required: ["on", "set"] }],
+      oneOf: [
+        { required: ["custom"] },
+        { required: ["on"], anyOf: [{ required: ["set"] }, { required: ["add"] }] },
+      ],
       additionalProperties: false,
       properties: {
         custom: { const: true, description: "Implemented in src/custom/actions/." },
@@ -76,9 +80,20 @@ export const actionsSection: SpecSection<"actions"> = {
           type: "object",
           minProperties: 1,
           propertyNames: { pattern: FIELD_NAME_PATTERN.source },
-          additionalProperties: { type: ["string", "number", "boolean"] },
+          additionalProperties: { type: ["string", "number", "boolean", "null"] },
           description:
-            'The new values: a literal the field accepts, or a formula on the record as it was, e.g. { status: resolved, resolvedAt: "NOW()" }.',
+            "The new values: a literal the field accepts, a formula on the record as it was, or nothing to ask the person for it, e.g. { status: canceled, cancelReason: }.",
+        },
+        add: {
+          type: "object",
+          minProperties: 1,
+          additionalProperties: {
+            type: "object",
+            propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+            additionalProperties: { type: ["string", "number", "boolean", "null"] },
+          },
+          description:
+            "Related records to create with the change, one per model that refers to this one, e.g. { IncidentUpdate: { status: resolved, at: NOW() } }.",
         },
         input: { ...fieldsSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
@@ -93,23 +108,44 @@ export const actionsSection: SpecSection<"actions"> = {
   },
   follow(spec, effect, ir) {
     const standard = ir.actions.filter((a): a is StandardActionIR => !a.custom);
+    // The values an action writes to records of a model: its own `set`, or what it adds.
+    const writes = (action: StandardActionIR, model: string) => [
+      ...(action.on === model ? [{ path: ["set"], values: action.set }] : []),
+      ...(action.add ?? [])
+        .filter((a) => a.model === model)
+        .map((a) => ({ path: ["add", a.model], values: a.values })),
+    ];
+    // Formulas are worked out on the action's record, in `set` and in `add` alike.
+    const formulas = (action: StandardActionIR) => [
+      ...action.set.map((v) => ({ path: ["set", v.field], v })),
+      ...(action.add ?? []).flatMap((a) =>
+        a.values.map((v) => ({ path: ["add", a.model, v.field], v })),
+      ),
+    ];
     if (effect.kind === "remove-field" || effect.kind === "change-field") {
       for (const action of standard) {
-        if (action.on !== effect.model) continue;
-        const wanted = action.when?.[effect.field];
-        const set = action.set.find((v) => v.field === effect.field);
+        const wanted = action.on === effect.model ? action.when?.[effect.field] : undefined;
+        const written = writes(action, effect.model).flatMap((w) =>
+          w.values.filter((v) => v.field === effect.field),
+        );
         const lost =
           effect.kind === "change-field" &&
           ((wanted !== undefined && lostValues(wanted, effect.choices).length > 0) ||
-            (set &&
-              "value" in set &&
-              typeof set.value === "string" &&
-              !effect.choices.includes(set.value)));
+            written.some(
+              (v) =>
+                "value" in v && typeof v.value === "string" && !effect.choices.includes(v.value),
+            ));
         const uses =
           effect.kind === "remove-field" &&
           (wanted !== undefined ||
-            set !== undefined ||
-            action.set.some((v) => "formula" in v && fieldsUsed(v.formula).includes(effect.field)));
+            written.length > 0 ||
+            (action.add ?? []).some(
+              (a) => a.model === effect.model && a.reference === effect.field,
+            ) ||
+            (action.on === effect.model &&
+              formulas(action).some(
+                ({ v }) => "formula" in v && fieldsUsed(v.formula).includes(effect.field),
+              )));
         if (lost || uses)
           return {
             refusal: `The action "${action.name}" uses ${effect.model}.${effect.field}${lost ? " and a value it would no longer have" : ""}; change or remove the action first.`,
@@ -126,7 +162,7 @@ export const actionsSection: SpecSection<"actions"> = {
         const type = model?.fields.find((f) => f.name === list)?.type;
         return type?.kind === "relation" && type.many && type.model === effect.model;
       };
-      for (const v of action.set)
+      for (const { path: at, v } of formulas(action))
         if ("formula" in v) {
           const next = renameInFormula(v.text, (name, list) =>
             name !== effect.from
@@ -135,13 +171,13 @@ export const actionsSection: SpecSection<"actions"> = {
                 ? effect.to
                 : undefined,
           );
-          if (next !== v.text) spec.set([...path, "set", v.field], next);
+          if (next !== v.text) spec.set([...path, ...at], next);
         }
-      if (action.on !== effect.model) continue;
-      if (action.when && effect.from in action.when)
+      if (action.on === effect.model && action.when && effect.from in action.when)
         spec.renameKey([...path, "when", effect.from], effect.to);
-      if (action.set.some((v) => v.field === effect.from))
-        spec.renameKey([...path, "set", effect.from], effect.to);
+      for (const w of writes(action, effect.model))
+        if (w.values.some((v) => v.field === effect.from))
+          spec.renameKey([...path, ...w.path, effect.from], effect.to);
     }
     return undefined;
   },
@@ -176,7 +212,7 @@ function readAction(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["custom", "input", "output", "on", "when", "set", "allow", ...TEXT_KEYS],
+    allowed: ["custom", "input", "output", "on", "when", "set", "add", "allow", ...TEXT_KEYS],
     later: ["confirm", "examples"],
     content: ["label", "title"],
   });
@@ -188,7 +224,9 @@ function readAction(
     ...readSemanticText(ctx, known),
   };
   const custom = byKey.get("custom");
-  const standard = ["on", "when", "set"].map((k) => byKey.get(k)).filter((e) => e !== undefined);
+  const standard = ["on", "when", "set", "add"]
+    .map((k) => byKey.get(k))
+    .filter((e) => e !== undefined);
   if (custom && standard.length) {
     ctx.error(
       standard[0]?.keyNode ?? keyNode,
@@ -247,11 +285,12 @@ function readStandardAction(
   }
   const on = byKey.get("on");
   const set = byKey.get("set");
-  if (!on || !set) {
+  const addEntry = byKey.get("add");
+  if (!on || (!set && !addEntry)) {
     ctx.error(
-      (on ?? set)?.keyNode ?? keyNode,
+      (on ?? set ?? addEntry)?.keyNode ?? keyNode,
       "missing-key",
-      `${capitalize(where)} needs "on" (the model whose record it changes) and "set" (the new values).`,
+      `${capitalize(where)} needs "on" (the model whose record it changes) and "set" (the new values), "add" (a related record to create) or both.`,
     );
     return undefined;
   }
@@ -274,91 +313,92 @@ function readStandardAction(
   const when = whenEntry
     ? readCondition(ctx, whenEntry.value, `"when" of ${where}`, model)
     : undefined;
-  const values: ActionValueIR[] = [];
-  const setEntries = mapEntries(ctx, set.value, `"set" of ${where}`);
-  if (setEntries?.length === 0)
+  let failed = false;
+  const read = (entry: Entry, target: ModelIR, what: string, skip?: string) => {
+    const before = ctx.diagnostics.filter((d) => d.severity === "error").length;
+    const values = readValues(ctx, entry, target, model, models, what, skip);
+    if (ctx.diagnostics.filter((d) => d.severity === "error").length > before) failed = true;
+    return values;
+  };
+  const values = set ? read(set, model, `"set" of ${where}`) : [];
+  if (set && !values.length && !failed)
     ctx.error(
       set.value,
       "invalid-set",
       `"set" of ${where} needs at least one field and its new value.`,
     );
-  for (const { key, keyNode: at, value } of setEntries ?? []) {
-    const field = model.fields.find((f) => f.name === key);
-    if (!field) {
+  const add: ActionAddIR[] = [];
+  for (const { key, keyNode: at, value } of addEntry
+    ? (mapEntries(ctx, addEntry.value, `"add" of ${where}`) ?? [])
+    : []) {
+    const target = models.find((m) => m.name === key);
+    if (!target) {
       ctx.error(
         at,
-        "unknown-field",
-        `"set" of ${where}: ${model.name} has no field named "${key}".`,
+        "unknown-model",
+        `"add" of ${where}: there is no model named "${key}".`,
         didYouMean(
           key,
-          model.fields.filter((f) => !unsettable(f)).map((f) => f.name),
+          models.map((m) => m.name),
         ),
       );
+      failed = true;
       continue;
     }
-    const why = unsettable(field);
-    if (why) {
+    // The new record hangs off the record the action runs on, through its one reference to it.
+    const back = target.fields.filter(
+      (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model.name,
+    );
+    if (back.length !== 1) {
       ctx.error(
         at,
-        "invalid-set",
-        `"set" of ${where}: ${model.name}.${key} cannot be set, ${why}.`,
+        "invalid-add",
+        `"add" of ${where}: ${key} must refer to ${model.name} exactly once to be added to it (it does ${back.length === 0 ? "not" : `${back.length} times`}).`,
       );
+      failed = true;
       continue;
     }
-    const raw = isScalar(value) ? value.value : undefined;
-    if (raw === null || raw === undefined || raw === "") {
+    const reference = back[0]?.name as string;
+    const what = `${key} in "add" of ${where}`;
+    const added = read({ key, keyNode: at, value } as Entry, target, what, reference);
+    const given = new Set(added.map((v) => v.field));
+    const missing = target.fields.filter(
+      (f) =>
+        f.required &&
+        f.name !== reference &&
+        !f.formula &&
+        f.default === undefined &&
+        !f.defaultFormula &&
+        !(f.type.kind === "relation" && f.type.many) &&
+        !given.has(f.name),
+    );
+    // A reference cannot be set or asked: a model that needs another one is out of reach for now.
+    const otherReference = missing.find((f) => f.type.kind === "relation");
+    if (otherReference) {
       ctx.error(
-        value ?? at,
-        "invalid-set",
-        `"set" of ${where}: ${key} needs a value (asking the person for one comes in a later version).`,
+        at,
+        "invalid-add",
+        `"add" of ${where}: ${key} also needs ${otherReference.name}, another required reference, which an action cannot fill yet; a model with another required reference cannot be added by an action.`,
       );
+      failed = true;
       continue;
     }
-    if (typeof raw !== "string" && typeof raw !== "number" && typeof raw !== "boolean") {
+    if (missing.length) {
       ctx.error(
-        value,
-        "invalid-set",
-        `"set" of ${where}: ${key} must be a single value or a formula.`,
+        at,
+        "invalid-add",
+        `Adding a ${key} needs a value for ${missing.map((f) => f.name).join(", ")}, or ask for ${missing.length > 1 ? "them" : "it"} (a key with no value).`,
       );
+      failed = true;
       continue;
     }
-    // As a default: a value with parentheses is a formula, anything else a literal.
-    if (typeof raw === "string" && raw.includes("(")) {
-      try {
-        const formula = parseFormula(raw);
-        const actual = checkFormula(formula, model, models);
-        const expected = valueTypeOf(field);
-        if (!(actual === expected || (actual === "date" && expected === "datetime")))
-          throw new FormulaError(`The formula gives a ${actual}, but ${key} is a ${expected}.`, 0);
-        values.push({ field: key, formula, text: raw });
-      } catch (error) {
-        if (!(error instanceof FormulaError)) throw error;
-        ctx.error(
-          value,
-          "invalid-formula",
-          `"set" of ${where}, ${key}: ${error.message}`,
-          error.hint,
-        );
-      }
-      continue;
-    }
-    const converted = parseDefault(field.type, raw);
-    if (!converted.ok) {
-      ctx.error(
-        value,
-        converted.code,
-        `"set" of ${where}, ${key}: ${converted.message}`,
-        converted.hint,
-      );
-      continue;
-    }
-    values.push({ field: key, value: converted.value });
+    add.push({ model: key, reference, values: added });
   }
-  if (!values.length) return undefined;
+  if (failed) return undefined;
   // Only when every value is one the condition already requires does the action change nothing.
-  if (values.every((v) => "value" in v && when?.[v.field] === v.value))
+  if (!add.length && values.every((v) => "value" in v && when?.[v.field] === v.value))
     ctx.warning(
-      set.value,
+      set?.value ?? keyNode,
       "action-changes-nothing",
       `${capitalize(where)} runs only on records that already have the values it sets: it leaves the record as it was.`,
     );
@@ -367,7 +407,7 @@ function readStandardAction(
     ctx.warning(
       rules.keyNode,
       "rules-not-enforced",
-      `The rules of ${where} are documentation only: a standard action does what "set" says.`,
+      `The rules of ${where} are documentation only: a standard action does what "set" and "add" say.`,
     );
   return {
     ...common,
@@ -376,7 +416,88 @@ function readStandardAction(
     on: model.name,
     ...(when ? { when } : {}),
     set: values,
+    ...(add.length ? { add } : {}),
   };
+}
+
+/**
+ * The values of `set`, or of one record in `add`: a literal the field accepts, a formula worked
+ * out on the record the action runs on (as a default is), or nothing, to ask the person for it.
+ */
+function readValues(
+  ctx: ParseContext,
+  entry: Entry,
+  target: ModelIR,
+  record: ModelIR,
+  models: ModelIR[],
+  what: string,
+  reference?: string,
+): ActionValueIR[] {
+  const values: ActionValueIR[] = [];
+  for (const { key, keyNode: at, value } of mapEntries(ctx, entry.value, what) ?? []) {
+    const field = target.fields.find((f) => f.name === key);
+    if (!field) {
+      ctx.error(
+        at,
+        "unknown-field",
+        `${what}: ${target.name} has no field named "${key}".`,
+        didYouMean(
+          key,
+          target.fields.filter((f) => !unsettable(f)).map((f) => f.name),
+        ),
+      );
+      continue;
+    }
+    if (key === reference) {
+      ctx.error(
+        at,
+        "invalid-add",
+        `${what}: ${key} is filled with the record the action runs on; leave it out.`,
+      );
+      continue;
+    }
+    const why = unsettable(field);
+    if (why) {
+      ctx.error(at, "invalid-set", `${what}: ${target.name}.${key} cannot be set, ${why}.`);
+      continue;
+    }
+    const raw = isScalar(value) ? value.value : value === null ? null : undefined;
+    // No value: the person is asked for it when they press the button.
+    if (raw === null || raw === "") {
+      values.push({ field: key, asked: true });
+      continue;
+    }
+    if (typeof raw !== "string" && typeof raw !== "number" && typeof raw !== "boolean") {
+      ctx.error(
+        value,
+        "invalid-set",
+        `${what}: ${key} must be a single value, a formula or nothing (asked for).`,
+      );
+      continue;
+    }
+    // As a default: a value with parentheses is a formula, anything else a literal.
+    if (typeof raw === "string" && raw.includes("(")) {
+      try {
+        const formula = parseFormula(raw);
+        const actual = checkFormula(formula, record, models);
+        const expected = valueTypeOf(field);
+        if (!(actual === expected || (actual === "date" && expected === "datetime")))
+          throw new FormulaError(`The formula gives a ${actual}, but ${key} is a ${expected}.`, 0);
+        values.push({ field: key, formula, text: raw });
+      } catch (error) {
+        if (!(error instanceof FormulaError)) throw error;
+        ctx.error(value, "invalid-formula", `${what}, ${key}: ${error.message}`, error.hint);
+      }
+      continue;
+    }
+    const converted = parseDefault(field.type, raw);
+    if (!converted.ok) {
+      ctx.error(value, converted.code, `${what}, ${key}: ${converted.message}`, converted.hint);
+      continue;
+    }
+    values.push({ field: key, value: converted.value });
+  }
+  return values;
 }
 
 /** Input or output fields: shorthand only; no lists, no defaults. */

@@ -14,6 +14,7 @@ import {
   type StandardActionIR,
   USER_MODEL,
 } from "@smithable/core";
+import { askedFields } from "./actions.js";
 import { aggregatedLists } from "./formulas.js";
 
 const HEADER =
@@ -242,6 +243,20 @@ ${tests.join("\n\n")}
         )
       : {};
     const values = JSON.stringify({ ...readable, ...fits });
+    // What the action asks for, as a test gives it: a value each field accepts.
+    const askedValues = askedFields(action).map((x) => {
+      const target = ir.models.find((m) => m.name === x.model) as ModelIR;
+      const field = target.fields.find((f) => f.name === x.field) as FieldIR;
+      return `${JSON.stringify(x.key)}: ${testValue(field, target)}`;
+    });
+    const asked = askedValues.length ? `, { ${askedValues.join(", ")} }` : "";
+    const counter = /\bn\b/.test(asked) ? "    const n = next();\n" : "";
+    const table = camel(plural(model.name));
+    // Refused, the action writes nothing: the record is as it was (an update it began rolls back).
+    const before = (record: string) =>
+      `    const ${record}Before = JSON.stringify(db.select().from(${table}).where(eq(${table}.id, ${record}.id)).get());\n`;
+    const unchanged = (record: string) =>
+      `    expect(JSON.stringify(db.select().from(${table}).where(eq(${table}.id, ${record}.id)).get())).toBe(${record}Before);\n`;
     const tests = roles.map((role) => {
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const can = expected(access, role);
@@ -249,19 +264,21 @@ ${tests.join("\n\n")}
       // As an owner, only with a role "allow" names (when it names any).
       const asOwner =
         role !== null && allowed.owner && (!allowed.among || allowed.among.includes(role));
+      const othersOk = can.readOthers && listed;
+      const ownOk = can.readOwn && (listed || asOwner);
       return `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
     const viewer = ${viewer};
-    const others = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${values});
-${
+${counter}    const others = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${values});
+${othersOk ? "" : before("others")}${
   role !== null
     ? `    const own = insert${model.name}(viewer.id, ${values});
-`
+${ownOk ? "" : before("own")}`
     : ""
 }    expect({
-      others: await can(() => ${run}(viewer, others.id)),
-      own: ${role !== null ? `await can(() => ${run}(viewer, own.id))` : "false"},
-    }).toEqual({ others: ${can.readOthers && listed}, own: ${can.readOwn && (listed || asOwner)} });
-  });`;
+      others: await can(() => ${run}(viewer, others.id${asked})),
+      own: ${role !== null ? `await can(() => ${run}(viewer, own.id${asked}))` : "false"},
+    }).toEqual({ others: ${othersOk}, own: ${ownOk} });
+${othersOk ? "" : unchanged("others")}${role !== null && !ownOk ? unchanged("own") : ""}  });`;
     });
     const [field, wanted] = Object.entries(action.when ?? {})[0] ?? [];
     const flipped = model.fields.find((f) => f.name === field);
@@ -274,9 +291,9 @@ ${
     const runner = roles.find((role) => role !== null && allowed.roles.includes(role));
     if (field !== undefined && other !== undefined && runner)
       tests.push(`  test("refused on a record where ${field} is not ${Array.isArray(wanted) ? wanted.join(" or ") : String(wanted)}", async () => {
-    const viewer = signedIn(${JSON.stringify(runner)});
+${counter}    const viewer = signedIn(${JSON.stringify(runner)});
     const record = insert${model.name}(viewer.id, ${JSON.stringify({ ...readable, ...fits, [field]: other })});
-    await expect(${run}(viewer, record.id)).rejects.toThrow("This cannot be done now.");
+    await expect(${run}(viewer, record.id${asked})).rejects.toThrow("This cannot be done now.");
   });`);
     describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
 ${tests.join("\n\n")}
@@ -290,7 +307,7 @@ ${tests.join("\n\n")}
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
 // "Own" records are owned by the user; "others" by someone else.
-import { describe, expect, test } from "vitest";
+${standard.length ? 'import { eq } from "drizzle-orm";\n' : ""}import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { ${[...tables, ...(signedIn ? ["user"] : [])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";

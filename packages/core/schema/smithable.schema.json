@@ -321,8 +321,19 @@
           },
           {
             "required": [
-              "on",
-              "set"
+              "on"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "set"
+                ]
+              },
+              {
+                "required": [
+                  "add"
+                ]
+              }
             ]
           }
         ],
@@ -350,10 +361,30 @@
               "type": [
                 "string",
                 "number",
-                "boolean"
+                "boolean",
+                "null"
               ]
             },
-            "description": "The new values: a literal the field accepts, or a formula on the record as it was, e.g. { status: resolved, resolvedAt: \"NOW()\" }."
+            "description": "The new values: a literal the field accepts, a formula on the record as it was, or nothing to ask the person for it, e.g. { status: canceled, cancelReason: }."
+          },
+          "add": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "propertyNames": {
+                "pattern": "^[a-z][A-Za-z0-9]*$"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "description": "Related records to create with the change, one per model that refers to this one, e.g. { IncidentUpdate: { status: resolved, at: NOW() } }."
           },
           "input": {
             "type": "object",

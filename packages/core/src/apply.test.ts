@@ -908,3 +908,51 @@ test("setProviders chooses the sign-in methods in button order, and refuses none
     message: expect.stringContaining('must be one of "email", "google", "facebook"'),
   });
 });
+
+describe("standard actions that ask and add", () => {
+  const status = example("status");
+
+  test("addAction writes an asked value as nothing and groups --add pairs by model", () => {
+    const result = applyOperation(status, "addAction", {
+      action: "note",
+      on: "Incident",
+      set: { summary: "" },
+      add: {
+        "IncidentUpdate.at": "NOW()",
+        "IncidentUpdate.status": "monitoring",
+        "IncidentUpdate.message": "",
+      },
+    });
+    if (!result.ok) throw new Error(result.message);
+    expect(result.files.spec).toContain(
+      "  note:\n    on: Incident\n    set:\n      summary:\n    add:\n      IncidentUpdate:\n        at: NOW()\n        status: monitoring\n        message:\n",
+    );
+  });
+
+  test("a field of an added record follows a rename, and cannot be removed while added", () => {
+    const first = applyOperation(status, "addAction", {
+      action: "note",
+      on: "Incident",
+      add: {
+        "IncidentUpdate.at": "NOW()",
+        "IncidentUpdate.status": "monitoring",
+        "IncidentUpdate.message": "",
+      },
+    });
+    if (!first.ok) throw new Error(first.message);
+    const project = { ...status, spec: first.files.spec };
+    const renamed = applyOperation(project, "renameField", {
+      model: "IncidentUpdate",
+      from: "message",
+      to: "text",
+    });
+    if (!renamed.ok) throw new Error(renamed.message);
+    expect(renamed.files.spec).toContain("        text:\n");
+    expect(
+      applyOperation(project, "removeField", { model: "IncidentUpdate", field: "incident" }),
+    ).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("uses IncidentUpdate.incident"),
+    });
+  });
+});
