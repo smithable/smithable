@@ -448,8 +448,13 @@ export function Hero({
         )}
       />
       {text}
-      {!shortcutList && cue}
-      {!shortcutList && end}
+      {/* After the picture too (it moves to the right with order-2), across both columns. */}
+      {!shortcutList && more && (
+        <div className="lg:order-3 lg:col-span-2">
+          {cue}
+          {end}
+        </div>
+      )}
     </section>,
   );
 }
@@ -935,7 +940,8 @@ export function Contact({
 }) {
   const [sent, setSent] = useState(false);
   const trap = useRef<HTMLInputElement>(null);
-  const details = (
+  const hasDetails = Boolean(address || phone || email || hours);
+  const details = hasDetails && (
     <dl className="space-y-5">
       {address && (
         <div className="flex gap-3">
@@ -999,8 +1005,17 @@ export function Contact({
     </dl>
   );
   return (
-    <Section id="contact" texts={texts} title={title} text={text}>
-      <div className={cn("grid gap-10", form && "lg:grid-cols-2")}>
+    // A form without a heading of its own still says what it is.
+    <Section
+      id="contact"
+      texts={texts}
+      title={title ?? (form ? "Contact us" : undefined)}
+      text={text}
+    >
+      {/* Details beside the form; a form alone is centred rather than left beside an empty column. */}
+      <div
+        className={cn("grid gap-10", form && hasDetails ? "lg:grid-cols-2" : "mx-auto max-w-2xl")}
+      >
         {details}
         {form &&
           (sent ? (
