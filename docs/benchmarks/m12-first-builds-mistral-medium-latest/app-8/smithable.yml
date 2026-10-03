@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Conference Registration
-  description: "Event registration for a conference: talks, speakers and attendees."
+  description: Event registration for a conference with talks, speakers and attendees.
 models:
   Talk:
     fields:
@@ -10,13 +10,13 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       room: string
-      capacity: int! = 100
+      capacity: int! = 50
       speaker: Speaker!
       registrations: Registration[]
     access:
-      delete: [admin]
-      create: [admin]
-      write: [admin]
+      create: [organizer]
+      write: [organizer]
+      delete: [organizer]
   Speaker:
     fields:
       name: string!
@@ -25,39 +25,40 @@ models:
       email: email
       company: string
     access:
-      delete: [admin]
-      create: [admin]
-      write: [admin]
+      create: [organizer]
+      write: [organizer]
+      delete: [organizer]
+  Registration:
+    fields:
+      talk: Talk! unique
+      registeredAt: datetime! = NOW()
+      attendee: Attendee!
+    capacity:
+      per: talk
+      max: talk.capacity
+    access:
+      create: [organizer, attendee]
+      delete: [organizer, owner]
   Attendee:
     fields:
       name: string!
       email: email! unique
       company: string
-      phone: phone
+      dietaryRequirements: text
     access:
-      delete: [admin]
-      create: [admin, attendee]
-      write: [admin, owner]
-  Registration:
-    fields:
-      talk: Talk!
-      attendee: Attendee!
-      registeredAt: datetime! = NOW()
-      status: registered | attended | canceled
-    capacity:
-      per: talk
-      max: talk.capacity
-    access:
-      delete: [admin, owner]
-      create: [admin, attendee]
-      write: [admin, owner]
+      create: [organizer, attendee]
+      write: [organizer, owner]
+      delete: [organizer, owner]
 pages:
   talks:
     crud: Talk
+    access: [organizer]
   speakers:
     crud: Speaker
+    access: [organizer]
   attendees:
     crud: Attendee
+    access: [organizer]
   registrations:
     crud: Registration
   home:
@@ -73,3 +74,5 @@ pages:
         form: Attendee
   team:
     users: manage
+  admin:
+    data: all

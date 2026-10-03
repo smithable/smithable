@@ -7,6 +7,3 @@ tones:
   Ticket.status:
     open: warning
     resolved: success
-pages:
-  tickets:
-    icon: clipboard

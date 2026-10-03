@@ -8,17 +8,14 @@ models:
       name: string!
       description: text
       sport: football | futsal | beach
-      founded: int
-      logo: url
+      founded: date
   Player:
     fields:
       name: string!
       position: goalkeeper | defender | midfielder | forward
-      number: int
       team: Team!
+      number: int
       birthDate: date
-      nationality: string
-      photo: url
   Match:
     fields:
       homeTeam: Team!
@@ -26,23 +23,21 @@ models:
       date: datetime!
       location: string
       status: scheduled | played | canceled
-      homeScore: int
-      awayScore: int
+  Result:
+    fields:
+      match: Match!
+      homeScore: int!
+      awayScore: int!
+      scorers: text
 pages:
   teams:
     crud: Team
-    search: [name, description]
-    sortable: [name, founded]
   players:
     crud: Player
-    search: [name, position, nationality]
-    filters: [team, position]
-    sortable: [name, number, birthDate]
   matches:
     crud: Match
-    search: [location]
-    filters: [homeTeam, awayTeam, status, date]
-    sortable: [date, homeScore, awayScore]
+  results:
+    crud: Result
   home:
     route: /
     landing:
@@ -50,4 +45,8 @@ pages:
       footer:
       teams:
         records: Team
-navigation: [home, teams, players, matches]
+      matches:
+        records: Match
+        where:
+          status: scheduled
+navigation: [home, teams, players, matches, results]

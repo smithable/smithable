@@ -3,8 +3,7 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
-roles:
-  member:
-    description: Member of the birdwatching club.
-defaultRole: member
+public:
+  pages: [home, sightings]
+  read: [Sighting]
 admins: [johan@smithable.ai]

@@ -4,9 +4,9 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
-    description: Manages inventory and suppliers.
-  staff:
-    description: Views and updates stock levels.
-defaultRole: staff
+  baker:
+    description: Manages ingredients and stock.
+  manager:
+    description: Manages suppliers and stock.
+defaultRole: baker
 admins: [johan@smithable.ai]

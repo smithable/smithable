@@ -8,8 +8,8 @@ models:
       name: string!
       description: text
       servings: int = 4
-      prepTime: int
-      cookTime: int
+      prepTime: string
+      cookTime: string
       instructions: text!
       category: breakfast | lunch | dinner | dessert | snack | drink
       difficulty: easy | medium | hard
@@ -26,20 +26,28 @@ models:
     fields:
       name: string!
       date: date! = TODAY()
-      status: pending | completed
-      items: string!
+      status: planned | inProgress | completed
+      recipe: Recipe
     access:
       delete: [admin]
+      write: [admin, member]
+      create: [admin, member]
+  ShoppingItem:
+    fields:
+      name: string!
+      quantity: string
+      unit: string
+      bought: bool = false
+      shoppingList: ShoppingList!
 pages:
   recipes:
     crud: Recipe
     search: [name, description, category, difficulty]
     filters: [category, difficulty]
-    sortable: [name, servings, prepTime, cookTime]
   shopping-lists:
     crud: ShoppingList
-    search: [name]
-    filters: [status]
+    filters: [status, date]
+    actions: [markAsInProgress, markAsCompleted]
   home:
     route: /
     landing:
@@ -49,4 +57,17 @@ pages:
         records: Recipe
         where:
           category: [breakfast, lunch, dinner, dessert, snack, drink]
+actions:
+  markAsInProgress:
+    on: ShoppingList
+    when:
+      status: planned
+    set:
+      status: inProgress
+  markAsCompleted:
+    on: ShoppingList
+    when:
+      status: inProgress
+    set:
+      status: completed
 navigation: [recipes, shopping-lists]

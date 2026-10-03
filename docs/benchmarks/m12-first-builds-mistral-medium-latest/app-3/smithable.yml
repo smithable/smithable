@@ -1,0 +1,75 @@
+smithable: 0.1
+app:
+  name: Freelance Invoicing
+  description: Invoicing for freelancers, with clients, invoices and payments.
+  currency: EUR
+models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date
+        formula: DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+pages:
+  clients:
+    crud: Client
+    search: [name, email]
+  settings:
+    crud: BusinessProfile
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+  invoices:
+    crud: Invoice
+    filters: [status, client]
+    search: [number]
+    actions: [markSent, markPaid]
+  overview:
+    crud: Invoice
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.

@@ -2,13 +2,13 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
+public:
+  pages: [home, jobs]
+  read: [{ JobPost: { where: { status: open } } }]
 roles:
   admin:
     description: Manages the job board.
   member:
-    description: Posts jobs and applies.
+    description: Posts jobs and applies to them.
 defaultRole: member
-public:
-  pages: [home, jobs]
-  read: [{ JobPost: { where: { status: open } } }]
 admins: [johan@smithable.ai]
