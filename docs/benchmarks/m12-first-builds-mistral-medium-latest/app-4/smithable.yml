@@ -29,6 +29,6 @@ models:
       name: string!
       description: text!
       category: garden | power | hand | measuring | other
-      condition: excellent | good | fair
+      condition: likeNew | good | worn
       available: bool = true
 navigation: [tools, myTools]

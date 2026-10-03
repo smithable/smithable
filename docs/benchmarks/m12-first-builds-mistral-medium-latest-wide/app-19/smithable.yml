@@ -31,8 +31,7 @@ models:
       photos: pictures
       description: text!
       price: money
-      category: klaeder | moebler | leksaker | boecker | elektronik | sport | oevrigt
+      category: klaeder | moebler | leksaker | elektronik | boecker | sport | annat
       condition: ny | naestanNy | bra | sliten
       place: string
       available: bool = true
-navigation: [catalog, myItems]

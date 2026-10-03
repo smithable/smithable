@@ -33,7 +33,7 @@ pages:
   appointments:
     crud: Appointment
     access: [admin]
-    actions: [confirmAppointment, cancelAppointment]
+    actions: [confirmBooking, cancelBooking]
   home:
     route: /
     landing:
@@ -44,13 +44,13 @@ pages:
       stylists:
         records: Stylist
 actions:
-  confirmAppointment:
+  confirmBooking:
     on: Appointment
     when:
       status: booked
     set:
       status: confirmed
-  cancelAppointment:
+  cancelBooking:
     on: Appointment
     when:
       status: [booked, confirmed]

@@ -4,9 +4,7 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
+  manager:
     description: Manages inventory and suppliers.
-  staff:
-    description: Views and updates stock levels.
-defaultRole: staff
+defaultRole: manager
 admins: [johan@smithable.ai]

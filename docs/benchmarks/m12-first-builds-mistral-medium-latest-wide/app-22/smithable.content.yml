@@ -20,8 +20,10 @@ models:
     fields:
       customerName:
         label: Kundenname
+      customerEmail:
+        label: E-Mail
       customerPhone:
-        label: Kundentelefon
+        label: Telefon
       product:
         label: Produkt
       quantity:
@@ -35,6 +37,8 @@ models:
           confirmed: Bestätigt
           pickedUp: Abgeholt
           canceled: Storniert
+      notes:
+        label: Notizen
   PickupSlot:
     label: Abholzeitfenster
     pluralLabel: Abholzeitfenster

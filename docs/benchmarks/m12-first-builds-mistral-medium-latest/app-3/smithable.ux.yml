@@ -1,22 +1,22 @@
 smithableUx: 0.1
 pages:
-  clients:
-    table:
-      sort: name
-      columns: [name, email, vatNumber]
-    form:
-      columns: 2
   invoices:
     table:
       sort: -issuedOn
       columns: [number, client, issuedOn, dueOn, status, total]
     form:
       columns: 2
-      control:
-        status: select
+  clients:
+    table:
+      sort: name
+      below:
+        name: address
+      columns: [name, email, vatNumber]
+    form:
+      columns: 2
   invoice-lines:
     table:
-      columns: [invoice, description, quantity, unitPrice, amount]
+      columns: [description, quantity, unitPrice, amount]
     form:
       columns: 2
 tones:

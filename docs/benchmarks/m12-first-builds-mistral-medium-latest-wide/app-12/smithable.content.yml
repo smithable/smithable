@@ -1,36 +1,7 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Service Status
-    subtitle: Check the current status and outages of our municipality's online services.
     hero:
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
-  history:
-    title: Incident History
-  incidents:
-    title: Incidents
-  updates:
-    title: Updates
-  components:
-    title: Components
-  maintenance:
-    title: Maintenance
-  overview:
-    title: Overview
-  team:
-    title: Team
-models:
-  Component:
-    label: Service
-    pluralLabel: Services
-  Incident:
-    label: Incident
-    pluralLabel: Incidents
-  IncidentUpdate:
-    label: Update
-    pluralLabel: Updates
-  Maintenance:
-    label: Maintenance
-    pluralLabel: Maintenance
