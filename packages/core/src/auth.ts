@@ -298,8 +298,9 @@ export function validateAuth(
     const model = !action.custom && ir?.models.find((m) => m.name === action.on);
     if (!model || action.custom) continue;
     const write = modelAccess(model, auth).write;
+    // Neither by role nor as an owner: the action is out of their reach.
     for (const role of action.allow ?? [])
-      if (!write.roles.includes(role) && roleNames.includes(role))
+      if (!write.roles.includes(role) && !write.owner && roleNames.includes(role))
         ctx.warning(
           roleNodes.get(role) ?? roles?.keyNode,
           "action-role-cannot-write",
