@@ -5,9 +5,14 @@ pages:
       sort: name
       view: cards
       columns: [name, category, difficulty, prepTime, cookTime]
+    form:
+      fieldOrder: [name, category, difficulty, servings, prepTime, cookTime, description, instructions, image]
+    icon: book
   shopping-lists:
     table:
       sort: -date
+      columns: [name, date, status]
+    icon: cart
 tones:
   ShoppingList.status:
     completed: success

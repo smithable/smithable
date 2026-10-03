@@ -29,7 +29,7 @@ models:
       year: int! unique
       amount: money!
       dueDate: date!
-      status: pending | paid
+      status: open | paid | overdue
       notes: text
     access:
       delete: [admin]
@@ -37,64 +37,15 @@ models:
 pages:
   plots:
     crud: Plot
-    access: [admin, member]
-    search: [number, notes]
+    search: [number, size, notes]
     filters: [status]
-    actions: [reservePlot, assignPlot, markAsAvailable]
   waiting-list:
     crud: WaitingList
-    access: [admin]
     search: [name, email, notes]
     filters: [status]
-    actions: [assignFromWaitingList, withdrawFromWaitingList]
   fees:
     crud: Fee
-    access: [admin, member]
-    filters: [year, status]
-    actions: [markFeePaid]
+    filters: [status, year]
   team:
     users: manage
-actions:
-  reservePlot:
-    on: Plot
-    when:
-      status: available
-    set:
-      status: reserved
-    intent: Reserve this plot temporarily.
-  markFeePaid:
-    on: Fee
-    when:
-      status: pending
-    set:
-      status: paid
-    intent: Mark this fee as paid.
-  assignFromWaitingList:
-    on: WaitingList
-    when:
-      status: active
-    set:
-      status: assigned
-    intent: Assign a plot to this person from the waiting list.
-  withdrawFromWaitingList:
-    on: WaitingList
-    when:
-      status: active
-    set:
-      status: withdrawn
-    intent: Withdraw this person from the waiting list.
-  assignPlot:
-    on: Plot
-    when:
-      status: [available, reserved]
-    set:
-      status: assigned
-    intent: Assign this plot to a member.
-  markAsAvailable:
-    on: Plot
-    when:
-      status: assigned
-    set:
-      status: available
-    intent: Mark this plot as available.
 navigation: [plots, waiting-list, fees, team]
