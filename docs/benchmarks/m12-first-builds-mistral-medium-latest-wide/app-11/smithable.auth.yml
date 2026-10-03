@@ -1,9 +1,13 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
   selfSignUp: false
 defaultAccess: shared
+public:
+  pages: [home]
 roles:
+  admin:
+    description: Runs the status board and the team.
   staff:
     description: Writes incidents and their updates.
 defaultRole: staff

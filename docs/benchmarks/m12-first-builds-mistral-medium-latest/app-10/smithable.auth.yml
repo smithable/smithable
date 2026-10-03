@@ -1,10 +1,14 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
-  selfSignUp: false
-defaultAccess: shared
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, recipes]
+  read: [Recipe]
 roles:
+  admin:
+    description: Manages recipes and shopping lists.
   member:
-    description: Family member who can view and add recipes.
+    description: Views recipes and shopping lists.
 defaultRole: member
 admins: [johan@smithable.ai]

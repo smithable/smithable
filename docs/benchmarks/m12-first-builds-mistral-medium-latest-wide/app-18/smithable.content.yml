@@ -17,8 +17,8 @@ models:
         label: Totalt
       validUntil:
         label: Giltig till
-      notes:
-        label: Anteckningar
+      description:
+        label: Beskrivning
       customer:
         label: Kund
   Invoice:
@@ -42,8 +42,6 @@ models:
         label: Förfallodatum
       paidAt:
         label: Betaldatum
-      notes:
-        label: Anteckningar
       customer:
         label: Kund
   Customer:
@@ -65,7 +63,7 @@ models:
       notes:
         label: Anteckningar
       accountManager:
-        label: Ansvarig säljare
+        label: Ansvarig
 pages:
   offerter:
     title: Offerter
@@ -73,5 +71,3 @@ pages:
     title: Fakturor
   kunder:
     title: Kunder
-  anvandare:
-    title: Användare

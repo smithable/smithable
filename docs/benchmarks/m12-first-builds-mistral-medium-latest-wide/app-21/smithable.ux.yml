@@ -1,4 +1,17 @@
 smithableUx: 0.1
+pages:
+  customers:
+    icon: users
+  cars:
+    icon: truck
+  service-jobs:
+    icon: settings
+    table:
+      sort: -startDate
+  invoices:
+    icon: receipt
+    table:
+      sort: -issuedOn
 tones:
   ServiceJob.status:
     completed: success
@@ -6,18 +19,3 @@ tones:
   Invoice.status:
     paid: success
     overdue: danger
-pages:
-  asiakkaat:
-    icon: users
-  autot:
-    icon: truck
-    form:
-      sections: [{ name: perustiedot, fields: [registrationNumber, make, model, year] }, { name: omistaja, fields: [customer] }]
-  huoltotyot:
-    icon: settings
-    form:
-      sections: [{ name: perustiedot, fields: [description, status, car] }, { name: aikataulu, fields: [startDate, endDate] }, { name: lisatiedot, fields: [notes] }]
-  laskut:
-    icon: receipt
-    form:
-      sections: [{ name: perustiedot, fields: [number, customer, issuedOn, dueOn, status] }, { name: yhteenveto, fields: [total] }]

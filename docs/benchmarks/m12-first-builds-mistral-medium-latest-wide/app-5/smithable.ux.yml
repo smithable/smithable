@@ -1,16 +1,1 @@
 smithableUx: 0.1
-pages:
-  invoices:
-    table:
-      sort: -issuedOn
-  shoots:
-    table:
-      sort: -date
-  clients:
-    table:
-      sort: name
-tones:
-  Invoice.status:
-    paid: success
-    overdue: danger
-    sent: warning

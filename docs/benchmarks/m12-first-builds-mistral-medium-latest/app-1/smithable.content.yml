@@ -1,7 +1,106 @@
 smithableContent: 0.1
+models:
+  ClassType:
+    label: Class Type
+    pluralLabel: Class Types
+    fields:
+      level:
+        label: Level
+        values:
+          beginner: Beginner
+          allLevels: All Levels
+          advanced: Advanced
+      durationMinutes:
+        label: Duration (minutes)
+  Instructor:
+    label: Instructor
+    pluralLabel: Instructors
+    fields:
+      bio:
+        label: Biography
+      portrait:
+        label: Portrait
+  Post:
+    label: Post
+    pluralLabel: Posts
+    fields:
+      title:
+        label: Title
+      address:
+        label: Address
+      summary:
+        label: Summary
+      cover:
+        label: Cover Image
+      body:
+        label: Content
+      publishedOn:
+        label: Published On
+      status:
+        label: Status
+        values:
+          draft: Draft
+          published: Published
+  Message:
+    label: Message
+    pluralLabel: Messages
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      message:
+        label: Message
+  Session:
+    label: Class Session
+    pluralLabel: Class Sessions
+    fields:
+      classType:
+        label: Class Type
+      instructor:
+        label: Instructor
+      startsAt:
+        label: Start Time
+      capacity:
+        label: Capacity
+  Booking:
+    label: Booking
+    pluralLabel: Bookings
+    fields:
+      session:
+        label: Class Session
+      status:
+        label: Status
+        values:
+          booked: Booked
+          attended: Attended
+          canceled: Canceled
 pages:
   home:
+    title: Yoga Studio
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
+  blog:
+    title: Blog
+  class-types:
+    title: Class Types
+  instructors:
+    title: Instructors
+  posts:
+    title: Posts
+  messages:
+    title: Messages
+  admin:
+    title: Admin
+  team:
+    title: Team
+  estimate:
+    title: Membership Calculator
+  schedule:
+    title: Class Schedule
+  sessions:
+    title: Sessions
+  my-bookings:
+    title: My Bookings

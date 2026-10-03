@@ -1,74 +1,7 @@
 smithableContent: 0.1
-models:
-  Recipe:
-    label: Recept
-    pluralLabel: Recepten
-    fields:
-      name:
-        label: Naam
-      description:
-        label: Beschrijving
-      servings:
-        label: Porties
-      prepTime:
-        label: Voorbereidingstijd (min)
-      cookTime:
-        label: Kooktijd (min)
-      instructions:
-        label: Instructies
-      category:
-        label: Categorie
-        values:
-          breakfast: Ontbijt
-          lunch: Lunch
-          dinner: Diner
-          dessert: Toetje
-          snack: Tussendoortje
-      difficulty:
-        label: Moeilijkheidsgraad
-        values:
-          easy: Makkelijk
-          medium: Gemiddeld
-          hard: Moeilijk
-      image:
-        label: Afbeelding
-  Ingredient:
-    label: Ingrediënt
-    pluralLabel: Ingrediënten
-    fields:
-      name:
-        label: Naam
-      quantity:
-        label: Hoeveelheid
-      unit:
-        label: Eenheid
-  ShoppingList:
-    label: Boodschappenlijst
-    pluralLabel: Boodschappenlijsten
-    fields:
-      name:
-        label: Naam
-      date:
-        label: Datum
-      status:
-        label: Status
-        values:
-          pending: In afwachting
-          completed: Voltooid
-  ShoppingItem:
-    label: Boodschappenitem
-    pluralLabel: Boodschappenitems
-    fields:
-      name:
-        label: Naam
-      quantity:
-        label: Hoeveelheid
-      unit:
-        label: Eenheid
-      purchased:
-        label: Aangekocht
 pages:
-  recipes:
-    title: Recepten
-  shopping-lists:
-    title: Boodschappenlijsten
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones

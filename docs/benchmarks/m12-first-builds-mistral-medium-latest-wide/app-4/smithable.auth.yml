@@ -1,9 +1,9 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: private
 roles:
   teacher:
-    description: The piano teacher managing pupils and lessons.
+    description: The piano teacher who manages pupils and lessons.
 defaultRole: teacher
 admins: [johan@smithable.ai]

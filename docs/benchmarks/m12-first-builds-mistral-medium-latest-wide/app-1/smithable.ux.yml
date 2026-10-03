@@ -1,18 +1,14 @@
 smithableUx: 0.1
-tones:
-  Quote.status:
-    paid: success
-    accepted: success
 pages:
+  quotes:
+    table:
+      sort: -issuedOn
+      columns: [number, client, amount, status, issuedOn]
   clients:
     table:
       columns: [name, email, vatNumber]
-      sort: name
-  quotes:
-    table:
-      columns: [client, description, amount, issuedOn, status]
-      sort: -issuedOn
-  payments:
-    table:
-      columns: [quote, amount, paidOn, method]
-      sort: -paidOn
+tones:
+  Quote.status:
+    paid: success
+    overdue: danger
+    sent: warning

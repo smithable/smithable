@@ -4,7 +4,6 @@
   "wordStarter": "booking",
   "questions": [
     "Who can view the inventory data?",
-    "What details should each ingredient record include?",
-    "Should stock levels be updated automatically or manually?"
+    "What details should each ingredient record include?"
   ]
 }

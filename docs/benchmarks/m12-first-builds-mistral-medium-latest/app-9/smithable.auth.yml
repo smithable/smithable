@@ -1,6 +1,6 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
   selfSignUp: false
 defaultAccess: shared
 roles:

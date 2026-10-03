@@ -4,6 +4,6 @@
   "wordStarter": "crm",
   "questions": [
     "What details should each lead and deal record include?",
-    "Who can see the pipeline?"
+    "Who can view the pipeline?"
   ]
 }

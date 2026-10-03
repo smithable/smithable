@@ -31,7 +31,7 @@ models:
       photos: pictures
       description: text!
       price: money
-      category: klaeder | moebler | leksaker | elektronik | boecker | annat
+      category: klaeder | moebler | elektronik | leksaker | boecker | sport | oevrigt
       condition: ny | bra | sliten
       place: string
       available: bool = true
