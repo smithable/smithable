@@ -99,17 +99,16 @@ export async function addLibraryPictures(options: {
       const editor = new YamlEditor(
         options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
       );
-      const at = ["pages", landing.id, "sections", hero.name];
+      // A landing section's texts are under the page by the section's name (pages.home.hero).
+      const at = ["pages", landing.id, hero.name];
       if (!editor.has([...at, "image"])) {
         const image = { src: "images/hero.webp", alt: picked.hero.alt };
         if (editor.has(at)) editor.add(at, "image", image);
-        else if (editor.has(["pages", landing.id, "sections"]))
-          editor.add(["pages", landing.id, "sections"], hero.name, { image });
         else if (editor.has(["pages", landing.id]))
-          editor.add(["pages", landing.id], "sections", { [hero.name]: { image } });
+          editor.add(["pages", landing.id], hero.name, { image });
         else if (editor.has(["pages"]))
-          editor.add(["pages"], landing.id, { sections: { [hero.name]: { image } } });
-        else editor.add([], "pages", { [landing.id]: { sections: { [hero.name]: { image } } } });
+          editor.add(["pages"], landing.id, { [hero.name]: { image } });
+        else editor.add([], "pages", { [landing.id]: { [hero.name]: { image } } });
         options.files["smithable.content.yml"] = editor.text;
       }
     }
