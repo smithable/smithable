@@ -6,6 +6,7 @@ import {
   computedField,
   draftOperations,
   draftProjectByOperations,
+  repaired,
   repairFieldShorthand,
 } from "./draft-operations.js";
 import type { Provider } from "./provider.js";
@@ -303,6 +304,14 @@ test("a model declaring a field every model has keeps the model, without that fi
   expect(draft.files["smithable.yml"]).toContain("  Tool:");
   expect(draft.files["smithable.yml"]).not.toMatch(/owner: User/);
   expect(draft.files["smithable.yml"]).toContain("tools:");
+});
+
+test("an owner that refers to another model is not left out as automatic", () => {
+  const step = {
+    op: "addModel",
+    args: { model: "Car", fields: { plate: "string!", owner: "Customer!", createdAt: "datetime" } },
+  };
+  expect(repaired(step)?.args.fields).toEqual({ plate: "string!", owner: "Customer!" });
 });
 
 test("places left over a list the model gets later: the model first, the computed field after", async () => {
