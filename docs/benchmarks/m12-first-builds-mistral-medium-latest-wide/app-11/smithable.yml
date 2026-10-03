@@ -42,6 +42,7 @@ models:
 pages:
   incidents:
     crud: Incident
+    actions: [identified, monitoring, resolve]
   updates:
     crud: IncidentUpdate
   components:
@@ -49,21 +50,49 @@ pages:
     access: [admin]
   maintenance:
     crud: Maintenance
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
   team:
     users: manage
-    access: [admin]
-  overview:
+  admin:
     data: all
-    access: [admin, staff]
-navigation: [overview, incidents, updates, maintenance, components, team]
+navigation: [incidents, updates, maintenance, components, team, admin]
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause is found and a fix is being worked on.
+    allow: [admin, staff]
+    intent: The cause is found; the incident moves to identified, with an update saying so.
+  monitoring:
+    on: Incident
+    when:
+      status: identified
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is being applied; the incident is being monitored.
+    allow: [admin, staff]
+    intent: A fix is being applied; the incident moves to monitoring, with an update saying so.
+  resolve:
+    on: Incident
+    when:
+      status: monitoring
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: The incident has been resolved.
+    allow: [admin, staff]
+    intent: The incident is resolved; it moves to resolved, with an update saying so.

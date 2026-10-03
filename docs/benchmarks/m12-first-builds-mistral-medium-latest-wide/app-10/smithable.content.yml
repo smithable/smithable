@@ -1,27 +1,4 @@
 smithableContent: 0.1
-models:
-  Artifact:
-    label: Object
-    pluralLabel: Objects
-    fields:
-      name:
-        label: Title
-      description:
-        label: Description
-      category:
-        label: Category
-      period:
-        label: Historical Period
-      image:
-        label: Image URL
-      story:
-        label: Story
-      status:
-        label: Display Status
-        values:
-          onDisplay: On Display
-          inStorage: In Storage
-          onLoan: On Loan
 pages:
   home:
     hero:

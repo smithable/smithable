@@ -14,7 +14,6 @@ pages:
   components:
     table:
       columns: [name, status, description]
-      sort: name
   maintenance:
     table:
       columns: [title, component, startsAt, endsAt, description]
@@ -29,5 +28,3 @@ tones:
     identified: warning
     monitoring: warning
     resolved: success
-theme:
-  preset: corporate

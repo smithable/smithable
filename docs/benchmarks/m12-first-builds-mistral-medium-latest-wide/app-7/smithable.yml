@@ -30,6 +30,7 @@ pages:
     crud: Item
     favorites: only
   catalog:
+    route: /items
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]

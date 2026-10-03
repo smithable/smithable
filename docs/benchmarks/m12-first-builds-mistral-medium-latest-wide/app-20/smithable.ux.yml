@@ -2,28 +2,16 @@ smithableUx: 0.1
 pages:
   class-types:
     icon: layers
-    form:
-      columns: 2
   instructors:
     icon: users
-    form:
-      columns: 2
-  team:
-    icon: users
-  admin:
-    icon: settings
   schedule:
     icon: calendar
-    table:
-      view: cards
-  my-bookings:
-    icon: cart
-    table:
-      view: cards
   sessions:
     icon: calendar
     table:
       sort: -startsAt
-      columns: [startsAt, classType, instructor, placesLeft]
+      columns: [classType, instructor, startsAt, placesLeft]
     form:
       columns: 2
+  my-bookings:
+    icon: cart

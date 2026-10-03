@@ -7,6 +7,6 @@ roles:
   admin:
     description: Manages the society and its records.
   member:
-    description: Member of the society.
+    description: Views plots and fees.
 defaultRole: member
 admins: [johan@smithable.ai]
