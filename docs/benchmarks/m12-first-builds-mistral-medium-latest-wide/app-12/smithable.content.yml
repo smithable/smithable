@@ -1,8 +1,8 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Municipal Service Status
-    subtitle: Check the current status and outages of our online services.
+    title: Service Status
+    subtitle: Check the current status and outages of our municipality's online services.
     hero:
       image:
         src: images/hero.webp
@@ -25,36 +25,12 @@ models:
   Component:
     label: Service
     pluralLabel: Services
-    fields:
-      status:
-        label: Status
-        values:
-          operational: Operational
-          degraded: Degraded
-          down: Down
-          maintenance: Maintenance
   Incident:
     label: Incident
     pluralLabel: Incidents
-    fields:
-      status:
-        label: Status
-        values:
-          investigating: Investigating
-          identified: Identified
-          monitoring: Monitoring
-          resolved: Resolved
   IncidentUpdate:
     label: Update
     pluralLabel: Updates
-    fields:
-      status:
-        label: Status
-        values:
-          investigating: Investigating
-          identified: Identified
-          monitoring: Monitoring
-          resolved: Resolved
   Maintenance:
     label: Maintenance
     pluralLabel: Maintenance

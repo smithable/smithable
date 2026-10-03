@@ -8,7 +8,7 @@ public:
 roles:
   admin:
     description: Manages the museum collection.
-  curator:
-    description: Adds and edits objects and stories.
-defaultRole: curator
+  visitor:
+    description: Browses the collection.
+defaultRole: visitor
 admins: [johan@smithable.ai]

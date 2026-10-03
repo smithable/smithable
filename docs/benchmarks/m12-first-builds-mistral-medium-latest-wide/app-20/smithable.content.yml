@@ -1,8 +1,8 @@
 smithableContent: 0.1
 models:
   ClassType:
-    label: Luokkatyyppi
-    pluralLabel: Luokkatyypit
+    label: Tuntityyppi
+    pluralLabel: Tuntityypit
     fields:
       name:
         label: Nimi
@@ -12,7 +12,7 @@ models:
         label: Taso
         values:
           beginner: Aloittelija
-          allLevels: Kaikille
+          allLevels: Kaikki tasot
           advanced: Edistynyt
       durationMinutes:
         label: Kesto (min)
@@ -31,7 +31,7 @@ models:
     pluralLabel: Tunnit
     fields:
       classType:
-        label: Luokkatyyppi
+        label: Tuntityyppi
       instructor:
         label: Ohjaaja
       startsAt:
@@ -54,13 +54,9 @@ pages:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
   class-types:
-    title: Luokkatyypit
+    title: Tuntityypit
   instructors:
     title: Ohjaajat
-  team:
-    title: Tiimi
-  admin:
-    title: Ylläpito
   schedule:
     title: Aikataulu
   sessions:

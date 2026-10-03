@@ -155,7 +155,8 @@ type Step = { op: string; args: OperationArgs };
 /** Operations a draft cannot do without; the others are extras a draft may drop. */
 const ESSENTIAL = new Set([
   "setApp",
-  // A starter's actions are its flow (the status page's resolve): refused, they are corrected, not dropped.
+  // A starter's actions are its flow (the status page's resolve): refused, they are corrected;
+  // still refused after the last round, they are dropped and named (see LAST_ROUND_DROPS).
   "addAction",
   "addModel",
   "addField",
@@ -165,6 +166,9 @@ const ESSENTIAL = new Set([
   "setPublic",
   "setSignUp",
 ]);
+
+/** Essential while there are rounds left; after the last one, dropped rather than failing the draft. */
+const LAST_ROUND_DROPS = new Set(["addAction"]);
 
 /**
  * Applies steps in order: a slip in the field shorthand is mended, a step already applied or
@@ -233,6 +237,29 @@ function applyAll(
         const fields = step.args.fields as Record<string, string>;
         const needs = Object.entries(fields).filter(([, type]) =>
           new RegExp(`\\b${missing}\\b`).test(String(type)),
+        );
+        if (needs.length && needs.length < Object.keys(fields).length) {
+          const rest = Object.fromEntries(
+            Object.entries(fields).filter(([name]) => !needs.some(([n]) => n === name)),
+          );
+          queue.unshift({ op: "addModel", args: { ...step.args, fields: rest } });
+          for (const [field, type] of needs)
+            queue.push({ op: "addField", args: { model: step.args.model, field, type } });
+          continue;
+        }
+      }
+      // A formula over a list the model does not have yet (a total of its lines): the model is
+      // added without it, and the formula follows at the end, once the list may be there.
+      const noList = /has no list named "(\w+)"/.exec(message)?.[1];
+      if (
+        noList &&
+        step.op === "addModel" &&
+        typeof step.args.fields === "object" &&
+        step.args.fields
+      ) {
+        const fields = step.args.fields as Record<string, string>;
+        const needs = Object.entries(fields).filter(([, type]) =>
+          new RegExp(`\\b${noList}\\.`).test(String(type)),
         );
         if (needs.length && needs.length < Object.keys(fields).length) {
           const rest = Object.fromEntries(
@@ -370,22 +397,33 @@ export async function draftProjectByOperations(options: {
       const outcome = applyAll(files, done, steps);
       files = outcome.files;
       refused = outcome.refused;
-      const essential = refused.filter((r) => ESSENTIAL.has(r.step.op));
+      const last = round === MAX_ROUNDS;
+      const essential = refused.filter(
+        (r) => ESSENTIAL.has(r.step.op) && !(last && LAST_ROUND_DROPS.has(r.step.op)),
+      );
       if (essential.length === 0) {
-        // Refused extras (a text, a color) are left out rather than failing the draft.
+        // Refused extras (a text, a color) are left out rather than failing the draft, and an
+        // action still refused after the last round is named.
+        const dropped = refused
+          .filter((r) => LAST_ROUND_DROPS.has(r.step.op))
+          .map(
+            (r) =>
+              `${r.step.op} ${String(r.step.args.action ?? r.step.args.name ?? "")}: ${r.message}`,
+          );
         if (done.length > 0)
           return {
             kind: "draft",
             files: toFiles(closeShared(files, done)),
             usage,
             operations: done,
+            ...(dropped.length ? { dropped } : {}),
           };
         problem =
           refused.map((r) => `${r.step.op}: ${r.message}`).join("\n") ||
           "Nothing could be applied.";
         break;
       }
-      if (round === MAX_ROUNDS) {
+      if (last) {
         problem = essential.map((r) => `${r.step.op}: ${r.message}`).join("\n");
         break;
       }

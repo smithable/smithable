@@ -7,4 +7,7 @@ roles:
   member:
     description: Member of the birdwatching club.
 defaultRole: member
+public:
+  pages: [sightings]
+  read: [Sighting]
 admins: [johan@smithable.ai]
