@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  invoices:
+    table:
+      sort: -month
+    icon: receipt
+tones:
+  Invoice.status:
+    paid: success
+    sent: warning

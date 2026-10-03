@@ -1,0 +1,7 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: private
+public:
+  pages: [home, items]
+  read: [Item]

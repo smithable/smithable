@@ -1,0 +1,38 @@
+smithable: 0.1
+app:
+  name: Freelance Translator CRM
+  description: Track clients, quotes, and payments for a freelance translator.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      notes: text
+  Quote:
+    fields:
+      client: Client!
+      amount: money!
+      currency: string = USD
+      status: sent | accepted | rejected | paid
+      sentAt: date = TODAY()
+      notes: text
+  Payment:
+    fields:
+      quote: Quote!
+      amount: money!
+      currency: string = USD
+      receivedAt: date = TODAY()
+      method: bank | paypal | cash
+      notes: text
+pages:
+  clients:
+    crud: Client
+    search: [name, email]
+  quotes:
+    crud: Quote
+    search: [client, status]
+  payments:
+    crud: Payment
+    search: [quote, method]
+navigation: [clients, quotes, payments]
