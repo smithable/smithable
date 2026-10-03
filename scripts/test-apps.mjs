@@ -155,10 +155,20 @@ async function screenshot(page) {
   return path;
 }
 
+/**
+ * Waits until React has hydrated the page, so typing and clicking reach their handlers: the root
+ * sets body[data-hydrated] in its first client effect. Typed before that, text shows in a box
+ * but nothing reacts (a search that never filters), which load made a flake.
+ */
+async function hydrated(page) {
+  await page.locator('body[data-hydrated="true"]').waitFor({ state: "attached", timeout: 60_000 });
+}
+
 /** Opens a page and waits until it is interactive: the dev server loads code on demand. */
 async function open(page, url) {
   await page.goto(url);
   await page.waitForLoadState("networkidle");
+  await hydrated(page);
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
@@ -171,8 +181,7 @@ async function chooseRecord(page, label, name) {
 async function signInAs(page, base, role) {
   // A cold dev server optimizes dependencies and reloads the page, which can swallow a click.
   for (let attempt = 1; ; attempt++) {
-    await page.goto(`${base}/sign-in`);
-    await page.waitForLoadState("networkidle");
+    await open(page, `${base}/sign-in`);
     await page.getByRole("button", { name: `Sign in as ${role}` }).click();
     try {
       // Signed in: on to the app, or first to its onboarding.
