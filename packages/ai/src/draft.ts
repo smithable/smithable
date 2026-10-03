@@ -88,7 +88,7 @@ pages:
 `,
   "smithable.auth.yml": `smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: shared
 roles:
   admin: { description: Runs the app. }

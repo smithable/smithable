@@ -35,6 +35,11 @@ function smtp() {
   return undefined;
 }
 
+/** Whether mail leaves the machine: the app has SMTP settings. */
+export function mailConfigured(): boolean {
+  return smtp() !== undefined;
+}
+
 /** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */
 export async function sendMail(mail: Mail): Promise<void> {
   const message = { from: process.env.MAIL_FROM ?? "app@localhost", ...mail };

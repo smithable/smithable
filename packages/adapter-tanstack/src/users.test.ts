@@ -52,7 +52,9 @@ test("a users page brings the invitation table, the server module, the kit, a te
   expect(file(app, "src/routes/team/index.tsx")).toContain("origin()");
   // Open sign-up: an invitation gives its role, everyone else the default one.
   const auth = file(app, "src/lib/auth.ts");
-  expect(auth).toContain('role: ADMINS.includes(email) ? "admin" : open?.role ?? "sales"');
+  expect(auth).toContain(
+    'role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "sales"',
+  );
   expect(auth).not.toContain("Only invited people");
   expect(auth).toContain("after: async (created) =>");
   expect(file(app, "src/routes/sign-in.tsx")).toContain("invitation={invitation}");

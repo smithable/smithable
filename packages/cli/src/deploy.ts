@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { validateAuth } from "@smithable/core";
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { security } from "./security.js";
@@ -57,6 +58,8 @@ export async function deploy(
     io.err("Not deployed: the Release checks failed.\n");
     return 1;
   }
+  const mail = mailWarning(dir, process.env);
+  if (mail) io.err(`${mail}\n`);
   // A remote Docker host is used over SSH by Docker itself.
   // The secret goes to `docker run -e NAME` through the environment, not on its command line.
   const env = {
@@ -154,4 +157,14 @@ volumes:
     `Wrote compose.yaml, with its secrets in .env. Set BETTER_AUTH_URL there to the app's public address, then:\n\n  docker compose up -d\n`,
   );
   return 0;
+}
+
+/** Email sign-in mails its codes: without mail settings in the environment nobody can sign in. */
+export function mailWarning(dir: string, env: NodeJS.ProcessEnv): string | undefined {
+  const path = join(dir, "smithable.auth.yml");
+  if (!existsSync(path)) return undefined;
+  const { auth } = validateAuth({ path, text: readFileSync(path, "utf8") });
+  const email = auth && auth.signIn !== "none" && auth.signIn.providers.includes("email");
+  if (!email || env.SMTP_URL || env.SMTP_HOST) return undefined;
+  return "Warning: email sign-in needs mail settings (SMTP_URL, or SMTP_HOST and the others): without them no sign-in code reaches anyone.";
 }
