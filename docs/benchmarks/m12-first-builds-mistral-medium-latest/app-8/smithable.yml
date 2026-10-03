@@ -1,0 +1,57 @@
+smithable: 0.1
+app:
+  name: Conference
+  description: Event registration for a conference with talks, speakers and attendees.
+models:
+  Talk:
+    fields:
+      title: string!
+      description: text
+      startTime: datetime!
+      endTime: datetime!
+      room: string
+      status: draft | published | cancelled
+    access:
+      delete: [organizer]
+  Speaker:
+    fields:
+      name: string!
+      bio: text
+      email: email!
+      photo: url
+    access:
+      delete: [organizer]
+  Attendee:
+    fields:
+      name: string!
+      email: email! unique
+      company: string
+      ticketType: standard | vip | speaker
+    access:
+      delete: [organizer]
+pages:
+  talks:
+    crud: Talk
+    access: [organizer]
+    search: [title, description]
+  speakers:
+    crud: Speaker
+    access: [organizer]
+    search: [name, bio]
+  attendees:
+    crud: Attendee
+    access: [organizer]
+    search: [name, email, company]
+    filters: [ticketType]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      talks:
+        records: Talk
+        where:
+          status: published
+      speakers:
+        records: Speaker
+navigation: [talks, speakers, attendees]

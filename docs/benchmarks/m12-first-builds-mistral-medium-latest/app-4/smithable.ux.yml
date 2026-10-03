@@ -1,0 +1,5 @@
+smithableUx: 0.1
+tones:
+  Tool.condition:
+    new: success
+    worn: warning
