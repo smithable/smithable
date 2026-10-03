@@ -1001,7 +1001,43 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 
 exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 {
-  "actions": [],
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The invoice went to the client.",
+      "name": "markSent",
+      "on": "Invoice",
+      "set": [
+        {
+          "field": "status",
+          "value": "sent",
+        },
+      ],
+      "when": {
+        "status": "draft",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The client paid the invoice.",
+      "name": "markPaid",
+      "on": "Invoice",
+      "set": [
+        {
+          "field": "status",
+          "value": "paid",
+        },
+      ],
+      "when": {
+        "status": [
+          "sent",
+          "overdue",
+        ],
+      },
+    },
+  ],
   "app": {
     "currency": "EUR",
     "description": "Simple invoicing for freelancers. Each user manages their own clients and invoices.",
@@ -1404,6 +1440,10 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       "route": "/overview",
     },
     {
+      "actions": [
+        "markSent",
+        "markPaid",
+      ],
       "id": "invoices",
       "pattern": {
         "kind": "crud",
