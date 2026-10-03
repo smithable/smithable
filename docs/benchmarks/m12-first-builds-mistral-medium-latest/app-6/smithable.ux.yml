@@ -7,9 +7,16 @@ pages:
       view: cards
     form:
       sections: [{ name: details, fields: [title, description, company, location] }, { name: compensation, fields: [salary, type] }]
+      columns: 2
+  applications:
+    table:
+      columns: [name, email, jobPost, status]
+    form:
+      sections: [{ name: applicant, fields: [name, email, phone] }, { name: documents, fields: [resume, coverLetter] }]
 tones:
   JobPost.status:
     open: success
+    closed: danger
   Application.status:
     reviewed: success
     shortlisted: success

@@ -1,38 +1,7 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Web Shop Uptime
-    subtitle: Current status of our services and recent outages.
     hero:
       image:
         src: images/hero.webp
         alt: A florist arranging a bouquet in a small shop
-  incidents:
-    title: Incidents
-  updates:
-    title: Incident Updates
-  maintenance:
-    title: Planned Maintenance
-  components:
-    title: Components
-models:
-  Component:
-    label: Service
-    pluralLabel: Services
-    fields:
-      status:
-        values:
-          operational: Operational
-          degraded: Degraded
-          down: Down
-          maintenance: Maintenance
-  Incident:
-    label: Outage
-    pluralLabel: Outages
-    fields:
-      status:
-        values:
-          investigating: Investigating
-          identified: Identified
-          monitoring: Monitoring
-          resolved: Resolved

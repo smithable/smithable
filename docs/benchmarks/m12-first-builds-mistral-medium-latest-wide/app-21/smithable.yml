@@ -70,7 +70,7 @@ pages:
     actions: [sendInvoice, markPaid, cancelInvoice]
   palvelut:
     crud: Service
-  team:
+  tiimi:
     users: manage
 actions:
   startWork:
@@ -118,4 +118,4 @@ actions:
     set:
       status: canceled
     intent: Peruuta lasku.
-navigation: [asiakkaat, autot, huoltotyot, laskut, palvelut, team]
+navigation: [asiakkaat, autot, huoltotyot, laskut, palvelut, tiimi]

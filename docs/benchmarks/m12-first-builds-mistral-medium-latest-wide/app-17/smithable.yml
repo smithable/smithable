@@ -8,38 +8,17 @@ models:
   Service:
     fields:
       name: string!
-      summary: text
+      description: text
       durationMinutes: int! = 30
       price: money!
     access:
-      create: [admin]
-      write: [admin]
       delete: [admin]
   Stylist:
     fields:
       name: string!
       bio: text
+      portrait: picture
     access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
-  Booking:
-    fields:
-      customerName: string!
-      customerEmail: email!
-      customerPhone: phone
-      appointment: Appointment! unique
-    capacity:
-      per: appointment
-      max: appointment.capacity
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
       delete: [admin]
   Appointment:
     fields:
@@ -47,22 +26,31 @@ models:
       stylist: Stylist!
       startsAt: datetime!
       capacity: int! = 1
+      bookings: Booking[]
     access:
-      create: [admin]
-      write: [admin]
       delete: [admin]
+  Booking:
+    fields:
+      appointment: Appointment! unique
+      customerName: string!
+      customerEmail: email!
+      customerPhone: phone
+    capacity:
+      per: appointment
+      max: appointment.capacity
 pages:
   tjanster:
     crud: Service
     access: [admin]
-  frisorer:
+  stylister:
     crud: Stylist
     access: [admin]
-  boka-nu:
-    crud: Booking
+  tider:
+    crud: Appointment
+    access: [admin]
   mina-bokningar:
     crud: Booking
-    mine: true
+    access: [customer, admin]
   hem:
     route: /
     landing:
@@ -70,21 +58,10 @@ pages:
       footer:
       tjanster:
         records: Service
-      frisorer:
+      stylister:
         records: Stylist
-      contact:
-        form: Message
-  team:
-    users: manage
-    access: [admin]
-  admin:
-    data: all
-    access: [admin]
-  tider:
-    crud: Appointment
-    access: [admin]
   schema:
     calendar:
       model: Appointment
       starts: startsAt
-navigation: [hem, schema, boka-nu, mina-bokningar]
+navigation: [hem, schema, mina-bokningar]

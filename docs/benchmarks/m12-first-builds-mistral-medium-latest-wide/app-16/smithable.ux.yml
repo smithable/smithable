@@ -15,14 +15,11 @@ pages:
     table:
       sort: number
       columns: [number, size, status, holder]
-    icon: layers
   waiting-list:
     table:
       sort: dateAdded
       columns: [name, email, phone, dateAdded, status]
-    icon: list
   fees:
     table:
       sort: -year
       columns: [year, amount, dueDate, status]
-    icon: receipt

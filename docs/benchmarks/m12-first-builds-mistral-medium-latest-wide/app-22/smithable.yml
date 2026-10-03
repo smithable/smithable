@@ -15,11 +15,13 @@ models:
   PreOrder:
     fields:
       customerName: string!
+      customerEmail: email
       customerPhone: phone
       product: Product!
       quantity: int! = 1
       pickupTime: datetime!
       status: pending | confirmed | pickedUp | canceled
+      notes: text
   PickupSlot:
     fields:
       date: date!
@@ -31,17 +33,14 @@ pages:
   produkte:
     crud: Product
     search: [name, category]
-    sortable: [name, price, available]
   vorbestellungen:
     crud: PreOrder
-    search: [customerName, customerPhone]
-    filters: [status, product]
-    sortable: [customerName, pickupTime, status]
-    actions: [confirmPreOrder, markAsPickedUp, cancelPreOrder]
+    actions: [confirmPreOrder, markPickedUp, cancelPreOrder]
+    search: [customerName, customerEmail, product]
+    filters: [status, pickupTime]
+    sortable: [pickupTime, customerName]
   abholzeiten:
     crud: PickupSlot
-    filters: [date]
-    sortable: [date, startTime]
   team:
     users: manage
 actions:
@@ -52,7 +51,7 @@ actions:
     set:
       status: confirmed
     intent: Bestätige eine Vorbestellung.
-  markAsPickedUp:
+  markPickedUp:
     on: PreOrder
     when:
       status: confirmed
@@ -65,5 +64,6 @@ actions:
       status: [pending, confirmed]
     set:
       status: canceled
+      notes:
     intent: Storniere eine Vorbestellung.
 navigation: [produkte, vorbestellungen, abholzeiten, team]

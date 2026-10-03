@@ -18,10 +18,10 @@ models:
           klaeder: Kläder
           moebler: Möbler
           leksaker: Leksaker
-          boecker: Böcker
           elektronik: Elektronik
+          boecker: Böcker
           sport: Sport
-          oevrigt: Övrigt
+          annat: Annat
       condition:
         label: Skick
         values:
