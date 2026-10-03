@@ -1,7 +1,7 @@
 import { PROVIDERS } from "../auth.js";
 import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlValue } from "../edit.js";
-import { humanize } from "../naming.js";
+import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 
 const setSignUp: Operation<{ who: "anyone" | "invited" }> = {
@@ -306,6 +306,100 @@ const setPublicWhere: Operation<{
   },
 };
 
+const setApi: Operation<{
+  models?: string[];
+  actions?: string[];
+  except?: string[];
+  assistants?: boolean;
+}> = {
+  name: "setApi",
+  summary:
+    'Say what other programs may reach with a key: models ("all" for every model, also later ones), the standard actions they may run, and whether AI assistants may use it too. No models turns the API off. A key\'s role still decides what it may do.',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      models: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "The models offered, e.g. [Customer, Order], or [all]; none turns the API off.",
+      },
+      actions: {
+        type: "array",
+        items: { type: "string" },
+        description: "The standard actions programs may run, e.g. [resolve], or [all].",
+      },
+      except: {
+        type: "array",
+        items: { type: "string" },
+        description: 'With "all": the models left out, e.g. [AuditEntry].',
+      },
+      assistants: {
+        type: "boolean",
+        description: "Offer the same to AI assistants as tools.",
+      },
+    },
+  },
+  positional: ["...models"],
+  describe: ({ models = [], actions = [] }) => {
+    if (!models.length) return "Turn the API off";
+    const what = models.includes("all")
+      ? "every model, also ones added later,"
+      : list(models.map((m) => humanize(plural(m)).toLowerCase()));
+    const run = actions.includes("all")
+      ? ", and let them run every standard action"
+      : actions.length
+        ? `, and let them run ${list(actions.map((a) => humanize(a).toLowerCase()))}`
+        : "";
+    return `Offer ${what} to other programs${run}`;
+  },
+  destructive: () => false,
+  apply({ auth }, { models = [], actions = [], except = [], assistants }, ir) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    const path = ["api"];
+    if (!models.length) {
+      if (actions.length || except.length || assistants)
+        throw new OperationError(
+          "Say which models the API offers (or all); without models it is turned off.",
+        );
+      if (auth.has(path)) auth.removeAndPrune(path, 0);
+      return [];
+    }
+    if (auth.get(["signIn"]) === "none")
+      throw new OperationError(
+        "This app has no sign-in, and a key is made by an administrator in the app.",
+      );
+    const all = models.includes("all");
+    if (all && models.length > 1)
+      throw new OperationError('"all" is every model: give it alone, with --except for the rest.');
+    if (except.length && !all)
+      throw new OperationError('"except" leaves models out of "all"; with a list, leave it out.');
+    for (const name of [...(all ? [] : models), ...except])
+      if (!ir.models.some((m) => m.name === name))
+        throw new OperationError(`There is no model named "${name}".`);
+    const allActions = actions.includes("all");
+    if (allActions && actions.length > 1)
+      throw new OperationError('"all" is every standard action: give it alone.');
+    const value: Record<string, YamlValue> = {
+      models: all ? "all" : [...new Set(models)],
+      ...(except.length ? { except: [...new Set(except)] } : {}),
+      ...(actions.length ? { actions: allActions ? "all" : [...new Set(actions)] } : {}),
+      ...(assistants ? { assistants: true } : {}),
+    };
+    if (auth.has(path)) auth.set(path, value);
+    else auth.add([], "api", value);
+    return [];
+  },
+};
+
+/** "a", "a and b", "a, b and c". */
+function list(items: string[]): string {
+  return items.length < 2
+    ? (items[0] ?? "")
+    : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
 export const authOperations: AnyOperation[] = [
   setSignUp,
   setDefaultAccess,
@@ -314,4 +408,5 @@ export const authOperations: AnyOperation[] = [
   setRoles,
   setPublic,
   setPublicWhere,
+  setApi,
 ];
