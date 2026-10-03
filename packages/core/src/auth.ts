@@ -57,9 +57,12 @@ export interface RoleIR {
 }
 
 export const AUTH_VERSION = "0.1";
-export const PROVIDERS = ["google", "facebook"] as const;
+/** `email` is a one-time code sent to the person's address: no keys, the app's own mail settings. */
+export const PROVIDERS = ["email", "google", "facebook"] as const;
 export type Provider = (typeof PROVIDERS)[number];
-const LATER_PROVIDERS = ["microsoft", "github", "apple", "email", "magicLink"];
+const LATER_PROVIDERS = ["microsoft", "github", "apple", "magicLink"];
+/** Domains nobody receives mail at (RFC 2606): an administrator there can never sign in. */
+const RESERVED_DOMAIN = /(^|\.)(example|test|invalid|localhost)$|^example\.(com|org|net)$/;
 
 /** Personal data that should never be readable by anyone on the internet. */
 const PERSONAL_TYPES = ["email", "phone"];
@@ -266,6 +269,24 @@ export function validateAuth(
       "With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.",
       `Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".`,
     );
+  }
+  if (auth.signIn !== "none") {
+    // Invited people and administrators only, and no administrator: nobody could ever sign in.
+    if (!auth.signIn.selfSignUp && auth.admins.length === 0)
+      ctx.warning(
+        signIn?.keyNode ?? root,
+        "no-admin",
+        "Only invited people and administrators may sign in, and there is no administrator: nobody can sign in.",
+        `Name one under "admins" (smithable op setAdmins you@your-domain).`,
+      );
+    for (const address of auth.admins)
+      if (RESERVED_DOMAIN.test(address.split("@")[1] ?? ""))
+        ctx.warning(
+          admins?.value ?? root,
+          "example-admin",
+          `Nobody receives mail at ${address}, so nobody can sign in as this administrator.`,
+          "Replace it with a real address (smithable op setAdmins you@your-domain).",
+        );
   }
   if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes);
   return done();
