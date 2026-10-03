@@ -1,30 +1,7 @@
 smithableContent: 0.1
-models:
-  Stylist:
-    label: Stylist
-    pluralLabel: Stylists
-  Service:
-    label: Service
-    pluralLabel: Services
-  Appointment:
-    label: Appointment
-    pluralLabel: Appointments
-    fields:
-      status:
-        values:
-          booked: Booked
-          confirmed: Confirmed
-          cancelled: Cancelled
 pages:
   home:
-    title: Welcome to Our Hair Salon
     hero:
       image:
         src: images/hero.webp
         alt: A hair salon with mirrors, chairs and plants in daylight
-  appointments:
-    title: Book an Appointment
-  stylists:
-    title: Our Stylists
-  services:
-    title: Our Services

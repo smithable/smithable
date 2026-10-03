@@ -1,8 +1,6 @@
 smithableContent: 0.1
 pages:
   home:
-    title: API Status
-    subtitle: Live status of our API services, incidents and planned maintenance.
     hero:
       image:
         src: images/hero.webp
