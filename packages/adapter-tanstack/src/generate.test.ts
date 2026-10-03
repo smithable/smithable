@@ -225,7 +225,6 @@ pages:
   expect(files.find((f) => f.path === "src/routes/__root.tsx")?.content).toContain(
     "!viewer && visitorRoutes.some(",
   );
-
 });
 
 test("a standard action is generated whole: its module, its server function and a button, never a stub", () => {
