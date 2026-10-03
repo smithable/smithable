@@ -50,7 +50,7 @@ Johan's decision: nothing is copied from the preview. The records in a new app a
 ## 5. Steps
 
 1. **Core (Fable):** `email` as a provider with its validation (it needs no keys; `selfSignUp` and `allowedDomains` apply), `setAdmins`, the two validator rules, the summary's sentence ("People sign in with a code sent to their email"), the spec reference.
-2. **Adapter and CLI (A):** the code flow with the auth library's email-code plugin, the sign-in page (address, then code), the limiter, the mail text from content, the outbox in development, `smithable new --admin`, the release check, the generated access and smoke tests signing in by code through the outbox, and all six starters on `[email]` with `.example` admins.
+2. **Adapter and CLI (A):** the code flow with the auth library's email-code plugin, the sign-in page (address, then code), the limiter, the mail text from content, the outbox in development, `smithable new --admin`, the release check, the generated access and smoke tests signing in by code through the outbox, all six starters on `[email]` with `.example` admins, and Studio's notice by the preview that the records are samples and are not published.
 3. **Service (B):** the owner's address at project creation and on hand-over, the relay's allowance for sign-in codes, and the sample-data notice on the first-build page and at publishing.
 4. **Docs (C):** "Sign in with Google" as a how-to for those who bring keys; the getting-started page's sign-in paragraph.
 
