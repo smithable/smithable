@@ -2252,6 +2252,11 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
             "name": "services",
           },
           {
+            "component": "Uptime",
+            "kind": "custom",
+            "name": "uptime",
+          },
+          {
             "kind": "records",
             "model": "Incident",
             "name": "open",
