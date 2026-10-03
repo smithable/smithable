@@ -164,8 +164,23 @@ export async function create(
   // The app's first administrator is whoever makes it: a starter's sample address never
   // survives into a new project, where it would be someone else's way in.
   const admin = options.admin?.trim() || gitEmail();
-  if (admin) files = administered(files, admin);
-  else if (/^admins:/m.test(files["smithable.auth.yml"] ?? ""))
+  if (admin) {
+    files = administered(files, admin);
+    // A starter's allowedDomains are its own: the admin gets in anyway, nobody else from theirs.
+    const domains = /allowedDomains:\s*\[([^\]]*)\]/.exec(files["smithable.auth.yml"] ?? "")?.[1];
+    const domain = admin.split("@")[1]?.toLowerCase();
+    if (
+      domains &&
+      domain &&
+      !domains
+        .split(",")
+        .map((d) => d.trim())
+        .includes(domain)
+    )
+      io.out(
+        `Sign-in is limited to ${domains.trim()} (allowedDomains in smithable.auth.yml): ${admin} may sign in as the administrator, but nobody else from ${domain}. Change it there if your people use other addresses.\n`,
+      );
+  } else if (/^admins:/m.test(files["smithable.auth.yml"] ?? ""))
     io.out(
       "No administrator was set (no --admin and no Git user.email): the starter's sample address is still in smithable.auth.yml. Set yours with: smithable op setAdmins you@your-domain\n",
     );
