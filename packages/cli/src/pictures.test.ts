@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { validateSpec } from "@smithable/core";
+import { validateContent, validateSpec } from "@smithable/core";
 import { afterEach, expect, test } from "vitest";
 import { addLibraryPictures, type Fetch, libraryIndex, writePictures } from "./pictures.js";
 
@@ -85,6 +85,26 @@ pages:
   expect(written.map((w) => w.file)).toEqual(["samples/1.webp", "hero.webp"]);
   expect(files["smithable.content.yml"]).toContain("src: images/hero.webp");
   expect(files["smithable.content.yml"]).toContain("alt: A café");
+  // The content file stays valid: the hero's texts are under the page by its name, and the same
+  // when the page already has texts of its own (as a draft's content file does).
+  const content = (text: string) =>
+    validateContent({ path: "smithable.content.yml", text }, ir).diagnostics.filter(
+      (d) => d.severity === "error",
+    );
+  expect(content(files["smithable.content.yml"] ?? "")).toEqual([]);
+  expect(files["smithable.content.yml"]).toContain("  home:\n    hero:\n      image:");
+  const drafted: Record<string, string> = {
+    "smithable.content.yml": "smithableContent: 0.1\npages:\n  home:\n    title: Kaffe\n",
+  };
+  await addLibraryPictures({
+    description: "a café with its menu",
+    ir,
+    files: drafted,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index,
+  });
+  expect(content(drafted["smithable.content.yml"] ?? "")).toEqual([]);
   expect(out.join("")).toContain("Pictures from the Smithable image library");
   const dir = temp();
   writePictures(dir, written);
