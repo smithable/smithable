@@ -256,7 +256,9 @@ ${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === 
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 ${models.map((m) => `import { ${m.schema}, ${m.ui} } from "${m.module}";\n`).join("")}import type { Rule } from "#/kit/access";
-${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
 import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action.name)}.server";
 
 /** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.allow ? ", among the roles it allows" : ""}${action.add ? ", and may create what it adds" : ""}. */
@@ -267,9 +269,16 @@ export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `
   return ${fitsCode(action)};
 }
 ${asks}
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${asked.length ? `z.object({ id: z.number().int(), values: ${a.asks} })` : "z.number().int()"})
-  .handler(async ({ data }) => ${a.run}(await currentViewer(), ${asked.length ? "data.id, data.values" : "data"}));
+  .handler(async ({ data }) => ${a.run}(await writer(), ${asked.length ? "data.id, data.values" : "data"}));
 ${
   action.copy
     ? ""
@@ -277,7 +286,7 @@ ${
 /** The "${action.name}" action on the chosen ${n.pluralLabel.toLowerCase()} (at most 1,000 at once). */
 export const ${a.many} = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000)${asked.length ? `, values: ${a.asks}` : ""} }))
-  .handler(async ({ data }) => ${a.runMany}(await currentViewer(), data.ids${asked.length ? ", data.values" : ""}));
+  .handler(async ({ data }) => ${a.runMany}(await writer(), data.ids${asked.length ? ", data.values" : ""}));
 `
 }`;
 }
@@ -391,7 +400,9 @@ ${hooks("written")}
  */
 export async function ${a.runMany}(viewer: Viewer | null, ids: number[]${askedParam}) {
 ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  const plans: ReturnType<typeof plan>[] = [];
-  for (const id of ids) {
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
     const row = await ${n.data}.get(viewer, id);
     if (!row || !allows(${a.access}, viewer, row.${ownerKey(model)}) || !${a.fits}(row)) continue;
     try {
@@ -405,7 +416,7 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
   for (const w of written) {
 ${hooks("w").replace(/^ {2}/gm, "    ")}
   }
-  return { changed: plans.length, skipped: ids.length - plans.length };
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 `;
 }
