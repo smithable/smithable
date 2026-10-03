@@ -236,3 +236,33 @@ test("invite-only asked before the team page gets the team page first", async ()
   expect(draft.files["smithable.yml"]).toContain("users: manage");
   expect(draft.dropped).toBeUndefined();
 });
+
+test("a value worked out from other fields, written as a default, does not cost its model", async () => {
+  const draft = await draftProjectByOperations({
+    description: "invoices",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Invoices" } },
+          {
+            op: "addModel",
+            args: {
+              model: "InvoiceLine",
+              fields: {
+                quantity: "int!",
+                unitPrice: "money!",
+                amount: "money = quantity * unitPrice",
+              },
+            },
+          },
+          { op: "addPage", args: { page: "lines", model: "InvoiceLine" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  expect(draft.files["smithable.yml"]).toContain("unitPrice:");
+  expect(draft.files["smithable.yml"]).toContain("lines:");
+  // The field goes back to the model with its reason; left out of the correction, it is dropped.
+  expect(draft.files["smithable.yml"]).not.toContain("quantity * unitPrice");
+});

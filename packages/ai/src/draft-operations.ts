@@ -252,18 +252,23 @@ function applyAll(
           continue;
         }
       }
-      // A formula over a list the model does not have yet (a total of its lines): the model is
-      // added without it, and the formula follows at the end, once the list may be there.
+      // A formula over a list the model does not have yet (a total of its lines), or a value
+      // worked out from other fields written as a default (no operation adds those yet): the
+      // model is added without it, and the field follows at the end, where it may still be
+      // refused and then left out and named, rather than costing the model and all after it.
       const noList = /has no list named "(\w+)"/.exec(message)?.[1];
+      const expression = /Default "([^"]+)" must be/.exec(message)?.[1];
       if (
-        noList &&
+        (noList || expression) &&
         step.op === "addModel" &&
         typeof step.args.fields === "object" &&
         step.args.fields
       ) {
         const fields = step.args.fields as Record<string, string>;
         const needs = Object.entries(fields).filter(([, type]) =>
-          new RegExp(`\\b${noList}\\.`).test(String(type)),
+          noList
+            ? new RegExp(`\\b${noList}\\.`).test(String(type))
+            : String(type).includes(`= ${expression}`) || String(type).includes(`=${expression}`),
         );
         if (needs.length && needs.length < Object.keys(fields).length) {
           const rest = Object.fromEntries(
