@@ -187,9 +187,10 @@ export function validateAuth(
       if (key === "admin") auth.roles[0] = role;
       else auth.roles.push(role);
     }
-  } else {
-    auth.roles.push({ name: "member" });
   }
+  // "admin" always exists, and so does a role for everyone else: "member" when none is declared
+  // (also when "roles" lists only admin, which would otherwise make every newcomer one).
+  if (!auth.roles.some((r) => r.name !== "admin")) auth.roles.push({ name: "member" });
   const roleNames = auth.roles.map((r) => r.name);
 
   const defaultRole = byKey.get("defaultRole");
@@ -203,6 +204,14 @@ export function validateAuth(
         `There is no role named "${name}".`,
         didYouMean(name, roleNames),
       );
+    } else if (name === "admin") {
+      ctx.error(
+        defaultRole.value,
+        "admin-default-role",
+        `"defaultRole: admin" would make everyone who signs in an administrator.`,
+        `Name another role, or list the administrators' addresses under "admins".`,
+      );
+      if (others.length === 1) auth.defaultRole = others[0] as string;
     } else if (name !== undefined) {
       auth.defaultRole = name;
     }

@@ -36,7 +36,11 @@ test("an operation's arguments complete with the names in the project's spec", (
     "model:Order.write",
     "model:Order.delete",
   ]);
-  expect(complete(["op", "setAccess", "model:Order.delete"], "", dir)).toEqual(["admin", "owner"]);
+  expect(complete(["op", "setAccess", "model:Order.delete"], "", dir)).toEqual([
+    "admin",
+    "member",
+    "owner",
+  ]);
   expect(complete(["op", "addField", "Customer", "phone"], "", dir)).toEqual([]);
 });
 
