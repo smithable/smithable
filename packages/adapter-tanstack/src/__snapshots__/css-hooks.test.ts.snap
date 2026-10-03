@@ -59,9 +59,11 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="help"",
     "data-part="error"",
     "data-kit="model-form"",
+    "data-part="view"",
     "data-part="section"",
     "data-part="title"",
     "data-part="actions"",
+    "data-part="pictures"",
   ],
   "src/kit/ModelTable.tsx": [
     "data-part="save"",
