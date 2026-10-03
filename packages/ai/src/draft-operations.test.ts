@@ -279,3 +279,58 @@ test("only a default naming the model's other fields is a formula", () => {
   expect(computedField("int! = 12", ["quantity"])).toBeUndefined();
   expect(computedField("low | high", ["quantity"])).toBeUndefined();
 });
+
+test("a model declaring a field every model has keeps the model, without that field", async () => {
+  const draft = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Tools" } },
+          {
+            op: "addModel",
+            args: {
+              model: "Tool",
+              fields: { name: "string!", owner: "User!", createdAt: "datetime" },
+            },
+          },
+          { op: "addPage", args: { page: "tools", model: "Tool" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  expect(draft.files["smithable.yml"]).toContain("  Tool:");
+  expect(draft.files["smithable.yml"]).not.toMatch(/owner: User/);
+  expect(draft.files["smithable.yml"]).toContain("tools:");
+});
+
+test("places left over a list the model gets later: the model first, the computed field after", async () => {
+  const draft = await draftProjectByOperations({
+    description: "hair salon booking",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Salon" } },
+          {
+            op: "addModel",
+            args: {
+              model: "Slot",
+              fields: {
+                startsAt: "datetime!",
+                capacity: "int! = 1",
+                placesLeft: "int = capacity - COUNT(bookings)",
+              },
+            },
+          },
+          { op: "addModel", args: { model: "Booking", fields: { slot: "Slot!" } } },
+          { op: "addField", args: { model: "Slot", field: "bookings", type: "Booking[]" } },
+          { op: "addPage", args: { page: "slots", model: "Slot" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  expect(draft.files["smithable.yml"]).toContain("formula: capacity - COUNT(bookings)");
+  expect(checkSpecFiles(draft.files)).toEqual([]);
+});
