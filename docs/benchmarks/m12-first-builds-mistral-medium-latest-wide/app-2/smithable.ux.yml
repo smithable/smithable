@@ -2,7 +2,7 @@ smithableUx: 0.1
 pages:
   leads:
     table:
-      sort: -followUpDate
+      sort: followUpDate
   deals:
     table:
       sort: -closeDate
@@ -11,5 +11,6 @@ tones:
     qualified: success
     lost: danger
   Deal.status:
+    negotiation: warning
     won: success
     lost: danger

@@ -1,1 +1,48 @@
 smithableContent: 0.1
+models:
+  Ingredient:
+    label: Ingredient
+    pluralLabel: Ingredients
+    fields:
+      name:
+        label: Name
+      description:
+        label: Description
+      category:
+        label: Category
+        values:
+          dry: Dry
+          wet: Wet
+          frozen: Frozen
+      unit:
+        label: Unit
+      minStock:
+        label: Minimum Stock
+  Supplier:
+    label: Supplier
+    pluralLabel: Suppliers
+    fields:
+      name:
+        label: Name
+      contactPerson:
+        label: Contact Person
+      email:
+        label: Email
+      phone:
+        label: Phone
+      address:
+        label: Address
+  Stock:
+    label: Stock
+    pluralLabel: Stock Levels
+    fields:
+      ingredient:
+        label: Ingredient
+      supplier:
+        label: Supplier
+      quantity:
+        label: Quantity
+      lastRestocked:
+        label: Last Restocked
+      expiryDate:
+        label: Expiry Date

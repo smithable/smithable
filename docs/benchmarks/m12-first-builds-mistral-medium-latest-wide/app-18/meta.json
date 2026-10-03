@@ -1,5 +1,10 @@
 {
   "description": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
-  "starter": "records",
+  "starter": "crm",
+  "wordStarter": "records",
+  "questions": [
+    "Vilka typer av uppgifter ska sparas för varje kund?",
+    "Vem ska kunna se och hantera informationen?"
+  ],
   "lang": "sv"
 }

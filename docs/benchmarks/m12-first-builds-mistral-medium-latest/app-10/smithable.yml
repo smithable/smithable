@@ -10,34 +10,32 @@ models:
       servings: int = 4
       prepTime: int
       cookTime: int
-      category: breakfast | lunch | dinner | dessert | snack
-      difficulty: easy | medium | hard
       instructions: text!
+      category: breakfast | lunch | dinner | dessert | snack | drink
+      difficulty: easy | medium | hard
+      image: url
     access:
-      delete: [owner]
+      delete: [admin]
   Ingredient:
     fields:
       name: string!
       quantity: string
       unit: string
       recipe: Recipe!
-    access:
-      delete: [owner]
   ShoppingList:
     fields:
       name: string!
-      date: date! = TODAY()
-      status: pending | completed
       recipe: Recipe
+      items: text!
+      status: pending | completed
+      dueDate: date
     access:
-      delete: [owner]
+      delete: [admin]
 pages:
   recipes:
     crud: Recipe
-    search: [name, description, category]
+    search: [name, description, category, difficulty]
     filters: [category, difficulty]
-  ingredients:
-    crud: Ingredient
   shopping-lists:
     crud: ShoppingList
 navigation: [recipes, shopping-lists]

@@ -1,7 +1,32 @@
 smithableContent: 0.1
+models:
+  Artifact:
+    label: Object
+    pluralLabel: Objects
+    fields:
+      name:
+        label: Title
+      description:
+        label: Description
+      category:
+        label: Type
+        values:
+          artifact: Artifact
+          document: Document
+          photograph: Photograph
+      period:
+        label: Period
+      origin:
+        label: Origin
+      story:
+        label: Story
+      image:
+        label: Image
 pages:
   home:
+    title: Local Museum Collection
+    subtitle: Browse our objects and their stories
     hero:
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+  artifacts:
+    title: Objects
+    subtitle: Explore the museum's collection

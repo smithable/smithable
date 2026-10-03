@@ -3,4 +3,4 @@ pages:
   artifacts:
     table:
       view: cards
-    icon: layers
+      columns: [name, category, period]

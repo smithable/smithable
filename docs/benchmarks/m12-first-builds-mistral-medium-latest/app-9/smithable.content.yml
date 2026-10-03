@@ -1,1 +1,29 @@
 smithableContent: 0.1
+models:
+  Ticket:
+    label: Ticket
+    pluralLabel: Tickets
+    fields:
+      title:
+        label: Title
+      description:
+        label: Description
+      priority:
+        label: Priority
+        values:
+          low: Low
+          medium: Medium
+          high: High
+          critical: Critical
+      status:
+        label: Status
+        values:
+          open: Open
+          inProgress: In Progress
+          resolved: Resolved
+          closed: Closed
+      assignee:
+        label: Assignee
+pages:
+  tickets:
+    title: Tickets

@@ -32,6 +32,17 @@ models:
       endsAt: datetime!
       description: text
 pages:
+  incidents:
+    crud: Incident
+    search: [title, summary]
+    filters: [status, component]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    access: [admin]
+  maintenance:
+    crud: Maintenance
   home:
     route: /
     landing:
@@ -43,28 +54,27 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
-  incidents:
-    crud: Incident
-    access: [admin, staff]
-  updates:
-    crud: IncidentUpdate
-    access: [admin, staff]
-  components:
-    crud: Component
-    access: [admin]
-  maintenance:
-    crud: Maintenance
-    access: [admin, staff]
   overview:
     crud: Incident
-    access: [admin, staff]
   team:
     users: manage
-    access: [admin]
+actions:
+  identified:
+    custom: true
+    input:
+      incident: Incident!
+    allow: [admin, staff]
+    intent: The cause is found; the incident moves to identified.
+  monitoring:
+    custom: true
+    input:
+      incident: Incident!
+    allow: [admin, staff]
+    intent: A fix is out; the incident is watched before it is closed.
+  resolve:
+    custom: true
+    input:
+      incident: Incident!
+    allow: [admin, staff]
+    intent: The incident is over.
 navigation: [overview, incidents, updates, maintenance, components, team]

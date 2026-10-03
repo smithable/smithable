@@ -1,1 +1,40 @@
 smithableContent: 0.1
+models:
+  Client:
+    label: Client
+    pluralLabel: Clients
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      address:
+        label: Address
+      vatNumber:
+        label: VAT Number
+  Quote:
+    label: Quote
+    pluralLabel: Quotes
+    fields:
+      number:
+        label: Quote Number
+      client:
+        label: Client
+      issuedOn:
+        label: Issued On
+      amount:
+        label: Amount
+      status:
+        label: Status
+        values:
+          draft: Draft
+          sent: Sent
+          accepted: Accepted
+          paid: Paid
+      description:
+        label: Description
+pages:
+  clients:
+    title: Clients
+  quotes:
+    title: Quotes

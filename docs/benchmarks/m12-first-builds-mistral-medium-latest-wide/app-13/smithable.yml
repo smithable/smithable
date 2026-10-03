@@ -8,28 +8,27 @@ models:
       date: date!
       odometer: int!
       liters: decimal!
-      pricePerLiter: money!
-      totalCost: money
+      cost: money
       notes: text
   Service:
     fields:
       date: date!
       odometer: int!
       type: string!
-      description: text
-      cost: money!
+      cost: money
       notes: text
+      provider: string
   Cost:
     fields:
       date: date!
-      category: string!
       amount: money!
-      description: text
+      category: fuel | service | insurance | other
       notes: text
 pages:
   fuel:
     crud: Fuel
-  services:
+  service:
     crud: Service
   costs:
     crud: Cost
+navigation: [fuel, service, costs]

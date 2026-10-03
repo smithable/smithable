@@ -3,5 +3,11 @@ signIn:
   providers: [google]
 defaultAccess: private
 public:
-  pages: [home, items]
+  pages: [home, catalog]
   read: [Item]
+roles:
+  admin:
+    description: Håller loppis-sidan ren.
+  member:
+    description: Lägger upp och sparar föremål.
+defaultRole: member

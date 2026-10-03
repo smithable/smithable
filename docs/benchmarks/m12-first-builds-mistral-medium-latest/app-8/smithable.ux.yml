@@ -1,15 +1,16 @@
 smithableUx: 0.1
 pages:
+  attendees:
+    icon: users
+    table:
+      columns: [name, email, company, dietaryRestrictions]
+  registrations:
+    icon: receipt
+    table:
+      columns: [talk, attendee, status]
   talks:
     table:
-      sort: startTime
+      sort: startsAt
   speakers:
     table:
-      sort: name
-  attendees:
-    table:
-      sort: name
-tones:
-  Talk.status:
-    published: success
-    cancelled: danger
+      columns: [name, company, email]

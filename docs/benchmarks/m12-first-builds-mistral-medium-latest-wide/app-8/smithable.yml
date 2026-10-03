@@ -1,20 +1,29 @@
 smithable: 0.1
 app:
   name: Swap Shelf
-  description: A place for colleagues to offer and claim items they no longer need.
+  description: Colleagues offer things they no longer need and others claim them.
 models:
   Item:
     fields:
-      name: string!
-      description: text
-      status: available | claimed | taken
-      offeredBy: User!
-      claimedBy: User
-      image: url
-    access:
-      delete: [owner]
+      title: string!
+      photos: pictures
+      description: text!
+      category: furniture | bikes | electronics | sports | kids | other
+      condition: likeNew | good | worn
+      available: bool = true
 pages:
-  items:
+  catalog:
+    route: /
     crud: Item
-    filters: [status]
-    search: [name, description]
+    search: [title, description]
+    filters: [category, condition, available]
+    sortable: [createdAt]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+navigation: [catalog, myItems, saved]

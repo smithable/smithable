@@ -1,14 +1,14 @@
 smithable: 0.1
 app:
   name: Web Agency CRM
-  description: A sales pipeline for a six-person web agency to track leads, deals, and follow-ups.
+  description: "A sales pipeline for our six-person web agency: leads, deals and who follows up when."
 models:
   Lead:
     fields:
       name: string!
+      company: string
       email: email
       phone: phone
-      company: string
       status: new | contacted | qualified | lost
       source: referral | website | social | other
       notes: text
@@ -26,8 +26,8 @@ models:
 pages:
   leads:
     crud: Lead
-    search: [name, email, company]
-    sortable: [name, followUpDate, createdAt]
+    search: [name, company, email]
+    sortable: [name, company, followUpDate, createdAt]
   deals:
     crud: Deal
     search: [name, lead]
