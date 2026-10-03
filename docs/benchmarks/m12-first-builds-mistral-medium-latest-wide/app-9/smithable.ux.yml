@@ -2,7 +2,7 @@ smithableUx: 0.1
 pages:
   albums:
     table:
-      sort: -year
+      sort: title
       view: cards
       columns: [title, artist, year, condition, pricePaid]
 tones:
