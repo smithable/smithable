@@ -135,7 +135,9 @@ function openInvitation(email: string) {
   refuses
     ? `
 /** Why an address may not have an account here, or nothing when it may. */
-function joinRefusal(email: string): string | undefined {${domainCheck}${invitationCheck}
+function joinRefusal(email: string): string | undefined {
+  // The admins may always sign in, whatever the domains or the invitations say.
+  if (ADMINS.includes(email)) return undefined;${domainCheck}${invitationCheck}
   return undefined;
 }
 `
