@@ -8,14 +8,17 @@ models:
       species: string!
       place: string!
       date: date!
-      observer: User!
-    access:
-      delete: [admin]
-      write: [admin, member]
-      create: [admin, member]
+      observer: string!
 pages:
   sightings:
     crud: Sighting
-    search: [species, place]
+    search: [species, place, observer]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      sightings:
+        records: Sighting
   team:
     users: manage

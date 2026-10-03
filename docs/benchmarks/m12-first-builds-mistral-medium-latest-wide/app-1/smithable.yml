@@ -2,6 +2,7 @@ smithable: 0.1
 app:
   name: Freelance Translator
   description: Track clients, quotes, and payments for a freelance translator.
+  currency: EUR
 models:
   Client:
     fields:
@@ -10,36 +11,39 @@ models:
       address: text
       phone: phone
       notes: text
+    access:
+      delete: [owner]
   Quote:
     fields:
       client: Client!
       description: text!
       amount: money!
-      currency: string = USD
+      currency: string = EUR
       issuedOn: date! = TODAY()
-      expiresOn: date
+      validUntil: date
       status: draft | sent | accepted | rejected
+    access:
+      delete: [owner]
   Payment:
     fields:
       quote: Quote!
       amount: money!
-      currency: string = USD
+      currency: string = EUR
       paidOn: date! = TODAY()
-      method: string
+      method: bankTransfer | paypal | cash | other
       notes: text
+    access:
+      delete: [owner]
 pages:
   clients:
     crud: Client
-    search: [name, email]
   quotes:
     crud: Quote
     actions: [markSent, markAccepted, markRejected]
-    search: [description, client]
-    filters: [status, client]
-  payments:
-    crud: Payment
   team:
     users: manage
+  payments:
+    crud: Payment
 actions:
   markSent:
     on: Quote

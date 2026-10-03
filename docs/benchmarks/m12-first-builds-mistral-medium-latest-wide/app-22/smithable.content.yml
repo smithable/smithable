@@ -1,5 +1,17 @@
 smithableContent: 0.1
 models:
+  PickupTime:
+    label: Abholzeit
+    pluralLabel: Abholzeiten
+    fields:
+      date:
+        label: Datum
+      startTime:
+        label: Beginn
+      endTime:
+        label: Ende
+      notes:
+        label: Notizen
   Product:
     label: Produkt
     pluralLabel: Produkte
@@ -12,51 +24,44 @@ models:
         label: Preis
       category:
         label: Kategorie
+        values:
+          obst: Obst
+          gemuese: Gemüse
+          backwaren: Backwaren
+          sonstiges: Sonstiges
       available:
         label: Verfügbar
+      image:
+        label: Bild-URL
   PreOrder:
     label: Vorbestellung
     pluralLabel: Vorbestellungen
     fields:
       customerName:
         label: Kundenname
-      customerEmail:
-        label: E-Mail
       customerPhone:
-        label: Telefon
+        label: Kundentelefon
       product:
         label: Produkt
       quantity:
         label: Menge
-      pickupTime:
-        label: Abholzeit
+      orderDate:
+        label: Bestelldatum
+      pickupDate:
+        label: Abholdatum
       status:
         label: Status
         values:
-          pending: Ausstehend
-          confirmed: Bestätigt
-          pickedUp: Abgeholt
-          canceled: Storniert
-      notes:
-        label: Notizen
-  PickupSlot:
-    label: Abholzeitfenster
-    pluralLabel: Abholzeitfenster
-    fields:
-      date:
-        label: Datum
-      startTime:
-        label: Beginn
-      endTime:
-        label: Ende
-      maxPreOrders:
-        label: Max. Vorbestellungen
+          offen: offen
+          bestaetigt: bestätigt
+          abgeholt: abgeholt
+          storniert: storniert
       notes:
         label: Notizen
 pages:
+  abholzeiten:
+    title: Abholzeiten
   produkte:
     title: Produkte
   vorbestellungen:
     title: Vorbestellungen
-  abholzeiten:
-    title: Abholzeiten

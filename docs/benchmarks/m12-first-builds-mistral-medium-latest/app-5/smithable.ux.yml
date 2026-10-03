@@ -1,9 +1,11 @@
 smithableUx: 0.1
 pages:
+  ingredients:
+    table:
+      sort: name
+  suppliers:
+    table:
+      sort: name
   stock:
     table:
       sort: -lastUpdated
-      columns: [ingredient, quantity, lastUpdated, expiryDate]
-  suppliers:
-    table:
-      columns: [name, contactName, email, phone]

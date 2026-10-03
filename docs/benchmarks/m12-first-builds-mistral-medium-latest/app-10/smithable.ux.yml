@@ -2,15 +2,13 @@ smithableUx: 0.1
 pages:
   recipes:
     table:
-      columns: [name, category, difficulty, servings]
+      sort: name
       view: cards
-    form:
-      sections: [{ name: details, fields: [name, description, category, difficulty, servings] }, { name: times, fields: [prepTime, cookTime] }, { name: instructions, fields: [instructions, image] }]
-      columns: 2
+      columns: [name, category, difficulty, prepTime, cookTime]
   shopping-lists:
     table:
       sort: -date
 tones:
   ShoppingList.status:
     completed: success
-    pending: warning
+    inProgress: warning

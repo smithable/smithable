@@ -5,6 +5,5 @@
   "questions": [
     "Who can view the allotment details and waiting list?",
     "What details are recorded for each plot?"
-  ],
-  "dropped": "assignPlot"
+  ]
 }
