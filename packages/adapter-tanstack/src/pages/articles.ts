@@ -226,10 +226,14 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) =
       ? [
           { title: loaderData.article.title },
           ...(loaderData.article.summary ? [{ name: "description", content: loaderData.article.summary }] : []),
-          { property: "og:title", content: loaderData.article.title },
+          { property: "og:title", content: loaderData.article.title },${
+            p.picture
+              ? `
           ...(loaderData.article.picture
             ? [{ property: "og:image", content: loaderData.origin + loaderData.article.picture.src }]
-            : []),
+            : []),`
+              : ""
+          }
         ]
       : [],
   }),
