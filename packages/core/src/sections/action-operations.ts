@@ -9,6 +9,16 @@ const fields = (description: string) => ({
   description,
 });
 
+/** An action's values: text from the command line, or a model's JSON (numbers, true, null). */
+const values = (description: string) => ({
+  type: "object",
+  propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+  additionalProperties: { type: ["string", "number", "boolean", "null"] },
+  description,
+});
+
+type Value = string | number | boolean | null;
+
 /**
  * Adds an action. With `on` and `set` it is standard: it sets fields of one record, offered on
  * the model's crud page (when it has exactly one) for records `when` fits. Without, it is custom:
@@ -18,9 +28,11 @@ const fields = (description: string) => ({
 const addAction: Operation<{
   action: string;
   on?: string;
-  when?: Record<string, string>;
-  set?: Record<string, string>;
-  add?: Record<string, string>;
+  when?: Record<string, string | boolean | string[]>;
+  set?: Record<string, Value>;
+  add?: Record<string, Value | Record<string, Value>>;
+  copy?: Record<string, Value>;
+  with?: string[];
   input?: Record<string, string>;
   output?: Record<string, string>;
   allow?: string[];
@@ -39,15 +51,36 @@ const addAction: Operation<{
         { ref: "model", label: "Changes a record of" },
         { description: "A standard action: the model whose record it changes." },
       ),
-      when: fields(
-        'Only for records with these values, e.g. { status: "investigating | identified" }.',
-      ),
-      set: fields(
+      when: {
+        type: "object",
+        propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+        additionalProperties: {
+          type: ["string", "boolean", "array"],
+          items: { type: "string" },
+        },
+        description:
+          'Only for records with these values, e.g. { status: "investigating | identified" } or { status: [investigating, identified] }.',
+      },
+      set: values(
         'The new values: a value, a formula, or nothing to ask the person, e.g. { status: canceled, cancelReason: "" }.',
       ),
-      add: fields(
-        'A related record to create, as Model.field pairs, e.g. { "IncidentUpdate.status": resolved, "IncidentUpdate.at": "NOW()" }.',
+      add: {
+        type: "object",
+        additionalProperties: {
+          type: ["string", "number", "boolean", "null", "object"],
+          additionalProperties: { type: ["string", "number", "boolean", "null"] },
+        },
+        description:
+          'A related record to create, by model, e.g. { IncidentUpdate: { status: resolved, at: "NOW()", message: "" } }, or as Model.field pairs from the command line.',
+      },
+      copy: values(
+        'A copy of the record instead of a change: what differs (a value, a formula, or nothing to ask), e.g. { status: draft, number: "" }; empty copies as is.',
       ),
+      with: {
+        type: "array",
+        items: { type: "string" },
+        description: "Lists of the model whose records the copy takes along, e.g. [lines].",
+      },
       input: fields(
         'A custom action: the values it needs, as field shorthand, e.g. { keep: "Customer!" }.',
       ),
@@ -65,7 +98,19 @@ const addAction: Operation<{
   destructive: () => false,
   apply(
     { spec },
-    { action, on, when = {}, set = {}, add = {}, input = {}, output = {}, allow = [], intent },
+    {
+      action,
+      on,
+      when = {},
+      set = {},
+      add = {},
+      copy,
+      with: lists = [],
+      input = {},
+      output = {},
+      allow = [],
+      intent,
+    },
     ir,
   ) {
     if (!FIELD_NAME_PATTERN.test(action))
@@ -79,7 +124,13 @@ const addAction: Operation<{
       ...(intent?.trim() ? { intent: intent.trim() } : {}),
     };
     if (!on) {
-      if (Object.keys(set).length || Object.keys(when).length || Object.keys(add).length)
+      if (
+        Object.keys(set).length ||
+        Object.keys(when).length ||
+        Object.keys(add).length ||
+        copy ||
+        lists.length
+      )
         throw new OperationError(
           `A standard action needs "on": the model whose record it changes.`,
         );
@@ -97,13 +148,14 @@ const addAction: Operation<{
       );
     const model = ir.models.find((m) => m.name === on);
     if (!model) throw new OperationError(`There is no model named "${on}".`);
-    if (!Object.keys(set).length && !Object.keys(add).length)
+    if (!Object.keys(set).length && !Object.keys(add).length && !copy)
       throw new OperationError(
-        `A standard action needs "set" (the new values), "add" (a related record) or both.`,
+        `A standard action needs "set" (the new values), "add" (a related record), both, or "copy".`,
       );
     // Command-line values are text: a yes/no or a number becomes one, as the field holds it;
     // nothing means the person is asked for it.
-    const typed = (field: string, value: string, of = model): string | number | boolean | null => {
+    const typed = (field: string, value: Value, of = model): Value => {
+      if (typeof value !== "string") return value;
       if (value === "") return null;
       const type = of.fields.find((f) => f.name === field)?.type;
       if (value.includes("(") || type?.kind !== "scalar") return value;
@@ -118,7 +170,13 @@ const addAction: Operation<{
     };
     // "IncidentUpdate.status=resolved": the records to add, grouped by model.
     const added: Record<string, Record<string, string | number | boolean | null>> = {};
-    for (const [key, value] of Object.entries(add)) {
+    // A model's values as a map ({ IncidentUpdate: { status: resolved } }), as the YAML reads.
+    const pairs = Object.entries(add).flatMap(([key, value]) =>
+      value !== null && typeof value === "object"
+        ? Object.entries(value).map(([f, v]) => [`${key}.${f}`, v] as const)
+        : [[key, value] as const],
+    );
+    for (const [key, value] of pairs) {
       const [name, field] = key.split(".");
       const target = ir.models.find((m) => m.name === name);
       if (!name || !field || !target)
@@ -132,6 +190,10 @@ const addAction: Operation<{
         ? { set: Object.fromEntries(Object.entries(set).map(([k, v]) => [k, typed(k, v)])) }
         : {}),
       ...(Object.keys(added).length ? { add: added } : {}),
+      ...(copy
+        ? { copy: Object.fromEntries(Object.entries(copy).map(([k, v]) => [k, typed(k, v)])) }
+        : {}),
+      ...(lists.length ? { with: lists } : {}),
       ...text,
     });
     // One operation gives a working button: on the model's crud page, when there is just one.

@@ -352,7 +352,7 @@ export function detailRoute(
     ...offered.map(
       (a) =>
         `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row) && (
-              ${actionButton(a, "row")}
+              ${actionButton(a, "row", page.route)}
             )}`,
     ),
     ...(favorite
@@ -516,8 +516,12 @@ const contact${model.name} = createServerFn({ method: "POST" })
 }
 
 /** A standard action's button on a record: it acts at once, or asks first in a dialog. */
-export function actionButton(action: StandardActionIR, row: string): string {
+export function actionButton(action: StandardActionIR, row: string, route: string): string {
   const asks = askedFields(action).length > 0;
+  // A copy opens the new record, to be looked over; a change shows this one as it is now.
+  const after = action.copy
+    ? `await navigate({ to: ${JSON.stringify(join(route, "$id"))}, params: { id: String(copy) } });`
+    : "await router.invalidate();";
   return `<ActionButton
                 label=${attr(humanize(action.name))}${
                   asks
@@ -526,8 +530,8 @@ export function actionButton(action: StandardActionIR, row: string): string {
                     : ""
                 }
                 onRun={async (${asks ? "values" : ""}) => {
-                  await ${action.name}({ data: ${asks ? `{ id: ${row}.id, values: values as never }` : `${row}.id`} });
-                  await router.invalidate();
+                  ${action.copy ? "const copy = " : ""}await ${action.name}({ data: ${asks ? `{ id: ${row}.id, values: values as never }` : `${row}.id`} });
+                  ${after}
                 }}
               />`;
 }

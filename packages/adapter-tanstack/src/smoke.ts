@@ -19,6 +19,14 @@ export function smokeTests(ir: SpecIR, t: Texts, auth: AuthIR): string {
       roles: access.roles,
     };
   });
+  // An app without pages (a draft that made none) still starts: that is all there is to try.
+  if (pages.length === 0)
+    return `${HEADER}import { expect, test } from "@playwright/test";
+
+test("the app starts", async ({ request }) => {
+  expect((await request.get("/health")).ok()).toBe(true);
+});
+`;
   const roles = signIn ? auth.roles.map((r) => r.name) : [];
   // The warm-up: public pages as a visitor, then each other page as the first role that may open it.
   const warmed = new Set(pages.filter((p) => p.public).map((p) => p.route));

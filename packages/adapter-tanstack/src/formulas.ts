@@ -57,8 +57,9 @@ export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
     ? `{ ...row, ${computed.map((f) => `${f.name}: ${formulasName(model)}.${f.name}(row)`).join(", ")} }`
     : "row";
 
-  return `${HEADER}import { F } from "#/kit/formula";
-${[...imports].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}
+  // The formula library only when a formula uses it (a calculator's may not).
+  const usesF = [...computedEntries, ...defaultEntries].some((e) => e.includes("F."));
+  return `${HEADER}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}
 type Row = Record<string, unknown>;
 
 /** Computed fields of ${model.name}, on records as stored (money in cents). */
