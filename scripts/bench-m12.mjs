@@ -58,7 +58,8 @@ function check(dir) {
       ["smithable.ux.yml", validateUx],
     ]) {
       const text = read(dir, file);
-      if (text !== undefined) diagnostics.push(...validate({ path: file, text }, spec.ir).diagnostics);
+      if (text !== undefined)
+        diagnostics.push(...validate({ path: file, text }, spec.ir).diagnostics);
     }
   }
   return { ir: spec.ir, auth, diagnostics };
@@ -76,7 +77,8 @@ function score(dir, description, starter) {
     return `${[...from].filter((n) => now.has(n)).length} / ${from.size}`;
   };
   // The starter's name and its sample records' titles, found again in the draft's texts.
-  const texts = `${read(dir, "smithable.yml") ?? ""}\n${read(dir, "smithable.content.yml") ?? ""}`.toLowerCase();
+  const texts =
+    `${read(dir, "smithable.yml") ?? ""}\n${read(dir, "smithable.content.yml") ?? ""}`.toLowerCase();
   const samplesDir = join(example, "samples");
   const sampleFiles = existsSync(samplesDir)
     ? readdirSync(samplesDir).map((f) => ({
@@ -109,8 +111,14 @@ function score(dir, description, starter) {
     models: kept("models"),
     pages: kept("pages"),
     actions: kept("actions"),
-    access: auth ? `${auth.defaultAccess}; ${list(auth.roles.map((r) => r.name))} (${auth.defaultRole})` : "?",
-    pageAccess: list((draft.ir?.pages ?? []).filter((p) => p.access?.length).map((p) => `${p.id}: ${p.access.join("/")}`)),
+    access: auth
+      ? `${auth.defaultAccess}; ${list(auth.roles.map((r) => r.name))} (${auth.defaultRole})`
+      : "?",
+    pageAccess: list(
+      (draft.ir?.pages ?? [])
+        .filter((p) => p.access?.length)
+        .map((p) => `${p.id}: ${p.access.join("/")}`),
+    ),
     public: auth
       ? `pages ${list(auth.public.pages)}; read ${list(auth.public.read)}; create ${list(auth.public.create)}`
       : "?",
@@ -137,10 +145,12 @@ if (args.score) {
   const reportFile = `${dir}.md`;
   const report = existsSync(reportFile) ? readFileSync(reportFile, "utf8") : "";
   // The starter of each app: meta.json beside its files, or the report's table for older runs.
-  const tableStarters = [...report.matchAll(/^\| (.+?) \| (\w+) \| (?:yes|\*\*no\*\*) \|/gm)].map((m) => ({
-    description: m[1],
-    starter: m[2],
-  }));
+  const tableStarters = [...report.matchAll(/^\| (.+?) \| (\w+) \| (?:yes|\*\*no\*\*) \|/gm)].map(
+    (m) => ({
+      description: m[1],
+      starter: m[2],
+    }),
+  );
   const apps = readdirSync(dir)
     .filter((d) => /^app-\d+$/.test(d))
     .sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)));
