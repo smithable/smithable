@@ -278,3 +278,40 @@ actions:
   ]);
   expect(sentences("take")).toEqual(["Sets handler to whoever presses it."]);
 });
+
+test("what other programs may reach is said with sign-in and access", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Component:
+    fields: { name: string! }
+  Incident:
+    fields: { title: string!, status: investigating | resolved }
+actions:
+  resolve: { on: Incident, when: { status: investigating }, set: { status: resolved } }
+pages:
+  incidents: { crud: Incident, actions: [resolve] }
+  components: { crud: Component }
+`,
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const sentences = (api: string) => {
+    const { auth } = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\n${api}`,
+      },
+      ir,
+    );
+    return summarize(ir, auth, emptyContent()).find((s) => s.concept === "auth")?.sentences ?? [];
+  };
+  expect(sentences("api: { models: [Component, Incident], actions: [resolve] }\n")).toContain(
+    "Other programs can read and change components and incidents with a key, and run resolve.",
+  );
+  expect(sentences("api: { models: all, assistants: true }\n")).toContain(
+    "Other programs can read and change every kind of record, also ones added later, with a key. AI assistants can use it too.",
+  );
+  expect(sentences("").join(" ")).not.toContain("Other programs");
+});
