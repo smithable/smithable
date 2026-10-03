@@ -7,35 +7,39 @@ models:
     fields:
       name: string!
       description: text
-      sport: football | futsal | beachSoccer
-      founded: date
+      sport: football | futsal | beach
+      founded: int
+      logo: url
   Player:
     fields:
       name: string!
       position: goalkeeper | defender | midfielder | forward
-      team: Team!
       number: int
+      team: Team!
       birthDate: date
+      nationality: string
+      photo: url
   Match:
     fields:
       homeTeam: Team!
       awayTeam: Team!
       date: datetime!
       location: string
-      status: scheduled | inProgress | completed | canceled
-      homeScore: int = 0
-      awayScore: int = 0
+      status: scheduled | played | canceled
+      homeScore: int
+      awayScore: int
 pages:
   teams:
     crud: Team
     search: [name, description]
   players:
     crud: Player
-    search: [name, position]
+    search: [name, position, nationality]
   matches:
     crud: Match
+    search: [location]
     filters: [status, date, homeTeam, awayTeam]
-    actions: [startMatch, endMatch, cancelMatch]
+    sortable: [date, homeScore, awayScore]
   home:
     route: /
     landing:
@@ -46,27 +50,5 @@ pages:
       matches:
         records: Match
         where:
-          status: [scheduled, inProgress]
+          status: played
 navigation: [home, teams, players, matches]
-actions:
-  startMatch:
-    on: Match
-    when:
-      status: scheduled
-    set:
-      status: inProgress
-    intent: Start the match.
-  endMatch:
-    on: Match
-    when:
-      status: inProgress
-    set:
-      status: completed
-    intent: End the match.
-  cancelMatch:
-    on: Match
-    when:
-      status: [scheduled, inProgress]
-    set:
-      status: canceled
-    intent: Cancel the match.

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Web Agency CRM
-  description: "A sales pipeline for our six-person web agency: leads, deals and who follows up when."
+  description: A sales pipeline for a six-person web agency to track leads, deals and follow-ups.
 models:
   Lead:
     fields:
@@ -9,8 +9,8 @@ models:
       email: email
       phone: phone
       company: string
+      status: new | contacted | qualified | disqualified
       source: referral | website | social | other
-      status: new | contacted | qualified | lost
       notes: text
       assignee: User
       followUpDate: date
@@ -32,7 +32,7 @@ pages:
     crud: Lead
     search: [name, email, company]
     sortable: [name, followUpDate, createdAt]
-    actions: [qualifyLead, loseLead]
+    actions: [qualifyLead, disqualifyLead]
   deals:
     crud: Deal
     search: [name, lead]
@@ -48,13 +48,14 @@ actions:
     set:
       status: qualified
     intent: Mark a lead as qualified to move it to the next stage.
-  loseLead:
+  disqualifyLead:
     on: Lead
     when:
       status: [new, contacted, qualified]
     set:
-      status: lost
-    intent: Mark a lead as lost.
+      status: disqualified
+      notes:
+    intent: Mark a lead as disqualified and optionally add a reason.
   winDeal:
     on: Deal
     when:
@@ -68,5 +69,6 @@ actions:
       status: [proposal, negotiation]
     set:
       status: lost
-    intent: Mark a deal as lost.
+      notes:
+    intent: Mark a deal as lost and optionally add a reason.
 navigation: [leads, deals, team]

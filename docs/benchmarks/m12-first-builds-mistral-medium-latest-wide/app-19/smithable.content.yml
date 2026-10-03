@@ -17,15 +17,16 @@ models:
         values:
           klaeder: Kläder
           moebler: Möbler
-          elektronik: Elektronik
           leksaker: Leksaker
           boecker: Böcker
+          elektronik: Elektronik
           sport: Sport
           oevrigt: Övrigt
       condition:
         label: Skick
         values:
           ny: Ny
+          naestanNy: Nästan ny
           bra: Bra
           sliten: Sliten
       place:

@@ -17,7 +17,13 @@ import { completeJson, type Provider, type Usage } from "./provider.js";
 export type SpecFiles = Record<string, string>;
 
 export type Draft =
-  | { kind: "draft"; files: SpecFiles; usage: Usage[] }
+  | {
+      kind: "draft";
+      files: SpecFiles;
+      usage: Usage[];
+      /** What was left out because it could not be made valid, in words. */
+      dropped?: string[];
+    }
   | { kind: "failed"; message: string; usage: Usage[] };
 
 const FILES = ["smithable.yml", "smithable.auth.yml", "smithable.content.yml", "smithable.ux.yml"];

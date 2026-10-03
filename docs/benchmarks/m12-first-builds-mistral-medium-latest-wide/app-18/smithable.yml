@@ -11,7 +11,7 @@ models:
       status: draft | sent | accepted | rejected
       total: money!
       validUntil: date
-      description: text
+      notes: text
       customer: Customer!
     access:
       delete: [admin]
@@ -23,6 +23,7 @@ models:
       total: money!
       dueDate: date
       paidAt: datetime
+      notes: text
       customer: Customer!
     access:
       delete: [admin]
@@ -31,7 +32,7 @@ models:
       name: string!
       email: email unique
       phone: phone
-      segment: private | company | municipality
+      segment: private | company
       notes: text
       accountManager: User
     access:
@@ -39,22 +40,22 @@ models:
 pages:
   offerter:
     crud: Quote
-    actions: [sendQuote, acceptQuote, rejectQuote]
     sortable: [number, total, validUntil, createdAt]
+    actions: [sendQuote, acceptQuote, rejectQuote, createInvoiceFromQuote]
     search: [number, customer]
     filters: [status, customer]
   fakturor:
     crud: Invoice
-    actions: [sendInvoice, markPaid]
     sortable: [number, total, dueDate, createdAt]
+    actions: [sendInvoice, markPaid]
     search: [number, customer]
     filters: [status, customer]
+  anvandare:
+    users: manage
   kunder:
     crud: Customer
     search: [name, email]
     sortable: [name, createdAt]
-  anvandare:
-    users: manage
 actions:
   sendQuote:
     on: Quote
@@ -92,4 +93,12 @@ actions:
       status: paid
       paidAt: NOW()
     intent: Markera faktura som betald.
+  createInvoiceFromQuote:
+    on: Quote
+    when:
+      status: accepted
+    copy:
+      status: draft
+      number:
+    intent: Skapa faktura från accepterad offert.
 navigation: [kunder, offerter, fakturor, anvandare]

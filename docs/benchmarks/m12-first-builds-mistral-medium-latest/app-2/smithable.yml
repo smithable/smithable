@@ -1,96 +1,103 @@
 smithable: 0.1
 app:
   name: Sales CRM
-  description: A lightweight CRM for a small sales team to manage companies, contacts, deals, and follow-ups.
+  description: Lightweight CRM for a small sales team to manage companies, contacts, deals and follow-ups.
 models:
   Company:
     fields:
       name: string!
-      industry: string
-      website: url
+      email: email
+      phone: phone
+      segment: smb | enterprise | government
       notes: text
       accountManager: User
     access:
       delete: [admin]
+      write: [sales]
   Contact:
     fields:
       firstName: string!
       lastName: string!
       email: email
       phone: phone
+      role: decisionMaker | influencer | endUser
       company: Company!
-      role: string
       notes: text
     access:
       delete: [admin]
+      write: [sales]
   Deal:
     fields:
       name: string!
       company: Company!
       contact: Contact
-      value: money
+      value: money!
       stage: lead | qualified | proposal | negotiation | closedWon | closedLost
       closeDate: date
       notes: text
     access:
       delete: [admin]
+      write: [sales]
   FollowUp:
     fields:
       title: string!
-      company: Company!
-      contact: Contact
-      deal: Deal
+      deal: Deal!
       dueDate: date!
       status: pending | completed | canceled
       notes: text
     access:
       delete: [admin]
+      write: [sales]
 pages:
   companies:
     crud: Company
-    search: [name, industry]
+    search: [name, email]
   contacts:
     crud: Contact
     search: [firstName, lastName, email]
   deals:
     crud: Deal
-    search: [name, company, stage]
-    filters: [company, stage, closeDate]
+    search: [name, company]
+    filters: [stage, company, contact]
     sortable: [value, closeDate, stage]
-    actions: [markDealWon, markDealLost]
+    actions: [markWon, markLost]
   follow-ups:
     crud: FollowUp
-    search: [title, company, status]
-    filters: [company, status, dueDate]
+    search: [title, deal]
+    filters: [status, dueDate, deal]
     sortable: [dueDate, status]
     actions: [completeFollowUp, cancelFollowUp]
   team:
     users: manage
 actions:
-  markDealWon:
+  markWon:
     on: Deal
     when:
       stage: negotiation
     set:
       stage: closedWon
       closeDate: TODAY()
-  markDealLost:
+    intent: Mark a deal as won.
+  markLost:
     on: Deal
     when:
       stage: negotiation
     set:
       stage: closedLost
       closeDate: TODAY()
+    intent: Mark a deal as lost.
   completeFollowUp:
     on: FollowUp
     when:
       status: pending
     set:
       status: completed
+    intent: Mark a follow-up as completed.
   cancelFollowUp:
     on: FollowUp
     when:
       status: pending
     set:
       status: canceled
+    intent: Cancel a follow-up.
 navigation: [companies, contacts, deals, follow-ups, team]
