@@ -284,11 +284,31 @@ try {
       .getByRole("button", { name: /Forest/ })
       .getByText("themes/forest.yml", { exact: false })
       .waitFor();
+    // The theme swaps a font package, so the app's server restarts: the preview keeps the last
+    // page on screen meanwhile (never an empty panel) and says Updating… from the start.
+    await page.locator('iframe[title="App preview"]').waitFor();
+    await page.evaluate(() => {
+      const watch = { gaps: 0, updating: false };
+      window.__previewWatch = watch;
+      window.__previewTimer = setInterval(() => {
+        if (!document.querySelector('iframe[title="App preview"]')) watch.gaps++;
+        for (const el of document.querySelectorAll("span"))
+          if (el.textContent === "Updating…") watch.updating = true;
+      }, 50);
+    });
     await themes.getByRole("button", { name: /Playful/ }).click();
     await trace.getByText("Use the playful theme").first().waitFor({ timeout: 60000 });
     await themes
       .getByRole("button", { name: /Playful/, pressed: true })
       .waitFor({ timeout: 60000 });
+    await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 });
+    const watch = await page.evaluate(() => {
+      clearInterval(window.__previewTimer);
+      return window.__previewWatch;
+    });
+    if (watch.gaps)
+      throw new Error(`the preview was empty in ${watch.gaps} checks during the restart`);
+    if (!watch.updating) throw new Error("the preview never said Updating…");
   });
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
