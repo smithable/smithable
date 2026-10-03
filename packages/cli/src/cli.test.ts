@@ -40,6 +40,13 @@ test("a command's own help, an operation's help from its schema, and the complet
   expect(await run(["op", "addField", "--help"], op)).toBe(0);
   expect(op.stdout).toContain("Usage: smithable op addField <model> <field> <type>");
   expect(op.stdout).toContain("a model's name");
+  // An operation with only options lists them.
+  const theme = captureIo();
+  expect(await run(["op", "setTheme", "--help"], theme)).toBe(0);
+  expect(theme.stdout).toContain("Usage: smithable op setTheme [--preset …]");
+  expect(theme.stdout).toContain("Options:\n  --preset (text, optional): A built-in theme");
+  expect(theme.stdout).toContain("--density (comfortable or compact, optional)");
+  expect(theme.stdout).not.toContain("Arguments:");
   const shell = captureIo();
   expect(await run(["completion", "bash"], shell)).toBe(0);
   expect(shell.stdout).toContain("complete -F _smithable smithable");

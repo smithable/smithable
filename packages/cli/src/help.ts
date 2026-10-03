@@ -300,32 +300,51 @@ export function commandHelp(name: string): string | undefined {
 export function operationHelp(op: AnyOperation): string {
   const properties = (op.schema.properties ?? {}) as Record<string, JsonSchema>;
   const required = (op.schema.required as string[] | undefined) ?? [];
-  const lines = op.positional.map((spec) => {
-    const key = spec.replace(/^\.\.\./, "");
+  const positional = op.positional.map((spec) => spec.replace(/^\.\.\./, ""));
+  const options = Object.keys(properties).filter((key) => !positional.includes(key));
+  // Each argument as the operations page words it: its kind, whether it is optional, what it is.
+  const line = (key: string, name: string, rest = false) => {
     const p = properties[key] ?? {};
-    const ref = (p["x-smithable"] as { ref?: string; label?: string } | undefined) ?? {};
-    const type = p.enum
-      ? (p.enum as unknown[]).map((v) => JSON.stringify(v)).join(" | ")
-      : p.type === "array"
-        ? "list"
-        : p.type === "object"
-          ? "key=value pairs"
-          : String(p.type ?? "text");
-    const names = {
-      model: "a model's name",
-      field: "a field's name",
-      page: "a page's name",
-      role: "a role",
-      choiceValue: "a choice value",
-      section: "a landing section",
-    }[ref.ref ?? ""];
+    const ref = (p["x-smithable"] as { ref?: string } | undefined)?.ref ?? "";
+    const kind =
+      {
+        model: "a model's name",
+        field: "a field's name",
+        page: "a page's name",
+        role: "a role",
+        choiceValue: "a choice value",
+        section: "a landing section",
+      }[ref] ??
+      (p.enum
+        ? (p.enum as unknown[]).map(String).join(" or ")
+        : p.type === "array"
+          ? "a list"
+          : p.type === "object"
+            ? "key=value pairs"
+            : p.type === "boolean"
+              ? "true or false"
+              : p.type === "integer" || p.type === "number"
+                ? "a number"
+                : "text");
     const notes = [
-      names ?? type,
+      kind,
       required.includes(key) ? undefined : "optional",
-      spec.startsWith("...") ? "the rest of the line" : undefined,
+      rest ? "the rest of the line" : undefined,
     ].filter(Boolean);
-    const description = p.description ? `${String(p.description)} ` : "";
-    return `  <${key}>${" ".repeat(Math.max(1, 14 - key.length))}${description}(${notes.join(", ")})`;
-  });
-  return `Usage: smithable op ${op.name} ${op.positional.map((p) => `<${p.replace(/^\.\.\./, "")}>`).join(" ")}\n\n${op.summary}\n\nArguments:\n${lines.join("\n")}\n`;
+    return `  ${name} (${notes.join(", ")})${p.description ? `: ${String(p.description)}` : ""}`;
+  };
+  const usage = [
+    `smithable op ${op.name}`,
+    ...positional.map((key) => (required.includes(key) ? `<${key}>` : `[${key}]`)),
+    ...options.map((key) => `[--${key} …]`),
+  ].join(" ");
+  return [
+    `Usage: ${usage}\n\n${op.summary}\n`,
+    positional.length
+      ? `Arguments:\n${positional.map((key, i) => line(key, `<${key}>`, op.positional[i]?.startsWith("..."))).join("\n")}\n`
+      : "",
+    options.length ? `Options:\n${options.map((key) => line(key, `--${key}`)).join("\n")}\n` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
