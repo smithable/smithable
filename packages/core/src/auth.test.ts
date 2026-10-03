@@ -368,3 +368,44 @@ test("allowedDomains on a domain nobody has is warned about, instead of the admi
     "acme.example in allowedDomains is a domain nobody has an account at: remove it.",
   ]);
 });
+
+test("an action that adds a related record needs the right to create one, and a listed role without it is warned about", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields: { title: string!, status: open | resolved, updates: "Update[]" }
+    access: { write: [admin, staff, viewer] }
+  Update:
+    fields: { incident: Incident!, message: text! }
+    access: { create: [admin, staff] }
+actions:
+  resolve:
+    on: Incident
+    set: { status: resolved }
+    add:
+      Update: { message: Resolved. }
+    allow: [staff, viewer]
+`,
+  }).ir as SpecIR;
+  const { auth, diagnostics } = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, staff: {}, viewer: {} }\ndefaultRole: staff\n",
+    },
+    ir,
+  );
+  expect(
+    actionAccess(ir.actions[0] as SpecIR["actions"][0], auth as AuthIR, ir.models),
+  ).toMatchObject({
+    roles: ["admin", "staff"],
+    among: ["admin", "staff"],
+  });
+  expect(
+    diagnostics.filter((d) => d.code === "action-role-cannot-create").map((d) => d.message),
+  ).toEqual([
+    'The action "resolve" allows viewer and adds a Update, but viewer may not create Update records, so viewer still cannot run it.',
+  ]);
+});

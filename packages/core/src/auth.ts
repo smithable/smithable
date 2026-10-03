@@ -327,6 +327,20 @@ export function validateAuth(
     if (!model || action.custom) continue;
     const write = modelAccess(model, auth).write;
     // Neither by role nor as an owner: the action is out of their reach.
+    // A related record it adds needs the right to create one, too.
+    for (const add of action.add ?? []) {
+      const added = ir?.models.find((m) => m.name === add.model);
+      const create = added && modelAccess(added, auth).create;
+      if (!create || create.public) continue;
+      for (const role of action.allow ?? [])
+        if (roleNames.includes(role) && !create.roles.includes(role))
+          ctx.warning(
+            roleNodes.get(role) ?? roles?.keyNode,
+            "action-role-cannot-create",
+            `The action "${action.name}" allows ${role} and adds a ${add.model}, but ${role} may not create ${add.model} records, so ${role} still cannot run it.`,
+            `Let ${role} create ${add.model} (its "access" in smithable.yml), or take ${role} out of the action's "allow".`,
+          );
+    }
     for (const role of action.allow ?? [])
       if (!write.roles.includes(role) && !write.owner && roleNames.includes(role))
         ctx.warning(

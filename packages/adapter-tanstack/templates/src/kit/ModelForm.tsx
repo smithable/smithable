@@ -1,7 +1,7 @@
 // Smithable app kit: a create/edit form for any model, validated with the model's Zod schema.
 // To customize a form, copy this file into src/custom/components/ and edit the copy.
 import { Calculator, CircleAlert } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -68,6 +68,9 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
   const confirmDelete = useRef<HTMLDialogElement>(null);
+  // Ids unique to this form: a page may show the same form twice (a row's action dialog in the
+  // phone list and in the table), and a label must reach its own field.
+  const formId = useId();
   const recordName = initial?.[ui.titleField];
 
   async function submit(event: React.FormEvent) {
@@ -109,7 +112,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       field.kind === "pictures" ||
       field.control === "textarea");
   const renderField = (field: FieldUi) => {
-    const id = `field-${field.name}`;
+    const id = `${formId}field-${field.name}`;
     const error = errors[field.name];
     const inline = field.kind === "bool";
     const described =

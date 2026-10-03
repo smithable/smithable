@@ -12,7 +12,13 @@ import {
 } from "yaml";
 
 /** A value an operation writes: a scalar, a flow list, or a block mapping. */
-export type YamlValue = string | number | boolean | YamlValue[] | { [key: string]: YamlValue };
+export type YamlValue =
+  | string
+  | number
+  | boolean
+  | null
+  | YamlValue[]
+  | { [key: string]: YamlValue };
 
 type Path = readonly string[];
 
@@ -193,7 +199,7 @@ export class YamlEditor {
 }
 
 function isBlock(value: YamlValue): value is { [key: string]: YamlValue } {
-  return typeof value === "object" && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** A value on one line: a scalar, [a, b] or { k: v }. */
@@ -219,7 +225,8 @@ function render(value: YamlValue, indent: string): string {
       .map(([k, v]) => `\n${inner}${scalar(k)}:${render(v, inner)}`)
       .join("");
   }
-  return ` ${scalar(value)}`;
+  // Nothing, as an asked value is written: "cancelReason:".
+  return value === null ? "" : ` ${scalar(value)}`;
 }
 
 /**
@@ -227,7 +234,8 @@ function render(value: YamlValue, indent: string): string {
  * one line however long or with line breaks, since it goes after "key:" where anything spanning
  * lines would break.
  */
-function scalar(value: string | number | boolean): string {
+function scalar(value: string | number | boolean | null): string {
+  if (value === null) return "null";
   // A line break would make a block scalar ("|-"), which cannot follow "key:" on its line or
   // start a list item: such a text is double-quoted, which JSON writes as valid YAML.
   if (typeof value === "string" && /[\r\n]/.test(value)) return JSON.stringify(value);
