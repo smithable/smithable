@@ -10,5 +10,3 @@ tones:
 pages:
   tickets:
     icon: clipboard
-    table:
-      columns: [title, priority, status, assignee, requester]

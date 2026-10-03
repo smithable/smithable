@@ -1,4 +1,8 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
+public:
+  pages: [sightings]
+  read: [Sighting]

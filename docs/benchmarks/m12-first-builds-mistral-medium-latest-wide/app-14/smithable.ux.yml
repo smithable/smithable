@@ -3,9 +3,10 @@ pages:
   guests:
     table:
       sort: name
-      columns: [name, email, rsvpStatus, mealChoice, tableNumber]
+      columns: [name, attending, mealChoice, tableNumber, seatingGroup]
+    icon: users
 tones:
-  Guest.rsvpStatus:
-    attending: success
-    notAttending: danger
-    notResponded: warning
+  Guest.attending:
+    yes: success
+    no: danger
+    maybe: warning

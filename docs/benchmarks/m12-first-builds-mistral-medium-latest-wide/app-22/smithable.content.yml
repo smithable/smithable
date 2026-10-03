@@ -1,1 +1,68 @@
 smithableContent: 0.1
+models:
+  Product:
+    label: Produkt
+    pluralLabel: Produkte
+    fields:
+      name:
+        label: Name
+      description:
+        label: Beschreibung
+      price:
+        label: Preis
+      stock:
+        label: Bestand
+      unit:
+        label: Einheit
+        values:
+          piece: Stück
+          kg: Kilogramm
+          liter: Liter
+      category:
+        label: Kategorie
+  PreOrder:
+    label: Vorbestellung
+    pluralLabel: Vorbestellungen
+    fields:
+      customerName:
+        label: Kundenname
+      customerPhone:
+        label: Kundentelefon
+      product:
+        label: Produkt
+      quantity:
+        label: Menge
+      orderDate:
+        label: Bestelldatum
+      pickupDate:
+        label: Abholdatum
+      status:
+        label: Status
+        values:
+          pending: Ausstehend
+          ready: Bereit
+          pickedUp: Abgeholt
+          canceled: Storniert
+      notes:
+        label: Notizen
+  PickupSlot:
+    label: Abholzeit
+    pluralLabel: Abholzeiten
+    fields:
+      date:
+        label: Datum
+      startTime:
+        label: Beginn
+      endTime:
+        label: Ende
+      maxPreOrders:
+        label: Max. Vorbestellungen
+      notes:
+        label: Notizen
+pages:
+  produkte:
+    title: Produkte
+  vorbestellungen:
+    title: Vorbestellungen
+  abholzeiten:
+    title: Abholzeiten

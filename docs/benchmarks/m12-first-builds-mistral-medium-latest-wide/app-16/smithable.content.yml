@@ -1,1 +1,61 @@
 smithableContent: 0.1
+models:
+  Plot:
+    label: Plot
+    pluralLabel: Plots
+    fields:
+      number:
+        label: Plot Number
+      size:
+        label: Size
+      status:
+        label: Status
+        values:
+          free: Free
+          assigned: Assigned
+          reserved: Reserved
+      holder:
+        label: Holder
+      yearlyFee:
+        label: Yearly Fee
+      notes:
+        label: Notes
+  WaitingList:
+    label: Waiting List Entry
+    pluralLabel: Waiting List
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      phone:
+        label: Phone
+      dateAdded:
+        label: Date Added
+      status:
+        label: Status
+        values:
+          active: Active
+          assigned: Assigned
+          withdrawn: Withdrawn
+      notes:
+        label: Notes
+  Fee:
+    label: Yearly Fee
+    pluralLabel: Yearly Fees
+    fields:
+      year:
+        label: Year
+      amount:
+        label: Amount
+      dueDate:
+        label: Due Date
+      notes:
+        label: Notes
+pages:
+  plots:
+    title: Plots
+  waiting-list:
+    title: Waiting List
+  fees:
+    title: Yearly Fees

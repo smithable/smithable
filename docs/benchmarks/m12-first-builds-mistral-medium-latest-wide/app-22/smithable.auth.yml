@@ -1,10 +1,5 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
-roles:
-  admin:
-    description: Verwaltet den Hofladen.
-  employee:
-    description: Bearbeitet Bestellungen und Abholzeiten.
-defaultRole: employee

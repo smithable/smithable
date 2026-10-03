@@ -1,11 +1,12 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
-public:
-  pages: [home]
-  read: [Talk, Speaker]
 roles:
   organizer:
-    description: Manages the conference.
+    description: Manages conference talks, speakers, and registrations.
 defaultRole: organizer
+public:
+  pages: [home, talks]
+  read: [Talk, Speaker]

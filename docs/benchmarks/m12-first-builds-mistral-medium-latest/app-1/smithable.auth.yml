@@ -1,13 +1,15 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: private
-public:
-  pages: [home, schedule]
-  read: [ClassType, Instructor, Session]
 roles:
   admin:
     description: Studio staff. Manage the schedule, classes and teachers.
   member:
     description: A student who books classes.
 defaultRole: member
+public:
+  pages: [home, schedule]
+  read: [ClassType, Instructor, Session]
+  create: [Message]

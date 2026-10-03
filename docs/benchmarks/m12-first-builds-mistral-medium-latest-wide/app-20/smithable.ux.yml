@@ -1,25 +1,9 @@
 smithableUx: 0.1
 pages:
-  classes:
-    icon: calendar
+  sessions:
+    table:
+      sort: -startsAt
+      columns: [startsAt, classType, instructor, placesLeft]
+  schedule:
     table:
       view: cards
-      columns: [name, schedule, level, price]
-      sort: schedule
-  bookings:
-    icon: receipt
-    table:
-      columns: [class, user, status]
-  teachers:
-    icon: users
-    table:
-      columns: [name, email, phone]
-tones:
-  Booking.status:
-    confirmed: success
-    cancelled: danger
-theme:
-  preset: playful
-  brand:
-    primary: "#8B5CF6"
-    background: "#F9FAFB"
