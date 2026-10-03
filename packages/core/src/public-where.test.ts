@@ -109,3 +109,26 @@ test("setPublicWhere limits and widens; setPublic keeps a model's condition", ()
     ok: false,
   });
 });
+
+test("a dashboard tile's where refuses a changed field that loses a value it counts", () => {
+  const withTile = spec.replace(
+    "  posts: { crud: Post }\n",
+    "  posts: { crud: Post }\n  overview:\n    dashboard:\n      live: { count: Post, where: { status: [draft, published] } }\n",
+  );
+  const files = { spec: withTile, auth: auth("Post") };
+  expect(
+    applyOperation(files, "changeField", { model: "Post", field: "status", type: "draft | live" }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining(
+      'The "live" tile of the overview page counts Post records where status is published',
+    ),
+  });
+  expect(
+    applyOperation(files, "changeField", {
+      model: "Post",
+      field: "status",
+      type: "draft | published | archived",
+    }).ok,
+  ).toBe(true);
+});
