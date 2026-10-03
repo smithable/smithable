@@ -24,7 +24,7 @@ const app = (fields: string) => {
 test("a markdown field is edited with the kit's Markdown editor; the formatter is its own dependency", () => {
   const file = app("title: string!, body: markdown!");
   const post = file("src/generated/post.ts") ?? "";
-  expect(post).toContain('import { MarkdownEditor } from "#/kit/Markdown";');
+  expect(post).toContain('import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";');
   expect(post).toMatch(/name: "body",[^}]*kind: "markdown",[^}]*input: MarkdownEditor/s);
   // Long, and not a list column.
   expect(post).toContain(".max(50000");

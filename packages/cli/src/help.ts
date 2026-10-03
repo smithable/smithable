@@ -15,6 +15,15 @@ export interface Command {
 
 export const COMMANDS: Command[] = [
   {
+    name: "read-page",
+    usage: "read-page <file.html> --url <address>",
+    text: [
+      "Print the description new --from would draft from, for a page saved elsewhere;",
+      "fails when the page shows too little without JavaScript",
+    ],
+    options: ["url"],
+  },
+  {
     name: "new",
     usage: "new <dir>",
     text: [
