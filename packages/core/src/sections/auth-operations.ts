@@ -112,10 +112,16 @@ const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string 
     if (auth.has(["roles"])) auth.set(["roles"], value);
     else auth.add([], "roles", value);
     const others = ["admin", ...names].filter((r, i, all) => r !== "admin" && all.indexOf(r) === i);
-    const chosen = defaultRole ?? (others.length === 1 ? others[0] : undefined);
+    // "admin" is never what new users get: that would make everyone an administrator. Asked for,
+    // it means "no other role named": the only other role, or member when there is none.
+    const wanted = defaultRole === "admin" ? undefined : defaultRole;
+    if (defaultRole === "admin" && others.length > 1)
+      throw new OperationError(
+        `New users cannot all be administrators: say which of ${others.join(", ")} they get.`,
+      );
+    const chosen = wanted ?? (others.length === 1 ? others[0] : undefined);
     if (chosen !== undefined) {
-      if (chosen !== "admin" && !names.includes(chosen))
-        throw new OperationError(`There is no role named "${chosen}".`);
+      if (!names.includes(chosen)) throw new OperationError(`There is no role named "${chosen}".`);
       if (auth.has(["defaultRole"])) auth.set(["defaultRole"], chosen);
       else auth.add([], "defaultRole", chosen);
     } else if (auth.has(["defaultRole"])) auth.removeAndPrune(["defaultRole"], 0);
