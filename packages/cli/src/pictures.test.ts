@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateContent, validateSpec } from "@smithable/core";
@@ -135,4 +135,58 @@ test("an unreachable library means no pictures and one line, never an error", as
   });
   expect(written).toEqual([]);
   expect(out.join("")).toContain("could not be reached");
+});
+
+test("the library is where SMITHABLE_IMAGE_LIBRARY says, and the index's addresses follow", async () => {
+  const { atLibrary, libraryBase } = await import("./pictures.js");
+  const before = process.env.SMITHABLE_IMAGE_LIBRARY;
+  try {
+    delete process.env.SMITHABLE_IMAGE_LIBRARY;
+    expect(libraryBase()).toBe("https://docs.smithable.ai/images");
+    process.env.SMITHABLE_IMAGE_LIBRARY = "http://172.30.0.2:8081/images/";
+    expect(atLibrary("https://docs.smithable.ai/images/sample/desk.webp")).toBe(
+      "http://172.30.0.2:8081/images/sample/desk.webp",
+    );
+    let asked = "";
+    await libraryIndex(
+      (async (url: string) => {
+        asked = url;
+        return new Response("[]");
+      }) as never,
+      mkdtempSync(join(tmpdir(), "library-")),
+    );
+    expect(asked).toBe("http://172.30.0.2:8081/images/index.json");
+  } finally {
+    if (before === undefined) delete process.env.SMITHABLE_IMAGE_LIBRARY;
+    else process.env.SMITHABLE_IMAGE_LIBRARY = before;
+  }
+});
+
+test("a picture the texts name but the project does not have is left out", async () => {
+  const { dropMissingPictures } = await import("./pictures.js");
+  const dir = mkdtempSync(join(tmpdir(), "drop-"));
+  mkdirSync(join(dir, "public", "images"), { recursive: true });
+  writeFileSync(join(dir, "public", "images", "kept.webp"), "x");
+  writeFileSync(
+    join(dir, "smithable.content.yml"),
+    "smithableContent: 0.1\npages:\n  home:\n    hero:\n      title: Hello\n      image: { src: images/hero.webp, alt: A view }\n    about:\n      image: { src: images/kept.webp, alt: Kept }\n",
+  );
+  const out: string[] = [];
+  dropMissingPictures(dir, { out: (s) => out.push(s), err: () => {} });
+  const text = readFileSync(join(dir, "smithable.content.yml"), "utf8");
+  expect(text).not.toContain("hero.webp");
+  expect(text).toContain("title: Hello");
+  expect(text).toContain("images/kept.webp");
+  expect(out.join("")).toContain("Left out a picture");
+});
+
+test("a name someone typed names the app, over the starter's or the draft's own", async () => {
+  const { named } = await import("./new.js");
+  const files = {
+    "smithable.yml": "smithable: 0.1\napp:\n  name: Payments API Status\n  description: Ours.\n",
+  };
+  expect(named(files, "Pulse API Status")["smithable.yml"]).toContain("  name: Pulse API Status\n");
+  expect(named({ "smithable.yml": "smithable: 0.1\n" }, "X")["smithable.yml"]).toBe(
+    "smithable: 0.1\n",
+  );
 });
