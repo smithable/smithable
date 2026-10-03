@@ -193,7 +193,7 @@ export function ModelTable<R extends Row>({
       children
     );
   // A record's checkbox; shift-click sets the range from the last one clicked to its state.
-  const check = (row: R, index: number) =>
+  const check = (row: R, index: number, size = "size-4") =>
     selection && (
       <input
         type="checkbox"
@@ -215,7 +215,7 @@ export function ModelTable<R extends Row>({
           anchor.current = index;
           selection.onChange(next);
         }}
-        className="relative z-10 size-4 cursor-pointer accent-primary"
+        className={`relative z-10 ${size} cursor-pointer accent-primary`}
       />
     );
   const all =
@@ -247,7 +247,7 @@ export function ModelTable<R extends Row>({
             >
               {selection && (
                 <span className="absolute top-3 left-3 z-10 rounded bg-card/90 p-1">
-                  {check(row, index)}
+                  {check(row, index, "size-6")}
                 </span>
               )}
               {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
