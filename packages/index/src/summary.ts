@@ -290,7 +290,12 @@ function access(auth: AuthIR): string[] {
   } else {
     const domains = auth.signIn.allowedDomains;
     sentences.push(
-      `People sign in with ${list(auth.signIn.providers.map(humanize), "or")}${domains ? `, only with ${list(domains, "or")} accounts` : ""}.`,
+      `People sign in with ${list(
+        auth.signIn.providers.map((p) =>
+          p === "email" ? "a code sent to their email" : humanize(p),
+        ),
+        "or",
+      )}${domains ? `, only with ${list(domains, "or")} ${auth.signIn.providers.every((p) => p === "email") ? "addresses" : "accounts"}` : ""}.`,
     );
     sentences.push(
       auth.defaultAccess === "shared"
