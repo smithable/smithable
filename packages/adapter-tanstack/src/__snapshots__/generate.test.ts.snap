@@ -5606,6 +5606,24 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
+/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
 // Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
@@ -5622,14 +5640,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
+    if (role) await signIn(page, role).catch(() => {});
     for (const route of routes) await open(route);
     await context.close();
   };
@@ -5678,10 +5689,7 @@ test("Admin needs sign-in", async ({ page }) => {
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as admin" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "admin");
   });
 
   test("Sessions opens", async ({ page }) => {
@@ -5709,10 +5717,7 @@ test.describe("signed in as admin", () => {
 
 test.describe("signed in as member", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as member" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "member");
   });
 
   test("My bookings opens", async ({ page }) => {
@@ -5992,7 +5997,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "6ea03521 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "2959f6ee generated",
+  "tests/smoke.spec.ts": "6eaabd6d generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -8541,6 +8546,24 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
+/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
 // Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
@@ -8557,14 +8580,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
+    if (role) await signIn(page, role).catch(() => {});
     for (const route of routes) await open(route);
     await context.close();
   };
@@ -8587,10 +8603,7 @@ test("Team needs sign-in", async ({ page }) => {
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as admin" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "admin");
   });
 
   test("Customers opens", async ({ page }) => {
@@ -8606,10 +8619,7 @@ test.describe("signed in as admin", () => {
 
 test.describe("signed in as sales", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as sales" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "sales");
   });
 
   test("Customers opens", async ({ page }) => {
@@ -8792,7 +8802,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "76cf26b8 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "7633643e generated",
+  "tests/smoke.spec.ts": "5a67adeb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -11852,6 +11862,24 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
+/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
 // Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
@@ -11868,14 +11896,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
+    if (role) await signIn(page, role).catch(() => {});
     for (const route of routes) await open(route);
     await context.close();
   };
@@ -11914,10 +11935,7 @@ test("Welcome needs sign-in", async ({ page }) => {
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as admin" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "admin");
   });
 
   test("Overview opens", async ({ page }) => {
@@ -11942,10 +11960,7 @@ test.describe("signed in as admin", () => {
 
 test.describe("signed in as member", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as member" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "member");
   });
 
   test("Overview opens", async ({ page }) => {
@@ -12156,7 +12171,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/welcome/index.tsx": "d181401c generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "f0bdb601 generated",
+  "tests/smoke.spec.ts": "04445d20 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -14173,6 +14188,24 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
+/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
 // Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
@@ -14189,14 +14222,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
+    if (role) await signIn(page, role).catch(() => {});
     for (const route of routes) await open(route);
     await context.close();
   };
@@ -14222,10 +14248,7 @@ test("Saved needs sign-in", async ({ page }) => {
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as admin" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "admin");
   });
 
   test("My items opens", async ({ page }) => {
@@ -14238,10 +14261,7 @@ test.describe("signed in as admin", () => {
 
 test.describe("signed in as member", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as member" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "member");
   });
 
   test("My items opens", async ({ page }) => {
@@ -14428,7 +14448,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/welcome/index.tsx": "47192f34 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "763c826f generated",
+  "tests/smoke.spec.ts": "9df26ec0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -15823,6 +15843,24 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
+/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
 // Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
@@ -15839,14 +15877,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
+    if (role) await signIn(page, role).catch(() => {});
     for (const route of routes) await open(route);
     await context.close();
   };
@@ -15863,20 +15894,14 @@ test("Items opens for a visitor", async ({ page }) => {
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as admin" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "admin");
   });
 
 });
 
 test.describe("signed in as member", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as member" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "member");
   });
 
 });
@@ -16029,7 +16054,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "6ea03521 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "faa41b43 generated",
+  "tests/smoke.spec.ts": "98ec146a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -19986,6 +20011,24 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
+/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
 // Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
@@ -20002,14 +20045,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
+    if (role) await signIn(page, role).catch(() => {});
     for (const route of routes) await open(route);
     await context.close();
   };
@@ -20051,10 +20087,7 @@ test("Team needs sign-in", async ({ page }) => {
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as admin" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "admin");
   });
 
   test("Incidents opens", async ({ page }) => {
@@ -20079,10 +20112,7 @@ test.describe("signed in as admin", () => {
 
 test.describe("signed in as staff", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Sign in as staff" }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, "staff");
   });
 
   test("Incidents opens", async ({ page }) => {
@@ -20317,7 +20347,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/new.tsx": "c4bd32a9 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "a80778bd generated",
+  "tests/smoke.spec.ts": "02d27b16 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",

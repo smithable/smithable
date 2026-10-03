@@ -46,7 +46,29 @@ async function visit(page: Page, route: string) {
   expect(errors).toEqual([]);
 }
 
-// Every page once before the tests: the development server compiles a page on its first visit
+${
+  roles.length
+    ? `/**
+ * Signs in through the development sign-in. A click before the page has hydrated reaches no
+ * handler, and the development server may reload the page for a library it just found: try again.
+ */
+async function signIn(page: Page, role: string) {
+  for (let attempt = 1; ; attempt++) {
+    await page.goto("/sign-in");
+    await page.locator('body[data-hydrated="true"]').waitFor();
+    await page.getByRole("button", { name: \`Sign in as \${role}\` }).click();
+    try {
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
+}
+
+`
+    : ""
+}// Every page once before the tests: the development server compiles a page on its first visit
 // (and may reload for a new library), which on a busy machine takes most of a test's minute.
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(300_000);
@@ -62,15 +84,7 @@ test.beforeAll(async ({ browser }) => {
         slow.push(role ? \`\${route} (as \${role})\` : route);
       }
     };
-    if (role) {
-      await open("/sign-in");
-      await page
-        .getByRole("button", { name: \`Sign in as \${role}\` })
-        .click({ timeout: 60_000 })
-        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
-        .catch(() => {});
-    }
-    for (const route of routes) await open(route);
+${roles.length ? "    if (role) await signIn(page, role).catch(() => {});\n" : ""}    for (const route of routes) await open(route);
     await context.close();
   };
 ${warmups}
@@ -99,10 +113,7 @@ test(${JSON.stringify(`${p.title} needs sign-in`)}, async ({ page }) => {
 
 test.describe(${JSON.stringify(`signed in as ${role}`)}, () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: ${JSON.stringify(`Sign in as ${role}`)} }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in");
+    await signIn(page, ${JSON.stringify(role)});
   });
 ${pages
   .filter((p) => !p.public && p.roles.includes(role))
