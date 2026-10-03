@@ -20,6 +20,19 @@ export function smokeTests(ir: SpecIR, t: Texts, auth: AuthIR): string {
     };
   });
   const roles = signIn ? auth.roles.map((r) => r.name) : [];
+  // The warm-up: public pages as a visitor, then each other page as the first role that may open it.
+  const warmed = new Set(pages.filter((p) => p.public).map((p) => p.route));
+  const list = (routes: string[]) => `[${routes.map((r) => JSON.stringify(r)).join(", ")}]`;
+  const warmups = [
+    ...(warmed.size ? [`  await warm(undefined, ${list([...warmed])});`] : []),
+    ...roles.flatMap((role) => {
+      const routes = pages
+        .filter((p) => !p.public && p.roles.includes(role) && !warmed.has(p.route))
+        .map((p) => p.route);
+      for (const r of routes) warmed.add(r);
+      return routes.length ? [`  await warm(${JSON.stringify(role)}, ${list(routes)});`] : [];
+    }),
+  ].join("\n");
   return `${HEADER}import { expect, type Page, test } from "@playwright/test";
 
 /** Opens a page and fails on any error in the browser, e.g. a script the policy blocked. */
@@ -32,6 +45,37 @@ async function visit(page: Page, route: string) {
   await expect(page.locator("h1").first()).toBeVisible();
   expect(errors).toEqual([]);
 }
+
+// Every page once before the tests: the development server compiles a page on its first visit
+// (and may reload for a new library), which on a busy machine takes most of a test's minute.
+test.beforeAll(async ({ browser }) => {
+  test.setTimeout(300_000);
+  const slow: string[] = [];
+  const warm = async (role: string | undefined, routes: string[]) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const open = async (route: string) => {
+      try {
+        await page.goto(route, { timeout: 90_000 });
+        await page.waitForLoadState("networkidle", { timeout: 45_000 });
+      } catch {
+        slow.push(role ? \`\${route} (as \${role})\` : route);
+      }
+    };
+    if (role) {
+      await open("/sign-in");
+      await page
+        .getByRole("button", { name: \`Sign in as \${role}\` })
+        .click({ timeout: 60_000 })
+        .then(() => page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 60_000 }))
+        .catch(() => {});
+    }
+    for (const route of routes) await open(route);
+    await context.close();
+  };
+${warmups}
+  if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
+});
 ${pages
   .filter((p) => p.public)
   .map(

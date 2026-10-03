@@ -4,6 +4,7 @@ import {
   emptyContent,
   type FieldIR,
   humanize,
+  type LandingSection,
   type ModelIR,
   type PageIR,
   type PatternKind,
@@ -44,6 +45,13 @@ export const KINDS: Record<string, string> = {
 
 const VERBS = { read: "see", create: "add", write: "change", delete: "delete" };
 
+/** The fields every record has, as a list's search, filters and sort say them. */
+const AUTOMATIC: Record<string, string> = {
+  createdAt: "date added",
+  updatedAt: "last change",
+  owner: "owner",
+};
+
 /**
  * The spec in plain language for the Builder (ARCHITECTURE §10.1): what the app stores, who
  * may do what, its pages and sign-in. Deterministic and free: no AI involved.
@@ -72,14 +80,26 @@ export function summarize(
       const labels = (names: string[] | undefined) =>
         (names ?? []).map((name) => {
           const field = model?.fields.find((f) => f.name === name);
-          return model && field ? fieldLabel(model, field) : name;
+          return model && field ? fieldLabel(model, field) : (AUTOMATIC[name] ?? name);
         });
       const searched = labels(p.search);
       const filtered = labels(p.filters);
       const sorted = labels(p.sortable);
+      // A page only some roles open may list records visitors still see elsewhere: say where.
+      const shown =
+        model && p.access && auth?.public.read.includes(model.name)
+          ? ir.pages.filter(
+              (o) =>
+                o.pattern.kind === "landing" &&
+                auth.public.pages.includes(o.id) &&
+                o.pattern.sections.some((x) => x.model === model.name),
+            )
+          : [];
       const notes = [
         model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
-        (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
+        p.pattern.kind === "landing"
+          ? `a landing page: ${list(landingWords(p.pattern.sections))}`
+          : (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
         searched.length ? `search by ${list(searched, "or")}` : "",
         filtered.length ? `filter by ${list(filtered, "or")}` : "",
         sorted.length ? `sort by ${list(sorted, "or")}` : "",
@@ -92,10 +112,26 @@ export function summarize(
         p.contact ? contactWords(p.contact, model, fieldLabel) : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         p.access ? `only for ${who(p.access)}` : "",
+        shown.length && model
+          ? `visitors see ${pluralLabel(model).toLowerCase()} on the ${list(shown.map((o) => content.pages[o.id]?.title ?? humanize(o.id)))} page`
+          : "",
       ].filter(Boolean);
       return `${title} (${notes.join("; ")})`;
     });
     sections.push({ concept: "pages", title: "Pages", sentences: pages.map((p) => `- ${p}`) });
+  }
+
+  /** A landing page's sections in words: what a records section shows, and the footer last. */
+  function landingWords(sections: LandingSection[]): string[] {
+    const ordered = [...sections].sort(
+      (a, b) => Number(a.kind === "footer") - Number(b.kind === "footer"),
+    );
+    return ordered.map((x) => {
+      const shownModel = x.kind === "records" && x.model ? modelNamed(x.model) : undefined;
+      if (!shownModel) return humanize(x.name).toLowerCase();
+      const only = x.where ? ` where ${conditionWords(x.where)}` : "";
+      return `${pluralLabel(shownModel).toLowerCase()}${only}`;
+    });
   }
 
   for (const model of ir.models) {
@@ -233,6 +269,13 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
     if (f.unique) notes.push("unique");
     if (f.default !== undefined && f.type.kind !== "choice") notes.push(`${f.default} by default`);
     if (f.defaultFormula) notes.push(`${words(model, f.defaultFormula)} by default`);
+    // A field named by a bare preposition ("at", "on", "from") is said by what it holds:
+    // "a date and time (at, required)", not "an at (a date and time, required)".
+    const kind = f.type.kind === "scalar" ? KINDS[f.type.name] : undefined;
+    if (kind && /^(at|on|by|from|to|until|since|in)$/.test(name)) {
+      const rest = [name, ...notes.filter((n) => n !== kind)];
+      return `${kind} (${rest.join(", ")})`;
+    }
     // "notes" and "issued on" read better without "a".
     const named = /s$| (on|at)$/.test(name) ? name : article(name);
     return notes.length ? `${named} (${notes.join(", ")})` : named;
