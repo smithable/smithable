@@ -79,7 +79,11 @@ export class YamlEditor {
     if (!isSeq(list)) throw new EditError(`${path.join(".")} is not a list.`);
     const item = list.items[index] as ParsedNode | undefined;
     if (!item) throw new EditError(`${path.join(".")} has no item ${index + 1}.`);
-    this.splice(item.range[0], item.range[1], flow(value));
+    // An item written as "- Name: { … }" is a block map, whose range runs on over a comment and
+    // the line break; it ends where its last value does.
+    const last = isMap(item) && !item.flow ? item.items.at(-1) : undefined;
+    const end = last ? ((last.value ?? last.key) as ParsedNode).range[1] : item.range[1];
+    this.splice(item.range[0], end, flow(value));
   }
 
   /** Renames the key at `path`, keeping its value, position and comments. */
