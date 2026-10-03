@@ -538,7 +538,7 @@ ${
                 (
                   a,
                 ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row) && (
-              ${actionButton(a, "row")}
+              ${actionButton(a, "row", page.route)}
             )}`,
               )
               .join("\n            ")}

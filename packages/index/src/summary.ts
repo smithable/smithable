@@ -208,6 +208,8 @@ export function summarize(
       const f = target.fields.find((x) => x.name === v.field);
       const name = f ? fieldLabel(target, f) : v.field;
       if ("asked" in v) return { asked: name };
+      if ("me" in v)
+        return { set: `${name} to whoever presses it`, pair: `${name} whoever pressed it` };
       const value =
         "formula" in v
           ? words(model, v.formula)
@@ -248,6 +250,20 @@ export function summarize(
       ];
     });
     const item = label(model).toLowerCase();
+    // A copy: "Makes a copy of an invoice with status draft, asking for the number; its lines are copied too."
+    if (action.copy) {
+      const words = action.copy.map((v) => valueWords(model, v));
+      const given = words.flatMap((w) => ("pair" in w && w.pair ? [w.pair] : []));
+      const askedOf = words.flatMap((w) => ("asked" in w && w.asked ? [`the ${w.asked}`] : []));
+      const lists = (action.with ?? []).map((l) => {
+        const f = field(l);
+        return f ? fieldLabel(model, f) : l;
+      });
+      return [
+        `${when.length ? `For ${article(item)} that is ${list(when)}, makes` : "Makes"} a copy of ${article(item)}${given.length ? ` with ${list(given)}` : ""}${askedOf.length ? `, asking for ${list(askedOf)}` : ""}${lists.length ? `; its ${list(lists)} are copied too` : ""}.`,
+        ...(action.intent ? [action.intent] : []),
+      ];
+    }
     const does = [
       ...(sets.length ? [`sets ${list(sets)}`] : []),
       ...(asked.length

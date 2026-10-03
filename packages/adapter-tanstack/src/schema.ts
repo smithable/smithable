@@ -43,7 +43,14 @@ export function schemaModule(ir: SpecIR, auth: AuthIR): string {
       let expr = `${type}()`;
       if (field.required) expr += ".notNull()";
       if (field.unique && !perOwner) expr += ".unique()";
-      return `${expr}.references(() => ${target}.id, { onDelete: ${JSON.stringify(onDelete)} })`;
+      // Tables that refer to each other (or to themselves) need the column's type said, as
+      // Drizzle's docs show, or TypeScript cannot infer either table.
+      const cycle =
+        field.type.kind === "relation" &&
+        field.type.model !== USER_MODEL &&
+        reaches(ir, field.type.model, model.name);
+      if (cycle) imports.add("type AnySQLiteColumn");
+      return `${expr}.references(${cycle ? "(): AnySQLiteColumn" : "()"} => ${target}.id, { onDelete: ${JSON.stringify(onDelete)} })`;
     };
     const columns = model.fields.flatMap((field) => {
       if (field.type.kind === "relation") {
@@ -317,4 +324,21 @@ export function sampleLiteral(field: FieldIR, value: unknown): string {
   if (field.type.kind === "scalar" && field.type.name === "datetime")
     return `new Date(${JSON.stringify(value)})`;
   return JSON.stringify(value);
+}
+
+/** Whether records of `from` refer, through references, to records of `to` (or are them). */
+function reaches(ir: SpecIR, from: string, to: string, seen = new Set<string>()): boolean {
+  if (from === to) return true;
+  if (seen.has(from)) return false;
+  seen.add(from);
+  const model = ir.models.find((m) => m.name === from);
+  return Boolean(
+    model?.fields.some(
+      (f) =>
+        f.type.kind === "relation" &&
+        !f.type.many &&
+        f.type.model !== USER_MODEL &&
+        reaches(ir, f.type.model, to, seen),
+    ),
+  );
 }

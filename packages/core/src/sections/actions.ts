@@ -6,6 +6,7 @@ import {
   mapEntries,
   type ParseContext,
   readBoolean,
+  readNameList,
   readRoleList,
   readString,
 } from "../context.js";
@@ -17,14 +18,15 @@ import {
   renameInFormula,
   valueTypeOf,
 } from "../formula.js";
-import type {
-  ActionAddIR,
-  ActionIR,
-  ActionValueIR,
-  FieldIR,
-  ModelIR,
-  SemanticText,
-  StandardActionIR,
+import {
+  type ActionAddIR,
+  type ActionIR,
+  type ActionValueIR,
+  type FieldIR,
+  type ModelIR,
+  type SemanticText,
+  type StandardActionIR,
+  USER_MODEL,
 } from "../ir.js";
 import { capitalize } from "../naming.js";
 import type { JsonSchema, SpecSection } from "../section.js";
@@ -62,7 +64,10 @@ export const actionsSection: SpecSection<"actions"> = {
       description: "Custom (custom: true, with input and output) or standard (on, when, set).",
       oneOf: [
         { required: ["custom"] },
-        { required: ["on"], anyOf: [{ required: ["set"] }, { required: ["add"] }] },
+        {
+          required: ["on"],
+          anyOf: [{ required: ["set"] }, { required: ["add"] }, { required: ["copy"] }],
+        },
       ],
       additionalProperties: false,
       properties: {
@@ -95,6 +100,18 @@ export const actionsSection: SpecSection<"actions"> = {
           description:
             "Related records to create with the change, one per model that refers to this one, e.g. { IncidentUpdate: { status: resolved, at: NOW() } }.",
         },
+        copy: {
+          type: ["object", "null"],
+          propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+          additionalProperties: { type: ["string", "number", "boolean", "null"] },
+          description:
+            "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is.",
+        },
+        with: {
+          type: "array",
+          items: { type: "string" },
+          description: "Lists of the model whose records a copy takes along, e.g. [lines].",
+        },
         input: { ...fieldsSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
         allow: {
@@ -111,6 +128,7 @@ export const actionsSection: SpecSection<"actions"> = {
     // The values an action writes to records of a model: its own `set`, or what it adds.
     const writes = (action: StandardActionIR, model: string) => [
       ...(action.on === model ? [{ path: ["set"], values: action.set }] : []),
+      ...(action.on === model && action.copy ? [{ path: ["copy"], values: action.copy }] : []),
       ...(action.add ?? [])
         .filter((a) => a.model === model)
         .map((a) => ({ path: ["add", a.model], values: a.values })),
@@ -118,6 +136,7 @@ export const actionsSection: SpecSection<"actions"> = {
     // Formulas are worked out on the action's record, in `set` and in `add` alike.
     const formulas = (action: StandardActionIR) => [
       ...action.set.map((v) => ({ path: ["set", v.field], v })),
+      ...(action.copy ?? []).map((v) => ({ path: ["copy", v.field], v })),
       ...(action.add ?? []).flatMap((a) =>
         a.values.map((v) => ({ path: ["add", a.model, v.field], v })),
       ),
@@ -138,6 +157,7 @@ export const actionsSection: SpecSection<"actions"> = {
         const uses =
           effect.kind === "remove-field" &&
           (wanted !== undefined ||
+            (action.on === effect.model && (action.with ?? []).includes(effect.field)) ||
             written.length > 0 ||
             (action.add ?? []).some(
               (a) => a.model === effect.model && a.reference === effect.field,
@@ -173,6 +193,12 @@ export const actionsSection: SpecSection<"actions"> = {
           );
           if (next !== v.text) spec.set([...path, ...at], next);
         }
+      // A renamed list a copy takes along.
+      if (action.on === effect.model && action.with?.includes(effect.from))
+        spec.set(
+          [...path, "with"],
+          action.with.map((l) => (l === effect.from ? effect.to : l)),
+        );
       if (action.on === effect.model && action.when && effect.from in action.when)
         spec.renameKey([...path, "when", effect.from], effect.to);
       for (const w of writes(action, effect.model))
@@ -212,7 +238,19 @@ function readAction(
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
   const known = checkKeys(ctx, entries, where, {
-    allowed: ["custom", "input", "output", "on", "when", "set", "add", "allow", ...TEXT_KEYS],
+    allowed: [
+      "custom",
+      "input",
+      "output",
+      "on",
+      "when",
+      "set",
+      "add",
+      "copy",
+      "with",
+      "allow",
+      ...TEXT_KEYS,
+    ],
     later: ["confirm", "examples"],
     content: ["label", "title"],
   });
@@ -224,7 +262,7 @@ function readAction(
     ...readSemanticText(ctx, known),
   };
   const custom = byKey.get("custom");
-  const standard = ["on", "when", "set", "add"]
+  const standard = ["on", "when", "set", "add", "copy", "with"]
     .map((k) => byKey.get(k))
     .filter((e) => e !== undefined);
   if (custom && standard.length) {
@@ -286,11 +324,30 @@ function readStandardAction(
   const on = byKey.get("on");
   const set = byKey.get("set");
   const addEntry = byKey.get("add");
-  if (!on || (!set && !addEntry)) {
+  const copyEntry = byKey.get("copy");
+  const withEntry = byKey.get("with");
+  if (!on || (!set && !addEntry && !copyEntry)) {
     ctx.error(
-      (on ?? set ?? addEntry)?.keyNode ?? keyNode,
+      (on ?? set ?? addEntry ?? copyEntry)?.keyNode ?? keyNode,
       "missing-key",
-      `${capitalize(where)} needs "on" (the model whose record it changes) and "set" (the new values), "add" (a related record to create) or both.`,
+      `${capitalize(where)} needs "on" (the model whose record it changes) and "set" (the new values), "add" (a related record to create), both, or "copy" (a new record from this one).`,
+    );
+    return undefined;
+  }
+  // It changes this record or makes a new one, never both.
+  if (copyEntry && (set || addEntry)) {
+    ctx.error(
+      copyEntry.keyNode,
+      "invalid-action",
+      `${capitalize(where)} makes a copy ("copy") or changes the record ("set", "add"), not both.`,
+    );
+    return undefined;
+  }
+  if (withEntry && !copyEntry) {
+    ctx.error(
+      withEntry.keyNode,
+      "invalid-action",
+      `"with" of ${where} names lists a copy takes along; it needs "copy".`,
     );
     return undefined;
   }
@@ -394,9 +451,14 @@ function readStandardAction(
     }
     add.push({ model: key, reference, values: added });
   }
+  const copy = copyEntry
+    ? readCopy(ctx, where, copyEntry, model, (v) => read(v, model, `"copy" of ${where}`))
+    : undefined;
+  const lists = withEntry && copy ? readWith(ctx, where, withEntry, model, models) : undefined;
+  if (copyEntry && (!copy || (withEntry && !lists))) failed = true;
   if (failed) return undefined;
   // Only when every value is one the condition already requires does the action change nothing.
-  if (!add.length && values.every((v) => "value" in v && when?.[v.field] === v.value))
+  if (!copy && !add.length && values.every((v) => "value" in v && when?.[v.field] === v.value))
     ctx.warning(
       set?.value ?? keyNode,
       "action-changes-nothing",
@@ -417,7 +479,80 @@ function readStandardAction(
     ...(when ? { when } : {}),
     set: values,
     ...(add.length ? { add } : {}),
+    ...(copy ? { copy } : {}),
+    ...(lists?.length ? { with: lists } : {}),
   };
+}
+
+/**
+ * Why a record of `model` cannot be copied by an action, if it cannot: a required picture (a copy
+ * starts without), or a required unique field the copy does not give a new value. `values` are
+ * the copy's own; a list's records (none) get nothing asked.
+ */
+function copyGap(model: ModelIR, values: ActionValueIR[] | undefined): string | undefined {
+  for (const f of model.fields) {
+    if (!f.required || f.formula) continue;
+    if (f.type.kind === "scalar" && (f.type.name === "picture" || f.type.name === "pictures"))
+      return `${model.name}.${f.name} is a required picture, which a copy starts without: ${model.name} cannot be copied by an action yet.`;
+    const given = values?.find((v) => v.field === f.name);
+    if (f.unique && !(given && ("formula" in given || "asked" in given)))
+      return values
+        ? `A copy needs its own ${f.name} (it is unique): give it in copy as a formula, or ask for it.`
+        : `${model.name}.${f.name} is unique and required, and nothing can be asked for a list's records: ${model.name} cannot come along in a copy.`;
+  }
+  return undefined;
+}
+
+function readCopy(
+  ctx: ParseContext,
+  where: string,
+  entry: Entry,
+  model: ModelIR,
+  read: (entry: Entry) => ActionValueIR[],
+): ActionValueIR[] | undefined {
+  // "copy: {}" (or nothing) copies as is.
+  const empty = entry.value === null || (isScalar(entry.value) && entry.value.value === null);
+  const values = empty ? [] : read(entry);
+  const gap = copyGap(model, values);
+  if (!gap) return values;
+  ctx.error(entry.keyNode, "invalid-copy", `"copy" of ${where}: ${gap}`);
+  return undefined;
+}
+
+function readWith(
+  ctx: ParseContext,
+  where: string,
+  entry: Entry,
+  model: ModelIR,
+  models: ModelIR[],
+): string[] | undefined {
+  const names: string[] = [];
+  let ok = true;
+  for (const { name, at } of readNameList(ctx, entry.value, `"with" of ${where}`)) {
+    const field = model.fields.find((f) => f.name === name);
+    if (!field || field.type.kind !== "relation" || !field.type.many) {
+      ctx.error(
+        at,
+        "invalid-copy",
+        `"with" of ${where}: ${model.name} has no list named "${name}".`,
+        didYouMean(
+          name,
+          model.fields.filter((f) => f.type.kind === "relation" && f.type.many).map((f) => f.name),
+        ),
+      );
+      ok = false;
+      continue;
+    }
+    const listed = models.find((m) => m.name === (field.type as { model: string }).model);
+    const gap = listed && copyGap(listed, undefined);
+    if (gap) {
+      ctx.error(at, "invalid-copy", `"with" of ${where}: ${gap}`);
+      ok = false;
+      continue;
+    }
+    names.push(name);
+  }
+  return ok ? names : undefined;
 }
 
 /**
@@ -456,12 +591,19 @@ function readValues(
       );
       continue;
     }
+    const raw = isScalar(value) ? value.value : value === null ? null : undefined;
+    // ME(): the person who pressed the button, the one reference an action sets (§10).
+    if (typeof raw === "string" && raw.replace(/\s/g, "") === "ME()") {
+      if (field.type.kind === "relation" && field.type.model === USER_MODEL && !field.type.many)
+        values.push({ field: key, me: true });
+      else ctx.error(value, "invalid-set", `${what}: ME() is a person: ${key} must refer to User.`);
+      continue;
+    }
     const why = unsettable(field);
     if (why) {
       ctx.error(at, "invalid-set", `${what}: ${target.name}.${key} cannot be set, ${why}.`);
       continue;
     }
-    const raw = isScalar(value) ? value.value : value === null ? null : undefined;
     // No value: the person is asked for it when they press the button.
     if (raw === null || raw === "") {
       values.push({ field: key, asked: true });
