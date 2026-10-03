@@ -98,6 +98,8 @@ public: { pages: [home, incidents], read: [{ Incident: { where: { status: [inves
   expect(test).toContain('where status is investigating or resolved"');
   expect(test).toContain('insertIncident(null, {"status":"investigating"});');
   expect(test).toContain('insertIncident(null, {"status":"identified"})');
+  // Every record a test inserts for visitors to read fits with one value, never the list.
+  expect(test).not.toMatch(/insertIncident\([^)]*\[/);
   expect(at("src/routes/index.tsx")).toContain(
     '.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).slice(0, 6)',
   );
