@@ -32,7 +32,7 @@ models:
         label: Status
         values:
           pending: Ausstehend
-          ready: Bereit
+          confirmed: Bestätigt
           pickedUp: Abgeholt
           canceled: Storniert
   PickupSlot:
@@ -45,8 +45,10 @@ models:
         label: Beginn
       endTime:
         label: Ende
-      maxPreOrders:
-        label: Maximale Vorbestellungen
+      maxCapacity:
+        label: Maximale Kapazität
+      notes:
+        label: Notizen
 pages:
   produkte:
     title: Produkte

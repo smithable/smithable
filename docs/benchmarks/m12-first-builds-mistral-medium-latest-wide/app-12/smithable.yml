@@ -10,6 +10,9 @@ models:
       description: text
       incidents: Incident[]
     access:
+      read: [admin]
+      create: [admin]
+      write: [admin]
       delete: [admin]
   Incident:
     fields:
@@ -21,6 +24,9 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
+      read: [admin, staff]
+      create: [admin, staff]
+      write: [admin, staff]
       delete: [admin, staff]
   IncidentUpdate:
     fields:
@@ -29,6 +35,9 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
     access:
+      read: [admin, staff]
+      create: [admin, staff]
+      write: [admin, staff]
       delete: [admin, staff]
   Maintenance:
     fields:
@@ -38,7 +47,51 @@ models:
       endsAt: datetime!
       description: text
     access:
+      read: [admin, staff]
+      create: [admin, staff]
+      write: [admin, staff]
       delete: [admin, staff]
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause is found and a fix is being worked on.
+    allow: [admin, staff]
+    intent: The cause is found; the incident moves to identified, with an update saying so.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is out. We are watching before we close this.
+    allow: [admin, staff]
+    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident is resolved.
+    allow: [admin, staff]
+    intent: The incident is over, with an update saying so.
 pages:
   home:
     route: /
@@ -51,6 +104,12 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
   history:
     crud: Incident
   incidents:

@@ -1,50 +1,79 @@
 smithable: 0.1
 app:
   name: Union Job Board
-  description: A job board for local union members to post and apply for jobs.
+  description: A job board for a local union to post jobs and receive applications.
 models:
   JobPost:
     fields:
       title: string!
       description: text!
-      category: fullTime | partTime | contract | temporary | seasonal
-      location: string!
+      company: string!
+      location: string
       salary: money
-      postedBy: User!
-      status: open | filled | expired
-      deadline: date
-      requirements: text
-      contactEmail: email
+      type: fullTime | partTime | contract | temporary
+      status: open | closed
+      postedAt: date = TODAY()
     access:
-      delete: [admin, owner]
-      create: [member]
+      create: [employer, admin]
+      delete: [employer, admin, owner]
   Application:
     fields:
       jobPost: JobPost!
-      applicant: User!
-      coverLetter: text!
-      resume: string
-      status: submitted | reviewed | shortlisted | rejected | hired
-      submittedAt: datetime = NOW()
+      name: string!
+      email: email!
+      phone: phone
+      resume: text
+      coverLetter: text
+      status: submitted | reviewed | shortlisted | rejected
     access:
-      delete: [admin, owner]
-      create: [member]
+      create: [member, employer, admin]
+      read: [employer, admin, owner]
+      delete: [employer, admin]
 pages:
   jobs:
     route: /
     crud: JobPost
-    search: [title, description, location, category]
-    sortable: [deadline, salary, createdAt]
-  my-jobs:
-    route: /my-jobs
-    crud: JobPost
-    mine: true
+    search: [title, description, company, location]
+    filters: [type, status, salary]
+    sortable: [postedAt, salary]
+    actions: [closeJob]
   applications:
-    route: /applications
     crud: Application
+    actions: [reviewApplication, shortlistApplication, rejectApplication]
   home:
-    route: /welcome
+    route: /home
     landing:
       hero:
       footer:
-navigation: [jobs, my-jobs, applications]
+  team:
+    users: manage
+actions:
+  closeJob:
+    on: JobPost
+    when:
+      status: open
+    set:
+      status: closed
+    intent: Close a job post when it is no longer open.
+  reviewApplication:
+    on: Application
+    when:
+      status: submitted
+    set:
+      status: reviewed
+    intent: Mark an application as reviewed.
+  shortlistApplication:
+    on: Application
+    when:
+      status: [reviewed, submitted]
+    set:
+      status: shortlisted
+    intent: Shortlist an application for further consideration.
+  rejectApplication:
+    on: Application
+    when:
+      status: [submitted, reviewed, shortlisted]
+    set:
+      status: rejected
+    intent: Reject an application.
+navigation: [jobs, applications, team]

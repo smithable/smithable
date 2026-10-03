@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: My Vinyl Collection
+  name: My Vinyl Record Collection
   description: A place to keep and show my vinyl record collection with albums, artists, condition and purchase price.
 models:
   Album:
     fields:
       title: string!
       artist: string!
-      year: int
+      releaseYear: int
       condition: mint | nearMint | veryGood | good | fair | poor
       pricePaid: money
       coverImage: url
@@ -16,5 +16,12 @@ pages:
   albums:
     crud: Album
     search: [title, artist, notes]
-    sortable: [title, artist, year, pricePaid]
+    filters: [condition, releaseYear]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      albums:
+        records: Album
 navigation: [albums]

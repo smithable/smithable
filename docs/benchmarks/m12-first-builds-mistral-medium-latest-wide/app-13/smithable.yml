@@ -22,7 +22,7 @@ models:
       date: date!
       description: string!
       amount: money!
-      category: fuel | service | other
+      category: string
       notes: text
 pages:
   fuel:
@@ -31,5 +31,4 @@ pages:
     crud: Service
   costs:
     crud: Cost
-  team:
-    users: manage
+navigation: [fuel, service, costs]
