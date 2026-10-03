@@ -1,0 +1,51 @@
+smithable: 0.1
+app:
+  name: Local Union Job Board
+  description: A job board for local union members to post and apply for jobs.
+models:
+  JobPost:
+    fields:
+      title: string!
+      description: text!
+      company: string!
+      location: string
+      salary: money
+      type: fullTime | partTime | contract | temporary
+      status: open | filled | expired
+      postedBy: User!
+    access:
+      delete: [admin, owner]
+  Application:
+    fields:
+      jobPost: JobPost!
+      applicant: User!
+      resume: string!
+      coverLetter: text
+      status: submitted | reviewed | interviewed | hired | rejected
+    access:
+      delete: [admin, owner]
+pages:
+  jobs:
+    route: /
+    crud: JobPost
+    search: [title, description, company, location]
+    filters: [type, status, salary]
+    sortable: [salary, createdAt]
+    favorites: true
+    contact: owner
+  myJobs:
+    route: /my-jobs
+    crud: JobPost
+    access: [member]
+    mine: true
+  applications:
+    route: /applications
+    crud: Application
+    access: [member]
+    mine: true
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+navigation: [jobs, myJobs, applications]
