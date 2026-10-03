@@ -58,7 +58,10 @@ export function Preview({
   useEffect(() => {
     if (server === "up") setShown({ key: frameKey, src: `${url}${current.current}` });
   }, [server, frameKey, url]);
-  const stale = server === "starting" ? shown : undefined;
+  // Only across a change to the app: after Go the page asked for comes, not the last one (whose
+  // location messages would otherwise put the old address back).
+  const stale =
+    server === "starting" && shown?.key.split("-")[1] === String(opened) ? shown : undefined;
   useEffect(() => {
     let stopped = false;
     (async () => {
