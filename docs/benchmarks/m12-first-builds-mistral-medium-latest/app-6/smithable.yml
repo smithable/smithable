@@ -13,34 +13,39 @@ models:
       type: fullTime | partTime | contract | temporary
       status: open | closed
       postedAt: datetime = NOW()
+    access:
+      delete: [admin]
   Application:
     fields:
       jobPost: JobPost!
       name: string!
       email: email!
       phone: phone
-      resume: url
+      resume: text
       coverLetter: text
       status: submitted | reviewed | shortlisted | rejected | hired
-      appliedAt: datetime = NOW()
+      submittedAt: datetime = NOW()
+    access:
+      delete: [admin]
 pages:
   jobs:
     route: /
     crud: JobPost
     search: [title, description, company, location]
     filters: [type, status, salary]
-    sortable: [postedAt, salary]
-    favorites: true
-    contact: owner
+    sortable: [salary, postedAt]
+  myJobs:
+    route: /my-jobs
+    crud: JobPost
+    mine: true
+  applications:
+    crud: Application
+    access: [admin]
   home:
-    route: /home
+    route: /welcome
     landing:
       hero:
       footer:
-      latest:
-        records: JobPost
-        where:
-          status: open
-  applications:
-    crud: Application
-navigation: [jobs, applications]
+  team:
+    users: manage
+navigation: [jobs, myJobs, applications, team]

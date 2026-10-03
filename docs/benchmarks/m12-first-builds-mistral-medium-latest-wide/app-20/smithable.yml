@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Joogastudio
-  description: "Varausjärjestelmä joogastudiolle: tunnit, ohjaajat ja varaukset verkossa."
+  description: "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa."
   currency: EUR
   timezone: Europe/Helsinki
 models:
@@ -20,28 +20,6 @@ models:
       portrait: picture
     access:
       create: [admin]
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
-  Post:
-    fields:
-      title: string!
-      address: string unique
-      summary: text
-      cover: picture
-      body: markdown!
-      publishedOn: date
-      status: draft | published
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
   Session:
     fields:
       classType: ClassType!
@@ -54,12 +32,9 @@ models:
         formula: capacity - COUNT(bookings)
     access:
       create: [admin]
-      write: [admin]
-      delete: [admin]
   Booking:
     fields:
-      session: Session!
-      user: User!
+      session: Session! unique
     capacity:
       per: session
       max: session.capacity
@@ -70,6 +45,12 @@ pages:
   instructors:
     crud: Instructor
     access: [admin]
+  sessions:
+    crud: Session
+    access: [admin]
+  my-bookings:
+    crud: Booking
+    access: [member, admin]
   home:
     route: /
     landing:
@@ -77,26 +58,12 @@ pages:
       footer:
       classes:
         records: ClassType
-      contact:
-        form: Message
-  messages:
-    crud: Message
-    access: [admin]
-  blog:
-    articles: Post
-  posts:
-    crud: Post
-    access: [admin]
-  team:
-    users: manage
-  sessions:
-    crud: Session
-    access: [admin]
-  my-bookings:
-    crud: Booking
-    access: [member, admin]
-    mine: true
+      callToAction:
+        button: sessions
   schedule:
     calendar:
       model: Session
       starts: startsAt
+  team:
+    users: manage
+navigation: [home, schedule, my-bookings]

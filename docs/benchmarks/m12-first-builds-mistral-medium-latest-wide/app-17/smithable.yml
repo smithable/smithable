@@ -24,49 +24,44 @@ models:
       create: [admin]
       write: [admin]
       delete: [admin]
-  Booking:
-    fields:
-      customerName: string!
-      customerEmail: email!
-      customerPhone: phone
-      appointment: Appointment! unique
-    access:
-      read: [owner]
-      write: [owner]
-      delete: [owner]
-      create: [customer]
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
   Appointment:
     fields:
       service: Service!
       stylist: Stylist!
       startsAt: datetime!
       capacity: int! = 1
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
     access:
       create: [admin]
       write: [admin]
       delete: [admin]
+  Booking:
+    fields:
+      appointment: Appointment! unique
+      customerName: string!
+      customerEmail: email!
+      customerPhone: phone
+    access:
+      create: [customer, admin]
+      read: [owner, admin]
+      write: [owner, admin]
+      delete: [owner, admin]
 pages:
   tjanster:
     crud: Service
     access: [admin]
-  frisorer:
+  stylister:
     crud: Stylist
+    access: [admin]
+  tider:
+    crud: Appointment
     access: [admin]
   mina-bokningar:
     crud: Booking
-    access: [customer]
-  meddelanden:
-    crud: Message
-    access: [admin]
+    access: [customer, admin]
   hem:
     route: /
     landing:
@@ -74,15 +69,9 @@ pages:
       footer:
       tjanster:
         records: Service
-      frisorer:
+      stylister:
         records: Stylist
-      contact:
-        form: Message
-  tider:
-    crud: Appointment
-    access: [admin]
   schema:
     calendar:
       model: Appointment
       starts: startsAt
-navigation: [hem, schema, mina-bokningar]
