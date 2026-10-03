@@ -12,6 +12,7 @@ import {
   type QueryIR,
   type SpecIR,
   type StandardActionIR,
+  titleField,
   USER_MODEL,
 } from "@smithable/core";
 import { textBounds } from "./data.js";
@@ -97,6 +98,8 @@ export function actionNames(action: ActionIR) {
     access: `${action.name}Access`,
     fits: `${action.name}Fits`,
     asks: `${action.name}Asks`,
+    runMany: `run${type}Many`,
+    many: `${action.name}Many`,
     askUi: `${action.name}AskUi`,
     run: `run${type}`,
     module: `#/generated/actions/${kebab(action.name)}`,
@@ -253,8 +256,10 @@ ${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === 
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 ${models.map((m) => `import { ${m.schema}, ${m.ui} } from "${m.module}";\n`).join("")}import type { Rule } from "#/kit/access";
-${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-import { ${a.run} } from "./${kebab(action.name)}.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action.name)}.server";
 
 /** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.allow ? ", among the roles it allows" : ""}${action.add ? ", and may create what it adds" : ""}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
@@ -264,10 +269,26 @@ export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `
   return ${fitsCode(action)};
 }
 ${asks}
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${asked.length ? `z.object({ id: z.number().int(), values: ${a.asks} })` : "z.number().int()"})
-  .handler(async ({ data }) => ${a.run}(await currentViewer(), ${asked.length ? "data.id, data.values" : "data"}));
-`;
+  .handler(async ({ data }) => ${a.run}(await writer(), ${asked.length ? "data.id, data.values" : "data"}));
+${
+  action.copy
+    ? ""
+    : `
+/** The "${action.name}" action on the chosen ${n.pluralLabel.toLowerCase()} (at most 1,000 at once). */
+export const ${a.many} = createServerFn({ method: "POST" })
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000)${asked.length ? `, values: ${a.asks}` : ""} }))
+  .handler(async ({ data }) => ${a.runMany}(await writer(), data.ids${asked.length ? ", data.values" : ""}));
+`
+}`;
 }
 
 /**
@@ -311,46 +332,91 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
   const all = [...values, ...adds.flatMap((x) => x.values)];
   const usesF = all.some((v) => v.includes("F."));
   const asked = askedFields(action).length > 0;
-  const changes = `  // The new values are worked out on the ${n.label.toLowerCase()} as it was${asked ? ", the asked ones as given" : ""}.
-  const values = ${n.schema}.parse({
-    ...row,
-${values.map((v) => `    ${v}`).join("\n")}
-  });`;
-  const body = adds.length
-    ? `${changes}
+  const askedParam = asked ? `, asked: z.output<typeof ${a.asks}>` : "";
+  const askedArg = asked ? ", asked" : "";
+  const label = n.label.toLowerCase();
+  const title = titleField(model);
+  // The writes of one record's plan, inside a transaction ("tx"), returning what was written.
+  const writes = (p: string) => `{
+      changed: tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get(),
+      inserted: [
+${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: viewer?.id ?? null }).returning().get(),`).join("\n")}
+      ] as const,
+    }`;
+  const hooks = (w: string) =>
+    `  await afterChange("afterUpdate", ${JSON.stringify(model.name)}, ${w}.changed, viewer);
+${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringify(target.name)}, ${w}.inserted[${i}], viewer);`).join("\n")}`;
+  return `${HEADER}import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";
+import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
+import { ${n.schema} } from "${n.module}";
+import { ${n.data} } from "${n.module}.server";
+${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${asked ? 'import type { z } from "zod";\n' : ""}
+type Row = NonNullable<Awaited<ReturnType<typeof ${n.data}.get>>>;
+
+/** The ${label}'s new values${adds.length ? " and the records it adds" : ""}, worked out on it as it was${asked ? ", the asked ones as given" : ""}. */
+function plan(${all.some((v) => v.includes("viewer")) ? "viewer" : "_viewer"}: Viewer | null, row: Row${askedParam}) {
+  return {
+    id: row.id,
+    values: ${n.schema}.parse({
+      ...row,
+${values.map((v) => `      ${v}`).join("\n")}
+    }),
 ${adds
   .map(
-    ({ add, tn }, i) => `  check(${tn.access}.create, viewer);
-  const added${i} = ${tn.schema}.parse({
-    ${dataKeyOf(add.reference)}: id,
-${adds[i]?.values.map((v) => `    ${v}`).join("\n")}
-  });`,
+    ({ add }, i) => `    added${i}: ${adds[i]?.tn.schema}.parse({
+      ${dataKeyOf(add.reference)}: row.id,
+${adds[i]?.values.map((v) => `      ${v}`).join("\n")}
+    }),`,
   )
   .join("\n")}
-  // One transaction: the change and the records it adds, or nothing.
-  const { changed, inserted } = db.transaction((tx) => ({
-    changed: tx.update(${n.table}).set(values).where(eq(${n.table}.id, id)).returning().get(),
-    inserted: [
-${adds.map(({ target, tn }, i) => `      tx.insert(${tn.table}).values({ ...added${i}, ${ownerKey(target)}: viewer?.id ?? null }).returning().get(),`).join("\n")}
-    ] as const,
-  }));
-  await afterChange("afterUpdate", ${JSON.stringify(model.name)}, changed, viewer);
-${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringify(target.name)}, inserted[${i}], viewer);`).join("\n")}
-  return changed;`
-    : `${changes}
-  return ${n.data}.update(viewer, id, values);`;
-  return `${HEADER}${adds.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\n' : ""}${adds.length ? `import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";\n` : ""}import { AccessDenied, check, type Viewer } from "#/kit/access";
-${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { ${n.schema} } from "${n.module}";
-import { ${n.data} } from "${n.module}.server";
-${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}${adds.length ? 'import { afterChange } from "#/generated/hooks";\n' : ""}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
-${asked ? 'import type { z } from "zod";\n' : ""}
-/** Runs the "${action.name}" action on the ${n.label.toLowerCase()} as the viewer${asked ? ", with what was asked" : ""}. */
-export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, asked: z.output<typeof ${a.asks}>` : ""}) {
+  };
+}
+
+/** Runs the "${action.name}" action on the ${label} as the viewer${asked ? ", with what was asked" : ""}. */
+export async function ${a.run}(viewer: Viewer | null, id: number${askedParam}) {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(${a.access}, viewer, row.${ownerKey(model)});
   if (!${a.fits}(row)) throw new Error("This cannot be done now.");
-${body}
+${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  const one = plan(viewer, row${askedArg});
+${
+  adds.length
+    ? `  // One transaction: the change and the records it adds, or nothing.
+  const written = db.transaction((tx) => (${writes("one")}));
+${hooks("written")}
+  return written.changed;`
+    : `  return ${n.data}.update(viewer, id, one.values);`
+}
+}
+
+/**
+ * Runs the "${action.name}" action on each chosen ${label} it fits and the viewer may run it on
+ * (docs/design/actions.md §9); the others are skipped. All or none: one that is refused stops
+ * them all, and is named.
+ */
+export async function ${a.runMany}(viewer: Viewer | null, ids: number[]${askedParam}) {
+${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  const plans: ReturnType<typeof plan>[] = [];
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
+    const row = await ${n.data}.get(viewer, id);
+    if (!row || !allows(${a.access}, viewer, row.${ownerKey(model)}) || !${a.fits}(row)) continue;
+    try {
+      plans.push(plan(viewer, row${askedArg}));
+    } catch (error) {
+      const why = error instanceof Error ? error.message : String(error);
+      throw new Error(\`${n.label} "\${String(row.${title} ?? row.id)}": \${why}\`);
+    }
+  }
+  const written = db.transaction((tx) => plans.map((p) => (${writes("p")})));
+  for (const w of written) {
+${hooks("w").replace(/^ {2}/gm, "    ")}
+  }
+  return { changed: plans.length, skipped: unique.length - plans.length };
 }
 `;
 }

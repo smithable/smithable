@@ -11,6 +11,7 @@ import {
   plural,
   type SpecIR,
   storesPictures,
+  titleField,
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
@@ -439,6 +440,21 @@ export function listParts(
     );
   if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
   if (offered.length) view.add("@tanstack/react-router", "useRouter");
+  // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
+  const many = offered.filter((a) => !a.copy);
+  const selecting = !within && (many.length > 0 || Boolean(auth && hasSignIn(auth)));
+  if (selecting) {
+    view
+      .add("react", "useState")
+      .add("@tanstack/react-router", "useRouter")
+      .add("#/kit/SelectionBar", "SelectionBar")
+      .add("#/kit/access", "allows")
+      .add(n.module, n.removeMany, n.deleteRule);
+    for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
+  }
+  const owner = `row.${ownerKey(model)}`;
+  const fits = (a: (typeof many)[number]) =>
+    `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row)`;
   view.add("#/generated/app", "app").add(n.module, n.ui);
   if (actions.length) view.add("#/kit/access", "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
@@ -454,7 +470,15 @@ export function listParts(
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
   const body = (api: string) => `function ${component}() {
   const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || offered.length || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || offered.length ? "\n  const router = useRouter();" : ""}${
+${actions.length || offered.length || selecting || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || offered.length || selecting ? "\n  const router = useRouter();" : ""}${
+    selecting
+      ? `
+  // The chosen rows, offered when the viewer may do something to at least one row.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const chosen = rows.filter((row) => selected.has(row.id));
+  const selectable = rows.some((row) => ${[...many.map(fits), `allows(${n.deleteRule}, viewer, ${owner})`].join(" || ")});`
+      : ""
+  }${
     favorites
       ? `
   // A heart saves the record for the viewer; a visitor signs in first and comes back.
@@ -516,6 +540,34 @@ ${
       />
 `
     : ""
+}${
+  selecting
+    ? `      {selectable && (
+        <SelectionBar
+          count={chosen.length}
+          noun={${literal([n.label.toLowerCase(), n.pluralLabel.toLowerCase()])}}
+          app={app}
+          titleOf={(id) => String(rows.find((row) => row.id === id)?.${titleField(model) === "id" ? "id" : keyOf(model, titleField(model))} ?? id)}
+          actions={[${many
+            .map(
+              (a) => `
+            {
+              label: ${JSON.stringify(humanize(a.name))},
+              applies: chosen.filter((row) => ${fits(a)}).length,${askedFields(a).length ? `\n              ask: { ui: ${actionNames(a).askUi}, schema: ${actionNames(a).asks} },` : ""}
+              run: (${askedFields(a).length ? "values" : ""}) => ${actionNames(a).many}({ data: { ids: chosen.map((row) => row.id)${askedFields(a).length ? ", values: values as never" : ""} } }),
+            },`,
+            )
+            .join("")}${many.length ? "\n          " : ""}]}
+          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
+          onDelete={() => ${n.removeMany}({ data: chosen.map((row) => row.id) })}
+          onDone={async () => {
+            setSelected(new Set());
+            await router.invalidate();
+          }}
+        />
+      )}
+`
+    : ""
 }${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
         ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
@@ -528,7 +580,7 @@ ${
           return filtering?.sorts.length && ordered !== "rows"
             ? `sort ? rows : ${ordered}`
             : ordered;
-        })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${
+        })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
           offered.length
             ? `
         rowActions={(row) => (

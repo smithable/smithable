@@ -228,6 +228,7 @@ ${tests.join("\n\n")}
   // A standard action: who may run it on others' records and on their own (whoever may edit,
   // narrowed by "allow"), and that it is refused on a record its condition does not fit.
   const standard = ir.actions.filter((a): a is StandardActionIR => !a.custom);
+  const overMany = new Set<string>();
   for (const action of standard) {
     const model = ir.models.find((m) => m.name === action.on) as ModelIR;
     const access = modelAccess(model, auth);
@@ -299,6 +300,20 @@ ${counter}    const viewer = signedIn(${JSON.stringify(runner)});
     const record = insert${model.name}(viewer.id, ${JSON.stringify({ ...readable, ...fits, [field]: other })});
     await expect(${run}(viewer, record.id${asked})).rejects.toThrow("This cannot be done now.");
   });`);
+    // Over chosen records (actions.md §9): the ones it fits change, the others are skipped,
+    // and a visitor's run changes nothing.
+    if (field !== undefined && other !== undefined && runner && !action.copy) {
+      overMany.add(action.name);
+      const strangers = signedIn && !expected(access, runner).readOthers;
+      tests.push(`  test("over chosen records, only those it fits and may run on change", async () => {
+${counter}    const viewer = signedIn(${JSON.stringify(runner)});
+    const fitting = insert${model.name}(viewer.id, ${values});
+    const notFitting = insert${model.name}(viewer.id, ${JSON.stringify({ ...readable, ...fits, [field]: other })});
+${strangers ? `    const others = insert${model.name}(stranger.id, ${values});\n` : ""}${before("notFitting")}    expect(await ${run}Many(viewer, [fitting.id, fitting.id, notFitting.id${strangers ? ", others.id" : ""}]${asked})).toEqual({ changed: 1, skipped: ${strangers ? 2 : 1} });
+${unchanged("notFitting")}    const again = insert${model.name}(viewer.id, ${values});
+${before("again")}    await ${run}Many(null, [again.id]${asked}).catch(() => undefined);
+${unchanged("again")}  });`);
+    }
     describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
 ${tests.join("\n\n")}
 });`);
@@ -306,7 +321,8 @@ ${tests.join("\n\n")}
   const imports = [
     ...ir.models.map((m) => `import { ${camel(m.name)}Data } from "./${kebab(m.name)}.server";`),
     ...standard.map(
-      (a) => `import { run${pascal(a.name)} } from "./actions/${kebab(a.name)}.server";`,
+      (a) =>
+        `import { run${pascal(a.name)}${overMany.has(a.name) ? `, run${pascal(a.name)}Many` : ""} } from "./actions/${kebab(a.name)}.server";`,
     ),
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
