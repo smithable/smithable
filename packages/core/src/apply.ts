@@ -94,6 +94,9 @@ export function applyOperation(
     message,
     diagnostics,
   });
+  // A model may send anything as the name: say so, so a retry can mend it.
+  if (typeof name !== "string")
+    return fail(`An operation's name must be text, like "addModel"; got ${JSON.stringify(name)}.`);
   const op = findOperation(name, files.plugins);
   if (!op) {
     const names = operationsFor(files.plugins).map((o) => o.name);

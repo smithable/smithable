@@ -162,7 +162,8 @@ export function dropMissingPictures(dir: string, io: Io): void {
     }
   };
   walk(editor.get([]), []);
-  for (const path of missing) editor.remove(path);
+  // A mapping left empty (a hero with only its picture) goes too: an empty key is not valid.
+  for (const path of missing) editor.removeAndPrune(path, 0);
   if (!missing.length) return;
   writeFileSync(file, editor.text);
   io.out(
