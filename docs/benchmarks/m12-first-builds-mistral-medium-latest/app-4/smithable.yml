@@ -14,14 +14,14 @@ pages:
           available: true
   tools:
     crud: Tool
-    search: [name, description, category]
-    sortable: [name, category, condition]
+    search: [name, description, category, location]
+    sortable: [name, category, condition, available]
 models:
   Tool:
     fields:
       name: string!
       description: text
       category: string
-      condition: new | good | worn
+      condition: new | good | worn | broken
       available: bool = true
-navigation: [tools, home]
+      location: string

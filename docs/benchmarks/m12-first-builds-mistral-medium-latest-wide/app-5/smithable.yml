@@ -1,0 +1,42 @@
+smithable: 0.1
+app:
+  name: Photography Invoicing
+  description: "Invoices for photography work: clients, shoots and unpaid amounts."
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount: money
+      invoice: Invoice!
+    access:
+      delete: [owner]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      total: money
+      lines: InvoiceLine[]
+    access:
+      delete: [owner]
+pages:
+  clients:
+    crud: Client
+  invoices:
+    crud: Invoice
+    filters: [status, client]
+    search: [number]
+  invoice-lines:
+    crud: InvoiceLine
