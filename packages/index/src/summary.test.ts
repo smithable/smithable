@@ -126,3 +126,63 @@ pages:
   expect(sections[0]?.concept).toBe("pages");
   expect(sections[0]?.sentences[0]).toMatch(/^- Home /);
 });
+
+test("a status page in words: what the front page shows, the footer last, and who sees the records", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Component:
+    fields: { name: string!, state: operational | degraded | outage }
+  Incident:
+    fields: { title: string!, status: investigating | identified | resolved }
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services: { records: Component }
+      open: { records: Incident, where: { status: [investigating, identified] } }
+  components: { crud: Component, access: [admin], sortable: [name, createdAt] }
+  incidents: { crud: Incident }
+`,
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const { auth } = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { pages: [home], read: [Component, Incident] }\n",
+    },
+    ir,
+  );
+  const pages = summarize(ir, auth, emptyContent())[0]?.sentences ?? [];
+  expect(pages[0]).toBe(
+    "- Home (a landing page: hero, components, incidents where status is investigating or identified and footer)",
+  );
+  expect(pages[1]).toBe(
+    "- Components (lists components; sort by name or date added; only for admins; visitors see components on the Home page)",
+  );
+  expect(pages[2]).toBe("- Incidents (lists incidents)");
+});
+
+test("a field named by a preposition is said by what it holds", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Update:
+    fields: { at: datetime!, message: text!, from: date }
+pages:
+  updates: { crud: Update }
+`,
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const model = summarize(ir, undefined, emptyContent()).find((s) => s.concept === "model:Update");
+  const text = model?.sentences.join(" ") ?? "";
+  expect(text).toContain("a date and time (at, required)");
+  expect(text).toContain("a date (from)");
+  expect(text).not.toContain("an at");
+});

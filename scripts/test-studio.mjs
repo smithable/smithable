@@ -285,7 +285,7 @@ try {
       .getByText("themes/forest.yml", { exact: false })
       .waitFor();
     await themes.getByRole("button", { name: /Playful/ }).click();
-    await trace.getByText("Set the theme: preset playful").first().waitFor({ timeout: 60000 });
+    await trace.getByText("Use the playful theme").first().waitFor({ timeout: 60000 });
     await themes
       .getByRole("button", { name: /Playful/, pressed: true })
       .waitFor({ timeout: 60000 });
@@ -293,7 +293,7 @@ try {
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
     await page.getByRole("button", { name: "Undo", exact: true }).click();
-    await status.getByText(/Undid: Set the theme/).waitFor({ timeout: 60000 });
+    await status.getByText(/Undid: Use the playful theme/).waitFor({ timeout: 60000 });
     const after = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
     if (JSON.stringify(before) === JSON.stringify(after))
       throw new Error("the theme changed no package");
@@ -600,7 +600,7 @@ try {
       await page.getByRole("tab", { name: "Look" }).click();
       await page.getByLabel("Theme of Home").selectOption("playful");
       await trace
-        .getByText(/home page's theme/i)
+        .getByText(/theme on the home page/i)
         .first()
         .waitFor({ timeout: 60000 });
       // A background of the owner's: picked, applied when the picker closes, in the CSS.
