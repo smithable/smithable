@@ -176,7 +176,9 @@ export async function restore(
   const local = mkdtempSync(join(tmpdir(), "smithable-restore-"));
   try {
     const source = target(options.from);
-    const backups = await source.list(app);
+    // Only the backups' own folders (named by their time); anything else under the app's
+    // prefix, e.g. a folder an earlier --to nested there, is not a backup.
+    const backups = (await source.list(app)).filter((name) => /^\d{8}-\d{6}$/.test(name));
     const chosen = options.backup ?? backups.at(-1);
     if (!chosen || !backups.includes(chosen))
       throw new Error(
