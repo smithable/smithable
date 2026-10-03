@@ -18,7 +18,7 @@ models:
       component: Component
       detectedAt: datetime!
       resolvedAt: datetime
-      summary: text
+      summary: markdown
       updates: IncidentUpdate[]
     access:
       delete: [admin, staff]
@@ -40,15 +40,6 @@ models:
     access:
       delete: [admin, staff]
 pages:
-  incidents:
-    crud: Incident
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-    access: [admin]
-  maintenance:
-    crud: Maintenance
   home:
     route: /
     landing:
@@ -60,8 +51,21 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
+  history:
+    crud: Incident
+  incidents:
+    crud: Incident
+    filters: [status, component]
+    search: [title]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    access: [admin]
+  maintenance:
+    crud: Maintenance
+  overview:
+    crud: Incident
   team:
     users: manage
-  overview:
-    data: all
 navigation: [overview, incidents, updates, maintenance, components, team]

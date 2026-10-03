@@ -1,12 +1,15 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: private
 public:
   pages: [hem, schema]
   read: [Service, Stylist, Appointment]
-  create: [Booking, Message]
+  create: [Message, Booking]
 roles:
   admin:
-    description: Salongsägare eller personal som hanterar tjänster, frisörer och tider.
+    description: Salongsägare eller personal.
+  kund:
+    description: Kund som bokar tider.
+defaultRole: kund
 admins: [johan@smithable.ai]

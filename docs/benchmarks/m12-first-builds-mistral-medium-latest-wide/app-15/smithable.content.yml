@@ -1,17 +1,1 @@
 smithableContent: 0.1
-models:
-  Sighting:
-    label: Sighting
-    pluralLabel: Sightings
-    fields:
-      species:
-        label: Species
-      place:
-        label: Place
-      date:
-        label: Date
-      observer:
-        label: Observer
-pages:
-  sightings:
-    title: Sightings

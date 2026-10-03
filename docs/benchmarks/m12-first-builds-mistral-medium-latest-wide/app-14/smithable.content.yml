@@ -5,7 +5,7 @@ models:
     pluralLabel: Guests
     fields:
       name:
-        label: Name
+        label: Full Name
       email:
         label: Email
       phone:
@@ -21,11 +21,14 @@ models:
         values:
           vegetarian: Vegetarian
           meat: Meat
-          fish: Fish
+          vegan: Vegan
+          glutenFree: Gluten-Free
       tableNumber:
         label: Table Number
       notes:
         label: Notes
+      group:
+        label: Group
 pages:
   guests:
     title: Guests

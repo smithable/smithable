@@ -3,9 +3,9 @@ pages:
   fuel:
     table:
       sort: -date
-  costs:
+  service:
     table:
       sort: -date
-  service:
+  costs:
     table:
       sort: -date

@@ -1,53 +1,50 @@
 smithable: 0.1
 app:
   name: Union Job Board
-  description: A job board for a local union to post jobs and receive applications.
+  description: A job board for local union members to post and apply for jobs.
 models:
-  Job:
+  JobPost:
     fields:
       title: string!
       description: text!
-      company: string!
-      location: string
+      category: fullTime | partTime | contract | temporary | seasonal
+      location: string!
       salary: money
-      type: fullTime | partTime | contract | temporary
+      postedBy: User!
       status: open | filled | expired
-      postedAt: date!
+      deadline: date
+      requirements: text
+      contactEmail: email
     access:
-      create: [employer]
-      delete: [employer, owner]
+      delete: [admin, owner]
+      create: [member]
   Application:
     fields:
-      job: Job!
-      name: string!
-      email: email!
-      phone: phone
-      resume: text
-      coverLetter: text
-      status: submitted | reviewed | interviewed | hired | rejected
+      jobPost: JobPost!
+      applicant: User!
+      coverLetter: text!
+      resume: string
+      status: submitted | reviewed | shortlisted | rejected | hired
+      submittedAt: datetime = NOW()
     access:
+      delete: [admin, owner]
       create: [member]
-      read: [employer, owner]
 pages:
   jobs:
     route: /
-    crud: Job
-    search: [title, description, company, location]
-    sortable: [postedAt, salary]
+    crud: JobPost
+    search: [title, description, location, category]
+    sortable: [deadline, salary, createdAt]
+  my-jobs:
+    route: /my-jobs
+    crud: JobPost
+    mine: true
   applications:
+    route: /applications
     crud: Application
-    search: [name, email]
-    filters: [job, status]
-    access: [employer]
   home:
-    route: /home
+    route: /welcome
     landing:
       hero:
       footer:
-      latest:
-        records: Job
-        where:
-          status: open
-  team:
-    users: manage
-navigation: [jobs, applications, team]
+navigation: [jobs, my-jobs, applications]

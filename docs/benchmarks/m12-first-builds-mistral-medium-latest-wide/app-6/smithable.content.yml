@@ -1,14 +1,1 @@
 smithableContent: 0.1
-models:
-  Client:
-    label: Household
-    pluralLabel: Households
-  Invoice:
-    fields:
-      client:
-        label: Household
-pages:
-  clients:
-    title: Households
-  invoice-lines:
-    title: Invoice lines

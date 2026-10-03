@@ -6,71 +6,42 @@ models:
   Talk:
     fields:
       title: string!
-      description: text
+      summary: text
       startsAt: datetime!
       endsAt: datetime!
       room: string
-      capacity: int! = 100
+      capacity: int! = 50
       speaker: Speaker!
       registrations: Registration[]
-    access:
-      create: [organizer]
-      delete: [organizer]
   Speaker:
     fields:
       name: string!
       bio: text
-      email: email!
       photo: picture
-    access:
-      create: [organizer]
-      delete: [organizer]
+      email: email!
+      company: string
+  Registration:
+    fields:
+      talk: Talk! unique
+      registeredAt: datetime! = NOW()
+      attendee: Attendee!
+    capacity:
+      per: talk
+      max: talk.capacity
   Attendee:
     fields:
       name: string!
       email: email! unique
       company: string
-      dietaryRestrictions: text
-    access:
-      create: [organizer, attendee]
-      delete: [organizer]
-  Registration:
-    fields:
-      talk: Talk!
-      attendee: Attendee!
-      registeredAt: datetime!
-    capacity:
-      per: talk
-      max: talk.capacity
-    access:
-      create: [organizer, attendee]
-      delete: [organizer, owner]
+      dietaryRequirements: text
 pages:
   talks:
     crud: Talk
-    access: [organizer]
   speakers:
     crud: Speaker
-    access: [organizer]
   attendees:
     crud: Attendee
-    access: [organizer]
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      talks:
-        records: Talk
-      speakers:
-        records: Speaker
-      contact:
-  team:
-    users: manage
-  admin:
-    data: all
   registrations:
     crud: Registration
-    access: [organizer, attendee]
-    mine: true
-navigation: [talks, speakers, registrations]
+  team:
+    users: manage

@@ -17,10 +17,11 @@ models:
         values:
           klaeder: Kläder
           moebler: Möbler
-          leksaker: Leksaker
           elektronik: Elektronik
+          leksaker: Leksaker
           boecker: Böcker
-          annat: Annat
+          sport: Sport
+          oevrigt: Övrigt
       condition:
         label: Skick
         values:
@@ -36,4 +37,4 @@ pages:
     hero:
       image:
         src: images/hero.webp
-        alt: A snowy village street at dusk with warm lit windows
+        alt: An empty sports hall with a polished wooden floor and climbing bars on the wall

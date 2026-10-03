@@ -1,15 +1,16 @@
 smithableUx: 0.1
 pages:
   recipes:
-    icon: book
-    form:
-      sections: [{ name: details, fields: [name, description, category, difficulty, servings, prepTime, cookTime] }, { name: instructions, fields: [instructions] }, { name: image, fields: [image] }]
-      columns: 2
     table:
+      columns: [name, category, difficulty, servings]
       view: cards
-      sort: name
+    form:
+      sections: [{ name: details, fields: [name, description, category, difficulty] }, { name: times, fields: [servings, prepTime, cookTime] }, { name: instructions, fields: [instructions, image] }]
+      columns: 2
   shopping-lists:
-    icon: cart
     table:
       columns: [name, date, status]
-      sort: -date
+tones:
+  ShoppingList.status:
+    completed: success
+    pending: warning

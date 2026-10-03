@@ -1,21 +1,15 @@
 smithable: 0.1
 app:
-  name: Cleaning Invoices
-  description: A shared place for our cleaning company to manage monthly invoices to households.
+  name: CleanSweep Invoicing
+  description: Monthly invoicing for a small cleaning company.
   currency: EUR
 models:
   Client:
     fields:
       name: string!
+      email: email!
       address: text
       invoices: Invoice[]
-  InvoiceLine:
-    fields:
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount: money
-      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -24,19 +18,3 @@ models:
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       total: money
-      lines: InvoiceLine[]
-pages:
-  clients:
-    crud: Client
-    search: [name, address]
-    sortable: [name]
-  invoices:
-    crud: Invoice
-    search: [number, client]
-    filters: [client, status, issuedOn, dueOn]
-    sortable: [number, issuedOn, dueOn, total]
-  invoice-lines:
-    crud: InvoiceLine
-  team:
-    users: manage
-navigation: [invoices, clients, invoice-lines, team]

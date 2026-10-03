@@ -1,13 +1,13 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: private
-public:
-  pages: [home]
 roles:
   admin:
     description: Keeps the tool library organized.
   member:
     description: Lends and borrows tools.
 defaultRole: member
+public:
+  pages: [home]
 admins: [johan@smithable.ai]
