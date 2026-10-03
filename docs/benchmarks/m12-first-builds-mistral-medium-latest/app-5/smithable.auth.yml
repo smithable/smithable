@@ -1,4 +1,9 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
+roles:
+  baker:
+    description: Manages ingredients and stock.
+defaultRole: baker

@@ -7,5 +7,5 @@ roles:
   admin:
     description: Sales management. Full access.
   sales:
-    description: Works with companies, contacts, deals, and follow-ups.
+    description: Works with companies, contacts, deals and follow-ups.
 defaultRole: sales

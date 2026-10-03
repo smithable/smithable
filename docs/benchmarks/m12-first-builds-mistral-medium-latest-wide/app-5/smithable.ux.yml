@@ -4,8 +4,20 @@ pages:
     table:
       sort: -issuedOn
       columns: [number, client, issuedOn, dueOn, status, total]
+    icon: receipt
     form:
       columns: 2
+  clients:
+    table:
+      sort: name
+      columns: [name, email, vatNumber]
+      below:
+        name: email
+    icon: users
+    form:
+      columns: 2
+  invoice-lines:
+    icon: list
 tones:
   Invoice.status:
     paid: success

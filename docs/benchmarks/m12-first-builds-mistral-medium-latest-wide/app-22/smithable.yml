@@ -10,39 +10,37 @@ models:
       name: string!
       description: text
       price: money!
+      stock: int! = 0
+      unit: piece | kg | liter
       category: string
-      available: bool = true
-      stock: int = 0
-    access:
-      delete: [admin]
   PreOrder:
     fields:
       customerName: string!
-      customerEmail: email
       customerPhone: phone
       product: Product!
-      quantity: int! = 1
+      quantity: int!
       orderDate: date! = TODAY()
-      status: pending | confirmed | cancelled | completed
-  PickupTime:
+      pickupDate: date!
+      status: pending | ready | pickedUp | canceled
+      notes: text
+  PickupSlot:
     fields:
       date: date!
       startTime: string!
       endTime: string!
-      maxSlots: int! = 10
+      maxPreOrders: int! = 10
       notes: text
-    access:
-      delete: [admin]
-      write: [admin]
 pages:
-  products:
+  produkte:
     crud: Product
-    search: [name, description, category]
-  pre-orders:
+    search: [name, category]
+  vorbestellungen:
     crud: PreOrder
-    search: [customerName, customerEmail, customerPhone]
-    filters: [status, product]
-  pickup-times:
-    crud: PickupTime
+    search: [customerName, customerPhone]
+    filters: [status, pickupDate, product]
+  abholzeiten:
+    crud: PickupSlot
     filters: [date]
-navigation: [products, pre-orders, pickup-times]
+  team:
+    users: manage
+navigation: [produkte, vorbestellungen, abholzeiten, team]

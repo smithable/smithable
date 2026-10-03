@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: A help desk for an IT team to manage tickets, priorities and assignments.
+  description: A help desk for an IT team to manage support tickets, priorities and assignments.
 models:
   Ticket:
     fields:
@@ -10,11 +10,13 @@ models:
       priority: low | medium | high | critical
       status: open | inProgress | resolved | closed
       assignee: User
-      requester: User!
     access:
-      delete: [itSupport]
+      delete: [admin]
 pages:
   tickets:
     crud: Ticket
     search: [title, description]
     sortable: [priority, status, createdAt]
+  team:
+    users: manage
+navigation: [tickets, team]

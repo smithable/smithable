@@ -1,4 +1,6 @@
 {
   "description": "A status page for our API, with incidents and planned maintenance.",
-  "starter": "status"
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": []
 }

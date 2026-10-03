@@ -1,10 +1,15 @@
 smithableUx: 0.1
 pages:
+  clients:
+    table:
+      sort: name
+    icon: home
   invoices:
     table:
-      sort: -month
+      sort: -issuedOn
     icon: receipt
 tones:
   Invoice.status:
     paid: success
+    overdue: danger
     sent: warning
