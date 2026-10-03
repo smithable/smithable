@@ -1,21 +1,23 @@
 smithableUx: 0.1
 pages:
-  customers:
+  asiakkaat:
     icon: users
-  cars:
+  autot:
     icon: truck
-  service-jobs:
-    icon: settings
+  huoltotyot:
+    icon: clipboard
     table:
       sort: -startDate
-  invoices:
+  laskut:
     icon: receipt
     table:
-      sort: -issuedOn
+      sort: -issueDate
+  palvelut:
+    icon: settings
 tones:
-  ServiceJob.status:
+  WorkOrder.status:
     completed: success
-    cancelled: danger
+    canceled: danger
   Invoice.status:
     paid: success
-    overdue: danger
+    canceled: danger

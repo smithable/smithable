@@ -7,17 +7,17 @@ models:
     fields:
       title: string!
       description: text
-      priority: low | medium | high | urgent
+      priority: low | medium | high | critical
       status: open | inProgress | resolved | closed
       assignee: User
     access:
-      delete: [itSupport]
+      delete: [admin]
 pages:
   tickets:
     crud: Ticket
     search: [title, description]
     sortable: [priority, status, createdAt]
-    actions: [startWork, resolve, close, reopen]
+    actions: [startWork, resolve, reopen, close]
   team:
     users: manage
 actions:
@@ -27,26 +27,26 @@ actions:
       status: open
     set:
       status: inProgress
-    intent: Start working on a ticket.
+      assignee: ME()
+    intent: Assign the ticket to yourself and start working on it.
   resolve:
     on: Ticket
     when:
       status: inProgress
     set:
       status: resolved
-    intent: Mark a ticket as resolved.
-  close:
-    on: Ticket
-    when:
-      status: [resolved, inProgress]
-    set:
-      status: closed
-    intent: Close a ticket.
+    intent: Mark the ticket as resolved.
   reopen:
     on: Ticket
     when:
-      status: [closed, resolved]
+      status: [resolved, closed]
     set:
       status: open
-    intent: Reopen a closed or resolved ticket.
-navigation: [tickets, team]
+    intent: Reopen the ticket for further work.
+  close:
+    on: Ticket
+    when:
+      status: resolved
+    set:
+      status: closed
+    intent: Close the ticket.

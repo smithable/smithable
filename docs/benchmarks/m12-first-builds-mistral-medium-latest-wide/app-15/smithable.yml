@@ -9,10 +9,6 @@ models:
       place: string!
       date: date!
       observer: User!
-    access:
-      delete: [admin]
-      write: [admin, member]
-      create: [admin, member]
 pages:
   sightings:
     crud: Sighting

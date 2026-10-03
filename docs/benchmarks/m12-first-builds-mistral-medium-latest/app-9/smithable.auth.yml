@@ -4,7 +4,7 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  itSupport:
-    description: Handles IT support tickets.
-defaultRole: itSupport
+  agent:
+    description: Handles support tickets.
+defaultRole: agent
 admins: [johan@smithable.ai]

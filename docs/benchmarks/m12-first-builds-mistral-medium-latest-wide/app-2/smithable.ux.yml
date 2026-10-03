@@ -9,7 +9,7 @@ pages:
 tones:
   Lead.status:
     qualified: success
-    lost: danger
+    disqualified: danger
   Deal.status:
     won: success
     lost: danger

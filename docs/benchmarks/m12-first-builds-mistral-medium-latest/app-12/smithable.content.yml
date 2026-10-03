@@ -1,19 +1,20 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Shop Uptime
-    subtitle: Current status of our web shop services and outage updates.
+    title: Web Shop Uptime
+    subtitle: Current status of our services and recent outages.
     hero:
-      title: Shop Uptime
-      subtitle: Current status of our web shop services and outage updates.
-      button: View History
       image:
         src: images/hero.webp
         alt: A florist arranging a bouquet in a small shop
-    footer:
-      text: © Shop Uptime. All systems operational.
-  history:
-    title: Incident History
+  incidents:
+    title: Incidents
+  updates:
+    title: Incident Updates
+  maintenance:
+    title: Planned Maintenance
+  components:
+    title: Components
 models:
   Component:
     label: Service
@@ -35,9 +36,3 @@ models:
           identified: Identified
           monitoring: Monitoring
           resolved: Resolved
-  IncidentUpdate:
-    label: Update
-    pluralLabel: Updates
-  Maintenance:
-    label: Maintenance
-    pluralLabel: Maintenance Windows

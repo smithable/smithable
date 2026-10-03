@@ -16,39 +16,20 @@ models:
       image: url
     access:
       delete: [admin]
-      write: [admin]
-      create: [admin, member]
   Ingredient:
     fields:
       name: string!
       quantity: string
       unit: string
       recipe: Recipe!
-    access:
-      delete: [admin]
-      write: [admin, member]
-      create: [admin, member]
   ShoppingList:
     fields:
       name: string!
       date: date! = TODAY()
       status: pending | completed
-      recipe: Recipe
+      items: string!
     access:
       delete: [admin]
-      write: [admin, member]
-      create: [admin, member]
-  ShoppingItem:
-    fields:
-      name: string!
-      quantity: string
-      unit: string
-      bought: bool = false
-      shoppingList: ShoppingList!
-    access:
-      delete: [admin]
-      write: [admin, member]
-      create: [admin, member]
 pages:
   recipes:
     crud: Recipe
@@ -58,9 +39,7 @@ pages:
   shopping-lists:
     crud: ShoppingList
     search: [name]
-    filters: [status, date]
-    sortable: [name, date, status]
-    actions: [markCompleted]
+    filters: [status]
   home:
     route: /
     landing:
@@ -70,12 +49,4 @@ pages:
         records: Recipe
         where:
           category: [breakfast, lunch, dinner, dessert, snack, drink]
-actions:
-  markCompleted:
-    on: ShoppingList
-    when:
-      status: pending
-    set:
-      status: completed
-    intent: Mark a shopping list as completed.
 navigation: [recipes, shopping-lists]

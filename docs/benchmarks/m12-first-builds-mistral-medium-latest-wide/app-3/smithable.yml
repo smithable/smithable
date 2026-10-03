@@ -19,11 +19,10 @@ models:
       service: Service!
       stylist: Stylist!
       startsAt: datetime!
+      status: booked | confirmed | cancelled
       customerName: string!
       customerEmail: email!
       customerPhone: phone
-      status: booked | confirmed | canceled | completed
-      notes: text
 pages:
   stylists:
     crud: Stylist
@@ -34,7 +33,7 @@ pages:
   appointments:
     crud: Appointment
     access: [admin]
-    actions: [confirmAppointment, cancelAppointment, completeAppointment]
+    actions: [confirmAppointment, cancelAppointment]
   home:
     route: /
     landing:
@@ -44,15 +43,6 @@ pages:
         records: Service
       stylists:
         records: Stylist
-  schedule:
-    calendar:
-      model: Appointment
-      starts: startsAt
-  team:
-    users: manage
-  admin:
-    data: all
-navigation: [home, schedule, appointments, stylists, services, admin, team]
 actions:
   confirmAppointment:
     on: Appointment
@@ -60,19 +50,9 @@ actions:
       status: booked
     set:
       status: confirmed
-    intent: Confirm a booked appointment.
   cancelAppointment:
     on: Appointment
     when:
       status: [booked, confirmed]
     set:
-      status: canceled
-      notes:
-    intent: Cancel an appointment.
-  completeAppointment:
-    on: Appointment
-    when:
-      status: confirmed
-    set:
-      status: completed
-    intent: Mark an appointment as completed.
+      status: cancelled

@@ -11,10 +11,14 @@ models:
         values:
           draft: Draft
           sent: Sent
-          paid: Paid
-          overdue: Overdue
-pages:
-  clients:
-    title: Clients
-  quotes:
-    title: Quotes
+          accepted: Accepted
+          rejected: Rejected
+  Payment:
+    label: Payment
+    pluralLabel: Payments
+    fields:
+      method:
+        values:
+          cash: Cash
+          bank: Bank Transfer
+          online: Online
