@@ -90,6 +90,8 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/SignIn.tsx": [
     "data-kit="sign-in"",
+    "data-part="code"",
+    "data-part="email"",
   ],
   "src/kit/Users.tsx": [
     "data-kit="users"",

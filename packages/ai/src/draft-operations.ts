@@ -20,7 +20,7 @@ import { completeJson, type Provider, type Usage } from "./provider.js";
 export const BLANK: SpecFiles = {
   "smithable.yml": "smithable: 0.1\napp:\n  name: App\n",
   "smithable.auth.yml":
-    "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: private\n",
+    "smithableAuth: 0.1\nsignIn:\n  providers: [email]\ndefaultAccess: private\n",
   "smithable.content.yml": "smithableContent: 0.1\n",
   "smithable.ux.yml": "smithableUx: 0.1\n",
 };

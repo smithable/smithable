@@ -1,6 +1,6 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import { type AuthIR, pageAccess, type SpecIR } from "@smithable/core";
-import { hasSignIn } from "./auth.js";
+import { devDomain, hasSignIn } from "./auth.js";
 import { HEADER, type Texts } from "./shared.js";
 
 /**
@@ -33,7 +33,8 @@ export function smokeTests(ir: SpecIR, t: Texts, auth: AuthIR): string {
       return routes.length ? [`  await warm(${JSON.stringify(role)}, ${list(routes)});`] : [];
     }),
   ].join("\n");
-  return `${HEADER}import { expect, type Page, test } from "@playwright/test";
+  const email = auth.signIn !== "none" && auth.signIn.providers.includes("email");
+  return `${HEADER}${email ? 'import { readdirSync, readFileSync } from "node:fs";\nimport { join } from "node:path";\n' : ""}import { expect, type Page, test } from "@playwright/test";
 
 /** Opens a page and fails on any error in the browser, e.g. a script the policy blocked. */
 async function visit(page: Page, route: string) {
@@ -126,6 +127,37 @@ ${pages
   .join("")}
 });`,
   )
-  .join("")}
+  .join("")}${
+  email
+    ? `
+
+/** The sign-in code mailed to an address, from the smoke tests' outbox (no mail is sent). */
+function codeFor(address: string): string | undefined {
+  const outbox = join("data", "smoke", "mail", "outbox");
+  let files: string[] = [];
+  try {
+    files = readdirSync(outbox).sort().reverse();
+  } catch {}
+  for (const file of files) {
+    const mail = readFileSync(join(outbox, file), "utf8").replace(/=\\r?\\n/g, "");
+    if (mail.includes(\`To: \${address}\`)) return /is (\\d{3} \\d{3})\\./.exec(mail)?.[1];
+  }
+  return undefined;
+}
+
+test("signing in with a code from the outbox", async ({ page }) => {
+  const address = \`dev-code-\${Date.now()}@${devDomain(auth)}\`;
+  await page.goto("/sign-in");
+  await page.locator('body[data-hydrated="true"]').waitFor();
+  await page.getByLabel("Email address").fill(address);
+  await page.getByRole("button", { name: "Send me a code" }).click();
+  await expect(page.getByText("a code is on its way")).toBeVisible();
+  await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
+  await page.getByLabel("Code").fill(codeFor(address) as string);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL((url) => url.pathname !== "/sign-in");
+});`
+    : ""
+}
 `;
 }

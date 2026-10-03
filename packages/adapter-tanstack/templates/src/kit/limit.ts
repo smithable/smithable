@@ -1,6 +1,7 @@
 // Smithable app kit: how often one person, or one address, may write. Sign-in and its callbacks
 // are limited by Better Auth itself (3 attempts per 10 seconds in production); this covers the
-// app's own server functions: creating, changing and deleting records, booking, inviting.
+// app's own server functions: creating, changing and deleting records, booking, inviting, and
+// the sign-in codes it mails.
 // Counts live in memory: the app runs as one process, so that is the whole picture.
 
 /** Refused because of how often, not because of who: the words are shown as they are. */
@@ -18,6 +19,10 @@ export const LIMITS = {
   visitorWrites: { max: 10, seconds: 60 },
   /** Invitations sent by one administrator. */
   invitations: { max: 20, seconds: 3600 },
+  /** Sign-in codes mailed to one address. */
+  codes: { max: 5, seconds: 3600 },
+  /** Sign-in codes asked for from one network address. */
+  codesFromAddress: { max: 20, seconds: 3600 },
 };
 
 const counts = new Map<string, { n: number; until: number }>();
@@ -57,4 +62,10 @@ export function writeAllowed(viewer: { id: string } | null, headers: Headers): v
 /** Counts an invitation sent by the viewer. */
 export function inviteAllowed(viewer: { id: string } | null): void {
   if (viewer) count(`invite:${viewer.id}`, LIMITS.invitations, "invitations");
+}
+
+/** Counts a sign-in code mailed to the address, asked for from the request's network address. */
+export function codeAllowed(email: string, headers: Headers): void {
+  count(`code:${email}`, LIMITS.codes, "sign-in codes");
+  count(`code-from:${address(headers)}`, LIMITS.codesFromAddress, "sign-in codes");
 }
