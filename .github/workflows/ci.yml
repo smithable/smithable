@@ -1,23 +1,34 @@
 # The gate. The required status is the `check` job, which only reports on the jobs it needs.
 # Every pull request runs lint, build, units and the site. The example apps (one job each, through
-# scripts/test-apps.mjs <example>) and Studio in a real browser run too when the repository
-# variable FULL_CI is "true" and the change touches the engine, the examples, the scripts
-# `pnpm check` runs, the dependencies or this workflow. While the repository is private FULL_CI
-# is off and the local `pnpm check` is the gate for engine changes (CLAUDE.md); at the public
-# flip it is switched on, with no edit here. A push to main whose tree its pull request already
-# checked runs nothing beyond the scope job; one that differs (an administrator's merge) gets lint,
-# build, units and the site. A newer push to a pull request cancels its older run.
+# scripts/test-apps.mjs <example>) and Studio in a real browser run too when the change touches the
+# engine, the examples, the scripts `pnpm check` runs, the dependencies or this workflow, and either
+# the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
+# change someone judges risky). While the repository is private FULL_CI is off and the local
+# `pnpm check` is the gate for engine changes (CLAUDE.md); at the public flip it is switched on,
+# with no edit here. Main gets the full check twice a day (03:00 and 13:00 UTC), skipped when
+# main's head is the commit the last scheduled run checked: it passes again if that run passed and
+# fails again if it failed (a cancelled one is run again), so the latest scheduled run always tells main's state. Run workflow
+# (workflow_dispatch) runs the full check on any branch. A push to main whose tree its pull request
+# already checked runs nothing beyond the scope job; one that differs (an administrator's merge)
+# gets lint, build, units and the site. A newer push to a pull request cancels its older run;
+# adding any other label runs nothing and cancels nothing.
 name: CI
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
+  schedule:
+    - cron: "0 3,13 * * *"
+  workflow_dispatch:
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   scope:
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
     outputs:
       full: ${{ steps.scope.outputs.full }}
       basics: ${{ steps.scope.outputs.basics }}
@@ -30,17 +41,37 @@ jobs:
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           FULL_CI: ${{ vars.FULL_CI }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
-          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+          if [ "$GITHUB_EVENT_NAME" = schedule ]; then
+            # The scheduled run before this one (this one is listed first, still running).
+            last=$(gh run list --workflow ci.yml --event schedule --limit 2 --json headSha,conclusion \
+              --jq '.[1] // {} | "\(.headSha) \(.conclusion)"')
+            if [ "${last% *}" = "$GITHUB_SHA" ]; then
+              case "${last#* }" in
+                success)
+                  echo "main is still $GITHUB_SHA, which the last scheduled run checked: skipped" | tee -a "$GITHUB_STEP_SUMMARY"
+                  { echo "full=false"; echo "basics=false"; echo "examples=[]"; } >> "$GITHUB_OUTPUT"
+                  exit 0 ;;
+                failure)
+                  echo "main is still $GITHUB_SHA, whose last scheduled run failed" | tee -a "$GITHUB_STEP_SUMMARY"
+                  exit 1 ;;
+              esac
+            fi
+          fi
+          if [ "$GITHUB_EVENT_NAME" = schedule ] || [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            full=true; why="$GITHUB_EVENT_NAME"
+          elif ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             full=true; why="no base to compare with"
           elif git diff --name-only "$BASE" HEAD | grep -qE "$engine"; then
             full=true; why="engine files changed"
           else
             full=false; why="no engine files changed"
           fi
-          if [ "$full" = true ] && [ "$FULL_CI" != true ]; then
-            full=false; why="$why, but FULL_CI is off: the local pnpm check is the gate"
+          if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
+            full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
           fi
           # A merge to main of an up-to-date pull request has the tree its pull request run checked.
           basics=true
@@ -103,7 +134,7 @@ jobs:
   # The required status: green when every job it needs passed, or was skipped on the short run.
   check:
     needs: [scope, lint-build-units, apps, studio]
-    if: always() && github.event_name == 'pull_request'
+    if: always() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci')
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed
