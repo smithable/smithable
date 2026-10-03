@@ -58,7 +58,7 @@ export function Uptime({ name, texts, title, text }: CustomSectionProps) {
                     <span
                       key={day.date}
                       title={`${day.date}: ${day.minutes ? `${day.minutes} minutes down` : "no incidents"}`}
-                      className={`flex-1 rounded-sm ${day.minutes === 0 ? "bg-emerald-500" : day.minutes < 60 ? "bg-amber-500" : "bg-red-500"}`}
+                      className={`flex-1 rounded-sm ${day.minutes === 0 ? "bg-success" : day.minutes < 60 ? "bg-warning" : "bg-destructive"}`}
                     />
                   ))}
                 </div>
