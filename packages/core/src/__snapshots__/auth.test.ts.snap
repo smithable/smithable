@@ -3,7 +3,7 @@
 exports[`the examples > booking is valid with its auth file 1`] = `
 {
   "admins": [
-    "owner@stillwater.ax",
+    "owner@stillwater.example",
   ],
   "defaultAccess": "private",
   "defaultRole": "member",
@@ -40,8 +40,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
   ],
   "signIn": {
     "providers": [
-      "google",
-      "facebook",
+      "email",
     ],
     "selfSignUp": true,
   },
@@ -51,7 +50,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
 exports[`the examples > crm is valid with its auth file 1`] = `
 {
   "admins": [
-    "owner@acme.com",
+    "owner@acme.example",
   ],
   "defaultAccess": "shared",
   "defaultRole": "sales",
@@ -73,10 +72,10 @@ exports[`the examples > crm is valid with its auth file 1`] = `
   ],
   "signIn": {
     "allowedDomains": [
-      "acme.com",
+      "acme.example",
     ],
     "providers": [
-      "google",
+      "email",
     ],
     "selfSignUp": false,
   },
@@ -110,7 +109,7 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
   ],
   "signIn": {
     "providers": [
-      "google",
+      "email",
     ],
     "selfSignUp": true,
   },
