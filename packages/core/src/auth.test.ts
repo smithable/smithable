@@ -359,4 +359,12 @@ test("allowedDomains on a domain nobody has is warned about, instead of the admi
   expect(codes("acme.example")).toContain("example-domain");
   expect(codes("acme.example")).not.toContain("admin-outside-domains");
   expect(codes("acme.com")).toEqual(["admin-outside-domains"]);
+  // A mixed list: the sample domain is to be removed; the real one still lets people in.
+  const mixed = validateAuth({
+    path: "smithable.auth.yml",
+    text: "smithableAuth: 0.1\nsignIn: { providers: [email], allowedDomains: [acme.example, mine.ax] }\ndefaultAccess: shared\nadmins: [you@mine.ax]\n",
+  }).diagnostics;
+  expect(mixed.map((d) => d.message)).toEqual([
+    "acme.example in allowedDomains is a domain nobody has an account at: remove it.",
+  ]);
 });
