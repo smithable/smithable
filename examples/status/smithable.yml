@@ -82,7 +82,7 @@ pages:
   maintenance: { crud: Maintenance }
   overview:
     dashboard:
-      open: { count: Incident, where: { status: investigating } }
+      open: { count: Incident, where: { status: [investigating, identified, monitoring] } }
       perMonth: { count: Incident, by: detectedAt }
       latest: { list: Incident, limit: 5 }
   team: { users: manage }

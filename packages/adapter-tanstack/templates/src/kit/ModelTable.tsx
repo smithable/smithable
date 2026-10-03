@@ -296,6 +296,8 @@ export function ModelTable<R extends Row>({
                       data-field={field.name}
                       className={cn(
                         numeric(field.kind) && "text-right tabular-nums",
+                        // A date and its time on one line.
+                        (field.kind === "date" || field.kind === "datetime") && "whitespace-nowrap",
                         field.name === ui.titleField && "font-semibold",
                       )}
                     >

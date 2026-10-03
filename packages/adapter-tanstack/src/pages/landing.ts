@@ -123,6 +123,9 @@ export function landingRoute(
           (f) => f.type.kind === "scalar" && f.type.name === "text",
         );
         const choice = model.fields.find((f) => f.type.kind === "choice");
+        // Its first amount of money, stored or computed: for a thing for sale, its price.
+        const money = model.fields.find((f) => f.type.kind === "scalar" && f.type.name === "money");
+        if (money) imports.add("#/generated/app", "app");
         // A card opens its article when the model has an articles page, and shows its picture.
         const article = ir.pages.find(
           (p) => p.pattern.kind === "articles" && p.pattern.model === model.name,
@@ -186,6 +189,14 @@ export function landingRoute(
                 ]),
               )
             : undefined;
+        // The badge's color by meaning, as in the model's tables.
+        const tones =
+          choice &&
+          Object.fromEntries(
+            Object.entries(ux.tones[`${model.name}.${choice.name}`] ?? {}).filter(
+              ([, tone]) => tone !== "neutral",
+            ),
+          );
         return [
           `${open("RecordCards")}
           id=${attr(section.name)}${icon ? `\n          icon={${icon}}` : ""}${door ? `\n          door={${literal(door)}}` : ""}
@@ -224,6 +235,16 @@ export function landingRoute(
               labels && choice
                 ? `
             badge: (${literal(labels)} as Record<string, string>)[row.${choice.name}],`
+                : ""
+            }${
+              money
+                ? `
+            amount: row.${money.name} == null ? undefined : new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(row.${money.name} / 100),`
+                : ""
+            }${
+              tones && Object.keys(tones).length
+                ? `
+            tone: (${literal(tones)} as Record<string, "success" | "warning" | "danger">)[row.${choice?.name}],`
                 : ""
             }
           }))}

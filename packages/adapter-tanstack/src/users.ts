@@ -302,7 +302,7 @@ The ${page} page lists who has access and lets administrators invite people by e
 ${
   closed
     ? `
-Sign-up is closed (see ${setting}): only invited addresses and ${admins} can sign in. Everyone else is refused at sign-in and told to ask an administrator.
+Sign-up is closed (see ${setting}): only invited addresses and ${admins} can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 `
     : `
 Anyone with an account at the sign-in provider may sign up and gets the default role; an invitation gives its role instead. Close sign-up in ${setting} to let only invited people in.
