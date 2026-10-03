@@ -1,0 +1,7 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A hair salon with mirrors, chairs and plants in daylight

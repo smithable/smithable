@@ -80,14 +80,20 @@ export function Panel({
   actions,
   children,
   className,
+  busy,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Its content is about to change (aria-busy), e.g. a preview that will reload. */
+  busy?: boolean;
 }) {
   return (
-    <section className={cx("flex min-h-0 flex-col border-neutral-200 bg-white", className)}>
+    <section
+      aria-busy={busy || undefined}
+      className={cx("flex min-h-0 flex-col border-neutral-200 bg-white", className)}
+    >
       {title !== undefined && (
         <header className="flex h-10 shrink-0 items-center justify-between border-b border-neutral-200 px-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
