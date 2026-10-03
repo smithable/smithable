@@ -177,3 +177,30 @@ other: 1
 other: 1
 `);
 });
+
+test("a long text stays on its line, plain or quoted, and reads back the same", () => {
+  // Found by bench-m12: setApp with a model's long description made invalid YAML.
+  const plain =
+    "Simple invoicing for freelancers. Each user manages their own clients, their invoices and the payments that come in.";
+  const quoted = `${plain.replace("Simple", "Simple: ")} And more.`;
+  const editor = new YamlEditor("app:\n  name: Invoicely\n  description: Short.\n");
+  editor.set(["app", "description"], plain);
+  editor.add(["app"], "tagline", quoted);
+  expect(editor.text.split("\n")).toHaveLength(5);
+  expect(editor.get(["app", "description"])).toBe(plain);
+  expect(editor.get(["app", "tagline"])).toBe(quoted);
+});
+
+test("a text with line breaks stays on its line through set, add and setItem, and reads back the same", () => {
+  const two = "First paragraph.\n\nSecond: with a colon, and a comma.";
+  const editor = new YamlEditor(
+    "app:\n  name: Shop\n  description: Short.\nrules:\n  - First rule.\n",
+  );
+  editor.set(["app", "description"], two);
+  editor.add(["app"], "tagline", two);
+  editor.setItem(["rules"], 0, { rule: two });
+  expect(editor.text.split("\n")).toHaveLength(7);
+  expect(editor.get(["app", "description"])).toBe(two);
+  expect(editor.get(["app", "tagline"])).toBe(two);
+  expect((editor.get(["rules"]) as { rule: string }[])[0]?.rule).toBe(two);
+});
