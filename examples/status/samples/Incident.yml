@@ -1,0 +1,16 @@
+# Two incidents: one being watched, one resolved.
+- title: Website unreachable for twenty minutes
+  status: resolved
+  component: Website
+  detectedAt: 2026-09-24 08:40
+  resolvedAt: 2026-09-24 09:01
+  summary: |
+    A certificate renewal failed and browsers refused to connect. The certificate was renewed by
+    hand and the renewal job now alerts the team a week before expiry.
+- title: Card payments slow at checkout
+  status: monitoring
+  component: Payments
+  detectedAt: 2026-10-01 14:05
+  summary: |
+    Card payments took up to a minute to confirm for some customers. The payment provider found a
+    faulty node and moved traffic away from it; we are watching before we call it resolved.

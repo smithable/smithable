@@ -1,0 +1,21 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+
+signIn:
+  providers: [google]
+  selfSignUp: false                # only people invited from the team page
+
+defaultAccess: shared              # the team sees and writes everything
+
+roles:
+  admin: { description: Runs the status page and the team. }
+  staff: { description: Writes incidents and their updates. }
+
+defaultRole: staff
+admins: [ops@northwind.ax]
+
+# ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
+# signing in. Never add models that contain personal or business data.
+public:
+  pages: [home, history]           # the status page and the incident history
+  read: [Component, Incident, IncidentUpdate, Maintenance]

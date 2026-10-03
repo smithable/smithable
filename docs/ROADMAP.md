@@ -295,6 +295,17 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - CI runs the full check for engine changes, once per pull request (#93, #94). `main` is protected, and sessions merge through `scripts/merge-green.sh`, which brings a pull request up to date first (#89, #101).
 - The image library is ready for Johan's go: the script, the manifest and the pilot's 48 pictures in `smithable-images`. The theme tools are merged: the theme sheet, a theme from a site and rule-made candidates (#92, #95, #97).
 
+**Progress (2026-10-03):**
+- The status page is the sixth starter (#139): components with their state, incidents with updates and the identified, monitoring and resolve actions (starter code that sets the status, its update, the end time and the component), planned maintenance, the public page at `/` with what is going on now apart from what was resolved, and the incident history as articles.
+- Every `where` takes a list of choice values, and a landing records section takes `where` (#135); the status page's "going on now" uses both.
+- The marketplace is complete on main: favourites, contact the owner, the catalogue as the start page, `mine` pages and the Torget starter with its photographs (#106, #109, #112, #114, #121).
+- An owner's background color in the Look tab (`theme.brand.background`, #134): a wash of its hue in both modes, everything on it checked for contrast.
+- Existing data in: `importRecords` from a CSV file, with a dry run, one transaction and undo, in the CLI, MCP and Studio (#130).
+- Opt-in error reports: `smithable report` and Studio's "Report this" show exactly what would be sent (never records, uploads or custom code), sent to the service hosted or as a GitHub issue (#133, the service's endpoint cloud #43).
+- US spelling for the product and every generated text; the crud key is `favorites` (#128).
+- npm publishing is ready behind a manual trigger: `smithable`, `create-smithable` and `@smithable/*` with their licences and provenance, a dry run by default; the `NPM_TOKEN` secret is Johan's to set (#137).
+- Generated apps pre-bundle their common libraries, and the smoke tests allow 60 s per page, after flakes under load (#136).
+
 ---
 
 ## Later (not before M16)
