@@ -179,3 +179,43 @@ public:
     "    - { Post: { where: { state: [draft, published] } } }\n",
   );
 });
+
+test("new users are never administrators by default", () => {
+  const only = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles: { admin: { description: Owner. } }\n",
+    },
+    ir,
+  );
+  // Listing only admin still leaves a role for everyone else.
+  expect(only.diagnostics.map((d) => d.code)).toEqual([]);
+  expect(only.auth?.roles.map((r) => r.name)).toEqual(["admin", "member"]);
+  expect(only.auth?.defaultRole).toBe("member");
+  const asked = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles: { admin: {} }\ndefaultRole: admin\n",
+    },
+    ir,
+  );
+  expect(asked.diagnostics.map((d) => d.code)).toEqual(["admin-default-role"]);
+  // setRoles: admin as the default means "no other role named"; with several others it is refused.
+  const files = { spec, auth: auth("Post") };
+  const one = applyOperation(files, "setRoles", {
+    roles: { admin: "Owner." },
+    defaultRole: "admin",
+  });
+  expect(one.ok && one.files.auth).not.toContain("defaultRole: admin");
+  const two = applyOperation(files, "setRoles", {
+    roles: { admin: "Owner.", editor: "Writes." },
+    defaultRole: "admin",
+  });
+  expect(two.ok && two.files.auth).toContain("defaultRole: editor");
+  expect(
+    applyOperation(files, "setRoles", {
+      roles: { editor: "Writes.", reader: "Reads." },
+      defaultRole: "admin",
+    }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining("cannot all be administrators") });
+});
