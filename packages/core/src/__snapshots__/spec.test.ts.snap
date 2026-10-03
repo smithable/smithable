@@ -2231,7 +2231,11 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
             "model": "Incident",
             "name": "open",
             "where": {
-              "status": "investigating",
+              "status": [
+                "investigating",
+                "identified",
+                "monitoring",
+              ],
             },
           },
           {
