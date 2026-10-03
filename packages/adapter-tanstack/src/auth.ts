@@ -19,7 +19,7 @@ const ENV: Record<string, [string, string]> = {
 };
 
 /** Development users get an address in an allowed domain, so they pass the sign-up check. */
-function devDomain(auth: AuthIR): string {
+export function devDomain(auth: AuthIR): string {
   return (auth.signIn === "none" ? undefined : auth.signIn.allowedDomains?.[0]) ?? "example.com";
 }
 
@@ -55,38 +55,30 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
     ? { ${name}: { clientId: process.env.${id}, clientSecret: process.env.${secret}${hd} } }
     : {}),`;
   };
+  const email = providers.includes("email");
   const domainCheck = allowedDomains
     ? `
-      if (!ALLOWED_DOMAINS.includes(email.split("@")[1] ?? "")) {
-        throw new APIError("FORBIDDEN", {
-          message: \`Only \${ALLOWED_DOMAINS.join(" and ")} accounts can sign in.\`,
-        });
-      }`
+  if (!ALLOWED_DOMAINS.includes(email.split("@")[1] ?? ""))
+    return \`Only \${ALLOWED_DOMAINS.join(" and ")} accounts can sign in.\`;`
     : "";
   // Who gets in: an invitation gives its role; closed sign-up refuses everyone else but the
   // admins (and, in development, the development users).
-  const invitationCheck = invitations
+  const closed = invitations && !selfSignUp;
+  const invitationCheck = closed
     ? `
-          const invited = db.select().from(invitation).where(eq(invitation.email, email)).get();
-          const open = invited && invited.expiresAt.getTime() > Date.now() ? invited : undefined;${
-            selfSignUp
-              ? ""
-              : `
-          if (
-            !open &&
-            !ADMINS.includes(email) &&
-            !(import.meta.env.DEV && email.startsWith("dev-")) &&
-            !(demoSignIn && email.startsWith("demo-"))
-          ) {
-            throw new APIError("FORBIDDEN", {
-              message: invited
-                ? "Your invitation has expired. Ask an administrator for a new one."
-                : \`Only invited people can sign in to \${APP_NAME}. Ask an administrator for an invitation.\`,
-            });
-          }`
-          }`
+  const invited = invitationOf(email);
+  if (
+    !(invited && invited.expiresAt.getTime() > Date.now()) &&
+    !ADMINS.includes(email) &&
+    !(import.meta.env.DEV && email.startsWith("dev-")) &&
+    !(demoSignIn && email.startsWith("demo-"))
+  )
+    return invited
+      ? "Your invitation has expired. Ask an administrator for a new one."
+      : \`Only invited people can sign in to \${APP_NAME}. Ask an administrator for an invitation.\`;`
     : "";
-  const role = invitations ? `open?.role ?? ${defaultRole}` : defaultRole;
+  const refuses = Boolean(domainCheck || invitationCheck);
+  const role = invitations ? `openInvitation(email)?.role ?? ${defaultRole}` : defaultRole;
   const afterCreate = invitations
     ? `
         after: async (created) => {
@@ -99,15 +91,15 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
     : "account, session, user, verification";
   return `${HEADER}import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-${allowedDomains || (invitations && !selfSignUp) ? 'import { APIError } from "better-auth/api";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
-${invitations ? 'import { eq } from "drizzle-orm";\n' : ""}import { db } from "#/db";
-import { ${tables} } from "#/db/schema";
+${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
+${invitations || (email && refuses) ? 'import { eq } from "drizzle-orm";\n' : ""}import { db } from "#/db";
+import { ${tables} } from "#/db/schema";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ${JSON.stringify(providers)};
 ${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n` : ""}/** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ${JSON.stringify(auth.admins)};
-${invitations && !selfSignUp ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
+${closed || email ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
 const socialProviders = {
 ${providers
   .filter((p) => p !== "email")
@@ -115,8 +107,40 @@ ${providers
   .join("\n")}
 };
 
-/** The providers whose keys are set. */
-export const configuredProviders = () => PROVIDERS.filter((p) => p in socialProviders);
+/** The providers whose keys are set${email ? " (email needs none: its codes go out by mail)" : ""}. */
+export const configuredProviders = () => PROVIDERS.filter((p) => ${email ? 'p === "email" || ' : ""}p in socialProviders);
+${
+  email
+    ? `
+/** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
+export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+`
+    : ""
+}${
+  invitations
+    ? `
+/** The invitation for an address, if there is one (it may have expired). */
+function invitationOf(email: string) {
+  return db.select().from(invitation).where(eq(invitation.email, email)).get();
+}
+
+/** The invitation for an address that is still open. */
+function openInvitation(email: string) {
+  const invited = invitationOf(email);
+  return invited && invited.expiresAt.getTime() > Date.now() ? invited : undefined;
+}
+`
+    : ""
+}${
+  refuses
+    ? `
+/** Why an address may not have an account here, or nothing when it may. */
+function joinRefusal(email: string): string | undefined {${domainCheck}${invitationCheck}
+  return undefined;
+}
+`
+    : ""
+}
 
 /**
  * A demo (DEMO_SIGN_IN=1 in the environment): the sign-in page offers every role without a
@@ -141,6 +165,8 @@ if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BET
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
+  // In development the app may run on any local port (the preview, the tests).
+  ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -154,7 +180,13 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (newUser) => {
-          const email = newUser.email.toLowerCase();${domainCheck}${invitationCheck}
+          const email = newUser.email.toLowerCase();${
+            refuses
+              ? `
+          const refused = joinRefusal(email);
+          if (refused) throw new APIError("FORBIDDEN", { message: refused });`
+              : ""
+          }
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${role} } };
         },${afterCreate}
       },
@@ -166,7 +198,38 @@ export const auth = betterAuth({
       update: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },
     },
   },
-  plugins: [tanstackStartCookies()],
+  plugins: [${
+    email
+      ? `
+    // Sign-in by a six-digit code by mail: good for ten minutes, five tries, stored hashed.
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 600,
+      allowedAttempts: 5,
+      storeOTP: "hashed",
+      async sendVerificationOTP({ email, otp, type }, ctx) {
+        if (type !== "sign-in") return;
+        const address = email.toLowerCase();
+        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+${
+  refuses
+    ? `        // Who may not join gets no mail, and the page says the same either way.
+        const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
+        if (!known && joinRefusal(address)) return;
+`
+    : ""
+}        // Not awaited, so the answer takes as long whether or not a mail goes out.
+        void sendMail({
+          to: address,
+          subject: \`Your code for \${APP_NAME}\`,
+          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+      },
+    }),
+    tanstackStartCookies(),
+  `
+      : "tanstackStartCookies()"
+  }],
 });
 `;
 }
@@ -219,6 +282,8 @@ export const userOptions = createServerFn().handler(async () => {
  */
 export function signInRoute(auth: AuthIR, start = "/", invitations = false): string {
   const roles = auth.roles.map((r) => r.name);
+  const email = auth.signIn !== "none" && auth.signIn.providers.includes("email");
+  const codes = email ? ", codes: codesReachPeople()" : "";
   const options = invitations
     ? `
 /** The sign-in choices, and whom an invitation link is for (by its token; never signs anyone in). */
@@ -238,14 +303,14 @@ const signInOptions = createServerFn()
       providers,
       missing: PROVIDERS.filter((p) => !providers.includes(p)),
       demo: demoSignIn,
-      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null,
+      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null${codes},
     };
   });
 `
     : `
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn${codes} };
 });
 `;
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
@@ -257,7 +322,7 @@ import { db } from "#/db";
 import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
-import { auth, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
@@ -298,7 +363,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo${invitations ? ", invitation" : ""} } = Route.useLoaderData();
+  const { providers, missing, demo${invitations ? ", invitation" : ""}${email ? ", codes" : ""} } = Route.useLoaderData();
   const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
   const router = useRouter();
   return (
@@ -311,7 +376,22 @@ function SignInPage() {
       onProvider={async (provider) => {
         const { error } = await authClient.signIn.social({ provider, callbackURL: redirect });
         if (error) throw new Error(error.message);
+      }}${
+        email
+          ? `
+      codes={codes}
+      onSendCode={async (address) => {
+        const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
+        if (error) throw new Error(error.message);
       }}
+      onCode={async (address, code) => {
+        const { error } = await authClient.signIn.emailOtp({ email: address, otp: code.replace(/\\s/g, "") });
+        if (error) throw new Error(error.message);
+        await router.invalidate();
+        await router.navigate({ href: redirect });
+      }}`
+          : ""
+      }
       onDevRole={async (role) => {
         await devSignIn({ data: role as (typeof ROLES)[number] });
         await router.invalidate();
@@ -414,16 +494,17 @@ export const verification = sqliteTable(
 /** The README section on signing in: provider setup and the development sign-in. */
 export function signInReadme(ir: SpecIR, auth: AuthIR): string {
   if (auth.signIn === "none") return "";
-  // Email codes need no keys (their flow is docs/design/email-sign-in.md, step 2).
-  const setup = auth.signIn.providers
-    .filter((p) => p !== "email")
-    .map((p) => {
-      const [id, secret] = ENV[p] as [string, string];
-      const console =
-        p === "google"
-          ? "In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type *Web application*"
-          : "In [Meta for Developers](https://developers.facebook.com/apps), create an app with *Facebook Login*";
-      return `### ${humanize(p)}
+  const setup = auth.signIn.providers.map((p) => {
+    if (p === "email")
+      return `### Email
+
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.`;
+    const [id, secret] = ENV[p] as [string, string];
+    const console =
+      p === "google"
+        ? "In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type *Web application*"
+        : "In [Meta for Developers](https://developers.facebook.com/apps), create an app with *Facebook Login*";
+    return `### ${humanize(p)}
 
 1. ${console}.
 2. Add the redirect URLs \`http://localhost:3000/api/auth/callback/${p}\` and \`https://<your domain>/api/auth/callback/${p}\`.
@@ -433,11 +514,11 @@ export function signInReadme(ir: SpecIR, auth: AuthIR): string {
    ${id}=...
    ${secret}=...
    \`\`\``;
-    });
+  });
   return `
 ## Signing in
 
-${ir.app.name} signs users in with ${auth.signIn.providers.map(humanize).join(" or ")}, through [Better Auth](https://www.better-auth.com). In development, the sign-in page also lets you sign in as any role (${auth.roles.map((r) => r.name).join(", ")}) without a provider; production builds leave that out.
+${ir.app.name} signs users in with ${auth.signIn.providers.map((p) => (p === "email" ? "a code by email" : humanize(p))).join(" or ")}, through [Better Auth](https://www.better-auth.com). In development, the sign-in page also lets you sign in as any role (${auth.roles.map((r) => r.name).join(", ")}) without a provider; production builds leave that out.
 
 In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \`openssl rand -base64 32\`) and \`BETTER_AUTH_URL\` (the app's public address) as well.
 

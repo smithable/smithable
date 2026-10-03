@@ -22,6 +22,20 @@ export function Preview({
   /** Hides the preview's column, for more room (wide windows). */
   onHide?: () => void;
 }) {
+  // The preview's records are samples, and a published app starts empty: said until dismissed.
+  const [samples, setSamples] = useState(() => {
+    try {
+      return localStorage.getItem("samplesNoticeDismissed") !== "1";
+    } catch {
+      return true;
+    }
+  });
+  const dismissSamples = () => {
+    setSamples(false);
+    try {
+      localStorage.setItem("samplesNoticeDismissed", "1");
+    } catch {}
+  };
   // The page the preview is on, as it reports it: a reload after a change comes back to it.
   const current = useRef("/");
   const [opened, setOpened] = useState(0);
@@ -152,33 +166,54 @@ export function Preview({
         </div>
       }
     >
-      {/* Remounted after every change, so server code and data are fresh; until the new one is
-          up, the last one stays. */}
-      {server !== "up" && !stale ? (
-        <div role="status" className="grid h-full place-items-center p-6 text-sm text-neutral-500">
-          {server === "starting" ? (
-            <p>Starting…</p>
-          ) : (
-            <div className="space-y-3 text-center">
-              <p>The preview is not answering.</p>
-              <Button onClick={() => setAttempt((n) => n + 1)}>Retry</Button>
+      <div className="flex h-full flex-col">
+        {samples && (
+          <div
+            role="note"
+            className="flex items-start gap-3 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          >
+            <p className="flex-1">
+              The records you see are samples for trying the app. Your published app starts empty:
+              what you add or change here is not published.
+            </p>
+            <Button variant="ghost" className="h-6" onClick={dismissSamples}>
+              Dismiss
+            </Button>
+          </div>
+        )}
+        <div className="min-h-0 flex-1">
+          {/* Remounted after every change, so server code and data are fresh; until the new one
+              is up, the last one stays, dimmed and inert. */}
+          {server !== "up" && !stale ? (
+            <div
+              role="status"
+              className="grid h-full place-items-center p-6 text-sm text-neutral-500"
+            >
+              {server === "starting" ? (
+                <p>Starting…</p>
+              ) : (
+                <div className="space-y-3 text-center">
+                  <p>The preview is not answering.</p>
+                  <Button onClick={() => setAttempt((n) => n + 1)}>Retry</Button>
+                </div>
+              )}
             </div>
+          ) : (
+            <iframe
+              ref={(el) => {
+                frame.current = el;
+                // The one window whose messages count, recorded as the frame is (re)made.
+                setPreview(el?.contentWindow ?? null, url);
+              }}
+              key={stale?.key ?? frameKey}
+              title="App preview"
+              src={stale?.src ?? `${url}${current.current}`}
+              onLoad={loaded}
+              className={cx("h-full w-full border-0", stale && "pointer-events-none opacity-60")}
+            />
           )}
         </div>
-      ) : (
-        <iframe
-          ref={(el) => {
-            frame.current = el;
-            // The one window whose messages count, recorded as the frame is (re)made.
-            setPreview(el?.contentWindow ?? null, url);
-          }}
-          key={stale?.key ?? frameKey}
-          title="App preview"
-          src={stale?.src ?? `${url}${current.current}`}
-          onLoad={loaded}
-          className="h-full w-full border-0"
-        />
-      )}
+      </div>
     </Panel>
   );
 }
