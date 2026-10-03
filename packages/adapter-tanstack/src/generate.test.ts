@@ -206,6 +206,27 @@ test("an action checks that the viewer may read every record its input names", (
   expect(action).toContain("return run(data, viewer);");
 });
 
+test("a public catalog at / without a landing page has the site's frame and its kit", () => {
+  const spec = `smithable: 0.1
+app: { name: Swap shelf }
+models:
+  Item:
+    fields: { title: string! }
+pages:
+  shelf: { route: /, crud: Item }
+`;
+  const auth = authOf(
+    "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { pages: [shelf], read: [Item] }\n",
+  );
+  const files = generateApp(ir("smithable.yml", spec), { ...options, auth });
+  const paths = files.map((f) => f.path);
+  expect(paths).toContain("src/kit/Landing.tsx");
+  expect(paths).toContain("src/generated/site.ts");
+  expect(files.find((f) => f.path === "src/routes/__root.tsx")?.content).toContain(
+    "!viewer && visitorRoutes.some(",
+  );
+});
+
 /** FNV-1a over the text: enough to notice any change, and runs anywhere. */
 function hash(text: string): string {
   let h = 0x811c9dc5;

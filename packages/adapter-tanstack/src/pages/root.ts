@@ -186,18 +186,22 @@ ${
           </p>
         )}
         ${
-          landings.length || sites.length
-            ? `{${framedBySite} ? (
+          landings.length || sites.length || visitorPages.length
+            ? `{${
+                landings.length || sites.length
+                  ? `${framedBySite} ? (
           children
-        ) : ${
-          visitorPages.length
-            ? `!viewer && visitorRoutes.some((r) => pathname === r || ${catalog ? `(r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : ${under})` : under}) ? (
+        ) : `
+                  : ""
+              }${
+                visitorPages.length
+                  ? `!viewer && visitorRoutes.some((r) => pathname === r || ${catalog ? `(r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : ${under})` : under}) ? (
           <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : `
-            : ""
-        }(
+                  : ""
+              }(
           <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
             {children}
           </AppShell>
