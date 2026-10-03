@@ -12,6 +12,7 @@ pages:
       subtitle: The state of our services, updated by the team as things happen.
       button: See past incidents
     services: { title: Services }
+    uptime: { title: The last 90 days, text: "One bar a day for each service: green when it worked all day, amber or red when an incident was going on." }
     open: { title: Going on now }
     recent: { title: Recently resolved }
     planned: { title: Planned maintenance }

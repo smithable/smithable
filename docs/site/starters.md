@@ -72,7 +72,7 @@ See it live: coming soon.
 ![The public status page of the status starter, Northwind Status](starters/status-1.webp)
 ![An incident as the team edits it](starters/status-2.webp)
 
-For a team that tells its users how its services are doing. Northwind Status shows each service's state on a public page with what is going on now, planned maintenance and recently resolved incidents; an incident moves through investigating, identified, monitoring and resolved, with a timeline of updates; and the incident history is public too. Uptime monitoring is not built in: the team opens the incidents.
+For a team that tells its users how its services are doing. Northwind Status shows each service's state on a public page with what is going on now, planned maintenance and recently resolved incidents; an incident moves through investigating, identified, monitoring and resolved, with a timeline of updates; and the incident history is public too. Under the services, a section of the starter's own code shows the last 90 days of each one, a bar a day, worked out from the incidents (`src/custom/sections/Uptime.tsx`, with its test): an example of a section no pattern covers. Uptime monitoring is not built in: the team opens the incidents.
 
 ```sh
 smithable new my-status --starter status
