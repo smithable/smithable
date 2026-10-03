@@ -1198,6 +1198,21 @@ async function copyFlow(base) {
         throw new Error("the copy has no lines");
       });
     console.log("  ✓ browser: Duplicate asks for a number and opens the copy, with its lines");
+
+    // An action on a record's own page: the form shows the record as the action left it, so
+    // "Save changes" afterwards cannot quietly undo it.
+    await open(page, `${base}/invoices`);
+    await page.locator("tbody tr", { hasText: "2026-006" }).getByRole("cell").first().click();
+    await page.waitForURL(/\/invoices\/\d+$/);
+    await page.getByRole("button", { name: "Mark sent" }).click();
+    await page
+      .getByRole("button", { name: "Mark sent" })
+      .waitFor({ state: "detached", timeout: 10000 });
+    for (let i = 0; (await page.getByLabel("Status").inputValue()) !== "sent"; i++) {
+      if (i === 50) throw new Error("the form still shows the status from before the action");
+      await page.waitForTimeout(100);
+    }
+    console.log("  ✓ browser: after an action on its page, the record's form shows the new values");
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
