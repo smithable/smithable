@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Swap Shelf
-  description: Colleagues offer things they no longer need and others claim them.
+  description: "A swap shelf for our office: colleagues offer things they no longer need and others claim them."
 models:
   Item:
     fields:
@@ -26,4 +26,6 @@ pages:
   saved:
     crud: Item
     favorites: only
-navigation: [catalog, myItems, saved]
+  team:
+    users: manage
+navigation: [catalog, myItems, saved, team]

@@ -3,11 +3,19 @@ pages:
   clients:
     table:
       sort: name
-    icon: home
+      columns: [name, address]
+    icon: users
   invoices:
     table:
+      columns: [number, client, issuedOn, dueOn, status, total]
       sort: -issuedOn
+    form:
+      columns: 2
     icon: receipt
+  invoice-lines:
+    table:
+      columns: [invoice, description, quantity, unitPrice, amount]
+    icon: list
 tones:
   Invoice.status:
     paid: success

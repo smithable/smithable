@@ -4,10 +4,6 @@ models:
     label: Ingredient
     pluralLabel: Ingredients
     fields:
-      name:
-        label: Name
-      description:
-        label: Description
       category:
         label: Category
         values:
@@ -16,22 +12,14 @@ models:
           frozen: Frozen
       unit:
         label: Unit
-      minStock:
-        label: Minimum Stock
+      minStockLevel:
+        label: Minimum Stock Level
   Supplier:
     label: Supplier
     pluralLabel: Suppliers
     fields:
-      name:
-        label: Name
       contactPerson:
         label: Contact Person
-      email:
-        label: Email
-      phone:
-        label: Phone
-      address:
-        label: Address
   Stock:
     label: Stock
     pluralLabel: Stock Levels

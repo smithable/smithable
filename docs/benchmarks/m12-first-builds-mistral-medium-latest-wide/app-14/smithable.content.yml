@@ -26,8 +26,6 @@ models:
         label: Table Number
       notes:
         label: Notes
-      seatingGroup:
-        label: Seating Group
 pages:
   guests:
     title: Guests

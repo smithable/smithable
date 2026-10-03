@@ -19,4 +19,3 @@ pages:
     sortable: [priority, status, createdAt]
   team:
     users: manage
-navigation: [tickets, team]

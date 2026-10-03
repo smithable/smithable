@@ -45,5 +45,4 @@ pages:
       footer:
       teams:
         records: Team
-      matches:
-        records: Match
+navigation: [teams, players, matches, results]

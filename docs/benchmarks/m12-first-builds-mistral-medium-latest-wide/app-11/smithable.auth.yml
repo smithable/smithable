@@ -3,11 +3,8 @@ signIn:
   providers: [google]
   selfSignUp: false
 defaultAccess: shared
-public:
-  pages: [home]
 roles:
-  admin:
-    description: Runs the status board and the team.
   staff:
     description: Writes incidents and their updates.
 defaultRole: staff
+admins: [johan@smithable.ai]

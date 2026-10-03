@@ -40,22 +40,21 @@ models:
   Booking:
     fields:
       session: Session!
-      user: User!
+      status: booked | attended | cancelled
     capacity:
       per: session
       max: session.capacity
+      where:
+        status: [booked, attended]
     access:
       create: [member, admin]
-      delete: [member, admin, owner]
+      delete: [member, admin]
 pages:
   class-types:
     crud: ClassType
     access: [admin]
   instructors:
     crud: Instructor
-    access: [admin]
-  messages:
-    crud: Message
     access: [admin]
   home:
     route: /
