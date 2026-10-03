@@ -42,8 +42,10 @@ describe("the examples", () => {
       examples[`../../../examples/${name}/smithable.auth.yml`] as string,
     );
     expect(diagnostics).toEqual([]);
-    // A starter's administrator is a sample on a domain nobody has: `smithable new` replaces it.
-    expect(auth.diagnostics.filter((d) => d.code !== "example-admin")).toEqual([]);
+    // A starter's administrator and domains are samples on domains nobody has: `smithable new` replaces them.
+    expect(
+      auth.diagnostics.filter((d) => d.code !== "example-admin" && d.code !== "example-domain"),
+    ).toEqual([]);
     expect(ir && auth.auth).toBeTruthy();
     expect(auth.auth).toMatchSnapshot();
   });
@@ -342,8 +344,19 @@ test("an administrator outside allowedDomains is warned about: nobody else from 
   const codes = (admins: string) =>
     validateAuth({
       path: "smithable.auth.yml",
-      text: `smithableAuth: 0.1\nsignIn: { providers: [email], allowedDomains: [acme.example] }\ndefaultAccess: shared\nadmins: [${admins}]\n`,
+      text: `smithableAuth: 0.1\nsignIn: { providers: [email], allowedDomains: [acme.com] }\ndefaultAccess: shared\nadmins: [${admins}]\n`,
     }).diagnostics.map((d) => d.code);
   expect(codes("you@gmail.com")).toContain("admin-outside-domains");
-  expect(codes("you@acme.example")).not.toContain("admin-outside-domains");
+  expect(codes("you@acme.com")).not.toContain("admin-outside-domains");
+});
+
+test("allowedDomains on a domain nobody has is warned about, instead of the admin being outside it", () => {
+  const codes = (domains: string) =>
+    validateAuth({
+      path: "smithable.auth.yml",
+      text: `smithableAuth: 0.1\nsignIn: { providers: [email], allowedDomains: [${domains}] }\ndefaultAccess: shared\nadmins: [you@gmail.com]\n`,
+    }).diagnostics.map((d) => d.code);
+  expect(codes("acme.example")).toContain("example-domain");
+  expect(codes("acme.example")).not.toContain("admin-outside-domains");
+  expect(codes("acme.com")).toEqual(["admin-outside-domains"]);
 });
