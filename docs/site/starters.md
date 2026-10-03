@@ -44,7 +44,7 @@ See it live: coming soon.
 ## Marketplace
 
 ![The catalog of the marketplace starter, Torget](starters/marketplace-1.webp)
-![The form for putting an item up for sale](starters/marketplace-2.webp)
+![An item for sale, as a visitor sees it](starters/marketplace-2.webp)
 
 For a place where people sell or give away things to each other. Torget's start page is the catalog, with search, filters (category, price, condition) and sorting; each item has several photos; members save the ones they like, keep a page of their own items, and send a seller a message from the item's page.
 
