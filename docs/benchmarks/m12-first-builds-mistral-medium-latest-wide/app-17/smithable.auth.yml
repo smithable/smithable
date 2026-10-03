@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: private
+public:
+  pages: [home]
+  read: [Service]
+  create: [Appointment]
+roles:
+  admin:
+    description: Administratör som hanterar bokningar och tjänster.
+defaultRole: admin

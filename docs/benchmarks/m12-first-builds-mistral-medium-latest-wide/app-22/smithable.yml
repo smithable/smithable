@@ -1,0 +1,48 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Verwaltung von Produkten, Vorbestellungen und Abholzeiten für einen kleinen Hofladen.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      category: string
+      available: bool = true
+      stock: int = 0
+    access:
+      delete: [admin]
+  PreOrder:
+    fields:
+      customerName: string!
+      customerEmail: email
+      customerPhone: phone
+      product: Product!
+      quantity: int! = 1
+      orderDate: date! = TODAY()
+      status: pending | confirmed | cancelled | completed
+  PickupTime:
+    fields:
+      date: date!
+      startTime: string!
+      endTime: string!
+      maxSlots: int! = 10
+      notes: text
+    access:
+      delete: [admin]
+      write: [admin]
+pages:
+  products:
+    crud: Product
+    search: [name, description, category]
+  pre-orders:
+    crud: PreOrder
+    search: [customerName, customerEmail, customerPhone]
+    filters: [status, product]
+  pickup-times:
+    crud: PickupTime
+    filters: [date]
+navigation: [products, pre-orders, pickup-times]

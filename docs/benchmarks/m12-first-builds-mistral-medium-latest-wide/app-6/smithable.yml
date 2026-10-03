@@ -1,0 +1,16 @@
+smithable: 0.1
+app:
+  name: Cleaning Company
+  description: A place for our cleaning company to manage monthly invoices for households.
+models:
+  Invoice:
+    fields:
+      household: string!
+      amount: money!
+      month: date!
+      status: draft | sent | paid
+pages:
+  invoices:
+    crud: Invoice
+    search: [household]
+    filters: [status, month]
