@@ -36,7 +36,6 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
-      placesLeft: int = capacity - COUNT(bookings)
     access:
       create: [admin]
       write: [admin]
@@ -44,10 +43,13 @@ models:
   Booking:
     fields:
       session: Session! unique
-      attendee: User!
+      user: User!
     capacity:
       per: session
       max: session.capacity
+    access:
+      create: [member]
+      delete: [member, owner]
 pages:
   class-types:
     crud: ClassType
@@ -59,7 +61,6 @@ pages:
     route: /
     landing:
       hero:
-        shortcuts: [schedule]
       footer:
       classes:
         records: ClassType
@@ -73,8 +74,6 @@ pages:
   sessions:
     crud: Session
     access: [admin]
-    search: [classType, instructor]
-    filters: [classType, instructor, startsAt]
   my-bookings:
     crud: Booking
     access: [member]

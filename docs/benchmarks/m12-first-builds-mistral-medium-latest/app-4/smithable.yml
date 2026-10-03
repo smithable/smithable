@@ -4,22 +4,25 @@ app:
   description: A tool library where neighbors lend each other tools.
 pages:
   home:
-    route: /
+    route: /welcome
     landing:
       hero:
       footer:
       latest:
         records: Tool
-  myTools:
-    crud: Tool
-    mine: true
+        where:
+          available: true
   tools:
+    route: /
     crud: Tool
     search: [name, description]
     filters: [category, condition, available]
     sortable: [name, createdAt]
     favorites: true
     contact: owner
+  myTools:
+    crud: Tool
+    mine: true
 models:
   Tool:
     fields:

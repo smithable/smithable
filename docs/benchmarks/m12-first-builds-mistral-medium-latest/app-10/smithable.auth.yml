@@ -1,8 +1,10 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-defaultAccess: private
+  selfSignUp: false
+defaultAccess: shared
 roles:
   member:
     description: Family member who can view and add recipes.
 defaultRole: member
+admins: [johan@smithable.ai]

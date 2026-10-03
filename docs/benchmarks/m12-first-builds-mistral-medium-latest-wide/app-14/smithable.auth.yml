@@ -5,7 +5,5 @@ signIn:
 defaultAccess: shared
 roles:
   admin:
-    description: Manages the guest list and seating.
-  guest:
-    description: Views their own RSVP.
-defaultRole: guest
+    description: Manages the guest list and seating plan.
+admins: [johan@smithable.ai]

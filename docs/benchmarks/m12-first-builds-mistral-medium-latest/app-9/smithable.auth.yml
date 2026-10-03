@@ -7,3 +7,4 @@ roles:
   itSupport:
     description: Handles IT support tickets.
 defaultRole: itSupport
+admins: [johan@smithable.ai]

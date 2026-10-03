@@ -3,21 +3,12 @@ pages:
   invoices:
     table:
       sort: -issuedOn
-      columns: [number, client, issuedOn, dueOn, status, total]
-    icon: receipt
-    form:
-      columns: 2
+  shoots:
+    table:
+      sort: -date
   clients:
     table:
       sort: name
-      columns: [name, email, vatNumber]
-      below:
-        name: email
-    icon: users
-    form:
-      columns: 2
-  invoice-lines:
-    icon: list
 tones:
   Invoice.status:
     paid: success

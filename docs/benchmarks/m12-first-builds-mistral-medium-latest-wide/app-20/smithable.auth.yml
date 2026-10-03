@@ -8,7 +8,8 @@ public:
   create: [Message]
 roles:
   admin:
-    description: Studiovastaava. Hallinnoi tunteja, ohjaajia ja varauksia.
+    description: Studiomme työntekijä. Hallinnoi aikataulua, tunteja ja ohjaajia.
   member:
-    description: Asiakas, joka varaa tunteja.
+    description: Opiskelija, joka varaa tunteja.
 defaultRole: member
+admins: [johan@smithable.ai]

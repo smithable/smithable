@@ -3,3 +3,4 @@ signIn:
   providers: [google]
   selfSignUp: false
 defaultAccess: shared
+admins: [johan@smithable.ai]

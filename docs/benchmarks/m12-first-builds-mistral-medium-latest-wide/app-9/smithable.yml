@@ -3,17 +3,17 @@ app:
   name: My Vinyl Record Collection
   description: A place to keep and show my vinyl record collection with albums, artists, condition and purchase price.
 models:
-  Album:
+  Record:
     fields:
       title: string!
       artist: string!
-      releaseYear: int
       condition: mint | nearMint | veryGood | good | fair | poor
       pricePaid: money
-      summary: text
+      releaseYear: int
+      notes: text
 pages:
-  albums:
-    crud: Album
-    search: [title, artist, summary]
-    filters: [condition]
+  records:
+    crud: Record
+    search: [title, artist, notes]
+    filters: [condition, releaseYear]
     sortable: [title, artist, releaseYear, pricePaid]
