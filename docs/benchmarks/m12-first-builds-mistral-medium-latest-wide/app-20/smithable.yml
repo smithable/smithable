@@ -1,0 +1,56 @@
+smithable: 0.1
+app:
+  name: Joogastudio
+  description: Varausjärjestelmä joogastudiolle tunnit, ohjaajat ja varaukset verkossa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Class:
+    fields:
+      name: string!
+      description: text
+      duration: int! = 60
+      level: beginner | intermediate | advanced
+      maxParticipants: int! = 15
+      price: money!
+      schedule: string!
+      teacher: Teacher!
+    access:
+      delete: [admin]
+  Teacher:
+    fields:
+      name: string!
+      email: email! unique
+      phone: phone
+      bio: text
+    access:
+      delete: [admin]
+  Booking:
+    fields:
+      class: Class!
+      user: User!
+      status: booked | confirmed | cancelled
+      notes: text
+    access:
+      delete: [admin, owner]
+pages:
+  classes:
+    crud: Class
+    search: [name, schedule, level]
+    filters: [level]
+  teachers:
+    crud: Teacher
+    access: [admin, teacher]
+  bookings:
+    crud: Booking
+    access: [admin, teacher, member]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      classes:
+        records: Class
+      teachers:
+        records: Teacher
+navigation: [home, classes, bookings]

@@ -2,4 +2,6 @@ smithableUx: 0.1
 tones:
   Tool.condition:
     new: success
+    good: success
     worn: warning
+    broken: danger
