@@ -74,10 +74,12 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="placeholder"",
     "data-kit="model-table"",
     "data-part="empty"",
+    "data-part="select"",
     "data-part="row"",
     "data-part="description"",
     "data-part="row-actions"",
     "data-part="header"",
+    "data-part="select-all"",
     "data-part="cell"",
     "data-field={field.name}",
   ],
@@ -92,6 +94,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/SearchBox.tsx": [
     "data-kit="search-box"",
+  ],
+  "src/kit/SelectionBar.tsx": [
+    "data-kit="selection-bar"",
   ],
   "src/kit/SignIn.tsx": [
     "data-kit="sign-in"",

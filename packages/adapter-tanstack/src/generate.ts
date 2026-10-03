@@ -425,7 +425,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
       {
         files: ["src/kit/ActionButton.tsx"],
-        used: ({ ir }) => ir.pages.some((p) => standardActions(p, ir).length),
+        used: ({ ir, auth }) =>
+          ir.pages.some((p) => standardActions(p, ir).length) || selects(ir, auth),
+      },
+      {
+        // Chosen rows on a crud list (actions.md §9).
+        files: ["src/kit/SelectionBar.tsx"],
+        used: ({ ir, auth }) => selects(ir, auth),
       },
       {
         files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],
@@ -607,5 +613,13 @@ function hasSite(ir: SpecIR, auth: AuthIR): boolean {
       p.pattern.kind === "landing" ||
       publicArticles(p, { auth }) ||
       (p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id)),
+  );
+}
+
+/** Whether a crud list offers chosen rows: an action that changes records, or delete with sign-in. */
+function selects(ir: SpecIR, auth: AuthIR): boolean {
+  return ir.pages.some(
+    (p) =>
+      p.pattern.kind === "crud" && (hasSignIn(auth) || standardActions(p, ir).some((a) => !a.copy)),
   );
 }

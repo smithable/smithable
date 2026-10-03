@@ -174,7 +174,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { ${n.table} } from "#/db/schema";
-import { allows } from "#/kit/access";
+import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
@@ -191,6 +191,9 @@ async function writer() {
 export type ${model.name}Row = ${rowType};
 
 export const ${n.ui}: RecordUi<${model.name}Row> = ${uiSource};
+
+/** Who may delete ${n.pluralLabel.toLowerCase()}: a list's selection offers Delete by it (the server checks again). */
+export const ${n.deleteRule}: Rule = ${literal(modelAccess(model, auth).delete)};
 
 export const ${n.schema} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
 
@@ -230,6 +233,11 @@ export const ${n.update} = createServerFn({ method: "POST" })
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${n.data}.remove(await writer(), id));
+
+/** Deletes the chosen ${n.pluralLabel.toLowerCase()}, all or none (at most 1,000 at once). */
+export const ${n.removeMany} = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => ${n.data}.removeMany(await writer(), ids));
 ${
   hasFavorites(model, ir, auth)
     ? `
@@ -379,7 +387,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const drizzle = [
     "and",
     "eq",
-    ...(listed ? ["inArray"] : []),
+    "inArray",
     "sql",
     ...(referenced && titleColumn !== "id" ? ["asc"] : []),
     ...(access.create.public || capped || capacity || holds.length ? ["count"] : []),
@@ -470,7 +478,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favorites ? [favorites] : [])])].sort().join(", ")} } from "#/db/schema";
-import { AccessDenied, check, ${capacity || holds.length ? "Conflict, " : ""}type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
@@ -670,6 +678,35 @@ ${dropPictures(
   () => "undefined",
   () => "([] as string[])",
 )}    await afterDelete("${model.name}", id, viewer);
+  },
+
+  /**
+   * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
+   * all, and is named); the others are skipped.
+   */
+  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+    const rows = db
+      .select(${signedIn ? selectOwner.replace("{ ", `{ id: ${n.table}.id, `) : selectOwner})
+      .from(${n.table})
+      .where(and(inArray(${n.table}.id, ids), ${self}.readable(viewer)))
+      .all()
+      .filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}));
+    db.transaction((tx) => {
+      for (const row of rows)
+        try {
+          tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).run();
+        } catch (error) {
+          const refused = refusal(error);
+          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+        }
+    });
+    for (const row of rows) {
+${dropPictures(
+  () => "undefined",
+  () => "([] as string[])",
+).replace(/^ {4}/gm, "      ")}      await afterDelete("${model.name}", row.id, viewer);
+    }
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
 ${
   referenced
