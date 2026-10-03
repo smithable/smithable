@@ -124,14 +124,16 @@ export function Preview({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [selecting]);
+  // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
+  const reloading = updating || Boolean(stale);
   return (
     <Panel
       title="Preview"
-      busy={updating}
+      busy={reloading}
       className="h-full"
       actions={
         <div className="flex items-center gap-2">
-          {updating && <span className="text-xs text-neutral-500">Updating…</span>}
+          {reloading && <span className="text-xs text-neutral-500">Updating…</span>}
           {onSelecting && (
             <Button
               variant={selecting ? "primary" : "ghost"}
