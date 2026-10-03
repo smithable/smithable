@@ -149,3 +149,33 @@ test("setDefaultAccess switches between shared and private, and needs sign-in", 
     }),
   ).toMatchObject({ ok: false, message: expect.stringContaining("no sign-in") });
 });
+
+test("setPublicWhere and a rename change a condition written as a key with options", () => {
+  const files = {
+    spec,
+    auth: `smithableAuth: 0.1
+signIn: { providers: [google], allowedDomains: [example.com] }
+defaultAccess: shared
+public:
+  pages: [posts]
+  read:
+    # drafts stay with the team
+    - Post: { where: { status: [draft, published] } }
+`,
+  };
+  const narrowed = applyOperation(files, "setPublicWhere", {
+    model: "Post",
+    where: { status: "published" },
+  });
+  expect(narrowed.ok && narrowed.files.auth).toContain(
+    "    # drafts stay with the team\n    - { Post: { where: { status: published } } }\n",
+  );
+  const renamed = applyOperation(files, "renameField", {
+    model: "Post",
+    from: "status",
+    to: "state",
+  });
+  expect(renamed.ok && renamed.files.auth).toContain(
+    "    - { Post: { where: { state: [draft, published] } } }\n",
+  );
+});
