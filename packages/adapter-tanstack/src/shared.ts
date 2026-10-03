@@ -132,6 +132,8 @@ export function names(model: ModelIR, t: Texts) {
     create: `create${model.name}`,
     update: `update${model.name}`,
     remove: `delete${model.name}`,
+    removeMany: `delete${pascal(pluralName)}`,
+    deleteRule: `${camel(model.name)}DeleteRule`,
     module: `#/generated/${kebab(model.name)}`,
     options: `${camel(model.name)}Options`,
     access: `${camel(model.name)}Access`,

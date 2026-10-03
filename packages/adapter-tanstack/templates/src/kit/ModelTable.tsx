@@ -202,7 +202,10 @@ export function ModelTable<R extends Row>({
         checked={selection.ids.has(row.id)}
         onChange={(e) => {
           const next = new Set(selection.ids);
-          const from = (e.nativeEvent as MouseEvent).shiftKey && anchor.current !== null ? anchor.current : index;
+          const from =
+            (e.nativeEvent as MouseEvent).shiftKey && anchor.current !== null
+              ? anchor.current
+              : index;
           for (let i = Math.min(from, index); i <= Math.max(from, index); i++) {
             const id = shown[i]?.id;
             if (id === undefined) continue;
@@ -215,7 +218,8 @@ export function ModelTable<R extends Row>({
         className="relative z-10 size-4 cursor-pointer accent-primary"
       />
     );
-  const all = selection !== undefined && shown.length > 0 && shown.every((r) => selection.ids.has(r.id));
+  const all =
+    selection !== undefined && shown.length > 0 && shown.every((r) => selection.ids.has(r.id));
   const some = selection !== undefined && shown.some((r) => selection.ids.has(r.id));
   const heart = (row: R) =>
     saved && (
@@ -242,7 +246,9 @@ export function ModelTable<R extends Row>({
               )}
             >
               {selection && (
-                <span className="absolute top-3 left-3 z-10 rounded bg-card/90 p-1">{check(row, index)}</span>
+                <span className="absolute top-3 left-3 z-10 rounded bg-card/90 p-1">
+                  {check(row, index)}
+                </span>
               )}
               {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
               {view === "cards" &&
@@ -319,7 +325,9 @@ export function ModelTable<R extends Row>({
                         if (el) el.indeterminate = some && !all;
                       }}
                       onChange={(e) =>
-                        selection.onChange(e.target.checked ? new Set(shown.map((r) => r.id)) : new Set())
+                        selection.onChange(
+                          e.target.checked ? new Set(shown.map((r) => r.id)) : new Set(),
+                        )
                       }
                       className="size-4 cursor-pointer accent-primary"
                     />
