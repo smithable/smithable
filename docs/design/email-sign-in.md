@@ -1,6 +1,6 @@
 # Signing in to a published app: email codes, the owner as admin, and what a first publish carries
 
-Status: 2026-10-03, proposed by Fable after the tester journey on the beta (smithable-cloud `docs/tester-journey-2026-10-03.md`). Three decisions are Johan's (section 6); merging this document is the go-ahead for the steps in section 5.
+Status: 2026-10-03, proposed by Fable after the tester journey on the beta (smithable-cloud `docs/tester-journey-2026-10-03.md`). Johan decided on 2026-10-03 (section 6): email codes as the default, apps may mail sign-in codes and invitations to any address, and no copying of preview records: a published app starts empty and the preview says so. Merging this document is the go-ahead for the steps in section 5.
 
 ## 1. What the journey found
 
@@ -29,7 +29,9 @@ signIn:
 
 It is not a new construct: the value was reserved, and the five questions were answered when `signIn.providers` was designed. What is new is that it becomes the default.
 
-## 3. The owner is the admin
+## 3. The owner is the first admin
+
+Two different things, kept apart. The **owner** owns the project at Smithable: edits it in Studio, publishes it, exports it, deletes it. That lives in the service (or, self-hosted, in whoever holds the repository and the server) and never depends on a row in the app's database. An **admin** is a user inside the app who may manage its users and all its records. The app needs one admin to start with, because someone has to be able to sign in and invite the others, and the owner is the only person we know: so the owner's address is the first admin. It is a start, not a tie: the owner can name other admins and take themself off the list, and stays the owner.
 
 - **`setAdmins <address…>`**, an operation on the auth file (rule 2: the file is the truth, and the summary says who the admins are). Refused when it would leave an app with sign-in and no admin.
 - **`smithable new` sets it.** `--admin <address>` or, without it, the Git user's address; the starter's sample address never survives into a new project. The hosted service passes the owner's address when it creates the project, and again through `setAdmins` when a project changes hands.
@@ -37,26 +39,25 @@ It is not a new construct: the value was reserved, and the five questions were a
 - **Demo sign-in** (`DEMO_SIGN_IN=1`, the showcase sites) is a separate path: it turns on the address-and-password endpoint its buttons use, so there a visitor could also sign up as a sample admin. That gives nothing the "Try it as admin" button does not give by design, and the hourly reset removes it; the variable is only ever set on showcase apps, and their seeds are rebuilt once the starters' admins move to `.example`.
 - **The validator** warns when `admins` is empty with sign-in on ("nobody can manage users"), and errors at release when an address is on a starter's sample domain.
 
-## 4. What a first publish carries
+## 4. A published app starts empty, and the preview says so
 
-Today: an empty database, always. Proposed: the first publish of an environment asks once.
+Johan's decision: nothing is copied from the preview. The records in a new app are fiction for trying things out, and that is said where the person meets them, not asked about at publishing.
 
-- **"Start empty"** (the default): the owner signs in, is the admin, and every list's empty state offers to add the first record.
-- **"Take the records from my preview along (37 records in 4 lists)"**: for someone who edited the samples into their real classes or products. The service applies its existing seed mechanism once, before the first start. The development users are left behind; their records are given to the owner, who is created as a user with the admin role, so the first sign-in finds the account.
-
-Sample data that was never edited is somebody else's fiction ("Morning Flow with Anna" on a real studio's site), which is why empty is the default and the choice says how many records there are.
+- **In Studio and on the hosted first-build page:** a notice by the preview, shown when the app is made and until dismissed: "The records you see are samples for trying the app. Your published app starts empty: what you add or change here is not published." The publish step repeats the last sentence.
+- **In the published app:** the owner signs in with a code, is the admin, and every empty list offers to add its first record. Real records in bulk come in through the import (`importRecords`, a spreadsheet).
+- **Later:** a guide in Studio, an overlay that walks through its places (the preview, the summary, the change box, the Look tab, publishing) and says what each means. It gets its own design; this notice is the first piece of it.
 
 ## 5. Steps
 
 1. **Core (Fable):** `email` as a provider with its validation (it needs no keys; `selfSignUp` and `allowedDomains` apply), `setAdmins`, the two validator rules, the summary's sentence ("People sign in with a code sent to their email"), the spec reference.
 2. **Adapter and CLI (A):** the code flow with the auth library's email-code plugin, the sign-in page (address, then code), the limiter, the mail text from content, the outbox in development, `smithable new --admin`, the release check, the generated access and smoke tests signing in by code through the outbox, and all six starters on `[email]` with `.example` admins.
-3. **Service (B):** the owner's address at project creation and on hand-over, the relay's allowance for sign-in codes, the first-publish question and the seed with the owner as the records' owner.
+3. **Service (B):** the owner's address at project creation and on hand-over, the relay's allowance for sign-in codes, and the sample-data notice on the first-build page and at publishing.
 4. **Docs (C):** "Sign in with Google" as a how-to for those who bring keys; the getting-started page's sign-in paragraph.
 
-Exit: on the beta, a stranger builds an app from a sentence, publishes it, signs in with a code as its admin and adds a record, with no step outside Smithable.
+Exit: on the beta, a stranger builds an app from a sentence, is told its records are samples, publishes it, signs in with a code as its admin and adds a record, with no step outside Smithable.
 
-## 6. Decisions for Johan
+## 6. Decided (Johan, 2026-10-03)
 
-1. **Email codes as the default sign-in for every new app.** Recommended: yes. The alternative, the service as sign-in provider for its apps, would tie every published app to Smithable and break leaving with everything.
-2. **Apps may mail a sign-in code to any address that asks for one.** This is part of the open question in `2026-10-03-app-mail-recipients.md`. A code is transactional mail to the person who typed the address, within the relay's limits (100 a day per app) and its bounce and complaint handling. Recommended: yes for sign-in codes and invitations; other app mail stays as that file decides.
-3. **The first-publish question, with empty as the default.** Recommended: yes, as step 3, after sign-in works.
+1. **Email codes are the default sign-in for every new app.** Google and Facebook stay for those who bring their own keys; Smithable's own are never used for a published app.
+2. **Apps may mail a sign-in code or an invitation to any address,** within the relay's limits and its bounce and complaint handling. Other app mail stays as `2026-10-03-app-mail-recipients.md` decides.
+3. **No first-publish question.** A published app starts empty; the preview says its records are samples and that edits there are not published (section 4). A guide overlay in Studio comes later.
