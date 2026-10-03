@@ -13,8 +13,6 @@ models:
       validUntil: date
       notes: text
       customer: Customer!
-    access:
-      delete: [admin]
   Invoice:
     fields:
       number: string! unique
@@ -22,10 +20,9 @@ models:
       status: draft | sent | paid | overdue
       total: money!
       dueDate: date
+      paidAt: date
       notes: text
       customer: Customer!
-    access:
-      delete: [admin]
   Customer:
     fields:
       name: string!
@@ -34,15 +31,15 @@ models:
       segment: private | company | municipality
       notes: text
       accountManager: User
-    access:
-      delete: [admin]
 pages:
   offerter:
     crud: Quote
     search: [number, customer]
+    filters: [status, customer]
   fakturor:
     crud: Invoice
     search: [number, customer]
+    filters: [status, customer]
   kunder:
     crud: Customer
     search: [name, email]

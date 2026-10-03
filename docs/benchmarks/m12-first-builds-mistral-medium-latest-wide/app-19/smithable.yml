@@ -3,18 +3,16 @@ app:
   name: Vår Loppis
   description: En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.
   currency: SEK
-models:
-  Item:
-    fields:
-      title: string!
-      photos: pictures
-      description: text!
-      price: money
-      category: furniture | bikes | electronics | sports | kids | other
-      condition: likeNew | good | worn
-      place: string
-      available: bool = true
 pages:
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+        where:
+          available: true
   catalog:
     route: /
     crud: Item
@@ -26,16 +24,15 @@ pages:
   myItems:
     crud: Item
     mine: true
-  saved:
-    crud: Item
-    favorites: only
-  home:
-    route: /welcome
-    landing:
-      hero:
-      footer:
-      latest:
-        records: Item
-        where:
-          available: true
-navigation: [catalog, myItems, saved]
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      price: money
+      category: klaeder | moebler | leksaker | elektronik | boecker | annat
+      condition: ny | bra | sliten
+      place: string
+      available: bool = true
+navigation: [catalog, myItems]

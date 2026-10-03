@@ -3,8 +3,7 @@ pages:
   guests:
     table:
       sort: name
-      columns: [name, attending, mealChoice, tableNumber, seatingGroup]
-    icon: users
+      columns: [name, attending, mealChoice, tableNumber]
 tones:
   Guest.attending:
     yes: success

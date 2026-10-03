@@ -6,28 +6,32 @@ models:
   Lead:
     fields:
       name: string!
-      company: string
       email: email
       phone: phone
+      company: string
       status: new | contacted | qualified | lost
       source: referral | website | social | other
       notes: text
       assignee: User
       followUpDate: date
+    access:
+      delete: [admin]
   Deal:
     fields:
       name: string!
       lead: Lead!
       value: money
-      status: proposal | negotiation | won | lost
+      status: proposal | negotiation | closedWon | closedLost
       closeDate: date
       notes: text
       assignee: User
+    access:
+      delete: [admin]
 pages:
   leads:
     crud: Lead
-    search: [name, company, email]
-    sortable: [name, company, followUpDate, createdAt]
+    search: [name, email, company]
+    sortable: [name, followUpDate, createdAt]
   deals:
     crud: Deal
     search: [name, lead]

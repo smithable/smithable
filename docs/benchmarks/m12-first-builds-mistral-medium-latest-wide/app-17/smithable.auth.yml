@@ -5,9 +5,8 @@ defaultAccess: private
 public:
   pages: [hem, schema]
   read: [Service, Stylist, Appointment]
+  create: [Booking, Message]
 roles:
   admin:
-    description: Salongsägare eller personal som hanterar bokningar och tjänster.
-  customer:
-    description: Kund som bokar tider.
-defaultRole: customer
+    description: Salongsägare eller personal som hanterar tjänster, frisörer och tider.
+admins: [johan@smithable.ai]

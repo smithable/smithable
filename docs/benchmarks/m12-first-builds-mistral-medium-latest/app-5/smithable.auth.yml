@@ -5,5 +5,6 @@ signIn:
 defaultAccess: shared
 roles:
   baker:
-    description: Manages ingredients and stock.
+    description: Manages ingredients and stock levels.
 defaultRole: baker
+admins: [johan@smithable.ai]

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Freelancer Invoicing
-  description: Invoicing for freelancers, with clients, invoices and payments.
+  name: Invoicing for Freelancers
+  description: Invoicing app for freelancers to manage clients, invoices, and payments.
   currency: EUR
 models:
   BusinessProfile:
@@ -39,12 +39,20 @@ pages:
     crud: Invoice
   invoices:
     crud: Invoice
-    search: [number, client]
-    filters: [status, client, issuedOn]
-    sortable: [number, issuedOn, dueOn, total, status]
   clients:
     crud: Client
-    search: [name, email]
-    sortable: [name, email]
   settings:
     crud: BusinessProfile
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      pricing:
+      faq:
+      callToAction:
+        button: overview
+  dashboard:
+    crud: Invoice
+navigation: [dashboard, invoices, clients, settings]

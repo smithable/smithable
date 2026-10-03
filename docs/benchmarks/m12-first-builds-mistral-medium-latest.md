@@ -1,51 +1,52 @@
 # M12 first builds: mistral-medium-latest (2026-10-03)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 9 / 12 created, 9 type-check, 165,560 tokens, €0.1063.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 152,092 tokens, €0.0925.
 
 | Description | Starter | Created | Type-checks | Tokens | Cost | Time |
 |---|---|---|---|---|---|---|
-| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 19,679 | €0.0132 | 35 s |
-| A CRM for a small sales team: companies, contacts, deals and follow-ups. | crm | yes | yes | 8,325 | €0.0052 | 22 s |
-| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 9,367 | €0.0074 | 24 s |
-| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 21,657 | €0.0104 | 22 s |
-| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 8,155 | €0.0055 | 18 s |
-| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 27,642 | €0.0173 | 53 s |
-| A football club's site: teams, players, matches and results. | records | **no** | **no** | 8,671 | €0.0066 | 14 s |
-| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 9,259 | €0.0065 | 58 s |
-| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 7,982 | €0.0052 | 39 s |
-| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 8,662 | €0.0066 | 34 s |
-| A status page for our API, with incidents and planned maintenance. | status | **no** | **no** | 16,638 | €0.0094 | 15 s |
-| A public uptime page for a web shop: which services work, outages and their updates. | status | **no** | **no** | 19,523 | €0.0130 | 20 s |
+| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 16,721 | €0.0092 | 70 s |
+| A CRM for a small sales team: companies, contacts, deals and follow-ups. | crm | yes | yes | 8,239 | €0.0049 | 45 s |
+| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 17,370 | €0.0105 | 57 s |
+| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 14,862 | €0.0074 | 44 s |
+| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 8,029 | €0.0052 | 37 s |
+| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 8,091 | €0.0051 | 31 s |
+| A football club's site: teams, players, matches and results. | records | yes | yes | 8,763 | €0.0066 | 31 s |
+| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 16,478 | €0.0088 | 34 s |
+| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 8,058 | €0.0052 | 27 s |
+| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 9,141 | €0.0074 | 36 s |
+| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 19,769 | €0.0132 | 39 s |
+| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 16,571 | €0.0090 | 30 s |
 
 Each created app's four spec files are in [m12-first-builds-mistral-medium-latest/](m12-first-builds-mistral-medium-latest/), one folder per description (app-1 …).
 
 <!-- scorecard -->
-## Against the first run (before #169 and #174)
+## Against the earlier runs
 
-The baseline is this report's previous version: the same twelve descriptions, from main before #169 (shared drafts invite-only) and #174 (the first step in any language and with `--yes`; labels and texts in the description's language).
+The first run came from main before #169 (shared drafts invite-only) and #174 (the first step in any language and with `--yes`; labels and texts in the description's language). The second, #176, came after them. This one adds #180, A's fixes for the bugs the second run found.
 
-- **Better: sign-up and public data.** No draft is shared with open sign-up (open-shared-access warnings: 6 before, 0 now). One publishes personal data, against two before: 8, the conference, publishes its talks and speakers.
-- **Starters now picked by meaning.** `new` picked a different starter from the word match in four cases: the tool library got marketplace (words: records), the bakery inventory records (words: booking), the conference booking (words: records), the help desk records (words: invoicing). Each reads as the better fit.
-- **Questions.** The first step would ask questions for three descriptions (6, 8, 9); `--yes` answers none of them.
-- **Worse: three drafts fail** (9 of 12 created; before, 12 of 12). In 7, 11 and 12 the content file ends with an empty `hero:`. `new` says it wrote the hero picture, but no `hero.webp` is in `public/images`. `dropMissingPictures` then removes `hero.image`, leaving the section with no value, and validation refuses the file. This is an engine bug, reported to session A.
-- **Worse: an English description got Spanish titles.** 7, the football club's site, came out with page titles in Spanish (Equipos, Jugadores, Partidos, Resultados).
+- **All twelve are created and type-check again.** The first run had 12 of 12 and the second 9 of 12. The second run's three failures (7, 11, 12: a `hero:` left empty after the hero picture was not written) are gone.
+- **No open sign-up.** Open-shared-access warnings went from 6 in the first run to 0 in the second, and are still 0.
+- **One draft publishes personal data:** 8, the conference, publishes its speakers. The first run had two.
+- **Starters by meaning.** As in the second run, four starters differ from the word match: tool library to marketplace, bakery to records, conference to booking, help desk to records.
+- **Questions.** The first step would ask questions for 5, 6, 8 and 9.
+- **Still wrong: an English description gets Spanish titles.** 7, the football club's site, again has page titles in Spanish (Equipos, Jugadores, Partidos, Resultados), as in the second run. The first run did not, so it comes with #174's language rule.
 
 ## Scorecard (scripts/bench-m12.mjs --score)
 
 | # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | booking | 0 | 5 / 6 | 8 / 10 | 0 / 0 | private; admin, member (member) | class-types: admin, instructors: admin, messages: admin, sessions: admin | pages home, schedule; read ClassType, Instructor, Session; create Message | 2 (capacity-no-unique, no-timezone) | none | 3 / 5 | mentions visitors; landing page |
+| 1 | booking | 0 | 5 / 6 | 7 / 10 | 0 / 0 | private; admin, member (member) | class-types: admin, instructors: admin, sessions: admin | pages home, schedule; read ClassType, Instructor, Session; create Message | 2 (capacity-no-unique, no-timezone) | none | 3 / 5 | mentions visitors; landing page |
 | 2 | crm | 0 | 0 / 2 | 1 / 3 | 0 / 1 | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none | 0 / 4 | no mention; no landing page |
-| 3 | invoicing | 0 | 4 / 4 | 4 / 7 | 0 / 0 | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 3 / 4 | no mention; no landing page |
-| 4 | marketplace (words: records) | 0 | 0 / 1 | 1 / 4 | 0 / 0 | private; admin, member (member) | none | pages home; read Tool; create none | 0 | none | 0 / 1 | no mention; landing page |
-| 5 | records (words: booking) | 0 | 0 / 1 | 0 / 2 | 0 / 0 | shared; admin, baker (baker) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page |
-| 6 | marketplace | 2 | 0 / 1 | 0 / 4 | 0 / 0 | private; admin, employer, member (member) | applications: employer/admin, jobs: employer/member/admin, myJobs: employer/admin | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page |
+| 3 | invoicing | 0 | 4 / 4 | 5 / 7 | 0 / 0 | private; admin, member (member) | none | pages home; read none; create none | 0 | none | 3 / 4 | no mention; landing page |
+| 4 | marketplace (words: records) | 0 | 0 / 1 | 1 / 4 | 0 / 0 | private; admin, member (member) | none | pages home; read none; create none | 0 | none | 0 / 1 | no mention; landing page |
+| 5 | records (words: booking) | 3 | 0 / 1 | 0 / 2 | 0 / 0 | shared; admin, baker (baker) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page |
+| 6 | marketplace | 2 | 0 / 1 | 1 / 4 | 0 / 0 | shared; admin, employer, member (member) | applications: employer | pages home, jobs; read Job; create none | 0 | none | 0 / 2 | no mention; landing page |
 | 7 | records | 0 | 0 / 1 | 1 / 2 | 0 / 0 | private; admin, member (member) | none | pages home, teams, players, matches, results; read Team, Player, Match, Result; create none | 0 | none | 0 / 4 | mentions visitors; landing page |
-| 8 | booking (words: records) | 2 | 0 / 6 | 1 / 10 | 0 / 0 | shared; admin, organizer (organizer) | none | pages home, talks; read Talk, Speaker; create none | 2 (capacity-no-unique, public-personal-data) | none | 0 / 4 | no mention; landing page |
+| 8 | booking (words: records) | 2 | 0 / 6 | 2 / 10 | 0 / 0 | shared; admin, organizer, attendee (attendee) | talks: organizer, speakers: organizer, attendees: organizer, registrations: organizer/attendee | pages home; read Talk, Speaker; create none | 2 (capacity-no-unique, public-personal-data) | none | 0 / 4 | no mention; landing page |
 | 9 | records (words: invoicing) | 3 | 0 / 1 | 0 / 2 | 0 / 0 | shared; admin, itSupport (itSupport) | none | pages none; read none; create none | 0 | none | 0 / 1 | no mention; no landing page |
-| 10 | records | 0 | 0 / 1 | 0 / 2 | 0 / 0 | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page |
-| 11 | status | 0 | 4 / 4 | 6 / 8 | 3 / 3 | shared; admin, staff (staff) | incidents: admin/staff, updates: admin/staff, components: admin, maintenance: admin/staff | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | no mention; landing page |
-| 12 | status | 0 | 4 / 4 | 6 / 8 | 3 / 3 | shared; admin, staff (staff) | components: admin | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | mentions visitors; landing page |
+| 10 | records | 0 | 0 / 1 | 0 / 2 | 0 / 0 | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 4 | no mention; no landing page |
+| 11 | status | 0 | 4 / 4 | 7 / 8 | 0 / 3 | shared; admin, staff (staff) | components: admin | pages home; read Component, Incident, Maintenance; create none | 0 | none | 4 / 4 | no mention; landing page |
+| 12 | status | 0 | 4 / 4 | 6 / 8 | 3 / 3 | shared; admin, staff (staff) | incidents: admin/staff, updates: admin/staff, components: admin, maintenance: admin/staff | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | mentions visitors; landing page |
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one `new --describe --yes` printed, with the word-match starter (`closestStarter`) beside it when it differs; "Questions" counts what `smithable clarify` would ask (`--yes` asks nothing), with their language for a description not in English.
 <!-- /scorecard -->
@@ -60,21 +61,20 @@ Yoga Studio
 
 Pages
   - Home (a landing page: hero, class types, gallery, faq, contact, call to action and footer)
-  - Class Types (lists class types; only for admins; visitors see class types on the Home page)
+  - Class types (lists class types; only for admins; visitors see class types on the Home page)
   - Instructors (lists instructors; only for admins)
-  - Messages (lists messages; only for admins)
   - Team (who has access: invite people, change roles, remove users)
   - Admin (every kind of record, to find, open, change and delete)
   - Sessions (lists sessions; only for admins)
-  - My Bookings (lists bookings; only the viewer's own records)
+  - My bookings (lists bookings; only the viewer's own records)
   - Schedule (a calendar of sessions by week or month)
 
-Class Types
-  Class Types have:
+Class types
+  Class types have:
   - a name (required)
   - a summary
   - a level (beginner, all levels or advanced, beginner by default)
-  - a duration (minutes) (a whole number, required, 60 by default)
+  - duration minutes (a whole number, required, 60 by default)
   Only admins can add class types.
 
 Instructors
@@ -106,10 +106,10 @@ Sessions
 Bookings
   Bookings have:
   - a session (a session, required)
-  Each booking can have a user (a user).
+  - status (booked, attended or cancelled, booked by default)
   Only member users and admins can add bookings.
-  Only member users, the owner and admins can delete bookings.
-  At most the session's capacity bookings per session.
+  Only member users and admins can delete bookings.
+  At most the session's capacity bookings per session (counting those with status booked or attended).
 
 Sign-in and access
   People sign in with Google.
@@ -120,12 +120,12 @@ Sign-in and access
   New users get the member role.
   Open to anyone without signing in: the home page, the schedule page, reading class types, reading instructors, reading sessions and adding messages.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 121 files (121 changed, 0 removed).
+Generated 117 files (117 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-1/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-1/drizzle.config.ts'
 10 tables
 account 13 columns 1 indexes 1 fks
-bookings 6 columns 0 indexes 3 fks
+bookings 6 columns 0 indexes 2 fks
 class_types 8 columns 0 indexes 1 fks
 instructors 7 columns 0 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
@@ -135,41 +135,39 @@ sessions 8 columns 0 indexes 3 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_cuddly_chronomancer.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_calm_microbe.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-1. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-1. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-1
+  cd /tmp/smithable-bench-m12-ySDwIe/app-1
   smithable run
-/tmp/smithable-bench-m12-tGHm29/app-1/smithable.yml:45:7  warning  Booking has a capacity per session, but "session" is not unique: one person can take several places.
+/tmp/smithable-bench-m12-ySDwIe/app-1/smithable.yml:45:7  warning  Booking has a capacity per session, but "session" is not unique: one person can take several places.
     hint: Write "session: Session! unique" for one booking per person and session (unique per owner with private access).
-/tmp/smithable-bench-m12-tGHm29/app-1/smithable.yml:86:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+/tmp/smithable-bench-m12-ySDwIe/app-1/smithable.yml:85:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
     hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
 ```
 
 ### 2. A CRM for a small sales team: companies, contacts, deals and follow-ups.
 
 ```text
-Small Sales CRM
+Small Sales Team CRM
   A CRM for a small sales team to manage companies, contacts, deals and follow-ups.
 
 Pages
-  - Companies (lists companies; search by name or email)
+  - Companies (lists companies; search by name)
   - Contacts (lists contacts; search by first name, last name or email)
-  - Deals (lists deals; search by name or company; filter by stage or company; sort by value, close date or stage)
-  - Follow ups (lists follow ups; search by title or deal; filter by status, due date or deal; sort by due date or status)
+  - Deals (lists deals; search by name or company; filter by stage, company or contact)
+  - Follow ups (lists follow ups; search by title or deal; filter by completed, due date or deal)
   - Team (who has access: invite people, change roles, remove users)
 
 Companies
   Companies have:
   - a name (required)
-  - an email
-  - a phone
-  - a segment (smb, enterprise or government, smb by default)
+  - an industry
+  - a website (a web address)
   - notes
   Each company can have an account manager (a user).
   Only admins can delete companies.
-  Only sales users and admins can change companies.
 
 Contacts
   Contacts have:
@@ -177,48 +175,45 @@ Contacts
   - a last name (required)
   - an email
   - a phone
-  - a role (decision maker, influencer or end user, decision maker by default)
+  - a position
   - a company (a company, required)
   - notes
   Only admins can delete contacts.
-  Only sales users and admins can change contacts.
 
 Deals
   Deals have:
   - a name (required)
   - a company (a company, required)
   - a contact (a contact)
-  - a value (an amount, required)
-  - a stage (prospecting, qualification, proposal, negotiation, closed won or closed lost, prospecting by default)
+  - a value (an amount)
+  - a stage (prospect, qualified, proposal, negotiation, closed won or closed lost, prospect by default)
   - a close date
   - notes
   Only admins can delete deals.
-  Only sales users and admins can change deals.
 
 Follow ups
   Follow ups have:
   - a title (required)
   - a deal (a deal, required)
   - a due date (required)
-  - status (pending, completed or canceled, pending by default)
   - notes
+  - a completed (yes or no, false by default)
   Only admins can delete follow ups.
-  Only sales users and admins can change follow ups.
 
 Sign-in and access
   People sign in with Google.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin (Sales management. Full access)
+  - admin
   - sales (Works with companies, contacts, deals and follow-ups)
   New users get the sales role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 91 files (91 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-2/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-2/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
-companies 10 columns 0 indexes 2 fks
+companies 9 columns 0 indexes 2 fks
 contacts 11 columns 0 indexes 2 fks
 deals 11 columns 0 indexes 3 fks
 follow_ups 9 columns 0 indexes 2 fks
@@ -227,32 +222,34 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_mushy_peter_quill.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_purple_vargas.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-2. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-2. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-2
+  cd /tmp/smithable-bench-m12-ySDwIe/app-2
   smithable run
 ```
 
 ### 3. Invoicing for freelancers, with clients, invoices and payments.
 
 ```text
-Freelancer Invoicing
-  Invoicing for freelancers, with clients, invoices and payments.
+Invoicing for Freelancers
+  Invoicing app for freelancers to manage clients, invoices, and payments.
 
 Pages
+  - Invoicing for Freelancers (a landing page: hero, features, pricing, faq, call to action and footer)
   - Overview (lists invoices)
-  - Invoices (lists invoices; search by invoice number or client; filter by status, client or issued on; sort by invoice number, issued on, due on, total or status)
-  - Clients (lists clients; search by name or email; sort by name or email)
+  - Invoices (lists invoices)
+  - Clients (lists clients)
   - Settings (lists business profiles)
+  - Dashboard (lists invoices)
 
 Business Profiles
   Business Profiles have:
   - a business name (required)
   - a VAT number
   - an IBAN
-  - a payment term (days) (a whole number, required, 30 by default)
+  - payment term days (a whole number, required, 30 by default)
   - an invoice footer
 
 Clients
@@ -265,7 +262,7 @@ Clients
 
 Invoices
   Invoices have:
-  - an invoice number (required, unique)
+  - a number (required, unique)
   - a client (a client, required)
   - issued on (a date, required, today by default)
   - due on (a date, required)
@@ -288,10 +285,11 @@ Sign-in and access
   - admin
   - member (A freelancer using the app)
   New users get the member role.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 87 files (87 changed, 0 removed).
+  Open to anyone without signing in: the home page.
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
+Generated 90 files (90 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-3/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-3/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 business_profiles 9 columns 0 indexes 1 fks
@@ -302,11 +300,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_robust_cloak.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_sturdy_purifiers.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-3. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-3. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-3
+  cd /tmp/smithable-bench-m12-ySDwIe/app-3
   smithable run
 ```
 
@@ -317,9 +315,9 @@ Tool Library
   A tool library where neighbors lend each other tools.
 
 Pages
-  - Home (a landing page: hero, tools and footer)
-  - My tools (lists tools; only the viewer's own records)
   - Tools (lists tools; search by name or description; filter by category, condition or available; sort by name or date added; records can be saved as favorites; contact the owner by mail)
+  - Home (a landing page: hero, tools where available is yes and footer)
+  - My tools (lists tools; only the viewer's own records)
 
 Tools
   Tools have:
@@ -333,14 +331,14 @@ Sign-in and access
   People sign in with Google.
   Everyone sees and changes only their own records.
   Roles:
-  - admin
+  - admin (Keeps the tool library organized)
   - member (Lends and borrows tools)
   New users get the member role.
-  Open to anyone without signing in: the home page and reading tools.
+  Open to anyone without signing in: the home page.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 77 files (77 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-4/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-4/drizzle.config.ts'
 6 tables
 account 13 columns 1 indexes 1 fks
 session 8 columns 2 indexes 1 fks
@@ -349,11 +347,11 @@ tools_favorites 4 columns 1 indexes 2 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_bitter_lester.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_numerous_exodus.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-4. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-4. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-4
+  cd /tmp/smithable-bench-m12-ySDwIe/app-4
   smithable run
 ```
 
@@ -361,11 +359,11 @@ Created /tmp/smithable-bench-m12-tGHm29/app-4. Start it with:
 
 ```text
 Bakery Inventory
-  Track ingredients, suppliers, and stock levels for a small bakery.
+  An inventory app for a small bakery to manage ingredients, suppliers and stock levels.
 
 Pages
-  - Ingredients (lists ingredients; search by name or category)
-  - Suppliers (lists suppliers; search by name or contact person)
+  - Ingredients (lists ingredients; search by name or description)
+  - Suppliers (lists suppliers; search by name, contact person or email)
   - Stock (lists stock levels; search by ingredient; filter by ingredient or supplier)
   - Team (who has access: invite people, change roles, remove users)
 
@@ -375,7 +373,7 @@ Ingredients
   - a description
   - a category (dry, wet or frozen, dry by default)
   - a unit (required)
-  - a minimum stock (a whole number, 0 by default)
+  - a minimum stock level (a whole number, 0 by default)
   Only baker users and admins can delete ingredients.
 
 Suppliers
@@ -401,12 +399,12 @@ Sign-in and access
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin
-  - baker (Manages ingredients and stock)
+  - baker (Manages ingredients and stock levels)
   New users get the baker role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 85 files (85 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-5/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-5/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 ingredients 9 columns 0 indexes 1 fks
@@ -417,11 +415,11 @@ suppliers 9 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_reflective_old_lace.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_magenta_thunderbolt.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-5. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-5. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-5
+  cd /tmp/smithable-bench-m12-ySDwIe/app-5
   smithable run
 ```
 
@@ -432,21 +430,10 @@ Union Job Board
   A job board for a local union to post jobs and receive applications.
 
 Pages
-  - Jobs (lists jobs; search by title, description, company or location; filter by type, status or salary; sort by posted at or salary; only for employer users, member users and admins)
-  - Applications (lists applications; only for employer users and admins)
-  - My jobs (lists jobs; only the viewer's own records; only for employer users and admins)
-
-Applications
-  Applications have:
-  - a name (required)
-  - an email (required)
-  - a phone
-  - a resume
-  - a cover letter
-  - status (submitted, reviewed, interviewed, hired or rejected, submitted by default)
-  - a job (a job, required)
-  Only member users, employer users and admins can add applications.
-  Only employer users, the owner and admins can see applications.
+  - Jobs (lists jobs; search by title, description, company or location; sort by posted at or salary)
+  - Applications (lists applications; search by name or email; filter by job or status; only for employer users and admins)
+  - Home (a landing page: hero, jobs where status is open and footer)
+  - Team (who has access: invite people, change roles, remove users)
 
 Jobs
   Jobs have:
@@ -456,51 +443,124 @@ Jobs
   - a location
   - a salary (an amount)
   - a type (full time, part time, contract or temporary, full time by default)
-  - status (open or closed, open by default)
-  - posted at (a date, 2025-01-01 by default)
+  - status (open, filled or expired, open by default)
+  - posted at (a date, required)
   Only employer users and admins can add jobs.
-  Only employer users and admins can delete jobs.
+  Only employer users, the owner and admins can delete jobs.
+
+Applications
+  Applications have:
+  - a job (a job, required)
+  - a name (required)
+  - an email (required)
+  - a phone
+  - a resume
+  - a cover letter
+  - status (submitted, reviewed, interviewed, hired or rejected, submitted by default)
+  Only member users and admins can add applications.
+  Only employer users, the owner and admins can see applications.
 
 Sign-in and access
   People sign in with Google.
-  Everyone sees and changes only their own records.
+  Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin (Manages the job board)
-  - employer (Posts job listings)
+  - admin
+  - employer (Posts job openings)
   - member (Applies to jobs)
   New users get the member role.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 78 files (78 changed, 0 removed).
+  Open to anyone without signing in: the home page, the jobs page and reading jobs where status is open.
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
+Generated 82 files (82 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-6/drizzle.config.ts'
-6 tables
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-6/drizzle.config.ts'
+7 tables
 account 13 columns 1 indexes 1 fks
 applications 11 columns 0 indexes 2 fks
+invitation 7 columns 2 indexes 1 fks
 jobs 12 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_bouncy_malcolm_colcord.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_magenta_sumo.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-6. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-6. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-6
+  cd /tmp/smithable-bench-m12-ySDwIe/app-6
   smithable run
 ```
 
 ### 7. A football club's site: teams, players, matches and results.
 
-Failed:
-
 ```text
- anyone without signing in: the home page, the teams page, the players page, the matches page, the results page, reading teams, reading players, reading matches and reading results.
+Football Club
+  A football club's site with teams, players, matches and results.
+
+Pages
+  - Home (a landing page: hero, equipos and footer)
+  - Equipos (lists equipos)
+  - Jugadores (lists jugadores)
+  - Partidos (lists partidos)
+  - Resultados (lists resultados)
+
+Equipos
+  Equipos have:
+  - a nombre (required)
+  - a descripción
+  - a deporte (fútbol, fútbol sala or fútbol playa, fútbol by default)
+  - a fundado (a date)
+
+Jugadores
+  Jugadores have:
+  - a nombre (required)
+  - a posición (portero, defensa, centrocampista or delantero, portero by default)
+  - an equipo (an equipo, required)
+  - a número (a whole number)
+  - a fecha de nacimiento (a date)
+
+Partidos
+  Partidos have:
+  - an equipo local (an equipo, required)
+  - an equipo visitante (an equipo, required)
+  - a fecha y hora (a date and time, required)
+  - an ubicación
+  - an estado (programado, jugado or cancelado, programado by default)
+
+Resultados
+  Resultados have:
+  - a partido (a partido, required)
+  - a goles local (a whole number, required)
+  - a goles visitante (a whole number, required)
+  - goleadores
+
+Sign-in and access
+  People sign in with Google.
+  Everyone sees and changes only their own records.
+  Roles:
+  - admin
+  - member
+  New users get the member role.
+  Open to anyone without signing in: the home page, the teams page, the players page, the matches page, the results page, reading teams, reading players, reading matches and reading results.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Left out a picture the texts named but the app does not have.
-/tmp/smithable-bench-m12-tGHm29/app-7/smithable.content.yml:78:10  error  "hero" of page "home" must be a mapping of keys to values.
+Generated 86 files (86 changed, 0 removed).
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-7/drizzle.config.ts'
+8 tables
+account 13 columns 1 indexes 1 fks
+matches 9 columns 0 indexes 3 fks
+players 9 columns 0 indexes 2 fks
+results 8 columns 0 indexes 2 fks
+session 8 columns 2 indexes 1 fks
+teams 8 columns 0 indexes 1 fks
+user 8 columns 1 indexes 0 fks
+verification 6 columns 1 indexes 0 fks
 
-1 error in /tmp/smithable-bench-m12-tGHm29/app-7/smithable.content.yml.
+[✓] Your SQL migration file ➜ drizzle/0000_uneven_maximus.sql 🚀
 
+Created /tmp/smithable-bench-m12-ySDwIe/app-7. Start it with:
+
+  cd /tmp/smithable-bench-m12-ySDwIe/app-7
+  smithable run
 ```
 
 ### 8. Event registration for a conference: talks, speakers and attendees.
@@ -510,35 +570,35 @@ Conference Registration
   Event registration system for conference talks, speakers and attendees.
 
 Pages
-  - Conference Registration (a landing page: hero, talks, speakers, contact and footer)
-  - Talks (lists talks; search by title, summary or room)
-  - Speakers (lists speakers; search by name or company)
-  - Attendees (lists attendees; search by name, email or company)
-  - Registrations (lists registrations; filter by talk or status)
+  - Home (a landing page: hero, talks, speakers, contact and footer)
+  - Talks (lists talks; only for organizer users and admins; visitors see talks on the Home page)
+  - Speakers (lists speakers; only for organizer users and admins; visitors see speakers on the Home page)
+  - Attendees (lists attendees; only for organizer users and admins)
   - Team (who has access: invite people, change roles, remove users)
+  - Admin (every kind of record, to find, open, change and delete)
+  - Registrations (lists registrations; only the viewer's own records; only for organizer users, attendee users and admins)
 
 Talks
   Talks have:
   - a title (required)
-  - a summary
+  - a description
   - starts at (a date and time, required)
   - ends at (a date and time, required)
   - a room
   - a capacity (a whole number, required, 100 by default)
   - a speaker (a speaker, required)
   Each talk lists its registrations.
-  Only organizer users and admins can delete talks.
   Only organizer users and admins can add talks.
+  Only organizer users and admins can delete talks.
 
 Speakers
   Speakers have:
   - a name (required)
   - a bio
-  - a photo (picture)
   - an email (required)
-  - a company
-  Only organizer users and admins can delete speakers.
+  - a photo (picture)
   Only organizer users and admins can add speakers.
+  Only organizer users and admins can delete speakers.
 
 Attendees
   Attendees have:
@@ -546,14 +606,16 @@ Attendees
   - an email (required, unique)
   - a company
   - dietary restrictions
+  Only organizer users, attendee users and admins can add attendees.
   Only organizer users and admins can delete attendees.
-  Only organizer users and admins can add attendees.
 
 Registrations
   Registrations have:
   - a talk (a talk, required)
   - an attendee (an attendee, required)
-  - status (registered, attended or cancelled, registered by default)
+  - registered at (a date and time, required)
+  Only organizer users, attendee users and admins can add registrations.
+  Only organizer users, the owner and admins can delete registrations.
   At most the talk's capacity registrations per talk.
 
 Sign-in and access
@@ -562,32 +624,33 @@ Sign-in and access
   Roles:
   - admin
   - organizer (Manages conference talks, speakers, and registrations)
-  New users get the organizer role.
-  Open to anyone without signing in: the home page, the talks page, reading talks and reading speakers.
+  - attendee (A conference participant who registers for talks)
+  New users get the attendee role.
+  Open to anyone without signing in: the home page, reading talks and reading speakers.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 99 files (99 changed, 0 removed).
+Generated 110 files (110 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-8/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-8/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 attendees 8 columns 1 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
 registrations 7 columns 0 indexes 3 fks
 session 8 columns 2 indexes 1 fks
-speakers 9 columns 0 indexes 1 fks
+speakers 8 columns 0 indexes 1 fks
 talks 11 columns 0 indexes 2 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_complex_kat_farrell.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_magical_deathbird.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-8. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-8. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-8
+  cd /tmp/smithable-bench-m12-ySDwIe/app-8
   smithable run
-/tmp/smithable-bench-m12-tGHm29/app-8/smithable.yml:44:7  warning  Registration has a capacity per talk, but "talk" is not unique: one person can take several places.
+/tmp/smithable-bench-m12-ySDwIe/app-8/smithable.yml:43:7  warning  Registration has a capacity per talk, but "talk" is not unique: one person can take several places.
     hint: Write "talk: Talk! unique" for one registration per person and talk (unique per owner with private access).
-/tmp/smithable-bench-m12-tGHm29/app-8/smithable.auth.yml:12:16  warning  Anyone on the internet can read Speaker, including personal data in email.
+/tmp/smithable-bench-m12-ySDwIe/app-8/smithable.auth.yml:14:16  warning  Anyone on the internet can read Speaker, including personal data in email.
 ```
 
 ### 9. A help desk for an IT team: tickets, priorities and who handles them.
@@ -619,7 +682,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 76 files (76 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-9/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-9/drizzle.config.ts'
 6 tables
 account 13 columns 1 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
@@ -628,11 +691,11 @@ tickets 9 columns 0 indexes 2 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_friendly_wither.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_motionless_odin.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-9. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-9. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-9
+  cd /tmp/smithable-bench-m12-ySDwIe/app-9
   smithable run
 ```
 
@@ -640,93 +703,244 @@ Created /tmp/smithable-bench-m12-tGHm29/app-9. Start it with:
 
 ```text
 Family Recipes
-  A private collection of family recipes with ingredients and shopping lists.
+  A recipe collection for a family, with ingredients and shopping lists.
 
 Pages
-  - Recept (lists recept; search by namn, beskrivning, kategori or svårighetsgrad; filter by kategori or svårighetsgrad)
-  - Inköpslistor (lists inköpslistor)
+  - Recepten (lists recepten; search by naam, beschrijving or categorie; filter by categorie or moeilijkheidsgraad)
+  - Boodschappenlijsten (lists boodschappenlijsten; search by naam; filter by status or datum)
+  - Team (who has access: invite people, change roles, remove users)
 
-Recept
-  Recept have:
-  - a namn (required)
-  - a beskrivning
-  - a portioner (a whole number, 4 by default)
-  - a förberedelsetid (min) (a whole number)
-  - a tillagningstid (min) (a whole number)
-  - an instruktioner (required)
-  - a kategori (frukost, lunch, middag, efterrätt, mellanmål or dryck, frukost by default)
-  - a svårighetsgrad (lätt, medel or svår, lätt by default)
-  - a bild (a web address)
-  Only admins can delete recept.
+Recepten
+  Recepten have:
+  - a naam (required)
+  - a beschrijving
+  - porties (a whole number, 4 by default)
+  - a voorbereidingstijd (min) (a whole number)
+  - a kooktijd (min) (a whole number)
+  - instructies (required)
+  - a categorie (ontbijt, lunch, diner, toetje or tussendoortje, ontbijt by default)
+  - a moeilijkheidsgraad (makkelijk, gemiddeld or moeilijk, makkelijk by default)
+  - an afbeelding (a web address)
+  Only admins can delete recepten.
 
-Ingredienser
-  Ingredienser have:
-  - a namn (required)
-  - a mängd
-  - an enhet
+Ingrediënten
+  Ingrediënten have:
+  - a naam (required)
+  - a hoeveelheid
+  - an eenheid
   - a recipe (a recept, required)
 
-Inköpslistor
-  Inköpslistor have:
-  - a namn (required)
-  - a recipe (a recept)
-  - an artiklar (required)
-  - status (pågående or avslutad, pågående by default)
-  - a förfallodatum (a date)
-  Only admins can delete inköpslistor.
+Boodschappenlijsten
+  Boodschappenlijsten have:
+  - a naam (required)
+  - a datum (a date, required, today by default)
+  - status (in afwachting or voltooid, in afwachting by default)
+  Each boodschappenlijst lists its boodschappenitems.
+  Only admins can delete boodschappenlijsten.
+
+Boodschappenitems
+  Boodschappenitems have:
+  - a naam (required)
+  - a hoeveelheid
+  - an eenheid
+  - an aangekocht (yes or no, false by default)
+  - a shopping list (a boodschappenlijst, required)
+  Only admins can delete boodschappenitems.
 
 Sign-in and access
   People sign in with Google.
-  Everyone sees and changes only their own records.
+  Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin
   - member (Family member who can view and add recipes)
   New users get the member role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 78 files (78 changed, 0 removed).
+Generated 85 files (85 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-tGHm29/app-10/drizzle.config.ts'
-7 tables
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-10/drizzle.config.ts'
+9 tables
 account 13 columns 1 indexes 1 fks
 ingredients 8 columns 0 indexes 2 fks
+invitation 7 columns 2 indexes 1 fks
 recipes 13 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
-shopping_lists 9 columns 0 indexes 2 fks
+shopping_items 9 columns 0 indexes 2 fks
+shopping_lists 7 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_dazzling_eddie_brock.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_greedy_jimmy_woo.sql 🚀
 
-Created /tmp/smithable-bench-m12-tGHm29/app-10. Start it with:
+Created /tmp/smithable-bench-m12-ySDwIe/app-10. Start it with:
 
-  cd /tmp/smithable-bench-m12-tGHm29/app-10
+  cd /tmp/smithable-bench-m12-ySDwIe/app-10
   smithable run
 ```
 
 ### 11. A status page for our API, with incidents and planned maintenance.
 
-Failed:
-
 ```text
-g in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
+API Status
+  Live status of our API services, incidents, and planned maintenance.
+
+Pages
+  - API Status (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)
+  - Incidents (lists incidents)
+  - Updates (lists incident updates)
+  - Components (lists components; only for admins; visitors see components on the API Status page)
+  - Maintenance (lists maintenances)
+  - Overview (a dashboard: open, per month and latest)
+  - Team (who has access: invite people, change roles, remove users)
+
+Components
+  Components have:
+  - a name (required)
+  - status (operational, degraded, down or maintenance, operational by default)
+  - a description
+  Each component lists its incidents.
+
+Incidents
+  Incidents have:
+  - a title (required)
+  - status (investigating, identified, monitoring or resolved, investigating by default)
+  - a component (a component)
+  - detected at (a date and time, required)
+  - resolved at (a date and time)
+  - a summary (formatted text)
+  Each incident lists its incident updates.
+
+Incident Updates
+  Incident Updates have:
+  - an incident (an incident, required)
+  - a date and time (at, required)
+  - status (investigating, identified, monitoring or resolved, investigating by default)
+  - a message (required)
+
+Maintenances
+  Maintenances have:
+  - a title (required)
+  - a component (a component)
+  - starts at (a date and time, required)
+  - ends at (a date and time, required)
+  - a description
+
+Sign-in and access
+  People sign in with Google.
+  Everyone who signs in sees all records, and changes and deletes the ones they own.
+  Roles:
+  - admin (Runs the status page and the team)
+  - staff (Writes incidents and their updates)
+  New users get the staff role.
+  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved and reading maintenances.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Left out a picture the texts named but the app does not have.
-/tmp/smithable-bench-m12-tGHm29/app-11/smithable.content.yml:4:10  error  "hero" of page "home" must be a mapping of keys to values.
+Generated 95 files (95 changed, 0 removed).
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-11/drizzle.config.ts'
+9 tables
+account 13 columns 1 indexes 1 fks
+components 7 columns 0 indexes 1 fks
+incident_updates 8 columns 0 indexes 2 fks
+incidents 10 columns 0 indexes 2 fks
+invitation 7 columns 2 indexes 1 fks
+maintenances 9 columns 0 indexes 2 fks
+session 8 columns 2 indexes 1 fks
+user 8 columns 1 indexes 0 fks
+verification 6 columns 1 indexes 0 fks
 
-1 error in /tmp/smithable-bench-m12-tGHm29/app-11/smithable.content.yml.
+[✓] Your SQL migration file ➜ drizzle/0000_safe_nighthawk.sql 🚀
 
+Created /tmp/smithable-bench-m12-ySDwIe/app-11. Start it with:
+
+  cd /tmp/smithable-bench-m12-ySDwIe/app-11
+  smithable run
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.
 
-Failed:
-
 ```text
- in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
+Web Shop Status
+  A public uptime page showing which services work, outages and their updates.
+
+Pages
+  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring and footer)
+  - Incidents (lists incidents; only for staff users and admins; visitors see incidents on the Home page)
+  - Updates (lists incident updates; only for staff users and admins)
+  - Components (lists components; only for admins; visitors see components on the Home page)
+  - Maintenance (lists maintenances; only for staff users and admins)
+  - Team (who has access: invite people, change roles, remove users)
+  - Admin (every kind of record, to find, open, change and delete)
+
+Components
+  Components have:
+  - a name (required)
+  - status (operational, degraded, down or maintenance, operational by default)
+  - a description
+  Each component lists its incidents.
+
+Incidents
+  Incidents have:
+  - a title (required)
+  - status (investigating, identified, monitoring or resolved, investigating by default)
+  - a component (a component)
+  - detected at (a date and time, required)
+  - resolved at (a date and time)
+  - a summary (formatted text)
+  Each incident lists its incident updates.
+
+Incident updates
+  Incident updates have:
+  - an incident (an incident, required)
+  - a date and time (at, required)
+  - status (investigating, identified, monitoring or resolved, investigating by default)
+  - a message (required)
+
+Maintenances
+  Maintenances have:
+  - a title (required)
+  - a component (a component)
+  - starts at (a date and time, required)
+  - ends at (a date and time, required)
+  - a description
+
+Identified
+  The cause is found; the incident moves to identified.
+  Only staff users and admins can use it.
+
+Monitoring
+  A fix is out; the incident is watched before it is closed.
+  Only staff users and admins can use it.
+
+Resolve
+  The incident is over.
+  Only staff users and admins can use it.
+
+Sign-in and access
+  People sign in with Google.
+  Everyone who signs in sees all records, and changes and deletes the ones they own.
+  Roles:
+  - admin (Runs the status page and the team)
+  - staff (Writes incidents and their updates)
+  New users get the staff role.
+  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Left out a picture the texts named but the app does not have.
-/tmp/smithable-bench-m12-tGHm29/app-12/smithable.content.yml:74:10  error  "hero" of page "home" must be a mapping of keys to values.
+Generated 111 files (111 changed, 0 removed).
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ySDwIe/app-12/drizzle.config.ts'
+9 tables
+account 13 columns 1 indexes 1 fks
+components 7 columns 0 indexes 1 fks
+incident_updates 8 columns 0 indexes 2 fks
+incidents 10 columns 0 indexes 2 fks
+invitation 7 columns 2 indexes 1 fks
+maintenances 9 columns 0 indexes 2 fks
+session 8 columns 2 indexes 1 fks
+user 8 columns 1 indexes 0 fks
+verification 6 columns 1 indexes 0 fks
 
-1 error in /tmp/smithable-bench-m12-tGHm29/app-12/smithable.content.yml.
+[✓] Your SQL migration file ➜ drizzle/0000_warm_psylocke.sql 🚀
 
+Created /tmp/smithable-bench-m12-ySDwIe/app-12. Start it with:
+
+  cd /tmp/smithable-bench-m12-ySDwIe/app-12
+  smithable run
 ```

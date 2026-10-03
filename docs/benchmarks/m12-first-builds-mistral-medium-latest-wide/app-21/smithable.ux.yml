@@ -1,17 +1,23 @@
 smithableUx: 0.1
 tones:
+  ServiceJob.status:
+    completed: success
+    cancelled: danger
   Invoice.status:
     paid: success
-    canceled: danger
-  WorkOrder.status:
-    completed: success
-    canceled: danger
+    overdue: danger
 pages:
   asiakkaat:
     icon: users
-  laskut:
-    icon: receipt
   autot:
     icon: truck
+    form:
+      sections: [{ name: perustiedot, fields: [registrationNumber, make, model, year] }, { name: omistaja, fields: [customer] }]
   huoltotyot:
-    icon: clipboard
+    icon: settings
+    form:
+      sections: [{ name: perustiedot, fields: [description, status, car] }, { name: aikataulu, fields: [startDate, endDate] }, { name: lisatiedot, fields: [notes] }]
+  laskut:
+    icon: receipt
+    form:
+      sections: [{ name: perustiedot, fields: [number, customer, issuedOn, dueOn, status] }, { name: yhteenveto, fields: [total] }]

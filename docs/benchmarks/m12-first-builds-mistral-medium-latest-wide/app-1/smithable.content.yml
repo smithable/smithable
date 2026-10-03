@@ -16,14 +16,14 @@ models:
     label: Quote
     pluralLabel: Quotes
     fields:
-      number:
-        label: Quote Number
       client:
         label: Client
-      issuedOn:
-        label: Issued On
+      description:
+        label: Description
       amount:
         label: Amount
+      issuedOn:
+        label: Issued On
       status:
         label: Status
         values:
@@ -31,10 +31,19 @@ models:
           sent: Sent
           accepted: Accepted
           paid: Paid
-      description:
-        label: Description
-pages:
-  clients:
-    title: Clients
-  quotes:
-    title: Quotes
+  Payment:
+    label: Payment
+    pluralLabel: Payments
+    fields:
+      quote:
+        label: Quote
+      amount:
+        label: Amount
+      paidOn:
+        label: Paid On
+      method:
+        label: Method
+        values:
+          bank: Bank Transfer
+          cash: Cash
+          online: Online
