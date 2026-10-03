@@ -439,7 +439,6 @@ export function listParts(
       ...(askedFields(a).length ? [actionNames(a).askUi, actionNames(a).asks] : []),
     );
   if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
-  if (offered.length) view.add("@tanstack/react-router", "useRouter");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
   const selecting = !within && (many.length > 0 || Boolean(auth && hasSignIn(auth)));
@@ -470,7 +469,7 @@ export function listParts(
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
   const body = (api: string) => `function ${component}() {
   const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || offered.length || selecting || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || offered.length || selecting ? "\n  const router = useRouter();" : ""}${
+${actions.length || offered.length || selecting || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || selecting ? "\n  const router = useRouter();" : ""}${
     selecting
       ? `
   // The chosen rows, offered when the viewer may do something to at least one row.

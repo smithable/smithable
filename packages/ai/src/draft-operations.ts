@@ -156,7 +156,7 @@ type Step = { op: string; args: OperationArgs };
 const ESSENTIAL = new Set([
   "setApp",
   // A starter's actions are its flow (the status page's resolve): refused, they are corrected;
-  // still refused after the last round, they are dropped and named (see LAST_ROUND_DROPS).
+  // still refused after the last round, they are dropped and named (see lastRoundDrops).
   "addAction",
   "addModel",
   "addField",
@@ -167,8 +167,12 @@ const ESSENTIAL = new Set([
   "setSignUp",
 ]);
 
-/** Essential while there are rounds left; after the last one, dropped rather than failing the draft. */
-const LAST_ROUND_DROPS = new Set(["addAction"]);
+/**
+ * Essential while there are rounds left; after the last one, dropped rather than failing the
+ * draft: an action, and a field with a formula or default (a total over a list never added).
+ */
+const lastRoundDrops = (step: Step) =>
+  step.op === "addAction" || (step.op === "addField" && String(step.args.type ?? "").includes("="));
 
 /**
  * Applies steps in order: a slip in the field shorthand is mended, a step already applied or
@@ -270,6 +274,16 @@ function applyAll(
             queue.push({ op: "addField", args: { model: step.args.model, field, type } });
           continue;
         }
+      }
+      // Invite-only before the team page that invites: the page first, as closeShared does.
+      if (
+        step.op === "setSignUp" &&
+        /no page invites/.test(message) &&
+        !deferred.has(JSON.stringify(step))
+      ) {
+        deferred.add(JSON.stringify(step));
+        queue.unshift({ op: "addUsersPage", args: {} }, step);
+        continue;
       }
       const later = missing
         ? queue.findIndex((q) => q.op === "addModel" && q.args.model === missing)
@@ -399,17 +413,17 @@ export async function draftProjectByOperations(options: {
       refused = outcome.refused;
       const last = round === MAX_ROUNDS;
       const essential = refused.filter(
-        (r) => ESSENTIAL.has(r.step.op) && !(last && LAST_ROUND_DROPS.has(r.step.op)),
+        (r) => ESSENTIAL.has(r.step.op) && !(last && lastRoundDrops(r.step)),
       );
       if (essential.length === 0) {
         // Refused extras (a text, a color) are left out rather than failing the draft, and an
-        // action still refused after the last round is named.
+        // action or formula field still refused after the last round is named.
         const dropped = refused
-          .filter((r) => LAST_ROUND_DROPS.has(r.step.op))
-          .map(
-            (r) =>
-              `${r.step.op} ${String(r.step.args.action ?? r.step.args.name ?? "")}: ${r.message}`,
-          );
+          .filter((r) => lastRoundDrops(r.step))
+          .map((r) => {
+            const { action, model, field } = r.step.args;
+            return `${r.step.op} ${String(action ?? (model ? `${model}.${field}` : ""))}: ${r.message}`;
+          });
         if (done.length > 0)
           return {
             kind: "draft",
