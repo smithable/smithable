@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -49,6 +50,8 @@ export async function create(
     withPictures?: boolean;
     /** The app's name as someone typed it (the hosted form): it wins over a draft's own. */
     name?: string;
+    /** The administrator's address; without it, the Git user's (email-sign-in.md §3). */
+    admin?: string;
   } = {},
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
@@ -156,6 +159,14 @@ export async function create(
       pictures = await addLibraryPictures({ description, ir, files, io });
   }
   if (options.name?.trim()) files = named(files, options.name.trim());
+  // The app's first administrator is whoever makes it: a starter's sample address never
+  // survives into a new project, where it would be someone else's way in.
+  const admin = options.admin?.trim() || gitEmail();
+  if (admin) files = administered(files, admin);
+  else if (/^admins:/m.test(files["smithable.auth.yml"] ?? ""))
+    io.out(
+      "No administrator was set (no --admin and no Git user.email): the starter's sample address is still in smithable.auth.yml. Set yours with: smithable op setAdmins you@your-domain\n",
+    );
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
@@ -286,6 +297,26 @@ async function askQuestions(
 }
 
 /** The project's files with the app named `name` (a name someone typed wins over a draft's). */
+/** The project's files with `address` as the only administrator, when the app has sign-in. */
+export function administered(
+  files: Record<string, string>,
+  address: string,
+): Record<string, string> {
+  const auth = new YamlEditor(files["smithable.auth.yml"] ?? "");
+  if (!auth.has(["signIn"]) || auth.get(["signIn"]) === "none") return files;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address)) return files;
+  if (auth.has(["admins"])) auth.set(["admins"], [address.toLowerCase()]);
+  else auth.add([], "admins", [address.toLowerCase()]);
+  return { ...files, "smithable.auth.yml": auth.text };
+}
+
+/** The Git user's email address, when Git is there and knows one. */
+function gitEmail(): string | undefined {
+  const result = spawnSync("git", ["config", "user.email"], { encoding: "utf8" });
+  const address = result.status === 0 ? result.stdout.trim() : "";
+  return address || undefined;
+}
+
 export function named(files: Record<string, string>, name: string): Record<string, string> {
   const spec = new YamlEditor(files["smithable.yml"] ?? "");
   if (!spec.has(["app", "name"])) return files;

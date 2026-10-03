@@ -2080,7 +2080,11 @@ for (const [index, example] of examples.entries()) {
   const port = Number(process.env.TEST_APPS_PORT ?? 4400) + index;
   const reported = failures.length;
   try {
-    step("smithable new", () => run("node", [cli, "new", dir, "--starter", example], repo));
+    // Its own administrator: the default is the Git user's address, which on a developer's
+    // machine may name Smithable, and a detached project must not.
+    step("smithable new", () =>
+      run("node", [cli, "new", dir, "--starter", example, "--admin", "owner@acme.dev"], repo),
+    );
     if (example === "crm") {
       step("the starter comes with its custom action implemented", () => {
         const code = readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8");
