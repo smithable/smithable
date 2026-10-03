@@ -8,7 +8,16 @@ import { type PictureEntry, pickPictures } from "@smithable/ai";
 import { type SpecIR, YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
 
-export const LIBRARY_INDEX = "https://docs.smithable.ai/images/index.json";
+const LIBRARY = "https://docs.smithable.ai/images";
+/**
+ * Where the library is: SMITHABLE_IMAGE_LIBRARY, else docs.smithable.ai/images. A hosted
+ * workspace has no internet, so the service serves the library to it at its own address.
+ */
+export const libraryBase = () =>
+  (process.env.SMITHABLE_IMAGE_LIBRARY || LIBRARY).replace(/\/$/, "");
+/** A picture's address in the index, at the library's place (the index names docs.smithable.ai). */
+export const atLibrary = (url: string) =>
+  url.startsWith(`${LIBRARY}/`) ? `${libraryBase()}${url.slice(LIBRARY.length)}` : url;
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_PICTURE = 2 * 1024 * 1024;
 const TIMEOUT = 15_000;
@@ -32,7 +41,9 @@ export async function libraryIndex(
     // A broken cache is fetched again.
   }
   try {
-    const response = await fetchFn(LIBRARY_INDEX, { signal: AbortSignal.timeout(TIMEOUT) });
+    const response = await fetchFn(`${libraryBase()}/index.json`, {
+      signal: AbortSignal.timeout(TIMEOUT),
+    });
     if (!response.ok) return undefined;
     const text = await response.text();
     const index = JSON.parse(text) as PictureEntry[];
@@ -47,7 +58,7 @@ export async function libraryIndex(
 
 async function bytesOf(url: string, fetchFn: Fetch): Promise<Uint8Array | undefined> {
   try {
-    const response = await fetchFn(url, { signal: AbortSignal.timeout(TIMEOUT) });
+    const response = await fetchFn(atLibrary(url), { signal: AbortSignal.timeout(TIMEOUT) });
     if (!response.ok) return undefined;
     const length = Number(response.headers.get("content-length") ?? 0);
     if (length > MAX_PICTURE) return undefined;
@@ -128,4 +139,33 @@ export function writePictures(dir: string, pictures: { file: string; bytes: Uint
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, picture.bytes);
   }
+}
+
+/**
+ * Pictures the content file names that the project does not have are taken out: a drafted
+ * app's texts may name images/hero.webp (as its starter's do) when no picture was written,
+ * and a reference to a missing file shows a broken picture.
+ */
+export function dropMissingPictures(dir: string, io: Io): void {
+  const file = join(dir, "smithable.content.yml");
+  if (!existsSync(file)) return;
+  const editor = new YamlEditor(readFileSync(file, "utf8"));
+  const missing: string[][] = [];
+  const walk = (value: unknown, path: string[]) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    for (const [key, v] of Object.entries(value)) {
+      const src =
+        key === "image" ? (typeof v === "string" ? v : (v as { src?: unknown })?.src) : undefined;
+      if (typeof src === "string" && !/^https?:/.test(src) && !existsSync(join(dir, "public", src)))
+        missing.push([...path, key]);
+      else walk(v, [...path, key]);
+    }
+  };
+  walk(editor.get([]), []);
+  for (const path of missing) editor.remove(path);
+  if (!missing.length) return;
+  writeFileSync(file, editor.text);
+  io.out(
+    `Left out ${missing.length === 1 ? "a picture" : `${missing.length} pictures`} the texts named but the app does not have.\n`,
+  );
 }
