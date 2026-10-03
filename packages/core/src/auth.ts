@@ -65,6 +65,9 @@ const LATER_PROVIDERS = ["microsoft", "github", "apple", "magicLink"];
 /** Domains nobody receives mail at (RFC 2606): an administrator there can never sign in. */
 const RESERVED_DOMAIN = /(^|\.)(example|test|invalid|localhost)$|^example\.(com|org|net)$/;
 
+/** A domain nobody has an address at (a starter's sample, like acme.example). */
+export const reservedDomain = (domain: string) => RESERVED_DOMAIN.test(domain);
+
 /** Personal data that should never be readable by anyone on the internet. */
 const PERSONAL_TYPES = ["email", "phone"];
 
@@ -282,11 +285,25 @@ export function validateAuth(
         "Only invited people and administrators may sign in, and there is no administrator: nobody can sign in.",
         `Name one under "admins" (smithable op setAdmins you@your-domain).`,
       );
+    // A domain nobody has: only administrators and invited people can ever sign in.
+    const domains = auth.signIn.allowedDomains;
+    const sample = domains?.filter(reservedDomain) ?? [];
+    const allSample = sample.length > 0 && sample.length === domains?.length;
+    if (sample.length)
+      ctx.warning(
+        signIn?.keyNode ?? root,
+        "example-domain",
+        allSample
+          ? `Only ${sample.join(" and ")} accounts may sign up, and nobody has one: only administrators and invited people can sign in.`
+          : `${sample.join(" and ")} in allowedDomains ${sample.length > 1 ? "are domains" : "is a domain"} nobody has an account at: remove ${sample.length > 1 ? "them" : "it"}.`,
+        allSample
+          ? `Change "allowedDomains" under "signIn" to your people's domains, or remove it.`
+          : undefined,
+      );
     // An admin outside allowedDomains may sign in (admins always can), but the domains were
     // likely a starter's and keep everyone else from the admin's own domain out.
-    const domains = auth.signIn.allowedDomains;
     for (const address of auth.admins)
-      if (domains && !domains.includes(address.split("@")[1] ?? ""))
+      if (domains && !allSample && !domains.includes(address.split("@")[1] ?? ""))
         ctx.warning(
           admins?.value ?? root,
           "admin-outside-domains",
@@ -294,7 +311,7 @@ export function validateAuth(
           `Change "allowedDomains" under "signIn" to your people's domains, or remove it.`,
         );
     for (const address of auth.admins)
-      if (RESERVED_DOMAIN.test(address.split("@")[1] ?? ""))
+      if (reservedDomain(address.split("@")[1] ?? ""))
         ctx.warning(
           admins?.value ?? root,
           "example-admin",
