@@ -15,7 +15,7 @@ models:
       notes: text
   Order:
     fields:
-      ref: string
+      ref: string! unique
       lines: Line[]
   Line:
     fields:
@@ -74,6 +74,20 @@ actions:
       Line:
         order: 1                   # expect: invalid-add
         note: x
+  copyAndSet:
+    on: Customer
+    set: { status: lost }
+    copy: {}                       # expect: invalid-action
+  copyUnique:
+    on: Order
+    copy: { ref: R-1 }             # expect: invalid-copy
+  copyBadList:
+    on: Customer
+    copy: {}
+    with: [notalist]               # expect: invalid-copy
+  meNotUser:
+    on: Customer
+    set: { notes: ME() }           # expect: invalid-set
   withInput:
     on: Customer
     set: { status: lost }

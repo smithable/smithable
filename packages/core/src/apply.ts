@@ -203,6 +203,11 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
       args[key as string] = true;
       continue;
     }
+    // An object with no pairs ("--copy" alone) is an empty one.
+    if (type === "object" && (next === undefined || /^--[\w-]+$/.test(next))) {
+      args[key as string] = args[key as string] ?? {};
+      continue;
+    }
     if (key === undefined || !properties[key] || next === undefined) {
       values.push(words[i] as string);
       continue;

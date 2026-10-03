@@ -1144,6 +1144,44 @@ async function landingFlow(base) {
   }
 }
 
+/** A copy: Duplicate asks for the new invoice's number and opens the copy, with the lines. */
+async function copyFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/invoices`);
+    const first = page.locator("tbody tr").first();
+    await first.getByRole("button", { name: "Duplicate" }).waitFor();
+    await first.getByRole("button", { name: "Duplicate" }).click();
+    const dialog = page.getByRole("dialog", { name: "Duplicate" });
+    await dialog.getByLabel("Number").fill("COPY-900");
+    await dialog.getByRole("button", { name: "Duplicate" }).click();
+    // The copy's own page, with its number and the lines that came along.
+    await page.waitForURL(/\/invoices\/\d+$/);
+    await page
+      .getByLabel("Number")
+      .and(page.locator('[value="COPY-900"]'))
+      .waitFor({ timeout: 10000 });
+    await page
+      .locator("section", { hasText: "Lines" })
+      .locator("tbody tr")
+      .first()
+      .waitFor({ timeout: 10000 })
+      .catch(() => {
+        throw new Error("the copy has no lines");
+      });
+    console.log("  ✓ browser: Duplicate asks for a number and opens the copy, with its lines");
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("copy flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 /** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
@@ -2325,6 +2363,31 @@ for (const [index, example] of examples.entries()) {
         if (added.code !== 0) throw new Error(added.out);
         run("pnpm", ["typecheck"], dir);
       });
+    // A copy (actions.md §8): duplicate an invoice with its lines, asking for its own number.
+    if (example === "invoicing")
+      step(
+        "op addAction --copy gives invoices a duplicate action that takes their lines along",
+        () => {
+          const added = smithable(
+            dir,
+            "op",
+            "addAction",
+            "duplicate",
+            "--on",
+            "Invoice",
+            "--copy",
+            "status=draft",
+            "--copy",
+            "number=",
+            "--copy",
+            "issuedOn=TODAY()",
+            "--with",
+            "lines",
+          );
+          if (added.code !== 0) throw new Error(added.out);
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     // A standard action (actions.md): a button that sets fields of a record, without code.
     if (example === "status")
       step(
@@ -2377,6 +2440,7 @@ for (const [index, example] of examples.entries()) {
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "invoicing") {
+        await copyFlow(base);
         await formulaFlow(base);
         await onboardingFlow(base);
         await isolationFlow(dir, base);
