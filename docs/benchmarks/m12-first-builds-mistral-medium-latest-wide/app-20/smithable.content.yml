@@ -48,8 +48,6 @@ models:
         label: Aloitusaika
       capacity:
         label: Osallistujamäärä
-      placesLeft:
-        label: Vapaat paikat
   Booking:
     label: Varaus
     pluralLabel: Varaukset

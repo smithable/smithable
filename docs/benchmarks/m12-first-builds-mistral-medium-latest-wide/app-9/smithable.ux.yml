@@ -1,10 +1,11 @@
 smithableUx: 0.1
 pages:
-  albums:
+  records:
     table:
-      columns: [title, artist, releaseYear, condition, pricePaid]
+      sort: title
+      columns: [title, artist, condition, releaseYear, pricePaid]
 tones:
-  Album.condition:
+  Record.condition:
     mint: success
     nearMint: success
     good: warning

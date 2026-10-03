@@ -1,30 +1,16 @@
 smithable: 0.1
 app:
-  name: Pieni Autokorjaamo
+  name: Pieni autokorjaamo
   description: "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa."
   currency: EUR
-  timezone: Europe/Helsinki
 models:
   Customer:
     fields:
       name: string!
       email: email
       phone: phone
-      notes: text
-  Service:
-    fields:
-      name: string!
-      description: text
-      price: money!
-  Invoice:
-    fields:
-      number: string! unique
-      customer: Customer!
-      status: draft | sent | paid | canceled
-      total: money!
-      dueDate: date
-      issuedAt: datetime = NOW()
-      workOrder: WorkOrder
+      address: text
+      cars: Car[]
   Car:
     fields:
       registrationNumber: string! unique
@@ -32,34 +18,32 @@ models:
       model: string!
       year: int
       customer: Customer!
+      serviceJobs: ServiceJob[]
+  ServiceJob:
+    fields:
+      description: string!
+      status: pending | inProgress | completed | cancelled
+      car: Car!
+      startDate: date
+      endDate: date
       notes: text
-  WorkOrder:
+      invoice: Invoice
+  Invoice:
     fields:
       number: string! unique
       customer: Customer!
-      car: Car!
-      status: pending | inProgress | completed | canceled
-      description: text
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
       total: money
 pages:
   asiakkaat:
     crud: Customer
-    search: [name, email, phone]
-    sortable: [name, createdAt]
-  laskut:
-    crud: Invoice
-    search: [number, customer]
-    sortable: [number, issuedAt, dueDate, status]
-    filters: [status, customer, workOrder]
-  tiimi:
-    users: manage
   autot:
     crud: Car
-    search: [registrationNumber, make, model]
-    sortable: [registrationNumber, make, year]
   huoltotyot:
-    crud: WorkOrder
-    search: [number, description]
-    filters: [status, car, customer]
-    sortable: [number, status]
-navigation: [asiakkaat, autot, huoltotyot, laskut, tiimi]
+    crud: ServiceJob
+  laskut:
+    crud: Invoice
+  team:
+    users: manage

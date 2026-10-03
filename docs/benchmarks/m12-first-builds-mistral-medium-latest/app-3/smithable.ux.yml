@@ -5,21 +5,13 @@ tones:
     overdue: danger
     sent: warning
 pages:
-  overview:
-    icon: chart
   invoices:
     icon: receipt
-    form:
-      columns: 2
-    table:
-      sort: -issuedOn
   clients:
     icon: users
-    form:
-      columns: 2
-    table:
-      sort: name
   settings:
     icon: settings
-    form:
-      columns: 2
+  overview:
+    icon: chart
+  dashboard:
+    icon: chart

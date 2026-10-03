@@ -15,8 +15,7 @@ models:
 pages:
   artifacts:
     crud: Artifact
-    search: [name, description, story]
-    sortable: [name, period, createdAt]
+    search: [name, description, period, origin, story]
     filters: [category]
   home:
     route: /
@@ -27,4 +26,4 @@ pages:
         records: Artifact
         where:
           category: artifact
-navigation: [home, artifacts]
+navigation: [artifacts]

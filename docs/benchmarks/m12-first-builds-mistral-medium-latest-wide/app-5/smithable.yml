@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Photography Invoices
+  name: Photography Invoicing
   description: "Invoices for my photography work: clients, shoots and what is still unpaid."
   currency: EUR
 models:
@@ -10,11 +10,18 @@ models:
       email: email!
       address: text
       vatNumber: string
+      shoots: Shoot[]
+  Shoot:
+    fields:
+      name: string!
+      date: date!
+      location: string
+      client: Client!
       invoices: Invoice[]
   Invoice:
     fields:
       number: string! unique
-      client: Client!
+      shoot: Shoot!
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
@@ -31,9 +38,16 @@ pages:
   clients:
     crud: Client
     search: [name, email]
+  shoots:
+    crud: Shoot
+    filters: [client]
+    search: [name, location]
   invoices:
     crud: Invoice
-    search: [number, client]
-    filters: [status, client]
-  invoice-lines:
-    crud: InvoiceLine
+    filters: [status, shoot]
+    search: [number]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:

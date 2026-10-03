@@ -1,14 +1,4 @@
 smithableUx: 0.1
-pages:
-  offerter:
-    table:
-      sort: -validUntil
-  fakturor:
-    table:
-      sort: -dueDate
-  kunder:
-    table:
-      sort: name
 tones:
   Quote.status:
     accepted: success
