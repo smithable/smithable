@@ -9,11 +9,6 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
-    access:
-      read: [admin]
-      create: [admin]
-      write: [admin]
-      delete: [admin]
   Incident:
     fields:
       title: string!
@@ -24,21 +19,13 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
-      read: [admin, staff]
-      create: [admin, staff]
       write: [admin, staff]
-      delete: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
-    access:
-      read: [admin, staff]
-      create: [admin, staff]
-      write: [admin, staff]
-      delete: [admin, staff]
   Maintenance:
     fields:
       title: string!
@@ -46,11 +33,43 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-    access:
-      read: [admin, staff]
-      create: [admin, staff]
-      write: [admin, staff]
-      delete: [admin, staff]
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
+  history:
+    crud: Incident
+  incidents:
+    crud: Incident
+    search: [title]
+    filters: [status, component]
+    sortable: [detectedAt, resolvedAt, title]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    access: [admin]
+  maintenance:
+    crud: Maintenance
+  overview:
+    crud: Incident
+  team:
+    users: manage
+navigation: [overview, incidents, updates, maintenance, components, team]
 actions:
   identified:
     on: Incident
@@ -92,39 +111,3 @@ actions:
         message: This incident is resolved.
     allow: [admin, staff]
     intent: The incident is over, with an update saying so.
-pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
-  history:
-    crud: Incident
-  incidents:
-    crud: Incident
-    filters: [status, component]
-    search: [title]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-    access: [admin]
-  maintenance:
-    crud: Maintenance
-  overview:
-    crud: Incident
-  team:
-    users: manage
-navigation: [overview, incidents, updates, maintenance, components, team]

@@ -9,13 +9,7 @@ models:
       name: string!
       address: text
       email: email
-  InvoiceLine:
-    fields:
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount: money
-      invoice: Invoice!
+      invoices: Invoice[]
   Invoice:
     fields:
       number: string! unique
@@ -24,21 +18,19 @@ models:
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       total: money
-      lines: InvoiceLine[]
 pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    search: [number, client]
+    filters: [status, client, issuedOn]
   clients:
     crud: Client
     search: [name, email, address]
   team:
     users: manage
-  invoice-lines:
-    crud: InvoiceLine
-    filters: [invoice]
-  invoices:
-    crud: Invoice
-    search: [number, client]
-    filters: [status, client, issuedOn]
-    actions: [markSent, markPaid]
+  admin:
+    data: all
 actions:
   markSent:
     on: Invoice
@@ -54,4 +46,3 @@ actions:
     set:
       status: paid
     intent: The client paid the invoice.
-navigation: [invoices, clients, team]

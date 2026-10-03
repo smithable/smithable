@@ -15,7 +15,7 @@ models:
       client: Client!
       description: text!
       amount: money!
-      currency: string = USD
+      currency: string = EUR
       issuedOn: date! = TODAY()
       status: draft | sent | accepted | rejected
       notes: text
@@ -23,9 +23,9 @@ models:
     fields:
       quote: Quote!
       amount: money!
-      currency: string = USD
+      currency: string = EUR
       paidOn: date! = TODAY()
-      method: cash | bank | online
+      method: bankTransfer | paypal | cash | other
       notes: text
 pages:
   clients:
@@ -39,8 +39,6 @@ pages:
   payments:
     crud: Payment
     filters: [quote, method]
-  team:
-    users: manage
 actions:
   markSent:
     on: Quote

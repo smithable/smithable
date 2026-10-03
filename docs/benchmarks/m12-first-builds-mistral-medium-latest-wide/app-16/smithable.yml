@@ -42,15 +42,45 @@ pages:
     crud: Plot
     search: [number, notes]
     filters: [status]
+    actions: [markAsAvailable]
   waiting-list:
     crud: WaitingList
     search: [name, email, notes]
     filters: [status]
+    actions: [assignFromWaitingList]
   fees:
     crud: Fee
-    filters: [status, year]
+    filters: [year, status]
+    actions: [markFeePaid, markFeeOverdue]
   team:
     users: manage
-navigation:
-  main: [plots, waiting-list, fees, team]
-  admin: [team]
+actions:
+  assignFromWaitingList:
+    on: WaitingList
+    when:
+      status: active
+    set:
+      status: assigned
+    intent: Assign a plot to this person from the waiting list.
+  markFeePaid:
+    on: Fee
+    when:
+      status: [pending, overdue]
+    set:
+      status: paid
+    intent: Mark this fee as paid.
+  markFeeOverdue:
+    on: Fee
+    when:
+      status: pending
+    set:
+      status: overdue
+    intent: Mark this fee as overdue.
+  markAsAvailable:
+    on: Plot
+    when:
+      status: assigned
+    set:
+      status: available
+    intent: Mark this plot as available.
+navigation: [plots, waiting-list, fees, team]

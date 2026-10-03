@@ -14,8 +14,7 @@ models:
       status: open | closed
       postedAt: date = TODAY()
     access:
-      create: [employer, admin]
-      delete: [employer, admin, owner]
+      delete: [admin]
   Application:
     fields:
       jobPost: JobPost!
@@ -26,27 +25,31 @@ models:
       coverLetter: text
       status: submitted | reviewed | shortlisted | rejected
     access:
-      create: [member, employer, admin]
-      read: [employer, admin, owner]
-      delete: [employer, admin]
+      delete: [admin]
 pages:
   jobs:
     route: /
     crud: JobPost
     search: [title, description, company, location]
-    filters: [type, status, salary]
+    filters: [type, status]
     sortable: [postedAt, salary]
     actions: [closeJob]
   applications:
     crud: Application
+    search: [name, email]
+    filters: [jobPost, status]
     actions: [reviewApplication, shortlistApplication, rejectApplication]
+  team:
+    users: manage
   home:
     route: /home
     landing:
       hero:
       footer:
-  team:
-    users: manage
+      latest:
+        records: JobPost
+        where:
+          status: open
 actions:
   closeJob:
     on: JobPost
@@ -54,26 +57,26 @@ actions:
       status: open
     set:
       status: closed
-    intent: Close a job post when it is no longer open.
+    allow: [admin, member]
   reviewApplication:
     on: Application
     when:
       status: submitted
     set:
       status: reviewed
-    intent: Mark an application as reviewed.
+    allow: [admin, member]
   shortlistApplication:
     on: Application
     when:
-      status: [reviewed, submitted]
+      status: [reviewed, shortlisted]
     set:
       status: shortlisted
-    intent: Shortlist an application for further consideration.
+    allow: [admin, member]
   rejectApplication:
     on: Application
     when:
-      status: [submitted, reviewed, shortlisted]
+      status: [reviewed, shortlisted]
     set:
       status: rejected
-    intent: Reject an application.
+    allow: [admin, member]
 navigation: [jobs, applications, team]

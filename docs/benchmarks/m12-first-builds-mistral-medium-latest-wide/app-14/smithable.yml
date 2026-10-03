@@ -9,14 +9,21 @@ models:
       email: email
       phone: phone
       attending: yes | no | maybe
-      mealChoice: vegetarian | meat | fish | vegan | glutenFree
+      mealChoice: chicken | beef | fish | vegetarian
       tableNumber: int
       notes: text
       group: string
+    access:
+      delete: [admin]
 pages:
   guests:
     crud: Guest
-    search: [name, email, group, notes]
+    search: [name, email, group]
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
   team:
     users: manage
-navigation: [guests, team]

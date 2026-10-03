@@ -4,11 +4,6 @@ pages:
     table:
       columns: [name, attending, mealChoice, tableNumber, email, phone, group]
       sort: name
-    form:
-      control:
-        attending: radio
-        mealChoice: select
-      sections: [{ name: details, fields: [name, email, phone, group] }, { name: rsvp, fields: [attending, mealChoice, notes] }, { name: seating, fields: [tableNumber] }]
 tones:
   Guest.attending:
     yes: success

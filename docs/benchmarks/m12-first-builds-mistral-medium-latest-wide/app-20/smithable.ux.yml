@@ -6,12 +6,14 @@ pages:
     icon: users
   schedule:
     icon: calendar
+    table:
+      view: cards
   sessions:
     icon: calendar
     table:
       sort: -startsAt
-      columns: [classType, instructor, startsAt, placesLeft]
-    form:
-      columns: 2
+      columns: [startsAt, classType, instructor, placesLeft]
+      below:
+        startsAt: classType
   my-bookings:
     icon: cart

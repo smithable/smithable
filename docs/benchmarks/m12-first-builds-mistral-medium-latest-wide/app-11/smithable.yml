@@ -18,7 +18,7 @@ models:
       component: Component
       detectedAt: datetime!
       resolvedAt: datetime
-      summary: markdown
+      summary: text
       updates: IncidentUpdate[]
     access:
       delete: [admin]
@@ -42,19 +42,24 @@ models:
 pages:
   incidents:
     crud: Incident
-    actions: [identified, monitoring, resolve]
+    access: [admin, staff]
   updates:
     crud: IncidentUpdate
+    access: [admin, staff]
   components:
     crud: Component
     access: [admin]
   maintenance:
     crud: Maintenance
+    access: [admin, staff]
+  overview:
+    crud: Incident
+    access: [admin, staff]
   team:
     users: manage
   admin:
     data: all
-navigation: [incidents, updates, maintenance, components, team, admin]
+navigation: [overview, incidents, updates, maintenance, components, team, admin]
 actions:
   identified:
     on: Incident
@@ -67,25 +72,23 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
     when:
-      status: identified
+      status: [investigating, identified]
     set:
       status: monitoring
     add:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is being applied; the incident is being monitored.
-    allow: [admin, staff]
-    intent: A fix is being applied; the incident moves to monitoring, with an update saying so.
+        message: A fix is out. We are watching before we close this.
+    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
     when:
-      status: monitoring
+      status: [investigating, identified, monitoring]
     set:
       status: resolved
       resolvedAt: NOW()
@@ -93,6 +96,5 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: The incident has been resolved.
-    allow: [admin, staff]
-    intent: The incident is resolved; it moves to resolved, with an update saying so.
+        message: This incident is resolved.
+    intent: The incident is over, with an update saying so.

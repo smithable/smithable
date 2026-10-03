@@ -161,7 +161,8 @@ function score(dir, description, starter, lang, meta = {}) {
     starter,
     models: kept("models"),
     pages: kept("pages"),
-    actions: kept("actions"),
+    // Actions the draft left out because they could not be made valid, as `new` printed them.
+    actions: `${kept("actions")}${meta.dropped ? `; left out: ${meta.dropped}` : ""}`,
     access: auth
       ? `${auth.defaultAccess}; ${list(auth.roles.map((r) => r.name))} (${auth.defaultRole})`
       : "?",
@@ -215,7 +216,7 @@ function scorecard(rows) {
 |---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
 ${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
 
-"Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
+"Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names actions the draft dropped because they could not be made valid. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
 }
 
 const SCORE_START = "<!-- scorecard -->";
@@ -391,12 +392,19 @@ for (const [i, { text: description, lang }] of set.entries()) {
       .trim(),
     error: run.status === 0 ? "" : out.slice(-600),
   };
-  row.meta = { wordStarter, questions };
+  // One indented line per action left out ("  addAction <name>: <reason>"); the names are enough here.
+  const dropped = /Left out, since it could not be made valid:\n((?: {2}.+\n?)+)/
+    .exec(out)?.[1]
+    .split("\n")
+    .map((line) => /^\s+\w+ ([^:]+):/.exec(line)?.[1])
+    .filter(Boolean)
+    .join(", ");
+  row.meta = { wordStarter, questions, dropped };
   rows.push(row);
   if (existsSync(join(kept, `app-${i + 1}`)))
     writeFileSync(
       join(kept, `app-${i + 1}`, "meta.json"),
-      `${JSON.stringify({ description, starter: row.starter, wordStarter, questions, ...(lang && { lang }) }, null, 2)}\n`,
+      `${JSON.stringify({ description, starter: row.starter, wordStarter, questions, ...(dropped && { dropped }), ...(lang && { lang }) }, null, 2)}\n`,
     );
   console.log(
     `${i + 1}. ${row.created ? "created" : "failed"} (${row.starter}) · ${row.tokens} tokens · ${row.currency}${row.cost}`,
