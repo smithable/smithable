@@ -21464,6 +21464,7 @@ import { site } from "#/generated/site";
 import { listComponents } from "#/generated/component";
 import { listIncidents } from "#/generated/incident";
 import { listMaintenances } from "#/generated/maintenance";
+import { Uptime } from "#/custom/sections/Uptime";
 
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
@@ -21498,6 +21499,10 @@ function HomePage() {
   maintenance: "Maintenance",
 } as Record<string, string>)[row.status],
           }))}
+        />
+      <Uptime
+          name="uptime"
+          texts="pages.home.uptime"
         />
       <RecordCards
           texts="pages.home.open"
@@ -22432,6 +22437,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/sections/Uptime.tsx",
   "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
@@ -22543,6 +22549,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "4eff9d6c kit",
   "src/custom/hooks.ts": "4247261f custom",
+  "src/custom/sections/Uptime.tsx": "b8180e0a custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "0bc522d3 generated",
@@ -22610,7 +22617,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "a9333b17 generated",
   "src/routes/incidents/index.tsx": "755c4798 generated",
   "src/routes/incidents/new.tsx": "8f10b8a0 generated",
-  "src/routes/index.tsx": "8b95548c generated",
+  "src/routes/index.tsx": "b06924e8 generated",
   "src/routes/maintenance/$id.tsx": "4fe3347c generated",
   "src/routes/maintenance/index.tsx": "28bdc3ff generated",
   "src/routes/maintenance/new.tsx": "67635ee5 generated",
