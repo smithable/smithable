@@ -100,6 +100,7 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
     .map((p) => [p.route, p.id]);
   return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""}, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -155,6 +156,10 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { viewer, asOf, demo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // Set once React has taken over the page in the browser, for tests that must not type or
+  // click before the page's handlers are attached (body[data-hydrated]).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 ${
   signIn
     ? `  const router = useRouter();
@@ -169,7 +174,7 @@ ${
       <head>
         <HeadContent />
       </head>
-      <body data-page={pageOf(pathname)}>
+      <body data-page={pageOf(pathname)} data-hydrated={hydrated ? "true" : undefined}>
         {asOf && (
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             A copy of this app's data as of {asOf.slice(0, 16).replace("T", " ")} UTC: changes made here are not kept.
