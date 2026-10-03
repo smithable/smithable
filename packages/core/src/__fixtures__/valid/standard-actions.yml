@@ -11,6 +11,8 @@ models:
       pinned: bool
       severity: int
       note: text
+      code: string! unique
+      handler: User
       updates: IncidentUpdate[]
   IncidentUpdate:
     fields:
@@ -40,7 +42,14 @@ actions:
     on: Incident
     when: { pinned: false }
     set: { pinned: true, severity: 1 }
+  repeat:
+    on: Incident
+    copy: { status: investigating, code:, note: (title) }
+    with: [updates]
+  take:
+    on: Incident
+    set: { handler: ME() }
 pages:
   incidents:
     crud: Incident
-    actions: [resolve, escalate, annotate]
+    actions: [resolve, escalate, annotate, repeat, take]

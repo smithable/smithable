@@ -3903,6 +3903,46 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
         "pinned": false,
       },
     },
+    {
+      "copy": [
+        {
+          "field": "status",
+          "value": "investigating",
+        },
+        {
+          "asked": true,
+          "field": "code",
+        },
+        {
+          "field": "note",
+          "formula": {
+            "kind": "field",
+            "name": "title",
+          },
+          "text": "(title)",
+        },
+      ],
+      "custom": false,
+      "input": [],
+      "name": "repeat",
+      "on": "Incident",
+      "set": [],
+      "with": [
+        "updates",
+      ],
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "take",
+      "on": "Incident",
+      "set": [
+        {
+          "field": "handler",
+          "me": true,
+        },
+      ],
+    },
   ],
   "app": {
     "name": "Standard actions",
@@ -3977,6 +4017,25 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
           "type": {
             "kind": "scalar",
             "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": true,
+        },
+        {
+          "name": "handler",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
           },
           "unique": false,
         },
@@ -4056,6 +4115,8 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
         "resolve",
         "escalate",
         "annotate",
+        "repeat",
+        "take",
       ],
       "id": "incidents",
       "pattern": {

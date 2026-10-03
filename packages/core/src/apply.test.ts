@@ -956,3 +956,66 @@ describe("standard actions that ask and add", () => {
     });
   });
 });
+
+describe("standard actions that copy, and ME()", () => {
+  const invoicing = example("invoicing");
+
+  test("addAction --copy and --with write a copy action; a bare --copy copies as is", () => {
+    const op = findOperation("addAction");
+    if (!op) throw new Error("addAction");
+    expect(
+      parseOperationArgs(op, ["dup", "--on", "Invoice", "--copy", "--with", "lines"]),
+    ).toMatchObject({
+      copy: {},
+      with: ["lines"],
+    });
+    const result = applyOperation(invoicing, "addAction", {
+      action: "duplicate",
+      on: "Invoice",
+      copy: { status: "draft", number: "" },
+      with: ["lines"],
+    });
+    if (!result.ok) throw new Error(result.message);
+    expect(result.files.spec).toContain(
+      "  duplicate:\n    on: Invoice\n    copy:\n      status: draft\n      number:\n    with: [lines]\n",
+    );
+  });
+
+  test("a copy needs its own unique number; a renamed list follows into with", () => {
+    expect(
+      applyOperation(invoicing, "addAction", { action: "dup", on: "Invoice", copy: {} }),
+    ).toMatchObject({ ok: false });
+    const first = applyOperation(invoicing, "addAction", {
+      action: "duplicate",
+      on: "Invoice",
+      copy: { number: "" },
+      with: ["lines"],
+    });
+    if (!first.ok) throw new Error(first.message);
+    const renamed = applyOperation({ ...invoicing, spec: first.files.spec }, "renameField", {
+      model: "Invoice",
+      from: "lines",
+      to: "items",
+    });
+    if (!renamed.ok) throw new Error(renamed.message);
+    expect(renamed.files.spec).toContain("    with: [items]\n");
+  });
+});
+
+test("addAction takes what a model writes: add by model, JSON values and a list in when", () => {
+  const status = example("status");
+  const spec = status.spec
+    .replace(/\nactions:[\s\S]*?\n\npages:/, "\n\npages:")
+    .replace("    actions: [identified, monitoring, resolve]\n", "");
+  const result = applyOperation({ ...status, spec }, "addAction", {
+    action: "resolve",
+    on: "Incident",
+    when: { status: ["investigating", "identified"] },
+    set: { status: "resolved", summary: null },
+    add: { IncidentUpdate: { at: "NOW()", status: "resolved", message: "Done." } },
+  });
+  if (!result.ok) throw new Error(result.message);
+  expect(result.files.spec).toContain(
+    "    when:\n      status: [investigating, identified]\n    set:\n      status: resolved\n      summary:\n    add:\n      IncidentUpdate:\n",
+  );
+});

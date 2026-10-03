@@ -249,3 +249,32 @@ actions:
     "For an incident that is open; sets status to resolved; asks for the note and the update's message; adds an update (at now).",
   ]);
 });
+
+test("a copy and ME() in words", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Billing }
+models:
+  Invoice:
+    fields: { number: string! unique, status: draft | sent, handler: User, lines: "Line[]" }
+  Line:
+    fields: { invoice: Invoice!, amount: money }
+actions:
+  duplicate:
+    on: Invoice
+    copy: { status: draft, number: }
+    with: [lines]
+  take:
+    on: Invoice
+    set: { handler: ME() }
+`,
+  }).ir;
+  if (!ir) throw new Error("invalid spec");
+  const sentences = (name: string) =>
+    summarize(ir, undefined, emptyContent()).find((s) => s.concept === `action:${name}`)?.sentences;
+  expect(sentences("duplicate")).toEqual([
+    "Makes a copy of an invoice with status draft, asking for the number; its lines are copied too.",
+  ]);
+  expect(sentences("take")).toEqual(["Sets handler to whoever presses it."]);
+});

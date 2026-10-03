@@ -201,7 +201,7 @@ export function askedFields(
   action: StandardActionIR,
 ): { model: string; field: string; key: string }[] {
   return [
-    ...action.set
+    ...[...action.set, ...(action.copy ?? [])]
       .filter((v) => "asked" in v)
       .map((v) => ({ model: action.on, field: v.field, key: v.field })),
     ...(action.add ?? []).flatMap((a) =>
@@ -286,6 +286,8 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
     const field = target.fields.find((f) => f.name === v.field) as FieldIR;
     const scalar = field.type.kind === "scalar" ? field.type.name : field.type.kind;
     if ("asked" in v) return `${field.name}: asked[${JSON.stringify(key)}],`;
+    // ME(): the signed-in person who pressed the button (an action is never a visitor's).
+    if ("me" in v) return `${field.name}Id: viewer?.id,`;
     const code =
       "formula" in v
         ? stored(field, compile(v.formula, model, "row"))
@@ -295,6 +297,7 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
     // A date and time is stored as a Date; formulas and literals give its ISO text.
     return `${field.name}: ${scalar === "datetime" ? `new Date(${code})` : code},`;
   };
+  if (action.copy) return copyActionServer(action, ir, t, valueCode, imports);
   const values = action.set.map((v) => valueCode(model, v, v.field));
   const adds = (action.add ?? []).map((add) => {
     const target = modelNamed(ir, add.model);
@@ -462,6 +465,98 @@ ${options.length ? "        options={options}\n" : ""}        submitLabel=${attr
       />
     </>
   );
+}
+`;
+}
+
+/** What a copy carries over: stored fields, not computed, unique, pictures or lists (§8). */
+function copied(model: ModelIR, except: string[] = []): string[] {
+  return model.fields
+    .filter(
+      (f) =>
+        !f.formula &&
+        !f.unique &&
+        !(f.type.kind === "scalar" && (f.type.name === "picture" || f.type.name === "pictures")) &&
+        !(f.type.kind === "relation" && f.type.many) &&
+        !except.includes(f.name),
+    )
+    .map((f) => (f.type.kind === "relation" ? `${f.name}Id` : f.name));
+}
+
+/**
+ * A copy (§8): the record's stored fields with what the action says differs, and the records of
+ * the lists it names pointing at the new record, created in one transaction and owned by whoever
+ * pressed the button. Returns the new record's id, whose page the person lands on.
+ */
+function copyActionServer(
+  action: StandardActionIR,
+  ir: SpecIR,
+  t: Texts,
+  valueCode: (target: ModelIR, v: StandardActionIR["set"][number], key: string) => string,
+  imports: Set<ModelIR>,
+): string {
+  const a = actionNames(action);
+  const model = modelNamed(ir, action.on);
+  const n = names(model, t);
+  const values = (action.copy ?? []).map((v) => valueCode(model, v, v.field));
+  const lists = (action.with ?? []).map((name) => {
+    const field = model.fields.find((f) => f.name === name) as FieldIR;
+    const listed = modelNamed(ir, (field.type as { model: string }).model);
+    const back = listed.fields.find(
+      (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model.name,
+    ) as FieldIR;
+    return { name, listed, back, ln: names(listed, t) };
+  });
+  const asked = askedFields(action).length > 0;
+  const usesF = values.some((v) => v.includes("F."));
+  const pick = (from: string, keys: string[]) => keys.map((k) => `${k}: ${from}.${k}`).join(", ");
+  return `${HEADER}import { db } from "#/db";
+import { ${[n.table, ...lists.map((l) => l.ln.table)].sort().join(", ")} } from "#/db/schema";
+import { AccessDenied, check, type Viewer } from "#/kit/access";
+${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
+import { ${n.schema} } from "${n.module}";
+import { ${n.data} } from "${n.module}.server";
+${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${asked ? 'import type { z } from "zod";\n' : ""}
+/** Makes a copy of the ${n.label.toLowerCase()} as the viewer${asked ? ", with what was asked" : ""}; returns the copy's id. */
+export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, asked: z.output<typeof ${a.asks}>` : ""}): Promise<number> {
+  const row = await ${n.data}.get(viewer, id);
+  if (!row) throw new AccessDenied(viewer !== null);
+  check(${a.access}, viewer);
+  if (!${a.fits}(row)) throw new Error("This cannot be done now.");
+  // Its stored fields, then what the copy says differs (worked out on the original).
+  const values = ${n.schema}.parse({
+    ${pick(
+      "row",
+      copied(
+        model,
+        (action.copy ?? []).map((v) => v.field),
+      ),
+    )},
+${values.map((v) => `    ${v}`).join("\n")}
+  });
+${lists
+  .map(
+    (l) => `  const ${l.name} = row.${l.name}.map((item) =>
+    ${l.ln.schema}.parse({ ${pick("item", copied(l.listed, [l.back.name]))}, ${l.back.name}Id: 0 }),
+  );`,
+  )
+  .join("\n")}
+  // One transaction: the copy and its lists' records, or nothing.
+  const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
+    const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: viewer?.id ?? null }).returning().get();
+${lists
+  .map(
+    (l) => `    const ${l.name}Copies = ${l.name}.map((item) =>
+      tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: viewer?.id ?? null }).returning().get(),
+    );`,
+  )
+  .join("\n")}
+    return { created${lists.map((l) => `, ${l.name}Copies`).join("")} };
+  });
+  await afterChange("afterCreate", ${JSON.stringify(model.name)}, created, viewer);
+${lists.map((l) => `  for (const item of ${l.name}Copies) await afterChange("afterCreate", ${JSON.stringify(l.listed.name)}, item, viewer);`).join("\n")}
+  return created.id;
 }
 `;
 }

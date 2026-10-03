@@ -104,8 +104,7 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
-import { pageAccess } from "#/generated/pages";
-import { currentViewer } from "#/lib/viewer.server";
+${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { pageHeaders } from "#/kit/security";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";

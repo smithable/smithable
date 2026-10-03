@@ -300,6 +300,27 @@ pages:
   );
 });
 
+test("tables that refer to each other say their reference's type; an app without pages still type-checks", () => {
+  const spec = `smithable: 0.1
+app: { name: Garage }
+models:
+  Job:
+    fields: { title: string!, invoice: Invoice }
+  Invoice:
+    fields: { number: string!, job: Job }
+`;
+  const files = generateApp(ir("smithable.yml", spec), options);
+  const schema = files.find((f) => f.path === "src/db/schema.ts")?.content ?? "";
+  expect(schema).toContain("invoiceId: integer().references((): AnySQLiteColumn => invoices.id");
+  expect(schema).toContain("type AnySQLiteColumn");
+  expect(files.find((f) => f.path === "src/routes/__root.tsx")?.content).not.toContain(
+    "pageAccess",
+  );
+  expect(files.find((f) => f.path === "tests/smoke.spec.ts")?.content).toContain(
+    'test("the app starts"',
+  );
+});
+
 /** FNV-1a over the text: enough to notice any change, and runs anywhere. */
 function hash(text: string): string {
   let h = 0x811c9dc5;
