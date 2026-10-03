@@ -1129,7 +1129,7 @@ async function landingFlow(base) {
       .waitFor({ timeout: 10000 });
     await signInAs(page, base, "admin");
     await open(page, `${base}/messages`);
-    await page.getByRole("cell", { name: "Aino Visitor" }).waitFor({ timeout: 10000 });
+    await page.getByRole("cell", { name: "Aino Visitor", exact: true }).waitFor({ timeout: 10000 });
     console.log(
       "  ✓ browser: a visitor sends the contact form without an account; an admin reads it",
     );
@@ -1140,13 +1140,13 @@ async function landingFlow(base) {
       .getByRole("link", { name: /^Messages/ })
       .click();
     await page.waitForURL(/\/admin\/messages\/?$/);
-    await page.getByRole("cell", { name: "Aino Visitor" }).click();
+    await page.getByRole("cell", { name: "Aino Visitor", exact: true }).click();
     await page.waitForURL(/\/admin\/messages\/\d+$/);
     await page.getByRole("button", { name: "Delete", exact: true }).click();
     await page.getByRole("button", { name: "Delete message" }).click();
     await page.waitForURL(/\/admin\/messages\/?$/);
     await page
-      .getByRole("cell", { name: "Aino Visitor" })
+      .getByRole("cell", { name: "Aino Visitor", exact: true })
       .waitFor({ state: "detached", timeout: 10000 });
     // A member may not open it.
     await signInAs(page, base, "member");
@@ -1364,7 +1364,7 @@ async function isolationFlow(dir, base) {
     await page.getByRole("textbox", { name: "Email *" }).fill("me@client.example.com");
     await page.getByRole("button", { name: "Create client" }).click();
     await page.waitForURL(`${base}/clients`);
-    await page.getByRole("cell", { name: "My Client" }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "My Client", exact: true }).waitFor({ timeout: 5000 });
     if (await page.getByText("Other Client").count())
       throw new Error("another user's client is listed");
     await open(page, `${base}/invoices`);
@@ -2098,7 +2098,7 @@ async function browserFlow(base) {
 
     await open(page, `${base}/customers`);
     await page.getByRole("cell", { name: "Skerry Software", exact: true }).click();
-    await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
 
     await page.getByRole("button", { name: "Delete", exact: true }).click();
@@ -2115,7 +2115,7 @@ async function browserFlow(base) {
       .getByRole("cell", { name: "Nordic Timber Oy", exact: true })
       .first()
       .waitFor({ state: "detached", timeout: 5000 });
-    await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: orders are found by their customer's name");
 
     await open(page, `${base}/customers`);
@@ -2140,7 +2140,7 @@ async function browserFlow(base) {
         throw new Error("the duplicate is still there");
       });
     await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
-    await page.getByRole("cell", { name: "ORD-2001" }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the custom action merges customers and moves their orders");
 
     await page.getByRole("button", { name: "Sign out" }).click();
