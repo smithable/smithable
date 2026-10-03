@@ -7,12 +7,15 @@ import { Button, cx, Input, Panel } from "./ui";
 export function Preview({
   url,
   version,
+  updating,
   selecting,
   onSelecting,
   onHide,
 }: {
   url: string;
   version: number;
+  /** A change went through and the preview is about to reload with it. */
+  updating?: boolean;
   /** Select mode: clicking in the preview selects a part of the spec instead of using the app. */
   selecting?: boolean;
   onSelecting?: (on: boolean) => void;
@@ -50,11 +53,17 @@ export function Preview({
     };
   }, [url, frameKey]);
   // A page that loaded without the preview editor's "ready" (the server's error page, or one
-  // that stopped while loading) is checked again: a server that no longer answers is waited for.
+  // that stopped while loading) is loaded again: a server that no longer answers is waited for.
   const ready = useRef(false);
+  // Error pages in a row: a request that arrived while the server rebuilt after a change gets
+  // a 500 page, which answers but has no editor; it is loaded again, a few times.
+  const errors = useRef(0);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (isPreviewMessage(e) && e.data.type === "ready") ready.current = true;
+      if (isPreviewMessage(e) && e.data.type === "ready") {
+        ready.current = true;
+        errors.current = 0;
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -62,7 +71,8 @@ export function Preview({
   const loaded = () => {
     ready.current = false;
     setTimeout(async () => {
-      if (!ready.current && !(await answers(url))) setAttempt((n) => n + 1);
+      if (ready.current) return;
+      if (!(await answers(url)) || errors.current++ < 3) setAttempt((n) => n + 1);
     }, 8000);
   };
   useEffect(() => {
@@ -94,9 +104,11 @@ export function Preview({
   return (
     <Panel
       title="Preview"
+      busy={updating}
       className="h-full"
       actions={
         <div className="flex items-center gap-2">
+          {updating && <span className="text-xs text-neutral-500">Updating…</span>}
           {onSelecting && (
             <Button
               variant={selecting ? "primary" : "ghost"}
