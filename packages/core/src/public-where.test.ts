@@ -17,7 +17,7 @@ pages:
   posts: { crud: Post }
 `;
 const auth = (read: string) => `smithableAuth: 0.1
-signIn: { providers: [google], allowedDomains: [example.com] }
+signIn: { providers: [google], allowedDomains: [acme.com] }
 defaultAccess: shared
 public:
   pages: [posts]
@@ -154,7 +154,7 @@ test("setPublicWhere and a rename change a condition written as a key with optio
   const files = {
     spec,
     auth: `smithableAuth: 0.1
-signIn: { providers: [google], allowedDomains: [example.com] }
+signIn: { providers: [google], allowedDomains: [acme.com] }
 defaultAccess: shared
 public:
   pages: [posts]
