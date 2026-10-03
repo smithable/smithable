@@ -6,15 +6,15 @@ models:
     fields:
       name:
         label: Namn
-      description:
+      summary:
         label: Beskrivning
       durationMinutes:
         label: Varaktighet (minuter)
       price:
         label: Pris
   Stylist:
-    label: Frisör
-    pluralLabel: Frisörer
+    label: Stylist
+    pluralLabel: Stylister
     fields:
       name:
         label: Namn
@@ -32,8 +32,6 @@ models:
         label: E-post
       customerPhone:
         label: Telefon
-      notes:
-        label: Anteckningar
       appointment:
         label: Tid
   Message:
@@ -53,14 +51,27 @@ models:
       service:
         label: Tjänst
       stylist:
-        label: Frisör
+        label: Stylist
       startsAt:
         label: Starttid
       capacity:
         label: Kapacitet
 pages:
   hem:
+    title: Välkommen
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
+  tjanster:
+    title: Tjänster
+  stylister:
+    title: Stylister
+  mina-bokningar:
+    title: Mina bokningar
+  meddelanden:
+    title: Meddelanden
+  tider:
+    title: Tider
+  schema:
+    title: Schema

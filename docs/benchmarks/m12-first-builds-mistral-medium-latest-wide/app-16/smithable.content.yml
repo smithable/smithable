@@ -7,11 +7,11 @@ models:
       number:
         label: Plot Number
       size:
-        label: Size (m²)
+        label: Size (sqm)
       status:
         label: Status
         values:
-          free: Free
+          available: Available
           assigned: Assigned
           reserved: Reserved
       holder:
@@ -30,6 +30,12 @@ models:
         label: Phone
       dateAdded:
         label: Date Added
+      status:
+        label: Status
+        values:
+          active: Active
+          assigned: Assigned
+          withdrawn: Withdrawn
       notes:
         label: Notes
   Fee:
@@ -42,6 +48,11 @@ models:
         label: Amount
       dueDate:
         label: Due Date
+      status:
+        label: Status
+        values:
+          pending: Pending
+          paid: Paid
       notes:
         label: Notes
 pages:

@@ -1,8 +1,8 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: private
 public:
-  pages: [home, teams, players, matches, results]
-  read: [Team, Player, Match, Result]
+  pages: [home, teams, players, matches]
+  read: [Team, Player, Match]
 admins: [johan@smithable.ai]

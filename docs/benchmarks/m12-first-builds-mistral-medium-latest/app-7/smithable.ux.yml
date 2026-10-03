@@ -1,1 +1,15 @@
 smithableUx: 0.1
+pages:
+  matches:
+    table:
+      sort: -date
+    icon: calendar
+  teams:
+    icon: users
+  players:
+    icon: user
+tones:
+  Match.status:
+    completed: success
+    canceled: danger
+    inProgress: warning

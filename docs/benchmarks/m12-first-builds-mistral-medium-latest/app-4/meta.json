@@ -2,5 +2,5 @@
   "description": "A tool library where neighbors lend each other tools.",
   "starter": "marketplace",
   "wordStarter": "records",
-  "questions": []
+  "questions": ["Who can list tools for lending?", "What can unregistered visitors see?"]
 }

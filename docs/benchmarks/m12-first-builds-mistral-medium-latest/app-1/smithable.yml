@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Yoga Studio
+  name: Yoga Studio Booking
   description: Class schedule and online booking for a yoga studio.
 models:
   ClassType:
@@ -14,10 +14,23 @@ models:
   Instructor:
     fields:
       name: string!
-      bio: text
+      bio: markdown
       portrait: picture
     access:
       create: [admin]
+  Post:
+    fields:
+      title: string!
+      address: string unique
+      summary: text
+      cover: picture
+      body: markdown!
+      publishedOn: date
+      status: draft | published
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
   Message:
     fields:
       name: string!
@@ -36,19 +49,19 @@ models:
       bookings: Booking[]
     access:
       create: [admin]
+      write: [admin]
       delete: [admin]
   Booking:
     fields:
       session: Session!
-      status: booked | attended | cancelled
+      status: booked | attended | canceled
     capacity:
       per: session
       max: session.capacity
-      where:
-        status: [booked, attended]
     access:
       create: [member, admin]
-      delete: [member, admin]
+      write: [member, admin, owner]
+      delete: [member, admin, owner]
 pages:
   class-types:
     crud: ClassType
@@ -56,31 +69,63 @@ pages:
   instructors:
     crud: Instructor
     access: [admin]
+  posts:
+    crud: Post
+    access: [admin]
+  messages:
+    crud: Message
+    access: [admin]
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule]
       footer:
       classes:
         records: ClassType
       gallery:
       faq:
+      news:
+        records: Post
       contact:
         form: Message
-      callToAction:
-        button: schedule
-  team:
-    users: manage
+  estimate:
+    calculator:
+      fields:
+        classesPerMonth: int = 8
+        dropIn: money = 16
+        pass: money = 99
+        withoutPass: money
+        saved: money
+  blog:
+    articles: Post
   admin:
     data: all
+    access: [admin]
+  team:
+    users: manage
+    access: [admin]
   sessions:
     crud: Session
     access: [admin]
+    search: [classType, instructor]
+    filters: [classType, instructor, startsAt]
+    favorites: true
   my-bookings:
     crud: Booking
+    access: [member, admin]
     mine: true
+    actions: [cancelBooking]
   schedule:
     calendar:
       model: Session
       starts: startsAt
+    access: [member, admin]
+navigation: [home, schedule, blog, my-bookings]
+actions:
+  cancelBooking:
+    on: Booking
+    when:
+      status: booked
+    set:
+      status: canceled
+    intent: Cancel this booking.

@@ -1,10 +1,10 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
   selfSignUp: false
 defaultAccess: shared
 roles:
   sales:
-    description: Works with companies, contacts, deals and follow-ups.
+    description: Works with companies, contacts, deals, and follow-ups.
 defaultRole: sales
 admins: [johan@smithable.ai]

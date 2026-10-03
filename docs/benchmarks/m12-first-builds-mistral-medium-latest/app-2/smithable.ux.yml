@@ -1,8 +1,5 @@
 smithableUx: 0.1
 pages:
-  deals:
-    table:
-      sort: -closeDate
   follow-ups:
     table:
       sort: dueDate
@@ -10,3 +7,6 @@ tones:
   Deal.stage:
     closedWon: success
     closedLost: danger
+  FollowUp.status:
+    completed: success
+    canceled: danger

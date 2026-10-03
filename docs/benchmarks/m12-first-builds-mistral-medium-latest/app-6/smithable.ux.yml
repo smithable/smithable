@@ -2,18 +2,6 @@ smithableUx: 0.1
 pages:
   jobs:
     table:
-      sort: -postedAt
-      columns: [title, company, location, type, salary, status]
       view: cards
-  applications:
-    table:
-      columns: [job, name, email, status]
-tones:
-  Job.status:
-    open: success
-    expired: warning
-  Application.status:
-    reviewed: success
-    interviewed: success
-    hired: success
-    rejected: danger
+    form:
+      sections: [{ name: details, fields: [title, description, category, location, salary] }, { name: requirements, fields: [requirements, deadline, contactEmail] }]

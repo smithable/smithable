@@ -2,17 +2,5 @@ smithableUx: 0.1
 tones:
   Appointment.status:
     confirmed: success
-    cancelled: danger
-    pending: warning
-pages:
-  appointments:
-    form:
-      sections: [{ name: appointment, fields: [service, stylist, startsAt] }, { name: customer, fields: [customerName, customerEmail] }]
-    table:
-      sort: -startsAt
-      columns: [startsAt, service, stylist, customerName, status]
-    icon: calendar
-  stylists:
-    icon: users
-  services:
-    icon: tag
+    canceled: danger
+    completed: success

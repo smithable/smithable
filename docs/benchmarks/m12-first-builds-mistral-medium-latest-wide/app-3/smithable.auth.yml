@@ -1,9 +1,9 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
 defaultAccess: private
 public:
-  pages: [home]
+  pages: [home, schedule]
   read: [Stylist, Service]
   create: [Appointment]
 roles:

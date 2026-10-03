@@ -20,15 +20,6 @@ models:
       portrait: picture
     access:
       create: [admin]
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
   Session:
     fields:
       classType: ClassType!
@@ -36,20 +27,16 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
+      placesLeft: int = capacity - COUNT(bookings)
     access:
       create: [admin]
-      write: [admin]
-      delete: [admin]
   Booking:
     fields:
-      session: Session! unique
+      session: Session!
       user: User!
     capacity:
       per: session
       max: session.capacity
-    access:
-      create: [member]
-      delete: [member, owner]
 pages:
   class-types:
     crud: ClassType
@@ -65,18 +52,19 @@ pages:
       classes:
         records: ClassType
       contact:
-        form: Message
-      callToAction:
-        button: schedule
-  messages:
-    crud: Message
+  team:
+    users: manage
+    access: [admin]
+  admin:
+    data: all
     access: [admin]
   sessions:
     crud: Session
     access: [admin]
+    search: [classType, instructor]
+    filters: [classType, instructor, startsAt]
   my-bookings:
     crud: Booking
-    access: [member]
     mine: true
   schedule:
     calendar:
