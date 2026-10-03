@@ -41,6 +41,39 @@ export interface AuthIR {
     /** For a model in `read`, the records visitors may read (`Post: { where: { status: published } }`). */
     readWhere: Record<string, Condition>;
   };
+  /**
+   * What other programs may reach with a key (docs/design/integrations.md §2); absent when the
+   * app offers nothing. Listing is not granting: a key's role decides what it may do.
+   */
+  api?: ApiIR;
+}
+
+export interface ApiIR {
+  /** The models offered: all of them (also ones added later), or these. */
+  models: "all" | string[];
+  /** With `models: all`, the models left out. */
+  except: string[];
+  /** The standard actions offered: all whose model is offered, or these. */
+  actions: "all" | string[];
+  /** Offered to AI assistants as tools too; deleting only when it says so. */
+  assistants?: { delete: boolean };
+}
+
+/** The models and standard actions an app's `api` block offers, with `all` and `except` resolved. */
+export function apiOffers(auth: AuthIR, ir: SpecIR): { models: string[]; actions: string[] } {
+  const api = auth.api;
+  if (!api) return { models: [], actions: [] };
+  const known = ir.models.map((m) => m.name);
+  const models =
+    api.models === "all"
+      ? known.filter((m) => !api.except.includes(m))
+      : api.models.filter((m) => known.includes(m));
+  const standard = ir.actions.filter((a) => !a.custom && models.includes(a.on));
+  const actions =
+    api.actions === "all"
+      ? standard.map((a) => a.name)
+      : api.actions.filter((name) => standard.some((a) => a.name === name));
+  return { models, actions };
 }
 
 export interface SignInIR {
@@ -120,6 +153,7 @@ export function validateAuth(
         "defaultRole",
         "admins",
         "public",
+        "api",
       ],
       later: ["user", "teams"],
     }).map((e) => [e.key, e]),
@@ -263,6 +297,17 @@ export function validateAuth(
     }
   }
 
+  const api = byKey.get("api");
+  const apiNodes = api ? readApi(ctx, api, auth) : undefined;
+  if (api && auth.signIn === "none")
+    ctx.error(
+      api.keyNode,
+      "invalid-api",
+      `"api" needs sign-in: a key is made by an administrator in the app, and "signIn" is "none".`,
+    );
+  // "models: all" also offers models added later. That is said where it is chosen (setApi's
+  // confirmation, the summary), not as a warning on every later change.
+
   if (
     auth.signIn !== "none" &&
     auth.defaultAccess === "shared" &&
@@ -320,6 +365,7 @@ export function validateAuth(
         );
   }
   if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes);
+  if (ir && apiNodes) checkApi(ctx, auth, ir, apiNodes);
   // A standard action follows its model's write access: "allow" narrows it and never widens it,
   // so a role there that may not edit the record still cannot run the action.
   for (const action of ir?.actions ?? []) {
@@ -351,6 +397,148 @@ export function validateAuth(
         );
   }
   return done();
+}
+
+/** Where the `api` block's names are written, for errors about them. */
+interface ApiNodes {
+  models?: At;
+  modelNames: { name: string; at: At }[];
+  exceptNames: { name: string; at: At }[];
+  exceptAt?: At;
+  actionNames: { name: string; at: At }[];
+}
+
+/** "all", or a list of names. */
+function readAllOrList(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  what: string,
+): "all" | { name: string; at: At }[] {
+  if (isScalar(node) && node.value === "all") return "all";
+  return readNameList(ctx, node, what);
+}
+
+/**
+ * The `api` block: what other programs may reach with a key.
+ * `{ models: all | [..], except: [..], actions: all | [..], assistants: true | { delete: true } }`.
+ */
+function readApi(ctx: ParseContext, entry: Entry, auth: AuthIR): ApiNodes | undefined {
+  const where = `"api"`;
+  const nodes: ApiNodes = { modelNames: [], exceptNames: [], actionNames: [] };
+  const byKey = new Map(
+    checkKeys(ctx, mapEntries(ctx, entry.value, where) ?? [], where, {
+      allowed: ["models", "except", "actions", "assistants"],
+    }).map((e) => [e.key, e]),
+  );
+  const models = byKey.get("models");
+  if (!models) {
+    ctx.error(
+      entry.keyNode,
+      "missing-key",
+      `"api" needs "models": all, or the models other programs may reach, like [Customer, Order].`,
+    );
+    return undefined;
+  }
+  nodes.models = models.value;
+  const api: ApiIR = { models: [], except: [], actions: [] };
+  const offered = readAllOrList(ctx, models.value, `"models" in "api"`);
+  if (offered === "all") api.models = "all";
+  else {
+    nodes.modelNames = offered;
+    api.models = offered.map((m) => m.name);
+  }
+  const except = byKey.get("except");
+  if (except) {
+    nodes.exceptAt = except.keyNode;
+    nodes.exceptNames = readNameList(ctx, except.value, `"except" in "api"`);
+    api.except = nodes.exceptNames.map((m) => m.name);
+    if (api.models !== "all")
+      ctx.error(
+        except.keyNode,
+        "invalid-api",
+        `"except" in "api" leaves models out of "models: all"; with a list, leave the model out of the list.`,
+      );
+  }
+  const actions = byKey.get("actions");
+  if (actions) {
+    const listed = readAllOrList(ctx, actions.value, `"actions" in "api"`);
+    if (listed === "all") api.actions = "all";
+    else {
+      nodes.actionNames = listed;
+      api.actions = listed.map((a) => a.name);
+    }
+  }
+  const assistants = byKey.get("assistants");
+  if (assistants) {
+    if (isMap(assistants.value)) {
+      const what = `"assistants" in "api"`;
+      let del = false;
+      for (const { key, value } of checkKeys(
+        ctx,
+        mapEntries(ctx, assistants.value, what) ?? [],
+        what,
+        { allowed: ["delete"] },
+      )) {
+        if (key === "delete") del = readBoolean(ctx, value, `"delete" in ${what}`) === true;
+      }
+      api.assistants = { delete: del };
+    } else if (readBoolean(ctx, assistants.value, `"assistants" in "api"`) === true) {
+      api.assistants = { delete: false };
+    }
+  }
+  auth.api = api;
+  return nodes;
+}
+
+/** What the `api` block names must exist, and only standard actions of offered models can be run. */
+function checkApi(ctx: ParseContext, auth: AuthIR, ir: SpecIR, nodes: ApiNodes): void {
+  const known = ir.models.map((m) => m.name);
+  for (const { name, at } of [...nodes.modelNames, ...nodes.exceptNames])
+    if (!known.includes(name))
+      ctx.error(
+        at,
+        "unknown-model",
+        `There is no model named "${name}" in smithable.yml.`,
+        didYouMean(name, known),
+      );
+  const offered = apiOffers(auth, ir).models;
+  for (const { name, at } of nodes.actionNames) {
+    const action = ir.actions.find((a) => a.name === name);
+    if (!action)
+      ctx.error(
+        at,
+        "unknown-action",
+        `There is no action named "${name}" in smithable.yml.`,
+        didYouMean(
+          name,
+          ir.actions.map((a) => a.name),
+        ),
+      );
+    else if (action.custom)
+      ctx.error(
+        at,
+        "invalid-api",
+        `"${name}" is a custom action: only standard actions (on, set) can be offered to other programs.`,
+      );
+    else if (!offered.includes(action.on))
+      ctx.error(
+        at,
+        "invalid-api",
+        `"${name}" changes a ${action.on}, which "api" does not offer: add ${action.on} to "models".`,
+      );
+  }
+  // A key with a role that may read the model reads its personal data too.
+  for (const name of offered) {
+    const personal = ir.models
+      .find((m) => m.name === name)
+      ?.fields.filter((f) => f.type.kind === "scalar" && PERSONAL_TYPES.includes(f.type.name));
+    if (personal?.length)
+      ctx.warning(
+        nodes.modelNames.find((m) => m.name === name)?.at ?? nodes.models,
+        "api-personal-data",
+        `Anyone holding a key with a role that may read ${name} reads ${personal.map((f) => f.name).join(", ")}.`,
+      );
+  }
 }
 
 function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
