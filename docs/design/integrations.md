@@ -22,11 +22,22 @@ The same rules hold for all three:
 ## 2. The API
 
 ```yaml
-# smithable.yml
+# smithable.auth.yml, next to "public": everything the app exposes is said in one file
 api:
-  models: [Component, Incident]      # what it offers; nothing unless listed (all: every model)
-  actions: [resolve]                 # standard actions it may run
+  models: [Component, Incident]      # what programs may reach; nothing unless said
+  actions: [resolve]                 # standard actions they may run
 ```
+
+```yaml
+api:
+  models: all                        # every model, also ones added later
+  except: [AuditEntry]               # …but these
+  actions: all
+```
+
+- **Where it is written, and why in one place:** in `smithable.auth.yml`, beside `public`, not as a flag on each model or action. What an app exposes is the thing most worth reading in one look, and one way to say it keeps the spec neat (§2.2); a flag per model would scatter it and give two ways to say the same thing. `all` with `except` covers "everything but". A list is the careful form: a model added later is not reachable until someone lists it; with `all` it is, which the validator says once when `all` is first written ("models added later are offered too").
+- **Listing is not granting:** being offered only makes a model reachable. What a key may do with it is still its role's access, so `all` gives a key nothing its role could not do in the app.
+- **Actions have one name each.** An action is declared once, under `actions`, and pages only list which ones they offer; the same action may be on several pages. So `resolve` means one thing in the whole app, and the API runs it on a record of its model (`/api/v1/incidents/12/actions/resolve`). Two models that both want an "archive" declare `archiveInvoice` and `archiveCustomer` and may show the same label.
 
 - **What it offers:** for each listed model, list (with the list page's search, filters, sort; pages of at most 100), get one, create, change, delete; for each listed standard action, run it on a record. What a caller may actually do is decided by its role's access, exactly as in the app: a role that may not delete gets a refusal, a private model shows only what the role may read.
 - **Keys:** a key is made in the running app by an administrator (the users page gets a "Keys" part): a name saying what it is for, a role, an optional end date. The key is shown once, stored only as a hash, can be revoked, and shows when it was last used. It is sent in the `Authorization` header. A key is not a person: records it creates have no owner, and what belongs to "the owner" it cannot do.
@@ -34,7 +45,7 @@ api:
 - **Limits:** per key, the kit's limiter (60 requests a minute to start with), bodies up to 1 MB, no cookies and no browser access from other sites (it is for programs, not pages).
 - **Renames are API changes.** With an API on, an operation that renames or removes a field or a model of a listed model says so in its confirmation ("the API's field `phone` becomes `mobile`"), as it says what data a removal loses.
 - **Validation:** listed models and actions exist; an action listed is a standard one; a warning when a listed model has personal data ("anyone holding a key with a role that may read Customer reads email and phone").
-- **Operations:** `setApi <model…>` (none turns it off), `setApiActions <action…>`.
+- **Operations:** `setApi [models…] [--actions a,b] [--except M,N]` with `all` as a value (nothing turns it off).
 - **Summary:** "Other programs can read and change components and incidents with a key, and resolve an incident."
 - **Left out:** keys that belong to a person (a personal token acting as that user), fields left out per model, webhooks about changes (that is section 4), a GraphQL or other format.
 
@@ -108,7 +119,7 @@ Not to be confused with Smithable's own MCP server, which changes the spec while
 - **What it is:** the API of section 2 offered a second way, as tools an assistant can call, at `/mcp` of the app. One tool per listed model and verb the role may use (find, read, add, change) and one per listed standard action, generated from the spec. The spec is unusually good material for this: a model's and an action's `intent` and `rules`, the field labels and the choice values become the tools' descriptions, so an assistant knows what "resolve" means without guessing.
 - **What it costs:** little once the API exists. Same definitions, same keys, same access rules, same limiter; a thin layer and its tests.
 - **What it must not do:** widen anything. It offers only what `api` lists. Deleting is not offered as a tool unless the spec says so (`api.assistants: { delete: true }`), because an assistant can be talked into things by the text it reads (a record's own content is such text): a key for an assistant should have a role that can do little harm, and the how-to says so.
-- **Where it is switched on:** the spec says what is offered (`api.models`, `api.actions`); that it is also offered to assistants is one more line there, `api: { assistants: true }`. The protocol's name stays out of the spec, as REST's does.
+- **Where it is switched on:** the spec says what is offered (`api.models`, `api.actions`); that it is also offered to assistants is one more line there, `api: { assistants: true }` in the same block. The protocol's name stays out of the spec, as REST's does.
 - **Who the assistant is:** in the first version, a key with a role, as for any program. The better answer, an assistant that acts as the signed-in person and sees what they see, needs sign-in for programs (OAuth) on top of the email-code sign-in; that is the same later step as keys that belong to a person, and the two should be designed together.
 - **When:** right after step 1, as step 1b. It is small, it is what people will try first with an AI assistant, and no builder of this kind offers it from the spec.
 
@@ -131,7 +142,7 @@ Exit for steps 1 to 3: the status starter, with no custom code, takes a monitor'
 ## 8. Decisions for Johan
 
 1. **Keys belong to a role, made by an administrator in the app.** Recommended. The alternative, a key that acts as one person, is useful later for people's own scripts; it is not what connecting systems needs.
-2. **Nothing is offered unless the spec lists it** (`api.models`). Recommended: an app must never grow an API by accident.
+2. **Nothing is offered unless the auth file says so,** in one block beside `public`: a list, or `all` with `except`. No flags on single models or actions. Recommended: an app must never grow an API by accident, and what it exposes is read in one place.
 3. **Addresses and secrets are settings, never in the spec:** environment variables when self-hosted, a Connections page on the hosted service.
 4. **The first built-in outgoing call is the general one (tell an address), then mail.** No connection to a named service is built in before the beta; automation tools cover those.
 5. **The order in section 7.**
