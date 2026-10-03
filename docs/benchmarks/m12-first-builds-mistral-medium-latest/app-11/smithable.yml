@@ -32,23 +32,6 @@ models:
       endsAt: datetime!
       description: text
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
   incidents:
     crud: Incident
     access: [admin, staff]
@@ -61,10 +44,37 @@ pages:
   maintenance:
     crud: Maintenance
     access: [admin, staff]
-  overview:
-    crud: Incident
-    access: [admin, staff]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
   team:
     users: manage
-    access: [admin]
-navigation: [overview, incidents, updates, maintenance, components, team]
+  admin:
+    data: all
+actions:
+  identified:
+    custom: true
+    input:
+      incident: Incident!
+    allow: [admin, staff]
+    intent: The cause is found; the incident moves to identified.
+  monitoring:
+    custom: true
+    input:
+      incident: Incident!
+    allow: [admin, staff]
+    intent: A fix is out; the incident is watched before it is closed.
+  resolve:
+    custom: true
+    input:
+      incident: Incident!
+    allow: [admin, staff]
+    intent: The incident is over.

@@ -1,4 +1,6 @@
 {
   "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
-  "starter": "crm"
+  "starter": "invoicing",
+  "wordStarter": "crm",
+  "questions": []
 }

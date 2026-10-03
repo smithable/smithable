@@ -1,1 +1,27 @@
 smithableUx: 0.1
+tones:
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger
+  Incident.status:
+    investigating: warning
+    identified: warning
+    resolved: success
+pages:
+  home:
+    icon: home
+  overview:
+    icon: chart
+  team:
+    icon: users
+  components:
+    table:
+      view: cards
+  maintenance:
+    table:
+      view: cards
+      sort: startsAt
+  incidents:
+    table:
+      sort: -detectedAt

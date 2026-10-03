@@ -1,15 +1,7 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-defaultAccess: shared
+defaultAccess: private
 public:
   pages: [home, teams, players, matches, results]
   read: [Team, Player, Match, Result]
-roles:
-  admin:
-    description: Manages the club's site.
-  coach:
-    description: Manages teams and players.
-  member:
-    description: Views club information.
-defaultRole: member

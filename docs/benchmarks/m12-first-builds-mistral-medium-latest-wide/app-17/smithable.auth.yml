@@ -3,10 +3,11 @@ signIn:
   providers: [google]
 defaultAccess: private
 public:
-  pages: [home]
-  read: [Service]
-  create: [Appointment]
+  pages: [hem, schema]
+  read: [Service, Stylist, Appointment]
 roles:
   admin:
-    description: Administratör som hanterar bokningar och tjänster.
-defaultRole: admin
+    description: Salongsägare eller personal som hanterar bokningar och tjänster.
+  customer:
+    description: Kund som bokar tider.
+defaultRole: customer

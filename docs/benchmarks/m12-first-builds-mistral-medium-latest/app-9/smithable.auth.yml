@@ -1,8 +1,9 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
+  selfSignUp: false
 defaultAccess: shared
 roles:
   itSupport:
-    description: Handles and resolves IT tickets.
+    description: Handles IT support tickets.
 defaultRole: itSupport

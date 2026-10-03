@@ -1,7 +1,79 @@
 smithableContent: 0.1
+models:
+  ClassType:
+    label: Class Type
+    pluralLabel: Class Types
+    fields:
+      name:
+        label: Name
+      summary:
+        label: Summary
+      level:
+        label: Level
+        values:
+          beginner: Beginner
+          allLevels: All Levels
+          advanced: Advanced
+      durationMinutes:
+        label: Duration (minutes)
+  Instructor:
+    label: Instructor
+    pluralLabel: Instructors
+    fields:
+      name:
+        label: Name
+      bio:
+        label: Bio
+      portrait:
+        label: Portrait
+  Message:
+    label: Message
+    pluralLabel: Messages
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      message:
+        label: Message
+  Session:
+    label: Session
+    pluralLabel: Sessions
+    fields:
+      classType:
+        label: Class Type
+      instructor:
+        label: Instructor
+      startsAt:
+        label: Starts At
+      capacity:
+        label: Capacity
+  Booking:
+    label: Booking
+    pluralLabel: Bookings
+    fields:
+      session:
+        label: Session
 pages:
   home:
+    title: Home
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
+  class-types:
+    title: Class Types
+  instructors:
+    title: Instructors
+  messages:
+    title: Messages
+  team:
+    title: Team
+  admin:
+    title: Admin
+  schedule:
+    title: Schedule
+  sessions:
+    title: Sessions
+  my-bookings:
+    title: My Bookings

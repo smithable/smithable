@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Yoga Studio Booking
-  description: Online booking system for yoga classes with teachers and schedules.
+  name: Yoga Studio
+  description: Class schedule and online booking for a yoga studio.
 models:
   ClassType:
     fields:
@@ -14,10 +14,19 @@ models:
   Instructor:
     fields:
       name: string!
-      bio: markdown
+      bio: text
       portrait: picture
     access:
       create: [admin]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
   Session:
     fields:
       classType: ClassType!
@@ -25,16 +34,19 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
-      placesLeft: int = capacity - COUNT(bookings)
     access:
       create: [admin]
+      delete: [admin]
   Booking:
     fields:
       session: Session!
-      member: User!
+      user: User!
     capacity:
       per: session
       max: session.capacity
+    access:
+      create: [member, admin]
+      delete: [member, admin, owner]
 pages:
   class-types:
     crud: ClassType
@@ -42,22 +54,34 @@ pages:
   instructors:
     crud: Instructor
     access: [admin]
+  messages:
+    crud: Message
+    access: [admin]
   home:
     route: /
     landing:
       hero:
+        shortcuts: [schedule]
       footer:
       classes:
         records: ClassType
+      gallery:
+      faq:
+      contact:
+        form: Message
       callToAction:
         button: schedule
+  team:
+    users: manage
+  admin:
+    data: all
   sessions:
     crud: Session
     access: [admin]
   my-bookings:
     crud: Booking
+    mine: true
   schedule:
     calendar:
       model: Session
       starts: startsAt
-navigation: [schedule, my-bookings]
