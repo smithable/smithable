@@ -72,7 +72,7 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
     .map((p) => p.route);
   // Public articles have the site's frame too, their list and every article under it.
   const sites = ir.pages.filter((p) => publicArticles(p, { auth })).map((p) => p.route);
-  // Other public pages (a schedule) have the site's frame for visitors, the app's for those
+  // Other public pages (a schedule) and sign-in have the site's frame for visitors, the app's for those
   // signed in; only in an app with sign-in and a site (its landing page or blog).
   // A public catalog at "/" (marketplace.md §2.5) is a site of its own, with or without a
   // landing page.
@@ -88,6 +88,8 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
               !["landing", "onboarding", "articles"].includes(p.pattern.kind),
           )
           .map((p) => p.route)
+          // Signing in is a visitor's page too: the frame stays the site's until signed in.
+          .concat("/sign-in")
       : [];
   // A path under a visitor page; under a catalog at "/", only its records and new form.
   const under = `pathname.startsWith(\`\${r}/\`)`;
