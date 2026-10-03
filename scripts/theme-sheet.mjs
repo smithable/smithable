@@ -5,12 +5,11 @@
 // and a dialog in light and dark, laid out on one page per theme.
 // Run after `pnpm build`: `node scripts/theme-sheet.mjs [preset | themes/<name>.yml …] [--out <dir>]`.
 // Without themes it shoots the four presets. Not part of `check`.
-import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
+import { newApp, op, open as openUrl, serveDev, signIn } from "./dev-app.mjs";
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
@@ -20,69 +19,23 @@ const { values: opts, positionals } = parseArgs({
   },
 });
 const themes = positionals.length ? positionals : ["modern", "minimal", "playful", "corporate"];
-const repo = new URL("..", import.meta.url).pathname;
-const cli = join(repo, "packages/cli/dist/bin.js");
 const port = Number(opts.port);
 const base = `http://localhost:${port}`;
 
-function run(args, cwd = repo) {
-  const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8" });
-  if (result.status !== 0)
-    throw new Error(`${args.join(" ")} failed:\n${result.stdout}\n${result.stderr}`);
-  return result.stdout;
-}
-/** Kills the dev server and everything it started (pnpm, node, Vite), children first. */
-function killTree(pid) {
-  const children = spawnSync("ps", ["-o", "pid=", "--ppid", String(pid)], { encoding: "utf8" })
-    .stdout.split("\n")
-    .map((s) => Number(s.trim()))
-    .filter(Boolean);
-  for (const child of children) killTree(child);
-  try {
-    process.kill(pid);
-  } catch {}
-}
-const op = (dir, ...args) => run(["node", cli, "op", ...args, "--dir", dir, "--yes"]);
-
-const dir = join(mkdtempSync(join(tmpdir(), "smithable-theme-sheet-")), "app");
-console.log(`making the sheet app in ${dir}`);
-run(["node", cli, "new", dir, "--starter", "booking"]);
+const dir = newApp("booking", "theme-sheet");
+console.log(`made the sheet app in ${dir}`);
 // The controls the booking starter has no field for.
 op(dir, "addField", "ClassType", "price", "money");
 op(dir, "addField", "ClassType", "dropIn", "bool");
 op(dir, "addField", "ClassType", "website", "url");
 op(dir, "addField", "ClassType", "contact", "email");
 
-for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => process.exit(130));
-
 /**
- * Starts the dev server and waits for it. Started anew for each theme: a running server keeps
- * serving the stylesheet and font it loaded first.
+ * The dev server is started anew for each theme: a running server keeps serving the stylesheet
+ * and font it loaded first.
  */
-async function serve() {
-  const server = spawn("pnpm", ["exec", "vite", "dev", "--port", String(port), "--strictPort"], {
-    cwd: dir,
-    env: { ...process.env, PORT: String(port) },
-  });
-  let log = "";
-  server.stdout.on("data", (d) => (log += d));
-  server.stderr.on("data", (d) => (log += d));
-  const stop = () => killTree(server.pid);
-  process.on("exit", stop);
-  for (let i = 0; i < 240; i++) {
-    try {
-      if ((await fetch(`${base}/health`, { signal: AbortSignal.timeout(2000) })).ok) return stop;
-    } catch {}
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  stop();
-  throw new Error(`the app did not start:\n${log.slice(-2000)}`);
-}
-
-async function open(page, path) {
-  await page.goto(`${base}${path}`);
-  await page.waitForLoadState("networkidle");
-}
+const serve = () => serveDev(dir, port);
+const open = (page, path) => openUrl(page, `${base}${path}`);
 
 // The shots on a sheet: [label, path, what to do before the picture, full page].
 const SHOTS = [
@@ -112,16 +65,7 @@ try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await context.newPage();
     // Signed in as an admin, so the list, form and dialog are open to the camera.
-    for (let attempt = 1; ; attempt++) {
-      await open(page, "/sign-in");
-      await page.getByRole("button", { name: "Sign in as admin" }).click();
-      try {
-        await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 5000 });
-        break;
-      } catch (error) {
-        if (attempt === 3) throw error;
-      }
-    }
+    await signIn(page, base, "admin");
     const shots = [];
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
