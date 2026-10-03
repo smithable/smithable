@@ -1,6 +1,6 @@
 # Talking to other systems: an API, incoming calls, outgoing calls
 
-Status: 2026-10-04, proposed by Fable at Johan's request. ARCHITECTURE §2.1 says "integrations and external endpoints come later"; this is the proposal for them. Nothing here is built. It adds constructs to the spec, so merging this document is the go-ahead for step 1 only; each later step is confirmed when its turn comes. Section 8 lists what Johan decides.
+Status: 2026-10-04, proposed by Fable at Johan's request; Johan said yes to all six decisions (section 8) the same day, to be designed and built in the order of section 7. ARCHITECTURE §2.1 says "integrations and external endpoints come later"; this is the proposal for them. Nothing here is built. It adds constructs to the spec, so merging this document is the go-ahead for step 1 only; each later step is confirmed when its turn comes. Section 8 lists what Johan decides.
 
 ## 1. Three directions, one set of rules
 
@@ -123,6 +123,13 @@ Not to be confused with Smithable's own MCP server, which changes the spec while
 - **Who the assistant is:** in the first version, a key with a role, as for any program. The better answer, an assistant that acts as the signed-in person and sees what they see, needs sign-in for programs (OAuth) on top of the email-code sign-in; that is the same later step as keys that belong to a person, and the two should be designed together.
 - **When:** right after step 1, as step 1b. It is small, it is what people will try first with an AI assistant, and no builder of this kind offers it from the spec.
 
+## 5c. Later: an assistant to try it with
+
+Johan's idea (2026-10-04). An app's tools for assistants are hard to judge without an assistant at hand, so:
+
+- **First, while building:** Studio gets an "Assistant" panel beside the preview that talks to the previewed app's tools with the project's configured model, as a role the person picks. It is a test bench: ask "which incidents are open?", see which tools were called with what, and what came back. Development only, nothing in the generated app.
+- **Later, perhaps, in a published app:** "ask your app" for its signed-in users, acting as the person asking, through the same tools. It needs the person-level sign-in for programs (section 5b), a model paid for by the app's owner (the hosted service's allowances, or the owner's own key when self-hosted), and the guard against text in records steering the assistant. Its own design and decision when the test bench has shown what people ask.
+
 ## 6. What this needs outside the engine
 
 - **The hosted service (B):** a "Connections" page per project for target addresses and secrets, kept encrypted and handed to the app as settings at start; outgoing calls from published apps allowed to the internet but not to the host's own network; per-app limits on outgoing calls (as for mail); the access log covering API and incoming calls; the threat model and data-flows documents.
@@ -139,7 +146,7 @@ Not to be confused with Smithable's own MCP server, which changes the spec while
 
 Exit for steps 1 to 3: the status starter, with no custom code, takes a monitor's "down" call as an incident, tells a chat channel through an automation tool when one opens, and lets a script read the open incidents with a key.
 
-## 8. Decisions for Johan
+## 8. Decisions (Johan, 2026-10-04: yes to all six)
 
 1. **Keys belong to a role, made by an administrator in the app.** Recommended. The alternative, a key that acts as one person, is useful later for people's own scripts; it is not what connecting systems needs.
 2. **Nothing is offered unless the auth file says so,** in one block beside `public`: a list, or `all` with `except`. No flags on single models or actions. Recommended: an app must never grow an API by accident, and what it exposes is read in one place.
