@@ -880,3 +880,18 @@ describe("standard actions", () => {
     ).toMatchObject({ ok: false, message: expect.stringContaining('The action "cancelOrder"') });
   });
 });
+
+test("setProviders chooses the sign-in methods in button order, and refuses none or an unknown one", () => {
+  const result = applyOperation(files, "setProviders", { providers: ["email", "google", "email"] });
+  if (!result.ok) throw new Error(result.message);
+  expect(result.files.auth).toMatch(/signIn:\n {2}providers: \[email, google\]\n/);
+  expect(result.description).toBe("Sign in with a code by email or Google");
+  expect(applyOperation(files, "setProviders", { providers: [] })).toMatchObject({
+    ok: false,
+    message: "An app with sign-in needs at least one way to sign in.",
+  });
+  expect(applyOperation(files, "setProviders", { providers: ["gogle"] })).toMatchObject({
+    ok: false,
+    message: expect.stringContaining('must be one of "email", "google", "facebook"'),
+  });
+});
