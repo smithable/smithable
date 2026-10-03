@@ -26,4 +26,6 @@ pages:
   saved:
     crud: Item
     favorites: only
-navigation: [catalog, myItems, saved]
+  team:
+    users: manage
+navigation: [catalog, myItems, saved, team]

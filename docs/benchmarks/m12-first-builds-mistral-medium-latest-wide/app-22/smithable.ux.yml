@@ -9,13 +9,10 @@ pages:
   vorbestellungen:
     table:
       sort: pickupTime
-    form:
-      columns: 2
+    icon: cart
   abholzeiten:
     table:
-      columns: [date, startTime, endTime, maxCapacity]
-    form:
-      columns: 2
+      sort: date
+    icon: calendar
   produkte:
-    form:
-      columns: 2
+    icon: package

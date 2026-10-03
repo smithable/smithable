@@ -6,8 +6,6 @@ pages:
     icon: users
   schedule:
     icon: calendar
-    table:
-      view: cards
   sessions:
     icon: calendar
     table:
@@ -15,5 +13,8 @@ pages:
       columns: [startsAt, classType, instructor, placesLeft]
       below:
         startsAt: classType
+        classType: instructor
+    form:
+      columns: 2
   my-bookings:
     icon: cart

@@ -2,7 +2,8 @@ smithableUx: 0.1
 pages:
   stock:
     table:
-      sort: -expiryDate
-      columns: [ingredient, supplier, quantity, lastRestocked, expiryDate]
-    form:
-      sections: [{ name: details, fields: [ingredient, supplier, quantity] }, { name: dates, fields: [lastRestocked, expiryDate] }]
+      sort: -lastUpdated
+      columns: [ingredient, quantity, lastUpdated, expiryDate]
+  suppliers:
+    table:
+      columns: [name, contactName, email, phone]
