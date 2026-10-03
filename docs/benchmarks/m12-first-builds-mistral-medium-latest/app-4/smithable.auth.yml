@@ -1,0 +1,11 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
+roles:
+  member:
+    description: Can borrow and lend tools.
+defaultRole: member
+public:
+  pages: [home]
+  read: [{ Tool: { where: { available: true } } }]
