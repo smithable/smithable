@@ -62,6 +62,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }

@@ -5639,6 +5639,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }
@@ -6044,7 +6046,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "60c65616 generated",
+  "tests/smoke.spec.ts": "df7c90c9 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -8653,6 +8655,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }
@@ -8923,7 +8927,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "76cf26b8 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "60fbbd2d generated",
+  "tests/smoke.spec.ts": "47211f98 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -12038,6 +12042,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }
@@ -12361,7 +12367,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/welcome/index.tsx": "d181401c generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "cd22f18f generated",
+  "tests/smoke.spec.ts": "96656d16 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -14427,6 +14433,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }
@@ -14701,7 +14709,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/welcome/index.tsx": "a4ea7b3f generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "f2079b4d generated",
+  "tests/smoke.spec.ts": "83765356 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -16143,6 +16151,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }
@@ -16368,7 +16378,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "457c02c3 generated",
+  "tests/smoke.spec.ts": "cd3af4c8 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
@@ -20396,6 +20406,8 @@ async function signIn(page: Page, role: string) {
       await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15_000 });
       return;
     } catch (error) {
+      // A slow redirect may still land: signed in by then, nothing to try again.
+      if (new URL(page.url()).pathname !== "/sign-in") return;
       if (attempt === 3) throw error;
     }
   }
@@ -20746,7 +20758,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/new.tsx": "c4bd32a9 generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
-  "tests/smoke.spec.ts": "2e2444d7 generated",
+  "tests/smoke.spec.ts": "fd8fdf64 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "5a19a8a5 kit",
   "vite.config.ts": "2ac5a5ac kit",
