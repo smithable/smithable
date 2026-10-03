@@ -315,3 +315,36 @@ pages:
     '{ title: "Lamp", delivery: "pickup", available: true }',
   );
 });
+
+test("a seed with nothing to add imports nothing; a choice of a record with an optional title still has a name", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Club }
+models:
+  Membership:
+    fields: { member: User!, since: date }
+  Match:
+    fields: { date: datetime!, location: string }
+  Result:
+    fields: { match: Match!, score: string! }
+pages:
+  results: { crud: Result }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(spec, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
+  // Match's name is its optional location: an empty one is "Match #3", never null.
+  const options = at("src/generated/match.server.ts");
+  expect(options).toContain("label: sql<string>`coalesce(");
+  expect(options).toContain("matches.location}, 'Match #' || ");
+  const onlyPeople = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Club }\nmodels:\n  Membership:\n    fields: { member: User!, since: date }\npages:\n  memberships: { crud: Membership }\n",
+  }).ir as SpecIR;
+  const seed =
+    generateApp(onlyPeople, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
+      (f) => f.path === "src/db/seed.ts",
+    )?.content ?? "";
+  expect(seed).not.toContain('import { db } from "./index"');
+});
