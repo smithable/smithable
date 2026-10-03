@@ -103,6 +103,11 @@ try {
     await page.getByLabel("What do you want to change?").selectOption({ label });
   };
   const openPreview = async (path) => {
+    // A change from the step before reloads the preview a few seconds after it went through:
+    // until then it is updating (aria-busy), and a page opened now would be replaced under us.
+    await page
+      .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
+      .waitFor({ state: "detached", timeout: 60000 });
     await page.getByLabel("Preview address").fill(path);
     await page.getByRole("button", { name: "Go", exact: true }).click();
   };

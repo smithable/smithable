@@ -92,14 +92,25 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
   return parsed as T;
 }
 
+/**
+ * A change that went through will reload the preview, once the daemon says the app took it in
+ * ("changed", a few seconds later): until then the preview is updating (see Preview).
+ */
+export const EXPECT_RELOAD = "smithable:expect-reload";
+const changing = async (result: Promise<Result>) => {
+  const r = await result;
+  if (r.ok) window.dispatchEvent(new Event(EXPECT_RELOAD));
+  return r;
+};
+
 export const api = {
   project: () => call<Project>("/api/project"),
   logs: () => call<string[]>("/api/logs"),
   diff: () => call<{ patch: string }>("/api/diff"),
   operation: (name: string, args: Record<string, unknown>, confirm = false) =>
-    call<Result>("/api/op", { name, args, confirm }),
-  customize: (page: string) => call<Result>("/api/customize", { page }),
-  undo: () => call<Result>("/api/undo", {}),
+    changing(call<Result>("/api/op", { name, args, confirm })),
+  customize: (page: string) => changing(call<Result>("/api/customize", { page })),
+  undo: () => changing(call<Result>("/api/undo", {})),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
   sendReport: (send: boolean, choice?: "always" | "never" | "ask") =>
@@ -108,7 +119,7 @@ export const api = {
       choice,
     }),
   ask: (request: string) => call<Proposal>("/api/ask", { request }),
-  applyProposal: (id: string) => call<Result>("/api/ask/apply", { id }),
+  applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),
   /** Calls `onEvent` for every change and log line the daemon reports. */
   events(onEvent: (event: "changed" | "log" | "open", data: unknown) => void): () => void {
     const source = new EventSource("/api/events");
