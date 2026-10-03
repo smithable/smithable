@@ -1,0 +1,8 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
+roles:
+  sales:
+    description: Manages leads and deals.
+defaultRole: sales

@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  clients:
+    table:
+      sort: name
+  quotes:
+    table:
+      sort: -sentAt
+  payments:
+    table:
+      sort: -receivedAt

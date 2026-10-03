@@ -1,6 +1,6 @@
 import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Project } from "./api";
+import { api, EXPECT_RELOAD, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
 import { isPreviewMessage, type Place, shared } from "./preview";
@@ -37,6 +37,22 @@ export function App() {
   }, [message, holding]);
   const [pending, setPending] = useState<Pending>();
   const [version, setVersion] = useState(0);
+  // A change went through and the preview will reload with it (EXPECT_RELOAD), until "changed".
+  const [updating, setUpdating] = useState(false);
+  useEffect(() => {
+    // The daemon says "changed" within seconds; a reload that never comes ends the wait anyway.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const expect = () => {
+      setUpdating(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setUpdating(false), 15_000);
+    };
+    window.addEventListener(EXPECT_RELOAD, expect);
+    return () => {
+      window.removeEventListener(EXPECT_RELOAD, expect);
+      clearTimeout(timer);
+    };
+  }, []);
   const [logs, setLogs] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   // The preview: select mode, and the mode's slot it is placed over on narrow windows.
@@ -77,6 +93,7 @@ export function App() {
     if (next.notice) setMessage({ ok: false, text: next.notice });
     setProject(next);
     setVersion((v) => v + 1);
+    setUpdating(false);
   }, []);
 
   useEffect(() => {
@@ -343,6 +360,7 @@ export function App() {
           <Preview
             url={project.preview}
             version={version}
+            updating={updating}
             selecting={selecting}
             onSelecting={setSelecting}
             onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}

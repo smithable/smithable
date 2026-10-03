@@ -8,4 +8,4 @@ roles:
 defaultRole: member
 public:
   pages: [home]
-  read: [{ Tool: { where: { available: true } } }]
+  read: [Tool]

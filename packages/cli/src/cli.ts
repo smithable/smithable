@@ -150,6 +150,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.describe ? { describe: values.describe } : {}),
         ...(values.answers ? { answers: values.answers } : {}),
         ...(values.from ? { from: values.from } : {}),
+        ...(values.name ? { name: values.name } : {}),
         withPictures: values["with-pictures"] === true,
         yes: values.yes === true,
         sampleData: values["no-sample-data"] !== true,
