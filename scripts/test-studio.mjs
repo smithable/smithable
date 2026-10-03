@@ -104,25 +104,35 @@ try {
   };
   const openPreview = async (path) => {
     // A change from the step before reloads the preview a few seconds after it went through:
-    // until then it is updating (aria-busy), and a page opened now would be replaced under us.
+    // until the new frame is up it is updating (aria-busy), and a page opened now would be
+    // replaced under us.
     await page
       .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
       .waitFor({ state: "detached", timeout: 60000 });
     await page.getByLabel("Preview address").fill(path);
     await page.getByRole("button", { name: "Go", exact: true }).click();
-    // Until the frame is on the new page, the old one still answers: select mode sent now
-    // would mark the page that is about to go, and a click would land on the new one unmarked.
+    // Go makes a new frame; until it has loaded the page, select mode sent would reach the old
+    // one (marking it, so a test sees the mark) and a click would land on the new one, unmarked.
+    // The old frame, on the same page, may be found in the moment before it is removed: then the
+    // next one is waited for.
     const deadline = Date.now() + 60000;
-    let frame;
-    while (!frame) {
-      frame = page.frames().find((f) => {
+    for (;;) {
+      const frame = page.frames().find((f) => {
+        if (f === page.mainFrame() || f.isDetached()) return false;
         const url = new URL(f.url(), base);
-        return f !== page.mainFrame() && url.pathname + url.search === path;
+        return url.pathname + url.search === path;
       });
-      if (!frame && Date.now() > deadline) throw new Error(`the preview did not open ${path}`);
-      if (!frame) await page.waitForTimeout(100);
+      if (
+        frame &&
+        (await frame.waitForLoadState("load").then(
+          () => true,
+          () => false,
+        ))
+      )
+        break;
+      if (Date.now() > deadline) throw new Error(`the preview did not open ${path}`);
+      await page.waitForTimeout(100);
     }
-    await frame.waitForLoadState("load");
   };
 
   console.log("Builder mode");
