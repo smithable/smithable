@@ -132,3 +132,20 @@ test("a dashboard tile's where refuses a changed field that loses a value it cou
     }).ok,
   ).toBe(true);
 });
+
+test("setDefaultAccess switches between shared and private, and needs sign-in", () => {
+  const files = { spec, auth: auth("Post") };
+  const shared = applyOperation(files, "setDefaultAccess", { access: "shared" });
+  expect(shared.ok && shared.files.auth).toContain("defaultAccess: shared\n");
+  const back = applyOperation(
+    { ...files, auth: shared.ok ? shared.files.auth : "" },
+    "setDefaultAccess",
+    { access: "private" },
+  );
+  expect(back.ok && back.files.auth).toContain("defaultAccess: private\n");
+  expect(
+    applyOperation({ spec, auth: "smithableAuth: 0.1\nsignIn: none\n" }, "setDefaultAccess", {
+      access: "shared",
+    }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining("no sign-in") });
+});

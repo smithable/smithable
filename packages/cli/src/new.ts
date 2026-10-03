@@ -115,7 +115,7 @@ export async function create(
     const draft =
       process.env.SMITHABLE_DRAFT === "files"
         ? await draftProject({ description, starter: files, providers })
-        : await draftProjectByOperations({ description, providers });
+        : await draftProjectByOperations({ description, providers, starter: { name, files } });
     io.out(`${usageLine(draft.usage)}\n`);
     if (draft.kind === "failed") {
       io.err(
