@@ -1,21 +1,23 @@
 # M12 first builds: mistral-medium-latest (2026-10-03)
 
-The app descriptions, each started with `smithable new --describe` (the closest starter, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 143,720 tokens, €0.0769.
+The app descriptions, each started with `smithable new --describe` (the closest starter, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 143,874 tokens, €0.0772.
 
 | Description | Starter | Created | Type-checks | Tokens | Cost | Time |
 |---|---|---|---|---|---|---|
-| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 15,589 | €0.0083 | 23 s |
-| A CRM for a small sales team: companies, contacts, deals and follow-ups. | crm | yes | yes | 8,008 | €0.0049 | 19 s |
-| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 15,583 | €0.0086 | 25 s |
-| A tool library where neighbors lend each other tools. | records | yes | yes | 14,421 | €0.0075 | 20 s |
-| An inventory app for a small bakery: ingredients, suppliers and stock levels. | booking | yes | yes | 7,682 | €0.0037 | 16 s |
-| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 7,449 | €0.0043 | 17 s |
-| A football club's site: teams, players, matches and results. | records | yes | yes | 7,293 | €0.0042 | 18 s |
-| Event registration for a conference: talks, speakers and attendees. | records | yes | yes | 7,468 | €0.0045 | 19 s |
-| A help desk for an IT team: tickets, priorities and who handles them. | invoicing | yes | yes | 7,606 | €0.0042 | 15 s |
-| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 7,097 | €0.0038 | 18 s |
-| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 23,490 | €0.0123 | 30 s |
-| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 22,034 | €0.0106 | 27 s |
+| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 15,589 | €0.0083 | 22 s |
+| A CRM for a small sales team: companies, contacts, deals and follow-ups. | crm | yes | yes | 8,047 | €0.0050 | 21 s |
+| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 15,583 | €0.0086 | 41 s |
+| A tool library where neighbors lend each other tools. | records | yes | yes | 14,536 | €0.0077 | 50 s |
+| An inventory app for a small bakery: ingredients, suppliers and stock levels. | booking | yes | yes | 7,682 | €0.0037 | 33 s |
+| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 7,449 | €0.0043 | 31 s |
+| A football club's site: teams, players, matches and results. | records | yes | yes | 7,293 | €0.0042 | 27 s |
+| Event registration for a conference: talks, speakers and attendees. | records | yes | yes | 7,468 | €0.0045 | 27 s |
+| A help desk for an IT team: tickets, priorities and who handles them. | invoicing | yes | yes | 7,606 | €0.0042 | 23 s |
+| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 7,097 | €0.0038 | 20 s |
+| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 23,490 | €0.0123 | 32 s |
+| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 22,034 | €0.0106 | 25 s |
+
+Each created app's four spec files are in [m12-first-builds-mistral-medium-latest/](m12-first-builds-mistral-medium-latest/), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)
@@ -23,7 +25,7 @@ The app descriptions, each started with `smithable new --describe` (the closest 
 | # | Starter | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | booking | 4 / 6 | 6 / 10 | 0 / 0 | private; admin, member (member) | class-types: admin, instructors: admin, sessions: admin | pages home, schedule; read ClassType, Instructor, Session; create none | 2 (capacity-no-unique, no-timezone) | none | 3 / 4 | mentions visitors; landing page |
-| 2 | crm | 0 / 2 | 1 / 3 | 0 / 1 | shared; admin, sales (sales) | none | pages none; read none; create none | 1 (open-shared-access) | none | 0 / 4 | no mention; no landing page |
+| 2 | crm | 0 / 2 | 1 / 3 | 0 / 1 | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none | 0 / 4 | no mention; no landing page |
 | 3 | invoicing | 4 / 4 | 5 / 7 | 0 / 0 | private; admin, member (member) | none | pages home; read none; create none | 0 | none | 3 / 5 | no mention; landing page |
 | 4 | records | 0 / 1 | 1 / 2 | 0 / 0 | shared; admin, member (member) | none | pages home; read Tool; create none | 1 (open-shared-access) | none | 0 / 1 | no mention; landing page |
 | 5 | booking | 0 / 6 | 0 / 10 | 0 / 0 | shared; admin, member (member) | none | pages none; read none; create none | 1 (open-shared-access) | none | 0 / 3 | no mention; no landing page |
@@ -38,27 +40,6 @@ The app descriptions, each started with `smithable new --describe` (the closest 
 "Kept" counts the starter's models, pages and actions that the draft still has by name. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site.
 <!-- /scorecard -->
 
-## What changed since the run before (main with #143, #144, #151, #152)
-
-- **Created and type-checks:** 12 / 12 and 12 / 12. The run before was 9 / 12 created, 9 type-check.
-  - The three that failed to be created (invoicing, bakery, uptime page) had hit one engine bug: an operation's long text was folded across lines into invalid YAML. #151 fixes that, and texts with line breaks too.
-  - The three earlier type-check failures (yoga, football, help desk) were the generator bugs fixed in #144.
-- **The two status apps** (from their kept files):
-
-  | | defaultAccess | roles (defaultRole) | pages with `access` | models | actions |
-  |---|---|---|---|---|---|
-  | 11 API Status | shared | admin, staff (staff) | incidents, updates, maintenance, overview: admin and staff; components and team: admin | Component, Incident, IncidentUpdate, Maintenance | none |
-  | 12 Web Shop Status | shared | admin, staff (staff) | components: admin | Component, Incident, IncidentUpdate, Maintenance | none |
-
-  Both are now shared with the starter's staff role. App 12's page access is exactly the starter's. App 11 restricts more pages than the starter, though to its own roles and not to admins only. **Neither keeps the starter's status actions** (identified, monitoring, resolve), which the run before (app 11) had.
-- **Reuse of the starter's name or texts:**
-  - No app uses its starter's name. Yoga is now "Yoga Studio Booking", where it was "Stillwater Yoga" before.
-  - No landing or content text is reused.
-  - Only role descriptions from the starter's auth file, which #152 now shows to the model: yoga ("Studio staff. Manage the schedule, classes and teachers.", "A student who books classes.") and both status apps ("Runs the status page and the team.", "Writes incidents and their updates."). They fit those apps.
-  - Every other match is structure, as intended: field types, choice lists like `draft | sent | paid | overdue`, `= TODAY()`.
-
-Each created app's four spec files are in [m12-first-builds-mistral-medium-latest/](m12-first-builds-mistral-medium-latest/), one folder per description (app-1 …).
-
 ## Summaries, for review
 
 ### 1. A booking site for a yoga studio, with classes, teachers and online booking.
@@ -68,8 +49,8 @@ Yoga Studio Booking
   Online booking system for yoga classes with teachers and schedules.
 
 Pages
-  - Home (a landing page: hero, footer, classes and call to action)
-  - Class types (lists class types; only for admins)
+  - Home (a landing page: hero, class types, call to action and footer)
+  - Class types (lists class types; only for admins; visitors see class types on the Home page)
   - Instructors (lists instructors; only for admins)
   - Sessions (lists sessions; only for admins)
   - My bookings (lists bookings)
@@ -117,7 +98,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 99 files (99 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-1/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-1/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 bookings 6 columns 0 indexes 3 fks
@@ -128,15 +109,15 @@ sessions 9 columns 0 indexes 3 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_fuzzy_colonel_america.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_polite_earthquake.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-1. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-1. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-1
+  cd /tmp/smithable-bench-m12-ThTl50/app-1
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-1/smithable.yml:36:7  warning  Booking has a capacity per session, but "session" is not unique: one person can take several places.
+/tmp/smithable-bench-m12-ThTl50/app-1/smithable.yml:36:7  warning  Booking has a capacity per session, but "session" is not unique: one person can take several places.
     hint: Write "session: Session! unique" for one booking per person and session (unique per owner with private access).
-/tmp/smithable-bench-m12-iyPPE4/app-1/smithable.yml:61:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+/tmp/smithable-bench-m12-ThTl50/app-1/smithable.yml:61:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
     hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
 ```
 
@@ -149,8 +130,8 @@ Sales CRM
 Pages
   - Companies (lists companies; search by name or email)
   - Contacts (lists contacts; search by first name, last name or email)
-  - Deals (lists deals; search by name or company; filter by stage, company or contact; sort by value, close date or stage)
-  - Follow ups (lists follow ups; search by title, company or contact; filter by status, due date, company, contact or deal; sort by due date or status)
+  - Deals (lists deals; search by name or company; filter by stage, company or close date; sort by value, close date or stage)
+  - Follow ups (lists follow ups; search by title, company or contact; sort by due date or status)
   - Team (who has access: invite people, change roles, remove users)
 
 Companies
@@ -158,7 +139,7 @@ Companies
   - a name (required)
   - an email
   - a phone
-  - an industry
+  - a segment (smb, enterprise or government, smb by default)
   - notes
   Each company can have an account manager (a user).
   Only admins can delete companies.
@@ -170,7 +151,7 @@ Contacts
   - an email
   - a phone
   - a company (a company, required)
-  - a role (decision maker, influencer or user, decision maker by default)
+  - a role (decision maker, influencer or end user, decision maker by default)
   - notes
   Only admins can delete contacts.
 
@@ -179,8 +160,8 @@ Deals
   - a name (required)
   - a company (a company, required)
   - a contact (a contact)
-  - a value (an amount, required)
-  - a stage (prospecting, qualified, proposal, negotiation, closed won or closed lost, prospecting by default)
+  - a value (an amount)
+  - a stage (lead, qualified, proposal, negotiation, closed won or closed lost, lead by default)
   - a close date
   - notes
   Only admins can delete deals.
@@ -194,38 +175,37 @@ Follow ups
   - a due date (required)
   - status (pending, completed or canceled, pending by default)
   - notes
+  Each follow up can have an assignee (a user).
   Only admins can delete follow ups.
 
 Sign-in and access
   People sign in with Google.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin
+  - admin (Sales management. Full access)
   - sales (Works with companies, contacts, deals, and follow-ups)
   New users get the sales role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 91 files (91 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-2/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-2/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 companies 10 columns 0 indexes 2 fks
 contacts 11 columns 0 indexes 2 fks
 deals 11 columns 0 indexes 3 fks
-follow_ups 11 columns 0 indexes 4 fks
+follow_ups 12 columns 0 indexes 5 fks
 invitation 7 columns 2 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_unique_dorian_gray.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_boring_leader.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-2. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-2. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-2
+  cd /tmp/smithable-bench-m12-ThTl50/app-2
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-2/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
-    hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
 ```
 
 ### 3. Invoicing for freelancers, with clients, invoices and payments.
@@ -235,7 +215,7 @@ Freelance Invoicing
   Invoicing for freelancers, with clients, invoices and payments.
 
 Pages
-  - Home (a landing page: hero, footer, features and call to action)
+  - Home (a landing page: hero, features, call to action and footer)
   - Overview (lists invoices)
   - Invoices (lists invoices; search by number; filter by status or client)
   - Clients (lists clients; search by name or email)
@@ -294,7 +274,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 95 files (95 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-3/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-3/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 business_profiles 9 columns 0 indexes 1 fks
@@ -306,12 +286,28 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_lyrical_king_cobra.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_warm_romulus.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-3. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-3. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-3
+  cd /tmp/smithable-bench-m12-ThTl50/app-3
   smithable run
+
+/tmp/smithable-bench-m12-ThTl50/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
+		return this.stmt.run(...params);
+		                 ^
+SqliteError: FOREIGN KEY constraint failed
+    at PreparedQuery.run (/tmp/smithable-bench-m12-ThTl50/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
+    at QueryPromise.run (/tmp/smithable-bench-m12-ThTl50/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
+    at <anonymous> (/tmp/smithable-bench-m12-ThTl50/app-3/src/db/seed.ts:74:6)
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'
+}
+
+Node.js v24.21.0
+Could not add sample data; the app works without it.
 ```
 
 ### 4. A tool library where neighbors lend each other tools.
@@ -321,16 +317,17 @@ Tool Library
   A place where neighbors lend each other tools.
 
 Pages
-  - Home (a landing page: hero, footer and tools)
-  - Tools (lists tools; search by name, description or category; sort by name, category or condition)
+  - Home (a landing page: hero, tools where available is yes and footer)
+  - Tools (lists tools; search by name, description, category or location; sort by name, category, condition or available)
 
 Tools
   Tools have:
   - a name (required)
   - a description
   - a category
-  - a condition (new, good or worn, new by default)
+  - a condition (new, good, worn or broken, new by default)
   - an available (yes or no, true by default)
+  - a location
 
 Sign-in and access
   People sign in with Google.
@@ -339,25 +336,25 @@ Sign-in and access
   - admin
   - member (Can borrow and lend tools)
   New users get the member role.
-  Open to anyone without signing in: the home page and reading tools where available is yes.
+  Open to anyone without signing in: the home page and reading tools.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 73 files (73 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-4/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-4/drizzle.config.ts'
 5 tables
 account 13 columns 1 indexes 1 fks
 session 8 columns 2 indexes 1 fks
-tools 9 columns 0 indexes 1 fks
+tools 10 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_small_chimera.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_motionless_forge.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-4. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-4. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-4
+  cd /tmp/smithable-bench-m12-ThTl50/app-4
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-4/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
+/tmp/smithable-bench-m12-ThTl50/app-4/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
     hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
 ```
 
@@ -406,7 +403,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 81 files (81 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-5/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-5/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 ingredients 9 columns 0 indexes 1 fks
@@ -416,13 +413,13 @@ suppliers 9 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_famous_shocker.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_flowery_supreme_intelligence.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-5. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-5. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-5
+  cd /tmp/smithable-bench-m12-ThTl50/app-5
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-5/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
+/tmp/smithable-bench-m12-ThTl50/app-5/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
     hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
 ```
 
@@ -433,7 +430,7 @@ Local Union Job Board
   A job board for local union members to post and apply for jobs.
 
 Pages
-  - Jobs (lists job posts; search by title, description, company or location; filter by type, status or salary; sort by salary or createdAt; records can be saved as favorites; contact the owner by mail)
+  - Jobs (lists job posts; search by title, description, company or location; filter by type, status or salary; sort by salary or date added; records can be saved as favorites; contact the owner by mail)
   - My jobs (lists job posts; only the viewer's own records; only for member users and admins)
   - Applications (lists applications; only the viewer's own records; only for member users and admins)
   - Home (a landing page: hero and footer)
@@ -470,7 +467,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 83 files (83 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-6/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-6/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 applications 9 columns 0 indexes 3 fks
@@ -480,15 +477,15 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_huge_squirrel_girl.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_wealthy_shiver_man.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-6. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-6. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-6
+  cd /tmp/smithable-bench-m12-ThTl50/app-6
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-6/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
+/tmp/smithable-bench-m12-ThTl50/app-6/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
     hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
-/tmp/smithable-bench-m12-iyPPE4/app-6/smithable.auth.yml:13:12  warning  Anyone on the internet can read JobPost, including personal data in postedBy.
+/tmp/smithable-bench-m12-ThTl50/app-6/smithable.auth.yml:13:12  warning  Anyone on the internet can read JobPost, including personal data in postedBy.
 ```
 
 ### 7. A football club's site: teams, players, matches and results.
@@ -498,10 +495,10 @@ Football Club
   A football club's site with teams, players, matches and results.
 
 Pages
-  - Home (a landing page: hero, footer, teams and matches)
-  - Teams (lists teams; only for coach users, member users and admins)
+  - Home (a landing page: hero, teams, matches where status is scheduled and footer)
+  - Teams (lists teams; only for coach users, member users and admins; visitors see teams on the Home page)
   - Players (lists players; only for coach users, member users and admins)
-  - Matches (lists matches; only for coach users, member users and admins)
+  - Matches (lists matches; only for coach users, member users and admins; visitors see matches on the Home page)
   - Results (lists results; only for coach users, member users and admins)
 
 Teams
@@ -549,7 +546,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 86 files (86 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-7/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-7/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 matches 9 columns 0 indexes 3 fks
@@ -560,13 +557,13 @@ teams 7 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_thick_scarlet_spider.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_magical_power_pack.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-7. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-7. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-7
+  cd /tmp/smithable-bench-m12-ThTl50/app-7
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-7/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
+/tmp/smithable-bench-m12-ThTl50/app-7/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
     hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
 ```
 
@@ -577,9 +574,9 @@ Conference
   Event registration for a conference with talks, speakers and attendees.
 
 Pages
-  - Home (a landing page: hero, footer, talks and speakers)
-  - Talks (lists talks; search by title or description; only for organizer users and admins)
-  - Speakers (lists speakers; search by name or bio; only for organizer users and admins)
+  - Home (a landing page: hero, talks where status is published, speakers and footer)
+  - Talks (lists talks; search by title or description; only for organizer users and admins; visitors see talks on the Home page)
+  - Speakers (lists speakers; search by name or bio; only for organizer users and admins; visitors see speakers on the Home page)
   - Attendees (lists attendees; search by name, email or company; filter by ticket type; only for organizer users and admins)
 
 Talks
@@ -619,7 +616,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 83 files (83 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-8/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-8/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 attendees 8 columns 1 indexes 1 fks
@@ -629,15 +626,15 @@ talks 10 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_deep_psylocke.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_vengeful_queen_noir.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-8. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-8. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-8
+  cd /tmp/smithable-bench-m12-ThTl50/app-8
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-8/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
+/tmp/smithable-bench-m12-ThTl50/app-8/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
     hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
-/tmp/smithable-bench-m12-iyPPE4/app-8/smithable.auth.yml:7:16  warning  Anyone on the internet can read Speaker, including personal data in email.
+/tmp/smithable-bench-m12-ThTl50/app-8/smithable.auth.yml:7:16  warning  Anyone on the internet can read Speaker, including personal data in email.
 ```
 
 ### 9. A help desk for an IT team: tickets, priorities and who handles them.
@@ -647,7 +644,7 @@ IT Help Desk
   A help desk for an IT team to manage tickets, priorities and assignments.
 
 Pages
-  - Tickets (lists tickets; search by title or description; sort by priority, status or createdAt)
+  - Tickets (lists tickets; search by title or description; sort by priority, status or date added)
 
 Tickets
   Tickets have:
@@ -669,7 +666,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 72 files (72 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-9/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-9/drizzle.config.ts'
 5 tables
 account 13 columns 1 indexes 1 fks
 session 8 columns 2 indexes 1 fks
@@ -677,13 +674,13 @@ tickets 10 columns 0 indexes 3 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_jazzy_warlock.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_dark_goblin_queen.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-9. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-9. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-9
+  cd /tmp/smithable-bench-m12-ThTl50/app-9
   smithable run
-/tmp/smithable-bench-m12-iyPPE4/app-9/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
+/tmp/smithable-bench-m12-ThTl50/app-9/smithable.auth.yml:4:16  warning  With shared access and no allowedDomains, anyone with an account at the sign-in provider can sign up and read all records.
     hint: Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".
 ```
 
@@ -736,7 +733,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 82 files (82 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-10/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-10/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 ingredients 8 columns 0 indexes 2 fks
@@ -746,11 +743,11 @@ shopping_lists 8 columns 0 indexes 2 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_fixed_dragon_man.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_worthless_maddog.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-10. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-10. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-10
+  cd /tmp/smithable-bench-m12-ThTl50/app-10
   smithable run
 ```
 
@@ -761,12 +758,12 @@ API Status
   Live status of our API services, incidents, and planned maintenance.
 
 Pages
-  - Home (a landing page: hero, footer, services, open, recent and planned)
-  - Incidents (lists incidents; only for staff users and admins)
+  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)
+  - Incidents (lists incidents; only for staff users and admins; visitors see incidents on the Home page)
   - Updates (lists incident updates; only for staff users and admins)
-  - Components (lists components; only for admins)
-  - Maintenance (lists maintenances; only for staff users and admins)
-  - Overview (lists incidents; only for staff users and admins)
+  - Components (lists components; only for admins; visitors see components on the Home page)
+  - Maintenance (lists maintenances; only for staff users and admins; visitors see maintenances on the Home page)
+  - Overview (lists incidents; only for staff users and admins; visitors see incidents on the Home page)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Components
@@ -789,7 +786,7 @@ Incidents
 Incident updates
   Incident updates have:
   - an incident (an incident, required)
-  - an at (a date and time, required)
+  - a date and time (at, required)
   - status (investigating, identified, monitoring or resolved, investigating by default)
   - a message (required)
 
@@ -812,7 +809,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 95 files (95 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-11/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-11/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 components 7 columns 0 indexes 1 fks
@@ -824,11 +821,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_stale_nova.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_many_legion.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-11. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-11. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-11
+  cd /tmp/smithable-bench-m12-ThTl50/app-11
   smithable run
 ```
 
@@ -839,10 +836,10 @@ Web Shop Status
   A public uptime page showing which services work and current outages with updates.
 
 Pages
-  - Home (a landing page: hero, footer, services and open)
+  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring and footer)
   - Incidents (lists incidents)
   - Updates (lists incident updates)
-  - Components (lists components; only for admins)
+  - Components (lists components; only for admins; visitors see components on the Home page)
   - Maintenance (lists maintenances)
   - Team (who has access: invite people, change roles, remove users)
   - Admin (every kind of record, to find, open, change and delete)
@@ -867,7 +864,7 @@ Incidents
 Incident updates
   Incident updates have:
   - an incident (an incident, required)
-  - an at (a date and time, required)
+  - a date and time (at, required)
   - status (investigating, identified, monitoring or resolved, investigating by default)
   - a message (required)
 
@@ -890,7 +887,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 105 files (105 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-iyPPE4/app-12/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-ThTl50/app-12/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 components 7 columns 0 indexes 1 fks
@@ -902,10 +899,10 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_clear_pride.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_narrow_tusk.sql 🚀
 
-Created /tmp/smithable-bench-m12-iyPPE4/app-12. Start it with:
+Created /tmp/smithable-bench-m12-ThTl50/app-12. Start it with:
 
-  cd /tmp/smithable-bench-m12-iyPPE4/app-12
+  cd /tmp/smithable-bench-m12-ThTl50/app-12
   smithable run
 ```

@@ -1,0 +1,18 @@
+smithable: 0.1
+app:
+  name: Wedding Guest List
+  description: Manage wedding guests, RSVPs, and seating arrangements with meal choices.
+models:
+  Guest:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      rsvpStatus: notResponded | attending | notAttending
+      mealChoice: vegetarian | standard | glutenFree
+      tableNumber: string
+      notes: text
+pages:
+  guests:
+    crud: Guest
+    search: [name, email, phone]

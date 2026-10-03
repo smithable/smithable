@@ -1,0 +1,33 @@
+smithableUx: 0.1
+pages:
+  plots:
+    icon: home
+    table:
+      sort: number
+  members:
+    icon: users
+    table:
+      sort: name
+  assignments:
+    icon: layers
+    table:
+      sort: -startDate
+  fees:
+    icon: receipt
+    table:
+      sort: -year
+  waiting-list:
+    icon: list
+    table:
+      sort: requestedOn
+  payments:
+    icon: cart
+    table:
+      sort: -paidOn
+tones:
+  Plot.status:
+    free: success
+    reserved: warning
+  Fee.status:
+    paid: success
+    overdue: danger
