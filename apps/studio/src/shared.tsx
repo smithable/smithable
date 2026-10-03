@@ -38,6 +38,13 @@ export function Preview({
     server: "starting" as "starting" | "up" | "down",
   });
   const server = answer.key === frameKey ? answer.server : "starting";
+  // The last page that was up stays on screen while the next one starts (a change can restart
+  // the app's server for seconds), instead of an empty panel.
+  const [shown, setShown] = useState<{ key: string; src: string }>();
+  useEffect(() => {
+    if (server === "up") setShown({ key: frameKey, src: `${url}${current.current}` });
+  }, [server, frameKey, url]);
+  const stale = server === "starting" ? shown : undefined;
   useEffect(() => {
     let stopped = false;
     (async () => {
@@ -145,8 +152,9 @@ export function Preview({
         </div>
       }
     >
-      {/* Remounted after every change, so server code and data are fresh. */}
-      {server !== "up" ? (
+      {/* Remounted after every change, so server code and data are fresh; until the new one is
+          up, the last one stays. */}
+      {server !== "up" && !stale ? (
         <div role="status" className="grid h-full place-items-center p-6 text-sm text-neutral-500">
           {server === "starting" ? (
             <p>Starting…</p>
@@ -164,9 +172,9 @@ export function Preview({
             // The one window whose messages count, recorded as the frame is (re)made.
             setPreview(el?.contentWindow ?? null, url);
           }}
-          key={frameKey}
+          key={stale?.key ?? frameKey}
           title="App preview"
-          src={`${url}${current.current}`}
+          src={stale?.src ?? `${url}${current.current}`}
           onLoad={loaded}
           className="h-full w-full border-0"
         />
