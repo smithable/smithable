@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
+import { administered } from "./new.js";
 import { captureIo } from "./test-io.js";
 
 test("--version prints the Smithable and spec versions", async () => {
@@ -57,4 +58,21 @@ test("__complete offers commands, options and operations", async () => {
   await run(["__complete", "--", "op", "--", "add"], ops);
   expect(ops.stdout).toContain("addField\n");
   expect(ops.stdout).not.toContain("setAccess");
+});
+
+test("a new project's administrator is the one given, never the starter's sample", () => {
+  const files = {
+    "smithable.auth.yml":
+      "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\nadmins: [owner@acme.com]   # sample\n",
+  };
+  expect(administered(files, "Johan@Mine.ax")["smithable.auth.yml"]).toContain(
+    "admins: [johan@mine.ax]",
+  );
+  expect(administered(files, "nobody")["smithable.auth.yml"]).toContain("owner@acme.com");
+  const none = { "smithable.auth.yml": "smithableAuth: 0.1\nsignIn: none\n" };
+  expect(administered(none, "johan@mine.ax")).toBe(none);
+  const without = { "smithable.auth.yml": "smithableAuth: 0.1\nsignIn:\n  providers: [email]\n" };
+  expect(administered(without, "johan@mine.ax")["smithable.auth.yml"]).toContain(
+    "admins: [johan@mine.ax]",
+  );
 });

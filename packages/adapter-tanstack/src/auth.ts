@@ -109,7 +109,10 @@ ${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n
 const ADMINS: string[] = ${JSON.stringify(auth.admins)};
 ${invitations && !selfSignUp ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
 const socialProviders = {
-${providers.map(provider).join("\n")}
+${providers
+  .filter((p) => p !== "email")
+  .map(provider)
+  .join("\n")}
 };
 
 /** The providers whose keys are set. */
@@ -411,13 +414,16 @@ export const verification = sqliteTable(
 /** The README section on signing in: provider setup and the development sign-in. */
 export function signInReadme(ir: SpecIR, auth: AuthIR): string {
   if (auth.signIn === "none") return "";
-  const setup = auth.signIn.providers.map((p) => {
-    const [id, secret] = ENV[p] as [string, string];
-    const console =
-      p === "google"
-        ? "In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type *Web application*"
-        : "In [Meta for Developers](https://developers.facebook.com/apps), create an app with *Facebook Login*";
-    return `### ${humanize(p)}
+  // Email codes need no keys (their flow is docs/design/email-sign-in.md, step 2).
+  const setup = auth.signIn.providers
+    .filter((p) => p !== "email")
+    .map((p) => {
+      const [id, secret] = ENV[p] as [string, string];
+      const console =
+        p === "google"
+          ? "In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type *Web application*"
+          : "In [Meta for Developers](https://developers.facebook.com/apps), create an app with *Facebook Login*";
+      return `### ${humanize(p)}
 
 1. ${console}.
 2. Add the redirect URLs \`http://localhost:3000/api/auth/callback/${p}\` and \`https://<your domain>/api/auth/callback/${p}\`.
@@ -427,7 +433,7 @@ export function signInReadme(ir: SpecIR, auth: AuthIR): string {
    ${id}=...
    ${secret}=...
    \`\`\``;
-  });
+    });
   return `
 ## Signing in
 
