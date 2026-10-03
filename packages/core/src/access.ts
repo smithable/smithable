@@ -18,6 +18,11 @@ export interface Allowed {
   owner: boolean;
   /** Reading only: the records the public may read, when not all (`{ status: "published" }`). */
   where?: Condition;
+  /**
+   * Only users with one of these roles, whichever way they qualify (by role or as the owner):
+   * a standard action's `allow`, with admin.
+   */
+  among?: string[];
 }
 
 export type ModelAllowed = Record<AccessOperation, Allowed>;
@@ -70,13 +75,24 @@ export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
   };
 }
 
-/** Custom actions are for signed-in users; `allow` narrows them to roles. */
-export function actionAccess(action: ActionIR, auth: AuthIR): Allowed {
+/**
+ * Custom actions are for signed-in users; `allow` narrows them to roles. A standard action
+ * follows its model's write access (ARCHITECTURE §3), by role or as the record's owner, and
+ * `allow` narrows that to people with a listed role (`among`; admins always).
+ */
+export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] = []): Allowed {
   const everyone = auth.roles.map((r) => r.name);
+  if (auth.signIn === "none") return { public: false, roles: [], owner: false };
+  const model = action.custom ? undefined : models.find((m) => m.name === action.on);
+  if (!model)
+    return { public: false, roles: withAdmin(action.allow ?? everyone, everyone), owner: false };
+  const write = modelAccess(model, auth).write;
+  const among = action.allow && withAdmin(action.allow, everyone);
   return {
     public: false,
-    roles: auth.signIn === "none" ? [] : withAdmin(action.allow ?? everyone, everyone),
-    owner: false,
+    roles: among ? write.roles.filter((r) => among.includes(r)) : write.roles,
+    owner: write.owner,
+    ...(among ? { among } : {}),
   };
 }
 

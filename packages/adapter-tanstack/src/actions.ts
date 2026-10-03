@@ -10,9 +10,11 @@ import {
   pascal,
   type QueryIR,
   type SpecIR,
+  type StandardActionIR,
   USER_MODEL,
 } from "@smithable/core";
 import { textBounds } from "./data.js";
+import { formulaCompiler, formulasName } from "./formulas.js";
 import {
   attr,
   guard,
@@ -21,6 +23,7 @@ import {
   literal,
   modelNamed,
   names,
+  ownerKey,
   relatedTitle,
   type Texts,
 } from "./shared.js";
@@ -91,6 +94,8 @@ export function actionNames(action: ActionIR) {
     outputType: `${type}Output`,
     ui: `${action.name}Ui`,
     access: `${action.name}Access`,
+    fits: `${action.name}Fits`,
+    run: `run${type}`,
     module: `#/generated/actions/${kebab(action.name)}`,
     custom: `#/custom/actions/${kebab(action.name)}`,
   };
@@ -168,6 +173,96 @@ ${records
     const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;
     return run(data, viewer);
   });
+`;
+}
+
+/** Whether a standard action's condition fits a record, as code on the stored row. */
+export function fitsCode(action: StandardActionIR): string {
+  const tests = Object.entries(action.when ?? {}).map(([field, wanted]) =>
+    typeof wanted === "boolean"
+      ? `${wanted ? "" : "!"}row.${field}`
+      : Array.isArray(wanted)
+        ? `${JSON.stringify(wanted)}.includes(String(row.${field}))`
+        : `row.${field} === ${JSON.stringify(wanted)}`,
+  );
+  return tests.length ? tests.join(" && ") : "true";
+}
+
+/**
+ * A standard action (docs/design/actions.md): it loads the record through the model's data
+ * functions (so access and the public condition apply), checks its condition, works out the new
+ * values on the record as it was and saves them with the same update the edit form uses.
+ */
+export function standardActionModule(
+  action: StandardActionIR,
+  ir: SpecIR,
+  auth: AuthIR,
+  t: Texts,
+): string {
+  const a = actionNames(action);
+  const n = names(modelNamed(ir, action.on), t);
+  const when = Object.keys(action.when ?? {});
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import type { Rule } from "#/kit/access";
+import { currentViewer } from "#/lib/viewer.server";
+import { ${a.run} } from "./${kebab(action.name)}.server";
+
+/** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.allow ? ", among the roles it allows" : ""}. */
+export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
+
+/** Whether the "${action.name}" action fits the ${n.label.toLowerCase()}: it is offered and allowed only then. */
+export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `${f}?: unknown`).join("; ")}${when.length ? " " : ""}}): boolean {
+  return ${fitsCode(action)};
+}
+
+export const ${action.name} = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => ${a.run}(await currentViewer(), id));
+`;
+}
+
+/**
+ * What a standard action does, on the server: loads the record through the model's data
+ * functions (so access and the public condition apply), checks the condition, works out the new
+ * values on the record as it was and saves them with the same update the edit form uses.
+ */
+export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Texts): string {
+  const a = actionNames(action);
+  const model = modelNamed(ir, action.on);
+  const n = names(model, t);
+  const { compile, stored, imports } = formulaCompiler(model, ir);
+  const values = action.set.map((v) => {
+    const field = model.fields.find((f) => f.name === v.field) as FieldIR;
+    const scalar = field.type.kind === "scalar" ? field.type.name : field.type.kind;
+    const code =
+      "formula" in v
+        ? stored(field, compile(v.formula, model, "row"))
+        : scalar === "money"
+          ? String(Math.round(Number(v.value) * 100))
+          : JSON.stringify(v.value);
+    // A date and time is stored as a Date; formulas and literals give its ISO text.
+    return `${field.name}: ${scalar === "datetime" ? `new Date(${code})` : code},`;
+  });
+  const usesF = values.some((v) => v.includes("F."));
+  return `${HEADER}import { AccessDenied, check, type Viewer } from "#/kit/access";
+${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { ${n.schema} } from "${n.module}";
+import { ${n.data} } from "${n.module}.server";
+import { ${a.access}, ${a.fits} } from "./${kebab(action.name)}";
+
+/** Runs the "${action.name}" action on the ${n.label.toLowerCase()} as the viewer. */
+export async function ${a.run}(viewer: Viewer | null, id: number) {
+  const row = await ${n.data}.get(viewer, id);
+  if (!row) throw new AccessDenied(viewer !== null);
+  check(${a.access}, viewer, row.${ownerKey(model)});
+  if (!${a.fits}(row)) throw new Error("This cannot be done now.");
+  // The new values are worked out on the ${n.label.toLowerCase()} as it was, then saved as an edit.
+  const values = ${n.schema}.parse({
+    ...row,
+${values.map((v) => `    ${v}`).join("\n")}
+  });
+  return ${n.data}.update(viewer, id, values);
+}
 `;
 }
 

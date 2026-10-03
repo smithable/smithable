@@ -215,7 +215,11 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
             .map((v) => v.trim())
             .filter(Boolean)
         : type === "object"
-          ? Object.fromEntries(value.split(",").map((pair) => pairOf(pair.trim())))
+          ? // Repeated ("--set a=1 --set b=2") adds to the pairs given before.
+            {
+              ...(args[key] as object | undefined),
+              ...Object.fromEntries(pairsOf(value).map(pairOf)),
+            }
           : scalarOf(value, type);
   }
   op.positional.forEach((spec, index) => {
@@ -244,6 +248,28 @@ function scalarOf(word: string, type: unknown): unknown {
     return Number(word);
   if (type === "boolean" && (word === "true" || word === "false")) return word === "true";
   return word;
+}
+
+/** "a=x,b=y" as its pairs; a comma inside parentheses or quotes is a formula's, not a separator. */
+function pairsOf(text: string): string[] {
+  const pairs: string[] = [];
+  let depth = 0;
+  let quote = "";
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === quote) quote = "";
+    } else if (c === '"' || c === "'") quote = c;
+    else if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (c === "," && depth === 0) {
+      pairs.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  pairs.push(text.slice(start));
+  return pairs.map((p) => p.trim()).filter(Boolean);
 }
 
 /** "name=value" as a pair; a bare name has an empty value. */

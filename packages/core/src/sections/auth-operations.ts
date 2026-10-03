@@ -1,5 +1,7 @@
+import { PROVIDERS } from "../auth.js";
 import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlValue } from "../edit.js";
+import { humanize } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 
 const setSignUp: Operation<{ who: "anyone" | "invited" }> = {
@@ -34,6 +36,41 @@ const setSignUp: Operation<{ who: "anyone" | "invited" }> = {
     } else {
       auth.add(["signIn"], "selfSignUp", false);
     }
+    return [];
+  },
+};
+
+const setProviders: Operation<{ providers: string[] }> = {
+  name: "setProviders",
+  summary:
+    "Choose how people sign in, in button order: email (a code by mail, needs only the app's mail settings), google or facebook (each needs its keys in the environment, see the README).",
+  schema: {
+    type: "object",
+    required: ["providers"],
+    additionalProperties: false,
+    properties: {
+      providers: {
+        type: "array",
+        items: { type: "string", enum: [...PROVIDERS] },
+        description: "The sign-in methods in button order, e.g. [email, google].",
+      },
+    },
+  },
+  positional: ["...providers"],
+  describe: ({ providers }) =>
+    `Sign in with ${[...new Set(providers)].map((p) => (p === "email" ? "a code by email" : humanize(p))).join(" or ")}`,
+  destructive: () => false,
+  apply({ auth }, { providers }) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    if (auth.get(["signIn"]) === "none")
+      throw new OperationError("This app has no sign-in, so it has no sign-in methods.");
+    // The schema allows only the known methods; a repeated one counts once.
+    const list = [...new Set(providers)];
+    if (list.length === 0)
+      throw new OperationError("An app with sign-in needs at least one way to sign in.");
+    if (auth.has(["signIn", "providers"])) auth.set(["signIn", "providers"], list);
+    else if (auth.has(["signIn"])) auth.add(["signIn"], "providers", list);
+    else auth.add([], "signIn", { providers: list });
     return [];
   },
 };
@@ -273,6 +310,7 @@ export const authOperations: AnyOperation[] = [
   setSignUp,
   setDefaultAccess,
   setAdmins,
+  setProviders,
   setRoles,
   setPublic,
   setPublicWhere,

@@ -13,6 +13,7 @@ import {
   plural,
   type SpecIR,
   type SpecPlugin,
+  type StandardActionIR,
   USER_MODEL,
 } from "@smithable/core";
 import { formulaInWords } from "./formula-words.js";
@@ -62,7 +63,7 @@ export function summarize(
   content: ContentIR = emptyContent(),
   plugins: readonly SpecPlugin[] = [],
 ): SummarySection[] {
-  const { label, pluralLabel, fieldLabel, modelNamed, words, item } = wordsFor(ir, content);
+  const { label, pluralLabel, fieldLabel, choice, modelNamed, words, item } = wordsFor(ir, content);
 
   const sections: SummarySection[] = [];
   if (ir.app.description) {
@@ -187,12 +188,50 @@ export function summarize(
     });
   }
 
+  // "For an incident that is investigating, identified or monitoring; sets status to resolved
+  // and resolved at to now." Then what it is for, if said.
+  const standard = (action: StandardActionIR): string[] => {
+    const model = modelNamed(action.on);
+    if (!model) return [];
+    const field = (name: string) => model.fields.find((f) => f.name === name);
+    const when = Object.entries(action.when ?? {}).map(([name, wanted]) => {
+      const f = field(name);
+      if (!f) return name;
+      if (typeof wanted === "boolean") return `${wanted ? "" : "not "}${fieldLabel(model, f)}`;
+      return list(
+        [wanted].flat().map((v) => choice(model, f, v)),
+        "or",
+      );
+    });
+    const sets = action.set.map((v) => {
+      const f = field(v.field);
+      const name = f ? fieldLabel(model, f) : v.field;
+      const value =
+        "formula" in v
+          ? words(model, v.formula)
+          : f?.type.kind === "choice"
+            ? choice(model, f, String(v.value))
+            : typeof v.value === "boolean"
+              ? v.value
+                ? "yes"
+                : "no"
+              : String(v.value);
+      return `${name} to ${value}`;
+    });
+    const item = label(model).toLowerCase();
+    return [
+      `${when.length ? `For ${article(item)} that is ${list(when)}; sets` : "Sets"} ${list(sets)}.`,
+      ...(action.intent ? [action.intent] : []),
+    ];
+  };
   for (const action of ir.actions) {
     sections.push({
       concept: `action:${action.name}`,
       title: humanize(action.name),
       sentences: [
-        action.intent ?? action.description ?? "Custom code.",
+        ...(action.custom
+          ? [action.intent ?? action.description ?? "Custom code."]
+          : standard(action)),
         ...(action.allow ? [`Only ${who(action.allow)} can use it.`] : []),
         ...(action.rules ?? []).map((r) => `Rule: ${r.text}`),
       ],
@@ -280,7 +319,7 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
     const named = /s$| (on|at)$/.test(name) ? name : article(name);
     return notes.length ? `${named} (${notes.join(", ")})` : named;
   };
-  return { label, pluralLabel, fieldLabel, modelNamed, words, item };
+  return { label, pluralLabel, fieldLabel, choice, modelNamed, words, item };
 }
 
 function access(auth: AuthIR): string[] {
