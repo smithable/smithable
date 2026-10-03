@@ -71,6 +71,7 @@ pages:
     landing:
       hero: { button: history }
       services: { records: Component }
+      uptime: { custom: Uptime }       # src/custom/sections/Uptime.tsx, the starter's own
       open: { records: Incident, where: { status: [investigating, identified, monitoring] } }
       recent: { records: Incident, where: { status: resolved }, limit: 5 }
       planned: { records: Maintenance, limit: 3 }
