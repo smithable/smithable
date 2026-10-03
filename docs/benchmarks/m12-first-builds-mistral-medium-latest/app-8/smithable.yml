@@ -1,0 +1,91 @@
+smithable: 0.1
+app:
+  name: Conference Registration
+  description: "Event registration for a conference: talks, speakers and attendees."
+models:
+  Talk:
+    fields:
+      title: string!
+      summary: text
+      startsAt: datetime!
+      endsAt: datetime!
+      room: string
+      capacity: int! = 100
+      speaker: Speaker!
+      registrations: Registration[]
+    access:
+      delete: [admin]
+      write: [admin]
+  Speaker:
+    fields:
+      name: string!
+      bio: text
+      photo: picture
+      email: email
+      company: string
+    access:
+      delete: [admin]
+      write: [admin]
+  Attendee:
+    fields:
+      name: string!
+      email: email! unique
+      company: string
+      dietaryRestrictions: text
+      user: User!
+    access:
+      delete: [admin]
+      write: [admin]
+  Registration:
+    fields:
+      talk: Talk!
+      attendee: Attendee!
+      registeredAt: datetime! = NOW()
+      status: registered | attended | cancelled
+    capacity:
+      per: talk
+      max: talk.capacity
+    access:
+      delete: [admin, owner]
+      write: [admin, owner]
+pages:
+  talks:
+    crud: Talk
+  speakers:
+    crud: Speaker
+    access: [admin]
+  attendees:
+    crud: Attendee
+    access: [admin]
+  registrations:
+    crud: Registration
+    access: [admin]
+    actions: [cancelRegistration, markAttended]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      talks:
+        records: Talk
+      speakers:
+        records: Speaker
+      contact:
+  team:
+    users: manage
+actions:
+  cancelRegistration:
+    on: Registration
+    when:
+      status: registered
+    set:
+      status: cancelled
+    intent: Cancel this registration.
+  markAttended:
+    on: Registration
+    when:
+      status: registered
+    set:
+      status: attended
+    allow: [admin]
+    intent: Mark this registration as attended.

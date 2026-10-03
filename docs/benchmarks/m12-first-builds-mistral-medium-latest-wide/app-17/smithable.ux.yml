@@ -1,20 +1,16 @@
 smithableUx: 0.1
 pages:
-  boka-nu:
-    icon: calendar
-    form:
-      fieldOrder: [appointment, customerName, customerEmail, customerPhone]
-  mina-bokningar:
-    icon: calendar
   tjanster:
     icon: tag
     table:
       view: cards
-  frisorer:
-    icon: user
+  stylister:
+    icon: users
     table:
       view: cards
+  tider:
+    icon: calendar
+  mina-bokningar:
+    icon: briefcase
   schema:
     icon: calendar
-    table:
-      view: cards

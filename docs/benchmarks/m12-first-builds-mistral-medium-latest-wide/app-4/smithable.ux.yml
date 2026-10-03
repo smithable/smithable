@@ -1,1 +1,15 @@
 smithableUx: 0.1
+pages:
+  pupils:
+    table:
+      sort: name
+  lessons:
+    table:
+      sort: dayOfWeek
+    form:
+      sections: [{ name: schedule, fields: [dayOfWeek, startTime, durationMinutes] }, { name: details, fields: [notes] }]
+  practices:
+    table:
+      sort: -date
+    form:
+      sections: [{ name: session, fields: [date, minutes] }, { name: repertoire, fields: [piece] }, { name: notes, fields: [notes] }]

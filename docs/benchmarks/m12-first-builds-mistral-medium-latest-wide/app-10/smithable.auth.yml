@@ -7,8 +7,8 @@ public:
   read: [Artifact]
 roles:
   admin:
-    description: Manages the museum collection.
-  visitor:
-    description: Browses the collection.
-defaultRole: visitor
+    description: Manages the collection.
+  member:
+    description: Views the collection.
+defaultRole: member
 admins: [johan@smithable.ai]

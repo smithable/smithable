@@ -1,7 +1,6 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
 defaultAccess: private
 public:
   pages: [home, schedule]

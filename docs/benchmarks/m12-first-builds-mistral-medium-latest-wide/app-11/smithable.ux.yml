@@ -1,1 +1,28 @@
 smithableUx: 0.1
+pages:
+  incidents:
+    table:
+      sort: -detectedAt
+      columns: [title, component, status, detectedAt, resolvedAt]
+  updates:
+    table:
+      sort: -at
+      columns: [incident, at, status, message]
+  maintenance:
+    table:
+      sort: startsAt
+      columns: [title, component, startsAt, endsAt, description]
+  components:
+    table:
+      columns: [name, status, description]
+tones:
+  Incident.status:
+    resolved: success
+    monitoring: warning
+    investigating: danger
+    identified: danger
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger
+    maintenance: warning

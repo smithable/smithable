@@ -41,7 +41,7 @@ pages:
   offerter:
     crud: Quote
     sortable: [number, total, validUntil, createdAt]
-    actions: [sendQuote, acceptQuote, rejectQuote, createInvoiceFromQuote]
+    actions: [sendQuote, acceptQuote, rejectQuote]
     search: [number, customer]
     filters: [status, customer]
   fakturor:
@@ -50,12 +50,12 @@ pages:
     actions: [sendInvoice, markPaid]
     search: [number, customer]
     filters: [status, customer]
-  anvandare:
-    users: manage
   kunder:
     crud: Customer
     search: [name, email]
     sortable: [name, createdAt]
+  anvandare:
+    users: manage
 actions:
   sendQuote:
     on: Quote
@@ -63,7 +63,7 @@ actions:
       status: draft
     set:
       status: sent
-    intent: Skicka offert till kund.
+    intent: Skicka offert till kunden.
   acceptQuote:
     on: Quote
     when:
@@ -84,7 +84,7 @@ actions:
       status: draft
     set:
       status: sent
-    intent: Skicka faktura till kund.
+    intent: Skicka faktura till kunden.
   markPaid:
     on: Invoice
     when:
@@ -93,12 +93,4 @@ actions:
       status: paid
       paidAt: NOW()
     intent: Markera faktura som betald.
-  createInvoiceFromQuote:
-    on: Quote
-    when:
-      status: accepted
-    copy:
-      status: draft
-      number:
-    intent: Skapa faktura från accepterad offert.
 navigation: [kunder, offerter, fakturor, anvandare]

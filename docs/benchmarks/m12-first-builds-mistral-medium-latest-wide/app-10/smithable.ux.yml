@@ -2,5 +2,4 @@ smithableUx: 0.1
 pages:
   artifacts:
     table:
-      columns: [name, category, period, origin]
       view: cards

@@ -4,6 +4,6 @@
   "wordStarter": "invoicing",
   "questions": [
     "Who can see the items without signing in?",
-    "What details are recorded for each item?"
+    "What details does each item record include?"
   ]
 }

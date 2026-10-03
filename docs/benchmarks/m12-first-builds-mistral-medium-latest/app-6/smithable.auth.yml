@@ -3,15 +3,13 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
-public:
-  pages: [home, jobs]
-  read: [{ JobPost: { where: { status: open } } }]
 roles:
   admin:
     description: Manages the job board.
-  employer:
-    description: Posts job openings.
   member:
-    description: Applies to jobs.
+    description: Posts jobs and views applications.
 defaultRole: member
+public:
+  pages: [home, jobs]
+  read: [{ JobPost: { where: { status: open } } }]
 admins: [johan@smithable.ai]
