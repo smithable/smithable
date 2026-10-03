@@ -18,6 +18,7 @@ const PAGES = [
   { src: "docs/site/start.md", out: "start.html", nav: "Getting started" },
   { src: "docs/site/starters.md", out: "starters.html", nav: "Starters" },
   { src: "docs/site/change.md", out: "change.html", nav: "Changing an app" },
+  { src: "docs/site/actions.md", out: "actions.html", nav: "Buttons on a record" },
   { src: "docs/site/self-host.md", out: "self-host.html", nav: "Self-hosting" },
   { src: "docs/site/google-sign-in.md", out: "google-sign-in.html", nav: "Sign in with Google" },
   // Generated from the operations at build time, not a file in the repository.
