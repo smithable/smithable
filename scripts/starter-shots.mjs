@@ -36,7 +36,7 @@ const SHOTS = {
   ],
   marketplace: [
     ["catalog", "list", "visitor"],
-    ["myItems", "new", "member"],
+    ["catalog", 1, "visitor"],
   ],
   records: [
     ["home", "list", "visitor"],
