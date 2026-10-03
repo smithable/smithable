@@ -270,9 +270,10 @@ ${rows.join("\n")}
   });
   // Only when a sample row has a picture: samples may leave every picture out.
   const pictures = blocks.some((b) => b.includes("samplePicture("));
+  // A model that needs a person who signs in gets no sample rows; with no rows at all, the seed
+  // has nothing to import.
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
-import { db } from "./index";
-${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
+${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
   ir.pages.some((p) => p.pattern.kind === "calendar")
     ? `import { app } from "#/generated/app";
 import { instantOf, wallTime } from "#/kit/zoned";

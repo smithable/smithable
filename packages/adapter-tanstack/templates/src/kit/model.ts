@@ -44,6 +44,8 @@ export interface FieldUi {
   control?: "slider" | "stepper" | "radio" | "select" | "combobox" | "textarea" | "switch";
   /** The field's own input control, when a plain one does not do (a Markdown editor). */
   input?: (props: FieldControlProps) => React.ReactNode;
+  /** How someone who may only read sees its text, when plain text does not do (Markdown). */
+  view?: (props: { text: string }) => React.ReactNode;
 }
 
 /** What a field's own input control gets from the form. */

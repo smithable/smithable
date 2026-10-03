@@ -18,4 +18,9 @@ admins: [ops@northwind.ax]
 # signing in. Never add models that contain personal or business data.
 public:
   pages: [home, history]           # the status page and the incident history
-  read: [Component, Incident, IncidentUpdate, Maintenance]
+  read:
+    - Component
+    # Every state an incident has today is public; one added later is not until it is named here.
+    - Incident: { where: { status: [investigating, identified, monitoring, resolved] } }
+    - IncidentUpdate
+    - Maintenance
