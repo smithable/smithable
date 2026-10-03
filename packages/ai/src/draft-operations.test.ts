@@ -76,3 +76,43 @@ test("a draft starts with the starter's access default and sees the starter as i
   expect(prompts[0]).toContain("smithable.auth.yml:\n```yaml\nsmithableAuth: 0.1");
   expect(draftOperations().map((o) => o.name)).toContain("setDefaultAccess");
 });
+
+test("a shared draft with open sign-up is made invite-only, with a team page", async () => {
+  const steps = [
+    { op: "setApp", args: { name: "Tasks" } },
+    { op: "addModel", args: { model: "Task", fields: { title: "string!" } } },
+    { op: "addPage", args: { page: "tasks", model: "Task" } },
+  ];
+  const provider = (answer: unknown): Provider => ({
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 1, output: 3 },
+    async complete() {
+      return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
+    },
+  });
+  const shared = {
+    "smithable.yml": "smithable: 0.1\napp:\n  name: Team\n",
+    "smithable.auth.yml":
+      "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\n",
+  };
+  const draft = await draftProjectByOperations({
+    description: "a task list for our team",
+    providers: [provider({ operations: steps })],
+    starter: { name: "crm", files: shared },
+  });
+  if (draft.kind !== "draft") throw new Error("no draft");
+  expect(draft.files["smithable.auth.yml"]).toContain("selfSignUp: false");
+  expect(draft.files["smithable.yml"]).toContain("users: manage");
+  expect(draft.operations?.slice(-2).map((o) => o.op)).toEqual(["addUsersPage", "setSignUp"]);
+  expect(checkSpecFiles(draft.files)).toEqual([]);
+  // A private app stays open to sign-up: each person sees only their own records.
+  const own = await draftProjectByOperations({
+    description: "a personal task list",
+    providers: [provider({ operations: steps })],
+  });
+  if (own.kind !== "draft") throw new Error("no draft");
+  expect(own.files["smithable.auth.yml"]).not.toContain("selfSignUp");
+  expect(own.operations?.map((o) => o.op)).toEqual(["setApp", "addModel", "addPage"]);
+});

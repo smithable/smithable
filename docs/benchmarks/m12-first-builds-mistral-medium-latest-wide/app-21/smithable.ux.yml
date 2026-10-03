@@ -1,0 +1,41 @@
+smithableUx: 0.1
+pages:
+  customers:
+    icon: users
+    table:
+      columns: [name, email, phone]
+      below:
+        name: email
+  cars:
+    icon: truck
+    table:
+      columns: [licensePlate, make, model, year, customer]
+      below:
+        licensePlate: customer
+  services:
+    icon: settings
+  work-orders:
+    icon: clipboard
+    table:
+      sort: -startDate
+      columns: [car, description, status, startDate, endDate, totalCost]
+      below:
+        car: description
+    form:
+      sections: [{ name: perustiedot, fields: [car, description, status] }, { name: aikataulu, fields: [startDate, endDate] }, { name: kustannukset, fields: [totalCost] }]
+  invoices:
+    icon: receipt
+    table:
+      sort: -issueDate
+      columns: [invoiceNumber, workOrder, issueDate, dueDate, status, totalAmount]
+      below:
+        invoiceNumber: workOrder
+    form:
+      sections: [{ name: perustiedot, fields: [workOrder, invoiceNumber, issueDate, dueDate] }, { name: tila, fields: [status] }, { name: summa, fields: [totalAmount] }]
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+  WorkOrder.status:
+    completed: success
+    cancelled: danger

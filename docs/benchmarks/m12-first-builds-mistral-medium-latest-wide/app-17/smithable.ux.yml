@@ -1,0 +1,12 @@
+smithableUx: 0.1
+pages:
+  appointments:
+    table:
+      sort: -date
+    form:
+      sections: [{ name: customer, fields: [customerName, customerEmail, customerPhone] }, { name: booking, fields: [service, date, time, notes] }]
+tones:
+  Appointment.status:
+    confirmed: success
+    cancelled: danger
+    completed: success

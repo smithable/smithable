@@ -1,0 +1,15 @@
+smithableUx: 0.1
+tones:
+  Invoice.status:
+    paid: success
+    sent: warning
+  Quote.status:
+    accepted: success
+    rejected: danger
+pages:
+  customers:
+    icon: users
+  invoices:
+    icon: receipt
+  quotes:
+    icon: file

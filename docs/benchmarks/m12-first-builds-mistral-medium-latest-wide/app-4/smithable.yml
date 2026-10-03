@@ -1,0 +1,36 @@
+smithable: 0.1
+app:
+  name: Piano Lessons
+  description: Track pupils, their weekly lesson times and practice notes.
+models:
+  Pupil:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+  Lesson:
+    fields:
+      pupil: Pupil!
+      dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      startTime: string!
+      duration: int! = 30
+      notes: text
+  Practice:
+    fields:
+      pupil: Pupil!
+      lesson: Lesson
+      date: date!
+      piece: string!
+      notes: text
+pages:
+  pupils:
+    crud: Pupil
+    search: [name, email]
+  lessons:
+    crud: Lesson
+    search: [pupil, dayOfWeek]
+  practice:
+    crud: Practice
+    search: [pupil, piece]
+navigation: [pupils, lessons, practice]
