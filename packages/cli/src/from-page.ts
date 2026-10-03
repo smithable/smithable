@@ -3,7 +3,9 @@
 // site, 2 MB and 15 seconds) and keeps what describes the app behind it: its readable text, its
 // navigation, its forms and its pictures' places and alt texts. That becomes the description the
 // questions and the draft work from; nothing of it is copied into the app.
+import { readFileSync } from "node:fs";
 import { parse } from "node-html-parser";
+import type { Io } from "./io.js";
 import { VERSION } from "./version.js";
 
 export const USER_AGENT = `Smithable/${VERSION} (+https://smithable.ai)`;
@@ -246,4 +248,34 @@ export async function downloadPictures(
     }
   }
   return saved;
+}
+
+/**
+ * `smithable read-page <file.html> --url <address>`: the description `new --from` would draft
+ * from, for a page fetched elsewhere (the hosted service fetches it with its own guards and
+ * runs this in a sandbox, then the usual clarify and new --describe).
+ */
+export function readPageCommand(file: string | undefined, url: string | undefined, io: Io): number {
+  if (!file || !url) {
+    io.err(
+      "read-page needs a saved page and its address: smithable read-page page.html --url https://…\n",
+    );
+    return 2;
+  }
+  let html: string;
+  try {
+    html = readFileSync(file, "utf8");
+  } catch {
+    io.err(`Cannot read ${file}.\n`);
+    return 1;
+  }
+  const reading = readPage(html, url);
+  if (tooLittle(reading)) {
+    io.err(
+      `${url} shows almost nothing without JavaScript, so there is too little to go on. Describe the app instead.\n`,
+    );
+    return 1;
+  }
+  io.out(`${describePage(reading)}\n`);
+  return 0;
 }

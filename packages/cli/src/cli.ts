@@ -10,6 +10,7 @@ import { customize } from "./customize.js";
 import { deploy } from "./deploy.js";
 import { detach } from "./detach.js";
 import { runDev } from "./dev.js";
+import { readPageCommand } from "./from-page.js";
 import { generate } from "./generate.js";
 import { commandHelp, help, operationHelp } from "./help.js";
 import { inspect, test } from "./inspect.js";
@@ -138,6 +139,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return validate(dir, io, values.plugin ? [values.plugin] : []);
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
+    case "read-page":
+      return readPageCommand(args[0], values.url, io);
     case "new":
       if (args[0] === undefined) {
         io.err(`new needs a directory, like: smithable new my-app\n`);
