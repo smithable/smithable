@@ -107,7 +107,7 @@ export const COMMANDS: Command[] = [
     name: "backup",
     usage: "backup [dir]",
     text: [
-      "Back up the database and uploads --to a folder or s3://bucket/prefix (S3",
+      "Back up the database and uploads --to a folder or s3://bucket/prefix, into <app>/<time>/ there (S3",
       "credentials in AWS_* variables); --container <name> for a deployed app.",
       "--continuous streams every change with Litestream (installed separately),",
       "so restore --at can reach any second of the last 30 days; --data <dir>",
