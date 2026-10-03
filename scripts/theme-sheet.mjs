@@ -15,7 +15,7 @@ const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     out: { type: "string", default: "/mnt/c/Users/johan/Pictures/claude/themes" },
-    port: { type: "string", default: process.env.THEME_SHEET_PORT ?? "5402" },
+    port: { type: "string", default: process.env.THEME_SHEET_PORT ?? "8402" },
   },
 });
 const themes = positionals.length ? positionals : ["modern", "minimal", "playful", "corporate"];

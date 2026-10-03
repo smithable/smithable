@@ -14,7 +14,7 @@ const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     copy: { type: "string", default: "/mnt/c/Users/johan/Pictures/claude/starters" },
-    port: { type: "string", default: process.env.STARTER_SHOTS_PORT ?? "5403" },
+    port: { type: "string", default: process.env.STARTER_SHOTS_PORT ?? "8403" },
   },
 });
 
