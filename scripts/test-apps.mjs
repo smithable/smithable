@@ -446,9 +446,17 @@ async function filtersFlow(base) {
     await page.waitForURL(/creditLimit=30000\.\./);
     await page.getByLabel("Sort by").selectOption({ label: "Credit limit, high to low" });
     await page.waitForURL(/sort=-creditLimit/);
-    await page.waitForFunction(
-      () => document.querySelectorAll('[data-part="row"] [data-field="name"]').length === 2,
-    );
+    // The address changes first; the sorted rows follow when the list's data arrives.
+    await page
+      .waitForFunction(
+        () =>
+          [...document.querySelectorAll('[data-part="row"] [data-field="name"]')]
+            .map((e) => e.textContent?.trim())
+            .join() === "Nordic Timber Oy,Helios Energy",
+        undefined,
+        { timeout: 10000 },
+      )
+      .catch(() => {});
     const shown = await names();
     if (shown.join() !== "Nordic Timber Oy,Helios Energy")
       throw new Error(`the list shows ${shown.join()}`);
@@ -1320,7 +1328,7 @@ function query(dir, sql) {
 
 function smithable(dir, ...args) {
   const result = spawnSync("node", [cli, ...args, "--dir", dir], { cwd: repo, encoding: "utf8" });
-  return { code: result.status, out: `${result.stdout}${result.stderr}` };
+  return { code: result.status, out: `${result.stdout}${result.stderr}`, stdout: result.stdout };
 }
 
 /** Runs the CLI without blocking, so a stand-in model in this process can answer it. */
@@ -1837,9 +1845,10 @@ function operationsFlow(dir) {
   step(
     "inspect action:mergeCustomers gives its meaning, rules, files, symbols, routes and tests",
     () => {
-      const { code, out } = smithable(dir, "inspect", "action:mergeCustomers", "--json");
+      const { code, out, stdout } = smithable(dir, "inspect", "action:mergeCustomers", "--json");
       if (code !== 0) throw new Error(out);
-      const info = JSON.parse(out);
+      // Warnings go to stderr; the JSON is stdout.
+      const info = JSON.parse(stdout);
       const has = (role, path, symbol) =>
         info.files.some(
           (f) => f.role === role && f.path === path && (!symbol || f.symbols.includes(symbol)),
