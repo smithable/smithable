@@ -54,14 +54,13 @@ export function Preview({
   const server = answer.key === frameKey ? answer.server : "starting";
   // The last page that was up stays on screen while the next one starts (a change can restart
   // the app's server for seconds), instead of an empty panel.
-  const [shown, setShown] = useState<{ key: string; src: string }>();
+  const [shown, setShown] = useState<{ key: string; src: string; opened: number }>();
   useEffect(() => {
-    if (server === "up") setShown({ key: frameKey, src: `${url}${current.current}` });
-  }, [server, frameKey, url]);
+    if (server === "up") setShown({ key: frameKey, src: `${url}${current.current}`, opened });
+  }, [server, frameKey, url, opened]);
   // Only across a change to the app: after Go the page asked for comes, not the last one (whose
   // location messages would otherwise put the old address back).
-  const stale =
-    server === "starting" && shown?.key.split("-")[1] === String(opened) ? shown : undefined;
+  const stale = server === "starting" && shown?.opened === opened ? shown : undefined;
   useEffect(() => {
     let stopped = false;
     (async () => {
