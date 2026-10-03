@@ -372,6 +372,17 @@ function readStandardAction(
         !(f.type.kind === "relation" && f.type.many) &&
         !given.has(f.name),
     );
+    // A reference cannot be set or asked: a model that needs another one is out of reach for now.
+    const otherReference = missing.find((f) => f.type.kind === "relation");
+    if (otherReference) {
+      ctx.error(
+        at,
+        "invalid-add",
+        `"add" of ${where}: ${key} also needs ${otherReference.name}, another required reference, which an action cannot fill yet; a model with another required reference cannot be added by an action.`,
+      );
+      failed = true;
+      continue;
+    }
     if (missing.length) {
       ctx.error(
         at,
@@ -396,7 +407,7 @@ function readStandardAction(
     ctx.warning(
       rules.keyNode,
       "rules-not-enforced",
-      `The rules of ${where} are documentation only: a standard action does what "set" says.`,
+      `The rules of ${where} are documentation only: a standard action does what "set" and "add" say.`,
     );
   return {
     ...common,
