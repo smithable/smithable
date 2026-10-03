@@ -192,6 +192,11 @@ test("a total over a list that is never added is left out and named, not the dra
             op: "addField",
             args: { model: "Invoice", field: "total", type: "money = SUM(lines.amount)" },
           },
+          // A formula over fields the model never adds.
+          {
+            op: "addField",
+            args: { model: "Invoice", field: "net", type: "money = price * quantity" },
+          },
           { op: "addPage", args: { page: "invoices", model: "Invoice" } },
         ],
       }),
@@ -200,7 +205,10 @@ test("a total over a list that is never added is left out and named, not the dra
   if (draft.kind !== "draft") throw new Error(draft.message);
   expect(draft.files["smithable.yml"]).toContain("number:");
   expect(draft.files["smithable.yml"]).not.toContain("SUM(");
-  expect(draft.dropped).toEqual([expect.stringMatching(/^addField Invoice\.total: /)]);
+  expect(draft.dropped).toEqual([
+    expect.stringMatching(/^addField Invoice\.total: /),
+    expect.stringMatching(/^addField Invoice\.net: /),
+  ]);
 });
 
 test("invite-only asked before the team page gets the team page first", async () => {

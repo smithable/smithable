@@ -169,11 +169,10 @@ const ESSENTIAL = new Set([
 
 /**
  * Essential while there are rounds left; after the last one, dropped rather than failing the
- * draft: an action, and a field worked out by a formula (a total over a list never added).
+ * draft: an action, and a field with a formula or default (a total over a list never added).
  */
 const lastRoundDrops = (step: Step) =>
-  step.op === "addAction" ||
-  (step.op === "addField" && /=\s*[A-Z]+\(/.test(String(step.args.type ?? "")));
+  step.op === "addAction" || (step.op === "addField" && String(step.args.type ?? "").includes("="));
 
 /**
  * Applies steps in order: a slip in the field shorthand is mended, a step already applied or
