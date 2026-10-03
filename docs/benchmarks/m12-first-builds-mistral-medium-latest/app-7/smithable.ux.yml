@@ -3,13 +3,15 @@ pages:
   matches:
     table:
       sort: -date
+      columns: [date, homeTeam, awayTeam, homeScore, awayScore, status]
     icon: calendar
   teams:
+    table:
+      columns: [name, sport, founded]
+      view: cards
     icon: users
   players:
+    table:
+      columns: [name, position, number, team, nationality]
+      view: cards
     icon: user
-tones:
-  Match.status:
-    completed: success
-    canceled: danger
-    inProgress: warning

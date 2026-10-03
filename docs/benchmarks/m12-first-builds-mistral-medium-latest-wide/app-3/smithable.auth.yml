@@ -3,7 +3,7 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home, schedule]
+  pages: [home]
   read: [Stylist, Service]
   create: [Appointment]
 roles:

@@ -40,28 +40,22 @@ pages:
     search: [name, email]
   settings:
     crud: BusinessProfile
+  team:
+    users: manage
   home:
     route: /
     landing:
       hero:
       footer:
-  team:
-    users: manage
-  admin:
-    data: all
   invoices:
     crud: Invoice
-    actions: [markSent, markPaid]
     search: [number, client]
-    filters: [status, client, issuedOn]
-    sortable: [number, issuedOn, dueOn, total, status]
+    filters: [status, client]
+    sortable: [issuedOn, dueOn, total, number]
   invoice-lines:
     crud: InvoiceLine
   overview:
-    route: /overview
-    landing:
-      hero:
-      footer:
+    crud: Invoice
 actions:
   markSent:
     on: Invoice
@@ -77,4 +71,4 @@ actions:
     set:
       status: paid
     intent: The client paid the invoice.
-navigation: [overview, invoices, clients, settings]
+navigation: [overview, invoices, clients, settings, team]

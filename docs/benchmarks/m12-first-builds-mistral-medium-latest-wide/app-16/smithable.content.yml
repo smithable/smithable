@@ -53,6 +53,7 @@ models:
         values:
           pending: Pending
           paid: Paid
+          overdue: Overdue
       notes:
         label: Notes
 pages:

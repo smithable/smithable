@@ -1,9 +1,10 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
+  selfSignUp: false
 defaultAccess: private
 public:
-  pages: [home, schedule, blog]
+  pages: [home, schedule]
   read: [ClassType, Instructor, Session]
   create: [Message]
 roles:

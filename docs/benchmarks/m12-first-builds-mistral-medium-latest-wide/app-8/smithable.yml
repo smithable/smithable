@@ -8,7 +8,7 @@ models:
       title: string!
       photos: pictures
       description: text!
-      category: office | electronics | furniture | books | other
+      category: office | home | electronics | books | other
       condition: likeNew | good | worn
       available: bool = true
 pages:
@@ -26,13 +26,4 @@ pages:
   saved:
     crud: Item
     favorites: only
-  home:
-    route: /welcome
-    landing:
-      hero:
-      footer:
-      latest:
-        records: Item
-        where:
-          available: true
 navigation: [catalog, myItems, saved]

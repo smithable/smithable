@@ -14,7 +14,7 @@ models:
     fields:
       pupil: Pupil!
       dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
-      time: string!
+      startTime: string!
       durationMinutes: int! = 30
       notes: text
     access:

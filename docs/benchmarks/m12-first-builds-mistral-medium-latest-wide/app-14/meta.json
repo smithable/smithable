@@ -4,6 +4,6 @@
   "wordStarter": "invoicing",
   "questions": [
     "Who can view the guest list and seating plan?",
-    "What details are recorded for each guest besides their meal choice?"
+    "What details are recorded for each guest?"
   ]
 }
