@@ -5,10 +5,9 @@ defaultAccess: private
 public:
   pages: [hem, schema]
   read: [Service, Stylist, Appointment]
-  create: [Booking]
 roles:
   admin:
-    description: Salongsägare eller personal.
+    description: Salongsägare eller personal som hanterar schema och tjänster.
   customer:
     description: Kund som bokar tider.
 defaultRole: customer

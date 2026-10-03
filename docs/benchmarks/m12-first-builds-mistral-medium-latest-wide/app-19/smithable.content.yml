@@ -1,4 +1,18 @@
 smithableContent: 0.1
+pages:
+  hem:
+    title: Vår Loppis
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An empty sports hall with a polished wooden floor and climbing bars on the wall
+  katalog:
+    title: Föremål
+    subtitle: Bläddra bland alla föremål som säljs
+  mina-saker:
+    title: Mina saker
+  sparade:
+    title: Sparade föremål
 models:
   Item:
     label: Föremål
@@ -21,21 +35,15 @@ models:
           elektronik: Elektronik
           boecker: Böcker
           sport: Sport
-          annat: Annat
+          oevrigt: Övrigt
       condition:
         label: Skick
         values:
           ny: Ny
-          naestanNy: Nästan ny
+          somNy: Som ny
           bra: Bra
           sliten: Sliten
       place:
         label: Plats
       available:
         label: Tillgänglig
-pages:
-  home:
-    hero:
-      image:
-        src: images/hero.webp
-        alt: An empty sports hall with a polished wooden floor and climbing bars on the wall

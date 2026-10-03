@@ -19,9 +19,9 @@ models:
       name:
         label: Namn
       bio:
-        label: Om stylisten
+        label: Biografi
       portrait:
-        label: Bild
+        label: Porträtt
   Appointment:
     label: Tid
     pluralLabel: Tider
@@ -48,11 +48,13 @@ models:
         label: Telefon
 pages:
   hem:
-    title: Min Frisörsalong
+    title: Välkommen till Min Frisörsalong
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
+  schema:
+    title: Boka tid
   tjanster:
     title: Tjänster
   stylister:
@@ -61,5 +63,3 @@ pages:
     title: Tider
   mina-bokningar:
     title: Mina bokningar
-  schema:
-    title: Schema

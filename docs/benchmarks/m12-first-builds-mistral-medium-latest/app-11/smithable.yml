@@ -35,6 +35,8 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
+    access:
+      delete: [admin, staff]
 pages:
   incidents:
     crud: Incident
@@ -65,9 +67,8 @@ pages:
         records: Maintenance
   team:
     users: manage
-  overview:
+  admin:
     data: all
-navigation: [overview, incidents, updates, maintenance, components, team]
 actions:
   identified:
     on: Incident
@@ -80,7 +81,6 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -93,7 +93,6 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -106,6 +105,5 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message:
-    allow: [admin, staff]
-    intent: The incident is resolved; the incident moves to resolved, with an update saying so.
+        message: This incident is resolved.
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.

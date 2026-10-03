@@ -9,9 +9,10 @@ models:
       description: text
       category: dry | wet | frozen
       unit: string!
-      minStockLevel: int = 0
+      minStock: int = 0
+      supplier: Supplier
     access:
-      delete: [manager]
+      delete: [admin]
   Supplier:
     fields:
       name: string!
@@ -20,16 +21,13 @@ models:
       phone: phone
       address: text
     access:
-      delete: [manager]
+      delete: [admin]
   Stock:
     fields:
       ingredient: Ingredient!
-      supplier: Supplier
       quantity: decimal!
-      lastRestocked: date
+      lastUpdated: date! = TODAY()
       expiryDate: date
-    access:
-      delete: [manager]
 pages:
   ingredients:
     crud: Ingredient
@@ -40,7 +38,7 @@ pages:
   stock:
     crud: Stock
     search: [ingredient]
-    filters: [ingredient, supplier]
+    filters: [ingredient, lastUpdated]
   team:
     users: manage
-navigation: [stock, ingredients, suppliers, team]
+navigation: [ingredients, suppliers, stock, team]
