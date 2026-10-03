@@ -1,0 +1,26 @@
+smithable: 0.1
+app:
+  name: Local Museum Collection
+  description: Browse the museum's objects and their stories online.
+models:
+  Artifact:
+    fields:
+      name: string!
+      description: text!
+      category: paintings | sculptures | ceramics | textiles | jewelry | other
+      era: string
+      origin: string
+      photos: pictures
+      story: text
+pages:
+  artifacts:
+    route: /
+    crud: Artifact
+    search: [name, description, era, origin, story]
+    sortable: [name, era, createdAt]
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+navigation: [artifacts]

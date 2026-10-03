@@ -1,0 +1,40 @@
+smithable: 0.1
+app:
+  name: Frisörsalong Bokning
+  description: Ett system för kunder att boka tid hos frisören på nätet.
+  timezone: Europe/Stockholm
+models:
+  Appointment:
+    fields:
+      customerName: string!
+      customerEmail: email!
+      customerPhone: phone
+      service: string!
+      date: date!
+      time: string!
+      status: booked | confirmed | cancelled | completed
+      notes: text
+  Service:
+    fields:
+      name: string!
+      description: text
+      duration: int!
+      price: money!
+pages:
+  appointments:
+    crud: Appointment
+    access: [admin]
+    search: [customerName, customerEmail, service]
+  services:
+    crud: Service
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Service
+      contact:
+        form: Appointment
+navigation: [appointments, services]

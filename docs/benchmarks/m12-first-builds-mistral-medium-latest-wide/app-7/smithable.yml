@@ -1,0 +1,37 @@
+smithable: 0.1
+app:
+  name: Town Flea Market
+  description: A local marketplace where anyone can post items for sale with photos and prices.
+  currency: USD
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      price: money
+      category: furniture | bikes | electronics | sports | kids | other
+      condition: likeNew | good | worn
+      place: string
+      available: bool = true
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+  catalog:
+    route: /items
+    crud: Item
+    search: [title, description, place]
+    filters: [category, price, condition, available]
+    sortable: [price, createdAt]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+navigation: [catalog, myItems, saved]

@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: private
+public:
+  pages: [home, catalog]
+  read: [Item]
+roles:
+  admin:
+    description: Keeps the marketplace tidy.
+  member:
+    description: Sells and saves items.
+defaultRole: member
