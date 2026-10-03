@@ -7,6 +7,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { Marked } from "marked";
+import { operationsPage } from "./operations-page.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const out = resolve(process.argv[2] ?? join(root, "site"));
@@ -18,6 +19,13 @@ const PAGES = [
   { src: "docs/site/starters.md", out: "starters.html", nav: "Starters" },
   { src: "docs/site/change.md", out: "change.html", nav: "Changing an app" },
   { src: "docs/site/self-host.md", out: "self-host.html", nav: "Self-hosting" },
+  // Generated from the operations at build time, not a file in the repository.
+  {
+    src: "docs/site/operations.md",
+    out: "operations.html",
+    nav: "Operations",
+    generate: operationsPage,
+  },
   { src: "docs/site/why.md", out: "why.html", nav: "Why Smithable" },
   { src: "docs/site/faq.md", out: "faq.html", nav: "Questions" },
   { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
@@ -43,7 +51,7 @@ const esc = (s) =>
 // First the headings of every page, so a link can be checked against the page it points to.
 const lexer = new Marked();
 for (const page of PAGES) {
-  page.markdown = readFileSync(join(root, page.src), "utf8");
+  page.markdown = page.generate ? page.generate(root) : readFileSync(join(root, page.src), "utf8");
   page.headings = [];
   const seen = new Map();
   // Every heading, also one inside a list or a quote, in the order the renderer meets them.
