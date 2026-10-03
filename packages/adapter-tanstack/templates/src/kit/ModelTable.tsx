@@ -1,6 +1,7 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customize a table, copy this file into src/custom/components/ and edit the copy.
 import { ChevronRight, Heart, ImageIcon, type LucideIcon } from "lucide-react";
+import { useRef } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import {
@@ -41,6 +42,8 @@ interface ModelTableProps<R extends Row> {
   saved?: { ids: number[]; onToggle: (id: number) => void };
   /** Buttons for a record, e.g. its standard actions; above the row's own link. */
   rowActions?: (row: R) => React.ReactNode;
+  /** Checkboxes to choose records (a page offering actions or delete): the chosen ids, and a change. */
+  selection?: { ids: ReadonlySet<number>; onChange: (ids: Set<number>) => void };
 }
 
 /** Saves a record for the viewer, or unsaves it: a toggle above the row's own link. */
@@ -101,7 +104,10 @@ export function ModelTable<R extends Row>({
   icon,
   saved,
   rowActions,
+  selection,
 }: ModelTableProps<R>) {
+  // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
+  const anchor = useRef<number | null>(null);
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
     .filter((name) => !(hide as string[]).includes(name))
@@ -186,6 +192,31 @@ export function ModelTable<R extends Row>({
     ) : (
       children
     );
+  // A record's checkbox; shift-click sets the range from the last one clicked to its state.
+  const check = (row: R, index: number) =>
+    selection && (
+      <input
+        type="checkbox"
+        data-part="select"
+        aria-label={`Select ${title ? formatValue(title, displayValue(title, row), app) : `#${row.id}`}`}
+        checked={selection.ids.has(row.id)}
+        onChange={(e) => {
+          const next = new Set(selection.ids);
+          const from = (e.nativeEvent as MouseEvent).shiftKey && anchor.current !== null ? anchor.current : index;
+          for (let i = Math.min(from, index); i <= Math.max(from, index); i++) {
+            const id = shown[i]?.id;
+            if (id === undefined) continue;
+            if (e.target.checked) next.add(id);
+            else next.delete(id);
+          }
+          anchor.current = index;
+          selection.onChange(next);
+        }}
+        className="relative z-10 size-4 cursor-pointer accent-primary"
+      />
+    );
+  const all = selection !== undefined && shown.length > 0 && shown.every((r) => selection.ids.has(r.id));
+  const some = selection !== undefined && shown.some((r) => selection.ids.has(r.id));
   const heart = (row: R) =>
     saved && (
       <SaveButton
@@ -202,7 +233,7 @@ export function ModelTable<R extends Row>({
           view === "cards" ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3 md:hidden"
         }
       >
-        {shown.map((row) => (
+        {shown.map((row, index) => (
           <li key={row.id} data-part="row">
             <Card
               className={cn(
@@ -210,6 +241,9 @@ export function ModelTable<R extends Row>({
                 view === "cards" && pictureField && "overflow-hidden pt-0",
               )}
             >
+              {selection && (
+                <span className="absolute top-3 left-3 z-10 rounded bg-card/90 p-1">{check(row, index)}</span>
+              )}
               {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
               {view === "cards" &&
                 pictureField &&
@@ -274,6 +308,23 @@ export function ModelTable<R extends Row>({
           <Table>
             <TableHeader data-part="header">
               <TableRow className="hover:bg-transparent">
+                {selection && (
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      data-part="select-all"
+                      aria-label="Select all"
+                      checked={all}
+                      ref={(el) => {
+                        if (el) el.indeterminate = some && !all;
+                      }}
+                      onChange={(e) =>
+                        selection.onChange(e.target.checked ? new Set(shown.map((r) => r.id)) : new Set())
+                      }
+                      className="size-4 cursor-pointer accent-primary"
+                    />
+                  </TableHead>
+                )}
                 {columns.map((field) => (
                   <TableHead
                     key={field.name}
@@ -296,12 +347,14 @@ export function ModelTable<R extends Row>({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shown.map((row) => (
+              {shown.map((row, index) => (
                 <TableRow
                   key={row.id}
                   data-part="row"
+                  data-state={selection?.ids.has(row.id) ? "selected" : undefined}
                   className={onOpen ? "relative cursor-pointer" : undefined}
                 >
+                  {selection && <TableCell className="py-0">{check(row, index)}</TableCell>}
                   {columns.map((field) => (
                     <TableCell
                       key={field.name}
