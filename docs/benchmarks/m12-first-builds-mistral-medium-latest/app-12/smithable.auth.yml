@@ -12,3 +12,4 @@ roles:
   staff:
     description: Writes incidents and their updates.
 defaultRole: staff
+admins: [johan@smithable.ai]

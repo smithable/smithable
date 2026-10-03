@@ -2,3 +2,6 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones

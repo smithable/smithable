@@ -1,4 +1,83 @@
 smithableContent: 0.1
+models:
+  Component:
+    label: Component
+    pluralLabel: Components
+    fields:
+      name:
+        label: Name
+      status:
+        label: Status
+        values:
+          operational: Operational
+          degraded: Degraded
+          down: Down
+          maintenance: Maintenance
+      description:
+        label: Description
+  Incident:
+    label: Incident
+    pluralLabel: Incidents
+    fields:
+      title:
+        label: Title
+      status:
+        label: Status
+        values:
+          investigating: Investigating
+          identified: Identified
+          monitoring: Monitoring
+          resolved: Resolved
+      component:
+        label: Component
+      detectedAt:
+        label: Detected at
+      resolvedAt:
+        label: Resolved at
+      summary:
+        label: Summary
+  IncidentUpdate:
+    label: Incident Update
+    pluralLabel: Incident Updates
+    fields:
+      incident:
+        label: Incident
+      at:
+        label: At
+      status:
+        label: Status
+      message:
+        label: Message
+  Maintenance:
+    label: Maintenance
+    pluralLabel: Maintenances
+    fields:
+      title:
+        label: Title
+      component:
+        label: Component
+      startsAt:
+        label: Starts at
+      endsAt:
+        label: Ends at
+      description:
+        label: Description
 pages:
   home:
+    title: API Status
     hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  incidents:
+    title: Incidents
+  updates:
+    title: Updates
+  components:
+    title: Components
+  maintenance:
+    title: Maintenance
+  overview:
+    title: Overview
+  team:
+    title: Team

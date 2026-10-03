@@ -3,17 +3,6 @@ models:
   BusinessProfile:
     label: Business Profile
     pluralLabel: Business Profiles
-    fields:
-      businessName:
-        label: Business Name
-      vatNumber:
-        label: VAT Number
-      iban:
-        label: IBAN
-      paymentTermDays:
-        label: Payment Term (Days)
-      invoiceFooter:
-        label: Invoice Footer
   Client:
     label: Client
     pluralLabel: Clients
@@ -21,34 +10,23 @@ models:
     label: Invoice
     pluralLabel: Invoices
     fields:
-      number:
-        label: Invoice Number
-      issuedOn:
-        label: Issued On
-      dueOn:
-        label: Due On
       status:
-        label: Status
         values:
           draft: Draft
           sent: Sent
           paid: Paid
           overdue: Overdue
-      total:
-        label: Total
   InvoiceLine:
     label: Invoice Line
     pluralLabel: Invoice Lines
-    fields:
-      description:
-        label: Description
-      quantity:
-        label: Quantity
-      unitPrice:
-        label: Unit Price
-      amount:
-        label: Amount
 pages:
+  home:
+    title: Invoicing for Freelancers
+    subtitle: Manage your clients, invoices, and payments with ease.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
   overview:
     title: Overview
   invoices:
@@ -57,3 +35,5 @@ pages:
     title: Clients
   settings:
     title: Settings
+  dashboard:
+    title: Dashboard

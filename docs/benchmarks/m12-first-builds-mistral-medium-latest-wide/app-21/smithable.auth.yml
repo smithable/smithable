@@ -1,5 +1,5 @@
 smithableAuth: 0.1
 signIn:
   providers: [google]
-  selfSignUp: false
-defaultAccess: shared
+defaultAccess: private
+admins: [johan@smithable.ai]
