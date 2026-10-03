@@ -35,6 +35,7 @@ export const COMMANDS: Command[] = [
       "--from <url> starts from a page: its text, menu and forms describe the app (needs a model);",
       "--with-pictures also takes its pictures as sample pictures, after asking;",
       "--name \"Pulse API Status\" names the app, over the starter's or the draft's own name",
+      "--admin you@your-domain makes that address the app's administrator (default: the Git user's),",
     ],
     options: [
       "starter",
@@ -44,6 +45,7 @@ export const COMMANDS: Command[] = [
       "no-sample-data",
       "from",
       "with-pictures",
+      "admin",
       "name",
     ],
   },
