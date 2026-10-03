@@ -42,7 +42,8 @@ describe("the examples", () => {
       examples[`../../../examples/${name}/smithable.auth.yml`] as string,
     );
     expect(diagnostics).toEqual([]);
-    expect(auth.diagnostics).toEqual([]);
+    // A starter's administrator is a sample on a domain nobody has: `smithable new` replaces it.
+    expect(auth.diagnostics.filter((d) => d.code !== "example-admin")).toEqual([]);
     expect(ir && auth.auth).toBeTruthy();
     expect(auth.auth).toMatchSnapshot();
   });
@@ -138,7 +139,7 @@ public: { pages: [customer], read: [Customers], write: [Note] }
   test("closed sign-up needs a users page, and a users page needs sign-in", () => {
     const team = `${SPEC}  team: { users: manage }\n`;
     const closed =
-      "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: false }\ndefaultAccess: shared\n";
+      "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: false }\ndefaultAccess: shared\nadmins: [owner@studio.ax]\n";
     expect(codes(closed)).toEqual(["error no-users-page"]);
     const { auth, ir } = load(team, closed);
     expect(auth.diagnostics).toEqual([]);
