@@ -32,7 +32,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 
 ### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
@@ -2829,9 +2829,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -5925,7 +5932,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "e8b84a85 generated",
+  "README.md": "c37c586a generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "d5004d3e generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -5992,7 +5999,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "6d2eaa94 generated",
+  "src/lib/auth.ts": "40c21f37 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -6086,13 +6093,13 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 
 ### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 
 ## Users and invitations
 
 The team page lists who has access and lets administrators invite people by email address with a role, change roles, and remove users. An invitation mail carries a link to the sign-in page; the invited address then signs in with a configured provider and has the invited role. The link is also shown on the page, for sending by hand when the app has no mail settings (see Mail). Invitations are valid for 14 days and can be resent or withdrawn.
 
-Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator.
+Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
@@ -7749,9 +7756,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -8856,7 +8870,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "e5eafb01 generated",
+  "README.md": "349145d4 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "7bc75a08 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -8908,7 +8922,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c66e89f7 generated",
+  "src/lib/auth.ts": "fd016ac2 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -8967,7 +8981,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 
 ### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
@@ -10950,9 +10964,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -12288,7 +12309,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "8addaf74 generated",
+  "README.md": "eefcdcb3 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "351967e5 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -12344,7 +12365,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "b3196fea generated",
+  "src/lib/auth.ts": "61271d99 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -12407,7 +12428,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 
 ### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
@@ -13317,9 +13338,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -14636,7 +14664,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "11ab8055 generated",
+  "README.md": "0806195a generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "33a09c60 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -14686,7 +14714,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "7e197f1c generated",
+  "src/lib/auth.ts": "dca2a42f generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -14749,7 +14777,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 
 ### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
@@ -15580,9 +15608,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -16319,7 +16354,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "364cc987 generated",
+  "README.md": "7aa664a4 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c42c8ab6 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -16364,7 +16399,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "3594dc85 generated",
+  "src/lib/auth.ts": "1616c31e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -16418,13 +16453,13 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 
 ### Email
 
-People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Sending mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
+People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 
 ## Users and invitations
 
 The team page lists who has access and lets administrators invite people by email address with a role, change roles, and remove users. An invitation mail carries a link to the sign-in page; the invited address then signs in with a configured provider and has the invited role. The link is also shown on the page, for sending by hand when the app has no mail settings (see Mail). Invitations are valid for 14 days and can be resent or withdrawn.
 
-Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator.
+Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
@@ -18785,9 +18820,16 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }, ctx) {
-        if (type !== "sign-in") return;
+        // Without mail settings a production app keeps no codes: nobody would get them.
+        if (type !== "sign-in" || !codesReachPeople()) return;
         const address = email.toLowerCase();
-        codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        // Too many codes for the address (or from the network address): no mail. The plugin sends
+        // in the background, so the page's answer is the same either way.
+        try {
+          codeAllowed(address, ctx?.request?.headers ?? new Headers());
+        } catch {
+          return;
+        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -20664,7 +20706,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "2267791c generated",
+  "README.md": "6023d9eb generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "2e5ac822 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -20728,7 +20770,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "fc8743f1 generated",
+  "src/lib/auth.ts": "5006bdb8 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
