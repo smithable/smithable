@@ -222,7 +222,10 @@ function render(value: YamlValue, indent: string): string {
   return ` ${scalar(value)}`;
 }
 
-/** A key or scalar value as YAML: quoted only when it has to be (e.g. "@scope/package"). */
+/**
+ * A key or scalar value as YAML: quoted only when it has to be (e.g. "@scope/package"), and on
+ * one line however long, since it goes after "key:" where a folded continuation would break.
+ */
 function scalar(value: string | number | boolean): string {
-  return stringify(value).trimEnd();
+  return stringify(value, { lineWidth: 0 }).trimEnd();
 }
