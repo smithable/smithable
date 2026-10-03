@@ -1,0 +1,8 @@
+smithableUx: 0.1
+pages:
+  recipes:
+    table:
+      sort: name
+    icon: book
+  shopping-lists:
+    icon: cart

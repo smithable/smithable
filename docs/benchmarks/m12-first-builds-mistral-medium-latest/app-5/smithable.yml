@@ -1,0 +1,35 @@
+smithable: 0.1
+app:
+  name: Bakery Inventory
+  description: Track ingredients, suppliers and stock levels for a small bakery.
+models:
+  Ingredient:
+    fields:
+      name: string!
+      description: text
+      category: dry | wet | frozen | fresh
+      unit: string! = grams
+      minStockLevel: int = 0
+  Supplier:
+    fields:
+      name: string!
+      contactName: string
+      email: email
+      phone: phone
+      address: text
+  Stock:
+    fields:
+      ingredient: Ingredient!
+      supplier: Supplier
+      quantity: decimal!
+      lastRestocked: date
+      expiryDate: date
+pages:
+  ingredients:
+    crud: Ingredient
+  suppliers:
+    crud: Supplier
+  stock:
+    crud: Stock
+    search: [ingredient]
+    filters: [ingredient, supplier]

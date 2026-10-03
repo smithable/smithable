@@ -1,11 +1,11 @@
-// M12 first builds: the same ten app descriptions, each started from a sentence with
+// M12 first builds: the same app descriptions (ten, and two status pages since the sixth starter), each started from a sentence with
 // `smithable new --describe` by the models set up in the environment (docs/ai.md). Records
 // whether a valid app came out, how many model calls it took, tokens, cost and time, and the
 // plain-language summary for people to review. Uses the configured model: ask before running.
 // Run after `pnpm build`, once per model: `node scripts/bench-m12.mjs`.
 // Writes docs/benchmarks/m12-first-builds-<model>.md.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,7 +31,14 @@ const DESCRIPTIONS = [
   "Event registration for a conference: talks, speakers and attendees.",
   "A help desk for an IT team: tickets, priorities and who handles them.",
   "A recipe collection for a family, with ingredients and shopping lists.",
+  "A status page for our API, with incidents and planned maintenance.",
+  "A public uptime page for a web shop: which services work, outages and their updates.",
 ];
+
+// Each draft's spec files, kept next to the report so what the model made can be read later.
+const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}`;
+const kept = join(repo, "docs/benchmarks", slug);
+rmSync(kept, { recursive: true, force: true });
 
 const rows = [];
 for (const [i, description] of DESCRIPTIONS.entries()) {
@@ -47,6 +54,11 @@ for (const [i, description] of DESCRIPTIONS.entries()) {
   const typecheck =
     existsSync(join(dir, "package.json")) &&
     spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" }).status === 0;
+  for (const spec of ["smithable.yml", "smithable.auth.yml", "smithable.ux.yml", "smithable.content.yml"])
+    if (existsSync(join(dir, spec))) {
+      mkdirSync(join(kept, `app-${i + 1}`), { recursive: true });
+      cpSync(join(dir, spec), join(kept, `app-${i + 1}`, spec));
+    }
   const row = {
     description,
     starter: /Starting from the (\w+) starter/.exec(out)?.[1] ?? "?",
@@ -70,16 +82,18 @@ for (const [i, description] of DESCRIPTIONS.entries()) {
 const yes = (v) => (v ? "yes" : "**no**");
 const report = `# M12 first builds: ${model} (${new Date().toISOString().slice(0, 10)})
 
-Ten app descriptions, each started with \`smithable new --describe\` (the closest starter, adapted by the model; errors go back up to twice). Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, ${rows[0]?.currency ?? "€"}${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
+The app descriptions, each started with \`smithable new --describe\` (the closest starter, adapted by the model; errors go back up to twice). Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, ${rows[0]?.currency ?? "€"}${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
 
 | Description | Starter | Created | Type-checks | Tokens | Cost | Time |
 |---|---|---|---|---|---|---|
 ${rows.map((r) => `| ${r.description} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokens.toLocaleString("en")} | ${r.currency}${r.cost.toFixed(4)} | ${r.seconds} s |`).join("\n")}
 
+Each created app's four spec files are in [${slug}/](${slug}/), one folder per description (app-1 …).
+
 ## Summaries, for review
 
 ${rows.map((r, i) => `### ${i + 1}. ${r.description}\n\n${r.created ? `\`\`\`text\n${r.summary}\n\`\`\`` : `Failed:\n\n\`\`\`text\n${r.error}\n\`\`\``}`).join("\n\n")}
 `;
-const file = `docs/benchmarks/m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}.md`;
+const file = `docs/benchmarks/${slug}.md`;
 writeFileSync(join(repo, file), report);
 console.log(`\nWrote ${file}. The apps are in ${root}`);
