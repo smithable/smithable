@@ -100,3 +100,24 @@ test("pictures are downloaded as the project's own, named by their order", async
   expect(pictures).toEqual([{ file: "page-1.jpg", alt: "Cups on a wooden table by the window" }]);
   expect(saved).toEqual({ "page-1.jpg": 1000 });
 });
+
+test("read-page prints the description of a saved page, and refuses one that shows too little", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { readPageCommand } = await import("./from-page.js");
+  const dir = mkdtempSync(join(tmpdir(), "read-page-"));
+  writeFileSync(join(dir, "page.html"), PAGE);
+  writeFileSync(
+    join(dir, "empty.html"),
+    "<html><body><div id=root></div><script src=app.js></script></body></html>",
+  );
+  const out: string[] = [];
+  const err: string[] = [];
+  const io = { out: (s: string) => out.push(s), err: (s: string) => err.push(s) };
+  expect(readPageCommand(join(dir, "page.html"), "https://cafe.example/", io)).toBe(0);
+  expect(out.join("")).toBe(`${describePage(readPage(PAGE, "https://cafe.example/"))}\n`);
+  expect(readPageCommand(join(dir, "empty.html"), "https://spa.example/", io)).toBe(1);
+  expect(err.join("")).toContain("shows almost nothing without JavaScript");
+  expect(readPageCommand(join(dir, "page.html"), undefined, io)).toBe(2);
+});

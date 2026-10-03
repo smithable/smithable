@@ -6,7 +6,7 @@
 
 Models are configured with environment variables, so keys never end up in a project.
 
-An app drafted from a description also gets pictures: the landing page's hero and a few sample pictures for its records, chosen by subject from the Smithable image library (photographs made for Smithable, CC0, served from docs.smithable.ai; the index is fetched once a day and cached under `~/.cache/smithable/images/`). Offline, or with `SMITHABLE_NO_PICTURES=1`, the app starts without them, and `smithable new --from <url> --with-pictures` uses the page's own pictures instead.
+An app drafted from a description also gets pictures: the landing page's hero and a few sample pictures for its records, chosen by subject from the Smithable image library (photographs made for Smithable, CC0, served from docs.smithable.ai; the index is fetched once a day and cached under `~/.cache/smithable/images/`). Offline, or with `SMITHABLE_NO_PICTURES=1`, the app starts without them, and `smithable new --from <url> --with-pictures` uses the page's own pictures instead. For a page fetched elsewhere (the hosted service fetches it with its own guards, since a workspace has no internet), `smithable read-page page.html --url <address>` prints the same description `new --from` would draft from, or fails when the page shows too little without JavaScript; the service then runs `clarify` and `new --describe` with it.
 
 ## A local model (tier 1)
 
