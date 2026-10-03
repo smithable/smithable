@@ -154,3 +154,26 @@ test("keys that YAML cannot write plainly are quoted, others are not", () => {
   );
   expect(editor.get(["overrides", "@esbuild-kit/core-utils>esbuild"])).toBe("0.25.12");
 });
+
+test("setItem replaces an item written as a key with options, keeping its comment and the next item", () => {
+  const editor = new YamlEditor(`public:
+  read:
+    - Component
+    # every state is public today
+    - Incident: { where: { status: [a, b] } }   # the states
+    - IncidentUpdate
+    - Last: { where: { ok: true } }
+other: 1
+`);
+  editor.setItem(["public", "read"], 1, { Incident: { where: { status: ["b"] } } });
+  editor.setItem(["public", "read"], 3, "Last");
+  expect(editor.text).toBe(`public:
+  read:
+    - Component
+    # every state is public today
+    - { Incident: { where: { status: [b] } } }   # the states
+    - IncidentUpdate
+    - Last
+other: 1
+`);
+});
