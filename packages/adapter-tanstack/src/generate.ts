@@ -9,7 +9,15 @@ import {
   type UxIR,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
-import { actionModule, actionRoute, actionStub, queryContract, queryStub } from "./actions.js";
+import {
+  actionModule,
+  actionRoute,
+  actionStub,
+  queryContract,
+  queryStub,
+  standardActionModule,
+  standardActionServer,
+} from "./actions.js";
 import {
   authModule,
   hasInvitations,
@@ -39,6 +47,7 @@ import {
   literal,
   names,
   type SectionGenerator,
+  standardActions,
   type Texts,
   texts,
   userFields,
@@ -415,6 +424,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => hasSignIn(auth) && ir.models.some((m) => m.capacity),
       },
       {
+        files: ["src/kit/ActionButton.tsx"],
+        used: ({ ir }) => ir.pages.some((p) => standardActions(p, ir).length),
+      },
+      {
         files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],
         used: ({ ir }) => hasMarkdown(ir),
       },
@@ -458,17 +471,27 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   {
     key: "actions",
     files: ({ ir, t, auth }) =>
-      // Standard actions get their server function and button with the adapter's step 2
-      // (docs/design/actions.md); until then they generate nothing, and never a stub.
-      ir.actions
-        .filter((a) => a.custom)
-        .flatMap((action) => [
-          generated(
-            `src/generated/actions/${kebab(action.name)}.ts`,
-            actionModule(action, ir, auth, t),
-          ),
-          custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
-        ]),
+      // A standard action is generated whole; a custom one gets a stub to implement, once.
+      ir.actions.flatMap((action) =>
+        action.custom
+          ? [
+              generated(
+                `src/generated/actions/${kebab(action.name)}.ts`,
+                actionModule(action, ir, auth, t),
+              ),
+              custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
+            ]
+          : [
+              generated(
+                `src/generated/actions/${kebab(action.name)}.ts`,
+                standardActionModule(action, ir, auth, t),
+              ),
+              generated(
+                `src/generated/actions/${kebab(action.name)}.server.ts`,
+                standardActionServer(action, ir, t),
+              ),
+            ],
+      ),
   },
   {
     key: "queries",

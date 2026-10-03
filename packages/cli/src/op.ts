@@ -279,7 +279,7 @@ async function applyAndCheckpoint(
     io.out(
       `${result.description}${prepared ? `: ${prepared.rows.length} added` : ""}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
     );
-    if (operation.name === "addAction") io.out(actionNote(String(args.action)));
+    if (operation.name === "addAction" && !args.on) io.out(actionNote(String(args.action)));
     return 0;
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);

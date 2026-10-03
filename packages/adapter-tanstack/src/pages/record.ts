@@ -35,6 +35,7 @@ import {
   optionsFor,
   ownerKey,
   references,
+  standardActions,
   type Texts,
   titleField,
   type Within,
@@ -303,6 +304,14 @@ export function detailRoute(
   // A heart for the viewer's saved records (marketplace.md §2.3).
   const favorite = Boolean(auth && !within && page.favorites && hasFavorites(model, ir, auth));
   if (favorite) imports.set(n.module, [...(imports.get(n.module) ?? []), savedToggle(model)]);
+  // Standard actions: a button on a record they fit, for viewers who may run them.
+  const offered = within ? [] : standardActions(page, ir);
+  for (const action of offered)
+    imports.set(`#/generated/actions/${kebab(action.name)}`, [
+      action.name,
+      `${action.name}Access`,
+      `${action.name}Fits`,
+    ]);
   const contact =
     page.contact && auth && hasSignIn(auth) && !within
       ? contactParts(page, model, t, ir)
@@ -334,11 +343,30 @@ export function detailRoute(
         />
       </section>`;
   });
-  return `${HEADER}import { createFileRoute, notFound, useNavigate${favorite ? ", useRouter" : ""} } from "@tanstack/react-router";
+  const router = favorite || offered.length > 0;
+  const viewer = contact || favorite || offered.length > 0;
+  const buttons = [
+    ...offered.map(
+      (a) =>
+        `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row) && (
+              <ActionButton
+                label=${attr(humanize(a.name))}
+                onRun={async () => {
+                  await ${a.name}({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}`,
+    ),
+    ...(favorite
+      ? [`<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />`]
+      : []),
+  ];
+  return `${HEADER}import { createFileRoute, notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
+${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${sections.length || favorite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
@@ -352,12 +380,11 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) =
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${options ? ", options" : ""}${favorite ? ", saved" : ""} } = Route.useLoaderData();${contact || favorite ? "\n  const { viewer } = Route.useRouteContext();" : ""}
-  const navigate = useNavigate();
+  const { row, canWrite, canDelete${options ? ", options" : ""}${favorite ? ", saved" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite
       ? `
-  const router = useRouter();
   // The heart saves the record for the viewer; a visitor signs in first and comes back.
   const toggleSaved = async () => {
     if (!viewer) {
@@ -372,12 +399,21 @@ function ${component}() {
   return (
     <>
       ${
-        favorite
+        buttons.length === 1 && favorite
           ? `<PageHeader
         title={${heading}}
-        actions={<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />}
+        actions={${buttons[0]}}
       />`
-          : `<PageHeader title={${heading}} />`
+          : buttons.length
+            ? `<PageHeader
+        title={${heading}}
+        actions={
+          <>
+            ${buttons.join("\n            ")}
+          </>
+        }
+      />`
+            : `<PageHeader title={${heading}} />`
       }
       <ModelForm
         ui={${n.ui}}

@@ -5,6 +5,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/components/ui/badge.tsx": [
     "data-tone={variant && variant !== "default" ? variant : "neutral"}",
   ],
+  "src/kit/ActionButton.tsx": [
+    "data-kit="action-button"",
+  ],
   "src/kit/AppShell.tsx": [
     "data-kit="app-shell"",
     "data-part="header"",
@@ -73,6 +76,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="empty"",
     "data-part="row"",
     "data-part="description"",
+    "data-part="row-actions"",
     "data-part="header"",
     "data-part="cell"",
     "data-field={field.name}",
