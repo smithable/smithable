@@ -38,7 +38,7 @@ The container serves plain HTTP. In front of it, put a proxy that handles HTTPS 
 - `DATA_DIR=/data` and `PORT=3000`, set in the image.
 - From your shell, when they are set there: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, and the mail settings `SMTP_URL` (or `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`) with `MAIL_FROM`.
 
-**Signing in.** A production build signs people in with Google or Facebook, so a self-hosted app needs an OAuth client of its own: the app's README says how to make one, with the redirect address for your domain. The development sign-in (any role, one click) is left out of production builds. Without SMTP settings the app sends no mail; it writes each message to `/data/mail/outbox` instead.
+**Signing in.** A production build signs people in with a code by email, so a self-hosted app needs mail settings (`SMTP_URL` and `MAIL_FROM`); without them its sign-in page says it cannot send mail, and other mail is written to `/data/mail/outbox` instead of sent. An app that also offers Google or Facebook needs an OAuth client of its own for each: the app's README says how to make one, with the redirect address for your domain. The development sign-in (any role, one click) is left out of production builds.
 
 ## Where the data lives
 
