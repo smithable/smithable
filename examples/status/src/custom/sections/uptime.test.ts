@@ -31,3 +31,12 @@ test("overlapping incidents count once, an open one runs to now, older ones are 
   );
   expect(days.map((d) => d.minutes)).toEqual([0, 0, 120]);
 });
+
+test("a day with less than a minute down is not shown as all up", () => {
+  const { days } = uptime(
+    [{ from: at("2026-10-03T10:00:00"), to: at("2026-10-03T10:00:20") }],
+    now,
+    1,
+  );
+  expect(days[0]?.minutes).toBe(1);
+});

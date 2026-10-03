@@ -36,7 +36,8 @@ export function uptime(outages: Outage[], now: number, days = 90) {
   return {
     days: minutes.map((m, i) => ({
       date: new Date(start + i * DAY).toISOString().slice(0, 10),
-      minutes: Math.round(m),
+      // Up: a day with any time down shows it, even under a minute.
+      minutes: Math.ceil(m),
     })),
     up: 1 - down / (now - start),
   };
