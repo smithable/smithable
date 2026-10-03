@@ -13,6 +13,7 @@ import {
   validateSpec,
 } from "@smithable/core";
 import type { Draft, SpecFiles } from "./draft.js";
+import { languageNote } from "./language.js";
 import { plainSchema } from "./propose.js";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
@@ -330,7 +331,7 @@ export async function draftProjectByOperations(options: {
   for (const provider of [...options.providers].reverse()) {
     let files = toProject(blankFor(options.starter?.files));
     const done: Step[] = [];
-    let prompt = `Description: ${options.description}${shape}`;
+    let prompt = `Description: ${options.description}${languageNote(options.description)}${shape}`;
     let round = 0;
     let refused: { step: Step; message: string }[] = [];
     while (round < MAX_ROUNDS) {
@@ -386,7 +387,7 @@ export async function draftProjectByOperations(options: {
         problem = essential.map((r) => `${r.step.op}: ${r.message}`).join("\n");
         break;
       }
-      prompt = `Description: ${options.description}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
+      prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
     }
   }
   return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };
