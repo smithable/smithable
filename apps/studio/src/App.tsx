@@ -360,7 +360,7 @@ export function App() {
           <Preview
             url={project.preview}
             version={version}
-            updating={updating}
+            updating={updating || busy}
             selecting={selecting}
             onSelecting={setSelecting}
             onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
