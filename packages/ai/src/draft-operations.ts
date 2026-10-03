@@ -59,8 +59,8 @@ export function draftOperations(): AnyOperation[] {
 }
 
 const GUIDANCE = `You design the first version of a web app as a list of Smithable operations, applied in order to an empty app. Smithable generates the whole app from the result.
-Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess shared when a team works on the same records (private, the default, when each person sees only their own); setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts.
-When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, actions and access that fit the description, under the same names, leave out what does not fit, and add what the description needs.
+Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess only to change the access the app starts with (shared: a team works on the same records; private: each person sees only their own); setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts.
+When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, actions, roles and access that fit the description, under the same names, leave out what does not fit, and add what the description needs. The app already starts with the starter's default access. Restrict a page or a model to some roles only where the starter does or the description says so: a page without it is open to everyone who signs in. The starter's app name, its people, places and texts are sample content: never reuse them.
 Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic.`;
 
@@ -291,9 +291,14 @@ export async function draftProjectByOperations(options: {
   const system = `${GUIDANCE}\n\nOperations:\n${describeOperations(operations)}\n\nAnswer with JSON only: {"operations": [{"op": "<name>", "args": {...}}, ...]}.`;
   const schema = answerSchema(operations);
   let problem = "";
-  const example = options.starter?.files["smithable.yml"];
+  // The starter's spec and its auth file (roles, default access, what is public), as the example.
+  const fence = (name: string) => {
+    const text = options.starter?.files[name]?.trim();
+    return text ? `\n${name}:\n\`\`\`yaml\n${text}\n\`\`\`` : "";
+  };
+  const example = fence("smithable.yml");
   const shape = example
-    ? `\n\nThe ${options.starter?.name} starter, the example for this kind of app:\n\`\`\`yaml\n${example.trim()}\n\`\`\``
+    ? `\n\nThe ${options.starter?.name} starter, the example for this kind of app:${example}${fence("smithable.auth.yml")}`
     : "";
   for (const provider of [...options.providers].reverse()) {
     let files = toProject(blankFor(options.starter?.files));
