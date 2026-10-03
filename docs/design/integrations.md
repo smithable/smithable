@@ -10,6 +10,8 @@ An app talks to other systems in three ways:
 2. **Incoming calls.** Another service tells the app that something happened (a monitor, a payment provider, a form on another site): a request to an address of the app, verified, turned into a record or an action.
 3. **Outgoing calls.** The app tells another system that something happened in it, or asks it for something.
 
+**The difference between 1 and 2 is who decides what the request looks like.** With the API, the caller is written for this app: it speaks the app's language (its models, its field names, its key) and can ask as well as tell. With an incoming call, the other service decides: a monitor, a payment provider or a code host sends its own format, signed its own way, when it chooses, and cannot be changed to suit the app; so the app has an address that understands that service. Whenever the sender can be configured (a script, an automation tool), the API is enough and direction 2 is not needed; it exists for senders that cannot. That is also why it comes last in the order: with an automation tool in between, the tool receives the service's call and uses the app's API.
+
 The same rules hold for all three:
 
 - **Access rules are never bypassed.** Whatever comes in acts with a role and goes through the generated data functions, like a person with that role. Nothing gets a way around `access`.
@@ -99,6 +101,17 @@ Two things are called that, and the answer differs.
 - **Inside the app** (code that every request passes through: who is calling, how often, logging): no construct in the spec. It is technology, and the app must behave the same whoever generated it. In the generated app the API and incoming routes use the framework's own request middleware for the three things they share (the key or signature, the limiter, the access log line), calling small kit functions, as rule 4 asks. A place for a project's own middleware is added when a project needs one, not before.
 - **Between systems** (automation tools such as n8n, Make or Zapier, which sit in the middle and connect services): this is the reason to do the general API and the general incoming and outgoing calls first. With those three and the OpenAPI description, an app can be wired to thousands of services through such a tool on the day it is published, without Smithable building any of those connections. n8n can be self-hosted in the EU, which fits the product. A listing in those tools' catalogues can come later; it is marketing, not engineering.
 
+## 5b. For AI assistants: the same API as tools (MCP)
+
+Not to be confused with Smithable's own MCP server, which changes the spec while someone builds. This is the running app offering its records and actions to an assistant ("which incidents are open?", "resolve the payments one").
+
+- **What it is:** the API of section 2 offered a second way, as tools an assistant can call, at `/mcp` of the app. One tool per listed model and verb the role may use (find, read, add, change) and one per listed standard action, generated from the spec. The spec is unusually good material for this: a model's and an action's `intent` and `rules`, the field labels and the choice values become the tools' descriptions, so an assistant knows what "resolve" means without guessing.
+- **What it costs:** little once the API exists. Same definitions, same keys, same access rules, same limiter; a thin layer and its tests.
+- **What it must not do:** widen anything. It offers only what `api` lists. Deleting is not offered as a tool unless the spec says so (`api.assistants: { delete: true }`), because an assistant can be talked into things by the text it reads (a record's own content is such text): a key for an assistant should have a role that can do little harm, and the how-to says so.
+- **Where it is switched on:** the spec says what is offered (`api.models`, `api.actions`); that it is also offered to assistants is one more line there, `api: { assistants: true }`. The protocol's name stays out of the spec, as REST's does.
+- **Who the assistant is:** in the first version, a key with a role, as for any program. The better answer, an assistant that acts as the signed-in person and sees what they see, needs sign-in for programs (OAuth) on top of the email-code sign-in; that is the same later step as keys that belong to a person, and the two should be designed together.
+- **When:** right after step 1, as step 1b. It is small, it is what people will try first with an AI assistant, and no builder of this kind offers it from the spec.
+
 ## 6. What this needs outside the engine
 
 - **The hosted service (B):** a "Connections" page per project for target addresses and secrets, kept encrypted and handed to the app as settings at start; outgoing calls from published apps allowed to the internet but not to the host's own network; per-app limits on outgoing calls (as for mail); the access log covering API and incoming calls; the threat model and data-flows documents.
@@ -108,6 +121,7 @@ Two things are called that, and the answer differs.
 ## 7. Steps
 
 1. **Keys and the API** (core: `api`, operations, validation, summary; adapter: the routes, the keys part of the users page, OpenAPI, tests).
+   - **1b. The same as tools for assistants** (section 5b).
 2. **Outgoing, built in** (the outbox, signing, the deliveries view, settings; then mail as 4b).
 3. **Incoming** (`create` with templates, and `custom`).
 4. **Running an action from an incoming call; a plugin's connection**, each when someone needs it.
@@ -121,3 +135,4 @@ Exit for steps 1 to 3: the status starter, with no custom code, takes a monitor'
 3. **Addresses and secrets are settings, never in the spec:** environment variables when self-hosted, a Connections page on the hosted service.
 4. **The first built-in outgoing call is the general one (tell an address), then mail.** No connection to a named service is built in before the beta; automation tools cover those.
 5. **The order in section 7.**
+6. **The API also offered to AI assistants as tools (section 5b),** as step 1b, with a role-bound key first and acting as the signed-in person later. Recommended.
