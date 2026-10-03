@@ -77,3 +77,97 @@ Left out, on purpose:
 4. **Then section 3, in its order:** asking for a value, `copy`, `add`, selected rows, `ME()`.
 
 Exit for steps 1–3: the status starter has no custom action code, its incident flow works in the browser test, and a first build from "a status page for our API" keeps working resolve buttons.
+
+## 6. §3 step 1: asking for a value
+
+Status: 2026-10-03, proposed by Opus A after Fable's go for §3. Johan's words: a field in `set` with no value opens a good-looking dialog where the value is typed, several fields may be asked at once, and the action only shows to those who may run it.
+
+```yaml
+actions:
+  cancel:
+    on: Booking
+    when: { status: booked }
+    set: { status: canceled, cancelReason: }      # asked for
+  postpone:
+    on: Invoice
+    when: { status: sent }
+    set: { dueOn:, note: }                         # two at once
+```
+
+- **The grammar:** a key in `set` with no value (YAML null) is asked for. Nothing else is new. An action whose `set` has only asked fields is fine (postpone).
+- **What the person sees:**
+  - Pressing the button opens a dialog titled with the action's label, holding the asked fields in the order written. Each field uses its own control, label and help, as the edit form shows them (a date picker, a choice list, a text area).
+  - The fields start with the record's current values.
+  - The dialog has two buttons: the action's label, and Cancel.
+  - A field that is required on the model is required here. The error shows under it, as in the form.
+  - With nothing asked, the button acts at once, as now.
+- **Validation:** an asked field must be settable, as for any value in `set` (not computed, not a reference, not a picture). `when` and an asked field may name the same field.
+- **Access:** unchanged. The button shows only to those who may run the action on that record (the rule with `among`) and only where `when` fits. The server checks both again.
+- **What runs:**
+  - The server function takes the record's id and the asked values, validated by the model's own schema for those fields.
+  - It works out the literal and formula values on the record as it was, takes the asked ones as given, and saves all of them through the edit's `update`.
+- **Follow:** asked fields are keys of `set`, so renames and removals follow as they already do.
+- **The operation:** `addAction cancel --on Booking --when status=booked --set status=canceled --set cancelReason=`. An empty value asks for the field and is written as YAML null.
+- **Summary:** "For a booking that is booked; sets status to canceled and asks for the cancel reason."
+- **Left out:** values that are not fields of the record (that stays the custom action's `input`), questions that depend on an earlier answer, and a value suggested by a formula.
+
+## 7. §3 step 3: adding a related record
+
+Status: 2026-10-03, proposed by Opus A together with step 1, because it lets the status starter drop its custom code.
+
+```yaml
+actions:
+  resolve:
+    on: Incident
+    when: { status: [investigating, identified, monitoring] }
+    set: { status: resolved, resolvedAt: NOW() }
+    add:
+      IncidentUpdate: { at: NOW(), status: resolved, message: This incident is resolved. }
+  recordPayment:
+    on: Invoice
+    when: { status: [sent, overdue] }
+    add:
+      Payment: { amount:, paidOn: TODAY() }        # asked for, as in step 1
+```
+
+- **The grammar:** `add` maps a model to the values of one new record. The model must have exactly one reference to the action's model, and that reference is filled with the record the action runs on (it may not be given). Values work as in `set`:
+  - a literal;
+  - a formula worked out on the action's record as it was, so `(total)` means the invoice's total;
+  - nothing, to ask for it, in the same dialog under a heading with the model's label.
+  
+  `add` may name several models, one record each. An action needs `set`, `add` or both.
+- **What the person sees:** the button acts as before. The added record shows in the record page's list of it (an incident's updates, an invoice's payments). The dialog appears only when something is asked.
+- **Validation:**
+  - The model exists and refers to the action's model exactly once. A list (`Order[]`) does not count.
+  - Each field is settable on that model.
+  - Every required field of the added model that has no default gets a value or is asked for. Otherwise this error: "Adding a Payment needs a value for amount, or ask for it."
+  - The reference back is not given.
+  - Formulas type-check against the field they fill, on the action's model.
+- **Access:**
+  - Running the action also needs the right to create the added model's records.
+  - The kit's `allows` is asked for both, so the button shows only to those who may do both.
+  - A warning, like `action-role-cannot-write`, flags an allowed role that may not create the added model.
+  - The new record is owned by the person who pressed the button, as a create would be.
+- **What runs:** the record's update and the new records' inserts happen in one database transaction, through the data functions' rules (references readable, capacity, validation by the model's schema). Hooks run after it, as they do for a create.
+- **Follow:**
+  - A renamed field of the added model is renamed in `add`, keys and formulas alike.
+  - Removing such a field, or the reference back, is refused while the action uses it.
+  - Removing a choice value used in `add` is refused, as in `set`.
+- **The operation:** `addAction resolve --on Incident … --add "IncidentUpdate.status=resolved" --add "IncidentUpdate.at=NOW()" --add "IncidentUpdate.message=This incident is resolved."`. Each pair is written `Model.field=value`, and an empty value asks for it.
+- **Summary:** "…; sets status to resolved and resolved at to now; adds an update (at now, status resolved, message "This incident is resolved.")."
+- **Left out:** changing the referenced record (as §3 says), several records of one model, adding through a list or a many-to-many, and deleting.
+
+**The status starter with steps 1 and 3:**
+- `identified`, `monitoring` and `resolve` become standard: each sets the status and adds an IncidentUpdate with the status and its message.
+- `src/custom/actions/` goes.
+- One thing the custom code does is left out on purpose: resolving no longer sets the incident's component back to operational. That changes a referenced record. A component's state becomes what the team sets, which is also what the landing shows.
+- **Decision for Fable:** accept that, or keep `resolve` custom until something later says it.
+
+**Steps:**
+1. Core: `set` takes null as asked; `add` in the grammar and IR, validation, follow, access with create, the operation's `--add`, the summary, the schema and the spec reference.
+2. Adapter:
+   - the dialog, as a kit component on the shadcn Dialog, using the form's field controls;
+   - the server function with the asked values and the transaction;
+   - the access test cases (asked values validated; add refused without create);
+   - a browser step.
+3. The status starter on standard actions without custom code; its browser flow stays green.
