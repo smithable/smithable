@@ -1,4 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import { modelAccess } from "./access.js";
 import { readCondition } from "./condition.js";
 import {
   type At,
@@ -165,8 +166,10 @@ export function validateAuth(
   }
 
   const roles = byKey.get("roles");
+  const roleNodes = new Map<string, At>();
   if (roles) {
     for (const { key, keyNode, value } of mapEntries(ctx, roles.value, `"roles"`) ?? []) {
+      roleNodes.set(key, keyNode);
       if (!FIELD_NAME_PATTERN.test(key) || key === "owner") {
         ctx.error(
           keyNode,
@@ -289,6 +292,22 @@ export function validateAuth(
         );
   }
   if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes);
+  // A standard action follows its model's write access: "allow" narrows it and never widens it,
+  // so a role there that may not edit the record still cannot run the action.
+  for (const action of ir?.actions ?? []) {
+    const model = !action.custom && ir?.models.find((m) => m.name === action.on);
+    if (!model || action.custom) continue;
+    const write = modelAccess(model, auth).write;
+    // Neither by role nor as an owner: the action is out of their reach.
+    for (const role of action.allow ?? [])
+      if (!write.roles.includes(role) && !write.owner && roleNames.includes(role))
+        ctx.warning(
+          roleNodes.get(role) ?? roles?.keyNode,
+          "action-role-cannot-write",
+          `The action "${action.name}" allows ${role}, but ${role} may not edit ${model.name} records, so ${role} still cannot run it.`,
+          `Let ${role} edit ${model.name} (its "access" in smithable.yml), or take ${role} out of the action's "allow".`,
+        );
+  }
   return done();
 }
 

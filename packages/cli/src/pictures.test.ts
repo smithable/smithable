@@ -3,7 +3,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateContent, validateSpec } from "@smithable/core";
 import { afterEach, expect, test } from "vitest";
-import { addLibraryPictures, type Fetch, libraryIndex, writePictures } from "./pictures.js";
+// new.js pulls in most of the CLI: imported here, its load time is not a test's (5 s) on a busy machine.
+import { named } from "./new.js";
+import {
+  addLibraryPictures,
+  atLibrary,
+  dropMissingPictures,
+  type Fetch,
+  libraryBase,
+  libraryIndex,
+  writePictures,
+} from "./pictures.js";
 
 const index = [
   {
@@ -138,7 +148,6 @@ test("an unreachable library means no pictures and one line, never an error", as
 });
 
 test("the library is where SMITHABLE_IMAGE_LIBRARY says, and the index's addresses follow", async () => {
-  const { atLibrary, libraryBase } = await import("./pictures.js");
   const before = process.env.SMITHABLE_IMAGE_LIBRARY;
   try {
     delete process.env.SMITHABLE_IMAGE_LIBRARY;
@@ -163,7 +172,6 @@ test("the library is where SMITHABLE_IMAGE_LIBRARY says, and the index's address
 });
 
 test("a picture the texts name but the project does not have is left out", async () => {
-  const { dropMissingPictures } = await import("./pictures.js");
   const dir = mkdtempSync(join(tmpdir(), "drop-"));
   mkdirSync(join(dir, "public", "images"), { recursive: true });
   writeFileSync(join(dir, "public", "images", "kept.webp"), "x");
@@ -188,7 +196,6 @@ test("a picture the texts name but the project does not have is left out", async
 });
 
 test("a name someone typed names the app, over the starter's or the draft's own", async () => {
-  const { named } = await import("./new.js");
   const files = {
     "smithable.yml": "smithable: 0.1\napp:\n  name: Payments API Status\n  description: Ours.\n",
   };

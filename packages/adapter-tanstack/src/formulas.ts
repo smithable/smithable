@@ -38,6 +38,99 @@ const isMoney = (field: FieldIR) => field.type.kind === "scalar" && field.type.n
  * Formulas themselves work in whole currency units, like a spreadsheet.
  */
 export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
+  const { compile, stored, imports } = formulaCompiler(model, ir, model);
+
+  const computed = model.fields.filter((f) => f.formula);
+  const defaults = model.fields.filter((f) => f.defaultFormula);
+  // A formula that reads no field, like TODAY(), gets an "_r" parameter (unused on purpose).
+  const entry = (f: FieldIR, expr: Expr) => {
+    const code = stored(f, compile(expr, model, "r"));
+    const param = /\br\./.test(code) ? "r" : "_r";
+    return `  ${f.name}: (${param}: Row): ${tsType(f)} => ${code},`;
+  };
+  const computedEntries = computed.map((f) => entry(f, f.formula as Expr));
+  const defaultEntries = defaults.map((f) => entry(f, f.defaultFormula as Expr));
+  const withType = computed.length
+    ? `T & { ${computed.map((f) => `${f.name}: ${tsType(f)}`).join("; ")} }`
+    : "T";
+  const withBody = computed.length
+    ? `{ ...row, ${computed.map((f) => `${f.name}: ${formulasName(model)}.${f.name}(row)`).join(", ")} }`
+    : "row";
+
+  return `${HEADER}import { F } from "#/kit/formula";
+${[...imports].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}
+type Row = Record<string, unknown>;
+
+/** Computed fields of ${model.name}, on records as stored (money in cents). */
+export const ${formulasName(model)} = {
+${computedEntries.join("\n")}
+};
+
+/** Values suggested when a ${model.name} is created. */
+export const ${defaultsName(model)} = {
+${defaultEntries.join("\n")}
+};
+
+/** The record with its computed fields. */
+export function ${withFormulasName(model)}<T extends Row>(row: T): ${withType} {
+  return ${withBody};
+}
+`;
+}
+
+/** A Vitest test per example: the formula must give the expected value. */
+export function formulasTestSource(model: ModelIR): string | undefined {
+  const cases = model.fields.flatMap((field) =>
+    (field.examples ?? []).map((example) => ({ field, example })),
+  );
+  if (cases.length === 0) return undefined;
+  const inCents = (name: string, value: unknown) => {
+    const f = model.fields.find((x) => x.name === name);
+    return f && isMoney(f) && typeof value === "number" ? Math.round(value * 100) : value;
+  };
+  const tests = cases.map(({ field, example }) => {
+    const input = Object.entries(example.input).map(
+      ([k, v]) => `${k}: ${JSON.stringify(inCents(k, v))}`,
+    );
+    const title = Object.entries(example.input)
+      .map(([k, v]) => `${k} ${v}`)
+      .join(", ");
+    const expected = inCents(field.name, example.expected);
+    return `  test(${JSON.stringify(`${title} gives ${example.expected}`)}, () => {
+    expect(${formulasName(model)}.${field.name}({ ${input.join(", ")} })).toBe(${JSON.stringify(expected)});
+  });`;
+  });
+  const byField = [...new Set(cases.map((c) => c.field.name))].map(
+    (name) =>
+      `describe(${JSON.stringify(`${model.name}.${name}`)}, () => {\n${tests.filter((_, i) => cases[i]?.field.name === name).join("\n\n")}\n});`,
+  );
+  return `${HEADER}// The examples given for ${model.name}'s formulas: each must give the expected value.
+import { describe, expect, test } from "vitest";
+import { ${formulasName(model)} } from "${formulasModule(model)}";
+
+${byField.join("\n\n")}
+`;
+}
+
+/** Lists that aggregates in the model's formulas read, e.g. "lines" for SUM(lines.amount). */
+export function aggregatedLists(model: ModelIR): string[] {
+  const found = new Set<string>();
+  const visit = (e: unknown): void => {
+    if (!e || typeof e !== "object") return;
+    const node = e as { kind?: string; list?: string };
+    if (node.kind === "aggregate" && node.list) found.add(node.list);
+    for (const value of Object.values(e)) visit(value);
+  };
+  for (const field of model.fields) visit(field.formula);
+  return [...found];
+}
+
+/**
+ * Compiles formulas on records of `model` as stored. Computed fields of other models than
+ * `home` (the module the code goes in, if it is a model's formulas module) are read through
+ * their formulas modules, which `imports` collects.
+ */
+export function formulaCompiler(model: ModelIR, ir: SpecIR, home?: ModelIR) {
   const imports = new Set<ModelIR>();
   let depth = 0;
 
@@ -47,7 +140,7 @@ export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
   const fieldValue = (owner: ModelIR, name: string, row: string): string => {
     const field = owner.fields.find((f) => f.name === name) as FieldIR;
     // A computed field is read through its formula; another model's formulas are imported.
-    if (field.formula && owner !== model) imports.add(owner);
+    if (field.formula && owner !== home) imports.add(owner);
     const raw = field.formula ? `${formulasName(owner)}.${name}(${row})` : `${row}.${name}`;
     if (field.type.kind === "choice") return `F.t(${raw})`;
     if (field.type.kind !== "scalar") return raw;
@@ -142,87 +235,5 @@ export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
   /** A computed value converted back to stored units. */
   const stored = (field: FieldIR, code: string) => (isMoney(field) ? `F.toCents(${code})` : code);
 
-  const computed = model.fields.filter((f) => f.formula);
-  const defaults = model.fields.filter((f) => f.defaultFormula);
-  // A formula that reads no field, like TODAY(), gets an "_r" parameter (unused on purpose).
-  const entry = (f: FieldIR, expr: Expr) => {
-    const code = stored(f, compile(expr, model, "r"));
-    const param = /\br\./.test(code) ? "r" : "_r";
-    return `  ${f.name}: (${param}: Row): ${tsType(f)} => ${code},`;
-  };
-  const computedEntries = computed.map((f) => entry(f, f.formula as Expr));
-  const defaultEntries = defaults.map((f) => entry(f, f.defaultFormula as Expr));
-  const withType = computed.length
-    ? `T & { ${computed.map((f) => `${f.name}: ${tsType(f)}`).join("; ")} }`
-    : "T";
-  const withBody = computed.length
-    ? `{ ...row, ${computed.map((f) => `${f.name}: ${formulasName(model)}.${f.name}(row)`).join(", ")} }`
-    : "row";
-
-  return `${HEADER}import { F } from "#/kit/formula";
-${[...imports].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}
-type Row = Record<string, unknown>;
-
-/** Computed fields of ${model.name}, on records as stored (money in cents). */
-export const ${formulasName(model)} = {
-${computedEntries.join("\n")}
-};
-
-/** Values suggested when a ${model.name} is created. */
-export const ${defaultsName(model)} = {
-${defaultEntries.join("\n")}
-};
-
-/** The record with its computed fields. */
-export function ${withFormulasName(model)}<T extends Row>(row: T): ${withType} {
-  return ${withBody};
-}
-`;
-}
-
-/** A Vitest test per example: the formula must give the expected value. */
-export function formulasTestSource(model: ModelIR): string | undefined {
-  const cases = model.fields.flatMap((field) =>
-    (field.examples ?? []).map((example) => ({ field, example })),
-  );
-  if (cases.length === 0) return undefined;
-  const inCents = (name: string, value: unknown) => {
-    const f = model.fields.find((x) => x.name === name);
-    return f && isMoney(f) && typeof value === "number" ? Math.round(value * 100) : value;
-  };
-  const tests = cases.map(({ field, example }) => {
-    const input = Object.entries(example.input).map(
-      ([k, v]) => `${k}: ${JSON.stringify(inCents(k, v))}`,
-    );
-    const title = Object.entries(example.input)
-      .map(([k, v]) => `${k} ${v}`)
-      .join(", ");
-    const expected = inCents(field.name, example.expected);
-    return `  test(${JSON.stringify(`${title} gives ${example.expected}`)}, () => {
-    expect(${formulasName(model)}.${field.name}({ ${input.join(", ")} })).toBe(${JSON.stringify(expected)});
-  });`;
-  });
-  const byField = [...new Set(cases.map((c) => c.field.name))].map(
-    (name) =>
-      `describe(${JSON.stringify(`${model.name}.${name}`)}, () => {\n${tests.filter((_, i) => cases[i]?.field.name === name).join("\n\n")}\n});`,
-  );
-  return `${HEADER}// The examples given for ${model.name}'s formulas: each must give the expected value.
-import { describe, expect, test } from "vitest";
-import { ${formulasName(model)} } from "${formulasModule(model)}";
-
-${byField.join("\n\n")}
-`;
-}
-
-/** Lists that aggregates in the model's formulas read, e.g. "lines" for SUM(lines.amount). */
-export function aggregatedLists(model: ModelIR): string[] {
-  const found = new Set<string>();
-  const visit = (e: unknown): void => {
-    if (!e || typeof e !== "object") return;
-    const node = e as { kind?: string; list?: string };
-    if (node.kind === "aggregate" && node.list) found.add(node.list);
-    for (const value of Object.values(e)) visit(value);
-  };
-  for (const field of model.fields) visit(field.formula);
-  return [...found];
+  return { compile, stored, imports };
 }
