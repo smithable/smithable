@@ -246,6 +246,9 @@ ${tests.join("\n\n")}
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const can = expected(access, role);
       const listed = role !== null && allowed.roles.includes(role);
+      // As an owner, only with a role "allow" names (when it names any).
+      const asOwner =
+        role !== null && allowed.owner && (!allowed.among || allowed.among.includes(role));
       return `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
     const viewer = ${viewer};
     const others = insert${model.name}(${signedIn ? "stranger.id" : "null"}, ${values});
@@ -257,7 +260,7 @@ ${
 }    expect({
       others: await can(() => ${run}(viewer, others.id)),
       own: ${role !== null ? `await can(() => ${run}(viewer, own.id))` : "false"},
-    }).toEqual({ others: ${can.readOthers && listed}, own: ${can.readOwn && (listed || allowed.owner)} });
+    }).toEqual({ others: ${can.readOthers && listed}, own: ${can.readOwn && (listed || asOwner)} });
   });`;
     });
     const [field, wanted] = Object.entries(action.when ?? {})[0] ?? [];

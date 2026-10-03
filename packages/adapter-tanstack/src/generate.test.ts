@@ -254,6 +254,39 @@ pages:
   expect(files.some((f) => f.path === "src/kit/ActionButton.tsx")).toBe(true);
 });
 
+test("a standard action with allow on records their owners write: owners with a listed role run it on their own", () => {
+  const spec = `smithable: 0.1
+app: { name: Studio }
+models:
+  Booking:
+    fields: { status: booked | canceled }
+actions:
+  cancel:
+    on: Booking
+    when: { status: booked }
+    set: { status: canceled }
+    allow: [member]
+pages:
+  bookings: { crud: Booking, actions: [cancel] }
+`;
+  const auth = authOf(
+    "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: {}, member: {}, guest: {} }\ndefaultRole: member\n",
+  );
+  const files = generateApp(ir("smithable.yml", spec), { ...options, auth });
+  const access = files.find((f) => f.path === "src/generated/access.test.ts")?.content ?? "";
+  const action = access.slice(access.indexOf('describe("the cancel action"'));
+  const block = (role: string) =>
+    new RegExp(`test\\(${JSON.stringify(role)}, async \\(\\) => \\{([\\s\\S]*?)\\n  \\}\\);`).exec(
+      action,
+    )?.[1] ?? "";
+  expect(block("member")).toContain("toEqual({ others: false, own: true })");
+  expect(block("guest")).toContain("toEqual({ others: false, own: false })");
+  expect(block("admin")).toContain("toEqual({ others: true, own: true })");
+  expect(files.find((f) => f.path === "src/generated/actions/cancel.ts")?.content).toContain(
+    'among: ["admin", "member"]',
+  );
+});
+
 /** FNV-1a over the text: enough to notice any change, and runs anywhere. */
 function hash(text: string): string {
   let h = 0x811c9dc5;

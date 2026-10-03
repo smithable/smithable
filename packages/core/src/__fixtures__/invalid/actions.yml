@@ -53,6 +53,10 @@ actions:
     on: Customer
     when: { status: lost }
     set: { status: lost }          # expect: action-changes-nothing
+  remind:
+    on: Customer
+    when: { status: lost }
+    set: { status: lost, since: TODAY() }
     rules:                         # expect: rules-not-enforced
       - Only lost customers.
 pages:
@@ -62,6 +66,12 @@ pages:
   other:
     crud: Order
     actions: [again]               # expect: invalid-action
+  front:
+    landing: { hero: {} }
+    actions: [again]               # expect: invalid-key
+  overview:
+    dashboard: { open: { count: Customer } }
+    actions: [again]               # expect: invalid-key
   customers:
     crud: Customer
     actions: [notfy]               # expect: unknown-action
