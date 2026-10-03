@@ -9,6 +9,8 @@ models:
       description: text
       sport: football | futsal | beach
       founded: date
+    access:
+      delete: [admin]
   Player:
     fields:
       name: string!
@@ -16,6 +18,8 @@ models:
       team: Team!
       number: int
       birthDate: date
+    access:
+      delete: [admin]
   Match:
     fields:
       homeTeam: Team!
@@ -23,19 +27,28 @@ models:
       date: datetime!
       location: string
       status: scheduled | played | canceled
+    access:
+      delete: [admin]
   Result:
     fields:
       match: Match!
       homeScore: int!
       awayScore: int!
       scorers: text
+    access:
+      delete: [admin]
 pages:
   teams:
     crud: Team
+    search: [name]
   players:
     crud: Player
+    search: [name, position]
+    filters: [team, position]
   matches:
     crud: Match
+    search: [location]
+    filters: [status, homeTeam, awayTeam]
   results:
     crud: Result
   home:
@@ -49,4 +62,6 @@ pages:
         records: Match
         where:
           status: scheduled
-navigation: [home, teams, players, matches, results]
+  team:
+    users: manage
+navigation: [home, teams, players, matches, results, team]

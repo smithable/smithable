@@ -1,8 +1,8 @@
 smithableContent: 0.1
 models:
   ClassType:
-    label: Tuntityyppi
-    pluralLabel: Tuntityypit
+    label: Luokkatyyppi
+    pluralLabel: Luokkatyypit
     fields:
       name:
         label: Nimi
@@ -15,7 +15,7 @@ models:
           allLevels: Kaikki tasot
           advanced: Edistynyt
       durationMinutes:
-        label: Kesto (min)
+        label: Kesto (minuuttia)
   Instructor:
     label: Ohjaaja
     pluralLabel: Ohjaajat
@@ -26,51 +26,18 @@ models:
         label: Esittely
       portrait:
         label: Kuva
-  Post:
-    label: Artikkeli
-    pluralLabel: Artikkelit
-    fields:
-      title:
-        label: Otsikko
-      address:
-        label: Osoite
-      summary:
-        label: Yhteenveto
-      cover:
-        label: Kansikuva
-      body:
-        label: Sisältö
-      publishedOn:
-        label: Julkaistu
-      status:
-        label: Tila
-        values:
-          draft: Luonnos
-          published: Julkaistu
-  Message:
-    label: Viestit
-    pluralLabel: Viestit
-    fields:
-      name:
-        label: Nimi
-      email:
-        label: Sähköposti
-      message:
-        label: Viesti
   Session:
     label: Tunti
     pluralLabel: Tunnit
     fields:
       classType:
-        label: Tuntityyppi
+        label: Luokkatyyppi
       instructor:
         label: Ohjaaja
       startsAt:
         label: Aloitusaika
       capacity:
-        label: Osallistujamäärä
-      placesLeft:
-        label: Vapaat paikat
+        label: Kapasiteetti
   Booking:
     label: Varaus
     pluralLabel: Varaukset
@@ -84,18 +51,12 @@ pages:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
-  class-types:
-    title: Tuntityypit
-  instructors:
-    title: Ohjaajat
-  blog:
-    title: Blogi
-  posts:
-    title: Artikkelit
-  messages:
-    title: Viestit
   schedule:
     title: Aikataulu
+  class-types:
+    title: Luokkatyypit
+  instructors:
+    title: Ohjaajat
   sessions:
     title: Tunnit
   my-bookings:

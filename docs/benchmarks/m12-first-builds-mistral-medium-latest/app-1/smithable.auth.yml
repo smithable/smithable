@@ -1,6 +1,7 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
+  selfSignUp: false
 defaultAccess: private
 roles:
   admin:

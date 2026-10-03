@@ -10,10 +10,18 @@ models:
       year: int
       condition: mint | nearMint | veryGood | good | fair | poor
       pricePaid: money
-      coverImage: url
+      catalogNumber: string
       notes: text
 pages:
   albums:
     crud: Album
-    search: [title, artist, notes]
+    search: [title, artist, catalogNumber, notes]
     filters: [condition, year]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      albums:
+        records: Album
+navigation: [albums]
