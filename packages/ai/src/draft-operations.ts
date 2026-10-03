@@ -135,9 +135,16 @@ const fieldStep = (model: unknown, field: string, value: unknown): Step => ({
       : { model, field, type: value },
 });
 
+const AUTOMATIC_FIELDS = ["id", "owner", "createdAt", "updatedAt"];
+
 function repaired(step: Step): Step | undefined {
   if (step.op === "addModel" && step.args.fields && typeof step.args.fields === "object") {
-    const given = step.args.fields as Record<string, unknown>;
+    // Every model already has these: declaring them is a slip, left out.
+    const given = Object.fromEntries(
+      Object.entries(step.args.fields as Record<string, unknown>).filter(
+        ([k]) => !AUTOMATIC_FIELDS.includes(k),
+      ),
+    );
     const fields = Object.fromEntries(
       Object.entries(given).map(([k, v]) => {
         if (typeof v !== "string") return [k, v];
@@ -254,7 +261,9 @@ function applyAll(
         .map((d) => `${d.message}${d.hint ? ` ${d.hint}` : ""}`)
         .join(" ");
       const message = `${result.message}${detail ? ` ${detail}` : ""}`;
-      if (/already (?:has|exists)/i.test(message)) continue;
+      // Already there (a model or page added before): skipped. A validation error that only
+      // says the words ("every record already has an owner") is a refusal like any other.
+      if (/already (?:has|exists)/i.test(message) && !/would make/.test(message)) continue;
       // A list of related records the other model does not refer back to: a convenience the
       // app is complete without, so it is left out rather than refused.
       if (
@@ -311,7 +320,7 @@ function applyAll(
         const fields = step.args.fields as Record<string, string>;
         const needs = Object.entries(fields).filter(([, type]) =>
           noList
-            ? new RegExp(`\\b${noList}\\.`).test(fieldText(type))
+            ? new RegExp(`\\b${noList}\\b`).test(fieldText(type))
             : fieldText(type).includes(`= ${expression}`) ||
               fieldText(type).includes(`=${expression}`),
         );
@@ -320,7 +329,18 @@ function applyAll(
             Object.entries(fields).filter(([name]) => !needs.some(([n]) => n === name)),
           );
           queue.unshift({ op: "addModel", args: { ...step.args, fields: rest } });
-          for (const [field, type] of needs) queue.push(fieldStep(step.args.model, field, type));
+          // Mended on the way (a value worked out from other fields becomes a computed field).
+          const others = (field: string) => Object.keys(fields).filter((n) => n !== field);
+          for (const [field, type] of needs)
+            queue.push(
+              fieldStep(
+                step.args.model,
+                field,
+                typeof type === "string"
+                  ? (computedField(repairFieldShorthand(type), others(field)) ?? type)
+                  : type,
+              ),
+            );
           continue;
         }
       }
