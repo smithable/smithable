@@ -312,14 +312,48 @@
       },
       "additionalProperties": {
         "type": "object",
-        "required": [
-          "custom"
+        "description": "Custom (custom: true, with input and output) or standard (on, when, set).",
+        "oneOf": [
+          {
+            "required": [
+              "custom"
+            ]
+          },
+          {
+            "required": [
+              "on",
+              "set"
+            ]
+          }
         ],
         "additionalProperties": false,
         "properties": {
           "custom": {
             "const": true,
             "description": "Implemented in src/custom/actions/."
+          },
+          "on": {
+            "type": "string",
+            "description": "A standard action: the model whose record it changes."
+          },
+          "when": {
+            "type": "object",
+            "description": "Offered and allowed only for records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }."
+          },
+          "set": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "The new values: a literal the field accepts, or a formula on the record as it was, e.g. { status: resolved, resolvedAt: \"NOW()\" }."
           },
           "input": {
             "type": "object",

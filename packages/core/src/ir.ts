@@ -288,15 +288,39 @@ export interface QueryIR extends SemanticText {
   returns: string;
 }
 
-/** An action beyond create, edit and delete; in spec version 0.1 always custom code. */
-export interface ActionIR extends SemanticText {
+/**
+ * An action beyond create, edit and delete: custom code with its input and output, or a
+ * standard action that sets fields of one record (docs/design/actions.md).
+ */
+export type ActionIR = CustomActionIR | StandardActionIR;
+
+interface ActionBase extends SemanticText {
   name: string;
-  custom: true;
-  input: FieldIR[];
-  output?: FieldIR[];
   /** Only these roles may run the action (admins always can). */
   allow?: string[];
 }
+
+export interface CustomActionIR extends ActionBase {
+  custom: true;
+  input: FieldIR[];
+  output?: FieldIR[];
+}
+
+/** Changes one record of `on`, offered and allowed only when `when` fits it. */
+export interface StandardActionIR extends ActionBase {
+  custom: false;
+  /** Standard actions ask for nothing (yet): no input, no output. */
+  input: [];
+  output?: undefined;
+  on: string;
+  when?: Condition;
+  /** The new values, in the order written: a literal, or a formula on the record as it was. */
+  set: ActionValueIR[];
+}
+
+export type ActionValueIR =
+  | { field: string; value: FieldValue }
+  | { field: string; formula: Expr; text: string };
 
 export interface MenuIR {
   name: string;

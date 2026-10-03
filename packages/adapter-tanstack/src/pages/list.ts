@@ -359,7 +359,9 @@ export function listParts(
   // Inside a data page, one of many lists: named after its model too.
   const component = `${pascal(page.id)}${within ? pascal(plural(model.name)) : ""}Page`;
   const path = indexPath(page.route);
-  const actions = (page.actions ?? []).flatMap((name) => ir.actions.filter((a) => a.name === name));
+  const actions = (page.actions ?? []).flatMap((name) =>
+    ir.actions.filter((a) => a.name === name && a.custom),
+  );
   // Only the viewer's own records (mine: true), for apps with sign-in.
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
   const filtered =

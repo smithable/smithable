@@ -184,6 +184,7 @@ function readPage(
   let route = `/${kebab(id)}`;
   let pattern: PageIR["pattern"] | undefined;
   let actions: string[] | undefined;
+  const actionNodes = new Map<string, At>();
   let access: string[] | undefined;
   let search: { name: string; at: At }[] | undefined;
   let filters: { name: string; at: At }[] | undefined;
@@ -207,10 +208,12 @@ function readPage(
         route = r;
       }
     } else if (key === "actions") {
-      actions = readNameList(ctx, value, `the actions of ${where}`).map(({ name, at }) => {
+      const listed = readNameList(ctx, value, `the actions of ${where}`);
+      for (const { name, at } of listed) {
         ctx.reference("action", name, at);
-        return name;
-      });
+        actionNodes.set(name, at);
+      }
+      actions = listed.map(({ name }) => name);
     } else if (key === "search") {
       search = readNameList(ctx, value, `the search of ${where}`);
     } else if (key === "filters") {
@@ -290,6 +293,16 @@ function readPage(
       ["actions", "search", "filters", "sortable", "favorites", "contact", "mine"].includes(e.key),
     ))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
+  // A standard action changes a record of its model, so it is offered on that model's page.
+  for (const action of parsed.actions ?? []) {
+    const at = actionNodes.get(action.name);
+    if (model && actionNodes.has(action.name) && !action.custom && action.on !== model)
+      ctx.error(
+        at,
+        "invalid-action",
+        `The action "${action.name}" changes a ${action.on}, so it belongs on a crud page of ${action.on}, not on ${where}.`,
+      );
+  }
   if (!known.some((e) => e.key === "route") && RESERVED_ROUTES.some((r) => r.test(route))) {
     ctx.error(
       keyNode,

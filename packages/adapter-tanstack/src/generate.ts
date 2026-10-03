@@ -458,13 +458,17 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   {
     key: "actions",
     files: ({ ir, t, auth }) =>
-      ir.actions.flatMap((action) => [
-        generated(
-          `src/generated/actions/${kebab(action.name)}.ts`,
-          actionModule(action, ir, auth, t),
-        ),
-        custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
-      ]),
+      // Standard actions get their server function and button with the adapter's step 2
+      // (docs/design/actions.md); until then they generate nothing, and never a stub.
+      ir.actions
+        .filter((a) => a.custom)
+        .flatMap((action) => [
+          generated(
+            `src/generated/actions/${kebab(action.name)}.ts`,
+            actionModule(action, ir, auth, t),
+          ),
+          custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
+        ]),
   },
   {
     key: "queries",
@@ -503,7 +507,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         const dir = page.route === "/" ? "src/routes" : `src/routes${page.route}`;
         // A page's actions each get a route; the rest depends on its pattern.
         const actions = (page.actions ?? []).flatMap((name) => {
-          const action = ctx.ir.actions.find((a) => a.name === name);
+          const action = ctx.ir.actions.find((a) => a.name === name && a.custom);
           return action
             ? [
                 generated(
