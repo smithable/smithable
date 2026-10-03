@@ -34,6 +34,7 @@ models:
       endDate: date
       total: money
       notes: text
+      workItems: WorkItem[]
   WorkItem:
     fields:
       workOrder: WorkOrder!
@@ -55,41 +56,46 @@ pages:
   asiakkaat:
     crud: Customer
     search: [name, email, phone]
+    sortable: [name, createdAt]
   autot:
     crud: Car
-    search: [registrationNumber, make, model, customer]
+    search: [registrationNumber, make, model]
+    sortable: [registrationNumber, make, model, year]
   huoltotyot:
     crud: WorkOrder
-    search: [number, car, status]
-    filters: [status, startDate, endDate, car]
-    actions: [startWork, completeWork, cancelWork]
+    search: [number, description]
+    filters: [status, car, startDate, endDate]
+    sortable: [number, startDate, endDate, total]
+    actions: [markWorkOrderCompleted, markWorkOrderCanceled]
   laskut:
     crud: Invoice
-    search: [number, customer, workOrder, status]
-    filters: [status, issueDate, dueDate, customer]
-    actions: [sendInvoice, markPaid, cancelInvoice]
+    search: [number, customer]
+    filters: [status, customer, issueDate, dueDate]
+    sortable: [number, issueDate, dueDate, total]
+    actions: [markInvoiceSent, markInvoicePaid, markInvoiceCanceled]
   palvelut:
     crud: Service
-  tiimi:
+    search: [name, description]
+    sortable: [name, price]
+  team:
     users: manage
 actions:
-  startWork:
+  markWorkOrderCompleted:
     on: WorkOrder
     when:
-      status: pending
-    set:
-      status: inProgress
-      startDate: TODAY()
-    intent: Aloita huoltotö.
-  completeWork:
-    on: WorkOrder
-    when:
-      status: inProgress
+      status: [pending, inProgress]
     set:
       status: completed
       endDate: TODAY()
     intent: Merkitse huoltotö valmiiksi.
-  sendInvoice:
+  markWorkOrderCanceled:
+    on: WorkOrder
+    when:
+      status: [pending, inProgress]
+    set:
+      status: canceled
+    intent: Peruuta huoltotö.
+  markInvoiceSent:
     on: Invoice
     when:
       status: draft
@@ -97,25 +103,18 @@ actions:
       status: sent
       issueDate: TODAY()
     intent: Lähetä lasku asiakkaalle.
-  markPaid:
+  markInvoicePaid:
     on: Invoice
     when:
       status: sent
     set:
       status: paid
     intent: Merkitse lasku maksetuksi.
-  cancelWork:
-    on: WorkOrder
-    when:
-      status: [pending, inProgress]
-    set:
-      status: canceled
-    intent: Peruuta huoltotö.
-  cancelInvoice:
+  markInvoiceCanceled:
     on: Invoice
     when:
       status: [draft, sent]
     set:
       status: canceled
     intent: Peruuta lasku.
-navigation: [asiakkaat, autot, huoltotyot, laskut, palvelut, tiimi]
+navigation: [asiakkaat, autot, palvelut, huoltotyot, laskut, team]
