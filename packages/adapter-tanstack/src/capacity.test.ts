@@ -63,8 +63,9 @@ test("without a capacity nothing of it is generated", () => {
   }).ir as SpecIR;
   const app = generateApp(plain, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const booking = app.find((f) => f.path === "src/generated/booking.server.ts")?.content ?? "";
-  expect(booking).not.toContain("transaction");
-  expect(booking).not.toContain("Conflict");
+  // Deleting chosen rows has its own transaction (actions.md §9); the capacity's is not there.
+  expect(booking).not.toContain("row = db.transaction");
+  expect(booking).not.toContain('Conflict("full")');
 });
 
 test("the reservation block: a session's page books and cancels through the data functions; no sample places", () => {
