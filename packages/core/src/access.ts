@@ -70,13 +70,22 @@ export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
   };
 }
 
-/** Custom actions are for signed-in users; `allow` narrows them to roles. */
-export function actionAccess(action: ActionIR, auth: AuthIR): Allowed {
+/**
+ * Custom actions are for signed-in users; `allow` narrows them to roles. A standard action
+ * follows its model's write access (ARCHITECTURE §3), and `allow` narrows that to the roles
+ * listed: the record's owner may run it only when there is no `allow`.
+ */
+export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] = []): Allowed {
   const everyone = auth.roles.map((r) => r.name);
+  if (auth.signIn === "none") return { public: false, roles: [], owner: false };
+  const model = action.custom ? undefined : models.find((m) => m.name === action.on);
+  if (!model)
+    return { public: false, roles: withAdmin(action.allow ?? everyone, everyone), owner: false };
+  const write = modelAccess(model, auth).write;
   return {
     public: false,
-    roles: auth.signIn === "none" ? [] : withAdmin(action.allow ?? everyone, everyone),
-    owner: false,
+    roles: write.roles.filter((r) => !action.allow || r === "admin" || action.allow.includes(r)),
+    owner: write.owner && !action.allow,
   };
 }
 

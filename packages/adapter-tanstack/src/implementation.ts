@@ -83,7 +83,7 @@ export function implementationIndex(ir: SpecIR, auth: AuthIR): Record<string, Ge
     if (hasFormulas(model)) entry(concept).files.push({ path: `${base}.formulas.ts`, symbols: [] });
   }
 
-  for (const action of ir.actions) {
+  for (const action of ir.actions.filter((a) => a.custom)) {
     const a = actionNames(action);
     const concept = `action:${action.name}`;
     file(concept, `src/generated/actions/${kebab(action.name)}.ts`, [
@@ -107,6 +107,7 @@ export function implementationIndex(ir: SpecIR, auth: AuthIR): Record<string, Ge
       join(page.route, "$id"),
     );
     for (const name of page.actions ?? []) {
+      if (!ir.actions.find((a) => a.name === name)?.custom) continue;
       const path = `${dir}/actions/${kebab(name)}.tsx`;
       const route = join(page.route, `actions/${kebab(name)}`);
       file(concept, path, ["Route"]);

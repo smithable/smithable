@@ -784,5 +784,97 @@ test("an operation whose name is not text is refused, not thrown", () => {
   expect(applyOperation(files, 42 as unknown as string, {})).toMatchObject({
     ok: false,
     message: expect.stringContaining("must be text"),
+
+describe("standard actions", () => {
+  const cancel = () =>
+    applyOperation(files, "addAction", {
+      action: "cancelOrder",
+      on: "Order",
+      when: { status: "placed | shipped" },
+      set: { status: "canceled", total: "0" },
+    });
+
+  test("addAction with on and set adds a standard action and puts it on the model's crud page", () => {
+    const result = cancel();
+    if (!result.ok) throw new Error(result.message);
+    expect(result.description).toBe("Add the standard action cancelOrder");
+    expect(result.files.spec).toContain(
+      "  cancelOrder:\n    on: Order\n    when:\n      status: [placed, shipped]\n    set:\n      status: canceled\n      total: 0\n",
+    );
+    expect(result.files.spec).toMatch(
+      / {2}orders:\n {4}crud: Order\n {4}search: \[number, customer\]\n {4}actions: \[cancelOrder\]/,
+    );
+  });
+
+  test("the options parse from the command line", () => {
+    const op = findOperation("addAction");
+    if (!op) throw new Error("addAction");
+    expect(
+      parseOperationArgs(op, ["archive", "--on", "Order", "--set", "status=canceled"]),
+    ).toMatchObject({ action: "archive", on: "Order", set: { status: "canceled" } });
+    // Repeated pairs add up, and a formula's commas stay in the formula.
+    expect(
+      parseOperationArgs(op, [
+        "remind",
+        "--on",
+        "Order",
+        "--set",
+        "status=placed",
+        "--set",
+        'due=DATEADD(TODAY(), 14, "day"),note=a',
+      ]).set,
+    ).toEqual({ status: "placed", due: 'DATEADD(TODAY(), 14, "day")', note: "a" });
+  });
+
+  test("a standard action takes no input, and needs a model that exists", () => {
+    expect(
+      applyOperation(files, "addAction", {
+        action: "x",
+        on: "Order",
+        set: { status: "canceled" },
+        input: { why: "text" },
+      }),
+    ).toMatchObject({ ok: false, message: expect.stringContaining("no input") });
+    expect(
+      applyOperation(files, "addAction", { action: "x", on: "Ordr", set: { status: "canceled" } }),
+    ).toMatchObject({ ok: false, message: 'There is no model named "Ordr".' });
+    expect(
+      applyOperation(files, "addAction", { action: "x", on: "Order", set: { status: "lost" } }),
+    ).toMatchObject({ ok: false });
+  });
+
+  test("a renamed field is renamed in when, set and the formulas there", () => {
+    const first = cancel();
+    if (!first.ok) throw new Error(first.message);
+    const withFormula = applyOperation({ ...files, spec: first.files.spec }, "addAction", {
+      action: "discount",
+      on: "Order",
+      set: { total: "(total * 0.5)" },
+    });
+    if (!withFormula.ok) throw new Error(withFormula.message);
+    const renamed = applyOperation({ ...files, spec: withFormula.files.spec }, "renameField", {
+      model: "Order",
+      from: "total",
+      to: "amount",
+    });
+    if (!renamed.ok) throw new Error(renamed.message);
+    expect(renamed.files.spec).toContain("    set:\n      status: canceled\n      amount: 0\n");
+    expect(renamed.files.spec).toContain("      amount: (amount * 0.5)\n");
+  });
+
+  test("a field or choice value an action uses cannot be removed", () => {
+    const first = cancel();
+    if (!first.ok) throw new Error(first.message);
+    const project = { ...files, spec: first.files.spec };
+    expect(
+      applyOperation(project, "removeField", { model: "Order", field: "total" }),
+    ).toMatchObject({ ok: false, message: expect.stringContaining('The action "cancelOrder"') });
+    expect(
+      applyOperation(project, "changeField", {
+        model: "Order",
+        field: "status",
+        type: "draft | placed | canceled",
+      }),
+    ).toMatchObject({ ok: false, message: expect.stringContaining('The action "cancelOrder"') });
   });
 });

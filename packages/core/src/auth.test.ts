@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { actionAccess, modelAccess, pageAccess } from "./access.js";
 import type { AuthIR } from "./auth.js";
 import { validateAuth } from "./auth.js";
-import type { SpecIR } from "./ir.js";
+import type { SpecIR, StandardActionIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 
 const examples = import.meta.glob("../../../examples/*/smithable*.yml", {
@@ -63,6 +63,21 @@ describe("the examples", () => {
     });
     const merge = (ir as SpecIR).actions[0] as SpecIR["actions"][0];
     expect(actionAccess(merge, a).roles).toEqual(["admin"]);
+    // A standard action follows the model's write access; "allow" narrows it, never widens it.
+    const models = (ir as SpecIR).models;
+    const archive: StandardActionIR = {
+      name: "archive",
+      custom: false,
+      input: [],
+      on: "Customer",
+      set: [],
+    };
+    expect(actionAccess(archive, a, models)).toEqual(customer.write);
+    expect(actionAccess({ ...archive, allow: ["support"] }, a, models).roles).toEqual(["admin"]);
+    const order = { ...archive, on: "Order" };
+    expect(actionAccess(order, a, models)).toEqual(
+      modelAccess(models.find((m) => m.name === "Order") as SpecIR["models"][0], a).write,
+    );
   });
 
   test("booking: the schedule is public; members see only their own records", () => {
@@ -255,4 +270,37 @@ pages:
     ).diagnostics.map((d) => d.code);
   expect(codes("items, myItems")).toContain("mine-public");
   expect(codes("items")).not.toContain("mine-public");
+});
+
+test("a role a standard action allows but that may not edit the record is warned about", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields: { title: string!, status: open | resolved }
+    access: { write: [staff] }
+actions:
+  resolve:
+    on: Incident
+    set: { status: resolved }
+    allow: [staff, viewer]
+`,
+  }).ir;
+  const { diagnostics } = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {}, staff: {}, viewer: {} }\n",
+    },
+    ir,
+  );
+  expect(diagnostics.filter((d) => d.code === "action-role-cannot-write")).toMatchObject([
+    {
+      line: 4,
+      message: expect.stringContaining(
+        'The action "resolve" allows viewer, but viewer may not edit Incident records',
+      ),
+    },
+  ]);
 });

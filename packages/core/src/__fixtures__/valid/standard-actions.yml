@@ -1,0 +1,31 @@
+smithable: 0.1
+app:
+  name: Standard actions
+models:
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      resolvedAt: datetime
+      followUp: date
+      pinned: bool
+      severity: int
+actions:
+  resolve:
+    on: Incident
+    when: { status: [investigating, identified, monitoring] }
+    set:
+      status: resolved
+      resolvedAt: NOW()
+      followUp: DATEADD(TODAY(), 14, "day")
+      pinned: false
+    allow: [admin]
+    intent: The incident is over.
+  escalate:
+    on: Incident
+    when: { pinned: false }
+    set: { pinned: true, severity: 1 }
+pages:
+  incidents:
+    crud: Incident
+    actions: [resolve, escalate]
