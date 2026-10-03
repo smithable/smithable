@@ -611,7 +611,7 @@ test("addUsersPage adds one users page to the menu; setSignUp closes and reopens
   expect(again).toMatchObject({ ok: false, message: expect.stringContaining("team page") });
   const closed = applyOperation({ ...without, ...result.files }, "setSignUp", { who: "invited" });
   expect(closed.ok && closed.files.auth).toMatch(
-    /signIn:\n {2}providers: \[google\]\n {2}allowedDomains: .*\n {2}selfSignUp: false\n/,
+    /signIn:\n {2}providers: \[email\]\n {2}allowedDomains: .*\n {2}selfSignUp: false\n/,
   );
   // Closing sign-up without a users page is refused by the auth file's check.
   expect(applyOperation(without, "setSignUp", { who: "invited" })).toMatchObject({ ok: false });
