@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { modelAccess } from "./access.js";
+import { modelAccess, uniquePerOwner } from "./access.js";
 import { readCondition } from "./condition.js";
 import {
   type At,
@@ -364,7 +364,7 @@ export function validateAuth(
           "Replace it with a real address (smithable op setAdmins you@your-domain).",
         );
   }
-  if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes);
+  if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes, defaultAccess?.value ?? root);
   if (ir && apiNodes) checkApi(ctx, auth, ir, apiNodes);
   // A standard action follows its model's write access: "allow" narrows it and never widens it,
   // so a role there that may not edit the record still cannot run the action.
@@ -649,7 +649,23 @@ function checkAgainstSpec(
   auth: AuthIR,
   ir: SpecIR,
   publicNodes: Partial<Record<keyof AuthIR["public"], { name: string; at: At }[]>>,
+  accessAt: At,
 ): void {
+  // A capacity per a unique reference holds one record per referenced record when "unique" is
+  // global (not per owner): a max above 1 is never reached. The default access decides which.
+  for (const model of ir.models) {
+    const capacity = model.capacity;
+    const per = capacity && model.fields.find((f) => f.name === capacity.per);
+    if (!capacity || !per?.unique || uniquePerOwner(model, auth)) continue;
+    if (typeof capacity.max === "number" && capacity.max <= 1) continue;
+    const one = model.name.toLowerCase();
+    ctx.warning(
+      accessAt,
+      "capacity-unique-shared",
+      `${model.name}.${per.name} is unique, and with shared access that means one ${one} per ${per.name} in all: the capacity of ${capacity.max} is never reached. "unique" is one per person only when records are private.`,
+      `Remove "unique" from ${per.name}, or make the model's records private.`,
+    );
+  }
   const known = { pages: ir.pages.map((p) => p.id), read: ir.models.map((m) => m.name) };
   for (const key of ["pages", "read", "create"] as const) {
     const names = key === "pages" ? known.pages : known.read;

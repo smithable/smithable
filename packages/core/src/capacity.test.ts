@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
+import { validateAuth } from "./auth.js";
 import { validateSpec } from "./spec.js";
 
 const spec = (booking: string) => `smithable: 0.1
@@ -148,4 +149,30 @@ test("a capacity may count several values, and refuses to lose one", () => {
     where: { status: "confirmed | canceled" },
   });
   expect(set.ok && set.files.spec).toContain("        status: [confirmed, canceled]\n");
+});
+
+test("a unique per on shared records holds one in all: the auth file's check says so", () => {
+  const ir = read("capacity: { per: session, max: session.capacity }").ir;
+  const access = (defaultAccess: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: ${defaultAccess}\n`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.code);
+  expect(access("shared")).toContain("capacity-unique-shared");
+  // Private: unique is per owner, one place per person and session.
+  expect(access("private")).not.toContain("capacity-unique-shared");
+  // A max of 1 is what unique gives anyway.
+  const one = read("capacity: { per: session, max: 1 }").ir;
+  expect(
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
+      },
+      one,
+    ).diagnostics.map((d) => d.code),
+  ).not.toContain("capacity-unique-shared");
 });
