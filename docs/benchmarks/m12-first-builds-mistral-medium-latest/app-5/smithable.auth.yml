@@ -1,5 +1,12 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-defaultAccess: private
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages inventory and suppliers.
+  staff:
+    description: Views and updates stock levels.
+defaultRole: staff
 admins: [johan@smithable.ai]

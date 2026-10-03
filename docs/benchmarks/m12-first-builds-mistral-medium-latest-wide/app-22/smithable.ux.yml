@@ -1,21 +1,24 @@
 smithableUx: 0.1
-tones:
-  PreOrder.status:
-    ready: success
-    pickedUp: success
-    canceled: danger
-    pending: warning
 pages:
+  produkte:
+    icon: package
+    form:
+      columns: 2
   vorbestellungen:
+    icon: cart
+    form:
+      columns: 2
     table:
       sort: -pickupTime
+  abholzeiten:
+    icon: calendar
     form:
       columns: 2
-  abholzeiten:
     table:
       sort: date
-    form:
-      columns: 2
-  produkte:
-    form:
-      columns: 2
+tones:
+  PreOrder.status:
+    pending: warning
+    confirmed: success
+    pickedUp: success
+    canceled: danger

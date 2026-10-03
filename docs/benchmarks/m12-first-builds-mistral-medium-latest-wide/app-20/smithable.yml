@@ -16,7 +16,7 @@ models:
   Instructor:
     fields:
       name: string!
-      bio: markdown
+      bio: text
       portrait: picture
     access:
       create: [admin]
@@ -51,13 +51,8 @@ pages:
       footer:
       classes:
         records: ClassType
-      contact:
-  team:
-    users: manage
-    access: [admin]
-  admin:
-    data: all
-    access: [admin]
+      callToAction:
+        button: schedule
   sessions:
     crud: Session
     access: [admin]
@@ -65,8 +60,9 @@ pages:
     filters: [classType, instructor, startsAt]
   my-bookings:
     crud: Booking
-    mine: true
+    access: [member, admin]
   schedule:
     calendar:
       model: Session
       starts: startsAt
+    access: [member, admin]

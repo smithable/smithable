@@ -3,8 +3,6 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
-public:
-  pages: [home]
 roles:
   admin:
     description: Runs the status board and the team.

@@ -8,25 +8,37 @@ models:
       name: string!
       email: email!
       address: text
-      vatNumber: string
-      quotes: Quote[]
+      phone: phone
+      notes: text
   Quote:
     fields:
-      number: string! unique
       client: Client!
-      issuedOn: date! = TODAY()
+      description: text!
       amount: money!
-      status: draft | sent | paid | overdue
-      description: text
+      currency: string = USD
+      issuedOn: date! = TODAY()
+      status: draft | sent | accepted | rejected
+      notes: text
+  Payment:
+    fields:
+      quote: Quote!
+      amount: money!
+      currency: string = USD
+      paidOn: date! = TODAY()
+      method: cash | bank | online
+      notes: text
 pages:
   clients:
     crud: Client
     search: [name, email]
   quotes:
     crud: Quote
-    actions: [markSent, markPaid]
-    search: [number, description, client]
+    actions: [markSent, markAccepted, markRejected]
+    search: [description, client]
     filters: [status, client]
+  payments:
+    crud: Payment
+    filters: [quote, method]
   team:
     users: manage
 actions:
@@ -37,10 +49,17 @@ actions:
     set:
       status: sent
     intent: The quote was sent to the client.
-  markPaid:
+  markAccepted:
     on: Quote
     when:
-      status: [sent, overdue]
+      status: sent
     set:
-      status: paid
-    intent: The client paid the quote.
+      status: accepted
+    intent: The client accepted the quote.
+  markRejected:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: rejected
+    intent: The client rejected the quote.

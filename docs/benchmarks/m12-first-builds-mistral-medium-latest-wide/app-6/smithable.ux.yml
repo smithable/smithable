@@ -1,1 +1,19 @@
 smithableUx: 0.1
+pages:
+  clients:
+    table:
+      columns: [name, address, email]
+      sort: name
+  invoices:
+    table:
+      columns: [number, client, issuedOn, dueOn, status, total]
+      sort: -issuedOn
+  invoice-lines:
+    table:
+      columns: [invoice, description, quantity, unitPrice, amount]
+      sort: invoice
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+    sent: warning

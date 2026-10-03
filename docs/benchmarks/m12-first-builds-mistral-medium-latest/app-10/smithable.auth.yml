@@ -9,6 +9,6 @@ roles:
   admin:
     description: Manages recipes and shopping lists.
   member:
-    description: Views recipes and shopping lists.
+    description: Views and adds recipes and shopping lists.
 defaultRole: member
 admins: [johan@smithable.ai]
