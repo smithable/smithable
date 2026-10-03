@@ -64,7 +64,7 @@ export function draftOperations(): AnyOperation[] {
 const GUIDANCE = `You design the first version of a web app as a list of Smithable operations, applied in order to an empty app. Smithable generates the whole app from the result.
 Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess only to change the access the app starts with (shared: a team works on the same records; private: each person sees only their own); setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts; addAction with "on", "set" and usually "when" for a button that moves a record to its next state (resolve an incident, mark an invoice paid, cancel a booking), e.g. { action: "resolve", on: "Incident", when: { status: "investigating | identified" }, set: { status: "resolved", resolvedAt: "NOW()" }, add: { "IncidentUpdate.at": "NOW()", "IncidentUpdate.status": "resolved", "IncidentUpdate.message": "" } }: "add" also creates a related record (a model that refers to this one), and an empty value asks the person for it when they press the button; "copy" (with "with" for its lists) makes a new record from this one ("duplicate invoice"), and "ME()" sets a User field to whoever presses the button ("take ticket"). Never add a custom action (one without "on") unless the description asks for something only code can do: it does nothing until someone writes its code.
 When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, standard actions (those with "on"; never its custom ones), roles and access that fit the description, under the same names, leave out what does not fit, and add what the description needs. The app already starts with the starter's default access. Restrict a page or a model to some roles only where the starter does or the description says so: a page without it is open to everyone who signs in. The starter's app name, its people, places and texts are sample content: never reuse them.
-Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
+Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". A value worked out from the record's other fields, never entered, is a computed field, written as an object instead of a string: "amount": { "type": "money", "formula": "quantity * unitPrice" } ("= …" in the string is a default, set once). Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Language: everything a person reads is written in the description's language: the app's name and description, the landing page's texts, and, when that language is not English, a label for every model (setText with path [models, <Model>, label] and [models, <Model>, pluralLabel]), field ([models, <Model>, fields, <field>, label]), choice value ([models, <Model>, fields, <field>, values, <value>]) and page ([pages, <page>, title]). Model, field and choice names themselves stay English identifiers; a page's name becomes its address, so it may be a word of that language written with plain letters (boka-nu).
 Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic. Never make a model with an email or phone field readable by visitors (setPublic's read): that publishes people's contact details; keep those in a model that is not public, or collect them with a contact form. An app with shared access is for people who are invited (Smithable adds the team page): call setSignUp anyone only when the description says anybody may join.`;
 
@@ -102,13 +102,54 @@ export function repairFieldShorthand(text: string): string {
 }
 
 /** The step with its field shorthand mended, or undefined when nothing changed. */
+/**
+ * A value worked out from the model's other fields, written as a default ("money = quantity *
+ * unitPrice"): the long form of a computed field. A default that names none of them (TODAY())
+ * stays a default.
+ */
+export function computedField(
+  text: string,
+  others: string[],
+): { type: string; formula: string } | undefined {
+  const m = /^([^=]+?)\s*=\s*(.+)$/.exec(text.trim());
+  if (!m?.[1] || !m[2] || m[1].includes("|")) return undefined;
+  const formula = m[2].trim();
+  if (!others.some((name) => new RegExp(`\\b${name}\\b`).test(formula))) return undefined;
+  // A computed field is never entered: not required, not unique.
+  const type = m[1].replace(/!|\bunique\b/g, "").trim();
+  return /^\w+$/.test(type) ? { type, formula } : undefined;
+}
+
+/** A field's text whichever way it is written, to look for the names it uses. */
+const fieldText = (value: unknown) =>
+  typeof value === "object" && value
+    ? `${(value as { type: string }).type} = ${(value as { formula: string }).formula}`
+    : String(value);
+
+/** An addModel field added on its own: shorthand as the type, a computed field with its formula. */
+const fieldStep = (model: unknown, field: string, value: unknown): Step => ({
+  op: "addField",
+  args:
+    typeof value === "object" && value
+      ? { model, field, ...(value as { type: string; formula: string }) }
+      : { model, field, type: value },
+});
+
 function repaired(step: Step): Step | undefined {
   if (step.op === "addModel" && step.args.fields && typeof step.args.fields === "object") {
+    const given = step.args.fields as Record<string, unknown>;
     const fields = Object.fromEntries(
-      Object.entries(step.args.fields as Record<string, unknown>).map(([k, v]) => [
-        k,
-        repairFieldShorthand(String(v)),
-      ]),
+      Object.entries(given).map(([k, v]) => {
+        if (typeof v !== "string") return [k, v];
+        const text = repairFieldShorthand(v);
+        return [
+          k,
+          computedField(
+            text,
+            Object.keys(given).filter((n) => n !== k),
+          ) ?? text,
+        ];
+      }),
     );
     return JSON.stringify(fields) === JSON.stringify(step.args.fields)
       ? undefined
@@ -172,7 +213,9 @@ const ESSENTIAL = new Set([
  * draft: an action, and a field with a formula or default (a total over a list never added).
  */
 const lastRoundDrops = (step: Step) =>
-  step.op === "addAction" || (step.op === "addField" && String(step.args.type ?? "").includes("="));
+  step.op === "addAction" ||
+  (step.op === "addField" &&
+    (Boolean(step.args.formula) || String(step.args.type ?? "").includes("=")));
 
 /**
  * Applies steps in order: a slip in the field shorthand is mended, a step already applied or
@@ -207,7 +250,9 @@ function applyAll(
       }
     }
     if (!result.ok) {
-      const detail = result.diagnostics.map((d) => d.message).join(" ");
+      const detail = result.diagnostics
+        .map((d) => `${d.message}${d.hint ? ` ${d.hint}` : ""}`)
+        .join(" ");
       const message = `${result.message}${detail ? ` ${detail}` : ""}`;
       if (/already (?:has|exists)/i.test(message)) continue;
       // A list of related records the other model does not refer back to: a convenience the
@@ -240,38 +285,42 @@ function applyAll(
         // one added later): the model is added without it, and the field follows at the end.
         const fields = step.args.fields as Record<string, string>;
         const needs = Object.entries(fields).filter(([, type]) =>
-          new RegExp(`\\b${missing}\\b`).test(String(type)),
+          new RegExp(`\\b${missing}\\b`).test(fieldText(type)),
         );
         if (needs.length && needs.length < Object.keys(fields).length) {
           const rest = Object.fromEntries(
             Object.entries(fields).filter(([name]) => !needs.some(([n]) => n === name)),
           );
           queue.unshift({ op: "addModel", args: { ...step.args, fields: rest } });
-          for (const [field, type] of needs)
-            queue.push({ op: "addField", args: { model: step.args.model, field, type } });
+          for (const [field, type] of needs) queue.push(fieldStep(step.args.model, field, type));
           continue;
         }
       }
-      // A formula over a list the model does not have yet (a total of its lines): the model is
-      // added without it, and the formula follows at the end, once the list may be there.
+      // A formula over a list the model does not have yet (a total of its lines), or a value
+      // worked out from other fields written as a default (no operation adds those yet): the
+      // model is added without it, and the field follows at the end, where it may still be
+      // refused and then left out and named, rather than costing the model and all after it.
       const noList = /has no list named "(\w+)"/.exec(message)?.[1];
+      const expression = /Default "([^"]+)" must be/.exec(message)?.[1];
       if (
-        noList &&
+        (noList || expression) &&
         step.op === "addModel" &&
         typeof step.args.fields === "object" &&
         step.args.fields
       ) {
         const fields = step.args.fields as Record<string, string>;
         const needs = Object.entries(fields).filter(([, type]) =>
-          new RegExp(`\\b${noList}\\.`).test(String(type)),
+          noList
+            ? new RegExp(`\\b${noList}\\.`).test(fieldText(type))
+            : fieldText(type).includes(`= ${expression}`) ||
+              fieldText(type).includes(`=${expression}`),
         );
         if (needs.length && needs.length < Object.keys(fields).length) {
           const rest = Object.fromEntries(
             Object.entries(fields).filter(([name]) => !needs.some(([n]) => n === name)),
           );
           queue.unshift({ op: "addModel", args: { ...step.args, fields: rest } });
-          for (const [field, type] of needs)
-            queue.push({ op: "addField", args: { model: step.args.model, field, type } });
+          for (const [field, type] of needs) queue.push(fieldStep(step.args.model, field, type));
           continue;
         }
       }
