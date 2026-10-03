@@ -1,0 +1,8 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: private
+roles:
+  member:
+    description: Family member who can view and add recipes.
+defaultRole: member

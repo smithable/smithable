@@ -1,0 +1,65 @@
+smithable: 0.1
+app:
+  name: Freelance Invoicing
+  description: Invoicing for freelancers, with clients, invoices and payments.
+  currency: EUR
+models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      total: money
+      lines: InvoiceLine[]
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount: money
+  Payment:
+    fields:
+      invoice: Invoice!
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | creditCard | cash
+pages:
+  overview:
+    crud: Invoice
+  invoices:
+    crud: Invoice
+    filters: [status, client]
+    search: [number]
+  clients:
+    crud: Client
+    search: [name, email]
+  settings:
+    crud: BusinessProfile
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      callToAction:
+        button: overview
+  payments:
+    crud: Payment
+    filters: [invoice, method]

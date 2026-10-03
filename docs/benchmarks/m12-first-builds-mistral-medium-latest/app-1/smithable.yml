@@ -1,0 +1,63 @@
+smithable: 0.1
+app:
+  name: Yoga Studio Booking
+  description: Online booking system for yoga classes with teachers and schedules.
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: beginner | allLevels | advanced
+      durationMinutes: int! = 60
+    access:
+      create: [admin]
+  Instructor:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+    access:
+      create: [admin]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      placesLeft: int = capacity - COUNT(bookings)
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      session: Session!
+      member: User!
+    capacity:
+      per: session
+      max: session.capacity
+pages:
+  class-types:
+    crud: ClassType
+    access: [admin]
+  instructors:
+    crud: Instructor
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      classes:
+        records: ClassType
+      callToAction:
+        button: schedule
+  sessions:
+    crud: Session
+    access: [admin]
+  my-bookings:
+    crud: Booking
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+navigation: [schedule, my-bookings]

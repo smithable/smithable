@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [google]
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages the job board.
+  member:
+    description: Posts jobs and applies for them.
+defaultRole: member
+public:
+  pages: [home, jobs]
+  read: [{ JobPost: { where: { status: open } } }]
