@@ -8,7 +8,7 @@ models:
       name: string!
       email: email
       phone: phone
-      industry: string
+      segment: smb | enterprise | government
       notes: text
       accountManager: User
     access:
@@ -20,7 +20,7 @@ models:
       email: email
       phone: phone
       company: Company!
-      role: decisionMaker | influencer | user
+      role: decisionMaker | influencer | endUser
       notes: text
     access:
       delete: [admin]
@@ -29,8 +29,8 @@ models:
       name: string!
       company: Company!
       contact: Contact
-      value: money!
-      stage: prospecting | qualified | proposal | negotiation | closedWon | closedLost
+      value: money
+      stage: lead | qualified | proposal | negotiation | closedWon | closedLost
       closeDate: date
       notes: text
     access:
@@ -44,6 +44,7 @@ models:
       dueDate: date!
       status: pending | completed | canceled
       notes: text
+      assignee: User
     access:
       delete: [admin]
 pages:
@@ -56,12 +57,11 @@ pages:
   deals:
     crud: Deal
     search: [name, company]
-    filters: [stage, company, contact]
+    filters: [stage, company, closeDate]
     sortable: [value, closeDate, stage]
   follow-ups:
     crud: FollowUp
     search: [title, company, contact]
-    filters: [status, dueDate, company, contact, deal]
     sortable: [dueDate, status]
   team:
     users: manage

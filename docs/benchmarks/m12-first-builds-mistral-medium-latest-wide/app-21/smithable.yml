@@ -1,0 +1,72 @@
+smithable: 0.1
+app:
+  name: Pieni Autokorjaamo
+  description: Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+  Car:
+    fields:
+      licensePlate: string! unique
+      make: string!
+      model: string!
+      year: int
+      customer: Customer!
+  Service:
+    fields:
+      name: string!
+      description: text
+      price: money
+      duration: int = 60
+  WorkItem:
+    fields:
+      service: Service!
+      notes: text
+      quantity: int! = 1
+      workOrder: WorkOrder!
+  WorkOrder:
+    fields:
+      car: Car!
+      description: text
+      status: pending | inProgress | completed | cancelled
+      startDate: date
+      endDate: date
+      totalCost: money = 0
+      workItems: WorkItem[]
+    access:
+      delete: [mechanic]
+      write: [mechanic]
+  Invoice:
+    fields:
+      workOrder: WorkOrder!
+      invoiceNumber: string! unique
+      issueDate: date! = TODAY()
+      dueDate: date
+      status: draft | sent | paid | overdue
+      totalAmount: money!
+    access:
+      delete: [accountant]
+      write: [accountant]
+pages:
+  customers:
+    crud: Customer
+    search: [name, email, phone]
+  cars:
+    crud: Car
+    search: [licensePlate, make, model]
+  services:
+    crud: Service
+  work-orders:
+    crud: WorkOrder
+    access: [mechanic]
+    filters: [status, startDate, endDate, car]
+  invoices:
+    crud: Invoice
+    access: [accountant]
+    filters: [status, issueDate, dueDate]
