@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useId, useRef, useState } from "react";
+import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
@@ -521,6 +522,8 @@ export function RecordCards({
     title: string;
     text?: string;
     badge?: string;
+    /** The badge's color by meaning; without one it is neutral. */
+    tone?: "success" | "warning" | "danger";
     /** Where the card opens, e.g. its article. */
     href?: string;
     picture?: { src: string; alt: string; width: number; height: number };
@@ -574,9 +577,7 @@ export function RecordCards({
       {card.text && <p className="flex-1 text-muted-foreground">{card.text}</p>}
       {card.badge && (
         <p className="mt-2">
-          <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
-            {card.badge}
-          </span>
+          <Badge variant={card.tone}>{card.badge}</Badge>
         </p>
       )}
     </>

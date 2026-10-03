@@ -186,6 +186,14 @@ export function landingRoute(
                 ]),
               )
             : undefined;
+        // The badge's color by meaning, as in the model's tables.
+        const tones =
+          choice &&
+          Object.fromEntries(
+            Object.entries(ux.tones[`${model.name}.${choice.name}`] ?? {}).filter(
+              ([, tone]) => tone !== "neutral",
+            ),
+          );
         return [
           `${open("RecordCards")}
           id=${attr(section.name)}${icon ? `\n          icon={${icon}}` : ""}${door ? `\n          door={${literal(door)}}` : ""}
@@ -224,6 +232,11 @@ export function landingRoute(
               labels && choice
                 ? `
             badge: (${literal(labels)} as Record<string, string>)[row.${choice.name}],`
+                : ""
+            }${
+              tones && Object.keys(tones).length
+                ? `
+            tone: (${literal(tones)} as Record<string, "success" | "warning" | "danger">)[row.${choice?.name}],`
                 : ""
             }
           }))}
