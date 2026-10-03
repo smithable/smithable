@@ -695,7 +695,14 @@ ${
   options(viewer: Viewer | null) {
     if (readScope(${n.access}.read, viewer) === "none") return [];
     return db
-      .select({ value: ${n.table}.id, label: ${titleColumn === "id" ? `sql<string>\`'${n.label} #' || \${${n.table}.id}\`` : `${n.table}.${titleColumn}`} })
+      .select({ value: ${n.table}.id, label: ${
+        titleColumn === "id"
+          ? `sql<string>\`'${n.label} #' || \${${n.table}.id}\``
+          : model.fields.find((f) => f.name === titleColumn)?.required
+            ? `${n.table}.${titleColumn}`
+            : // An optional title: the record's number where it is empty, so every choice has a name.
+              `sql<string>\`coalesce(\${${n.table}.${titleColumn}}, '${n.label} #' || \${${n.table}.id})\``
+      } })
       .from(${n.table})
       .where(${self}.readable(viewer))
       .orderBy(${titleColumn === "id" ? `${n.table}.id` : `asc(${n.table}.${titleColumn})`})
