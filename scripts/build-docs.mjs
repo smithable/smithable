@@ -16,6 +16,7 @@ const PAGES = [
   { src: "docs/site/index.md", out: "index.html", nav: "Home" },
   { src: "docs/site/start.md", out: "start.html", nav: "Getting started" },
   { src: "docs/site/starters.md", out: "starters.html", nav: "Starters" },
+  { src: "docs/site/change.md", out: "change.html", nav: "Changing an app" },
   { src: "docs/site/why.md", out: "why.html", nav: "Why Smithable" },
   { src: "docs/site/faq.md", out: "faq.html", nav: "Questions" },
   { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
