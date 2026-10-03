@@ -50,10 +50,20 @@ const setTheme: Operation<{
     },
   },
   positional: [],
-  describe: ({ page, ...args }) =>
-    `Set ${page ? `the ${page} page's` : "the"} theme: ${Object.entries(args)
-      .map(([k, v]) => `${k} ${v}`)
-      .join(", ")}`,
+  // "Use the corporate theme", "Set the look: primary color #1d4ed8, compact density".
+  describe: ({ page, ...args }) => {
+    const { preset, ...rest } = args as Record<string, unknown>;
+    const where = page ? ` on the ${page} page` : "";
+    const WORDS: Record<string, string> = { primary: "primary color", background: "background" };
+    const others = Object.entries(rest).map(([k, v]) =>
+      k === "density" || k === "font" ? `${v} ${k}` : `${WORDS[k] ?? k} ${v}`,
+    );
+    const theme = preset === undefined ? "" : `Use the ${preset} theme${where}`;
+    if (!others.length) return theme || `Set the look${where}`;
+    return theme
+      ? `${theme}, with ${others.join(", ")}`
+      : `Set the look${where}: ${others.join(", ")}`;
+  },
   destructive: () => false,
   apply(editors, { page, ...args }, ir) {
     const ux = editors.ux;
