@@ -30,8 +30,6 @@ models:
       recipe: Recipe
     access:
       delete: [admin]
-      write: [admin, member]
-      create: [admin, member]
   ShoppingItem:
     fields:
       name: string!
@@ -47,24 +45,24 @@ pages:
   shopping-lists:
     crud: ShoppingList
     filters: [status, date]
-    actions: [markAsInProgress, markAsCompleted]
+    actions: [markInProgress, markCompleted]
   home:
     route: /
     landing:
       hero:
       footer:
-      recipes:
+      featuredRecipes:
         records: Recipe
         where:
-          category: [breakfast, lunch, dinner, dessert, snack, drink]
+          category: [dessert, breakfast]
 actions:
-  markAsInProgress:
+  markInProgress:
     on: ShoppingList
     when:
       status: planned
     set:
       status: inProgress
-  markAsCompleted:
+  markCompleted:
     on: ShoppingList
     when:
       status: inProgress

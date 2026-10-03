@@ -1,1 +1,21 @@
 smithableUx: 0.1
+pages:
+  matches:
+    table:
+      sort: -date
+      view: cards
+    icon: calendar
+  teams:
+    table:
+      view: cards
+    icon: users
+  players:
+    table:
+      view: cards
+    icon: user
+  results:
+    icon: receipt
+tones:
+  Match.status:
+    played: success
+    canceled: danger

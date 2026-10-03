@@ -7,8 +7,6 @@ pages:
       image:
         src: images/hero.webp
         alt: Close-up of green leaves with dew in soft light
-  guests:
-    title: Guests
 models:
   Guest:
     label: Guest

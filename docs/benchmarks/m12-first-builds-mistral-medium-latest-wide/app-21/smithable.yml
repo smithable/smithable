@@ -3,14 +3,14 @@ app:
   name: Pieni autokorjaamo
   description: Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
   currency: EUR
-  timezone: Europe/Helsinki
 models:
   Customer:
     fields:
       name: string!
       email: email
       phone: phone
-      notes: text
+      address: text
+      cars: Car[]
   Car:
     fields:
       registrationNumber: string! unique
@@ -18,28 +18,54 @@ models:
       model: string!
       year: int
       customer: Customer!
-      notes: text
-  Service:
+      serviceJobs: ServiceJob[]
+  ServiceJob:
     fields:
-      name: string!
-      description: text
-      price: money!
-  WorkOrderLine:
-    fields:
-      service: Service!
-      quantity: int! = 1
-      unitPrice: money
-      total:
-        type: money
-        formula: quantity * unitPrice
-      workOrder: WorkOrder!
-  WorkOrder:
+      car: Car!
+      description: text!
+      status: pending | inProgress | completed | cancelled
+      startDate: date
+      endDate: date
+      totalCost: money
+      invoice: Invoice
+  Invoice:
     fields:
       number: string! unique
-      car: Car!
-      status: pending | inProgress | completed | canceled
-      description: text
-      total: money
+      customer: Customer!
+      issuedOn: date! = TODAY()
+      dueOn: date
+      status: draft | sent | paid | overdue
+      serviceJobs: ServiceJob[]
+      total:
+        type: money
+        formula: SUM(serviceJobs.totalCost)
 pages:
-  team:
-    users: manage
+  asiakkaat:
+    crud: Customer
+    search: [name, email, phone]
+  autot:
+    crud: Car
+    search: [registrationNumber, make, model]
+  huoltotyot:
+    crud: ServiceJob
+    search: [description]
+    filters: [status, car]
+  laskut:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    filters: [status, customer]
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Lasku lähetetty asiakkaalle.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Asiakas on maksanut laskun.
