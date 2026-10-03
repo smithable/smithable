@@ -7676,6 +7676,8 @@ function openInvitation(email: string) {
 
 /** Why an address may not have an account here, or nothing when it may. */
 function joinRefusal(email: string): string | undefined {
+  // The admins may always sign in, whatever the domains or the invitations say.
+  if (ADMINS.includes(email)) return undefined;
   if (!ALLOWED_DOMAINS.includes(email.split("@")[1] ?? ""))
     return \`Only \${ALLOWED_DOMAINS.join(" and ")} accounts can sign in.\`;
   const invited = invitationOf(email);
@@ -8922,7 +8924,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "fd016ac2 generated",
+  "src/lib/auth.ts": "4fab771b generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -18974,6 +18976,8 @@ function openInvitation(email: string) {
 
 /** Why an address may not have an account here, or nothing when it may. */
 function joinRefusal(email: string): string | undefined {
+  // The admins may always sign in, whatever the domains or the invitations say.
+  if (ADMINS.includes(email)) return undefined;
   const invited = invitationOf(email);
   if (
     !(invited && invited.expiresAt.getTime() > Date.now()) &&
@@ -21002,7 +21006,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "5006bdb8 generated",
+  "src/lib/auth.ts": "9a9b192d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",

@@ -337,3 +337,13 @@ actions:
   });
   expect(diagnostics.filter((d) => d.code === "action-role-cannot-write")).toEqual([]);
 });
+
+test("an administrator outside allowedDomains is warned about: nobody else from their domain may sign in", () => {
+  const codes = (admins: string) =>
+    validateAuth({
+      path: "smithable.auth.yml",
+      text: `smithableAuth: 0.1\nsignIn: { providers: [email], allowedDomains: [acme.example] }\ndefaultAccess: shared\nadmins: [${admins}]\n`,
+    }).diagnostics.map((d) => d.code);
+  expect(codes("you@gmail.com")).toContain("admin-outside-domains");
+  expect(codes("you@acme.example")).not.toContain("admin-outside-domains");
+});
