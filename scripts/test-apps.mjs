@@ -785,6 +785,27 @@ async function statusFlow(base) {
     console.log(
       "  ✓ browser: a standard action's button is on the rows it fits; it asks for a message, reopens the incident and adds the update",
     );
+
+    // Chosen rows (actions.md §9): two selected, the action runs on the one it fits.
+    await open(page, `${base}/incidents`);
+    for (const title of [
+      "Card payments slow at checkout",
+      "Website unreachable for twenty minutes",
+    ])
+      await page.locator("tr", { hasText: title }).getByRole("checkbox").check();
+    const bar = page.locator('[data-kit="selection-bar"]');
+    await bar.getByText("2 selected").waitFor();
+    await bar.getByRole("button", { name: "Resolve (1)" }).click();
+    await bar.getByText("Resolve: 1 incident changed, 1 skipped.").waitFor({ timeout: 10000 });
+    await page
+      .locator("tr", { hasText: "Card payments slow at checkout" })
+      .getByText("Resolved")
+      .waitFor({ timeout: 10000 });
+    if (await page.locator("tbody").getByRole("checkbox", { checked: true }).count())
+      throw new Error("the selection was not cleared after the run");
+    console.log(
+      "  ✓ browser: two rows selected, Resolve (1) resolves the one it fits and skips the other",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
