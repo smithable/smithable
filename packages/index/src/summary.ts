@@ -1,5 +1,6 @@
 import {
   type AuthIR,
+  apiOffers,
   type ContentIR,
   emptyContent,
   type FieldIR,
@@ -310,8 +311,33 @@ export function summarize(
       sections.push({ concept: `plugin:${plugin.key}`, title: humanize(plugin.key), sentences });
   }
 
-  if (auth)
-    sections.push({ concept: "auth", title: "Sign-in and access", sentences: access(auth) });
+  if (auth) {
+    // What other programs may reach with a key (docs/design/integrations.md §2).
+    const offered = apiOffers(auth, ir);
+    const everything = auth.api?.models === "all" && auth.api.except.length === 0;
+    const records = everything
+      ? "every kind of record, also ones added later,"
+      : list(
+          offered.models.flatMap((name) => {
+            const model = modelNamed(name);
+            return model ? [pluralLabel(model).toLowerCase()] : [];
+          }),
+        );
+    const run = offered.actions.length
+      ? `, and run ${list(offered.actions.map((a) => humanize(a).toLowerCase()))}`
+      : "";
+    const api =
+      auth.api && (everything || offered.models.length)
+        ? [
+            `Other programs can read and change ${records} with a key${run}.${auth.api.assistants ? " AI assistants can use it too." : ""}`,
+          ]
+        : [];
+    sections.push({
+      concept: "auth",
+      title: "Sign-in and access",
+      sentences: [...access(auth), ...api],
+    });
+  }
   return sections;
 }
 
