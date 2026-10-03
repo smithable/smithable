@@ -17,6 +17,27 @@ The app descriptions, each started with `smithable new --describe` (the closest 
 | A status page for our API, with incidents and planned maintenance. | status | yes | yes | 23,490 | €0.0123 | 30 s |
 | A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 22,034 | €0.0106 | 27 s |
 
+<!-- scorecard -->
+## Scorecard (scripts/bench-m12.mjs --score)
+
+| # | Starter | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | booking | 4 / 6 | 6 / 10 | 0 / 0 | private; admin, member (member) | class-types: admin, instructors: admin, sessions: admin | pages home, schedule; read ClassType, Instructor, Session; create none | 2 (capacity-no-unique, no-timezone) | none | 3 / 4 | mentions visitors; landing page |
+| 2 | crm | 0 / 2 | 1 / 3 | 0 / 1 | shared; admin, sales (sales) | none | pages none; read none; create none | 1 (open-shared-access) | none | 0 / 4 | no mention; no landing page |
+| 3 | invoicing | 4 / 4 | 5 / 7 | 0 / 0 | private; admin, member (member) | none | pages home; read none; create none | 0 | none | 3 / 5 | no mention; landing page |
+| 4 | records | 0 / 1 | 1 / 2 | 0 / 0 | shared; admin, member (member) | none | pages home; read Tool; create none | 1 (open-shared-access) | none | 0 / 1 | no mention; landing page |
+| 5 | booking | 0 / 6 | 0 / 10 | 0 / 0 | shared; admin, member (member) | none | pages none; read none; create none | 1 (open-shared-access) | none | 0 / 3 | no mention; no landing page |
+| 6 | marketplace | 0 / 1 | 1 / 4 | 0 / 0 | shared; admin, member (member) | myJobs: member, applications: member | pages home, jobs; read JobPost; create none | 2 (open-shared-access, public-personal-data) | none | 0 / 2 | no mention; landing page |
+| 7 | records | 0 / 1 | 1 / 2 | 0 / 0 | shared; admin, coach, member (member) | teams: admin/coach/member, players: admin/coach/member, matches: admin/coach/member, results: admin/coach/member | pages home, teams, players, matches, results; read Team, Player, Match, Result; create none | 1 (open-shared-access) | none | 0 / 4 | mentions visitors; landing page |
+| 8 | records | 0 / 1 | 1 / 2 | 0 / 0 | shared; admin, organizer (organizer) | talks: organizer, speakers: organizer, attendees: organizer | pages home; read Talk, Speaker; create none | 2 (open-shared-access, public-personal-data) | none | 0 / 3 | no mention; landing page |
+| 9 | invoicing | 0 / 4 | 0 / 7 | 0 / 0 | shared; admin, itSupport (itSupport) | none | pages none; read none; create none | 1 (open-shared-access) | none | 0 / 1 | no mention; no landing page |
+| 10 | records | 0 / 1 | 0 / 2 | 0 / 0 | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page |
+| 11 | status | 4 / 4 | 7 / 8 | 0 / 3 | shared; admin, staff (staff) | incidents: admin/staff, updates: admin/staff, components: admin, maintenance: admin/staff, overview: admin/staff, team: admin | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | no mention; landing page |
+| 12 | status | 4 / 4 | 6 / 8 | 0 / 3 | shared; admin, staff (staff) | components: admin | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | mentions visitors; landing page |
+
+"Kept" counts the starter's models, pages and actions that the draft still has by name. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site.
+<!-- /scorecard -->
+
 ## What changed since the run before (main with #143, #144, #151, #152)
 
 - **Created and type-checks:** 12 / 12 and 12 / 12. The run before was 9 / 12 created, 9 type-check.
