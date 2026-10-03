@@ -12,16 +12,15 @@ models:
       durationMinutes: int! = 30
       price: money!
     access:
-      read: [admin]
+      create: [admin]
       write: [admin]
       delete: [admin]
   Stylist:
     fields:
       name: string!
       bio: text
-      portrait: picture
     access:
-      read: [admin]
+      create: [admin]
       write: [admin]
       delete: [admin]
   Booking:
@@ -48,18 +47,22 @@ models:
       stylist: Stylist!
       startsAt: datetime!
       capacity: int! = 1
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
 pages:
   tjanster:
     crud: Service
     access: [admin]
-  stylister:
+  frisorer:
     crud: Stylist
     access: [admin]
+  boka-nu:
+    crud: Booking
   mina-bokningar:
     crud: Booking
-  meddelanden:
-    crud: Message
-    access: [admin]
+    mine: true
   hem:
     route: /
     landing:
@@ -67,10 +70,16 @@ pages:
       footer:
       tjanster:
         records: Service
-      stylister:
+      frisorer:
         records: Stylist
       contact:
         form: Message
+  team:
+    users: manage
+    access: [admin]
+  admin:
+    data: all
+    access: [admin]
   tider:
     crud: Appointment
     access: [admin]
@@ -78,3 +87,4 @@ pages:
     calendar:
       model: Appointment
       starts: startsAt
+navigation: [hem, schema, boka-nu, mina-bokningar]

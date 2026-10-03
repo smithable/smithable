@@ -31,7 +31,7 @@ models:
       year: int! unique
       amount: money!
       dueDate: date!
-      status: pending | paid
+      status: pending | paid | overdue
       notes: text
     access:
       delete: [admin]
@@ -40,32 +40,17 @@ models:
 pages:
   plots:
     crud: Plot
-    filters: [status]
     search: [number, notes]
+    filters: [status]
   waiting-list:
     crud: WaitingList
-    filters: [status]
     search: [name, email, notes]
-    actions: [assignFromWaitingList]
+    filters: [status]
   fees:
     crud: Fee
     filters: [status, year]
-    actions: [markFeeAsPaid]
   team:
     users: manage
-navigation: [plots, waiting-list, fees, team]
-actions:
-  assignFromWaitingList:
-    on: WaitingList
-    when:
-      status: active
-    set:
-      status: assigned
-    intent: Assign a plot to this person from the waiting list.
-  markFeeAsPaid:
-    on: Fee
-    when:
-      status: pending
-    set:
-      status: paid
-    intent: Mark this yearly fee as paid.
+navigation:
+  main: [plots, waiting-list, fees, team]
+  admin: [team]

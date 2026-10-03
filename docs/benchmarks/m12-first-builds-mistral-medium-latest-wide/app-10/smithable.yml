@@ -7,21 +7,19 @@ models:
     fields:
       name: string!
       description: text
-      category: string
-      period: string
+      category: painting | sculpture | artifact | document
       image: url
+      period: string
+      origin: string
       story: text
-      status: onDisplay | inStorage | onLoan
     access:
-      create: [admin, curator]
-      write: [admin, curator]
+      create: [admin]
+      write: [admin]
       delete: [admin]
 pages:
   artifacts:
     crud: Artifact
-    search: [name, description, category, period, story]
-    sortable: [name, period, createdAt]
-    access: [admin, curator]
+    search: [name, description, period, origin, story]
   home:
     route: /
     landing:
@@ -30,5 +28,5 @@ pages:
       featured:
         records: Artifact
         where:
-          status: onDisplay
+          category: [painting, sculpture]
 navigation: [artifacts]
