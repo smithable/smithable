@@ -333,6 +333,11 @@
                 "required": [
                   "add"
                 ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
               }
             ]
           }
@@ -385,6 +390,31 @@
               }
             },
             "description": "Related records to create with the change, one per model that refers to this one, e.g. { IncidentUpdate: { status: resolved, at: NOW() } }."
+          },
+          "copy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "description": "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is."
+          },
+          "with": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lists of the model whose records a copy takes along, e.g. [lines]."
           },
           "input": {
             "type": "object",

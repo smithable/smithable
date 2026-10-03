@@ -318,13 +318,22 @@ export interface StandardActionIR extends ActionBase {
   set: ActionValueIR[];
   /** Related records created with the change, one per model (docs/design/actions.md §7). */
   add?: ActionAddIR[];
+  /**
+   * A copy instead of a change (§8): a new record of `on` from this one, with these values
+   * different; `set` and `add` are then empty.
+   */
+  copy?: ActionValueIR[];
+  /** Lists of the model whose records the copy takes along (§8). */
+  with?: string[];
 }
 
 export type ActionValueIR =
   | { field: string; value: FieldValue }
   | { field: string; formula: Expr; text: string }
   /** The person is asked for it when they press the button (§6). */
-  | { field: string; asked: true };
+  | { field: string; asked: true }
+  /** The person who pressed the button, for a field that refers to User (§10). */
+  | { field: string; me: true };
 
 /** A record of `model` created by a standard action, its `reference` filled with the action's record. */
 export interface ActionAddIR {

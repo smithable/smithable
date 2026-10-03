@@ -249,8 +249,12 @@ ${tests.join("\n\n")}
       const field = target.fields.find((f) => f.name === x.field) as FieldIR;
       return `${JSON.stringify(x.key)}: ${testValue(field, target)}`;
     });
-    const asked = askedValues.length ? `, { ${askedValues.join(", ")} }` : "";
-    const counter = /\bn\b/.test(asked) ? "    const n = next();\n" : "";
+    // Each run gets its own values (a unique number must differ between two copies).
+    const fresh = askedValues.some((v) => /\bn\b/.test(v));
+    const asked = !askedValues.length ? "" : fresh ? ", ask()" : `, { ${askedValues.join(", ")} }`;
+    const counter = fresh
+      ? `    const ask = () => {\n      const n = next();\n      return { ${askedValues.join(", ")} };\n    };\n`
+      : "";
     const table = camel(plural(model.name));
     // Refused, the action writes nothing: the record is as it was (an update it began rolls back).
     const before = (record: string) =>
