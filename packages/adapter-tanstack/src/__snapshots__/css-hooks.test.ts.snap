@@ -11,6 +11,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="nav"",
     "data-part="title"",
     "data-part="actions"",
+    "data-part=save])]:flex-1"",
   ],
   "src/kit/Articles.tsx": [
     "data-kit="articles"",

@@ -54,7 +54,8 @@ export function Filters({
     onChange({ ...values, [name]: value || undefined, sort });
   return (
     <div data-kit="filters" className="mb-6 space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Phones: the Filters button and the sort, the filters under them; wider: the filters, then the sort. */}
+      <div className="flex flex-wrap items-end gap-3">
         {shown.length > 0 && (
           <Button
             type="button"
@@ -62,14 +63,14 @@ export function Filters({
             aria-expanded={open}
             aria-controls={`${id}-panel`}
             onClick={() => setOpen(!open)}
-            className="md:hidden"
+            className="order-1 md:hidden"
           >
             <SlidersHorizontal aria-hidden className="size-4" /> Filters
             {active.length > 0 && ` (${active.length})`}
           </Button>
         )}
         {sorts.length > 0 && (
-          <div className="ml-auto flex items-center gap-2">
+          <div className="order-2 ml-auto flex items-center gap-2 md:order-3">
             <Label htmlFor={`${id}-sort`} className="text-sm">
               Sort by
             </Label>
@@ -88,22 +89,25 @@ export function Filters({
             </select>
           </div>
         )}
+        {shown.length > 0 && (
+          <div
+            id={`${id}-panel`}
+            className={cn(
+              "order-3 w-full flex-wrap items-start gap-x-6 gap-y-3 md:order-2 md:flex md:w-auto md:flex-1",
+              open ? "flex" : "hidden",
+            )}
+          >
+            {shown.map((f) => (
+              <Filter
+                key={f.name}
+                filter={f}
+                value={values[f.name]}
+                onChange={(v) => set(f.name, v)}
+              />
+            ))}
+          </div>
+        )}
       </div>
-      {shown.length > 0 && (
-        <div
-          id={`${id}-panel`}
-          className={cn("flex-wrap items-end gap-x-6 gap-y-3 md:flex", open ? "flex" : "hidden")}
-        >
-          {shown.map((f) => (
-            <Filter
-              key={f.name}
-              filter={f}
-              value={values[f.name]}
-              onChange={(v) => set(f.name, v)}
-            />
-          ))}
-        </div>
-      )}
       {active.length > 0 && (
         <ul aria-label="Active filters" className="flex flex-wrap gap-2">
           {active.map((f) => (
@@ -149,7 +153,7 @@ function Filter({
     );
   if (filter.kind === "toggle")
     return (
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         <Label htmlFor={id}>{filter.label}</Label>
         <select
           id={id}
@@ -168,7 +172,7 @@ function Filter({
   // Many values read better as a list to pick one from than as a row of chips.
   if (options.length > 8)
     return (
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         <Label htmlFor={id}>{filter.label}</Label>
         <select
           id={id}
