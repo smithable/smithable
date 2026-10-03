@@ -1,81 +1,73 @@
 smithableContent: 0.1
 models:
   Team:
-    label: Equipo
-    pluralLabel: Equipos
+    label: Team
+    pluralLabel: Teams
     fields:
       name:
-        label: Nombre
+        label: Name
       description:
-        label: Descripción
+        label: Description
       sport:
-        label: Deporte
+        label: Sport
         values:
-          football: Fútbol
-          futsal: Fútbol Sala
-          beachSoccer: Fútbol Playa
+          football: Football
+          futsal: Futsal
+          beachSoccer: Beach Soccer
       founded:
-        label: Fundado
+        label: Founded
   Player:
-    label: Jugador
-    pluralLabel: Jugadores
+    label: Player
+    pluralLabel: Players
     fields:
       name:
-        label: Nombre
+        label: Name
       position:
-        label: Posición
+        label: Position
         values:
-          goalkeeper: Portero
-          defender: Defensa
-          midfielder: Centrocampista
-          forward: Delantero
+          goalkeeper: Goalkeeper
+          defender: Defender
+          midfielder: Midfielder
+          forward: Forward
       team:
-        label: Equipo
+        label: Team
       number:
-        label: Número
+        label: Number
       birthDate:
-        label: Fecha de nacimiento
+        label: Birth Date
   Match:
-    label: Partido
-    pluralLabel: Partidos
+    label: Match
+    pluralLabel: Matches
     fields:
       homeTeam:
-        label: Equipo local
+        label: Home Team
       awayTeam:
-        label: Equipo visitante
+        label: Away Team
       date:
-        label: Fecha y hora
+        label: Date
       location:
-        label: Ubicación
+        label: Location
       status:
-        label: Estado
+        label: Status
         values:
-          scheduled: Programado
-          played: Jugado
-          cancelled: Cancelado
-  Result:
-    label: Resultado
-    pluralLabel: Resultados
-    fields:
-      match:
-        label: Partido
+          scheduled: Scheduled
+          inProgress: In Progress
+          completed: Completed
+          canceled: Canceled
       homeScore:
-        label: Goles local
+        label: Home Score
       awayScore:
-        label: Goles visitante
-      scorers:
-        label: Goleadores
+        label: Away Score
 pages:
-  teams:
-    title: Equipos
-  players:
-    title: Jugadores
-  matches:
-    title: Partidos
-  results:
-    title: Resultados
   home:
+    title: Football Club
     hero:
       image:
         src: images/hero.webp
         alt: A team standing at a whiteboard by a window over the harbour
+  teams:
+    title: Teams
+  players:
+    title: Players
+  matches:
+    title: Matches

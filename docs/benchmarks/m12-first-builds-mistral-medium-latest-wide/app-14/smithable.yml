@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Our Wedding
-  description: The guest list and seating plan for our wedding, with who has answered and their meal choices.
+  name: Wedding Guest List
+  description: Manage the guest list and seating plan for our wedding, with RSVPs and meal choices.
 models:
   Guest:
     fields:
@@ -9,17 +9,15 @@ models:
       email: email
       phone: phone
       attending: yes | no | maybe
-      mealChoice: vegetarian | meat | fish
+      mealChoice: vegetarian | meat | vegan | glutenFree
       tableNumber: int
       notes: text
-    access:
-      delete: [admin]
+      group: string
 pages:
   guests:
     crud: Guest
-    search: [name, email, notes]
-    filters: [attending, mealChoice, tableNumber]
-    sortable: [name, tableNumber, createdAt]
+    search: [name, email, group]
+    sortable: [name, tableNumber, attending]
   team:
     users: manage
 navigation: [guests, team]

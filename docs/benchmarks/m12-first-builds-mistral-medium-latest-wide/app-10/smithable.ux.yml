@@ -3,4 +3,12 @@ pages:
   artifacts:
     table:
       view: cards
-      columns: [name, category, period]
+      columns: [name, category, period, status]
+  home:
+    sections:
+      featured:
+        layout: grid
+tones:
+  Artifact.status:
+    onDisplay: success
+    onLoan: warning

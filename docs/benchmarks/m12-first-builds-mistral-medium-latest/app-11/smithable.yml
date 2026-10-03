@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: Live status of our API services, incidents, and planned maintenance.
+  description: Live status of our API services, incidents and planned maintenance.
 models:
   Component:
     fields:
@@ -9,6 +9,8 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+    access:
+      delete: [admin]
   Incident:
     fields:
       title: string!
@@ -18,12 +20,16 @@ models:
       resolvedAt: datetime
       summary: markdown
       updates: IncidentUpdate[]
+    access:
+      delete: [admin]
   IncidentUpdate:
     fields:
       incident: Incident!
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
+    access:
+      delete: [admin]
   Maintenance:
     fields:
       title: string!
@@ -31,6 +37,8 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
+    access:
+      delete: [admin]
 pages:
   home:
     route: /
@@ -43,33 +51,28 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
+  history:
+    crud: Incident
   incidents:
     crud: Incident
+    search: [title, summary]
+    filters: [status, component]
   updates:
     crud: IncidentUpdate
+    search: [message]
+    filters: [status, incident]
   components:
     crud: Component
+    search: [name, description]
+    filters: [status]
     access: [admin]
   maintenance:
     crud: Maintenance
+    search: [title, description]
+    filters: [component]
   overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: investigating
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
+    crud: Incident
   team:
     users: manage
+    access: [admin]
 navigation: [overview, incidents, updates, maintenance, components, team]

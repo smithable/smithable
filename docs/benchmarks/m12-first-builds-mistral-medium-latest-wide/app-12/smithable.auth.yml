@@ -1,10 +1,10 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
+  providers: [email]
   selfSignUp: false
 defaultAccess: shared
 public:
-  pages: [home]
+  pages: [home, history]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 roles:
   admin:

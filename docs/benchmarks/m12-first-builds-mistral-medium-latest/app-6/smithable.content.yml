@@ -1,6 +1,33 @@
 smithableContent: 0.1
+models:
+  JobPost:
+    label: Job Post
+    pluralLabel: Job Posts
+    fields:
+      category:
+        label: Job Type
+      status:
+        label: Status
+        values:
+          open: Open
+          filled: Filled
+          expired: Expired
+  Application:
+    label: Application
+    pluralLabel: Applications
+    fields:
+      status:
+        label: Status
+        values:
+          submitted: Submitted
+          reviewed: Reviewed
+          shortlisted: Shortlisted
+          rejected: Rejected
+          hired: Hired
 pages:
   home:
+    title: Union Job Board
+    subtitle: Find and post local union jobs.
     hero:
       image:
         src: images/hero.webp

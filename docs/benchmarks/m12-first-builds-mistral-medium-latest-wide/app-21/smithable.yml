@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: Pieni autokorjaamo
+  name: Pieni Autokorjaamo
   description: "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa."
   currency: EUR
 models:
   Customer:
     fields:
       name: string!
-      email: email
+      email: email!
       phone: phone
       address: text
       cars: Car[]
@@ -21,29 +21,59 @@ models:
       serviceJobs: ServiceJob[]
   ServiceJob:
     fields:
-      description: string!
-      status: pending | inProgress | completed | cancelled
       car: Car!
+      description: text!
+      status: pending | inProgress | completed | cancelled
       startDate: date
       endDate: date
-      notes: text
+      totalCost: money
       invoice: Invoice
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
+      serviceJob: ServiceJob
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
       total: money
+      lines: InvoiceLine[]
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount: money
 pages:
-  asiakkaat:
+  customers:
     crud: Customer
-  autot:
+    search: [name, email, phone]
+  cars:
     crud: Car
-  huoltotyot:
+    search: [registrationNumber, make, model]
+  service-jobs:
     crud: ServiceJob
-  laskut:
+    search: [description]
+    filters: [status, car]
+    sortable: [startDate, endDate, totalCost]
+  invoices:
     crud: Invoice
-  team:
-    users: manage
+    actions: [markSent, markPaid]
+    filters: [status, customer]
+    sortable: [issuedOn, dueOn, total]
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Lasku lähetetty asiakkaalle.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Asiakas on maksanut laskun.

@@ -11,8 +11,10 @@ models:
       status: draft | sent | accepted | rejected
       total: money!
       validUntil: date
-      notes: text
+      description: text
       customer: Customer!
+    access:
+      delete: [admin]
   Invoice:
     fields:
       number: string! unique
@@ -20,9 +22,10 @@ models:
       status: draft | sent | paid | overdue
       total: money!
       dueDate: date
-      paidAt: date
-      notes: text
+      paidAt: datetime
       customer: Customer!
+    access:
+      delete: [admin]
   Customer:
     fields:
       name: string!
@@ -31,18 +34,62 @@ models:
       segment: private | company | municipality
       notes: text
       accountManager: User
+    access:
+      delete: [admin]
 pages:
   offerter:
     crud: Quote
+    actions: [sendQuote, acceptQuote, rejectQuote]
+    sortable: [number, total, validUntil, createdAt]
     search: [number, customer]
     filters: [status, customer]
   fakturor:
     crud: Invoice
+    actions: [sendInvoice, markPaid]
+    sortable: [number, total, dueDate, createdAt]
     search: [number, customer]
     filters: [status, customer]
   kunder:
     crud: Customer
     search: [name, email]
+    sortable: [name, createdAt]
   anvandare:
     users: manage
+actions:
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka offert till kund.
+  acceptQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: Acceptera offert.
+  rejectQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: rejected
+    intent: Avvisa offert.
+  sendInvoice:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka faktura till kund.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+      paidAt: NOW()
+    intent: Markera faktura som betald.
 navigation: [kunder, offerter, fakturor, anvandare]

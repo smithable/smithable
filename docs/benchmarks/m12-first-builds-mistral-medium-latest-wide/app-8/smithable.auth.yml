@@ -1,9 +1,14 @@
 smithableAuth: 0.1
 signIn:
-  providers: [google]
-  selfSignUp: false
+  providers: [email]
 defaultAccess: private
 public:
-  pages: [catalog]
+  pages: [home, catalog]
   read: [Item]
+roles:
+  admin:
+    description: Keeps the swap shelf tidy.
+  member:
+    description: Offers and claims items.
+defaultRole: member
 admins: [johan@smithable.ai]

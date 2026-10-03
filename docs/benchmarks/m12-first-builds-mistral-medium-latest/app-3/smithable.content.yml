@@ -1,39 +1,7 @@
 smithableContent: 0.1
-models:
-  BusinessProfile:
-    label: Business Profile
-    pluralLabel: Business Profiles
-  Client:
-    label: Client
-    pluralLabel: Clients
-  Invoice:
-    label: Invoice
-    pluralLabel: Invoices
-    fields:
-      status:
-        values:
-          draft: Draft
-          sent: Sent
-          paid: Paid
-          overdue: Overdue
-  InvoiceLine:
-    label: Invoice Line
-    pluralLabel: Invoice Lines
 pages:
   home:
-    title: Invoicing for Freelancers
-    subtitle: Manage your clients, invoices, and payments with ease.
     hero:
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
-  overview:
-    title: Overview
-  invoices:
-    title: Invoices
-  clients:
-    title: Clients
-  settings:
-    title: Settings
-  dashboard:
-    title: Dashboard

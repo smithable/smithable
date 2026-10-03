@@ -3,8 +3,8 @@
   "starter": "crm",
   "wordStarter": "records",
   "questions": [
-    "Vem ska kunna se och hantera offerter, kunder och fakturor?",
-    "Vad ska en offert innehålla förutom pris?"
+    "Vilka typer av uppgifter ska spåras för varje kund?",
+    "Ska teammedlemmar kunna se alla kunder och offerter, eller bara sina egna?"
   ],
   "lang": "sv"
 }

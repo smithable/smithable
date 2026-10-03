@@ -22,22 +22,20 @@ models:
       awayTeam: Team!
       date: datetime!
       location: string
-      status: scheduled | played | cancelled
-  Result:
-    fields:
-      match: Match!
-      homeScore: int!
-      awayScore: int!
-      scorers: text
+      status: scheduled | inProgress | completed | canceled
+      homeScore: int = 0
+      awayScore: int = 0
 pages:
   teams:
     crud: Team
+    search: [name, description]
   players:
     crud: Player
+    search: [name, position]
   matches:
     crud: Match
-  results:
-    crud: Result
+    filters: [status, date, homeTeam, awayTeam]
+    actions: [startMatch, endMatch, cancelMatch]
   home:
     route: /
     landing:
@@ -45,4 +43,30 @@ pages:
       footer:
       teams:
         records: Team
-navigation: [teams, players, matches, results]
+      matches:
+        records: Match
+        where:
+          status: [scheduled, inProgress]
+navigation: [home, teams, players, matches]
+actions:
+  startMatch:
+    on: Match
+    when:
+      status: scheduled
+    set:
+      status: inProgress
+    intent: Start the match.
+  endMatch:
+    on: Match
+    when:
+      status: inProgress
+    set:
+      status: completed
+    intent: End the match.
+  cancelMatch:
+    on: Match
+    when:
+      status: [scheduled, inProgress]
+    set:
+      status: canceled
+    intent: Cancel the match.
