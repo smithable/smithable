@@ -110,6 +110,19 @@ try {
       .waitFor({ state: "detached", timeout: 60000 });
     await page.getByLabel("Preview address").fill(path);
     await page.getByRole("button", { name: "Go", exact: true }).click();
+    // Until the frame is on the new page, the old one still answers: select mode sent now
+    // would mark the page that is about to go, and a click would land on the new one unmarked.
+    const deadline = Date.now() + 60000;
+    let frame;
+    while (!frame) {
+      frame = page.frames().find((f) => {
+        const url = new URL(f.url(), base);
+        return f !== page.mainFrame() && url.pathname + url.search === path;
+      });
+      if (!frame && Date.now() > deadline) throw new Error(`the preview did not open ${path}`);
+      if (!frame) await page.waitForTimeout(100);
+    }
+    await frame.waitForLoadState("load");
   };
 
   console.log("Builder mode");
