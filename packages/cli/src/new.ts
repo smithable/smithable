@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
   clarifyProject,
+  closeShared,
   closestStarter,
   describedWith,
   draftProject,
@@ -12,6 +13,7 @@ import {
 } from "@smithable/ai";
 import {
   fitSamples,
+  reservedDomain,
   validateAuth,
   validateContent,
   validateSpec,
@@ -166,20 +168,15 @@ export async function create(
   const admin = options.admin?.trim() || gitEmail();
   if (admin) {
     files = administered(files, admin);
-    // A starter's allowedDomains are its own: the admin gets in anyway, nobody else from theirs.
-    const domains = /allowedDomains:\s*\[([^\]]*)\]/.exec(files["smithable.auth.yml"] ?? "")?.[1];
-    const domain = admin.split("@")[1]?.toLowerCase();
-    if (
-      domains &&
-      domain &&
-      !domains
-        .split(",")
-        .map((d) => d.trim())
-        .includes(domain)
-    )
-      io.out(
-        `Sign-in is limited to ${domains.trim()} (allowedDomains in smithable.auth.yml): ${admin} may sign in as the administrator, but nobody else from ${domain}. Change it there if your people use other addresses.\n`,
-      );
+    files = withoutSampleDomains(files, io);
+    // What follows for the administrator and their colleagues, in the validator's words.
+    const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
+    for (const d of validateAuth(
+      { path: "smithable.auth.yml", text: files["smithable.auth.yml"] ?? "" },
+      ir,
+    ).diagnostics)
+      if (d.code === "admin-outside-domains" || d.code === "example-domain")
+        io.out(`${d.message}\n`);
   } else if (/^admins:/m.test(files["smithable.auth.yml"] ?? ""))
     io.out(
       "No administrator was set (no --admin and no Git user.email): the starter's sample address is still in smithable.auth.yml. Set yours with: smithable op setAdmins you@your-domain\n",
@@ -334,4 +331,48 @@ export function named(files: Record<string, string>, name: string): Record<strin
   if (!spec.has(["app", "name"])) return files;
   spec.set(["app", "name"], name);
   return { ...files, "smithable.yml": spec.text };
+}
+
+/**
+ * A starter's allowedDomains are sample content, like its admin: on a domain nobody has
+ * (acme.example) they are taken out. A shared app that anyone could then sign up to and read is
+ * made invite-only, as a draft is (closeShared): a team page and setSignUp invited.
+ */
+export function withoutSampleDomains(
+  files: Record<string, string>,
+  io: Io,
+): Record<string, string> {
+  const text = files["smithable.auth.yml"];
+  if (!text) return files;
+  const auth = new YamlEditor(text);
+  const path = ["signIn", "allowedDomains"];
+  const domains = auth.has(path) ? (auth.get(path) as unknown) : undefined;
+  if (
+    !Array.isArray(domains) ||
+    !domains.length ||
+    !domains.every((d) => reservedDomain(String(d)))
+  )
+    return files;
+  auth.removeAndPrune(path, 1);
+  const project = {
+    spec: files["smithable.yml"] ?? "",
+    auth: auth.text,
+    content: files["smithable.content.yml"],
+    ux: files["smithable.ux.yml"],
+  };
+  const closed = closeShared(project, []);
+  io.out(
+    `Sign-in was limited to ${domains.join(" and ")}, the starter's sample domain${domains.length > 1 ? "s" : ""}: taken out.${
+      closed !== project
+        ? " So that not anyone may sign up and read everything, only invited people and the administrator may sign in (the team page invites them; smithable op setSignUp anyone opens it)."
+        : ""
+    }\n`,
+  );
+  return {
+    ...files,
+    "smithable.yml": closed.spec,
+    "smithable.auth.yml": closed.auth ?? auth.text,
+    ...(closed.content !== undefined ? { "smithable.content.yml": closed.content } : {}),
+    ...(closed.ux !== undefined ? { "smithable.ux.yml": closed.ux } : {}),
+  };
 }
