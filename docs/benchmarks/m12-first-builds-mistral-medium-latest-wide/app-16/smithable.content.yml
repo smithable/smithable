@@ -7,7 +7,7 @@ models:
       number:
         label: Plot Number
       size:
-        label: Size
+        label: Size (m²)
       status:
         label: Status
         values:
@@ -16,8 +16,6 @@ models:
           reserved: Reserved
       holder:
         label: Holder
-      yearlyFee:
-        label: Yearly Fee
       notes:
         label: Notes
   WaitingList:
@@ -32,12 +30,6 @@ models:
         label: Phone
       dateAdded:
         label: Date Added
-      status:
-        label: Status
-        values:
-          active: Active
-          assigned: Assigned
-          withdrawn: Withdrawn
       notes:
         label: Notes
   Fee:

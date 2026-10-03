@@ -5,3 +5,4 @@ defaultAccess: private
 public:
   pages: [home, artifacts]
   read: [Artifact]
+admins: [johan@smithable.ai]

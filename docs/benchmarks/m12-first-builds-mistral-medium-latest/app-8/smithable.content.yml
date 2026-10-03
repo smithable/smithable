@@ -1,34 +1,6 @@
 smithableContent: 0.1
-models:
-  Talk:
-    label: Talk
-    pluralLabel: Talks
-  Speaker:
-    label: Speaker
-    pluralLabel: Speakers
-  Attendee:
-    label: Attendee
-    pluralLabel: Attendees
-  Registration:
-    label: Registration
-    pluralLabel: Registrations
-    fields:
-      status:
-        values:
-          registered: Registered
-          attended: Attended
-          cancelled: Cancelled
 pages:
-  talks:
-    title: Talks
-  speakers:
-    title: Speakers
-  attendees:
-    title: Attendees
-  registrations:
-    title: Registrations
   home:
-    title: Conference Registration
     hero:
       image:
         src: images/hero.webp

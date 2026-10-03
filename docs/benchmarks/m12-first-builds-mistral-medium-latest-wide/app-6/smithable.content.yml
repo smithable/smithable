@@ -10,5 +10,5 @@ models:
 pages:
   clients:
     title: Households
-  invoices:
-    title: Invoices
+  invoice-lines:
+    title: Invoice lines

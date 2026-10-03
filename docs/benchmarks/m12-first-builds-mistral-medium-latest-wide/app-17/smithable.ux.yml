@@ -1,18 +1,1 @@
 smithableUx: 0.1
-pages:
-  tjanster:
-    icon: tag
-    table:
-      view: cards
-  stylister:
-    icon: users
-    table:
-      view: cards
-  mina-bokningar:
-    icon: calendar
-  tider:
-    icon: calendar
-  schema:
-    icon: calendar
-    table:
-      view: cards
