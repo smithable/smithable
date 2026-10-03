@@ -2944,7 +2944,7 @@ const landingRoutes = ["/"];
 /** Public articles: their list and each article have the site's frame. */
 const siteRoutes = ["/blog"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/schedule"];
+const visitorRoutes = ["/schedule", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -5964,21 +5964,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.server.ts": "652c8d07 generated",
   "src/generated/session.ts": "789d2343 generated",
   "src/generated/site.ts": "9b0ce48a generated",
-  "src/kit/AppShell.tsx": "ddc3a345 kit",
+  "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Articles.tsx": "4d0a8e9d kit",
   "src/kit/Calculator.tsx": "d9039e3d kit",
   "src/kit/Calendar.tsx": "eb7327fb kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "6f7c9ab1 kit",
+  "src/kit/Landing.tsx": "d25b6dac kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
+  "src/kit/ModelForm.tsx": "3067018d kit",
   "src/kit/ModelTable.tsx": "ec20cf4d kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "e8fe2b44 kit",
+  "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "ac916cfe kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -5994,7 +5994,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "a5259626 generated",
+  "src/routes/__root.tsx": "d8c7196e generated",
   "src/routes/admin/bookings/$id.tsx": "5ef57140 generated",
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
@@ -8886,13 +8886,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "de07ed11 generated",
   "src/generated/users.test.ts": "818352a3 generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/AppShell.tsx": "ddc3a345 kit",
+  "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
+  "src/kit/ModelForm.tsx": "3067018d kit",
   "src/kit/ModelTable.tsx": "ec20cf4d kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "e8fe2b44 kit",
+  "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "ac916cfe kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -10989,6 +10989,8 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { LandingLayout } from "#/kit/Landing";
+import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
@@ -11032,6 +11034,8 @@ const menus: MenuUi[] = [
 ];
 
 const landingRoutes = ["/", "/welcome"];
+/** Public pages that visitors see in the site's frame (signed in, the app's). */
+const visitorRoutes = ["/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -11112,6 +11116,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         )}
         {landingRoutes.includes(pathname) ? (
           children
+        ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+            <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
+          </LandingLayout>
         ) : (
           <AppShell appName={app.name} home={{ to: "/", access: pageAccess["home"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
@@ -12309,16 +12317,16 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.ts": "212924a8 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
-  "src/kit/AppShell.tsx": "ddc3a345 kit",
+  "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "9da58466 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "6f7c9ab1 kit",
-  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
+  "src/kit/Landing.tsx": "d25b6dac kit",
+  "src/kit/ModelForm.tsx": "3067018d kit",
   "src/kit/ModelTable.tsx": "ec20cf4d kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "e8fe2b44 kit",
+  "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "ac916cfe kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -12334,7 +12342,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "ce8718d1 generated",
+  "src/routes/__root.tsx": "14c028a7 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/clients/$id.tsx": "d14d0660 generated",
   "src/routes/clients/index.tsx": "ee5cef45 generated",
@@ -13489,7 +13497,7 @@ const menus: MenuUi[] = [
 
 const landingRoutes = ["/welcome"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/"];
+const visitorRoutes = ["/", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -14231,6 +14239,7 @@ import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { listItems } from "#/generated/item";
+import { app } from "#/generated/app";
 import { Package } from "lucide-react";
 
 export const Route = createFileRoute("/welcome/")({
@@ -14288,6 +14297,7 @@ function HomePage() {
   kids: "Kids",
   other: "Other",
 } as Record<string, string>)[row.category],
+            amount: row.price == null ? undefined : new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(row.price / 100),
           }))}
         />
     </LandingLayout>
@@ -14645,17 +14655,17 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
   "src/generated/site.ts": "b9832c55 generated",
-  "src/kit/AppShell.tsx": "ddc3a345 kit",
+  "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/ContactOwner.tsx": "e30d77bd kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Filters.tsx": "e765045c kit",
-  "src/kit/Landing.tsx": "6f7c9ab1 kit",
-  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
+  "src/kit/Filters.tsx": "b6f63aa9 kit",
+  "src/kit/Landing.tsx": "d25b6dac kit",
+  "src/kit/ModelForm.tsx": "3067018d kit",
   "src/kit/ModelTable.tsx": "ec20cf4d kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "e8fe2b44 kit",
+  "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "ac916cfe kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -14673,7 +14683,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
   "src/routes/$id.tsx": "f4ffe7cd generated",
-  "src/routes/__root.tsx": "5fd63c79 generated",
+  "src/routes/__root.tsx": "d5881835 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
@@ -14688,7 +14698,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/index.tsx": "2b8999a4 generated",
   "src/routes/saved/new.tsx": "09d0880f generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
-  "src/routes/welcome/index.tsx": "47192f34 generated",
+  "src/routes/welcome/index.tsx": "a4ea7b3f generated",
   "src/styles.css": "e345f098 kit",
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "f2079b4d generated",
@@ -15627,7 +15637,7 @@ const menus: MenuUi[] = [
 
 const landingRoutes = ["/"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/items"];
+const visitorRoutes = ["/items", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [["/items", "items"], ["/", "home"]];
@@ -16326,14 +16336,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.ts": "a2dec615 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
-  "src/kit/AppShell.tsx": "ddc3a345 kit",
+  "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "6f7c9ab1 kit",
-  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
+  "src/kit/Landing.tsx": "d25b6dac kit",
+  "src/kit/ModelForm.tsx": "3067018d kit",
   "src/kit/ModelTable.tsx": "ec20cf4d kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "e8fe2b44 kit",
+  "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "ac916cfe kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -16348,7 +16358,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "710f398d generated",
+  "src/routes/__root.tsx": "ec290ed5 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "9b03a82e generated",
@@ -18811,6 +18821,8 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { LandingLayout } from "#/kit/Landing";
+import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
@@ -18862,6 +18874,8 @@ const menus: MenuUi[] = [
 const landingRoutes = ["/"];
 /** Public articles: their list and each article have the site's frame. */
 const siteRoutes = ["/history"];
+/** Public pages that visitors see in the site's frame (signed in, the app's). */
+const visitorRoutes = ["/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -18943,6 +18957,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         )}
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
           children
+        ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+            <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
+          </LandingLayout>
         ) : (
           <AppShell appName={app.name} home={{ to: "/", access: pageAccess["home"] }} menus={menus} viewer={viewer} onSignOut={signOut}>
             {children}
@@ -20674,18 +20692,18 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "365732cf generated",
   "src/generated/users.test.ts": "56ce3b86 generated",
-  "src/kit/AppShell.tsx": "ddc3a345 kit",
+  "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Articles.tsx": "4d0a8e9d kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "9da58466 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Landing.tsx": "6f7c9ab1 kit",
+  "src/kit/Landing.tsx": "d25b6dac kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
+  "src/kit/ModelForm.tsx": "3067018d kit",
   "src/kit/ModelTable.tsx": "ec20cf4d kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "e8fe2b44 kit",
+  "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "ac916cfe kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
@@ -20702,7 +20720,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "32602008 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/__root.tsx": "90ac19fe generated",
+  "src/routes/__root.tsx": "10b74ab0 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/components/$id.tsx": "180bd41a generated",
   "src/routes/components/index.tsx": "16680101 generated",

@@ -123,6 +123,9 @@ export function landingRoute(
           (f) => f.type.kind === "scalar" && f.type.name === "text",
         );
         const choice = model.fields.find((f) => f.type.kind === "choice");
+        // Its first amount of money, stored or computed: for a thing for sale, its price.
+        const money = model.fields.find((f) => f.type.kind === "scalar" && f.type.name === "money");
+        if (money) imports.add("#/generated/app", "app");
         // A card opens its article when the model has an articles page, and shows its picture.
         const article = ir.pages.find(
           (p) => p.pattern.kind === "articles" && p.pattern.model === model.name,
@@ -232,6 +235,11 @@ export function landingRoute(
               labels && choice
                 ? `
             badge: (${literal(labels)} as Record<string, string>)[row.${choice.name}],`
+                : ""
+            }${
+              money
+                ? `
+            amount: row.${money.name} == null ? undefined : new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(row.${money.name} / 100),`
                 : ""
             }${
               tones && Object.keys(tones).length

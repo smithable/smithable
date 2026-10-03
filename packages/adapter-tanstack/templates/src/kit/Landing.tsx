@@ -521,6 +521,8 @@ export function RecordCards({
     key: string | number;
     title: string;
     text?: string;
+    /** An amount of money, formatted: a price. */
+    amount?: string;
     badge?: string;
     /** The badge's color by meaning; without one it is neutral. */
     tone?: "success" | "warning" | "danger";
@@ -574,6 +576,7 @@ export function RecordCards({
     );
   const details = (card: CardItem) => (
     <>
+      {card.amount && <p className="text-lg font-semibold tabular-nums">{card.amount}</p>}
       {card.text && <p className="flex-1 text-muted-foreground">{card.text}</p>}
       {card.badge && (
         <p className="mt-2">
