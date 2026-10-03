@@ -192,6 +192,19 @@ describe("custom pages", () => {
   });
 });
 
+test("the admins may sign in before the domains or the invitations are asked", () => {
+  const crm = Object.entries(examples).find(([path]) => path.includes("/crm/"));
+  const auth = Object.entries(authFiles).find(([path]) => path.includes("/crm/"));
+  if (!crm || !auth) throw new Error("no CRM");
+  const files = generateApp(ir(crm[0], crm[1] as string), {
+    ...options,
+    auth: authOf(auth[1] as string),
+  });
+  expect(files.find((f) => f.path === "src/lib/auth.ts")?.content).toContain(
+    "function joinRefusal(email: string): string | undefined {\n  // The admins may always sign in, whatever the domains or the invitations say.\n  if (ADMINS.includes(email)) return undefined;\n  if (!ALLOWED_DOMAINS",
+  );
+});
+
 test("an action checks that the viewer may read every record its input names", () => {
   const crm = Object.entries(examples).find(([path]) => path.includes("/crm/"));
   const auth = Object.entries(authFiles).find(([path]) => path.includes("/crm/"));
