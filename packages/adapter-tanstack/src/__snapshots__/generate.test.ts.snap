@@ -1867,7 +1867,7 @@ import { z } from "zod";
 import { instructors } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-import { MarkdownEditor } from "#/kit/Markdown";
+import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { bindPicture } from "#/kit/PictureInput";
 import { instructorAccess, instructorData } from "./instructor.server";
 import { writeAllowed } from "#/kit/limit";
@@ -1903,6 +1903,7 @@ export const instructorUi: RecordUi<InstructorRow> = {
       kind: "markdown",
       required: false,
       input: MarkdownEditor,
+      view: MarkdownText,
       get: (row) => row.bio,
     },
     {
@@ -2333,7 +2334,7 @@ import { z } from "zod";
 import { posts } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-import { MarkdownEditor } from "#/kit/Markdown";
+import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { bindPicture } from "#/kit/PictureInput";
 import { postAccess, postData } from "./post.server";
 import { writeAllowed } from "#/kit/limit";
@@ -2392,6 +2393,7 @@ export const postUi: RecordUi<PostRow> = {
       kind: "markdown",
       required: true,
       input: MarkdownEditor,
+      view: MarkdownText,
       get: (row) => row.body,
     },
     {
@@ -5862,13 +5864,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "3769a0bf generated",
   "src/generated/instructor.server.ts": "eaeb7083 generated",
-  "src/generated/instructor.ts": "6a2671a0 generated",
+  "src/generated/instructor.ts": "b60cf6e1 generated",
   "src/generated/message.server.ts": "986a2bcd generated",
   "src/generated/message.ts": "140e99ed generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
   "src/generated/post.server.ts": "7b4014ff generated",
-  "src/generated/post.ts": "a9d056be generated",
+  "src/generated/post.ts": "53d0397b generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.server.ts": "652c8d07 generated",
   "src/generated/session.ts": "789d2343 generated",
@@ -5882,7 +5884,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "5db15a72 kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
   "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/Reserve.tsx": "3b4a2fff kit",
@@ -5893,7 +5895,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "ba62bfa9 kit",
+  "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/uploads.ts": "9b671202 kit",
@@ -8683,7 +8685,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AppShell.tsx": "ddc3a345 kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
   "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
@@ -8693,7 +8695,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "ba62bfa9 kit",
+  "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -12005,7 +12007,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Dashboard.tsx": "9da58466 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Landing.tsx": "5db15a72 kit",
-  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
   "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/Onboarding.tsx": "3b6631a6 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -12016,7 +12018,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "ba62bfa9 kit",
+  "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -14239,7 +14241,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Filters.tsx": "e765045c kit",
   "src/kit/Landing.tsx": "5db15a72 kit",
-  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
   "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/PictureInput.tsx": "69fa6ffa kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -14250,7 +14252,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "ba62bfa9 kit",
+  "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/uploads.ts": "9b671202 kit",
@@ -15816,7 +15818,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
   "src/kit/Landing.tsx": "5db15a72 kit",
-  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
   "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
@@ -15825,7 +15827,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "ba62bfa9 kit",
+  "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -16428,8 +16430,8 @@ describe("Component", () => {
 describe("Incident", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
-    const others = insertIncident(stranger.id);
-    const own = insertIncident(viewer.id);
+    const others = insertIncident(stranger.id, {"status":"investigating"});
+    const own = insertIncident(viewer.id, {"status":"investigating"});
     expect({
       readOthers: await reads(incidentData, viewer, others.id),
       readOwn: await reads(incidentData, viewer, own.id),
@@ -16451,8 +16453,8 @@ describe("Incident", () => {
 
   test("staff", async () => {
     const viewer = signedIn("staff");
-    const others = insertIncident(stranger.id);
-    const own = insertIncident(viewer.id);
+    const others = insertIncident(stranger.id, {"status":"investigating"});
+    const own = insertIncident(viewer.id, {"status":"investigating"});
     expect({
       readOthers: await reads(incidentData, viewer, others.id),
       readOwn: await reads(incidentData, viewer, own.id),
@@ -16474,7 +16476,7 @@ describe("Incident", () => {
 
   test("a visitor who has not signed in", async () => {
     const viewer = null;
-    const others = insertIncident(stranger.id);
+    const others = insertIncident(stranger.id, {"status":"investigating"});
     expect({
       readOthers: await reads(incidentData, viewer, others.id),
       readOwn: false,
@@ -17141,7 +17143,7 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
 
 exports[`../../../examples/status/smithable.yml > file list and generated code > src/generated/incident.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, asc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { incidents } from "#/db/schema";
 import { AccessDenied, check, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
@@ -17153,7 +17155,12 @@ import type { IncidentValues } from "./incident";
 
 /** Who may read, create, change and delete incidents. */
 export const incidentAccess: ModelAccess = {
-  read: { public: true, roles: ["admin", "staff"], owner: false },
+  read: {
+    public: true,
+    roles: ["admin", "staff"],
+    owner: false,
+    where: { status: ["investigating", "identified", "monitoring", "resolved"] },
+  },
   create: { public: false, roles: ["admin", "staff"], owner: false },
   write: { public: false, roles: ["admin"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
@@ -17170,6 +17177,7 @@ export const incidentData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentAccess.read, viewer);
     if (scope === "all") return undefined;
+    if (scope === "public") return and(inArray(incidents.status, ["investigating","identified","monitoring","resolved"]));
     return scope === "own" && viewer ? eq(incidents.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -17286,7 +17294,7 @@ import { z } from "zod";
 import { incidents } from "#/db/schema";
 import { allows } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-import { MarkdownEditor } from "#/kit/Markdown";
+import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { incidentAccess, incidentData } from "./incident.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
@@ -17360,6 +17368,7 @@ export const incidentUi: RecordUi<IncidentRow> = {
       kind: "markdown",
       required: false,
       input: MarkdownEditor,
+      view: MarkdownText,
       get: (row) => row.summary,
     },
   ],
@@ -20015,7 +20024,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "0bc522d3 generated",
   "src/db/seed.ts": "fa375893 generated",
-  "src/generated/access.test.ts": "bfa73434 generated",
+  "src/generated/access.test.ts": "32875fb4 generated",
   "src/generated/actions/identified.ts": "93b4aa94 generated",
   "src/generated/actions/monitoring.ts": "bd052446 generated",
   "src/generated/actions/resolve.ts": "73723368 generated",
@@ -20026,8 +20035,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/hooks.ts": "84c092d9 generated",
   "src/generated/incident-update.server.ts": "0e8a075b generated",
   "src/generated/incident-update.ts": "acc43612 generated",
-  "src/generated/incident.server.ts": "bb73c927 generated",
-  "src/generated/incident.ts": "895abe23 generated",
+  "src/generated/incident.server.ts": "23e003d1 generated",
+  "src/generated/incident.ts": "a710bc92 generated",
   "src/generated/maintenance.server.ts": "bf97ba41 generated",
   "src/generated/maintenance.ts": "e628c9a9 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
@@ -20042,7 +20051,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "5db15a72 kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "4a8527a8 kit",
+  "src/kit/ModelForm.tsx": "32bdb1b2 kit",
   "src/kit/ModelTable.tsx": "68cad2ec kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "db074e7a kit",
@@ -20053,7 +20062,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "d4e977eb kit",
   "src/kit/mail.ts": "e8c94fdf kit",
-  "src/kit/model.ts": "ba62bfa9 kit",
+  "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
