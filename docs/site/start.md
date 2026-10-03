@@ -32,7 +32,7 @@ A project is a folder with `smithable.yml` (what the app does), its companion fi
 
 ## Signing in
 
-New apps sign people in with a code by email: they type their address and get a six-digit code, good for ten minutes. There are no passwords and no keys to register. You are the app's first administrator: `smithable new` uses your Git address (`git config user.email`), or the one you give with `--admin you@your-domain`. `smithable op setAdmins` changes the list later. Who else may sign in follows the auth file. `smithable op setSignUp invited` lets in only invited people and the administrators.
+New apps sign people in with a code by email: they type their address and get a six-digit code, good for ten minutes. There are no passwords and no keys to register. You are the app's first administrator: `smithable new` uses your Git address (`git config user.email`), or the one you give with `--admin you@your-domain`. `smithable op setAdmins` changes the list later. Who else may sign in follows the auth file. `smithable op setSignUp invited` lets in only invited people and the administrators. To offer Google as well, see [Sign in with Google](google-sign-in.md).
 
 In development nothing is mailed. The sign-in page lets you sign in as any role with one click, and codes land in `data/mail/outbox`. A published app needs mail settings to send codes: `SMTP_URL` (like `smtp://user:password@smtp.example.eu:587`) and `MAIL_FROM` (the sender). Without them its sign-in page says it cannot send mail, and `smithable deploy` warns before publishing. The app's README has the details, under "Signing in" and "Mail".
 
