@@ -176,4 +176,15 @@ other: 1
     - Last
 other: 1
 `);
+
+test("a long text stays on its line, plain or quoted, and reads back the same", () => {
+  // Found by bench-m12: setApp with a model's long description made invalid YAML.
+  const plain = "Simple invoicing for freelancers. Each user manages their own clients, their invoices and the payments that come in.";
+  const quoted = `${plain.replace("Simple", "Simple: ")} And more.`;
+  const editor = new YamlEditor("app:\n  name: Invoicely\n  description: Short.\n");
+  editor.set(["app", "description"], plain);
+  editor.add(["app"], "tagline", quoted);
+  expect(editor.text.split("\n")).toHaveLength(5);
+  expect(editor.get(["app", "description"])).toBe(plain);
+  expect(editor.get(["app", "tagline"])).toBe(quoted);
 });
