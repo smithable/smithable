@@ -200,10 +200,16 @@ export function Trace({
             >
               <p className={cx("text-sm", e.undone && "line-through")}>{text(e)}</p>
               <p className="mt-0.5 text-xs text-neutral-500">
-                {e.isUndo ? "undo" : e.engine}
-                {e.model ? ` (${e.model})` : ""} · {e.tokens.toLocaleString("en")} tokens
-                {e.cost ? ` · ${e.currency === "USD" ? "$" : "€"}${e.cost.toFixed(4)}` : ""}
-                {e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
+                {/* The Builder (words given) says only when, and the model's use where there was
+                    one; Studio says how every change was made. */}
+                {!words || e.tokens > 0 ? (
+                  <>
+                    {e.isUndo ? "undo" : e.engine}
+                    {e.model ? ` (${e.model})` : ""} · {e.tokens.toLocaleString("en")} tokens
+                    {e.cost ? ` · ${e.currency === "USD" ? "$" : "€"}${e.cost.toFixed(4)}` : ""}
+                    {!words && e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
+                  </>
+                ) : null}
                 {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
             </li>
