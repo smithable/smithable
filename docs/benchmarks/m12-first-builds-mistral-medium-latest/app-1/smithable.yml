@@ -1,13 +1,12 @@
 smithable: 0.1
 app:
   name: App
+  timezone: UTC
 pages:
   admin:
     data: all
-    access: [admin]
   team:
     users: manage
-    access: [admin]
   class-types:
     crud: ClassType
     access: [admin]
@@ -19,17 +18,18 @@ pages:
     access: [admin]
   my-bookings:
     crud: Booking
+    access: [member, admin]
     mine: true
-  schedule:
-    calendar:
-      model: Session
-      starts: startsAt
-    access: [admin]
+    actions: [cancelBooking]
   home:
     route: /
     landing:
       hero:
       footer:
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
 models:
   ClassType:
     fields:
@@ -37,7 +37,7 @@ models:
       description: text
       duration: int! = 60
       level: beginner | intermediate | advanced
-      price: money!
+      color: "string = #6366f1"
     access:
       create: [admin]
       write: [admin]
@@ -58,7 +58,7 @@ models:
       instructor: Instructor!
       startsAt: datetime!
       endsAt: datetime!
-      maxCapacity: int! = 20
+      capacity: int! = 20
       bookings: Booking[]
     access:
       create: [admin]
@@ -67,7 +67,20 @@ models:
   Booking:
     fields:
       session: Session!
-      user: User!
+      member: User!
       status: booked | attended | cancelled
       bookedAt: datetime = NOW()
-navigation: [home, schedule, my-bookings, class-types, instructors, sessions]
+    capacity:
+      per: session
+      max: session.capacity
+      where:
+        status: [booked, attended]
+navigation: [home, schedule, my-bookings]
+actions:
+  cancelBooking:
+    on: Booking
+    when:
+      status: booked
+    set:
+      status: cancelled
+    intent: Cancel this booking.

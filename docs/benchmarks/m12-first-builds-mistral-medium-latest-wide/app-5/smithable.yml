@@ -1,21 +1,6 @@
 smithable: 0.1
 app:
   name: App
-pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-  team:
-    users: manage
-  clients:
-    crud: Client
-  shoots:
-    crud: Shoot
-  invoices:
-    crud: Invoice
-    actions: [markSent, markPaid]
 models:
   Client:
     fields:
@@ -24,20 +9,28 @@ models:
       phone: phone
   Shoot:
     fields:
-      client: Client!
+      name: string!
       date: date!
-      location: string
+      client: Client!
       description: text
   Invoice:
     fields:
+      number: string! unique
       client: Client!
       shoot: Shoot
-      number: string! unique
       date: date! = TODAY()
       dueDate: date
       status: draft | sent | paid | overdue
-      amount: money!
+      total: money
       notes: text
+pages:
+  clients:
+    crud: Client
+  shoots:
+    crud: Shoot
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
 actions:
   markSent:
     on: Invoice
