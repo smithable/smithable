@@ -8,6 +8,11 @@ Routine changes are made by deterministic generators, not by an AI rewriting cod
 - **[Starters](starters.md)**: the six apps to begin from, with pictures: a CRM, a booking site, invoicing, a marketplace, records and a status page.
 - **[Why Smithable](why.md)**: what is different about changes, cost, ownership, security and where things run, with the measurements.
 - **[Questions and answers](faq.md)**: how it compares, what it can build today, hosting, data, contributing.
+- **How-tos:**
+  - [Change an app without writing code](change.md): five changes through operations on the status starter.
+  - [Buttons that change a record](actions.md): standard actions, from setting a field to copying a record with its lines.
+  - [Sign in with Google](google-sign-in.md): offering Google beside the code by email.
+  - [Run an app on your own machine](self-host.md): deploying, backing up, restoring and updating.
 - **[The spec reference](../spec/v0.1.md)**: everything `smithable.yml` and its companion files can say, with examples.
 - **[AI setup](../ai.md)**: the models behind `smithable ask` and drafting an app from a sentence, local first.
 - **[JSON Schema](https://docs.smithable.ai/schema/smithable-0.1.json)** for `smithable.yml`, for autocomplete and checking in your editor.
