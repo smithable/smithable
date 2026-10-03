@@ -22,12 +22,13 @@ models:
       pickupTime: datetime!
       status: pending | confirmed | pickedUp | canceled
       notes: text
+      pickedUpAt: datetime
   PickupSlot:
     fields:
       date: date!
       startTime: string!
       endTime: string!
-      maxCapacity: int! = 10
+      maxPreOrders: int! = 10
       notes: text
 pages:
   produkte:
@@ -35,10 +36,10 @@ pages:
     search: [name, category]
   vorbestellungen:
     crud: PreOrder
-    actions: [confirmPreOrder, markPickedUp, cancelPreOrder]
+    actions: [confirmPreOrder, cancelPreOrder, markPickedUp]
     search: [customerName, customerEmail, product]
-    filters: [status, pickupTime]
-    sortable: [pickupTime, customerName]
+    filters: [status, pickupTime, product]
+    sortable: [pickupTime, customerName, status]
   abholzeiten:
     crud: PickupSlot
   team:
@@ -50,20 +51,20 @@ actions:
       status: pending
     set:
       status: confirmed
-    intent: Bestätige eine Vorbestellung.
-  markPickedUp:
-    on: PreOrder
-    when:
-      status: confirmed
-    set:
-      status: pickedUp
-    intent: Markiere eine Vorbestellung als abgeholt.
+    intent: Bestätigt eine Vorbestellung.
   cancelPreOrder:
     on: PreOrder
     when:
       status: [pending, confirmed]
     set:
       status: canceled
-      notes:
-    intent: Storniere eine Vorbestellung.
+    intent: Storniert eine Vorbestellung.
+  markPickedUp:
+    on: PreOrder
+    when:
+      status: confirmed
+    set:
+      status: pickedUp
+      pickedUpAt: NOW()
+    intent: Markiert eine Vorbestellung als abgeholt.
 navigation: [produkte, vorbestellungen, abholzeiten, team]

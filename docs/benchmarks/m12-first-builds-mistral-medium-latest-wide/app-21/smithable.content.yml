@@ -33,14 +33,14 @@ models:
     pluralLabel: Huoltotyöt
     fields:
       number:
-        label: Töiden numero
+        label: Tunnus
       car:
         label: Auto
       status:
         label: Tila
         values:
           pending: Odottaa
-          inProgress: Käynnissä
+          inProgress: Käsittelyssä
           completed: Valmis
           canceled: Peruutettu
       description:
@@ -113,5 +113,3 @@ pages:
     title: Laskut
   palvelut:
     title: Palvelut
-  tiimi:
-    title: Tiimi

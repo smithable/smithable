@@ -12,7 +12,7 @@ models:
         label: Taso
         values:
           beginner: Aloittelija
-          allLevels: Kaikki tasot
+          allLevels: Kaikille
           advanced: Edistynyt
       durationMinutes:
         label: Kesto (min)

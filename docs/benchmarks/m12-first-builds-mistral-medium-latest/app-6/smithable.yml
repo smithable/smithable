@@ -39,8 +39,6 @@ pages:
     search: [name, email]
     filters: [jobPost, status]
     actions: [reviewApplication, shortlistApplication, rejectApplication]
-  team:
-    users: manage
   home:
     route: /home
     landing:
@@ -57,26 +55,26 @@ actions:
       status: open
     set:
       status: closed
-    allow: [admin, member]
+    allow: [admin]
   reviewApplication:
     on: Application
     when:
       status: submitted
     set:
       status: reviewed
-    allow: [admin, member]
+    allow: [admin]
   shortlistApplication:
     on: Application
     when:
       status: [reviewed, shortlisted]
     set:
       status: shortlisted
-    allow: [admin, member]
+    allow: [admin]
   rejectApplication:
     on: Application
     when:
       status: [reviewed, shortlisted]
     set:
       status: rejected
-    allow: [admin, member]
-navigation: [jobs, applications, team]
+    allow: [admin]
+navigation: [jobs, applications]

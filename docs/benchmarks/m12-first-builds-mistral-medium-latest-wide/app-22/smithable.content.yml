@@ -49,8 +49,8 @@ models:
         label: Beginn
       endTime:
         label: Ende
-      maxCapacity:
-        label: Maximale Kapazität
+      maxPreOrders:
+        label: Max. Vorbestellungen
       notes:
         label: Notizen
 pages:
