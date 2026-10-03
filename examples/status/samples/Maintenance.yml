@@ -1,0 +1,6 @@
+# Work planned ahead, announced on the status page.
+- title: Database upgrade
+  component: Website
+  startsAt: 2026-10-12 22:00
+  endsAt: 2026-10-12 23:00
+  description: The shop may be slow or show a maintenance page for up to an hour.

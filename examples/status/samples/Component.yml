@@ -1,0 +1,10 @@
+# The services the status page reports on (docs/spec/v0.1.md, Sample data).
+- name: Website
+  status: operational
+  description: The public website and the online shop.
+- name: Payments
+  status: degraded
+  description: Card payments at checkout.
+- name: Mobile app
+  status: operational
+  description: The app for iOS and Android.
