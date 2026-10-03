@@ -1,0 +1,70 @@
+smithable: 0.1
+app:
+  name: API Status
+  description: Live status of our API services, incidents, and planned maintenance.
+models:
+  Component:
+    fields:
+      name: string!
+      status: operational | degraded | down | maintenance
+      description: text
+      incidents: Incident[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      component: Component
+      detectedAt: datetime!
+      resolvedAt: datetime
+      summary: markdown
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+  Maintenance:
+    fields:
+      title: string!
+      component: Component
+      startsAt: datetime!
+      endsAt: datetime!
+      description: text
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
+  incidents:
+    crud: Incident
+    access: [admin, staff]
+  updates:
+    crud: IncidentUpdate
+    access: [admin, staff]
+  components:
+    crud: Component
+    access: [admin]
+  maintenance:
+    crud: Maintenance
+    access: [admin, staff]
+  overview:
+    crud: Incident
+    access: [admin, staff]
+  team:
+    users: manage
+    access: [admin]
+navigation: [overview, incidents, updates, maintenance, components, team]
