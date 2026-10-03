@@ -3,7 +3,15 @@
 // instead of generated ones (docs/spec/v0.1.md, Sample data). Data, not grammar: nothing here
 // changes what the app does. References name the referenced record by its title, choices by
 // value or label, pictures by a file under public/images/samples/.
-import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import {
+  isMap,
+  isScalar,
+  isSeq,
+  LineCounter,
+  type ParsedNode,
+  parseDocument,
+  stringify,
+} from "yaml";
 import type { ContentIR } from "./content.js";
 import { ParseContext } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
@@ -221,4 +229,54 @@ function samplePicture(
     if (typeof file === "string" && typeof alt === "string") return { picture: file, alt };
   }
   return undefined;
+}
+
+/**
+ * A starter's sample files fitted to an app drafted from it: the files of models the draft
+ * kept, each record with only the fields the draft's model has, and without the records that
+ * no longer fit (a choice value that went, a required field the starter never had, a reference
+ * to a record that is gone). What is left passes validateSamples with nothing to say, so the
+ * first preview shows real records wherever the draft kept the starter's shape.
+ */
+export function fitSamples(
+  files: readonly { path: string; text: string }[],
+  ir: SpecIR,
+): { path: string; text: string }[] {
+  let kept = files.flatMap((file) => {
+    const name = file.path.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "");
+    const model = ir.models.find((m) => m.name === name);
+    const doc = parseDocument(file.text);
+    if (!model || doc.errors.length || !isSeq(doc.contents)) return [];
+    const settable = new Set(
+      model.fields
+        .filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many))
+        .map((f) => f.name),
+    );
+    const records = (doc.toJS() as unknown[]).flatMap((record) =>
+      record && typeof record === "object" && !Array.isArray(record)
+        ? [Object.fromEntries(Object.entries(record).filter(([key]) => settable.has(key)))]
+        : [],
+    );
+    return [{ path: file.path, records }];
+  });
+  const render = (set: typeof kept) =>
+    set.map((f) => ({ path: f.path, text: stringify(f.records, { lineWidth: 0 }) }));
+  // A record is kept when it validates among the others; dropping one may orphan a reference
+  // in another file, so go round until nothing more goes (a few rounds at most).
+  for (let round = 0; round < 5; round++) {
+    const next = kept.map((file) => ({
+      path: file.path,
+      records: file.records.filter((record) => {
+        const others = render(kept.filter((f) => f.path !== file.path));
+        const alone = { path: file.path, text: stringify([record], { lineWidth: 0 }) };
+        return validateSamples([...others, alone], ir).diagnostics.every(
+          (d) => d.file !== file.path,
+        );
+      }),
+    }));
+    const same = next.every((f, i) => f.records.length === kept[i]?.records.length);
+    kept = next;
+    if (same) break;
+  }
+  return render(kept.filter((f) => f.records.length > 0));
 }
