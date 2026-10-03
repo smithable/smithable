@@ -3,6 +3,7 @@ import { checkSpecFiles } from "./draft.js";
 import {
   BLANK,
   blankFor,
+  computedField,
   draftOperations,
   draftProjectByOperations,
   repairFieldShorthand,
@@ -237,7 +238,7 @@ test("invite-only asked before the team page gets the team page first", async ()
   expect(draft.dropped).toBeUndefined();
 });
 
-test("a value worked out from other fields, written as a default, does not cost its model", async () => {
+test("a value worked out from other fields, written as a default, becomes a computed field", async () => {
   const draft = await draftProjectByOperations({
     description: "invoices",
     providers: [
@@ -251,7 +252,8 @@ test("a value worked out from other fields, written as a default, does not cost 
               fields: {
                 quantity: "int!",
                 unitPrice: "money!",
-                amount: "money = quantity * unitPrice",
+                amount: "money! = quantity * unitPrice",
+                addedOn: "date = TODAY()",
               },
             },
           },
@@ -261,8 +263,19 @@ test("a value worked out from other fields, written as a default, does not cost 
     ],
   });
   if (draft.kind !== "draft") throw new Error(draft.message);
-  expect(draft.files["smithable.yml"]).toContain("unitPrice:");
-  expect(draft.files["smithable.yml"]).toContain("lines:");
-  // The field goes back to the model with its reason; left out of the correction, it is dropped.
-  expect(draft.files["smithable.yml"]).not.toContain("quantity * unitPrice");
+  expect(draft.files["smithable.yml"]).toContain(
+    "      amount:\n        type: money\n        formula: quantity * unitPrice\n",
+  );
+  expect(draft.files["smithable.yml"]).toContain("addedOn: date = TODAY()");
+  expect(checkSpecFiles(draft.files)).toEqual([]);
+});
+
+test("only a default naming the model's other fields is a formula", () => {
+  expect(computedField("money = quantity * unitPrice", ["quantity", "unitPrice"])).toEqual({
+    type: "money",
+    formula: "quantity * unitPrice",
+  });
+  expect(computedField("date = TODAY()", ["quantity"])).toBeUndefined();
+  expect(computedField("int! = 12", ["quantity"])).toBeUndefined();
+  expect(computedField("low | high", ["quantity"])).toBeUndefined();
 });

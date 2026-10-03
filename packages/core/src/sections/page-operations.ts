@@ -2,6 +2,7 @@ import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlEditor } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
+import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, NAME_PATTERN } from "./names.js";
 
 const addPage: Operation<{ page: string; model: string; route?: string }> = {
@@ -214,7 +215,7 @@ const addArticlesPage: Operation<{ page: string; model: string }> = {
   },
 };
 
-const addCalculatorPage: Operation<{ page: string; fields: Record<string, string> }> = {
+const addCalculatorPage: Operation<{ page: string; fields: Record<string, FieldArg> }> = {
   name: "addCalculatorPage",
   summary:
     "Add a calculator page: fields written as a model's, the entered ones its inputs and the formula fields its results, stored nowhere; it goes in the main menu.",
@@ -226,9 +227,9 @@ const addCalculatorPage: Operation<{ page: string; fields: Record<string, string
       page: { type: "string", description: "Page name, e.g. mortgage." },
       fields: {
         type: "object",
-        additionalProperties: { type: "string" },
+        additionalProperties: FIELD_ARG,
         description:
-          'Field name → type shorthand, e.g. { "price": "money = 300000", "years": "int = 25" }; results are added with addField and a formula.',
+          'Field name → type shorthand, e.g. { "price": "money = 300000", "years": "int = 25" }; a result is a computed field, { "type": "money", "formula": "price / years" }.',
       },
     },
   },
@@ -245,6 +246,7 @@ const addCalculatorPage: Operation<{ page: string; fields: Record<string, string
       throw new OperationError(`Page "${page}" already exists.`);
     if (!Object.keys(fields).length)
       throw new OperationError("A calculator needs at least one field, e.g. price=money.");
+    for (const [f, value] of Object.entries(fields)) checkFieldArg(f, value);
     spec.add(["pages"], page, { calculator: { fields } });
     addToMainMenu(spec, page);
     return [];
