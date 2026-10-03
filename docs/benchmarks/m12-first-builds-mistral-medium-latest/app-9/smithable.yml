@@ -10,6 +10,7 @@ models:
       priority: low | medium | high | critical
       status: open | inProgress | resolved | closed
       assignee: User
+      requester: User
     access:
       delete: [admin]
 pages:
@@ -17,7 +18,7 @@ pages:
     crud: Ticket
     search: [title, description]
     sortable: [priority, status, createdAt]
-    actions: [startWork, resolve, reopen, close]
+    actions: [startWork, resolve, close, reopen]
   team:
     users: manage
 actions:
@@ -36,17 +37,17 @@ actions:
     set:
       status: resolved
     intent: Mark the ticket as resolved.
-  reopen:
-    on: Ticket
-    when:
-      status: [resolved, closed]
-    set:
-      status: open
-    intent: Reopen the ticket for further work.
   close:
     on: Ticket
     when:
       status: resolved
     set:
       status: closed
-    intent: Close the ticket.
+    intent: Close the resolved ticket.
+  reopen:
+    on: Ticket
+    when:
+      status: [closed, resolved]
+    set:
+      status: open
+    intent: Reopen the ticket for further work.

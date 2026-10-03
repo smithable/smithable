@@ -3,6 +3,6 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home, teams, players, matches]
-  read: [Team, Player, Match]
+  pages: [home, teams, players, matches, results]
+  read: [Team, Player, Match, Result]
 admins: [johan@smithable.ai]

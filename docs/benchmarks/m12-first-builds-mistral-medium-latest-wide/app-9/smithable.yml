@@ -10,9 +10,10 @@ models:
       year: int
       condition: mint | nearMint | veryGood | good | fair | poor
       pricePaid: money
+      coverImage: url
       notes: text
 pages:
   albums:
     crud: Album
     search: [title, artist, notes]
-    filters: [year, condition]
+    filters: [condition, year]

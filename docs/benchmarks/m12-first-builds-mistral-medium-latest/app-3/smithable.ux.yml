@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  clients:
+    table:
+      sort: name
+  settings:
+    form:
+      sections: [{ name: business, fields: [businessName, vatNumber] }, { name: payment, fields: [iban, paymentTermDays, invoiceFooter] }]
+  invoices:
+    table:
+      sort: -issuedOn

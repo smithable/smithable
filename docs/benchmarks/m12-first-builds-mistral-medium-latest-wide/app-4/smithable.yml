@@ -1,24 +1,21 @@
 smithable: 0.1
 app:
   name: Piano Lessons
-  description: "A piano teacher's lessons: pupils, their weekly times and what each one practises."
+  description: "A piano teacher's lessons: my pupils, their weekly times and what each one practises."
 models:
   Pupil:
     fields:
       name: string!
       email: email
       phone: phone
-    access:
-      delete: [teacher]
+      notes: text
   Lesson:
     fields:
       pupil: Pupil!
       dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
       startTime: string!
-      durationMinutes: int! = 30
+      durationMinutes: int! = 60
       notes: text
-    access:
-      delete: [teacher]
   Practice:
     fields:
       lesson: Lesson!
@@ -26,12 +23,12 @@ models:
       piece: string!
       minutes: int
       notes: text
-    access:
-      delete: [teacher]
 pages:
   pupils:
     crud: Pupil
   lessons:
     crud: Lesson
-  practices:
+  practice:
     crud: Practice
+  team:
+    users: manage

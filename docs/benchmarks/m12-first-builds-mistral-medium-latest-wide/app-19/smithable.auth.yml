@@ -3,12 +3,12 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [hem, katalog]
+  pages: [home, catalog]
   read: [Item]
 roles:
   admin:
-    description: Håller loppis snygg och ordnad.
+    description: Håller loppis sidan ren och snygg.
   member:
-    description: Lägger upp och sparar föremål.
+    description: Lägger upp och sparar saker.
 defaultRole: member
 admins: [johan@smithable.ai]
