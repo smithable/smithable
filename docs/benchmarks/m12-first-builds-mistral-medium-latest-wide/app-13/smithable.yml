@@ -22,7 +22,7 @@ models:
       date: date!
       description: string!
       amount: money!
-      category: string
+      category: fuel | service | other
       notes: text
 pages:
   fuel:

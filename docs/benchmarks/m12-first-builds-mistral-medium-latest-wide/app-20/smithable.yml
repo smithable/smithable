@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Joogastudio
-  description: "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa."
+  description: "Varausjärjestelmä joogastudiolle: tunnit, ohjaajat ja varaukset verkossa."
   currency: EUR
   timezone: Europe/Helsinki
 models:
@@ -16,10 +16,32 @@ models:
   Instructor:
     fields:
       name: string!
-      bio: text
+      bio: markdown
       portrait: picture
     access:
       create: [admin]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
+  Post:
+    fields:
+      title: string!
+      address: string unique
+      summary: text
+      cover: picture
+      body: markdown!
+      publishedOn: date
+      status: draft | published
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
   Session:
     fields:
       classType: ClassType!
@@ -27,9 +49,13 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
-      placesLeft: int = capacity - COUNT(bookings)
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
     access:
       create: [admin]
+      write: [admin]
+      delete: [admin]
   Booking:
     fields:
       session: Session!
@@ -44,16 +70,6 @@ pages:
   instructors:
     crud: Instructor
     access: [admin]
-  sessions:
-    crud: Session
-    access: [admin]
-  my-bookings:
-    crud: Booking
-    access: [member, admin]
-  schedule:
-    calendar:
-      model: Session
-      starts: startsAt
   home:
     route: /
     landing:
@@ -61,5 +77,26 @@ pages:
       footer:
       classes:
         records: ClassType
-      callToAction:
-        button: schedule
+      contact:
+        form: Message
+  messages:
+    crud: Message
+    access: [admin]
+  blog:
+    articles: Post
+  posts:
+    crud: Post
+    access: [admin]
+  team:
+    users: manage
+  sessions:
+    crud: Session
+    access: [admin]
+  my-bookings:
+    crud: Booking
+    access: [member, admin]
+    mine: true
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
