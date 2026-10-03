@@ -92,16 +92,20 @@ export async function create(
   let description = options.describe;
   const providers = description ? providersFor() : [];
   // Before the draft: the model may ask up to three questions and picks the starter to adapt
-  // (docs/design/first-build.md). --yes asks nothing; --answers answers in order, unasked.
-  if (description && !options.yes && !options.answers) {
+  // (docs/design/first-build.md). --yes asks nothing; --answers answers in order, unasked. Either
+  // way the model still picks the starter when none was named: skipping the questions is not
+  // skipping the choice (the word match knows only English).
+  const asking = !options.yes && !options.answers;
+  if (description && (asking || starter === undefined)) {
     const asked = await clarifyProject({ description, starters: starterSummaries(), providers });
     if (asked.starter && starter === undefined) name = asked.starter;
-    if (asked.questions.length) {
+    if (asking && asked.questions.length) {
       const answers = await askQuestions(io, asked.questions);
       if (answers === undefined) return 1;
       description = describedWith(description, answers);
     }
-  } else if (description && options.answers) {
+  }
+  if (description && options.answers) {
     const given = options.answers.split(";").map((a) => a.trim());
     description = describedWith(
       description,
