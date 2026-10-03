@@ -226,7 +226,9 @@ pages:
     "!viewer && visitorRoutes.some(",
   );
 
-test("a standard action generates nothing yet, and never a stub to implement", () => {
+});
+
+test("a standard action is generated whole: its module, its server function and a button, never a stub", () => {
   const spec = `smithable: 0.1
 app: { name: Status }
 models:
@@ -240,8 +242,17 @@ actions:
 pages:
   incidents: { crud: Incident, actions: [resolve] }
 `;
-  const paths = generateApp(ir("smithable.yml", spec), options).map((f) => f.path);
-  expect(paths.filter((p) => p.includes("resolve"))).toEqual([]);
+  const files = generateApp(ir("smithable.yml", spec), options);
+  expect(files.map((f) => f.path).filter((p) => p.includes("resolve"))).toEqual([
+    "src/generated/actions/resolve.server.ts",
+    "src/generated/actions/resolve.ts",
+  ]);
+  const server = files.find((f) => f.path === "src/generated/actions/resolve.server.ts")?.content;
+  expect(server).toContain('if (!resolveFits(row)) throw new Error("This cannot be done now.");');
+  expect(server).toContain('status: "resolved",');
+  const record = files.find((f) => f.path === "src/routes/incidents/$id.tsx")?.content;
+  expect(record).toContain("resolveFits(row) && (");
+  expect(files.some((f) => f.path === "src/kit/ActionButton.tsx")).toBe(true);
 });
 
 /** FNV-1a over the text: enough to notice any change, and runs anywhere. */

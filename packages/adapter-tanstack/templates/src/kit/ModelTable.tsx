@@ -39,6 +39,8 @@ interface ModelTableProps<R extends Row> {
   icon?: LucideIcon;
   /** A heart on each record: the ids the viewer saved, and what a click does (sign in, for a visitor). */
   saved?: { ids: number[]; onToggle: (id: number) => void };
+  /** Buttons for a record, e.g. its standard actions; above the row's own link. */
+  rowActions?: (row: R) => React.ReactNode;
 }
 
 /** Saves a record for the viewer, or unsaves it: a toggle above the row's own link. */
@@ -98,6 +100,7 @@ export function ModelTable<R extends Row>({
   view = "table",
   icon,
   saved,
+  rowActions,
 }: ModelTableProps<R>) {
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const columns = (chosen ?? ui.columns)
@@ -245,6 +248,11 @@ export function ModelTable<R extends Row>({
                   onOpen && <ChevronRight aria-hidden className="mt-0.5 size-5 shrink-0" />
                 )}
               </div>
+              {rowActions && (
+                <div data-part="row-actions" className="relative z-10 flex flex-wrap gap-2">
+                  {rowActions(row)}
+                </div>
+              )}
               {(date || amount) && (
                 <p className="flex items-baseline justify-between gap-3 pt-2 text-sm">
                   <span className="text-muted-foreground">
@@ -280,6 +288,11 @@ export function ModelTable<R extends Row>({
                     <span className="sr-only">Saved</span>
                   </TableHead>
                 )}
+                {rowActions && (
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -305,6 +318,11 @@ export function ModelTable<R extends Row>({
                     </TableCell>
                   ))}
                   {saved && <TableCell className="py-0">{heart(row)}</TableCell>}
+                  {rowActions && (
+                    <TableCell data-part="row-actions" className="relative z-10 py-0 text-right">
+                      {rowActions(row)}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

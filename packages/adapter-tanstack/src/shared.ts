@@ -15,6 +15,7 @@ import {
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
+  type StandardActionIR,
   snake,
   type ThemeIR,
   USER_MODEL,
@@ -403,5 +404,12 @@ export function hasFavorites(model: ModelIR, ir: SpecIR, auth: AuthIR): boolean 
   return (
     hasSignIn(auth) &&
     ir.pages.some((p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.favorites)
+  );
+}
+
+/** The standard actions a page offers (docs/design/actions.md): on its records' pages. */
+export function standardActions(page: PageIR, ir: SpecIR): StandardActionIR[] {
+  return (page.actions ?? []).flatMap((name) =>
+    ir.actions.filter((a): a is StandardActionIR => a.name === name && !a.custom),
   );
 }

@@ -34,6 +34,7 @@ import {
   names,
   ownerKey,
   relatedTitle,
+  standardActions,
   type Texts,
   tableNames,
   type Within,
@@ -425,6 +426,12 @@ export function listParts(
     .add("@tanstack/react-router", "Link", "useNavigate")
     .add("#/components/ui/button", "buttonVariants");
   for (const a of actions) view.add(actionNames(a).module, actionNames(a).access);
+  // Standard actions: a button in each row they fit, for viewers who may run them.
+  const offered = within ? [] : standardActions(page, ir);
+  for (const a of offered)
+    view.add(actionNames(a).module, a.name, actionNames(a).access, actionNames(a).fits);
+  if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
+  if (offered.length) view.add("@tanstack/react-router", "useRouter");
   view.add("#/generated/app", "app").add(n.module, n.ui);
   if (actions.length) view.add("#/kit/access", "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
@@ -440,10 +447,9 @@ export function listParts(
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
   const body = (api: string) => `function ${component}() {
   const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${
+${actions.length || offered.length || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || offered.length ? "\n  const router = useRouter();" : ""}${
     favorites
       ? `
-  const router = useRouter();
   // A heart saves the record for the viewer; a visitor signs in first and comes back.
   const toggleSaved = async (id: number) => {
     if (!viewer) {
@@ -516,6 +522,29 @@ ${
             ? `sort ? rows : ${ordered}`
             : ordered;
         })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${
+          offered.length
+            ? `
+        rowActions={(row) => (
+          <>
+            ${offered
+              .map(
+                (
+                  a,
+                ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row) && (
+              <ActionButton
+                label=${attr(humanize(a.name))}
+                onRun={async () => {
+                  await ${a.name}({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}`,
+              )
+              .join("\n            ")}
+          </>
+        )}`
+            : ""
+        }${
           filtering
             ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${n.pluralLabel.toLowerCase()} match the search and filters." : ${
                 favorites === "only"

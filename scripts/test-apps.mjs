@@ -753,6 +753,22 @@ async function statusFlow(base) {
     console.log(
       "  ✓ browser: resolving an incident (its action) marks it resolved and its service working again, on the public page too",
     );
+
+    // The standard action: a button only on the rows it fits; pressed, the record changes.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/incidents`);
+    const row = page.locator("tr", { hasText: "Card payments slow at checkout" });
+    await row.getByRole("button", { name: "Reopen" }).click();
+    await row.getByText("Investigating").waitFor({ timeout: 10000 });
+    await row.getByRole("button", { name: "Reopen" }).waitFor({ state: "detached" });
+    const fits = await page
+      .locator("tr", { hasText: "Website unreachable" })
+      .getByRole("button", { name: "Reopen" })
+      .count();
+    if (fits !== 1) throw new Error("the resolved incident has no Reopen button");
+    console.log(
+      "  ✓ browser: a standard action's button is on the rows it fits, and pressing it reopens the incident",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -2292,6 +2308,29 @@ for (const [index, example] of examples.entries()) {
         if (added.code !== 0) throw new Error(added.out);
         run("pnpm", ["typecheck"], dir);
       });
+    // A standard action (actions.md): a button that sets fields of a record, without code.
+    if (example === "status")
+      step(
+        "op addAction --on gives incidents a standard action (reopen), with no code to write, and the app type-checks",
+        () => {
+          const added = smithable(
+            dir,
+            "op",
+            "addAction",
+            "reopen",
+            "--on",
+            "Incident",
+            "--when",
+            "status=resolved",
+            "--set",
+            "status=investigating",
+          );
+          if (added.code !== 0) throw new Error(added.out);
+          if (existsSync(join(dir, "src/custom/actions/reopen.ts")))
+            throw new Error("a stub was made");
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
