@@ -1,0 +1,96 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Manage plots, waiting list and yearly fees for an allotment society.
+models:
+  Plot:
+    fields:
+      number: string! unique
+      size: int
+      status: free | assigned | reserved
+      notes: text
+    access:
+      delete: [admin]
+      write: [admin]
+  Member:
+    fields:
+      name: string!
+      email: email! unique
+      phone: phone
+      address: text
+      joinedOn: date
+      status: active | inactive
+    access:
+      delete: [admin]
+      write: [admin]
+  Assignment:
+    fields:
+      plot: Plot!
+      member: Member!
+      startDate: date!
+      endDate: date
+      status: active | ended
+    access:
+      delete: [admin]
+      write: [admin]
+    capacity:
+      per: plot
+      max: 1
+  Fee:
+    fields:
+      year: int! unique
+      amount: money!
+      dueDate: date!
+      status: open | paid | overdue
+    access:
+      delete: [admin]
+      write: [admin]
+  WaitingList:
+    fields:
+      member: Member!
+      plot: Plot
+      requestedOn: date!
+      notes: text
+    access:
+      delete: [admin]
+      write: [admin]
+  Payment:
+    fields:
+      member: Member!
+      fee: Fee!
+      amount: money!
+      paidOn: date!
+      method: cash | bank | online
+    access:
+      delete: [admin]
+      write: [admin]
+pages:
+  plots:
+    crud: Plot
+    search: [number, notes]
+    filters: [status]
+  members:
+    crud: Member
+    search: [name, email, phone, address]
+    filters: [status]
+  assignments:
+    crud: Assignment
+    access: [admin]
+    filters: [plot, member, status]
+  fees:
+    crud: Fee
+    access: [admin]
+    filters: [year, status]
+  team:
+    users: manage
+  admin:
+    data: all
+  waiting-list:
+    crud: WaitingList
+    access: [admin]
+    filters: [plot, member]
+  payments:
+    crud: Payment
+    access: [admin]
+    filters: [member, fee, method, paidOn]
+navigation: [plots, members, assignments, waiting-list, fees, payments]

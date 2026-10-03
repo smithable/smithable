@@ -1,0 +1,13 @@
+smithableUx: 0.1
+pages:
+  albums:
+    table:
+      sort: -year
+      columns: [title, artist, year, condition, pricePaid]
+tones:
+  Album.condition:
+    mint: success
+    nearMint: success
+    good: warning
+    fair: danger
+    poor: danger
