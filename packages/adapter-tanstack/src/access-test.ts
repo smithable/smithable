@@ -121,8 +121,14 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
     const access = modelAccess(model, auth);
     const data = `${camel(model.name)}Data`;
     const values = `${camel(model.name)}Values`;
-    // Visitors read only records that fit the public condition: the records here do.
-    const fits = access.read.where ? `, ${JSON.stringify(access.read.where)}` : "";
+    // Visitors read only records that fit the public condition: the records here do (a list of
+    // values fits with its first one).
+    const where = access.read.where
+      ? Object.fromEntries(
+          Object.entries(access.read.where).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
+        )
+      : undefined;
+    const fits = where ? `, ${JSON.stringify(where)}` : "";
     const tests = roles.map((role) => {
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const title = role === null ? "a visitor who has not signed in" : role;
@@ -157,12 +163,7 @@ ${Object.entries(expected(access, role))
   });`);
     // The public condition: a visitor reads a record that fits and not one that does not; a role
     // that reads everything reads both.
-    // A list of values fits with its first one and not with a value outside it.
-    const where = access.read.where
-      ? Object.fromEntries(
-          Object.entries(access.read.where).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
-        )
-      : undefined;
+    // A list of values does not fit with a value outside it.
     const [field, wanted] = Object.entries(where ?? {})[0] ?? [];
     const flipped = model.fields.find((f) => f.name === field);
     if (where && field !== undefined && flipped) {
