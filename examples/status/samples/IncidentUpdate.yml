@@ -1,0 +1,6 @@
+# What the team said while each incident lasted, in order.
+- { incident: Card payments slow at checkout, at: 2026-10-01 14:10, status: investigating, message: We are looking into slow card payments at checkout. }
+- { incident: Card payments slow at checkout, at: 2026-10-01 14:42, status: identified, message: The payment provider found a faulty node and is moving traffic away from it. }
+- { incident: Card payments slow at checkout, at: 2026-10-01 15:20, status: monitoring, message: Payments confirm in seconds again. We are watching for an hour before closing this. }
+- { incident: Website unreachable for twenty minutes, at: 2026-09-24 08:45, status: investigating, message: The website does not load for anyone. We are on it. }
+- { incident: Website unreachable for twenty minutes, at: 2026-09-24 09:01, status: resolved, message: The certificate is renewed and the website is back. }
