@@ -6,6 +6,7 @@ import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
+import { cn } from "#/lib/utils";
 import { FieldInput } from "./FieldInput";
 import { formatValue, fromInput, toInput } from "./format";
 import {
@@ -188,17 +189,27 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                 </h2>
               )}
               <dl className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-5"}>
-                {group.fields.map((field) => (
-                  <div
-                    key={field.name}
-                    data-kit="field"
-                    data-field={field.name}
-                    className={wide(field) ? "sm:col-span-2" : undefined}
-                  >
-                    <dt className="text-sm font-medium text-muted-foreground">{field.label}</dt>
-                    <dd className="mt-1">{shown(ui, field, record, app)}</dd>
-                  </div>
-                ))}
+                {/* The title is the page's heading already. */}
+                {group.fields
+                  .filter((field) => field.name !== ui.titleField)
+                  .map((field) => (
+                    <div
+                      key={field.name}
+                      data-kit="field"
+                      data-field={field.name}
+                      className={wide(field) ? "sm:col-span-2" : undefined}
+                    >
+                      <dt className="text-sm font-medium text-muted-foreground">{field.label}</dt>
+                      <dd
+                        className={cn(
+                          "mt-1",
+                          field.kind === "money" && "text-xl font-semibold tabular-nums",
+                        )}
+                      >
+                        {shown(ui, field, record, app)}
+                      </dd>
+                    </div>
+                  ))}
               </dl>
             </section>
           ))}
