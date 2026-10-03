@@ -204,3 +204,21 @@ test("a name someone typed names the app, over the starter's or the draft's own"
     "smithable: 0.1\n",
   );
 });
+
+test("a starter's sample allowedDomains go, and a shared app open to sign-up becomes invite-only", async () => {
+  const { withoutSampleDomains } = await import("./new.js");
+  const out: string[] = [];
+  const files = withoutSampleDomains(
+    {
+      "smithable.yml":
+        "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Ticket:\n    fields: { title: string! }\npages:\n  tickets: { crud: Ticket }\n",
+      "smithable.auth.yml":
+        "smithableAuth: 0.1\nsignIn:\n  providers: [email]\n  allowedDomains: [desk.example]\ndefaultAccess: shared\nadmins: [you@gmail.com]\n",
+    },
+    { out: (s) => out.push(s), err: () => {} },
+  );
+  expect(files["smithable.auth.yml"]).not.toContain("allowedDomains");
+  expect(files["smithable.auth.yml"]).toContain("selfSignUp: false");
+  expect(files["smithable.yml"]).toContain("users: manage");
+  expect(out.join("")).toContain("only invited people and the administrator may sign in");
+});
