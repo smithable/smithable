@@ -1,8 +1,12 @@
 # Publishes the engine to npm: `smithable` (the CLI), `create-smithable` (npm create smithable)
 # and the packages under @smithable/. Only by hand (Actions → Publish → Run workflow), with the
 # version to publish, and a dry run unless that box is cleared. The version is stamped into the
-# packages for the build (scripts/set-version.mjs) and not committed. Provenance links each
-# package to this workflow run; the npm automation token is the NPM_TOKEN secret.
+# packages for the build (scripts/set-version.mjs) and not committed.
+#
+# No token: npm trusts this workflow as a publisher (OIDC, `id-token: write`) in stage-only mode,
+# so a run can only stage each version; ops-smithable approves it with a passkey on npmjs.com
+# (or `npm stage approve <id>`) before it is live. The run's summary lists what was staged.
+# Provenance is added once the repository is public.
 name: Publish
 on:
   workflow_dispatch:
@@ -11,7 +15,7 @@ on:
         description: The version to publish, like 0.1.0
         required: true
       dry_run:
-        description: Pack and check only; publish nothing
+        description: Pack and check only; stage nothing
         type: boolean
         default: true
 concurrency:
@@ -23,21 +27,31 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # The inputs reach the shell as variables, never pasted into a command.
+    env:
+      VERSION: ${{ inputs.version }}
+      DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup
-      - run: node scripts/set-version.mjs "${{ inputs.version }}"
+      - run: node scripts/set-version.mjs "$VERSION"
       - run: pnpm build
       - run: pnpm test
-      - name: Publish (or a dry run)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: "true"
+      # Staged publishing needs npm 11.15 or later.
+      - run: npm install --global npm@^11.15.0 && npm --version
+      # pnpm packs each package, turning its workspace: references into the version above.
+      - run: pnpm -r --filter "./packages/*" pack --pack-destination "$RUNNER_TEMP/packed"
+      - name: Stage each package (or a dry run)
         run: |
-          if [ "${{ inputs.dry_run }}" != true ] && [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "The NPM_TOKEN secret is not set: nothing can be published." >&2
-            exit 1
-          fi
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          pnpm -r --filter "./packages/*" publish --access public --no-git-checks \
-            ${{ inputs.dry_run && '--dry-run' || '' }}
+          echo "## Version $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          for tarball in "$RUNNER_TEMP"/packed/*.tgz; do
+            if [ "$DRY_RUN" = true ]; then
+              npm publish "$tarball" --access public --dry-run
+              echo "- dry run: $(basename "$tarball")" >> "$GITHUB_STEP_SUMMARY"
+            else
+              out=$(npm stage publish "$tarball" --access public 2>&1) || { echo "$out" >&2; exit 1; }
+              echo "$out"
+              echo "- staged $(basename "$tarball"): $(echo "$out" | tail -n 1)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          [ "$DRY_RUN" = true ] || echo "Approve each staged version on npmjs.com, or with npm stage approve <id>." >> "$GITHUB_STEP_SUMMARY"
