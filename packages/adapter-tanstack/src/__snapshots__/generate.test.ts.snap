@@ -3092,14 +3092,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@stillwater.example"];
 const APP_NAME = "Stillwater Yoga";
@@ -3156,6 +3163,20 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -6499,7 +6520,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "0925f79f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -6512,7 +6533,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "2464e9fc generated",
+  "src/lib/auth.ts": "98b21233 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -8039,6 +8060,7 @@ import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
 export const ROLES = ["admin", "sales"] as const;
@@ -8115,19 +8137,22 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
-  db.delete(invitation).where(eq(invitation.email, address)).run();
-  const created = db
-    .insert(invitation)
-    .values({
-      id: randomUUID(),
-      email: address,
-      role,
-      token: randomBytes(24).toString("base64url"),
-      invitedById: by.id,
-      expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
-    })
-    .returning()
-    .get();
+  const created = db.transaction((tx) => {
+    tx.delete(invitation).where(eq(invitation.email, address)).run();
+    audit(tx, by, { action: "invited", model: "User", title: address, details: { email: address, role } });
+    return tx
+      .insert(invitation)
+      .values({
+        id: randomUUID(),
+        email: address,
+        role,
+        token: randomBytes(24).toString("base64url"),
+        invitedById: by.id,
+        expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
+      })
+      .returning()
+      .get();
+  });
   const result = row(created, origin);
   await sendInvitation(by, result);
   return result;
@@ -8140,30 +8165,43 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
-  const renewed = db
-    .update(invitation)
-    .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
-    .where(eq(invitation.id, invitationId))
-    .returning()
-    .get();
+  const renewed = db.transaction((tx) => {
+    const sent = tx
+      .update(invitation)
+      .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
+      .where(eq(invitation.id, invitationId))
+      .returning()
+      .get();
+    if (sent)
+      audit(tx, by, { action: "invitation sent again", model: "User", title: sent.email, details: { email: sent.email, role: sent.role } });
+    return sent;
+  });
   if (!renewed) throw new Error("This invitation no longer exists.");
   await sendInvitation(by, row(renewed, origin));
 }
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
-  manager(viewer);
-  db.delete(invitation).where(eq(invitation.id, invitationId)).run();
+  const by = manager(viewer);
+  db.transaction((tx) => {
+    const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
+    if (gone)
+      audit(tx, by, { action: "invitation withdrawn", model: "User", title: gone.email, details: { email: gone.email, role: gone.role } });
+  });
 }
 
 /** Gives a user another role; never your own, and the last administrator stays one. */
 export async function setRole(viewer: Viewer | null, userId: string, role: Role): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot change your own role.");
-  const target = db.select({ role: user.role }).from(user).where(eq(user.id, userId)).get();
+  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
-  db.update(user).set({ role }).where(eq(user.id, userId)).run();
+  db.transaction((tx) => {
+    tx.update(user).set({ role }).where(eq(user.id, userId)).run();
+    // What touches security keeps its values: who, what they were and what they became.
+    audit(tx, by, { action: "role changed", model: "User", title: target.name, details: { user: userId, from: target.role, to: role } });
+  });
 }
 
 /**
@@ -8174,12 +8212,19 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
 export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
-  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
+  const target = db
+    .select({ role: user.role, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
   if (!target) return;
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
-    db.delete(user).where(eq(user.id, userId)).run();
+    db.transaction((tx) => {
+      tx.delete(user).where(eq(user.id, userId)).run();
+      audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
       throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
@@ -8214,13 +8259,16 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
 
 const ORIGIN = "https://team.example";
+/** The audit log's lines of one kind, oldest first. */
+const audited = (action: string) =>
+  db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@acme.example", role: "admin" };
 db.insert(user).values(admin).run();
 
@@ -8246,6 +8294,9 @@ test("an invited address signs up with the invited role, and the invitation is u
   const created = await signUp("users-test-invited@acme.example");
   expect(created?.role).toBe("sales");
   expect(db.select().from(invitation).where(eq(invitation.email, "users-test-invited@acme.example")).get()).toBeUndefined();
+  // The audit log has both ends, with their values: who was invited as what, and who accepted.
+  expect(audited("invited").at(-1)).toMatchObject({ who: admin.id, details: { email: "users-test-invited@acme.example", role: "sales" } });
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { email: "users-test-invited@acme.example" } });
 });
 
 test("with sign-up closed, an address nobody invited is refused", async () => {
@@ -8269,6 +8320,9 @@ test("only the page's roles manage users; an administrator cannot change or remo
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, colleague.id)).get()?.role).toBe("admin");
   await removeUser(admin, colleague.id);
   expect(db.select().from(user).where(eq(user.id, colleague.id)).get()).toBeUndefined();
+  // What touches security keeps its values in the audit log: from what to what, and who.
+  expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: "sales", to: "admin" } });
+  expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@acme.example" } });
 
   const pending = await invite(admin, "users-test-pending@acme.example", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
@@ -8304,12 +8358,18 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 const ALLOWED_DOMAINS = ["acme.example"];
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@acme.example"];
@@ -8396,13 +8456,31 @@ export const auth = betterAuth({
         before: async (newUser) => {
           const email = newUser.email.toLowerCase();
           const refused = joinRefusal(email);
-          if (refused) throw new APIError("FORBIDDEN", { message: refused });
+          if (refused) {
+            audit(db, null, { action: "sign-in refused", model: "User", title: email, details: { email, reason: refused } });
+            throw new APIError("FORBIDDEN", { message: refused });
+          }
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "sales" } };
         },
         after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };
+          const used = invitationOf(email);
+          if (used)
+            audit(db, who, { action: "invitation accepted", model: "User", title: email, details: { email, role: used.role } });
           // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
+          db.delete(invitation).where(eq(invitation.email, email)).run();
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
         },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -9622,8 +9700,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.server.ts": "46b982bb generated",
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
-  "src/generated/users.server.ts": "de07ed11 generated",
-  "src/generated/users.test.ts": "818352a3 generated",
+  "src/generated/users.server.ts": "d86f882a generated",
+  "src/generated/users.test.ts": "5c2c6167 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/AppShell.tsx": "2236ff19 kit",
@@ -9636,7 +9714,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "0925f79f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -9648,7 +9726,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "030a96c0 generated",
+  "src/lib/auth.ts": "289c7fb0 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -12186,14 +12264,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@invoicely.example"];
 const APP_NAME = "Invoicely";
@@ -12250,6 +12335,20 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -13817,7 +13916,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "0925f79f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -13829,7 +13928,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "9283c2f6 generated",
+  "src/lib/auth.ts": "12ac8efb generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -14821,14 +14920,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@torget.example"];
 const APP_NAME = "Torget";
@@ -14885,6 +14991,20 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -16348,7 +16468,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "0925f79f kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -16362,7 +16482,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "0086a0c4 generated",
+  "src/lib/auth.ts": "41e6d03d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -17274,14 +17394,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = [];
 const APP_NAME = "Our Collection";
@@ -17338,6 +17465,20 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -18172,7 +18313,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "0925f79f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -18184,7 +18325,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "e1fff927 generated",
+  "src/lib/auth.ts": "23c7114e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -20907,6 +21048,7 @@ import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
 export const ROLES = ["admin", "staff"] as const;
@@ -20983,19 +21125,22 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
-  db.delete(invitation).where(eq(invitation.email, address)).run();
-  const created = db
-    .insert(invitation)
-    .values({
-      id: randomUUID(),
-      email: address,
-      role,
-      token: randomBytes(24).toString("base64url"),
-      invitedById: by.id,
-      expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
-    })
-    .returning()
-    .get();
+  const created = db.transaction((tx) => {
+    tx.delete(invitation).where(eq(invitation.email, address)).run();
+    audit(tx, by, { action: "invited", model: "User", title: address, details: { email: address, role } });
+    return tx
+      .insert(invitation)
+      .values({
+        id: randomUUID(),
+        email: address,
+        role,
+        token: randomBytes(24).toString("base64url"),
+        invitedById: by.id,
+        expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
+      })
+      .returning()
+      .get();
+  });
   const result = row(created, origin);
   await sendInvitation(by, result);
   return result;
@@ -21008,30 +21153,43 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
-  const renewed = db
-    .update(invitation)
-    .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
-    .where(eq(invitation.id, invitationId))
-    .returning()
-    .get();
+  const renewed = db.transaction((tx) => {
+    const sent = tx
+      .update(invitation)
+      .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
+      .where(eq(invitation.id, invitationId))
+      .returning()
+      .get();
+    if (sent)
+      audit(tx, by, { action: "invitation sent again", model: "User", title: sent.email, details: { email: sent.email, role: sent.role } });
+    return sent;
+  });
   if (!renewed) throw new Error("This invitation no longer exists.");
   await sendInvitation(by, row(renewed, origin));
 }
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
-  manager(viewer);
-  db.delete(invitation).where(eq(invitation.id, invitationId)).run();
+  const by = manager(viewer);
+  db.transaction((tx) => {
+    const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
+    if (gone)
+      audit(tx, by, { action: "invitation withdrawn", model: "User", title: gone.email, details: { email: gone.email, role: gone.role } });
+  });
 }
 
 /** Gives a user another role; never your own, and the last administrator stays one. */
 export async function setRole(viewer: Viewer | null, userId: string, role: Role): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot change your own role.");
-  const target = db.select({ role: user.role }).from(user).where(eq(user.id, userId)).get();
+  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
-  db.update(user).set({ role }).where(eq(user.id, userId)).run();
+  db.transaction((tx) => {
+    tx.update(user).set({ role }).where(eq(user.id, userId)).run();
+    // What touches security keeps its values: who, what they were and what they became.
+    audit(tx, by, { action: "role changed", model: "User", title: target.name, details: { user: userId, from: target.role, to: role } });
+  });
 }
 
 /**
@@ -21042,12 +21200,19 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
 export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
-  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
+  const target = db
+    .select({ role: user.role, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
   if (!target) return;
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
-    db.delete(user).where(eq(user.id, userId)).run();
+    db.transaction((tx) => {
+      tx.delete(user).where(eq(user.id, userId)).run();
+      audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
       throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
@@ -21082,13 +21247,16 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
 
 const ORIGIN = "https://team.example";
+/** The audit log's lines of one kind, oldest first. */
+const audited = (action: string) =>
+  db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@example.com", role: "admin" };
 db.insert(user).values(admin).run();
 
@@ -21114,6 +21282,9 @@ test("an invited address signs up with the invited role, and the invitation is u
   const created = await signUp("users-test-invited@example.com");
   expect(created?.role).toBe("staff");
   expect(db.select().from(invitation).where(eq(invitation.email, "users-test-invited@example.com")).get()).toBeUndefined();
+  // The audit log has both ends, with their values: who was invited as what, and who accepted.
+  expect(audited("invited").at(-1)).toMatchObject({ who: admin.id, details: { email: "users-test-invited@example.com", role: "staff" } });
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { email: "users-test-invited@example.com" } });
 });
 
 test("with sign-up closed, an address nobody invited is refused", async () => {
@@ -21137,6 +21308,9 @@ test("only the page's roles manage users; an administrator cannot change or remo
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, colleague.id)).get()?.role).toBe("admin");
   await removeUser(admin, colleague.id);
   expect(db.select().from(user).where(eq(user.id, colleague.id)).get()).toBeUndefined();
+  // What touches security keeps its values in the audit log: from what to what, and who.
+  expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: "staff", to: "admin" } });
+  expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@example.com" } });
 
   const pending = await invite(admin, "users-test-pending@example.com", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
@@ -21155,12 +21329,18 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["ops@northwind.example"];
 const APP_NAME = "Northwind Status";
@@ -21244,13 +21424,31 @@ export const auth = betterAuth({
         before: async (newUser) => {
           const email = newUser.email.toLowerCase();
           const refused = joinRefusal(email);
-          if (refused) throw new APIError("FORBIDDEN", { message: refused });
+          if (refused) {
+            audit(db, null, { action: "sign-in refused", model: "User", title: email, details: { email, reason: refused } });
+            throw new APIError("FORBIDDEN", { message: refused });
+          }
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "staff" } };
         },
         after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };
+          const used = invitationOf(email);
+          if (used)
+            audit(db, who, { action: "invitation accepted", model: "User", title: email, details: { email, role: used.role } });
           // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
+          db.delete(invitation).where(eq(invitation.email, email)).run();
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
         },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -23252,8 +23450,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.ts": "ce9b2f03 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
-  "src/generated/users.server.ts": "365732cf generated",
-  "src/generated/users.test.ts": "56ce3b86 generated",
+  "src/generated/users.server.ts": "b220a57c generated",
+  "src/generated/users.test.ts": "fd88af07 generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Articles.tsx": "4d0a8e9d kit",
@@ -23271,7 +23469,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "0925f79f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -23283,7 +23481,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "8404a82a generated",
+  "src/lib/auth.ts": "79701b2a generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",

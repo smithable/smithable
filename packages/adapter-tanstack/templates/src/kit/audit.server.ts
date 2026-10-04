@@ -20,7 +20,10 @@ export interface AuditLine {
   title?: unknown;
   /** For a change, the fields that changed (their names, not their values). */
   fields?: string[];
-  /** Anything more the line needs to say, e.g. the record a copy came from. */
+  /**
+   * Anything more the line needs to say, e.g. the record a copy came from. For what touches
+   * security, the values: who was made what, and what they were (never a secret).
+   */
   details?: Record<string, unknown>;
 }
 
@@ -28,7 +31,11 @@ export interface AuditLine {
  * Writes one line for the viewer the change was made as: a visitor in a request, or "the app"
  * for its own work outside one (a daily job). The client's details come from the request.
  */
-export function audit(tx: Writer, viewer: Viewer | null, line: AuditLine): void {
+export function audit(
+  tx: Writer,
+  viewer: Pick<Viewer, "id" | "role"> | null,
+  line: AuditLine,
+): void {
   const trace = traceDetails();
   tx.insert(auditLog)
     .values({
