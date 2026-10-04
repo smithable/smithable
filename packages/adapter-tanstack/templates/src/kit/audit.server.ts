@@ -16,7 +16,7 @@ export interface AuditLine {
   action: string;
   model?: string;
   record?: number;
-  /** The record's title at that moment, so a deleted record can still be named. */
+  /** Only on the line that deletes a record: its title by then, so it can still be named. */
   title?: unknown;
   /** For a change, the fields that changed (their names, not their values). */
   fields?: string[];
