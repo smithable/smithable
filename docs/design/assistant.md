@@ -173,12 +173,12 @@ The five questions (ARCHITECTURE §2.4): common (an assistant in an app is becom
 
 ## 10. Steps
 
-1. **Core:** the tools and the summary described from the spec, the auth file and a role; `where` as the condition grammar with ranges, references and `mine`. (Fable.)
+1. **Core:** the tools and the summary described from the spec, the auth file and a role; `where` as the condition grammar with ranges, references and `mine`. (Fable. Built 2026-10-04: `assistantOffer` in `packages/core/src/assistant.ts`. Measured on the six starters, as an administrator inside the app: 6 or 7 tools of about 860 to 1,040 tokens whatever the number of models, and a summary of about 60 to 250 tokens; booking with six models is about 1,150 in all.)
 2. **Adapter:** `where`, `search`, `sort`, counting and adding up in the data modules; the seven tools at `/mcp` and the same as query parameters on the API. This is backlog item 12, reshaped. (A, core parts reviewed by Fable.)
 3. **The bench** of §9, on the tools alone through `/mcp`, before any panel exists: it settles decision 1 with numbers. (C.)
 4. **The wording rules for questions**, a pure function from a sentence and the spec to a tool call. (Fable.)
 5. **The kit's panel:** the rules first, then the model's tool loop, the results shown by the app, the confirmation cards. As the administrator's inspector first, since that needs no new grammar. (A.)
-6. **The `assistant` block** and `setAssistant`, and "Ask" for the people who use the app. (Fable for core, A.)
+6. **The `assistant` block** and `setAssistant`, and "Ask" for the people who use the app. (Fable for core, A.) (The block, `setAssistant`, the summary sentence and `asksWith` in core: built 2026-10-04. Inside the app the offer only reads unless the block says `may: change`.)
 7. **The service:** the model's address for previews and published apps, the limits, the counts on the usage page. (B.)
 8. **Voice:** the read-aloud button, then the microphone setting. (A.)
 
