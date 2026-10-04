@@ -27,7 +27,7 @@ const setTheme: Operation<{
 }> = {
   name: "setTheme",
   summary:
-    'Choose the theme preset, brand color, background color, font, density or motion ("none" removes a color or the font).',
+    'Choose the theme preset, brand color, background color, font, density or motion ("none" removes a color or the font; for motion it means no motion).',
   schema: {
     type: "object",
     additionalProperties: false,
@@ -62,7 +62,11 @@ const setTheme: Operation<{
     const where = page ? ` on the ${page} page` : "";
     const WORDS: Record<string, string> = { primary: "primary color", background: "background" };
     const others = Object.entries(rest).map(([k, v]) =>
-      k === "density" || k === "font" || k === "motion" ? `${v} ${k}` : `${WORDS[k] ?? k} ${v}`,
+      k === "motion" && v === "none"
+        ? "no motion"
+        : k === "density" || k === "font" || k === "motion"
+          ? `${v} ${k}`
+          : `${WORDS[k] ?? k} ${v}`,
     );
     const theme = preset === undefined ? "" : `Use the ${preset} theme${where}`;
     if (!others.length) return theme || `Set the look${where}`;
@@ -84,6 +88,7 @@ const setTheme: Operation<{
       );
     const at = page === undefined ? ["theme"] : ["pages", page, "theme"];
     // On a page, "none" returns a key to the app's theme; for the app it removes a brand key.
+    // For motion alone, "none" is a value: no motion.
     if (args.preset !== undefined)
       put(ux, [...at, "preset"], page && args.preset === "none" ? undefined : args.preset);
     if (args.density !== undefined)
