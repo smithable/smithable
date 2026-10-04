@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages the sales team and has full access.
+  sales:
+    description: Works with leads, deals, and follow-ups.
+defaultRole: sales
+admins: [johan@smithable.ai]

@@ -1,0 +1,17 @@
+smithableUx: 0.1
+pages:
+  ingredients:
+    table:
+      columns: [name, quantityInStock, unit, reorderLevel, lowStock, supplier]
+      sort: name
+    icon: package
+  suppliers:
+    table:
+      columns: [name, contactName, email, phone]
+      sort: name
+    icon: truck
+theme:
+  preset: modern
+  brand:
+    primary: "#b45309"
+    background: "#faf5ee"

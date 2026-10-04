@@ -1,0 +1,98 @@
+smithable: 0.1
+app:
+  name: Cleaning Invoices
+  description: A shared workspace for a three-person cleaning company to manage household clients and monthly invoices.
+  currency: EUR
+models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid, duplicateInvoice]
+    filters: [status, client, issuedOn, dueOn]
+    search: [number]
+  clients:
+    crud: Client
+    search: [name, email, address]
+  invoice-lines:
+    crud: InvoiceLine
+  settings:
+    crud: BusinessProfile
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      paid:
+        sum: Invoice.total
+        where:
+          status: paid
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
+  team:
+    users: manage
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Record that the invoice has been sent to the household.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Record that the household has paid the invoice.
+  duplicateInvoice:
+    on: Invoice
+    copy:
+      number:
+      issuedOn: TODAY()
+      dueOn: DATEADD(TODAY(), 30, "day")
+      status: draft
+    with: [lines]
+    intent: Create the next monthly invoice using the same household and cleaning line items, asking for a new invoice number.

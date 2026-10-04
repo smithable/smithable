@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages IT systems, the status board, and team access.
+  staff:
+    description: Views incidents and writes incident updates.
+defaultRole: staff
+admins: [johan@smithable.ai]

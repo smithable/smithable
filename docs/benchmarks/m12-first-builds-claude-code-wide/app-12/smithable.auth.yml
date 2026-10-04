@@ -1,0 +1,18 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+public:
+  pages: [home]
+  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
+roles:
+  admin:
+    description: Runs the status page and the team.
+  staff:
+    description: Writes incidents, their updates and planned maintenance.
+defaultRole: staff
+api:
+  models: [Component, Incident]
+  actions: [resolve]
+admins: [johan@smithable.ai]

@@ -1,0 +1,97 @@
+smithable: 0.1
+app:
+  name: Web Shop Status
+  description: Live service status, outages, and incident updates for our web shop.
+  timezone: UTC
+models:
+  Component:
+    fields:
+      name: string!
+      status: operational | degraded | down | maintenance
+      description: text
+      incidents: Incident[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      component: Component
+      detectedAt: datetime!
+      resolvedAt: datetime
+      summary: text
+      updates: IncidentUpdate[]
+    access:
+      write: [admin, staff]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+pages:
+  incidents:
+    crud: Incident
+    actions: [identified, monitoring, resolve]
+    filters: [status, component]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+  team:
+    users: manage
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause has been identified and a fix is being worked on.
+    allow: [admin, staff]
+    intent: Mark the cause as identified and publish an update.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix has been deployed and we are monitoring the service.
+    allow: [admin, staff]
+    intent: Move the incident to monitoring and publish an update.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident has been resolved.
+    allow: [admin, staff]
+    intent: Resolve the incident and publish an update; service status remains separately managed.

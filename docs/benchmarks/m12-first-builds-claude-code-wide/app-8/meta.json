@@ -1,0 +1,10 @@
+{
+  "description": "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+  "starter": "marketplace",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Can people outside the office see the shelf without signing in?",
+    "How should claiming work?",
+    "Besides a title and description, what should each offered item include?"
+  ]
+}

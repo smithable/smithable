@@ -1,0 +1,8 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Ingredient
+    pluralLabel: Ingredients
+pages:
+  items:
+    title: Ingredients

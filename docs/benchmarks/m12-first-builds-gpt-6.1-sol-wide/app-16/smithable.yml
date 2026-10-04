@@ -1,0 +1,59 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Manage plot holders, the waiting list and yearly allotment fees.
+models:
+  Member:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+  Item:
+    fields:
+      name: string! unique
+      summary: text
+      holder: Member
+      addedOn: date! = TODAY()
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  WaitingListEntry:
+    fields:
+      member: Member!
+      joinedOn: date! = TODAY()
+      status: waiting | allocated | withdrawn
+      notes: text
+  Fee:
+    fields:
+      member: Member!
+      plot: Item!
+      year: int!
+      amount: money!
+      status: due | paid
+      paidOn: date
+pages:
+  items:
+    crud: Item
+    search: [name, summary]
+  members:
+    crud: Member
+    search: [name, email, phone]
+  waiting-list:
+    crud: WaitingListEntry
+    filters: [status]
+  fees:
+    crud: Fee
+    filters: [year, status, member, plot]
+    actions: [markFeePaid]
+  team:
+    users: manage
+actions:
+  markFeePaid:
+    on: Fee
+    when:
+      status: due
+    set:
+      status: paid
+      paidOn: TODAY()

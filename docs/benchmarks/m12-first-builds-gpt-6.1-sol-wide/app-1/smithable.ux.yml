@@ -1,0 +1,18 @@
+smithableUx: 0.1
+pages:
+  clients:
+    table:
+      columns: [name, email]
+  quotes:
+    table:
+      columns: [client, description, quotedOn, amount, status]
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#0F766E"
+    font: Inter

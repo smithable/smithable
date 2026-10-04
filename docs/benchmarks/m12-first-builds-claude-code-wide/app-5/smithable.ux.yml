@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  shoots:
+    table:
+      sort: -date
+    icon: calendar
+tones:
+  Invoice.status:
+    paid: success
+    sent: warning
+    overdue: danger
+theme:
+  preset: minimal
+  brand:
+    primary: "#1f2937"

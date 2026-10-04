@@ -1,0 +1,11 @@
+smithableUx: 0.1
+theme:
+  preset: modern
+  brand:
+    primary: "#15803d"
+    font: Inter
+pages:
+  matches:
+    table:
+      columns: [kickoff, team, opponent, location, status, teamScore, opponentScore]
+      sort: -kickoff

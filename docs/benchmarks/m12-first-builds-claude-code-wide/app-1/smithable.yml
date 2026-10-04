@@ -1,0 +1,74 @@
+smithable: 0.1
+app:
+  name: Translation Clients
+  description: Keep track of my translation clients, the quotes I send them and the payments they make.
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      company: string
+      notes: text
+      quotes: Quote[]
+      payments: Payment[]
+  Quote:
+    fields:
+      client: Client!
+      description: string!
+      sourceLanguage: string
+      targetLanguage: string
+      wordCount: int
+      amount: money!
+      quotedOn: date! = TODAY()
+      status: sent | accepted | declined
+      payments: Payment[]
+  Payment:
+    fields:
+      client: Client!
+      quote: Quote
+      amount: money!
+      paidOn: date! = TODAY()
+      notes: string
+pages:
+  clients:
+    crud: Client
+    search: [name, company, email]
+  quotes:
+    crud: Quote
+    filters: [status, client]
+    actions: [markAccepted, markDeclined]
+  payments:
+    crud: Payment
+  overview:
+    dashboard:
+      openQuotes:
+        sum: Quote.amount
+        where:
+          status: sent
+      acceptedQuotes:
+        sum: Quote.amount
+        where:
+          status: accepted
+      received:
+        sum: Payment.amount
+        by: paidOn
+      latestPayments:
+        list: Payment
+        limit: 5
+actions:
+  markAccepted:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: The client accepted the quote.
+  markDeclined:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: declined
+    intent: The client declined the quote.

@@ -1,0 +1,50 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Fynda på vår loppis
+      subtitle: Lägg upp det du vill sälja med bilder och pris – och hitta något nytt bland grannarnas saker.
+      button: Se alla saker
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    latest:
+      title: Senast upplagt
+    title: Välkommen
+  catalog:
+    title: Saker till salu
+  myItems:
+    title: Mina saker
+  saved:
+    title: Sparade
+models:
+  Item:
+    label: Sak
+    pluralLabel: Saker
+    fields:
+      title:
+        label: Rubrik
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      category:
+        label: Kategori
+        values:
+          furniture: Möbler
+          clothes: Kläder
+          books: Böcker
+          kitchen: Kök
+          electronics: Elektronik
+          toys: Leksaker
+          other: Övrigt
+      condition:
+        label: Skick
+        values:
+          likeNew: Som ny
+          good: Bra
+          worn: Sliten
+      available:
+        label: Till salu

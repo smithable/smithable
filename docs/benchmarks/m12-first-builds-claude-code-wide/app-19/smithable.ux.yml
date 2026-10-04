@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  catalog:
+    table:
+      view: cards
+theme:
+  preset: playful
+  brand:
+    primary: "#c2410c"
+    background: "#fbf5ec"
+tones:
+  Item.condition:
+    likeNew: success
+    worn: warning

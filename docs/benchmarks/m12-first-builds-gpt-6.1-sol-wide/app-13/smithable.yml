@@ -1,0 +1,42 @@
+smithable: 0.1
+app:
+  name: Car Log
+  description: Keep a personal log of your car's fuel purchases, service visits and costs.
+models:
+  Item:
+    fields:
+      name: string!
+      summary: text
+      fuelEntries: FuelEntry[]
+      serviceVisits: ServiceVisit[]
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  FuelEntry:
+    fields:
+      car: Item!
+      date: date! = TODAY()
+      odometer: decimal!
+      liters: decimal!
+      pricePerLiter: money!
+      totalCost:
+        type: money
+        formula: liters * pricePerLiter
+      notes: text
+  ServiceVisit:
+    fields:
+      car: Item!
+      date: date! = TODAY()
+      odometer: decimal!
+      garage: string
+      description: text!
+      cost: money!
+pages:
+  fuel-entries:
+    crud: FuelEntry
+  service-visits:
+    crud: ServiceVisit
+  items:
+    crud: Item
+    search: [name, summary]
