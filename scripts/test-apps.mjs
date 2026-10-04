@@ -970,6 +970,7 @@ async function statusFlow(base) {
     ).json();
     if (!described.paths?.["/api/v1/incidents/{id}/actions/resolve"])
       throw new Error("the description lacks resolve");
+    await apiSecurityChecks(base, shown);
     page.once("dialog", (d) => d.accept());
     await keyRow.getByRole("button", { name: "Revoke" }).click();
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
@@ -1235,6 +1236,362 @@ async function markdownFlow(base) {
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
     failures.push("markdown flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * The security checks of the gate for the API and the tools for assistants (on the status app,
+ * with a key of the staff role): each is an attack the app must refuse. A key counts only in its
+ * header; a malformed body or call is a 400 or a refusal, never a crash; a body cannot set what
+ * the app sets (the id, the owner, the dates); no other site is let in; and a condition or a
+ * search that looks like SQL is only a value.
+ */
+async function apiSecurityChecks(base, key) {
+  const check = async (name, fn) => {
+    try {
+      await fn();
+      console.log(`  ✓ security: ${name}`);
+    } catch (error) {
+      console.log(`  ✗ security: ${name}\n    ${error.message.split("\n")[0]}`);
+      failures.push(`security: ${name}`);
+    }
+  };
+  const call = (path, init = {}) =>
+    fetch(`${base}${path}`, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+        ...init.headers,
+      },
+    });
+  await check(
+    "a key counts only in the Authorization header, and a malformed one is refused",
+    async () => {
+      const incident = (title) =>
+        JSON.stringify({ title, status: "investigating", detectedAt: new Date().toISOString() });
+      const control = await call("/api/v1/incidents", {
+        method: "POST",
+        body: incident("From the header"),
+      });
+      if (control.status !== 201)
+        throw new Error(`the same incident with the key in its header gave ${control.status}`);
+      for (const name of ["key", "access_token", "api_key"]) {
+        const posted = await fetch(`${base}/api/v1/incidents?${name}=${key}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: incident("From the address"),
+        });
+        if (posted.ok) throw new Error(`a key in the address (?${name}=) could add`);
+      }
+      for (const header of [
+        "Basic " + btoa(`x:${key}`),
+        "Bearer",
+        `Bearer ${key}x`,
+        `Bearer ${"a".repeat(5000)}`,
+      ]) {
+        const answer = await fetch(`${base}/api/v1/incidents`, {
+          method: "POST",
+          headers: { authorization: header, "content-type": "application/json" },
+          body: JSON.stringify({ title: "Malformed key" }),
+        });
+        if (answer.status !== 401 && answer.status !== 429)
+          throw new Error(`Authorization "${header.slice(0, 20)}…" gave ${answer.status}`);
+      }
+    },
+  );
+  await check("a malformed body is a 400 or 422 with the app's words, never a crash", async () => {
+    for (const body of [
+      "{not json",
+      "[]",
+      "null",
+      '"text"',
+      JSON.stringify({ title: 12 }),
+      JSON.stringify({ title: { $gt: "" } }),
+    ]) {
+      const answer = await call("/api/v1/incidents", { method: "POST", body });
+      if (answer.status >= 500 || answer.ok)
+        throw new Error(`the body ${body.slice(0, 30)} gave ${answer.status}`);
+      const problem = await answer.json().catch(() => ({}));
+      if (
+        typeof problem.title !== "string" ||
+        /at \w+ \(|node_modules|\.ts:\d+/.test(JSON.stringify(problem))
+      )
+        throw new Error(
+          `the body ${body.slice(0, 30)} was answered with ${JSON.stringify(problem).slice(0, 100)}`,
+        );
+    }
+  });
+  await check("a body cannot set what the app sets: the id, the owner, the dates", async () => {
+    for (const extra of [
+      {},
+      { id: 9999 },
+      { ownerId: "someone" },
+      { createdAt: "2000-01-01T00:00:00Z" },
+      { __proto__: { admin: true }, constructor: {} },
+    ]) {
+      const answer = await call("/api/v1/incidents", {
+        method: "POST",
+        body: JSON.stringify({
+          title: "Set by the app",
+          status: "investigating",
+          detectedAt: new Date().toISOString(),
+          ...extra,
+        }),
+      });
+      const raw = JSON.stringify(extra);
+      if (raw === "{}" && answer.status !== 201)
+        throw new Error(`the body alone gave ${answer.status}`);
+      if (answer.ok && raw !== "{}") throw new Error(`a body with ${raw} was taken`);
+    }
+  });
+  await check("no other site is let in (no CORS grant)", async () => {
+    const answer = await fetch(`${base}/api/v1/incidents`, {
+      headers: { Origin: "https://evil.example" },
+    });
+    const preflight = await fetch(`${base}/api/v1/incidents`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://evil.example",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization",
+      },
+    });
+    for (const response of [answer, preflight]) {
+      const allowed = response.headers.get("access-control-allow-origin");
+      if (allowed === "*" || allowed === "https://evil.example")
+        throw new Error(`Access-Control-Allow-Origin: ${allowed}`);
+    }
+  });
+  await check(
+    "a condition or a search that looks like SQL is only a value, through the API and the tools",
+    async () => {
+      // Where the list takes filters (an unknown value is refused), one shaped like SQL must
+      // match nothing; anywhere, it must not crash or change a thing.
+      const filters = (await call("/api/v1/incidents?status=no-such-status")).status === 400;
+      for (const query of [
+        "title=%27%20OR%201%3D1%20--",
+        "search=%22%3B%20DROP%20TABLE%20incidents%3B%20--",
+        "status=resolved%27%20OR%20%271%27%3D%271",
+        "sort=title%3B%20DROP%20TABLE%20incidents",
+      ]) {
+        const answer = await call(`/api/v1/incidents?${query}`);
+        if (answer.status >= 500) throw new Error(`?${query} gave ${answer.status}`);
+        if (filters && answer.ok && (await answer.json()).total)
+          throw new Error(`?${query} matched records`);
+      }
+      const rpc = async (body) => {
+        const answer = await call("/mcp", {
+          method: "POST",
+          body: typeof body === "string" ? body : JSON.stringify(body),
+        });
+        if (answer.status >= 500)
+          throw new Error(`/mcp gave ${answer.status} for ${String(body).slice(0, 30)}`);
+        return answer.json().catch(() => ({}));
+      };
+      const found = await rpc({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "find", arguments: { kind: "Incident", where: { title: "' OR 1=1 --" } } },
+      });
+      if (found.result?.structuredContent?.total)
+        throw new Error("a condition like SQL matched records");
+      const user = await rpc({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "find", arguments: { kind: "User" } },
+      });
+      if (!user.result?.isError) throw new Error("a kind not offered (User) was answered");
+      const unknown = await rpc({ jsonrpc: "2.0", id: 3, method: "admin/shutdown" });
+      if (unknown.error?.code !== -32601)
+        throw new Error(`an unknown method gave ${JSON.stringify(unknown)}`);
+      await rpc("{not json");
+      // The incidents are all still there.
+      const still = await (await call("/api/v1/incidents")).json();
+      if (!still.total) throw new Error("the incidents are gone");
+    },
+  );
+}
+
+/**
+ * The security checks of the gate for input and sign-in (on the booking app): each is an attack
+ * the app must refuse, kept as a named check for every later change. A script in a visitor's
+ * message never runs for the admin who reads it; a Markdown link cannot run code; a search that
+ * looks like SQL is only text; guessing a sign-in code stops after five tries; the session cookie
+ * is out of a script's reach; sign-in never sends anyone to another site; and no file path
+ * climbs out of the pictures.
+ */
+async function inputSecurityFlow(dir, base) {
+  const check = async (name, fn) => {
+    try {
+      await fn();
+      console.log(`  ✓ security: ${name}`);
+    } catch (error) {
+      console.log(`  ✗ security: ${name}\n    ${error.message.split("\n")[0]}`);
+      failures.push(`security: ${name}`);
+    }
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  // Anything a page runs that it should not would set this, or open a dialog.
+  const ran = async () => page.evaluate(() => Boolean(window.__ran));
+  const dialogs = [];
+  page.on("dialog", (dialog) => {
+    dialogs.push(dialog.message());
+    dialog.dismiss();
+  });
+  const attack = '<img src=x onerror="window.__ran=1"><script>window.__ran=1</script>';
+  try {
+    await check("a script in a visitor's message does not run when an admin reads it", async () => {
+      await open(page, `${base}/`);
+      await page.getByRole("textbox", { name: "Name *" }).fill(`Mallory ${attack}`);
+      await page.getByRole("textbox", { name: "Email *" }).fill("mallory@example.com");
+      await page.getByRole("textbox", { name: "Message *" }).fill(`Hello ${attack}`);
+      await page.getByRole("button", { name: "Send message" }).click();
+      await page.getByText("Thank you!", { exact: false }).waitFor({ timeout: 10000 });
+      await signInAs(page, base, "admin");
+      await open(page, `${base}/messages`);
+      const row = page.getByRole("cell", { name: /^Mallory/ }).first();
+      await row.waitFor({ timeout: 10000 });
+      if (!(await row.innerText()).includes("<img src=x"))
+        throw new Error("the message's name is not shown as the text it is");
+      await row.click();
+      await page.waitForURL(/\/messages\/\d+$/);
+      await page.waitForTimeout(500);
+      if ((await ran()) || dialogs.length) throw new Error("the message's script ran");
+    });
+    await check("a Markdown link cannot run code", async () => {
+      await open(page, `${base}/instructors/1`);
+      await page
+        .getByLabel("Bio")
+        .fill("[Book now](javascript:window.__ran=1) and [here](JaVaScRiPt:alert(1))");
+      await page.getByRole("button", { name: "Preview" }).click();
+      await page.getByText("Book now").first().waitFor({ timeout: 10000 });
+      const hrefs = await page
+        .locator("main a")
+        .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+      if (hrefs.some((href) => /^\s*javascript:/i.test(href)))
+        throw new Error(`a link runs code: ${hrefs.join(", ")}`);
+      if ((await ran()) || dialogs.length) throw new Error("the link's code ran");
+      await page.getByRole("button", { name: "Write" }).click();
+    });
+    await check(
+      "a search that looks like SQL is only text, and % or _ are no wildcards",
+      async () => {
+        for (const q of ["' OR 1=1 --", "%", "_", '"; DROP TABLE class_types; --']) {
+          const answer = await page.request.get(
+            `${base}/admin/class-types?q=${encodeURIComponent(q)}`,
+          );
+          if (answer.status() !== 200) throw new Error(`?q=${q} gave ${answer.status()}`);
+          await open(page, `${base}/admin/class-types?q=${encodeURIComponent(q)}`);
+          if (await page.locator('[data-part="row"]').filter({ visible: true }).count())
+            throw new Error(`?q=${q} matched records`);
+        }
+        // The table is still there.
+        await open(page, `${base}/class-types`);
+        await page
+          .locator('[data-part="row"]')
+          .filter({ visible: true })
+          .first()
+          .waitFor({ timeout: 10000 });
+      },
+    );
+    await check(
+      "the session cookie is out of a script's reach and goes to no other site",
+      async () => {
+        const cookies = await page.context().cookies(base);
+        const session = cookies.find((c) => c.name.includes("session_token"));
+        if (!session) throw new Error("no session cookie");
+        if (!session.httpOnly) throw new Error("a script can read the session cookie");
+        if (session.sameSite !== "Lax" && session.sameSite !== "Strict")
+          throw new Error(`the session cookie goes to other sites (SameSite ${session.sameSite})`);
+      },
+    );
+    await check("sign-in never sends anyone on to another site", async () => {
+      for (const target of [
+        "//evil.example/",
+        "/\\evil.example/",
+        "https://evil.example/",
+        "/%5Cevil.example",
+      ]) {
+        const visitor = await browser.newPage();
+        try {
+          await open(visitor, `${base}/sign-in?redirect=${encodeURIComponent(target)}`);
+          await visitor.getByRole("button", { name: "Sign in as member" }).click();
+          await visitor
+            .waitForURL((url) => url.pathname !== "/sign-in", { timeout: 10000 })
+            .catch(() => {});
+          await visitor.waitForTimeout(500);
+          if (new URL(visitor.url()).pathname === "/sign-in")
+            throw new Error(`redirect=${target}: signing in did not leave /sign-in`);
+          if (new URL(visitor.url()).host !== new URL(base).host)
+            throw new Error(`redirect=${target} led to ${visitor.url()}`);
+        } finally {
+          await visitor.close();
+        }
+      }
+    });
+    await check(
+      "guessing a sign-in code stops after five tries, even before the right one",
+      async () => {
+        const post = (path, body) =>
+          fetch(`${base}/api/auth${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Origin: base },
+            body: JSON.stringify(body),
+          });
+        const outbox = join(dir, "data", "mail", "outbox");
+        let mailed = existsSync(outbox) ? readdirSync(outbox).length : 0;
+        const codeFor = async (email) => {
+          const sent = await post("/email-otp/send-verification-otp", { email, type: "sign-in" });
+          if (!sent.ok) throw new Error(`asking for a code gave ${sent.status}`);
+          let code;
+          for (let i = 0; !code && i < 50; i++) {
+            const mails = existsSync(outbox) ? readdirSync(outbox).sort() : [];
+            if (mails.length > mailed)
+              code = /\b(\d{3}) ?(\d{3})\b/
+                .exec(readFileSync(join(outbox, mails.at(-1)), "utf8"))
+                ?.slice(1)
+                .join("");
+            if (!code) await new Promise((r) => setTimeout(r, 100));
+            else mailed = mails.length;
+          }
+          if (!code) throw new Error(`no code for ${email} in the outbox`);
+          return code;
+        };
+        const fresh = await post("/sign-in/email-otp", {
+          email: "fresh@example.com",
+          otp: await codeFor("fresh@example.com"),
+        });
+        if (!fresh.ok) throw new Error(`a fresh code did not sign in (${fresh.status})`);
+        const email = "guess@example.com";
+        const code = await codeFor(email);
+        const wrong = String((Number(code) + 1) % 1000000).padStart(6, "0");
+        for (let i = 0; i < 5; i++) {
+          const guess = await post("/sign-in/email-otp", { email, otp: wrong });
+          if (guess.ok) throw new Error("a wrong code signed in");
+        }
+        const right = await post("/sign-in/email-otp", { email, otp: code });
+        if (right.ok) throw new Error("the right code still worked after five wrong guesses");
+      },
+    );
+    await check("no file path climbs out of the pictures", async () => {
+      for (const path of [
+        "/files/..%2F..%2Fdata%2Fdb%2Fapp.db",
+        "/files/Post/1/picture/..%2F..%2F..%2F..%2Fsmithable.yml",
+        "/files/%2e%2e/%2e%2e/data/db/app.db",
+        "/images/..%2F..%2Fdata%2Fdb%2Fapp.db",
+      ]) {
+        const answer = await fetch(`${base}${path}`);
+        const body = answer.ok ? await answer.text() : "";
+        if (body.includes("SQLite format") || body.includes("smithable: 0.1"))
+          throw new Error(`${path} served an app file`);
+      }
+    });
   } finally {
     await browser.close();
   }
@@ -2872,6 +3229,7 @@ for (const [index, example] of examples.entries()) {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await markdownFlow(base);
+        await inputSecurityFlow(dir, base);
         await articlesFlow(dir, base);
         await calculatorFlow(base);
         await pictureFlow(dir, base);
