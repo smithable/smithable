@@ -8,6 +8,10 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/ActionButton.tsx": [
     "data-kit="action-button"",
   ],
+  "src/kit/ActivityLog.tsx": [
+    "data-kit="activity-log"",
+    "data-part="line"",
+  ],
   "src/kit/AppShell.tsx": [
     "data-kit="app-shell"",
     "data-part="header"",
