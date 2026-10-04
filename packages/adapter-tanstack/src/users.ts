@@ -106,7 +106,7 @@ export async function invite(
     throw new Error(\`\${address} already has access.\`);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
-    audit(tx, by, { action: "invited", model: "User", title: address, details: { email: address, role } });
+    audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
     return tx
       .insert(invitation)
       .values({
@@ -140,7 +140,7 @@ export async function resendInvitation(
       .returning()
       .get();
     if (sent)
-      audit(tx, by, { action: "invitation sent again", model: "User", title: sent.email, details: { email: sent.email, role: sent.role } });
+      audit(tx, by, { action: "invitation sent again", model: "User", details: { email: sent.email, role: sent.role } });
     return sent;
   });
   if (!renewed) throw new Error("This invitation no longer exists.");
@@ -152,7 +152,7 @@ export async function withdrawInvitation(viewer: Viewer | null, invitationId: st
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
-      audit(tx, by, { action: "invitation withdrawn", model: "User", title: gone.email, details: { email: gone.email, role: gone.role } });
+      audit(tx, by, { action: "invitation withdrawn", model: "User", details: { email: gone.email, role: gone.role } });
   });
 }
 
@@ -167,7 +167,7 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   db.transaction((tx) => {
     tx.update(user).set({ role }).where(eq(user.id, userId)).run();
     // What touches security keeps its values: who, what they were and what they became.
-    audit(tx, by, { action: "role changed", model: "User", title: target.name, details: { user: userId, from: target.role, to: role } });
+    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
   });
 }
 
@@ -270,7 +270,7 @@ test("an invited address signs up with the invited role, and the invitation is u
   expect(db.select().from(invitation).where(eq(invitation.email, "users-test-invited@${domain}")).get()).toBeUndefined();
   // The audit log has both ends, with their values: who was invited as what, and who accepted.
   expect(audited("invited").at(-1)).toMatchObject({ who: admin.id, details: { email: "users-test-invited@${domain}", role: ${JSON.stringify(other ?? "admin")} } });
-  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { email: "users-test-invited@${domain}" } });
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { role: ${JSON.stringify(other ?? "admin")} } });
 });
 ${
   closed
