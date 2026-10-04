@@ -1,5 +1,14 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
-import { type AuthIR, humanize, type PageIR, pascal, type SpecIR } from "@smithable/core";
+import {
+  type AuthIR,
+  apiOffers,
+  humanize,
+  kebab,
+  type PageIR,
+  pascal,
+  plural,
+  type SpecIR,
+} from "@smithable/core";
 import { roleLabels } from "../auth.js";
 import { hasKeys } from "../keys.js";
 import { attr, guard, HEADER, indexPath, literal, type Texts } from "../shared.js";
@@ -14,6 +23,13 @@ export function usersRoute(page: PageIR, ir: SpecIR, t: Texts, auth: AuthIR): st
   const component = `${pascal(page.id)}Page`;
   // Keys for the API, for administrators (docs/design/integrations.md §2).
   const keys = hasKeys(ir, auth);
+  // "Using a key": the first model the API offers, and whether assistants get tools.
+  const first = apiOffers(auth, ir).models[0];
+  const use = {
+    app: ir.app.name,
+    ...(first ? { path: kebab(plural(first)) } : {}),
+    tools: Boolean(auth.api?.assistants),
+  };
   const labels = roleLabels(auth);
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
@@ -131,6 +147,7 @@ function ${component}() {
         <Keys
           keys={keys}
           roles={ROLE_OPTIONS}
+          use={${literal(use)}}
           onMake={async (name, role, until) => {
             const key = await makeApiKey({ data: { name, role: role as Role, until } });
             await router.invalidate();
