@@ -11,6 +11,7 @@ export function Preview({
   selecting,
   onSelecting,
   onHide,
+  highlight,
 }: {
   url: string;
   version: number;
@@ -21,6 +22,8 @@ export function Preview({
   onSelecting?: (on: boolean) => void;
   /** Hides the preview's column, for more room (wide windows). */
   onHide?: () => void;
+  /** What the last change touched, flashed once in the preview (motion.md 9a); `key` names the change. */
+  highlight?: { key: string; concepts: string[] };
 }) {
   // The preview's records are samples, and a published app starts empty: said until dismissed.
   const [samples, setSamples] = useState(() => {
@@ -124,6 +127,27 @@ export function Preview({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [selecting]);
+  // What the last change touched, flashed in the page (motion.md 9a): at once, for a change the
+  // page shows without reloading (a text edited in place), and once more when the page that has
+  // it says it is ready. Each change flashes once.
+  const flashed = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!highlight?.concepts.length) return;
+    const flash = () =>
+      frame.current?.contentWindow?.postMessage(
+        { type: "smithable:highlight", concepts: highlight.concepts },
+        previewTarget(),
+      );
+    flash();
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e) || e.data.type !== "ready" || flashed.current === highlight.key)
+        return;
+      flashed.current = highlight.key;
+      flash();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [highlight]);
   // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
   const reloading = updating || Boolean(stale);
   return (
