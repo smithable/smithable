@@ -22,5 +22,13 @@ export const ADDRESS_HEADER = "x-smithable-address";
 export function withAddress(request: Request): Request {
   const headers = new Headers(request.headers);
   headers.set(ADDRESS_HEADER, visitorAddress(request) ?? "");
-  return new Request(request, { headers });
+  // From its parts: the server's own Request is not one the standard constructor can copy.
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : request.body;
+  return new Request(request.url, {
+    method: request.method,
+    headers,
+    body,
+    signal: request.signal,
+    ...(body ? { duplex: "half" } : {}),
+  } as RequestInit);
 }
