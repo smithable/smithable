@@ -192,18 +192,17 @@ try {
       await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
       await page.getByLabel("New name").fill("Web page");
       await page.getByText("Customers: the website is now called web page").first().waitFor();
-      // The preview flashes what the change touched once it shows it (motion 9a). The flash
-      // lasts 1.6 s, so the wait starts before the change, not after the status line.
-      const flashed = preview
-        .locator('[data-sm-flash][data-sm-concept="field:Customer.webPage"]')
-        .first()
-        .waitFor({ state: "attached", timeout: 90000 });
-      flashed.catch(() => {});
       await page.getByRole("button", { name: "Rename field" }).click();
       await status
         .getByText("Customers: the website is now called web page")
         .waitFor({ timeout: 60000 });
-      await flashed;
+      // The preview flashes what the change touched once it shows it (motion 9a), and says so:
+      // the flash is over in 1.6 s, so the test reads what Studio heard, which stays on the
+      // frame. The page shows the field under its new name.
+      await page
+        .locator('iframe[title="App preview"][data-flashed~="field:Customer.webPage"]')
+        .waitFor({ state: "attached", timeout: 90000 });
+      await preview.locator('[data-sm-concept="field:Customer.webPage"]').first().waitFor();
     },
   );
   await step(

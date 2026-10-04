@@ -14,9 +14,10 @@
 // - Daily, after the day's merges: the first set on Claude (20 hours apart). Its second set
 //   (--set wide) once a week (Sundays), or when a pull request changes the drafting or clarify
 //   prompts (say so in the report).
-// - Mistral, for the EU option: once a week (Sunday), `--model mistral-medium-latest` on the first
-//   set as the check on what the beta serves; the wide set only when a prompt changed. Every run
-//   of a named model is six days apart.
+// - What the beta serves (Johan's choice, 2026-10-04: Claude Sonnet 4.6 through Amazon Bedrock in
+//   the EU): once a week (Sunday), `--model eu.anthropic.claude-sonnet-4-6` on the first set (about
+//   $1); the wide set only when a prompt changed. Mistral, the EU-owned alternative: once a week,
+//   `--model mistral-large-latest` on the first set. Every run of a named model is six days apart.
 // In between, only the descriptions a change is about, once.
 // - `--only 3,7,11` or `--only invoicing` (the starter a description got in the last full run)
 //   runs just those and merges their rows into the last full report, marked as reruns.
