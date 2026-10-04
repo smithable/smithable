@@ -10,8 +10,16 @@ import {
   openLinked,
   repaired,
   repairFieldShorthand,
+  visitorFlaws,
 } from "./draft-operations.js";
 import type { Provider } from "./provider.js";
+
+const toProjectFiles = (files: Record<string, string | undefined>) => ({
+  spec: files["smithable.yml"] ?? "",
+  auth: files["smithable.auth.yml"],
+  content: files["smithable.content.yml"],
+  ux: files["smithable.ux.yml"],
+});
 
 test("the empty app is valid, and the draft's operations leave out what a draft never needs", () => {
   expect(checkSpecFiles(BLANK)).toEqual([]);
@@ -493,6 +501,64 @@ test("a valid draft that a visitor would find broken goes back to the model once
     expect(kept.files["smithable.auth.yml"]).not.toContain("read:");
     expect(checkSpecFiles(kept.files)).toEqual([]);
   }
+
+  // A remedy that brings a new flaw is told of that one too: tools that name their keeper are
+  // closed to visitors, which empties the landing page's section, which is then removed.
+  prompts.length = 0;
+  const twice = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            library[0],
+            {
+              op: "addModel",
+              args: { model: "Tool", fields: { name: "string!", keeper: "User" } },
+            },
+            ...library.slice(2, 5),
+            { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+          ],
+        },
+        { operations: [{ op: "setPublic", args: { read: [] } }] },
+        { operations: [{ op: "removeSection", args: { page: "home", section: "catalogue" } }] },
+      ]),
+    ],
+  });
+  if (twice.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(3);
+  expect(prompts[1]).toContain("Anyone on the internet can read Tool");
+  expect(prompts[2]).toContain("remove the section of home that shows it");
+  expect(twice.files["smithable.yml"]).not.toContain("catalogue");
+  expect(visitorFlaws(toProjectFiles(twice.files))).toEqual([]);
+
+  // A remedy that undoes an earlier one is not what the person gets: the tools closed in one
+  // round and opened again in the next stay closed, the best the draft has been.
+  prompts.length = 0;
+  const back = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            library[0],
+            {
+              op: "addModel",
+              args: { model: "Tool", fields: { name: "string!", keeper: "User" } },
+            },
+            ...library.slice(2, 5),
+            { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+          ],
+        },
+        { operations: [{ op: "setPublic", args: { read: [] } }] },
+        { operations: [{ op: "setPublic", args: { read: ["Tool"] } }] },
+      ]),
+    ],
+  });
+  if (back.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(3);
+  expect(back.files["smithable.auth.yml"]).not.toContain("read:");
+  expect(back.operations?.at(-1)).toEqual({ op: "setPublic", args: { read: [] } });
 
   // A draft without such a flaw costs no second call.
   prompts.length = 0;
