@@ -36,7 +36,7 @@ const file = generate(spec);
 test("a calendar loads the range shown through the model's data function, with lengths one reference away", () => {
   const route = file("src/routes/schedule/index.tsx") ?? "";
   expect(route).toContain(
-    "sessionData.list(viewer, and(gte(sessions.startsAt, new Date(data.from)), lt(sessions.startsAt, new Date(data.to))))",
+    "sessionData.list(viewer, and(gte(schema.sessions.startsAt, new Date(data.from)), lt(schema.sessions.startsAt, new Date(data.to))))",
   );
   expect(route).toContain("await classTypeData.list(viewer)");
   expect(route).toContain("minutes.get(row.classTypeId)");

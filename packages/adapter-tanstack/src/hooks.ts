@@ -20,13 +20,12 @@ export function pluginsWithHooks(ir: SpecIR, plugins: readonly SpecPlugin[] = []
 export function hooksModule(ir: SpecIR, t: Texts, plugins: readonly SpecPlugin[] = []): string {
   const models = ir.models.map((m) => ({ model: m, n: names(m, t) }));
   const withHooks = pluginsWithHooks(ir, plugins);
-  const tables = models.map(({ n }) => n.table).sort();
   return `${HEADER}// Where the app reacts to changes: after a record is created, changed or deleted, and once a
 // day. Your reactions go in src/custom/hooks.ts (send an email, update another record, call a
 // service); a plugin's in its own hooks file. A hook runs on the server, in the request that
 // made the change and with the viewer who made it, after the change is saved; a hook that
 // throws fails that request. Daily jobs run in production, a day after the server started.
-import type { ${tables.join(", ")} } from "#/db/schema";
+import type * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
 import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
