@@ -120,9 +120,13 @@ export function Keys({
   onRevoke: (id: number) => Promise<unknown>;
 }) {
   const [name, setName] = useState("");
-  // The least a key can be: the first role that is not an administrator's (admin is a choice).
+  // The least a key can be: an assistant's role when the app has one, else the first role that
+  // is not an administrator's (admin is a choice).
   const [role, setRole] = useState(
-    roles.find((r) => r.value !== "admin")?.value ?? roles[0]?.value ?? "",
+    roles.find((r) => r.value === "assistant")?.value ??
+      roles.find((r) => r.value !== "admin")?.value ??
+      roles[0]?.value ??
+      "",
   );
   const [until, setUntil] = useState("");
   const [made, setMade] = useState<string>();
