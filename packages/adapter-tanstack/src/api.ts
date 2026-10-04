@@ -329,13 +329,8 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           const query = new URL(request.url).searchParams;
           const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
           const page = Math.max(1, Number(query.get("page")) || 1);
-          const rows = await ${n.data}.list(viewer);
-          return {
-            items: rows.slice((page - 1) * limit, page * limit).map(${camelName}ToApi),
-            page,
-            pages: Math.max(1, Math.ceil(rows.length / limit)),
-            total: rows.length,
-          };
+          const { items, total } = await ${n.data}.page(viewer, limit, (page - 1) * limit);
+          return { items: items.map(${camelName}ToApi), page, pages: Math.max(1, Math.ceil(total / limit)), total };
         }),
       POST: ({ request }) =>
         apiCall(request, async (viewer, body) => ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never)), 201),
@@ -498,9 +493,9 @@ export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     const snake = path.replace(/-/g, "_");
     const one = kebab(model.name).replace(/-/g, "_");
     cases.push(`    case "find_${snake}": {
-      const rows = await ${n.data}.list(viewer);
       const page = Math.max(1, Number(args.page) || 1);
-      return { items: rows.slice((page - 1) * 100, page * 100).map(${c}ToApi), page, pages: Math.max(1, Math.ceil(rows.length / 100)), total: rows.length };
+      const { items, total } = await ${n.data}.page(viewer, 100, (page - 1) * 100);
+      return { items: items.map(${c}ToApi), page, pages: Math.max(1, Math.ceil(total / 100)), total };
     }
     case "read_${one}":
       return ${c}ToApi(await found(${n.data}, viewer, args.id, ${JSON.stringify(n.label.toLowerCase())}));
