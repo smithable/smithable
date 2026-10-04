@@ -3638,9 +3638,14 @@ export const noteData = {
     );
   },
 
-  /** The records that fit, with their computed fields worked out: for adding those up. */
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.notes.findMany({ where: condition, with: { project: { columns: { id: true, name: true } } }, });
+    const rows = await db.query.notes.findMany({ where: condition, with: { project: { columns: { id: true, name: true } } }, limit: 10001 });
+    if (rows.length > 10000)
+      throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
   },
 
@@ -4111,9 +4116,14 @@ export const projectData = {
     );
   },
 
-  /** The records that fit, with their computed fields worked out: for adding those up. */
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.projects.findMany({ where: condition, });
+    const rows = await db.query.projects.findMany({ where: condition, limit: 10001 });
+    if (rows.length > 10000)
+      throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
   },
 
@@ -4603,9 +4613,14 @@ export const taskData = {
     );
   },
 
-  /** The records that fit, with their computed fields worked out: for adding those up. */
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.tasks.findMany({ where: condition, with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } }, });
+    const rows = await db.query.tasks.findMany({ where: condition, with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } }, limit: 10001 });
+    if (rows.length > 10000)
+      throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
   },
 
@@ -7278,12 +7293,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
   "src/generated/mcp.server.ts": "1b6dbc21 generated",
-  "src/generated/note.server.ts": "678d42bd generated",
+  "src/generated/note.server.ts": "344bee7c generated",
   "src/generated/note.ts": "4bbd09eb generated",
   "src/generated/pages.ts": "4b852c85 generated",
-  "src/generated/project.server.ts": "86c234c4 generated",
+  "src/generated/project.server.ts": "7ac22229 generated",
   "src/generated/project.ts": "3dee7710 generated",
-  "src/generated/task.server.ts": "55325e4a generated",
+  "src/generated/task.server.ts": "8afe7639 generated",
   "src/generated/task.ts": "a2db981c generated",
   "src/generated/users.server.ts": "bacb5017 generated",
   "src/generated/users.test.ts": "b228c678 generated",
@@ -29623,9 +29638,14 @@ export const componentData = {
     );
   },
 
-  /** The records that fit, with their computed fields worked out: for adding those up. */
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.components.findMany({ where: condition, });
+    const rows = await db.query.components.findMany({ where: condition, limit: 10001 });
+    if (rows.length > 10000)
+      throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
   },
 
@@ -30234,9 +30254,14 @@ export const incidentData = {
     );
   },
 
-  /** The records that fit, with their computed fields worked out: for adding those up. */
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.incidents.findMany({ where: condition, with: { component: { columns: { id: true, name: true } } }, });
+    const rows = await db.query.incidents.findMany({ where: condition, with: { component: { columns: { id: true, name: true } } }, limit: 10001 });
+    if (rows.length > 10000)
+      throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
   },
 
@@ -34942,13 +34967,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "cc26804b generated",
+  "src/generated/component.server.ts": "2ee22b0a generated",
   "src/generated/component.ts": "a4ec356f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.server.ts": "ab9831a5 generated",
   "src/generated/incident-update.ts": "20a029b3 generated",
-  "src/generated/incident.server.ts": "f9ba2831 generated",
+  "src/generated/incident.server.ts": "7e4ac5ea generated",
   "src/generated/incident.ts": "81235c4d generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
