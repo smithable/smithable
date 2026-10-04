@@ -7,6 +7,8 @@ export {
   closeShared,
   draftOperations,
   draftProjectByOperations,
+  openLinked,
+  visitorFlaws,
 } from "./draft-operations.js";
 export type { PickedPictures, PictureEntry } from "./pictures.js";
 export { pickPictures } from "./pictures.js";

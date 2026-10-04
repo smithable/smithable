@@ -59,10 +59,25 @@ export interface ApiIR {
   assistants?: { delete: boolean };
 }
 
+/** What an app's API offers a program: with a key, and to anyone without one. */
+export interface ApiOffers {
+  /** The models offered to a key, with `all` and `except` resolved; its role decides the rest. */
+  models: string[];
+  /** The standard actions offered to a key. */
+  actions: string[];
+  /**
+   * What a call without a key may reach (docs/design/api-only.md §3.4): it is the visitor, so it
+   * reads the offered models `public.read` lists (within their `where`) and adds the offered
+   * ones `public.create` lists. It never changes, deletes or runs an action. The tools for
+   * assistants follow the same rule.
+   */
+  visitors: { read: string[]; create: string[] };
+}
+
 /** The models and standard actions an app's `api` block offers, with `all` and `except` resolved. */
-export function apiOffers(auth: AuthIR, ir: SpecIR): { models: string[]; actions: string[] } {
+export function apiOffers(auth: AuthIR, ir: SpecIR): ApiOffers {
   const api = auth.api;
-  if (!api) return { models: [], actions: [] };
+  if (!api) return { models: [], actions: [], visitors: { read: [], create: [] } };
   const known = ir.models.map((m) => m.name);
   const models =
     api.models === "all"
@@ -73,7 +88,11 @@ export function apiOffers(auth: AuthIR, ir: SpecIR): { models: string[]; actions
     api.actions === "all"
       ? standard.map((a) => a.name)
       : api.actions.filter((name) => standard.some((a) => a.name === name));
-  return { models, actions };
+  const visitors = {
+    read: models.filter((m) => auth.public.read.includes(m)),
+    create: models.filter((m) => auth.public.create.includes(m)),
+  };
+  return { models, actions, visitors };
 }
 
 export interface SignInIR {
@@ -730,6 +749,22 @@ function checkAgainstSpec(
           "shortcut-closed",
           `Visitors can't open ${target} from the ${name} hero's shortcuts: list it under public.pages, or choose another page.`,
         );
+  }
+  // A public page shows a visitor only what visitors may read: records of a model that is not
+  // under public.read are simply missing there (an empty catalogue, a landing section with no
+  // cards), which looks broken rather than closed.
+  for (const { name, at } of publicNodes.pages ?? []) {
+    const page = ir.pages.find((p) => p.id === name);
+    if (!page || page.mine) continue;
+    const closed = [...new Set(patternInfo(page).models())].filter(
+      (m) => m !== USER_MODEL && !auth.public.read.includes(m),
+    );
+    if (closed.length)
+      ctx.warning(
+        at,
+        "public-page-closed-records",
+        `Visitors can open ${name}, but may not read ${closed.join(" or ")}, so the page shows them none: add ${closed.length > 1 ? "them" : "it"} under public.read, or ${page.pattern.kind === "landing" ? `remove the section of ${name} that shows ${closed.length > 1 ? "them" : "it"}` : `take ${name} out of public.pages`}.`,
+      );
   }
   // A page of the viewer's own records has nothing to show a visitor, who owns nothing.
   for (const { name, at } of publicNodes.pages ?? []) {

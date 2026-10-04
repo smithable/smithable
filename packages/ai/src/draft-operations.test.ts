@@ -1,3 +1,4 @@
+import { applyOperation, type ProjectFiles } from "@smithable/core";
 import { expect, test } from "vitest";
 import { checkSpecFiles } from "./draft.js";
 import {
@@ -6,10 +7,19 @@ import {
   computedField,
   draftOperations,
   draftProjectByOperations,
+  openLinked,
   repaired,
   repairFieldShorthand,
+  visitorFlaws,
 } from "./draft-operations.js";
 import type { Provider } from "./provider.js";
+
+const toProjectFiles = (files: Record<string, string | undefined>) => ({
+  spec: files["smithable.yml"] ?? "",
+  auth: files["smithable.auth.yml"],
+  content: files["smithable.content.yml"],
+  ux: files["smithable.ux.yml"],
+});
 
 test("the empty app is valid, and the draft's operations leave out what a draft never needs", () => {
   expect(checkSpecFiles(BLANK)).toEqual([]);
@@ -383,4 +393,188 @@ test("places left over a list the model gets later: the model first, the compute
   if (draft.kind !== "draft") throw new Error(draft.message);
   expect(draft.files["smithable.yml"]).toContain("formula: capacity - COUNT(bookings)");
   expect(checkSpecFiles(draft.files)).toEqual([]);
+});
+
+test("a public landing page's button to a list of public records opens that list to visitors", () => {
+  const build = (steps: { op: string; args: Record<string, unknown> }[]) => {
+    let files: ProjectFiles = {
+      spec: BLANK["smithable.yml"] ?? "",
+      auth: BLANK["smithable.auth.yml"],
+      content: BLANK["smithable.content.yml"],
+      ux: BLANK["smithable.ux.yml"],
+    };
+    for (const step of steps) {
+      const result = applyOperation(files, step.op, step.args);
+      if (!result.ok) throw new Error(`${step.op}: ${result.message}`);
+      files = result.files;
+    }
+    return files;
+  };
+  const library = [
+    { op: "addModel", args: { model: "Tool", fields: { name: "string!" } } },
+    { op: "addModel", args: { model: "Loan", fields: { tool: "Tool!", borrower: "User" } } },
+    { op: "addPage", args: { page: "tools", model: "Tool" } },
+    { op: "addPage", args: { page: "loans", model: "Loan" } },
+    { op: "addLandingPage", args: { page: "home", route: "/" } },
+  ];
+  const publicPages = (files: { auth?: string }) =>
+    /pages: \[([^\]]*)\]/.exec(files.auth ?? "")?.[1];
+
+  // The tools are public to read, and the landing page's button leads to their list.
+  const done: { op: string; args: Record<string, unknown> }[] = [];
+  const opened = openLinked(
+    build([
+      ...library,
+      { op: "addSection", args: { page: "home", section: "callToAction", button: "tools" } },
+      { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+    ]),
+    done,
+  );
+  expect(publicPages(opened)).toBe("home, tools");
+  expect(opened.auth).toContain("read: [Tool]");
+  expect(done).toEqual([{ op: "setPublic", args: { pages: ["home", "tools"] } }]);
+
+  // A button into records visitors may not read stays the way to sign-in: nothing is opened.
+  const closed = build([
+    ...library,
+    { op: "addSection", args: { page: "home", section: "callToAction", button: "loans" } },
+    { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+  ]);
+  expect(openLinked(closed, [])).toBe(closed);
+});
+
+test("a valid draft that a visitor would find broken goes back to the model once, with the validator's words", async () => {
+  const library = [
+    { op: "setApp", args: { name: "Tool library" } },
+    { op: "addModel", args: { model: "Tool", fields: { name: "string!" } } },
+    { op: "addPage", args: { page: "tools", model: "Tool" } },
+    { op: "addLandingPage", args: { page: "home", route: "/" } },
+    { op: "addSection", args: { page: "home", section: "catalogue", records: "Tool" } },
+    { op: "setPublic", args: { pages: ["home"] } },
+  ];
+  const prompts: string[] = [];
+  const provider = (answers: unknown[]): Provider => ({
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 1, output: 3 },
+    async complete(request) {
+      prompts.push(request.user);
+      const answer = answers[Math.min(prompts.length, answers.length) - 1];
+      return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
+    },
+  });
+  // The landing page is public and shows tools, which visitors may not read: the model is told,
+  // and opens the tools.
+  const fixed = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        { operations: library },
+        { operations: [{ op: "setPublic", args: { pages: ["home"], read: ["Tool"] } }] },
+      ]),
+    ],
+  });
+  if (fixed.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(2);
+  expect(prompts[1]).toContain("Visitors can open home, but may not read Tool");
+  expect(fixed.files["smithable.auth.yml"]).toContain("read: [Tool]");
+  expect(fixed.operations?.at(-1)).toEqual({
+    op: "setPublic",
+    args: { pages: ["home"], read: ["Tool"] },
+  });
+
+  // It is asked once: an answer that leaves it, or a remedy that cannot be applied, still gives
+  // the draft that was valid before.
+  for (const second of [
+    { operations: [] },
+    { operations: [{ op: "setPublic", args: { read: ["Nothing"] } }] },
+  ]) {
+    prompts.length = 0;
+    const kept = await draftProjectByOperations({
+      description: "a tool library",
+      providers: [provider([{ operations: library }, second])],
+    });
+    if (kept.kind !== "draft") throw new Error("no draft");
+    expect(prompts).toHaveLength(2);
+    expect(kept.files["smithable.auth.yml"]).toContain("pages: [home]");
+    expect(kept.files["smithable.auth.yml"]).not.toContain("read:");
+    expect(checkSpecFiles(kept.files)).toEqual([]);
+  }
+
+  // A remedy that brings a new flaw is told of that one too: tools that name their keeper are
+  // closed to visitors, which empties the landing page's section, which is then removed.
+  prompts.length = 0;
+  const twice = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            library[0],
+            {
+              op: "addModel",
+              args: { model: "Tool", fields: { name: "string!", keeper: "User" } },
+            },
+            ...library.slice(2, 5),
+            { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+          ],
+        },
+        { operations: [{ op: "setPublic", args: { read: [] } }] },
+        { operations: [{ op: "removeSection", args: { page: "home", section: "catalogue" } }] },
+      ]),
+    ],
+  });
+  if (twice.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(3);
+  expect(prompts[1]).toContain("Anyone on the internet can read Tool");
+  expect(prompts[2]).toContain("remove the section of home that shows it");
+  expect(twice.files["smithable.yml"]).not.toContain("catalogue");
+  expect(visitorFlaws(toProjectFiles(twice.files))).toEqual([]);
+
+  // A remedy that undoes an earlier one is not what the person gets: the tools closed in one
+  // round and opened again in the next stay closed, the best the draft has been.
+  prompts.length = 0;
+  const back = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            library[0],
+            {
+              op: "addModel",
+              args: { model: "Tool", fields: { name: "string!", keeper: "User" } },
+            },
+            ...library.slice(2, 5),
+            { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+          ],
+        },
+        { operations: [{ op: "setPublic", args: { read: [] } }] },
+        { operations: [{ op: "setPublic", args: { read: ["Tool"] } }] },
+      ]),
+    ],
+  });
+  if (back.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(3);
+  expect(back.files["smithable.auth.yml"]).not.toContain("read:");
+  expect(back.operations?.at(-1)).toEqual({ op: "setPublic", args: { read: [] } });
+
+  // A draft without such a flaw costs no second call.
+  prompts.length = 0;
+  const fine = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            ...library.slice(0, 5),
+            { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+          ],
+        },
+      ]),
+    ],
+  });
+  expect(fine.kind).toBe("draft");
+  expect(prompts).toHaveLength(1);
 });
