@@ -105,6 +105,7 @@ ${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'impo
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${tables} } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -188,6 +189,9 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
