@@ -15,6 +15,7 @@ import {
 } from "@smithable/ai";
 import { validateSpec } from "@smithable/core";
 import { buildContext } from "@smithable/index";
+import { bedrock } from "./bedrock.js";
 import { claudeCode } from "./claude-code.js";
 import { coderFromEnv, writeCode } from "./code.js";
 import { logTokens } from "./context.js";
@@ -65,6 +66,15 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
   // A frontier model through the user's own Claude Code: SMITHABLE_FRONTIER=claude-code.
   if (env.SMITHABLE_FRONTIER === "claude-code")
     providers.push(claudeCode(env.SMITHABLE_FRONTIER_MODEL || undefined));
+  // Claude through Amazon Bedrock and the signed-in `aws` command: SMITHABLE_FRONTIER=bedrock,
+  // SMITHABLE_FRONTIER_MODEL=<inference profile id> (an eu. one stays in the EU).
+  if (env.SMITHABLE_FRONTIER === "bedrock" && env.SMITHABLE_FRONTIER_MODEL)
+    providers.push(
+      bedrock(
+        env.SMITHABLE_FRONTIER_MODEL,
+        env.SMITHABLE_BEDROCK_REGION || env.AWS_REGION || "eu-north-1",
+      ),
+    );
   // The benchmark's and tests' response cache (SMITHABLE_LLM_CACHE=<folder>): a request seen
   // before is answered from the folder. Never on unless set.
   const folder = env.SMITHABLE_LLM_CACHE;
