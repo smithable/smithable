@@ -2629,6 +2629,30 @@ for (const [index, example] of examples.entries()) {
           run("pnpm", ["typecheck"], dir);
         },
       );
+    // Models whose tables have the names of generated locals (rows, values): the generated code
+    // reaches tables through the schema namespace, so nothing shadows them.
+    if (example === "status")
+      step(
+        "models named Row and Value, with a data page and the API on every model, type-check; undo takes them back",
+        () => {
+          const ops = [
+            ["addModel", "Row", "label=string!", "amount=money"],
+            ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
+            ["addModel", "Value", "name=string!", "amount=int"],
+            ["addDataPage"],
+            ["setApi", "all", "--actions", "all", "--assistants", "true"],
+          ];
+          for (const args of ops) {
+            const done = smithable(dir, "op", ...args);
+            if (done.code !== 0) throw new Error(done.out);
+          }
+          run("pnpm", ["typecheck"], dir);
+          for (const _ of ops) {
+            const undone = smithable(dir, "undo");
+            if (undone.code !== 0) throw new Error(undone.out);
+          }
+        },
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;

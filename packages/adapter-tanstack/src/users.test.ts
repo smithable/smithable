@@ -102,7 +102,7 @@ test("a model named Item with the API on: page() never shadows its table, items"
     "src/generated/item.server.ts",
   );
   const page = server.slice(server.indexOf("async page("));
-  expect(page).toContain(".from(items)");
+  expect(page).toContain(".from(schema.items)");
   expect(page).toMatch(/return \{ items: rows\.map\(\w+\), total \};/);
   expect(page.slice(0, page.indexOf("\n  },"))).not.toMatch(/const items\b/);
 });
