@@ -1,0 +1,11 @@
+smithableContent: 0.1
+pages:
+  my-registrations:
+    title: My registrations
+  home:
+    hero:
+      title: Join the conference
+      subtitle: Browse the talks, meet the speakers and save your seat.
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden

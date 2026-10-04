@@ -1,0 +1,14 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, teams, players, matches]
+  read: [Team, Player, Match]
+roles:
+  admin:
+    description: Manages the club's teams, players, fixtures and results.
+  member:
+    description: Browses the club's teams, players, fixtures and results.
+defaultRole: member
+admins: [johan@smithable.ai]

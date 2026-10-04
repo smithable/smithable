@@ -1,0 +1,16 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Lead
+    pluralLabel: Leads
+  Deal:
+    fields:
+      customer:
+        label: Lead
+  FollowUp:
+    fields:
+      customer:
+        label: Lead
+pages:
+  customers:
+    title: Leads

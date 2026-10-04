@@ -1,0 +1,28 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Talk
+    pluralLabel: Talks
+  Instructor:
+    label: Speaker
+    pluralLabel: Speakers
+  Session:
+    fields:
+      classType:
+        label: Talk
+      instructor:
+        label: Speaker
+pages:
+  class-types:
+    title: Talks
+  instructors:
+    title: Speakers
+  attendees:
+    subtitle: Create your attendee details before reserving a place at a talk.
+  home:
+    hero:
+      title: Discover your next great idea
+      subtitle: Explore the conference talks and speakers, then sign in to register and reserve your places.
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio

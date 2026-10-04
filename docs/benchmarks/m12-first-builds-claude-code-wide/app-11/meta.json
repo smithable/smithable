@@ -1,0 +1,10 @@
+{
+  "description": "An internal status board for our IT systems, so staff see what is down and when it is back.",
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": [
+    "Who can post and update outages?",
+    "Besides current outages, what else should the board track?",
+    "Should staff be able to report a problem they notice?"
+  ]
+}

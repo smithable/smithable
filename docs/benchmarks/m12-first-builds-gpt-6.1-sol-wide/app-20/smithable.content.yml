@@ -1,0 +1,72 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Tuntilaji
+    pluralLabel: Tuntilajit
+    fields:
+      name:
+        label: Nimi
+      summary:
+        label: Kuvaus
+      level:
+        label: Taso
+        values:
+          allLevels: Kaikille tasoille
+          beginner: Aloittelijoille
+          advanced: Edistyneille
+      durationMinutes:
+        label: Kesto minuutteina
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+    fields:
+      name:
+        label: Nimi
+      bio:
+        label: Esittely
+      portrait:
+        label: Kuvan verkko-osoite
+  Session:
+    label: Joogatunti
+    pluralLabel: Joogatunnit
+    fields:
+      classType:
+        label: Tuntilaji
+      instructor:
+        label: Ohjaaja
+      startsAt:
+        label: Alkamisaika
+      capacity:
+        label: Paikkamäärä
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+    fields:
+      session:
+        label: Joogatunti
+pages:
+  my-bookings:
+    title: Omat varaukset
+  sessions:
+    title: Tuntien hallinta
+  class-types:
+    title: Tuntilajit
+  instructors:
+    title: Ohjaajat
+  schedule:
+    title: Tuntikalenteri
+  home:
+    title: Etusivu
+    hero:
+      title: Löydä oma joogahetkesi
+      subtitle: Tutustu joogatunteihin ja ohjaajiin sekä varaa paikkasi tuntikalenterista.
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    classes:
+      title: Tutustu tunteihimme
+    callToAction:
+      title: Varaa paikkasi joogatunnille
+      button: Avaa tuntikalenteri
+    footer:
+      text: Joogavaraus – tilaa liikkeelle ja rauhoittumiselle.

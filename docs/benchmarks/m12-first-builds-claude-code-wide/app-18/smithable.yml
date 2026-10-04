@@ -1,0 +1,117 @@
+smithable: 0.1
+app:
+  name: Byggkoll
+  description: Håller ordning på kunder, offerter och fakturor för en liten byggfirma.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+      quotes: Quote[]
+      invoices: Invoice[]
+  Quote:
+    fields:
+      number: string! unique
+      customer: Customer!
+      title: string!
+      issuedOn: date! = TODAY()
+      validUntil: date = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | accepted | declined
+      lines: QuoteLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  QuoteLine:
+    fields:
+      quote: Quote!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      quote: Quote
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  offerter:
+    crud: Quote
+    actions: [sendQuote, acceptQuote, declineQuote]
+    search: [number, title]
+    filters: [status, customer]
+  fakturor:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    filters: [status, customer]
+  kunder:
+    crud: Customer
+    search: [name, email, phone]
+  offertrader:
+    crud: QuoteLine
+  fakturarader:
+    crud: InvoiceLine
+  oversikt:
+    dashboard:
+      latestQuotes:
+        list: Quote
+        limit: 5
+  team:
+    users: manage
+actions:
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Offerten har skickats till kunden.
+  acceptQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: Kunden har godkänt offerten.
+  declineQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: declined
+    intent: Kunden har tackat nej till offerten.
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Fakturan har skickats till kunden.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Kunden har betalat fakturan.

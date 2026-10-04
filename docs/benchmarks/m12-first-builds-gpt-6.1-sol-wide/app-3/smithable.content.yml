@@ -1,0 +1,37 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Service
+    pluralLabel: Services
+  Instructor:
+    label: Stylist
+    pluralLabel: Stylists
+  Session:
+    label: Appointment slot
+    pluralLabel: Appointment slots
+    fields:
+      classType:
+        label: Service
+      instructor:
+        label: Stylist
+  Booking:
+    fields:
+      session:
+        label: Appointment slot
+pages:
+  class-types:
+    title: Services
+  instructors:
+    title: Stylists
+  sessions:
+    title: Appointment slots
+  schedule:
+    title: Book an appointment
+  home:
+    hero:
+      title: Your stylist. Your time.
+      subtitle: Choose a stylist, find an available appointment and book online.
+      button: Find an appointment
+      image:
+        src: images/hero.webp
+        alt: A hair salon with mirrors, chairs and plants in daylight

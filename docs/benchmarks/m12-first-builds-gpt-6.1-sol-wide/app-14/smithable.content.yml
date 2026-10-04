@@ -1,0 +1,11 @@
+smithableContent: 0.1
+models:
+  Guest:
+    fields:
+      rsvp:
+        label: RSVP
+        values:
+          pending: Awaiting response
+pages:
+  tables:
+    title: Seating Plan

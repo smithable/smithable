@@ -1,0 +1,17 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Objects with stories to tell
+      subtitle: Explore our local museum's collection and discover the people, places and moments behind each object.
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    items:
+      title: Discover the collection
+  items:
+    title: Collection
+models:
+  Item:
+    label: Object
+    pluralLabel: Objects
