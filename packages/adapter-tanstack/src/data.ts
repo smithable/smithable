@@ -25,6 +25,7 @@ import {
   HEADER,
   hasFavorites,
   type importList,
+  keyOf,
   lists,
   literal,
   modelNamed,
@@ -323,6 +324,64 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const ownedLists = signedIn
     ? lists(model).filter((f) => !modelNamed(ir, f.type.model).ownedBy)
     : [];
+  // What a program or an assistant may filter, search and sort these records by (assistant.md §3).
+  const stored = model.fields.filter(
+    (f) => !f.formula && !storesPictures(f) && !(f.type.kind === "relation" && f.type.many),
+  );
+  const filterable = (paged ? stored : []).map((f) => {
+    const column = `${n.table}.${dataKey(f)}`;
+    if (f.type.kind === "choice")
+      return `${f.name}: { kind: "choice", column: ${column}, values: ${JSON.stringify(f.type.values)} }`;
+    if (f.type.kind === "relation") {
+      const target = f.type.model;
+      const table = target === USER_MODEL ? "schema.user" : tableRef(modelNamed(ir, target));
+      // By its record's title when that is a stored field of it (a user's name).
+      const title = relatedTitle(ir, target);
+      const titled =
+        target === USER_MODEL ||
+        modelNamed(ir, target).fields.some((t) => t.name === title && !t.formula);
+      const titleKey =
+        target === USER_MODEL ? title : titled ? keyOf(modelNamed(ir, target), title) : "";
+      return `${f.name}: { kind: "reference", column: ${column}${titled ? `, title: { table: ${table}, column: ${table}.${titleKey} }` : ""} }`;
+    }
+    const name = f.type.kind === "scalar" ? f.type.name : "string";
+    const kind =
+      name === "int" || name === "decimal"
+        ? "number"
+        : name === "money"
+          ? "money"
+          : name === "date"
+            ? "date"
+            : name === "datetime"
+              ? "instant"
+              : name === "bool"
+                ? "bool"
+                : "text";
+    return `${f.name}: { kind: "${kind}", column: ${column} }`;
+  });
+  const searched = stored.filter(
+    (f) =>
+      f.type.kind === "scalar" &&
+      ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
+  );
+  // A reference given by its record's title, resolved among the records the viewer may read
+  // (where that model is offered too, so it has named()).
+  const offeredModels = apiOffers(auth, ir).models;
+  const namedRefs = (paged ? stored : []).flatMap((f) => {
+    if (f.type.kind !== "relation" || f.type.model === USER_MODEL) return [];
+    const target = modelNamed(ir, f.type.model);
+    if (!offeredModels.includes(target.name) || titleField(target) === "id") return [];
+    const data = target.name === model.name ? self : names(target, t).data;
+    return [`${f.name}: (text: string) => ${data}.named(viewer, text)`];
+  });
+  const numeric = stored.filter(
+    (f) => f.type.kind === "scalar" && ["int", "decimal", "money"].includes(f.type.name),
+  );
+  // Computed number fields (an invoice's total): worked out in the app, so added up there too.
+  const computedNumbers = model.fields.filter(
+    (f) =>
+      f.formula && f.type.kind === "scalar" && ["int", "decimal", "money"].includes(f.type.name),
+  );
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -387,6 +446,11 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     })${tail};`
       : `${lead}${formulas ? `${rows}.map(${withFormulasName(model)})` : rows}${tail};`;
   const titleColumn = titleField(model);
+  // The references measureBy can name its groups by: those whose model has a title.
+  const titled = references(model)
+    .map((f) => ({ f, target: modelNamed(ir, f.type.model) }))
+    .map(({ f, target }) => ({ f, target, title: titleField(target) }))
+    .filter(({ title }) => title !== "id");
   const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
   const access = modelAccess(model, auth);
   // A capacity: at most so many of these per referenced record (docs/design/booking.md),
@@ -416,11 +480,12 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     "eq",
     "inArray",
     "sql",
-    ...(referenced && titleColumn !== "id" ? ["asc"] : []),
+    ...((referenced && titleColumn !== "id") || paged ? ["asc"] : []),
     ...(access.create.public || capped || paged || capacity || holds.length ? ["count"] : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
+    ...(paged ? ["avg", "desc", "isNotNull", "max", "min", "sum"] : []),
   ];
   // Visitors (and anyone reading only because it is public) read the records the public
   // condition fits; an owner reads their own too.
@@ -509,13 +574,13 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
           `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")});\n`,
       ),
     ].join("");
-  return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
+  return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/api.server";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -530,6 +595,43 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
   if (viewer && (row.ownerId === viewer.id || ${n.access}.read.roles.includes(viewer.role))) return row;
   return { ...row, ownerId: null };
 }
+`
+    : ""
+}
+${
+  paged
+    ? `
+/** What \`where\` may name, and how: the stored fields, by kind. */
+const FILTERABLE: Record<string, Filterable> = {
+${filterable.map((f) => `  ${f},`).join("\n")}
+};
+
+/** What the records can be sorted by. */
+const SORTABLE = { ${["id", ...stored.filter((f) => f.type.kind !== "relation").map((f) => f.name), "createdAt"].map((k) => `${k}: ${n.table}.${k}`).join(", ")} };
+
+/** The number fields \`measure\` adds up; amounts are stored in cents. */
+const NUMBERS: Record<string, AnyColumn> = { ${numeric.map((f) => `${f.name}: ${n.table}.${f.name}`).join(", ")} };
+const MONEY: string[] = ${JSON.stringify([...numeric, ...computedNumbers].filter((f) => f.type.kind === "scalar" && f.type.name === "money").map((f) => f.name))};
+
+/** Computed number fields \`measure\` adds up from the records themselves. */
+const COMPUTED: string[] = ${JSON.stringify(computedNumbers.map((f) => f.name))};
+
+/** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
+function titlesOf(${titled.length ? "by" : "_by"}: string, ${titled.length ? "ids" : "_ids"}: number[]): Map<unknown, string> {
+  switch (${titled.length ? "by" : "_by"}) {${titled
+    .map(
+      ({ target, f, title }) => `
+    case "${f.name}":
+      return new Map(db.select({ id: ${tableRef(target)}.id, title: ${tableRef(target)}.${title} }).from(${tableRef(target)}).where(inArray(${tableRef(target)}.id, ids)).all().map((r) => [r.id, String(r.title)]));`,
+    )
+    .join("")}
+    default:
+      return new Map();
+  }
+}
+
+/** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
+const BY: string[] = ${JSON.stringify(stored.filter((f) => f.type.kind === "choice" || f.type.kind === "relation" || (f.type.kind === "scalar" && ["bool", "date", "datetime"].includes(f.type.name))).map((f) => f.name))};
 `
     : ""
 }
@@ -609,17 +711,168 @@ ${
 ${
   paged
     ? `
-  /** A page of the ${n.pluralLabel.toLowerCase()} the viewer may read, newest first, and how many there are: for the API. */
-  async page(viewer: Viewer | null, limit: number, offset: number) {
+  /**
+   * The ${n.pluralLabel.toLowerCase()} the viewer may read that fit \`where\` and \`search\`, in \`sort\`'s order (else newest
+   * first), a page of them and how many there are: for the API and the assistants' tools.
+   */
+  async find(
+    viewer: Viewer | null,
+    options: { where?: unknown; search?: string; sort?: string; limit?: number; offset?: number } = {},
+  ) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const total = db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
+    const condition = ${self}.fitting(viewer, options.where, options.search);
+    const order = sortOf(SORTABLE, options.sort);
+    const total = db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;
     const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
-      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
-      orderBy: (t, { desc }) => [desc(t.id)],
-      limit,
-      offset,
+      where: condition,${withClause(listWith, "      ")}
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
+      limit: options.limit ?? 100,
+      offset: options.offset ?? 0,
     });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return { items: ", ", total }")}
+  },
+
+  /**
+   * A number from the ${n.pluralLabel.toLowerCase()} the viewer may read that fit \`where\`: how many, or the sum,
+   * average, smallest or largest of a number field.
+   */
+  async measure(
+    viewer: Viewer | null,
+    how: "count" | "sum" | "average" | "smallest" | "largest",
+    options: { field?: string; where?: unknown; search?: string } = {},
+  ): Promise<number | null> {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const condition = ${self}.fitting(viewer, options.where, options.search);
+    if (how === "count")
+      return db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;
+    const field = options.field ?? "";
+    const money = MONEY.includes(field);
+    if (COMPUTED.includes(field)) {
+      const rows = await ${self}.computedRows(condition);
+      const value = aggregate(rows.map((row) => row[field]), how);
+      return value === null ? null : money ? value / 100 : value;
+    }
+    const column = NUMBERS[field];
+    if (!column)
+      throw new BadInput(
+        \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
+      );
+    const pick = { sum, average: avg, smallest: min, largest: max }[how];
+    const value = db.select({ v: pick(column) }).from(${n.table}).where(condition).get()?.v;
+    if (value === null || value === undefined) return null;
+    return money ? Number(value) / 100 : Number(value);
+  },
+
+  /** Which record holds the smallest or largest value of a number field (the first of a tie). */
+  async holder(
+    viewer: Viewer | null,
+    how: "smallest" | "largest",
+    options: { field?: string; where?: unknown; search?: string } = {},
+  ): Promise<{ id: number; title: string } | null> {
+    const condition = ${self}.fitting(viewer, options.where, options.search);
+    const field = options.field ?? "";
+    if (COMPUTED.includes(field)) {
+      let best: Record<string, unknown> | undefined;
+      for (const row of await ${self}.computedRows(condition)) {
+        const v = row[field];
+        if (typeof v !== "number") continue;
+        if (!best || (how === "largest" ? v > (best[field] as number) : v < (best[field] as number))) best = row;
+      }
+      return best ? { id: best.id as number, title: String(best.${titleColumn}) } : null;
+    }
+    const column = NUMBERS[field];
+    if (!column) return null;
+    const row = db
+      .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
+      .from(${n.table})
+      .where(and(condition, isNotNull(column)))
+      .orderBy(how === "largest" ? desc(column) : asc(column), asc(${n.table}.id))
+      .limit(1)
+      .get();
+    return row ? { id: row.id, title: String(row.title) } : null;
+  },
+
+  /**
+   * The same number per value of a field (a choice, yes/no, a reference) or per month of a date:
+   * \`[{ value, number }]\`, the most first.
+   */
+  async measureBy(
+    viewer: Viewer | null,
+    how: "count" | "sum" | "average" | "smallest" | "largest",
+    by: string,
+    options: { field?: string; where?: unknown; search?: string } = {},
+  ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const split = FILTERABLE[by];
+    if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
+      throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
+    const field = options.field ?? "";
+    const money = MONEY.includes(field);
+    const condition = ${self}.fitting(viewer, options.where, options.search);
+    const amount = (n: number | null) => (n === null ? null : money ? n / 100 : n);
+    const most = (a: { number: number | null }, b: { number: number | null }) => (b.number ?? 0) - (a.number ?? 0);
+    // A reference's groups carry the referenced record's title beside its id.
+    const named = (rows: { value: unknown; number: number | null }[]) => {
+      if (split.kind !== "reference") return rows;
+      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
+    };
+    if (COMPUTED.includes(field)) {
+      // Each record's month or value, then the computed numbers added up per group.
+      const groups = new Map<unknown, unknown[]>();
+      for (const row of await ${self}.computedRows(condition)) {
+        const raw = row[split.kind === "reference" ? \`\${by}Id\` : by];
+        const value = split.kind === "date" ? String(raw ?? "").slice(0, 7) || null : split.kind === "instant" ? (raw instanceof Date ? raw.toISOString().slice(0, 7) : null) : raw;
+        groups.set(value, [...(groups.get(value) ?? []), row[field]]);
+      }
+      return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
+    }
+    const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
+    const column = NUMBERS[field];
+    if (how !== "count" && !column)
+      throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
+    const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
+    return named(
+      db
+        .select({ value: key, number: pick })
+        .from(${n.table})
+        .where(condition)
+        .groupBy(key)
+        .all()
+        .map((r) => ({ value: r.value, number: r.number === null ? null : amount(Number(r.number)) }))
+        .sort(most),
+    );
+  },
+
+  /** The records that fit, with their computed fields worked out: for adding those up. */
+  async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
+    const rows = await db.query.${n.tableKey}.findMany({ where: condition,${withClause(listWith, " ").replace(/\n/g, "")} });
+    return rows.map((row) => ${formulas ? `${withFormulasName(model)}(row as never)` : "row"} as Record<string, unknown>);
+  },
+
+${
+  titleColumn !== "id"
+    ? `  /** The ${n.pluralLabel.toLowerCase()} the viewer may read whose ${titleColumn} has the text: a few, for naming one. */
+  named(viewer: Viewer | null, text: string): { id: number; title: string }[] {
+    return db
+      .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
+      .from(${n.table})
+      .where(and(${self}.readable(viewer), contains([${n.table}.${titleColumn}], text)))
+      .limit(6)
+      .all()
+      .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+`
+    : ""
+}  /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
+  fitting(viewer: Viewer | null, where?: unknown, search?: string) {
+    return and(
+      ${self}.readable(viewer),
+      whereOf(FILTERABLE, where, ${signedIn ? `viewer ? eq(${n.table}.${owner}, viewer.id) : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
+      // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
+      ...wordsOf(search).map((word) => ${searched.length ? `contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)` : "sql`false`"}),
+    );
   },
 `
     : ""

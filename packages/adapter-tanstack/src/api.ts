@@ -3,10 +3,12 @@
 // delete under /api/v1/<models>, its standard actions on a record, and an OpenAPI description.
 // Every call is a key's, through the model's data functions, so a key may do what its role may.
 import {
+  type AssistantCaller,
   type AuthIR,
   apiOffers,
+  assistantOffer,
+  type ContentIR,
   type FieldIR,
-  humanize,
   kebab,
   type ModelIR,
   plural,
@@ -15,7 +17,15 @@ import {
   storesPictures,
 } from "@smithable/core";
 import { actionNames, askedFields } from "./actions.js";
-import { HEADER, literal, modelNamed, names, type Texts } from "./shared.js";
+import {
+  HEADER,
+  literal,
+  modelNamed,
+  names,
+  relatedTitle,
+  type Texts,
+  titleField,
+} from "./shared.js";
 
 /**
  * The fields a program reads and writes: everything but pictures (not in the API yet) and the
@@ -369,6 +379,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${[...new Set([reads, adds])].sort().join(", ")} } from "#/kit/api.server";
+import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/${path}/")({
   server: {
@@ -378,8 +389,27 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           const query = new URL(request.url).searchParams;
           const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
           const page = Math.max(1, Number(query.get("page")) || 1);
-          const { items, total } = await ${n.data}.page(viewer, limit, (page - 1) * limit);
-          return { items: items.map(${camelName}ToApi), page, pages: Math.max(1, Math.ceil(total / limit)), total };
+          // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
+          const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
+          const search = query.get("search") ?? undefined;
+          const { items, total } = await ${n.data}.find(viewer, {
+            where,
+            search,
+            sort: query.get("sort") ?? undefined,
+            limit,
+            offset: (page - 1) * limit,
+          });
+          // ?sum=total adds up a number field over every record that fits, not only this page.
+          const sums = query.get("sum")?.split(",").filter(Boolean);
+          return {
+            items: items.map(${camelName}ToApi),
+            page,
+            pages: Math.max(1, Math.ceil(total / limit)),
+            total,
+            ...(sums?.length
+              ? { sums: Object.fromEntries(await Promise.all(sums.map(async (field) => [field, await ${n.data}.measure(viewer, "sum", { field, where, search })]))) }
+              : {}),
+          };
         }),
       POST: ({ request }) =>
         ${adds}(request, async (viewer, body) => ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never)), 201),
@@ -451,149 +481,62 @@ ${own
   return files;
 }
 
-/** The tools an assistant gets (docs/design/integrations.md §5b), with what each says it does. */
-function mcpTools(ir: SpecIR, auth: AuthIR, t: Texts) {
+/**
+ * src/generated/mcp.server.ts: the tools for assistants (docs/design/assistant.md §3): seven, the
+ * same for every app, described by core per caller (each role, and a visitor without a key), and
+ * one dispatcher that runs them through each model's data module.
+ */
+export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts, content?: ContentIR): string {
   const { models, actions } = apiParts(ir, auth, t);
-  const deletes = auth.api?.assistants?.delete === true;
-  const tools: { name: string; description: string; inputSchema: Record<string, unknown> }[] = [];
-  const id = { id: { type: "integer", description: "The record's id" } };
-  for (const { model, n, path } of models) {
-    const fields = Object.fromEntries(
-      entered(model).map((f) => {
-        return [f.name, { ...fieldSchema(f), description: humanize(f.name) }];
-      }),
-    );
-    const what = n.pluralLabel.toLowerCase();
-    const snake = path.replace(/-/g, "_");
-    const one = kebab(model.name).replace(/-/g, "_");
-    tools.push(
-      {
-        name: `find_${snake}`,
-        description: `List ${what} this key may read, 100 at a time (page 1, 2, …).`,
-        inputSchema: { type: "object", properties: { page: { type: "integer", minimum: 1 } } },
-      },
-      {
-        name: `read_${one}`,
-        description: `One ${n.label.toLowerCase()}, by its id.`,
-        inputSchema: { type: "object", properties: id, required: ["id"] },
-      },
-      {
-        name: `add_${one}`,
-        description: `Add a ${n.label.toLowerCase()}. Amounts as decimal texts ("12.50"), times as ISO texts.`,
-        inputSchema: {
-          type: "object",
-          properties: fields,
-          required: entered(model)
-            .filter((f) => f.required)
-            .map((f) => f.name),
+  const callers: AssistantCaller[] = [...auth.roles.map((r) => ({ role: r.name })), "visitor"];
+  const offers = Object.fromEntries(
+    callers.map((caller) => {
+      const offer = assistantOffer(ir, auth, caller, { scope: "api", content });
+      return [
+        caller === "visitor" ? "visitor" : caller.role,
+        {
+          summary: offer.summary,
+          tools: offer.tools,
+          describe: Object.fromEntries(offer.kinds.map((k) => [k.model, k.description])),
         },
-      },
-      {
-        name: `change_${one}`,
-        description: `Change a ${n.label.toLowerCase()}: only the fields given.`,
-        inputSchema: { type: "object", properties: { ...id, ...fields }, required: ["id"] },
-      },
-      ...(deletes
-        ? [
-            {
-              name: `delete_${one}`,
-              description: `Delete a ${n.label.toLowerCase()}. It cannot be undone.`,
-              inputSchema: { type: "object", properties: id, required: ["id"] },
-            },
-          ]
-        : []),
-    );
-  }
-  for (const action of actions) {
-    const model = modelNamed(ir, action.on);
-    const asked = askedFields(action);
-    tools.push({
-      name: action.name,
-      description: [
-        action.intent ?? `${action.name} on a ${names(model, t).label.toLowerCase()}`,
-        ...(action.rules ?? []).map((r) => r.text),
-      ].join(" "),
-      inputSchema: {
-        type: "object",
-        properties: {
-          ...id,
-          ...(asked.length
-            ? {
-                values: {
-                  type: "object",
-                  description: `What it asks for: ${asked.map((x) => x.key).join(", ")}`,
-                },
-              }
-            : {}),
-        },
-        required: asked.length ? ["id", "values"] : ["id"],
-      },
-    });
-  }
-  // A visitor's tools: finding and reading what anyone may read, adding what anyone may add.
-  const { visitors } = apiParts(ir, auth, t);
-  const visitorTools = models.flatMap(({ model, path }) => {
-    const snake = path.replace(/-/g, "_");
-    const one = kebab(model.name).replace(/-/g, "_");
-    const names = [
-      ...(visitors.read.includes(model.name) ? [`find_${snake}`, `read_${one}`] : []),
-      ...(visitors.create.includes(model.name) ? [`add_${one}`] : []),
-    ];
-    return tools
-      .filter((tool) => names.includes(tool.name))
-      .map((tool) => ({
-        ...tool,
-        description: tool.description.replace("this key may read", "anyone may read"),
-      }));
-  });
-  return { tools, visitorTools, models, actions, deletes };
-}
-
-/** src/generated/mcp.server.ts: the tools, and each call through the data functions. */
-export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
-  const { tools, visitorTools, models, actions, deletes } = mcpTools(ir, auth, t);
-  const cases: string[] = [];
-  for (const { model, n, path } of models) {
+      ];
+    }),
+  );
+  const entries = models.map(({ model, n }) => {
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
-    const snake = path.replace(/-/g, "_");
-    const one = kebab(model.name).replace(/-/g, "_");
-    cases.push(`    case "find_${snake}": {
-      const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await ${n.data}.page(viewer, 100, (page - 1) * 100);
-      return { items: items.map(${c}ToApi), page, pages: Math.max(1, Math.ceil(total / 100)), total };
-    }
-    case "read_${one}":
-      return ${c}ToApi(await found(${n.data}, viewer, args.id, ${JSON.stringify(n.label.toLowerCase())}));
-    case "add_${one}":
-      return ${c}ToApi(await ${n.data}.create(viewer, ${c}FromApi(args) as never));
-    case "change_${one}": {
-      const { id, ...fields } = args;
-      const row = await found(${n.data}, viewer, id, ${JSON.stringify(n.label.toLowerCase())});
-      return ${c}ToApi(await ${n.data}.update(viewer, row.id, ${c}FromApi(fields, row) as never));
-    }${
-      deletes
-        ? `
-    case "delete_${one}": {
-      const row = await found(${n.data}, viewer, args.id, ${JSON.stringify(n.label.toLowerCase())});
-      await ${n.data}.remove(viewer, row.id);
-      return { deleted: row.id };
-    }`
-        : ""
-    }`);
-  }
-  for (const action of actions) {
+    const refs = model.fields
+      .filter((f) => f.type.kind === "relation" && !f.type.many)
+      .map((f) => [f.name, relatedTitle(ir, (f.type as { model: string }).model)]);
+    const searched = model.fields
+      .filter(
+        (f) =>
+          !f.formula &&
+          f.type.kind === "scalar" &&
+          ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
+      )
+      .map((f) => f.name);
+    const named =
+      titleField(model) === "id"
+        ? ", named: undefined"
+        : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, label: ${JSON.stringify(n.label.toLowerCase())}${named} },`;
+  });
+  const runs = actions.map((action) => {
     const model = modelNamed(ir, action.on);
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const asked = askedFields(action).length > 0;
-    cases.push(`    case ${JSON.stringify(action.name)}:
-      return ${c}ToApi(await ${actionNames(action).run}(keyed(viewer), Number(args.id)${asked ? `, ${actionNames(action).asks}.parse(args.values)` : ""}));`);
-  }
-  return `${HEADER}// The app's records and actions as tools for AI assistants (docs/design/integrations.md §5b):
-// what the auth file's \`api\` block offers, with the spec's own words as the descriptions, called
-// as the key's role through the data functions, exactly as the API is.
+    // The record by its id or its title, as the other tools take it.
+    return `    case ${JSON.stringify(action.name)}: {
+      const row = await found(KINDS.${model.name}, viewer, args.id, "change");
+      return ${c}ToApi(await ${actionNames(action).run}(keyed(viewer), row.id${asked ? `, ${actionNames(action).asks}.parse(args.input ?? {})` : ""}));
+    }`;
+  });
+  return `${HEADER}// The app's records and actions as tools for AI assistants (docs/design/assistant.md §3): seven
+// tools whatever the app's size, and the app's summary as the server's instructions, both as core
+// describes them for each caller; every call goes through the data functions, as the API's do.
 ${actions.length ? 'import { AccessDenied, type Viewer } from "#/kit/access";' : 'import type { Viewer } from "#/kit/access";'}
-import { NotFound } from "#/kit/api.server";
-import type { Tool } from "#/kit/mcp.server";
+import { BadInput, NotFound } from "#/kit/api.server";
+import type { Offer } from "#/kit/mcp.server";
 import { ${models
     .flatMap(({ model }) => {
       const c = model.name[0]?.toLowerCase() + model.name.slice(1);
@@ -604,37 +547,145 @@ import { ${models
 ${models.map(({ model, n }) => `import { ${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}
 ${actions.map((a) => `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "./actions/${kebab(a.name)}";` : ""}`).join("\n")}
 
-export const TOOLS: Tool[] = ${JSON.stringify(tools, null, 2)};
+/**
+ * What each caller is offered (by the key's role, and for a visitor without a key): the tools,
+ * the summary, and what describe answers per kind, as that caller may use it.
+ */
+const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = ${JSON.stringify(offers, null, 2)};
 
-/** What a visitor without a key gets: finding and reading what anyone may read, adding what anyone may add. */
-export const VISITOR_TOOLS: Tool[] = ${JSON.stringify(visitorTools, null, 2)};
+/** The offer for a caller; a role the app does not know gets nothing. */
+export function offerFor(viewer: Viewer | null): Offer & { describe: Record<string, string> } {
+  return OFFERS[viewer?.role ?? "visitor"] ?? { summary: "", tools: [], describe: {} };
+}
 
-/** A record the key may read, or a refusal that says so. */
-async function found<R extends { id: number }>(
-  data: { get: (viewer: Viewer | null, id: number) => Promise<R | null | undefined> },
-  viewer: Viewer | null,
-  id: unknown,
-  label: string,
-): Promise<R> {
-  const row = Number.isInteger(id) ? await data.get(viewer, id as number) : null;
-  if (!row) throw new NotFound(\`No such \${label}, or not one this key may read.\`);
+/** Each kind's data functions and conversions, its title field, and its references' titles. */
+const KINDS = {
+${entries.join("\n")}
+};
+type Kind = (typeof KINDS)[keyof typeof KINDS];
+
+const kindOf = (args: Record<string, unknown>): Kind => {
+  const kind = KINDS[args.kind as keyof typeof KINDS];
+  if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
+  return kind;
+};
+
+/**
+ * A record the caller may use, by its id or by its title (an invoice's number): one that fits,
+ * never a guess; "not there" and "not yours" are the same answer.
+ */
+async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "read") {
+  let key = Number.isInteger(id) ? (id as number) : /^\\d+$/.test(String(id)) ? Number(id) : undefined;
+  if (key === undefined && typeof id === "string" && kind.named) {
+    const fits = kind.named(viewer, id);
+    const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
+    const pick = exact.length === 1 ? exact : fits;
+    if (pick.length > 1)
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+    key = pick[0]?.id;
+  }
+  const row = key === undefined ? null : await kind.data.get(viewer, key);
+  if (!row) throw new NotFound(\`No \${kind.label} \${String(id)} that you may \${verb}; find it first.\`);
   return row;
 }
 
+/** A field's value in a row: a reference as its id and title, nothing else changed. */
+function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
+  const title = (kind.refs as Record<string, string>)[field];
+  const related = row[field] as Record<string, unknown> | null | undefined;
+  if (title && related && typeof related === "object") return { id: related.id, title: related[title] };
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  return api[field];
+}
+
+/** "count", "sum total", "average total", "min …", "max …" as measure's own words. */
+function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest" | "largest"; field?: string } {
+  const [word = "count", field] = String(of ?? "count").trim().split(/\\s+/);
+  const how = ({ count: "count", sum: "sum", average: "average", min: "smallest", max: "largest" } as const)[word as "count"];
+  if (!how) throw new BadInput('"of" is count, or sum, average, min or max with a number field, e.g. "sum total".');
+  return { how, field };
+}
 ${
   actions.length
-    ? `/** An action is a key's: a visitor is never offered one (VISITOR_TOOLS), and is refused here too. */
+    ? `
+/** An action is a key's: a visitor is never offered one, and is refused here too. */
 const keyed = (viewer: Viewer | null): Viewer => {
   if (!viewer) throw new AccessDenied(false);
   return viewer;
 };
-
 `
     : ""
-}/** Calls one tool as the key, or as a visitor without one. */
+}
+/** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
-${cases.join("\n")}
+    case "find": {
+      const kind = kindOf(args);
+      const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
+      const page = Math.max(1, Number(args.page) || 1);
+      const { items, total } = await kind.data.find(viewer, {
+        where: args.where,
+        search: typeof args.search === "string" ? args.search : undefined,
+        sort: typeof args.sort === "string" ? args.sort : undefined,
+        limit,
+        offset: (page - 1) * limit,
+      });
+      const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
+      const columns = [...new Set(["id", kind.title, ...asked])];
+      const rows = items.map((row) => {
+        const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
+        return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
+      });
+      // Nothing found by a search: say where it looked, and how a reference is matched instead.
+      const refs = Object.keys(kind.refs);
+      if (!total && typeof args.search === "string")
+        return {
+          columns,
+          rows,
+          total,
+          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
+        };
+      return { columns, rows, total };
+    }
+    case "measure": {
+      const kind = kindOf(args);
+      const { how, field } = measureOf(args.of);
+      const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
+      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
+      const value = await kind.data.measure(viewer, how, options);
+      // The smallest or largest: which record holds it.
+      if ((how === "smallest" || how === "largest") && value !== null)
+        return { [how]: value, of: await kind.data.holder(viewer, how, options) };
+      return { [how === "count" ? "total" : how]: value };
+    }
+    case "read": {
+      const kind = kindOf(args);
+      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+    }
+    case "add": {
+      const kind = kindOf(args);
+      return kind.toApi(await kind.data.create(viewer, kind.fromApi(args.values ?? {}) as never));
+    }
+    case "change": {
+      const kind = kindOf(args);
+      const row = await found(kind, viewer, args.id, "change");
+      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+    }
+    case "delete": {
+      const kind = kindOf(args);
+      const row = await found(kind, viewer, args.id, "delete");
+      await kind.data.remove(viewer, row.id);
+      return { deleted: row.id };
+    }
+    case "describe":
+      kindOf(args);
+      return { description: offerFor(viewer).describe[args.kind as string] };
+    case "run":
+      switch (args.action) {
+${runs.join("\n")}
+        default:
+          throw new NotFound(\`There is no action "\${String(args.action)}".\`);
+      }
     default:
       throw new NotFound(\`There is no tool "\${name}".\`);
   }
@@ -647,14 +698,14 @@ export function mcpRoute(ir: SpecIR): string {
   return `${HEADER}// The app's tools for AI assistants (docs/design/integrations.md §5b), at /mcp: connect an
 // assistant here with a key made on the users page, as Authorization: Bearer <key>.
 import { createFileRoute } from "@tanstack/react-router";
-import { callTool, TOOLS, VISITOR_TOOLS } from "#/generated/mcp.server";
+import { callTool, offerFor } from "#/generated/mcp.server";
 import { handleMcp } from "#/kit/mcp.server";
 import { problem } from "#/kit/api.server";
 
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
-      POST: ({ request }) => handleMcp(request, { name: ${JSON.stringify(ir.app.name)}, tools: TOOLS, visitorTools: VISITOR_TOOLS, call: callTool }),
+      POST: ({ request }) => handleMcp(request, { name: ${JSON.stringify(ir.app.name)}, offerFor, call: callTool }),
       GET: () => problem(405, "This server answers POST requests only (no event stream)."),
     },
   },

@@ -1,5 +1,5 @@
 // Smithable app kit: the API as tools for AI assistants (docs/design/integrations.md §5b), at
-// /mcp. A small JSON-RPC endpoint in the Model Context Protocol's form for a server without
+// /mcp (docs/design/assistant.md §3). A small JSON-RPC endpoint in the Model Context Protocol's form for a server without
 // sessions: initialize, the list of tools and calling one, each answered in JSON. Same keys, same
 // access, same limiter as the API; a refusal comes back as the tool's error in the app's words,
 // so the assistant can read it.
@@ -11,6 +11,14 @@ export interface Tool {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** Reading only, or changing what exists: assistants that ask their user go by these. */
+  annotations?: { readOnlyHint: boolean; destructiveHint: boolean };
+}
+
+/** What a caller is offered: the tools, and the app's summary as the server's instructions. */
+export interface Offer {
+  summary: string;
+  tools: Tool[];
 }
 
 interface Message {
@@ -23,26 +31,26 @@ interface Message {
 const PROTOCOL = "2025-06-18";
 
 /**
- * Answers one request to /mcp: the tools offered, and calls to them as the key. Without a key, a
- * visitor gets the tools for what anyone may read or add (`visitorTools`), when there are any.
+ * Answers one request to /mcp: the tools offered to the caller (by the key's role, or to a
+ * visitor without a key, when anything is open to visitors), and calls to them.
  */
 export async function handleMcp(
   request: Request,
   server: {
     name: string;
-    tools: Tool[];
-    visitorTools: Tool[];
+    offerFor: (viewer: Viewer | null) => Offer;
     call: (viewer: Viewer | null, name: string, args: Record<string, unknown>) => Promise<unknown>;
   },
 ): Promise<Response> {
   let viewer: Viewer | null;
   let body: unknown;
-  let tools = server.tools;
+  let offer: Offer;
   try {
     const caller = callerOf(request);
     viewer = caller.viewer;
-    if (!viewer && caller.keyless && server.visitorTools.length) tools = server.visitorTools;
-    else if (!viewer) return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
+    offer = server.offerFor(viewer);
+    if (!viewer && !(caller.keyless && offer.tools.length))
+      return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
     body = await bodyOf(request);
   } catch (error) {
     const refused = refusalOf(error);
@@ -63,19 +71,28 @@ export async function handleMcp(
           protocolVersion: PROTOCOL,
           capabilities: { tools: {} },
           serverInfo: { name: server.name, version: "1" },
+          instructions: offer.summary,
         });
       case "ping":
         return reply({});
       case "tools/list":
-        return reply({ tools });
+        return reply({ tools: offer.tools });
       case "tools/call": {
         const name = String(message.params?.name ?? "");
         const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
         try {
-          if (!tools.some((t) => t.name === name))
-            throw new BadInput(`There is no tool "${name}".`);
+          const tool = offer.tools.find((t) => t.name === name);
+          if (!tool) throw new BadInput(`There is no tool "${name}".`);
+          // Only the kinds and actions this tool offers this caller (a narrow key is not told of
+          // the rest).
+          const properties = tool.inputSchema.properties as Record<string, { enum?: unknown[] }>;
+          for (const key of ["kind", "action"]) {
+            const allowed = properties?.[key]?.enum;
+            if (allowed && !allowed.includes(args[key]))
+              throw new BadInput(`"${key}" is one of ${allowed.join(", ")}.`);
+          }
           // Adding without a key is held to a visitor's limit, as through the API.
-          if (!key && name.startsWith("add_")) writeAllowed(null, request.headers);
+          if (!key && name === "add") writeAllowed(null, request.headers);
           const result = await server.call(key, name, args);
           return reply({
             content: [{ type: "text", text: JSON.stringify(result ?? { done: true }) }],
