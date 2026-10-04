@@ -1,0 +1,21 @@
+smithableUx: 0.1
+pages:
+  invoices:
+    table:
+      sort: -issuedOn
+    icon: receipt
+  payments:
+    table:
+      sort: -paidOn
+    icon: tag
+  clients:
+    icon: users
+tones:
+  Invoice.status:
+    sent: warning
+    paid: success
+    overdue: danger
+theme:
+  preset: modern
+  brand:
+    primary: "#2563eb"

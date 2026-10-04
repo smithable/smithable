@@ -1,0 +1,127 @@
+smithable: 0.1
+app:
+  name: Agency Pipeline
+  description: Sales pipeline for a six-person web agency to track leads, deals and follow-ups.
+  currency: USD
+  timezone: America/New_York
+models:
+  Deal:
+    fields:
+      title: string!
+      companyName: string!
+      contactName: string!
+      email: email
+      phone: phone
+      stage: proposal | negotiation | won | lost
+      value: money!
+      probability: int
+      expectedCloseDate: date
+      assignedTo: User
+      notes: text
+      followUpAt: date
+      lostReason: string
+      lead: Lead
+    access:
+      delete: [admin]
+  Lead:
+    fields:
+      companyName: string!
+      contactName: string!
+      email: email
+      phone: phone
+      website: url
+      source: referral | website | coldOutreach | event | other
+      status: new | contacted | qualified | disqualified
+      notes: text
+      assignedTo: User
+      followUpAt: date
+    access:
+      delete: [admin]
+  Activity:
+    fields:
+      deal: Deal!
+      type: call | email | meeting | proposalSent | other
+      summary: string!
+      notes: text
+      occurredAt: datetime
+    access:
+      delete: [admin]
+pages:
+  deals:
+    crud: Deal
+    search: [title, companyName, contactName]
+    sortable: [title, value, expectedCloseDate, stage]
+    actions: [markWon, markLost]
+    filters: [stage, expectedCloseDate]
+  team:
+    users: manage
+  overview:
+    dashboard:
+      activeDeals:
+        count: Deal
+        where:
+          stage: [proposal, negotiation]
+      pipelineValue:
+        sum: Deal.value
+        where:
+          stage: [proposal, negotiation]
+      dealsWon:
+        count: Deal
+        where:
+          stage: won
+      openLeads:
+        count: Lead
+        where:
+          status: [new, contacted, qualified]
+      recentActivities:
+        list: Activity
+        limit: 5
+  leads:
+    crud: Lead
+    search: [companyName, contactName, email]
+    filters: [status, source, followUpAt]
+    sortable: [companyName, followUpAt, status]
+    actions: [qualify, disqualify, markContacted]
+  activities:
+    crud: Activity
+    search: [summary]
+    filters: [type, deal]
+actions:
+  markWon:
+    on: Deal
+    when:
+      stage: [proposal, negotiation]
+    set:
+      stage: won
+    intent: Mark a deal as won.
+  markLost:
+    on: Deal
+    when:
+      stage: [proposal, negotiation]
+    set:
+      stage: lost
+      lostReason:
+    intent: Mark a deal as lost and record the reason.
+  qualify:
+    on: Lead
+    when:
+      status: [new, contacted]
+    set:
+      status: qualified
+    intent: Mark a lead as qualified and ready to become a deal.
+  disqualify:
+    on: Lead
+    when:
+      status: [new, contacted, qualified]
+    set:
+      status: disqualified
+    intent: Mark a lead as disqualified.
+  markContacted:
+    on: Lead
+    when:
+      status: new
+    set:
+      status: contacted
+      followUpAt:
+    intent: Record that the lead has been contacted and set a follow-up date.
+navigation: [overview, leads, deals, activities, team]

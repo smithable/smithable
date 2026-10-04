@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  talks:
+    table:
+      sort: startsAt
+    icon: layers
+  schedule:
+    icon: calendar
+  my-registrations:
+    icon: clipboard
+  speakers:
+    icon: user
+theme:
+  preset: corporate

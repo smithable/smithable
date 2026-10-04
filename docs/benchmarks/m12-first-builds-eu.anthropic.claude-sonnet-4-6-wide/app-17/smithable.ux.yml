@@ -1,0 +1,16 @@
+smithableUx: 0.1
+pages:
+  schema:
+    icon: calendar
+  my-bookings:
+    icon: clipboard
+  services:
+    icon: tag
+  stylists:
+    icon: user
+  messages:
+    icon: mail
+theme:
+  preset: minimal
+  brand:
+    font: Nunito Sans

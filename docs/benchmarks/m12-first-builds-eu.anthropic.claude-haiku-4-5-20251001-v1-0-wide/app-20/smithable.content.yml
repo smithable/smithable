@@ -1,0 +1,44 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Tunti
+    pluralLabel: Tunnit
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+  Session:
+    label: Istunto
+    pluralLabel: Istunnot
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+  Post:
+    label: Artikkeli
+    pluralLabel: Artikkelit
+  Message:
+    label: Viesti
+    pluralLabel: Viestit
+pages:
+  schedule:
+    title: Aikataulu
+  sessions:
+    title: Istunnot
+  class-types:
+    title: Tunnityypit
+  instructors:
+    title: Ohjaajat
+  messages:
+    title: Viestit
+  blog:
+    title: Blogi
+  posts:
+    title: Artikkelit
+  my-bookings:
+    title: Omat varaukset
+  admin:
+    title: Hallinto
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio

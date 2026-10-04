@@ -1,0 +1,21 @@
+smithable: 0.1
+app:
+  name: Wedding Guest List
+  description: Guest list and seating plan for our wedding, with RSVPs and meal choices.
+models:
+  Guest:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      partySize: int! = 1
+      status: pending | accepted | declined
+      mealChoice: chicken | fish | vegetarian | vegan
+      dietaryRestrictions: text
+      table: int
+      notes: text
+pages:
+  guests:
+    crud: Guest
+    search: [name, email]
+    filters: [status, mealChoice, table]

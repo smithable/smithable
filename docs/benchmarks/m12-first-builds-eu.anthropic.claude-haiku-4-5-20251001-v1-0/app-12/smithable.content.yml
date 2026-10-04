@@ -1,0 +1,7 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A florist arranging a bouquet in a small shop

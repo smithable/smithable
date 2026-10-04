@@ -1,0 +1,9 @@
+{
+  "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+  "starter": "invoicing",
+  "wordStarter": "crm",
+  "questions": [
+    "What information do you want to track about each quote you give?",
+    "Do you want to track payments in detail, or just record what was paid?"
+  ]
+}

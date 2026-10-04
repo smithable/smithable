@@ -1,0 +1,14 @@
+smithableUx: 0.1
+theme:
+  preset: woodland
+tones:
+  Tool.condition:
+    likeNew: success
+    worn: warning
+pages:
+  catalog:
+    icon: layers
+  my-tools:
+    icon: package
+  saved:
+    icon: star

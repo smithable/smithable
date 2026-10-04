@@ -1,0 +1,21 @@
+smithableUx: 0.1
+pages:
+  matches:
+    table:
+      sort: -date
+      columns: [date, team, opponent, home, status, homeScore, awayScore]
+    icon: calendar
+  teams:
+    icon: users
+  players:
+    table:
+      columns: [name, team, position, number]
+    icon: user
+tones:
+  Match.status:
+    played: success
+    cancelled: danger
+theme:
+  preset: corporate
+  brand:
+    primary: "#16a34a"

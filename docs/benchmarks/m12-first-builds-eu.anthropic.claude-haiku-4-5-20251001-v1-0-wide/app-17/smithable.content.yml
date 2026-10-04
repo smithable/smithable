@@ -1,0 +1,30 @@
+smithableContent: 0.1
+models:
+  ServiceType:
+    label: Tjänst
+    pluralLabel: Tjänster
+  Stylist:
+    label: Frisör
+    pluralLabel: Frisörer
+  TimeSlot:
+    label: Tid
+    pluralLabel: Tider
+  Booking:
+    label: Bokning
+    pluralLabel: Bokningar
+pages:
+  services:
+    title: Tjänster
+  stylists:
+    title: Frisörer
+  timeslots:
+    title: Tider
+  bookings:
+    title: Bokningar
+  schedule:
+    title: Boka tid
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio

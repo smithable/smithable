@@ -1,0 +1,10 @@
+{
+  "description": "Bird sightings for our birdwatching club: species, place, date and who saw it.",
+  "starter": "records",
+  "wordStarter": "booking",
+  "questions": [
+    "Who can log a sighting?",
+    "What can visitors see without signing in?",
+    "What details does a sighting hold?"
+  ]
+}

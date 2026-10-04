@@ -1,0 +1,10 @@
+{
+  "description": "A sales pipeline for our six-person web agency: leads, deals and who follows up when.",
+  "starter": "crm",
+  "wordStarter": "crm",
+  "questions": [
+    "Besides leads and deals, what are the main record types you need to track?",
+    "Who on the team can add or update leads and deals?",
+    "What key details does a deal hold beyond a name and owner?"
+  ]
+}

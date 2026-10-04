@@ -1,0 +1,53 @@
+smithable: 0.1
+app:
+  name: Sales Pipeline
+  description: "Sales pipeline for a web agency: leads, deals and who follows up when."
+  currency: USD
+  timezone: America/New_York
+models:
+  FollowUp:
+    fields:
+      type: call | email | meeting | proposal | other
+      scheduledFor: datetime!
+      assignedTo: User!
+      status: pending | completed | canceled
+      notes: text
+      completedAt: datetime
+      lead: Lead!
+  Lead:
+    fields:
+      name: string!
+      company: string!
+      email: email
+      phone: phone
+      source: website | referral | coldCall | event | other
+      status: new | contacted | qualified | proposal | won | lost
+      notes: text
+      followUpDate: date
+      assignedTo: User
+      value: money
+  Deal:
+    fields:
+      name: string!
+      lead: Lead!
+      stage: discovery | proposal | negotiation | closedWon | closedLost
+      value: money!
+      expectedCloseDate: date
+      assignedTo: User!
+      notes: text
+pages:
+  follow-ups:
+    crud: FollowUp
+    search: [notes]
+    filters: [status, type]
+  team:
+    users: manage
+  leads:
+    crud: Lead
+    search: [name, company, email]
+    filters: [status, source]
+  deals:
+    crud: Deal
+    search: [name]
+    filters: [stage]
+navigation: [leads, deals, follow-ups, team]
