@@ -347,8 +347,11 @@ test("a capacity that can never fill goes back to the model; setPublic leaves ou
     starter: { name: "booking", files: shared },
   });
   if (draft.kind !== "draft") throw new Error(draft.message);
-  // The capacity was refused, not shipped with its warning.
+  // The capacity was refused, not shipped with its warning, and is named as left out.
   expect(draft.files["smithable.yml"]).not.toContain("capacity:");
+  expect(draft.dropped).toEqual([
+    expect.stringMatching(/^setCapacity Registration: .*never reached/),
+  ]);
   expect(draft.files["smithable.auth.yml"]).toContain("pages: [home]");
 });
 
