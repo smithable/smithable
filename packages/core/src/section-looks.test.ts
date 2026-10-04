@@ -102,14 +102,17 @@ test("a landing page may have a theme of its own, set with setTheme --page; othe
     ir,
   );
   expect(read.diagnostics).toEqual([]);
-  // A preset brings its own density unless the file sets one: corporate is compact.
+  // A preset brings its own density and motion unless the file sets them: corporate is
+  // compact, playful lively.
   expect(read.ux?.pages.home?.theme).toEqual({
     preset: "playful",
     font: "Nunito Sans",
     density: "comfortable",
+    motion: "lively",
   });
   expect(read.ux?.theme.preset).toBe("corporate");
   expect(read.ux?.theme.density).toBe("compact");
+  expect(read.ux?.theme.motion).toBe("subtle");
   const crud = validateUx(
     {
       path: "smithable.ux.yml",
@@ -127,4 +130,17 @@ test("a landing page may have a theme of its own, set with setTheme --page; othe
   expect(applyOperation({ spec }, "setTheme", { page: "items", preset: "playful" })).toMatchObject({
     ok: false,
   });
+});
+
+test("motion is a theme value: the preset's own, the ux file's over it, set with setTheme --motion", () => {
+  const read = (text: string) =>
+    validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\n${text}` }, ir).ux?.theme
+      .motion;
+  expect(read("theme: { preset: modern }\n")).toBe("subtle");
+  expect(read("theme: { preset: playful }\n")).toBe("lively");
+  expect(read("theme: { preset: playful, motion: none }\n")).toBe("none");
+  const set = applyOperation({ spec }, "setTheme", { motion: "lively" });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.description).toBe("Set the look: lively motion");
+  expect(set.files.ux).toContain("motion: lively");
 });
