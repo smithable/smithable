@@ -1205,9 +1205,8 @@ async function copyFlow(base) {
     // "Save changes" afterwards cannot quietly undo it.
     await open(page, `${base}/invoices`);
     await page.getByRole("cell", { name: "2026-006", exact: true }).click();
-    await page.waitForURL(/\/invoices\/\d+$/);
-    await page.waitForLoadState("networkidle");
-    // The header's actions are there twice (wide and narrow screens): the one on screen.
+    // The list's rows have their own Mark sent until the record's page has replaced it.
+    await page.getByRole("heading", { name: "2026-006", exact: true }).waitFor();
     const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
     await markSent.click();
     await markSent.waitFor({ state: "detached", timeout: 10000 });
