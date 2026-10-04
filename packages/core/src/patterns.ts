@@ -32,7 +32,7 @@ import {
   type SpecIR,
 } from "./ir.js";
 import { capitalize, kebab, plural } from "./naming.js";
-import type { AnyOperation, Effect, Refusal } from "./operation.js";
+import type { AnyOperation, Effect, Note, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
 import { checkFilterFields } from "./sections/list-keys.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
@@ -88,7 +88,7 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
     page: PageIR & { pattern: PatternOf<K> },
     effect: Effect,
     ir: SpecIR,
-  ): Refusal | undefined;
+  ): Refusal | Note | undefined;
 }
 
 /**
@@ -264,6 +264,26 @@ const landing: PagePattern<"landing"> = {
   forms: (p) => p.sections.flatMap((s) => (s.form ? [s.form] : [])),
   operations: landingOperations,
   follow(spec, page, effect) {
+    // A removed page is no longer a hero's button or shortcut (the button falls back to the
+    // app's first page).
+    if (effect.kind === "remove-page") {
+      const linked = page.pattern.sections.filter(
+        (s) => s.button === effect.page || s.shortcuts?.includes(effect.page),
+      );
+      for (const section of linked) {
+        const at = ["pages", page.id, "landing", section.name];
+        if (section.button === effect.page) spec.removeAndPrune([...at, "button"], 4);
+        const rest = section.shortcuts?.filter((p) => p !== effect.page) ?? [];
+        if (section.shortcuts?.includes(effect.page))
+          if (rest.length) spec.set([...at, "shortcuts"], rest);
+          else spec.removeAndPrune([...at, "shortcuts"], 4);
+      }
+      return linked.length
+        ? {
+            note: `the ${page.id} page's ${linked.map((s) => s.name).join(" and ")} no longer ${linked.length > 1 ? "link" : "links"} to it`,
+          }
+        : undefined;
+    }
     // A records section's condition follows a renamed field, and keeps the field and the values
     // it names: losing them would silently show every record.
     if (
