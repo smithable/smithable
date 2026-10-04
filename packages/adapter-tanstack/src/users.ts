@@ -1,7 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import type { AuthIR, SpecIR } from "@smithable/core";
-import { hasKeys } from "./keys.js";
 import { roleLabels } from "./auth.js";
+import { hasKeys } from "./keys.js";
 import { HEADER, literal } from "./shared.js";
 
 /** The users page's id (there is one). */

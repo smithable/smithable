@@ -18,6 +18,7 @@ import {
   standardActionModule,
   standardActionServer,
 } from "./actions.js";
+import { apiModule, apiRoutes } from "./api.js";
 import {
   authModule,
   hasInvitations,
@@ -378,7 +379,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // Sign-in (smithable.auth.yml): its kit and files only when the app has sign-in.
     key: "auth",
     kit: [{ files: SIGN_IN_KIT, used: ({ auth }) => hasSignIn(auth) }],
-    files: ({ ir, auth }) => {
+    files: ({ ir, auth, t }) => {
       if (!hasSignIn(auth)) return [];
       const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");
       const users =
@@ -403,6 +404,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ? [
               generated("src/generated/keys.server.ts", keysModule(auth)),
               generated("src/generated/keys.test.ts", keysTestSource(auth)),
+              // The API itself: conversions, the OpenAPI description and the routes.
+              generated("src/generated/api.server.ts", apiModule(ir, auth, t)),
+              ...Object.entries(apiRoutes(ir, auth, t)).map(([path, source]) =>
+                generated(path, source),
+              ),
             ]
           : []),
       ];
@@ -443,7 +449,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
       {
         // Keys for the API, on the users page (docs/design/integrations.md §2).
-        files: ["src/kit/Keys.tsx"],
+        files: ["src/kit/Keys.tsx", "src/kit/api.server.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth),
       },
       {
