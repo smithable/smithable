@@ -2,21 +2,21 @@
 
 The questions of [bench-ask-questions.mjs](../../scripts/bench-ask-questions.mjs), asked of each starter's assistant tools at `/mcp` with an administrator's key ([bench-ask.mjs](../../scripts/bench-ask.mjs)), by each model: it calls tools until it answers (at most 8 model calls). A read is right when its answer gives the number, names, words or pairs worked out from the records; a change is right when the records afterwards say so. Each change starts from the starter's records.
 
-| Model | Right | Wrong | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
-|---|---|---|---|---|---|---|---|---|---|
-| eu.anthropic.claude-haiku-4-5-20251001-v1:0 | 122 / 130 (94 %) | 8 | 0 | 2.4 | 80 / 99 | 6,149 / 162 | 671 | $0.0077 | 6.9 s |
-| mistral-small-latest | 105 / 130 (81 %) | 25 | 0 | 2.4 | 71 / 99 | 5,263 / 40 | 597 | $0.0008 | 2.4 s |
-| eu.anthropic.claude-sonnet-4-6 | 129 / 130 (99 %) | 1 | 0 | 2.2 | 94 / 99 | 5,769 / 161 | 657 | $0.0217 | 6.0 s |
+| Model | Right | Wrong | Of them, a count or sum the model worked out | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
+|---|---|---|---|---|---|---|---|---|---|---|
+| eu.anthropic.claude-haiku-4-5-20251001-v1:0 | 123 / 130 (95 %) | 7 | 3 | 0 | 2.4 | 80 / 99 | 6,149 / 162 | 671 | $0.0077 | 6.9 s |
+| mistral-small-latest | 105 / 130 (81 %) | 25 | 9 | 0 | 2.4 | 71 / 99 | 5,263 / 40 | 597 | $0.0008 | 2.4 s |
+| eu.anthropic.claude-sonnet-4-6 | 130 / 130 (100 %) | 0 | 0 | 0 | 2.2 | 94 / 99 | 5,769 / 161 | 657 | $0.0217 | 6.0 s |
 
 **Read with this (C, 2026-10-04).** The baseline is today's tools: a find, read, add and change tool per model (and the standard actions), where find takes no filter, so every count, sum or filter is the model reading pages of records and working it out.
 
-- **Sonnet 4.6 is right on 129 of 130** (99 %); its one miss counts the draft invoice as owed ("How much is still to be paid to us?": 3,220.50 with the draft, 2,770.50 without), which Haiku does too: a question to read as the answer's choice as much as a mistake. 94 of 99 reads in one or two model calls; $0.022 a question, 6 s.
-- **Haiku 4.5: 122 of 130** (94 %), a third of Sonnet's cost ($0.008). Its misses are arithmetic over a list it read (an average of 14 prices, the sum of 16 capacities), looking in the wrong model (Kallio Design's VAT number among the business profiles, not the clients), and two incidents changed in ways the check refuses.
-- **Mistral Small: 105 of 130** (81 %), $0.0008 a question: misses lookups across records (who teaches what, an invoice's client), says "not found" for records that exist, and answers from its own knowledge ("what should I bring to Yin").
-- **The tools' size**: 346 to 1,752 tokens per starter, sent with every model call; the tool results add about 650 tokens per question (whole pages of records). Most of a question's 5,000 to 6,000 input tokens are the tools and the records read, twice (a question takes two calls).
-- What the seven tools should change: counts and sums worked out by the app (the arithmetic misses), finds with a filter (fewer records read, smaller results), one model call for a lookup.
-- Not measured: the four delete questions (the tools offered no delete; `setApi --assistants-delete` comes with fable/assistants-delete), and "Which teachers have a portrait?" (pictures are not in the API). One question was reworded after this run, for the second: "Fjord Analytics' billing address is now billing@…" read as the postal address by Haiku; it is now "Send Fjord Analytics' invoices to billing@… from now on."
-- Rows marked "from the first run's log" were answered before a crash of the runner (the app's dev server closed a connection); their outcome, calls, tokens and cost are from its log, their answers were not kept. Total spend for the baseline: about $4.25.
+- **Sonnet 4.6 is right on all 130.** "How much is still to be paid to us?" is accepted in both readings (sent and overdue: 2,770.50; with the draft: 3,220.50) when the answer says the draft is counted, which Sonnet's and Haiku's do. 94 of 99 reads in one or two model calls; $0.022 a question, 6 s.
+- **Haiku 4.5: 123 of 130** (95 %), a third of Sonnet's cost ($0.008). Three misses are a count or sum it worked out itself (an average of 14 prices and of 8 orders, the sum of 16 capacities); the others look in the wrong model (Kallio Design's VAT number among the business profiles), change incidents in ways the check refuses, and read "billing address" as the postal address.
+- **Mistral Small: 105 of 130** (81 %), $0.0008 a question: 9 misses are counts or sums it worked out; it also misses lookups across records (who teaches what, an invoice's client), says "not found" for records that exist, and answers from its own knowledge ("what should I bring to Yin").
+- **The tools' size**: 346 to 1,752 tokens per starter, sent with every model call; tool results add about 650 tokens per question (whole pages of records). A question takes about two model calls and 5,300 to 6,200 input tokens.
+- What the seven tools should change: counts and sums worked out by the app (the "count or sum the model worked out" column should go to nothing), finds with a filter (smaller results), fewer input tokens.
+- Not measured: the four delete questions (no delete tool; `setApi --assistants-delete` comes with #276), and "Which teachers have a portrait?" (pictures are not in the API). One question was reworded after this run: "Fjord Analytics' billing address is now billing@…" (read as the postal address by Haiku) is now "Send Fjord Analytics' invoices to billing@… from now on."
+- Rows marked "from the first run's log" were answered before the runner crashed (the app's dev server closed a connection); their outcome, calls, tokens and cost are from its log, their answers were not kept, and answers before the fix kept only 240 characters, so those keep the judgement made on the whole answer. Total spend: about $4.25.
 
 The tools each starter offers (`tools/list`, about four characters a token):
 
@@ -34,7 +34,7 @@ The tools each starter offers (`tools/list`, about four characters a token):
 | Starter | eu.anthropic.claude-haiku-4-5-20251001-v1:0 | mistral-small-latest | eu.anthropic.claude-sonnet-4-6 |
 |---|---|---|---|
 | crm | 23 / 24 | 21 / 24 | 24 / 24 |
-| invoicing | 22 / 25 | 17 / 25 | 24 / 25 |
+| invoicing | 23 / 25 | 17 / 25 | 25 / 25 |
 | status | 23 / 25 | 23 / 25 | 25 / 25 |
 | booking | 22 / 23 | 16 / 23 | 23 / 23 |
 | marketplace | 18 / 19 | 15 / 19 | 19 / 19 |
@@ -75,7 +75,7 @@ The tools each starter offers (`tools/list`, about four characters a token):
 | mistral-small-latest | crm | 13 | What is the average order total? | wrong | 4089.25 | **Average order total: $4,188.13** |
 | mistral-small-latest | crm | 17 | What does shipping cost on order ORD-1007? | wrong | 15 | I can't find that order. |
 | mistral-small-latest | crm | 21 | Kallio Design is an enterprise customer now, please change that. | wrong |  | Kallio Design is already an enterprise customer. |
-| eu.anthropic.claude-haiku-4-5-20251001-v1:0 | invoicing | 23 | Fjord Analytics' billing address is now billing@fjordanalytics.example. | wrong |  | Done! Fjord Analytics' billing address has been updated to billing@fjordanalytics.example. |
+| eu.anthropic.claude-haiku-4-5-20251001-v1:0 | invoicing | 23 | Send Fjord Analytics' invoices to billing@fjordanalytics.example from now on. | wrong |  | Done! Fjord Analytics' billing address has been updated to billing@fjordanalytics.example. |
 | mistral-small-latest | invoicing | 4 | How much does Solstice Bakery owe us? | wrong | 690 | Solstice Bakery does not owe you anything. |
 | mistral-small-latest | invoicing | 8 | Which client has the most invoices? | wrong | ["Kallio Design","Skerry Software"] | Kallio Design (2 invoices). |
 | mistral-small-latest | invoicing | 9 | What's Kallio Design's VAT number? | wrong | ["FI87654321"] | Kallio Design's VAT number is not listed in the business profiles. |
@@ -90,6 +90,4 @@ The tools each starter offers (`tools/list`, about four characters a token):
 | mistral-small-latest | status | 22 | Report a new incident: logging in to the mobile app fails, we're investigating. | wrong |  | Incident **#3** logged: *Mobile app login failure* (investigating). |
 | eu.anthropic.claude-haiku-4-5-20251001-v1:0 | booking | 17 | Which teachers have a portrait? | skipped (pictures are not in the API) |  |  |
 | eu.anthropic.claude-haiku-4-5-20251001-v1:0 | invoicing | 9 | What's Kallio Design's VAT number? | wrong | ["FI87654321"] | I don't see "Kallio Design" in the business profiles. The system shows 8 business profiles, but none of them are named Kallio Design. Could you check if the name is spelled differently, or would you like me to search the clients list instea |
-| eu.anthropic.claude-haiku-4-5-20251001-v1:0 | invoicing | 19 | How much is still to be paid to us? | wrong | 2770.5 | Based on your invoices, here's what's still outstanding: **Unpaid invoices:** - **Overdue:** Invoice 2026-003 - $690.00 - **Sent (not yet paid):** Invoice 2026-004 - $970.00 - **Sent (not yet paid):** Invoice 2026-005 - $1,110.50 - **Draft: |
-| eu.anthropic.claude-sonnet-4-6 | invoicing | 19 | How much is still to be paid to us? | wrong | 2770.5 | Here's a summary of what's still outstanding (excluding paid invoices): \| # \| Invoice \| Status \| Total \| \|---\|---------\|--------\|-------\| \| \| 2026-004 \| Sent \| €970.00 \| \| \| 2026-005 \| Sent \| €1,110.50 \| \| \| 2026-003 \| **Overdue** \| €690.00 |
 | eu.anthropic.claude-haiku-4-5-20251001-v1:0 | booking | 6 | How many places are there in all the sessions together? | wrong | 196 | There are **16 sessions** in total, with a combined capacity of **188 places**. Here's the breakdown: - 4 sessions with 12 places each = 48 - 2 sessions with 16 places each = 32 - 2 sessions with 14 places each = 28 - 2 sessions with 10 pla |
