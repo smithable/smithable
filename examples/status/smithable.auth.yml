@@ -24,3 +24,9 @@ public:
     - Incident: { where: { status: [investigating, identified, monitoring, resolved] } }
     - IncidentUpdate
     - Maintenance
+
+# What other programs may reach with a key made on the team page (a monitoring tool posting
+# incidents, say). A key acts with its role: listing is not granting.
+api:
+  models: [Component, Incident]
+  actions: [resolve]
