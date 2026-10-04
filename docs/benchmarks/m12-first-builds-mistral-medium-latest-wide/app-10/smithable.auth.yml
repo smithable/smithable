@@ -9,6 +9,6 @@ roles:
   admin:
     description: Manages the museum collection.
   visitor:
-    description: Browses the collection.
+    description: Browses the museum collection.
 defaultRole: visitor
 admins: [johan@smithable.ai]

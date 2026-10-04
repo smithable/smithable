@@ -1,11 +1,27 @@
 smithableContent: 0.1
 models:
+  Customer:
+    label: Kund
+    pluralLabel: Kunder
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      phone:
+        label: Telefon
+      notes:
+        label: Anteckningar
+      accountManager:
+        label: Kontoansvarig
   Quote:
     label: Offert
     pluralLabel: Offerter
     fields:
       number:
         label: Offertnummer
+      customer:
+        label: Kund
       status:
         label: Status
         values:
@@ -19,14 +35,14 @@ models:
         label: Beskrivning
       validUntil:
         label: Giltig till
-      customer:
-        label: Kund
   Invoice:
     label: Faktura
     pluralLabel: Fakturor
     fields:
       number:
         label: Fakturanummer
+      customer:
+        label: Kund
       quote:
         label: Offert
       status:
@@ -42,32 +58,12 @@ models:
         label: Förfallodatum
       paidAt:
         label: Betald datum
-      customer:
-        label: Kund
-  Customer:
-    label: Kund
-    pluralLabel: Kunder
-    fields:
-      name:
-        label: Namn
-      email:
-        label: E-post
-      phone:
-        label: Telefon
-      segment:
-        label: Segment
-        values:
-          private: Privat
-          company: Företag
-          municipality: Kommun
-      notes:
-        label: Anteckningar
-      accountManager:
-        label: Ansvarig säljare
 pages:
+  kunder:
+    title: Kunder
   offerter:
     title: Offerter
   fakturor:
     title: Fakturor
-  kunder:
-    title: Kunder
+  anvandare:
+    title: Användare
