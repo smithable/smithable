@@ -44,6 +44,14 @@ if (typeof window !== "undefined" && window.parent !== window) {
   let watching = null;
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
+    studio = event.origin;
+    // Studio hears when the page has flashed (with the key it sent), so a change is flashed
+    // once however often the page reloads for it, and never lost to a reload without it.
+    const key = event.data.key ?? null;
+    const done = (elements) => {
+      elements.forEach(flash);
+      post({ type: "flashed", key });
+    };
     const selector = (event.data.concepts ?? [])
       .map((concept) =>
         concept.startsWith("text:")
@@ -54,12 +62,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!selector) return;
     watching?.disconnect();
     const found = document.querySelectorAll(selector);
-    if (found.length) return found.forEach(flash);
+    if (found.length) return done(found);
     const observer = new MutationObserver(() => {
       const now = document.querySelectorAll(selector);
       if (!now.length) return;
       observer.disconnect();
-      now.forEach(flash);
+      done(now);
     });
     watching = observer;
     // A renamed field may keep its element and change only its marker.
@@ -68,7 +76,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
       subtree: true,
       attributeFilter: ["data-sm-concept", "data-sm-text"],
     });
-    setTimeout(() => observer.disconnect(), 5000);
+    // A page that never shows it (the field is on another page) stops watching after a minute;
+    // a regeneration under load can take longer than a few seconds to reach the page.
+    setTimeout(() => observer.disconnect(), 60000);
   });
 
   window.addEventListener("message", (event) => {
