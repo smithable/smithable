@@ -1,0 +1,75 @@
+smithable: 0.1
+app:
+  name: Union Job Board
+  description: Browse local union job posts and submit applications.
+models:
+  Item:
+    fields:
+      title: string!
+      description: text!
+      employer: string!
+      place: string
+      available: bool = true
+      applications: Application[]
+  Application:
+    fields:
+      job: Item!
+      name: string!
+      email: email!
+      coverLetter: text
+      resume: url
+      status: submitted | reviewing | accepted | rejected | withdrawn
+pages:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description, employer, place]
+    filters: [available]
+    sortable: [title, createdAt]
+    favorites: true
+    contact: owner
+    actions: [closeJob]
+  applications:
+    crud: Application
+    filters: [job, status]
+    actions: [reviewApplication, acceptApplication, rejectApplication, withdrawApplication]
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+        where:
+          available: true
+actions:
+  closeJob:
+    on: Item
+    when:
+      available: true
+    set:
+      available: false
+  reviewApplication:
+    on: Application
+    when:
+      status: submitted
+    set:
+      status: reviewing
+  acceptApplication:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: accepted
+  rejectApplication:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: rejected
+  withdrawApplication:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: withdrawn

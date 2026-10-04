@@ -1,0 +1,9 @@
+{
+  "description": "A recipe collection for a family, with ingredients and shopping lists.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "What can visitors see without signing in?",
+    "How should shopping lists be created?"
+  ]
+}

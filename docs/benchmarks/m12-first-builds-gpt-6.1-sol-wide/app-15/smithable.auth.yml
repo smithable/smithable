@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Maintains the club's bird sighting records.
+  member:
+    description: Looks at the club's bird sightings.
+defaultRole: member
+admins: [johan@smithable.ai]

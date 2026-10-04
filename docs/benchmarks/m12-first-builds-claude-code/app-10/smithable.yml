@@ -1,0 +1,64 @@
+smithable: 0.1
+app:
+  name: Family Kitchen
+  description: The family's recipe collection, with each recipe's ingredients and shared shopping lists.
+  timezone: Europe/Mariehamn
+models:
+  Recipe:
+    fields:
+      name: string!
+      summary: text
+      category: main | side | soup | dessert | breakfast | baking | drink
+      servings: int = 4
+      minutes: int
+      instructions: text
+      source: url
+      favorite: bool
+      ingredients: Ingredient[]
+  Ingredient:
+    fields:
+      recipe: Recipe!
+      name: string!
+      quantity: string
+      note: string
+  ShoppingList:
+    fields:
+      name: string!
+      shopOn: date = TODAY()
+      status: open | done
+      items: ShoppingItem[]
+  ShoppingItem:
+    fields:
+      list: ShoppingList!
+      name: string!
+      quantity: string
+      forRecipe: Recipe
+      bought: bool
+pages:
+  recipes:
+    crud: Recipe
+    search: [name, summary, category]
+    filters: [category, favorite]
+  shoppingLists:
+    route: /shopping-lists
+    crud: ShoppingList
+    filters: [status]
+    actions: [finishShopping]
+  team:
+    users: manage
+actions:
+  markBought:
+    on: ShoppingItem
+    when:
+      bought: false
+    set:
+      bought: true
+    intent: Tick off an item once it is in the basket.
+  finishShopping:
+    on: ShoppingList
+    when:
+      status: open
+    set:
+      status: done
+    intent: Mark a shopping list as done after the trip to the shop.
+navigation: [recipes, shoppingLists, team]

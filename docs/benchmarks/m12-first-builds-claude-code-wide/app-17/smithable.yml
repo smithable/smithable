@@ -1,0 +1,73 @@
+smithable: 0.1
+app:
+  name: Salongen
+  description: Onlinebokning för en frisörsalong där kunderna själva bokar sin tid.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Service:
+    fields:
+      name: string!
+      summary: text
+      durationMinutes: int! = 45
+      price: money
+    access:
+      create: [admin]
+  Stylist:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+    access:
+      create: [admin]
+  Slot:
+    fields:
+      service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      capacity: int! = 1
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      slot: Slot! unique
+      phone: phone
+      note: text
+    capacity:
+      per: slot
+      max: slot.capacity
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [boka, mina-bokningar]
+      footer:
+      services:
+        records: Service
+      stylists:
+        records: Stylist
+      faq:
+      callToAction:
+        button: boka
+  boka:
+    calendar:
+      model: Slot
+      starts: startsAt
+  mina-bokningar:
+    crud: Booking
+  tider:
+    crud: Slot
+    access: [admin]
+  tjanster:
+    crud: Service
+    access: [admin]
+  frisorer:
+    crud: Stylist
+    access: [admin]
+  admin:
+    data: all

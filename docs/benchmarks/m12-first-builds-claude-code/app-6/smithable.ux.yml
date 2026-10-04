@@ -1,0 +1,21 @@
+smithableUx: 0.1
+pages:
+  jobs:
+    table:
+      columns: [title, employer, location, type, deadline, status]
+  applications:
+    table:
+      below:
+        email: phone
+tones:
+  Job.status:
+    open: success
+    closed: danger
+  Application.status:
+    reviewing: warning
+    accepted: success
+    rejected: danger
+theme:
+  preset: corporate
+  brand:
+    primary: "#1d4ed8"

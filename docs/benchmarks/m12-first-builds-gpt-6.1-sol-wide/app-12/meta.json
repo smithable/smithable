@@ -1,0 +1,9 @@
+{
+  "description": "Service status for our municipality's online services, for residents to check outages.",
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": [
+    "What can residents see without signing in?",
+    "Who manages service statuses and outage updates?"
+  ]
+}

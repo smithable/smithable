@@ -1,0 +1,12 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Recipe
+    pluralLabel: Recipes
+  ShoppingItem:
+    fields:
+      quantity:
+        label: Quantity and unit
+pages:
+  items:
+    title: Family Recipes

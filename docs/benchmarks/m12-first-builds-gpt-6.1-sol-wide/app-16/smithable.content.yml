@@ -1,0 +1,13 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Plot
+    pluralLabel: Plots
+    fields:
+      name:
+        label: Plot number
+      holder:
+        label: Plot holder
+pages:
+  items:
+    title: Plots

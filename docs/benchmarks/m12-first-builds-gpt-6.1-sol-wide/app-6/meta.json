@@ -1,0 +1,9 @@
+{
+  "description": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
+  "starter": "invoicing",
+  "wordStarter": "booking",
+  "questions": [
+    "How should households access their invoices?",
+    "What should each monthly invoice contain?"
+  ]
+}

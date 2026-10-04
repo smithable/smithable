@@ -1,0 +1,10 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  member:
+    description: Logs and looks at sightings.
+defaultRole: member
+admins: [johan@smithable.ai]

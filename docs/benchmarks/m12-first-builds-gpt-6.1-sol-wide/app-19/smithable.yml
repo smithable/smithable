@@ -1,0 +1,29 @@
+smithable: 0.1
+app:
+  name: Vår loppis
+  description: En loppissida där alla kan lägga upp saker till försäljning med bilder och pris.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      price: money!
+pages:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [price]
+    sortable: [price, createdAt]
+    contact: owner
+  home:
+    route: /welcome
+    landing:
+      hero:
+        shortcuts: [catalog]
+      footer:
+      latest:
+        records: Item

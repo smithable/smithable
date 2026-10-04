@@ -1,0 +1,36 @@
+smithable: 0.1
+app:
+  name: Museum Collection
+  description: Our local museum's collection online, so visitors can browse the objects and their stories.
+models:
+  Item:
+    fields:
+      name: string!
+      accessionNumber: string unique
+      summary: text
+      story: text
+      category: string
+      maker: string
+      origin: string
+      period: string
+      status: draft | published
+      link: url
+      addedOn: date! = TODAY()
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  items:
+    crud: Item
+    search: [name, summary, story, category, maker, origin]
+    filters: [status]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      items:
+        records: Item
+        where:
+          status: published

@@ -1,0 +1,8 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#875B70"
+    background: "#FAF5F2"
+    font: Inter

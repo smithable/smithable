@@ -1,0 +1,14 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, jobs]
+  read: [{ Job: { where: { status: open } } }]
+roles:
+  staff:
+    description: Union staff who post jobs and review applications.
+  member:
+    description: Union members who browse jobs and apply.
+defaultRole: member
+admins: [johan@smithable.ai]

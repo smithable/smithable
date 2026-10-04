@@ -1,0 +1,15 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Web Shop Status
+      subtitle: Check our services and follow the latest outage updates.
+      image:
+        src: images/hero.webp
+        alt: A florist arranging a bouquet in a small shop
+    services:
+      title: Service status
+    open:
+      title: Active incidents
+    recent:
+      title: Resolved incidents

@@ -1,0 +1,12 @@
+smithableUx: 0.1
+pages:
+  items:
+    table:
+      columns: [name, stockLevel, unit, reorderLevel, supplier]
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#98612D"
+    background: "#FAF6EF"
+    font: Inter

@@ -1,0 +1,11 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Union jobs, posted for our members
+      subtitle: Browse open positions from local employers and apply in a few minutes.
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    latest:
+      title: Open jobs
