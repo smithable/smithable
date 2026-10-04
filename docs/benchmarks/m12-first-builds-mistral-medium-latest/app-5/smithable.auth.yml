@@ -1,12 +1,5 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
-roles:
-  baker:
-    description: Manages ingredients and stock.
-  manager:
-    description: Manages suppliers and stock.
-defaultRole: baker
+defaultAccess: private
 admins: [johan@smithable.ai]

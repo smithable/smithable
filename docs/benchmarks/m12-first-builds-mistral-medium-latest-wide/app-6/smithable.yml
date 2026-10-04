@@ -1,29 +1,51 @@
 smithable: 0.1
 app:
-  name: App
+  name: CleanSweep Invoicing
+  description: A shared place for our cleaning company to manage monthly invoices to households.
+  currency: EUR
 models:
   Client:
     fields:
       name: string!
-      email: email
+      email: email!
       address: text
+      invoices: Invoice[]
+    access:
+      delete: [admin]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+    access:
+      delete: [admin]
   Invoice:
     fields:
       number: string! unique
       client: Client!
-      issuedOn: date!
-      dueOn: date!
-      status: draft | sent | paid
-      total: money
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date
+        formula: DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+    access:
+      delete: [admin]
 pages:
   clients:
     crud: Client
-    search: [name, email]
+  invoice-lines:
+    crud: InvoiceLine
   invoices:
     crud: Invoice
     actions: [markSent, markPaid]
-    filters: [status, client]
-    search: [number, client]
   team:
     users: manage
 actions:
@@ -37,7 +59,7 @@ actions:
   markPaid:
     on: Invoice
     when:
-      status: sent
+      status: [sent, overdue]
     set:
       status: paid
     intent: The client paid the invoice.

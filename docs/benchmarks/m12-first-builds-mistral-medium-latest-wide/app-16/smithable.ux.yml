@@ -1,14 +1,4 @@
 smithableUx: 0.1
-tones:
-  Plot.status:
-    available: success
-    reserved: warning
-  WaitingList.status:
-    assigned: success
-    withdrawn: danger
-  Fee.status:
-    paid: success
-    overdue: danger
 pages:
   plots:
     table:
@@ -19,3 +9,14 @@ pages:
   fees:
     table:
       sort: -year
+tones:
+  Plot.status:
+    available: success
+    reserved: warning
+  WaitingList.status:
+    assigned: success
+    withdrawn: danger
+  Fee.status:
+    paid: success
+    pending: warning
+    overdue: danger

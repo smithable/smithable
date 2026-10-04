@@ -8,28 +8,33 @@ models:
       name: string!
       description: text
       servings: int = 4
-      prepTime: string
-      cookTime: string
+      prepTime: int
+      cookTime: int
       instructions: text!
       category: breakfast | lunch | dinner | dessert | snack | drink
       difficulty: easy | medium | hard
       image: url
     access:
       delete: [admin]
+      write: [admin, member]
   Ingredient:
     fields:
       name: string!
       quantity: string
       unit: string
       recipe: Recipe!
+    access:
+      delete: [admin, owner]
+      write: [admin, owner]
   ShoppingList:
     fields:
       name: string!
       date: date! = TODAY()
       status: planned | inProgress | completed
-      recipe: Recipe
+      items: ShoppingItem[]
     access:
-      delete: [admin]
+      delete: [admin, owner]
+      write: [admin, owner]
   ShoppingItem:
     fields:
       name: string!
@@ -37,35 +42,40 @@ models:
       unit: string
       bought: bool = false
       shoppingList: ShoppingList!
+    access:
+      delete: [admin, owner]
+      write: [admin, owner]
 pages:
   recipes:
     crud: Recipe
-    search: [name, description, category, difficulty]
+    search: [name, description, category]
     filters: [category, difficulty]
+    sortable: [name, servings, prepTime, cookTime]
   shopping-lists:
     crud: ShoppingList
     filters: [status, date]
-    actions: [markInProgress, markCompleted]
+    search: [name]
+    actions: [markCompleted, markInProgress]
   home:
     route: /
     landing:
       hero:
       footer:
-      featuredRecipes:
+      recipes:
         records: Recipe
         where:
-          category: [dessert, breakfast]
+          category: [breakfast, lunch, dinner, dessert]
 actions:
+  markCompleted:
+    on: ShoppingList
+    when:
+      status: [planned, inProgress]
+    set:
+      status: completed
   markInProgress:
     on: ShoppingList
     when:
       status: planned
     set:
       status: inProgress
-  markCompleted:
-    on: ShoppingList
-    when:
-      status: inProgress
-    set:
-      status: completed
 navigation: [recipes, shopping-lists]
