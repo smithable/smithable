@@ -3308,12 +3308,13 @@ for (const [index, example] of examples.entries()) {
         "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real, and refuses to add up a computed field over more than 10,000 records; undo takes them back",
         () => {
           const ops = [
-            // Made with the table that refers to it (drizzle-kit's ALTER TABLE leaves the
-            // "values" in REFERENCES unquoted).
-            ["addModel", "Value", "name=string!", "amount=int"],
-            ["addModel", "Row", "label=string!", "amount=money", "group=Value"],
+            ["addModel", "Row", "label=string!", "amount=money"],
             ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
             ["addField", "Row", "size", "small | large"],
+            ["addModel", "Value", "name=string!", "amount=int"],
+            // A reference added to an existing table, to one named like an SQL word (values):
+            // its migration names the table quoted (quoteReferences).
+            ["addField", "Row", "group", "Value"],
             ["addDataPage"],
             ["setApi", "all", "--actions", "all", "--assistants", "true"],
           ];
