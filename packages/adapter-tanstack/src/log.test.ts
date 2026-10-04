@@ -46,7 +46,7 @@ test("one id for the request: continued, answered, and on every line it writes",
   const written = await lines(async () => {
     answer = await trace.traced(request, "10.0.0.1", async () => {
       trace.traceWho("user-1", "admin");
-      log.info("Looked up the customers", { found: 3 });
+      log.info("Looked up the customers", { found: 3, level: "debug", message: "x" });
       return new Response("ok");
     });
   });
