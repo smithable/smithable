@@ -24007,7 +24007,7 @@ import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
-import { auditLog, user } from "#/db/schema";
+import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { componentSchema, componentUi, deleteComponent, getComponent, updateComponent } from "#/generated/component";
@@ -24026,6 +24026,9 @@ const getHistory = createServerFn()
     const viewer = await currentViewer();
     if (viewer?.role !== "admin") return null;
     const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+      people.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
     return db
       .select()
       .from(auditLog)
@@ -24422,7 +24425,7 @@ import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/rea
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
-import { auditLog, user } from "#/db/schema";
+import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteIncident, getIncident, incidentSchema, incidentUi, updateIncident } from "#/generated/incident";
@@ -24446,6 +24449,9 @@ const getHistory = createServerFn()
     const viewer = await currentViewer();
     if (viewer?.role !== "admin") return null;
     const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+      people.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
     return db
       .select()
       .from(auditLog)
@@ -24827,7 +24833,7 @@ import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
-import { auditLog, user } from "#/db/schema";
+import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteMaintenance, getMaintenance, maintenanceSchema, maintenanceUi, updateMaintenance } from "#/generated/maintenance";
@@ -24845,6 +24851,9 @@ const getHistory = createServerFn()
     const viewer = await currentViewer();
     if (viewer?.role !== "admin") return null;
     const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+      people.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
     return db
       .select()
       .from(auditLog)
@@ -25347,7 +25356,7 @@ import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
-import { auditLog, user } from "#/db/schema";
+import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteIncidentUpdate, getIncidentUpdate, incidentUpdateSchema, incidentUpdateUi, updateIncidentUpdate } from "#/generated/incident-update";
@@ -25365,6 +25374,9 @@ const getHistory = createServerFn()
     const viewer = await currentViewer();
     if (viewer?.role !== "admin") return null;
     const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+      people.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
     return db
       .select()
       .from(auditLog)
@@ -26035,24 +26047,24 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/$id.ts": "72c4b9dd generated",
   "src/routes/api/v1/incidents/index.ts": "d4ea2510 generated",
   "src/routes/api/v1/openapi[.]json.ts": "e57fe423 generated",
-  "src/routes/components/$id.tsx": "d8b4b2ac generated",
+  "src/routes/components/$id.tsx": "cb63ee2c generated",
   "src/routes/components/index.tsx": "2cdf77e5 generated",
   "src/routes/components/new.tsx": "872a5c00 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "0bed1abf generated",
-  "src/routes/incidents/$id.tsx": "fbc99b00 generated",
+  "src/routes/incidents/$id.tsx": "18306b46 generated",
   "src/routes/incidents/index.tsx": "755c4798 generated",
   "src/routes/incidents/new.tsx": "8f10b8a0 generated",
   "src/routes/index.tsx": "b06924e8 generated",
-  "src/routes/maintenance/$id.tsx": "5e1e124c generated",
+  "src/routes/maintenance/$id.tsx": "2b6dd2de generated",
   "src/routes/maintenance/index.tsx": "28bdc3ff generated",
   "src/routes/maintenance/new.tsx": "67635ee5 generated",
   "src/routes/mcp.ts": "d2796a40 generated",
   "src/routes/overview/index.tsx": "a6c168d7 generated",
   "src/routes/sign-in.tsx": "c9a35e7c generated",
   "src/routes/team/index.tsx": "ac08d897 generated",
-  "src/routes/updates/$id.tsx": "e037dfa2 generated",
+  "src/routes/updates/$id.tsx": "1cd374e0 generated",
   "src/routes/updates/index.tsx": "73707478 generated",
   "src/routes/updates/new.tsx": "c4bd32a9 generated",
   "src/start.ts": "eb3c5e5b kit",
