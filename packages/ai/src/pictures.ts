@@ -53,26 +53,40 @@ const SYNONYMS: Record<string, string[]> = {
   used: ["second-hand"],
 };
 
-/** How well an entry's tags fit the words: a subject tag counts 1, a generic one a tenth. */
-function score(entry: PictureEntry, wordSet: Set<string>): number {
+/** What the picker reads: what the person wrote, and what the app's spec names. */
+interface Words {
+  /** The description and the app's name, with how often each word comes. */
+  said: Map<string, number>;
+  /** Model, field and choice names: they say less (every app with a Booking is not a yoga studio). */
+  spec: Set<string>;
+}
+
+/**
+ * How well an entry's tags fit. A subject tag the description says counts 1, and a little more
+ * when it says it twice ("a tool library … lend each other tools" is about tools); one only the
+ * spec names counts 0.3; a generic tag, or a `starter-…` tag (which names the starter a picture
+ * was made for, not a subject), a tenth.
+ */
+function score(entry: PictureEntry, w: Words): number {
   const meant = new Set<string>();
-  for (const w of wordSet) for (const t of SYNONYMS[w] ?? []) meant.add(t);
+  for (const word of w.said.keys()) for (const t of SYNONYMS[word] ?? []) meant.add(t);
   let total = 0;
   for (const tag of entry.tags) {
+    const starter = tag.startsWith("starter-");
     const t = tag.replace(/^starter-/, "");
-    const parts = t.split("-");
-    const hit =
-      wordSet.has(t) ||
-      meant.has(t) ||
-      parts.some((p) => p.length > 3 && wordSet.has(p)) ||
-      [...wordSet].some((w) => w.length > 3 && t.startsWith(w));
-    if (hit) total += GENERIC.has(t) ? 0.1 : 1;
+    const parts = [t, ...t.split("-").filter((p) => p.length > 3)];
+    const said = Math.max(0, ...parts.map((p) => w.said.get(p) ?? 0));
+    const inSpec = parts.some((p) => w.spec.has(p));
+    if (!said && !inSpec && !meant.has(t)) continue;
+    if (starter || GENERIC.has(t)) total += 0.1;
+    else if (said || meant.has(t)) total += 1 + 0.25 * Math.min(2, Math.max(0, said - 1));
+    else total += 0.3;
   }
   return total;
 }
 
-const byScore = (wordSet: Set<string>) => (a: PictureEntry, b: PictureEntry) => {
-  const d = score(b, wordSet) - score(a, wordSet);
+const byScore = (w: Words) => (a: PictureEntry, b: PictureEntry) => {
+  const d = score(b, w) - score(a, w);
   return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 };
 
@@ -85,16 +99,22 @@ export function pickPictures(
   options: { description: string; ir?: SpecIR; count?: number },
 ): PickedPictures {
   const count = options.count ?? 6;
-  const text = [
-    options.description,
-    options.ir?.app.name ?? "",
-    options.ir?.app.description ?? "",
-    ...(options.ir?.models.flatMap((m) => [
-      m.name,
-      ...m.fields.flatMap((f) => [f.name, ...(f.type.kind === "choice" ? f.type.values : [])]),
-    ]) ?? []),
-  ].join(" ");
-  const wordSet = new Set(words(text));
+  const said = new Map<string, number>();
+  for (const word of words(
+    [options.description, options.ir?.app.name ?? "", options.ir?.app.description ?? ""].join(" "),
+  ))
+    said.set(word, (said.get(word) ?? 0) + 1);
+  const spec = new Set(
+    words(
+      (
+        options.ir?.models.flatMap((m) => [
+          m.name,
+          ...m.fields.flatMap((f) => [f.name, ...(f.type.kind === "choice" ? f.type.values : [])]),
+        ]) ?? []
+      ).join(" "),
+    ),
+  );
+  const wordSet: Words = { said, spec };
   const heroes = index.filter((e) => e.kind === "hero").sort(byScore(wordSet));
   const best = heroes[0];
   const hero =
