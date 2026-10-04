@@ -330,6 +330,7 @@ const setApi: Operation<{
   actions?: string[];
   except?: string[];
   assistants?: boolean;
+  assistantsDelete?: boolean;
 }> = {
   name: "setApi",
   summary:
@@ -358,10 +359,15 @@ const setApi: Operation<{
         type: "boolean",
         description: "Offer the same to AI assistants as tools.",
       },
+      assistantsDelete: {
+        type: "boolean",
+        description:
+          "With assistants: they may also delete records, where the key's role may. Off unless said: an assistant can be talked into things by the text it reads.",
+      },
     },
   },
   positional: ["...models"],
-  describe: ({ models = [], actions = [], assistants }) => {
+  describe: ({ models = [], actions = [], assistants, assistantsDelete }) => {
     if (!models.length) return "Turn the API off";
     const what = models.includes("all")
       ? "every model, also ones added later,"
@@ -373,18 +379,18 @@ const setApi: Operation<{
         : "";
     const tools =
       assistants === true
-        ? ", also as tools for AI assistants"
+        ? `, also as tools for AI assistants${assistantsDelete ? ", which may delete too" : ""}`
         : assistants === false
           ? ", not to AI assistants"
           : "";
     return `Offer ${what} to other programs${run}${tools}`;
   },
   destructive: () => false,
-  apply({ auth }, { models = [], actions = [], except = [], assistants }, ir) {
+  apply({ auth }, { models = [], actions = [], except = [], assistants, assistantsDelete }, ir) {
     if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
     const path = ["api"];
     if (!models.length) {
-      if (actions.length || except.length || assistants)
+      if (actions.length || except.length || assistants || assistantsDelete)
         throw new OperationError(
           "Say which models the API offers (or all); without models it is turned off.",
         );
@@ -394,6 +400,10 @@ const setApi: Operation<{
     if (auth.get(["signIn"]) === "none")
       throw new OperationError(
         "This app has no sign-in, and a key is made by an administrator in the app.",
+      );
+    if (assistantsDelete && !assistants)
+      throw new OperationError(
+        "Deleting is something assistants are allowed: give --assistants true with it.",
       );
     const all = models.includes("all");
     if (all && models.length > 1)
@@ -410,7 +420,7 @@ const setApi: Operation<{
       models: all ? "all" : [...new Set(models)],
       ...(except.length ? { except: [...new Set(except)] } : {}),
       ...(actions.length ? { actions: allActions ? "all" : [...new Set(actions)] } : {}),
-      ...(assistants ? { assistants: true } : {}),
+      ...(assistants ? { assistants: assistantsDelete ? { delete: true } : true } : {}),
     };
     if (auth.has(path)) auth.set(path, value);
     else auth.add([], "api", value);
