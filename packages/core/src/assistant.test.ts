@@ -154,6 +154,15 @@ test("what each field can be matched by, what can be added up, and what a kind's
     "creditLimit",
     "accountManager",
   ]);
+  // The stored fields with the words people see, for reading a question by its words.
+  expect(customer?.fields).toEqual([
+    { name: "name", label: "Name" },
+    { name: "email", label: "Email" },
+    { name: "segment", label: "Segment" },
+    { name: "creditLimit", label: "Credit limit" },
+    { name: "notes", label: "Notes" },
+    { name: "accountManager", label: "Account manager" },
+  ]);
   expect(customer?.description).toContain("Customer: A company we sell to.");
   expect(customer?.description).toContain("- Orders are held above the credit limit.");
   expect(customer?.description).toContain("A record belongs to its accountManager.");
