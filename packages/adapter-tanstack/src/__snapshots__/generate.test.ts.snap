@@ -26114,7 +26114,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/Dashboard.tsx": "9da58466 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Keys.tsx": "49e0e6fd kit",
+  "src/kit/Keys.tsx": "e51c2d1d kit",
   "src/kit/Landing.tsx": "82daa4ba kit",
   "src/kit/Markdown.tsx": "8585b934 kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
