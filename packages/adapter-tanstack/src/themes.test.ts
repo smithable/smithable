@@ -1,6 +1,6 @@
-import { emptyUx } from "@smithable/core";
+import { BUILT_IN_THEMES, emptyUx } from "@smithable/core";
 import { expect, test } from "vitest";
-import { themeCss } from "./themes.js";
+import { FONT_PACKAGES, themeCss } from "./themes.js";
 
 test("an owner's background goes in under the brand color, in both modes", () => {
   const ux = {
@@ -20,4 +20,9 @@ test("an owner's background goes in under the brand color, in both modes", () =>
   // The brand's primary is the same with or without the background.
   const primary = (text: string) => /:root \{[^}]*--primary: ([^;]+);/.exec(text)?.[1];
   expect(primary(css)).toBe(primary(plain));
+});
+
+test("every built-in theme's font is one the app can host: it has a package", () => {
+  for (const theme of BUILT_IN_THEMES)
+    expect(FONT_PACKAGES[theme.font], `${theme.name}: ${theme.font}`).toBeTruthy();
 });
