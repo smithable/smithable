@@ -11,6 +11,9 @@ interface Trace {
   /** Who the request is for, once known: a user's id or a key's name. */
   who?: string;
   role?: string;
+  /** The client, for the audit log (docs/design/logging.md §3.3). */
+  address?: string;
+  browser?: string;
 }
 
 const store = new AsyncLocalStorage<Trace>();
@@ -20,6 +23,19 @@ const hex = (bytes: number) => randomBytes(bytes).toString("hex");
 /** The current request's trace id; undefined outside a request. */
 export function traceId(): string | undefined {
   return store.getStore()?.traceId;
+}
+
+/** Who the current request is for, as far as known: the app log names them. */
+export function traceWhoNow(): string | undefined {
+  return store.getStore()?.who;
+}
+
+/** The current request's id, who and the client; outside a request, nothing (the app's own work). */
+export function traceDetails(): Omit<Trace, "spanId"> | undefined {
+  const trace = store.getStore();
+  if (!trace) return undefined;
+  const { spanId: _, ...details } = trace;
+  return details;
 }
 
 /** Says who the request is for (the viewer, a key), for the access line. */
@@ -44,10 +60,42 @@ export async function traced(
   address: string | undefined,
   run: () => Promise<Response>,
 ): Promise<Response> {
-  const traceId = TRACEPARENT.exec(request.headers.get("traceparent") ?? "")?.[1] ?? hex(16);
-  const trace: Trace = { traceId, spanId: hex(8) };
+  const given = TRACEPARENT.exec(request.headers.get("traceparent") ?? "")?.[1];
+  // An all-zero id is invalid in the standard: a new one is made instead.
+  const traceId = given && !/^0+$/.test(given) ? given : hex(16);
+  const trace: Trace = {
+    traceId,
+    spanId: hex(8),
+    address,
+    browser: request.headers.get("user-agent") ?? undefined,
+  };
   const started = performance.now();
-  let response = await store.run(trace, run);
+  const line = (status: number, size?: number, error?: string) =>
+    process.stdout.write(
+      `${JSON.stringify({
+        time: new Date().toISOString(),
+        log: "access",
+        trace: traceId,
+        method: request.method,
+        path: loggedPath(new URL(request.url)),
+        status,
+        ms: Math.round(performance.now() - started),
+        who: trace.who ?? "visitor",
+        ...(trace.role ? { role: trace.role } : {}),
+        address,
+        browser: request.headers.get("user-agent") ?? undefined,
+        size,
+        error,
+      })}\n`,
+    );
+  let response: Response;
+  try {
+    response = await store.run(trace, run);
+  } catch (error) {
+    // A request that throws is in the log too, as the 500 it becomes, with the error's kind.
+    line(500, undefined, error instanceof Error ? error.name : typeof error);
+    throw error;
+  }
   const traceparent = `00-${traceId}-${trace.spanId}-01`;
   try {
     response.headers.set("traceparent", traceparent);
@@ -56,20 +104,6 @@ export async function traced(
     response = new Response(response.body, response);
     response.headers.set("traceparent", traceparent);
   }
-  const line = {
-    time: new Date().toISOString(),
-    log: "access",
-    trace: traceId,
-    method: request.method,
-    path: loggedPath(new URL(request.url)),
-    status: response.status,
-    ms: Math.round(performance.now() - started),
-    who: trace.who ?? "visitor",
-    ...(trace.role ? { role: trace.role } : {}),
-    address,
-    browser: request.headers.get("user-agent") ?? undefined,
-    size: Number(response.headers.get("content-length")) || undefined,
-  };
-  process.stdout.write(`${JSON.stringify(line)}\n`);
+  line(response.status, Number(response.headers.get("content-length")) || undefined);
   return response;
 }

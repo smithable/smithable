@@ -9,6 +9,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
+import { log } from "./log.server";
 
 export interface Mail {
   to: string | string[];
@@ -57,9 +58,9 @@ export async function sendMail(mail: Mail): Promise<void> {
     .slice(0, 40);
   writeFileSync(join(OUTBOX, `${stamp}-${id}.eml`), info.message as Buffer);
   if (process.env.NODE_ENV === "production")
-    console.warn(
-      `Mail to ${[mail.to].flat().join(", ")} was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others). It is kept in ${OUTBOX}.`,
-    );
+    log.warn("A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)", {
+      kept: OUTBOX,
+    });
 }
 
 /** The mails in the outbox, oldest first, as tests read them: the headers and the text body. */

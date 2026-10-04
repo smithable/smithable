@@ -63,8 +63,8 @@ test("without a capacity nothing of it is generated", () => {
   }).ir as SpecIR;
   const app = generateApp(plain, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const booking = app.find((f) => f.path === "src/generated/booking.server.ts")?.content ?? "";
-  // Deleting chosen rows has its own transaction (actions.md §9); the capacity's is not there.
-  expect(booking).not.toContain("row = db.transaction");
+  // Every write has its transaction (for its audit line); the capacity's count is not in it.
+  expect(booking).not.toContain("tx.select({ n: sessions.capacity })");
   expect(booking).not.toContain('Conflict("full")');
 });
 
