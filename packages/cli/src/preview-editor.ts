@@ -62,7 +62,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
       now.forEach(flash);
     });
     watching = observer;
-    observer.observe(document.body, { childList: true, subtree: true });
+    // A renamed field may keep its element and change only its marker.
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributeFilter: ["data-sm-concept", "data-sm-text"],
+    });
     setTimeout(() => observer.disconnect(), 5000);
   });
 
