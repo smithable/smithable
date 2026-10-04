@@ -853,6 +853,18 @@ async function statusFlow(base) {
     });
     if (keyless.status !== 401)
       throw new Error(`a visitor could add an incident (${keyless.status})`);
+    // Writes without a key are held to a visitor's limit, 10 a minute per address.
+    let held = 0;
+    for (let n = 2; n <= 11 && !held; n++) {
+      const tried = await fetch(`${base}/api/v1/incidents`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      if (tried.status === 429) held = n;
+    }
+    if (held !== 11)
+      throw new Error(`the eleventh keyless write was not held (${held || "never"})`);
     const wrong = await fetch(`${base}/api/v1/incidents`, {
       headers: { authorization: "Bearer smk_not_a_key" },
     });
@@ -956,7 +968,7 @@ async function statusFlow(base) {
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
     if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
-      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); without a key a program or assistant reads only what anyone may and is refused the rest; revoked, it stops",
+      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); without a key a program or assistant reads only what anyone may, is refused the rest and held to ten writes a minute; revoked, it stops",
     );
   } catch (error) {
     console.log(

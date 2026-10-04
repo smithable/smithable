@@ -5,6 +5,7 @@
 // so the assistant can read it.
 import type { Viewer } from "./access";
 import { BadInput, bodyOf, callerOf, problem, refusalOf } from "./api.server";
+import { writeAllowed } from "./limit";
 
 export interface Tool {
   name: string;
@@ -73,6 +74,8 @@ export async function handleMcp(
         try {
           if (!tools.some((t) => t.name === name))
             throw new BadInput(`There is no tool "${name}".`);
+          // Adding without a key is held to a visitor's limit, as through the API.
+          if (!key && name.startsWith("add_")) writeAllowed(null, request.headers);
           const result = await server.call(key, name, args);
           return reply({
             content: [{ type: "text", text: JSON.stringify(result ?? { done: true }) }],
