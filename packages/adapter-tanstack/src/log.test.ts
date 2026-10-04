@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { afterEach, expect, test, vi } from "vitest";
 
 // access.ts (the refusal's Conflict) imports the router for its redirect, which tests do not need.
