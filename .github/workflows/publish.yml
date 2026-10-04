@@ -27,10 +27,14 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # The inputs reach the shell as variables, never pasted into a command.
+    env:
+      VERSION: ${{ inputs.version }}
+      DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup
-      - run: node scripts/set-version.mjs "${{ inputs.version }}"
+      - run: node scripts/set-version.mjs "$VERSION"
       - run: pnpm build
       - run: pnpm test
       # Staged publishing needs npm 11.15 or later.
@@ -39,9 +43,9 @@ jobs:
       - run: pnpm -r --filter "./packages/*" pack --pack-destination "$RUNNER_TEMP/packed"
       - name: Stage each package (or a dry run)
         run: |
-          echo "## Version ${{ inputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Version $VERSION" >> "$GITHUB_STEP_SUMMARY"
           for tarball in "$RUNNER_TEMP"/packed/*.tgz; do
-            if [ "${{ inputs.dry_run }}" = true ]; then
+            if [ "$DRY_RUN" = true ]; then
               npm publish "$tarball" --access public --dry-run
               echo "- dry run: $(basename "$tarball")" >> "$GITHUB_STEP_SUMMARY"
             else
@@ -50,4 +54,4 @@ jobs:
               echo "- staged $(basename "$tarball"): $(echo "$out" | tail -n 1)" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
-          [ "${{ inputs.dry_run }}" = true ] || echo "Approve each staged version on npmjs.com, or with npm stage approve <id>." >> "$GITHUB_STEP_SUMMARY"
+          [ "$DRY_RUN" = true ] || echo "Approve each staged version on npmjs.com, or with npm stage approve <id>." >> "$GITHUB_STEP_SUMMARY"
