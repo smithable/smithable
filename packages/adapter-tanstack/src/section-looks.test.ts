@@ -106,4 +106,28 @@ test("a hero's shortcut to a page behind sign-in shows only to those who may ope
   expect(home).toContain('{ to: "/open", label: "Open"');
   expect(home).toContain('...(allows(pageAccess["history"], viewer) ? [{ to: "/history"');
   expect(home).toMatch(/import \{ [^}]*\ballows\b[^}]*\} from "#\/kit\/access";/);
+
+test("robots.txt lets search engines read the public pages and nothing else", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  home:\n    route: /\n    landing:\n      hero:\n  items: { crud: Item }\n  orders: { crud: Item, route: /orders }\n",
+  }).ir as SpecIR;
+  const robots = (publicPart: string) => {
+    const auth = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n${publicPart}`,
+      },
+      ir,
+    ).auth as AuthIR;
+    return (
+      generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
+        (f) => f.path === "src/routes/robots[.]txt.ts",
+      )?.content ?? ""
+    );
+  };
+  expect(robots("public: { pages: [home, items], read: [Item] }\n")).toContain(
+    'const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nDisallow: /\\n";',
+  );
+  expect(robots("")).toContain('const ROBOTS = "User-agent: *\\nDisallow: /\\n";');
 });

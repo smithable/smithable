@@ -242,3 +242,26 @@ export const Route = createFileRoute("/")({
 });
 `;
 }
+
+/**
+ * /robots.txt from `public`: search engines may read the public pages (and the records under
+ * them), nothing else; with nothing public, nothing at all.
+ */
+export function robotsRoute(ir: SpecIR, auth: AuthIR): string {
+  const allowed = ir.pages
+    .filter((p) => auth.public.pages.includes(p.id))
+    .map((p) => `Allow: ${p.route === "/" ? "/$" : p.route}`);
+  const text = ["User-agent: *", ...allowed, "Disallow: /", ""].join("\n");
+  return `${HEADER}import { createFileRoute } from "@tanstack/react-router";
+
+const ROBOTS = ${JSON.stringify(text)};
+
+export const Route = createFileRoute("/robots.txt")({
+  server: {
+    handlers: {
+      GET: () => new Response(ROBOTS, { headers: { "Content-Type": "text/plain; charset=utf-8" } }),
+    },
+  },
+});
+`;
+}
