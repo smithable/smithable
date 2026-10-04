@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  member:
+    description: Records and views bird sightings.
+defaultRole: member
+public:
+  pages: [home]
+  read: [Sighting]
+admins: [johan@smithable.ai]

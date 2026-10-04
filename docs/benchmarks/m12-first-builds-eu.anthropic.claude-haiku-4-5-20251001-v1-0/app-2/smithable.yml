@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Sales CRM
+  description: Lightweight CRM for a small B2B sales team.
+  currency: EUR
+  timezone: Europe/Mariehamn
+models:
+  Company:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      segment: smb | enterprise | government
+      notes: text
+      accountManager: User
+  Contact:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      title: string
+      company: Company!
+      notes: text
+  Deal:
+    fields:
+      name: string!
+      company: Company!
+      contact: Contact
+      amount: money!
+      status: prospect | qualified | proposal | negotiation | won | lost
+      expectedCloseDate: date
+      closedAt: datetime
+      notes: text
+  FollowUp:
+    fields:
+      type: call | email | meeting | task
+      company: Company!
+      contact: Contact
+      deal: Deal
+      scheduledFor: datetime!
+      completedAt: datetime
+      notes: text
+pages:
+  companies:
+    crud: Company
+    search: [name, email]
+  contacts:
+    crud: Contact
+    search: [name, email]
+  deals:
+    crud: Deal
+    search: [name, company]
+    filters: [status, company]
+  followups:
+    crud: FollowUp
+  team:
+    users: manage
+navigation: [companies, contacts, deals, followups, team]

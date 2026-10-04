@@ -1,0 +1,45 @@
+smithable: 0.1
+app:
+  name: Piano Lessons
+  description: Manage pupils, their weekly lesson times and what each one practises.
+models:
+  Pupil:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+  Piece:
+    fields:
+      pupil: Pupil!
+      title: string!
+      composer: string
+      status: learning | polishing | complete
+      notes: text
+  LessonSlot:
+    fields:
+      pupil: Pupil!
+      dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      startTime: string!
+      durationMinutes: int! = 30
+      active: bool! = true
+pages:
+  pupils:
+    crud: Pupil
+    search: [name, email]
+  pieces:
+    crud: Piece
+    search: [title, composer]
+    filters: [pupil, status]
+    actions: [markComplete]
+  lesson-slots:
+    crud: LessonSlot
+    filters: [pupil, dayOfWeek, active]
+actions:
+  markComplete:
+    on: Piece
+    when:
+      status: [learning, polishing]
+    set:
+      status: complete
+    intent: Mark a piece as complete.

@@ -1,0 +1,7 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden

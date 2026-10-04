@@ -1,0 +1,9 @@
+{
+  "description": "A status page for our API, with incidents and planned maintenance.",
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": [
+    "Who can view the status page?",
+    "What are the main API components you want to track?"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.",
+  "starter": "marketplace",
+  "wordStarter": "records",
+  "questions": [
+    "Vem kan lägga upp saker på loppiset?",
+    "Kan besökare se sakerna utan att logga in?"
+  ],
+  "lang": "sv"
+}

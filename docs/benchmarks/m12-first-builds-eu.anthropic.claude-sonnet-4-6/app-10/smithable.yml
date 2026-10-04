@@ -1,0 +1,68 @@
+smithable: 0.1
+app:
+  name: Family Recipes
+  description: A recipe collection for the whole family, with ingredients and shopping lists.
+models:
+  Recipe:
+    fields:
+      name: string!
+      description: text
+      category: breakfast | lunch | dinner | dessert | snack | drink
+      servings: int = 4
+      prepTime: int
+      cookTime: int
+      imageUrl: url
+      isFavorite: bool
+  Ingredient:
+    fields:
+      recipe: Recipe!
+      name: string!
+      quantity: string
+      unit: string
+  ShoppingList:
+    fields:
+      name: string!
+      date: date! = TODAY()
+      notes: text
+  ShoppingItem:
+    fields:
+      shoppingList: ShoppingList!
+      name: string!
+      quantity: string
+      unit: string
+      checked: bool
+pages:
+  recipes:
+    route: /
+    crud: Recipe
+    search: [name, description]
+    filters: [category, isFavorite]
+    sortable: [name, category, prepTime, cookTime]
+    favorites: true
+  ingredients:
+    crud: Ingredient
+  shopping-lists:
+    crud: ShoppingList
+    search: [name]
+  shopping-items:
+    crud: ShoppingItem
+    filters: [shoppingList, checked]
+    actions: [checkItem, uncheckItem]
+  team:
+    users: manage
+actions:
+  checkItem:
+    on: ShoppingItem
+    when:
+      checked: false
+    set:
+      checked: true
+    intent: Mark a shopping item as picked up.
+  uncheckItem:
+    on: ShoppingItem
+    when:
+      checked: true
+    set:
+      checked: false
+    intent: Mark a shopping item as not yet picked up.
+navigation: [recipes, ingredients, shopping-lists, shopping-items, team]

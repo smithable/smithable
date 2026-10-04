@@ -1,0 +1,42 @@
+smithable: 0.1
+app:
+  name: My Clients
+  description: "Track my clients as a freelance translator: who they are, what I quoted and what they paid."
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      quotes: Quote[]
+  Quote:
+    fields:
+      client: Client!
+      description: string!
+      quotedAmount: money!
+      paidAmount: money! = 0
+      status: pending | accepted | paid
+      quotedOn: date! = TODAY()
+      paidOn: date
+pages:
+  clients:
+    crud: Client
+  quotes:
+    crud: Quote
+    actions: [markAccepted, markPaid]
+actions:
+  markAccepted:
+    on: Quote
+    when:
+      status: pending
+    set:
+      status: accepted
+    intent: The client accepted the quote.
+  markPaid:
+    on: Quote
+    when:
+      status: [pending, accepted]
+    set:
+      status: paid
+      paidOn: TODAY()
+    intent: The client paid the quote.

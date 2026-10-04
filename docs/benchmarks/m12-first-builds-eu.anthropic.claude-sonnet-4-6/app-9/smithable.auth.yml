@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages the help desk, team members and all tickets.
+  agent:
+    description: Handles and resolves support tickets.
+defaultRole: agent
+admins: [johan@smithable.ai]

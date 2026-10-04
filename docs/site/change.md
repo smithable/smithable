@@ -58,7 +58,7 @@ Generated 107 files (1 changed, 0 removed).
 Set the theme: primary #0f766e. Undo with: smithable undo
 ```
 
-The color is adjusted until text on it is readable, and the theme's other colors follow it. `--preset`, `--font`, `--background` and `--density` change the rest of the look; nothing else in the app changes.
+The color is adjusted until text on it is readable, and the theme's other colors follow it. `--preset`, `--font`, `--background`, `--density` and `--motion` (none, subtle or lively; a visitor's "reduce motion" setting always wins) change the rest of the look; nothing else in the app changes.
 
 ## 5. Undo
 

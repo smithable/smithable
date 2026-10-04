@@ -1,0 +1,29 @@
+smithable: 0.1
+app:
+  name: Swap Shelf
+  description: A swap shelf for colleagues to offer things they no longer need and claim items from others.
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      category: furniture | electronics | books | clothing | sports | kitchen | other
+      condition: likeNew | good | worn
+      available: bool = true
+pages:
+  items:
+    crud: Item
+    search: [title, description]
+    filters: [category, condition, available]
+    sortable: [createdAt]
+    favorites: true
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+  team:
+    users: manage
+navigation: [items, myItems, saved]
