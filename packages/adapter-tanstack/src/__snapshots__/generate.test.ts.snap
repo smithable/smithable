@@ -459,6 +459,7 @@ import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, bookings, classTypes, instructors, messages, posts, sessions, user } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { classTypeData } from "./class-type.server";
 import { instructorData } from "./instructor.server";
 import { sessionData } from "./session.server";
@@ -1048,6 +1049,32 @@ describe("the audit log", () => {
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+    expect(() => forgetInLog(signedIn("member"), { model: "ClassType", record: made.id })).toThrow(AccessDenied);
+    forgetInLog(signedIn("admin"), { model: "ClassType", record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, "ClassType"), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: "ClassType", record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });
 "
@@ -6478,7 +6505,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "a29fd775 generated",
   "src/db/seed.ts": "d49bc7e4 generated",
-  "src/generated/access.test.ts": "63f0d3b2 generated",
+  "src/generated/access.test.ts": "6a8773fd generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/booking.server.ts": "2cab4562 generated",
   "src/generated/booking.ts": "9ec9d400 generated",
@@ -6519,7 +6546,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "d6c9a870 kit",
+  "src/kit/audit.server.ts": "babd39ec kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -6952,6 +6979,7 @@ import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, customers, orders, user } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { customerData } from "./customer.server";
 import { orderData } from "./order.server";
 
@@ -7182,6 +7210,32 @@ describe("the audit log", () => {
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+    expect(() => forgetInLog(signedIn("sales"), { model: "Customer", record: made.id })).toThrow(AccessDenied);
+    forgetInLog(signedIn("admin"), { model: "Customer", record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, "Customer"), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: "Customer", record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });
 "
@@ -9687,7 +9741,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "97ca0658 generated",
   "src/db/seed.ts": "39cef010 generated",
-  "src/generated/access.test.ts": "4af2bcd6 generated",
+  "src/generated/access.test.ts": "b6fb3db7 generated",
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -9713,7 +9767,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "d6c9a870 kit",
+  "src/kit/audit.server.ts": "babd39ec kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -10160,6 +10214,7 @@ import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, businessProfiles, clients, invoiceLines, invoices, user } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { businessProfileData } from "./business-profile.server";
 import { clientData } from "./client.server";
 import { invoiceData } from "./invoice.server";
@@ -10674,6 +10729,32 @@ describe("the audit log", () => {
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+    expect(() => forgetInLog(signedIn("member"), { model: "BusinessProfile", record: made.id })).toThrow(AccessDenied);
+    forgetInLog(signedIn("admin"), { model: "BusinessProfile", record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, "BusinessProfile"), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: "BusinessProfile", record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });
 "
@@ -13879,7 +13960,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "dc3d0d42 generated",
   "src/db/seed.ts": "d388638c generated",
-  "src/generated/access.test.ts": "4747d4da generated",
+  "src/generated/access.test.ts": "cad63469 generated",
   "src/generated/actions/mark-paid.server.ts": "d8bfd9f2 generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
   "src/generated/actions/mark-sent.server.ts": "81f2ba0a generated",
@@ -13914,7 +13995,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "d6c9a870 kit",
+  "src/kit/audit.server.ts": "babd39ec kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -14277,6 +14358,7 @@ import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, items, user } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { itemData } from "./item.server";
 
 let counter = 0;
@@ -14423,6 +14505,32 @@ describe("the audit log", () => {
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+    expect(() => forgetInLog(signedIn("member"), { model: "Item", record: made.id })).toThrow(AccessDenied);
+    forgetInLog(signedIn("admin"), { model: "Item", record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, "Item"), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: "Item", record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });
 "
@@ -16442,7 +16550,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "0d802f59 generated",
   "src/db/seed.ts": "088a3106 generated",
-  "src/generated/access.test.ts": "e89a39b5 generated",
+  "src/generated/access.test.ts": "02887fc2 generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
@@ -16465,7 +16573,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "d6c9a870 kit",
+  "src/kit/audit.server.ts": "babd39ec kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -16809,6 +16917,7 @@ import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, items, user } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { itemData } from "./item.server";
 
 let counter = 0;
@@ -16955,6 +17064,32 @@ describe("the audit log", () => {
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+    expect(() => forgetInLog(signedIn("member"), { model: "Item", record: made.id })).toThrow(AccessDenied);
+    forgetInLog(signedIn("admin"), { model: "Item", record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, "Item"), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: "Item", record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });
 "
@@ -18289,7 +18424,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3f96f60a generated",
   "src/db/seed.ts": "fee52e69 generated",
-  "src/generated/access.test.ts": "e36e59a9 generated",
+  "src/generated/access.test.ts": "f9942b56 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
@@ -18309,7 +18444,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "d6c9a870 kit",
+  "src/kit/audit.server.ts": "babd39ec kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -18765,6 +18900,7 @@ import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, components, incidentUpdates, incidents, maintenances, user } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { componentData } from "./component.server";
 import { incidentData } from "./incident.server";
 import { incidentUpdateData } from "./incident-update.server";
@@ -19322,6 +19458,32 @@ describe("the audit log", () => {
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+    expect(() => forgetInLog(signedIn("staff"), { model: "Component", record: made.id })).toThrow(AccessDenied);
+    forgetInLog(signedIn("admin"), { model: "Component", record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, "Component"), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: "Component", record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });
 "
@@ -23426,7 +23588,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3e28a99c generated",
   "src/db/seed.ts": "fa375893 generated",
-  "src/generated/access.test.ts": "8ecd1812 generated",
+  "src/generated/access.test.ts": "88c1eb0b generated",
   "src/generated/actions/identified.server.ts": "f72475bb generated",
   "src/generated/actions/identified.ts": "4baad691 generated",
   "src/generated/actions/monitoring.server.ts": "d6583731 generated",
@@ -23465,7 +23627,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "d6c9a870 kit",
+  "src/kit/audit.server.ts": "babd39ec kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
