@@ -326,7 +326,7 @@ guidance: >
   Tables should be compact; this is a back-office tool used all day.
 plugins: ["@acme/smithable-newsletter", ./smithable/plugins/loyalty]
 ai:
-  policy: eu-only          # local-only | eu-only | best-available | custom
+  policy: eu-only          # local-only | eu-only | best-available (the default) | custom
 ```
 
 It is checked against a JSON Schema like the other companions. It has structured fields where possible and one free-text `guidance` field for implementation preferences. It never contains functional requirements. As built (M15), `packages` names libraries for custom code at exact versions (`packages: { chart.js: 4.4.1 }`, or the `setPackage` operation, so hosted projects and the AI coder can add one without a terminal); the generator adds them to `package.json`, and the stack profile's own packages are refused.
@@ -536,8 +536,8 @@ AI never edits generated or kit files.
 |---|---|---|
 | 0 | Generators: explicit operations (UI controls, CLI) and a phrase grammar over the request (`matchRequest` in `@smithable/index`: a request worded like an everyday change becomes operations when every name in it resolves to exactly one concept, else it goes on to a model) | The "required" toggle; "Customers should have a phone number" |
 | 1 | Local model, where available (CLI, self-hosted; possibly in-browser later) → operations | "Customers need a mobile number" |
-| 2 | **Smithable model**: a small open model hosted in the EU → operations, pattern and theme choices | The same, for hosted users; "make it feel friendlier" |
-| 3 | Frontier model (via EU providers where possible, or the user's own API or Claude Code) | Custom action logic, new custom components |
+| 2 | **Smithable model**: a small, cheap model (EU-hosted in the beta) → operations, pattern and theme choices | The same, for hosted users; "make it feel friendlier" |
+| 3 | Frontier model (the service's, the user's own API or Claude Code; via an EU region where the policy asks for it) | Custom action logic, new custom components |
 
 For hosted users, who have no local model, tier 2 is the main AI tier. It starts as an off-the-shelf open model on an EU provider's hosted endpoint (for example Mistral, Scaleway or OVH), and is fine-tuned later once curated and consented data exists. Because every tier speaks the same operation schemas, swapping the model behind a tier never changes the product.
 
@@ -566,7 +566,8 @@ Models are poor judges of their own confidence, so Smithable does not rely on se
 ### 9.5 Providers and policy
 
 - Provider interface with implementations for: **OpenAI-compatible** (covers Ollama, llama.cpp, vLLM, Mistral and most EU hosts), **Anthropic API**, and **Claude Code CLI** (spawned headless, confined to the project directory; Smithable never reads or copies its credentials).
-- **Policy** (`local-only`, `eu-only`, `best-available`, `custom` allowlist) is enforced centrally in the provider layer, not by each caller. An organization can pin the policy.
+- **Policy** (`local-only`, `eu-only`, `best-available`, `custom` allowlist) is enforced centrally in the provider layer, not by each caller. An organization can pin the policy. **Where a model may run is a setting** (decided 2026-10-04): with nothing said the policy is `best-available`, the best model configured wherever it runs; `eu-only` keeps a project to local and EU-hosted models and `local-only` to the machine. Until that decision `eu-only` was the default. smithable.eu, when it exists, is the edition where `eu-only` and EU-only infrastructure are always on.
+- **Integrations follow the same line.** What Smithable builds in and chooses the provider for (mail, later text messages) uses an EU provider wherever a good one exists, and on smithable.eu always. A connection to a service someone names (their issue tracker, their payment provider) is that service, wherever it runs: nobody wants an EU stand-in for the tool they already use.
 - Local models: use an existing small open model with optional download; never bundle weights. The Smithable model (tier 2) is later fine-tuned on (request, semantic context, accepted operation) triples from curated, synthetic or consented data, and may be published as open weights for local use.
 
 - A proposal is dry-run with `applyOperation`, repaired once with the error, then escalated. One that loses no data is applied at once (Undo takes it back); one that deletes data waits for Apply. Every AI commit carries a `Smithable-AI` trailer (tier, model, tokens, cost). Details: [as-built.md](as-built.md#m12-smithables-own-ai).
@@ -753,7 +754,7 @@ The OSS repo contains only code eligible for publication. The hosted service goe
 
 **Hosting of the beta (M15):** AWS Stockholm (`eu-north-1`), described with OpenTofu in `smithable-cloud/infra`, built only from pieces every EU provider has (a VM, S3-compatible storage, DNS), so moving to Hetzner, Scaleway or OVH is a migration, not a rewrite. The data stays in the EU; AWS being a US company (the CLOUD Act) is the known trade-off, revisited if customers ask for sovereignty. One Graviton host runs the service and published apps as containers behind Caddy (TLS), with S3 for projects and backups, within $50 a month.
 
-**Customer data stays in the EU:** projects, their databases, published apps, backups and the service's own database are stored and processed only in `eu-north-1`, and AI calls go to an EU-hosted model. The only thing outside is Route 53's health check, whose alarm lives in `us-east-1` and sees nothing but whether `/health` answers.
+**Customer data is stored in the EU:** projects, their databases, published apps, backups and the service's own database are stored and processed only in `eu-north-1`. AI calls go to the models the service has configured, which its list of sub-processors names (in the beta so far, an EU-hosted model); a project or an organization that needs it sets the `eu-only` policy, and then its AI calls stay in the EU as well (§9.5). The only thing outside is Route 53's health check, whose alarm lives in `us-east-1` and sees nothing but whether `/health` answers.
 
 **The AWS-specific ops layer** is kept thin and in `smithable-cloud`: OpenTofu in `infra/`, releases and secrets through SSM, alarms through CloudWatch and SNS, the external health check in Route 53, and S3 lifecycle rules. The service itself needs only Docker, a filesystem and an S3-compatible bucket, which is what makes a move to another EU provider a migration of this layer alone.
 
