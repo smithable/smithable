@@ -46,6 +46,10 @@ const SHOTS = {
     ["home", "list", "visitor"],
     ["incidents", 1, "admin"],
   ],
+  api: [
+    ["admin", "tasks", "admin"],
+    ["team", "list", "admin", true],
+  ],
 };
 const starters = positionals.length ? positionals : Object.keys(SHOTS);
 const port = Number(opts.port);

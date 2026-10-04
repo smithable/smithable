@@ -79,3 +79,17 @@ smithable new my-status --starter status
 ```
 
 See it live: coming soon.
+
+## Tasks and notes for an assistant
+
+![The tasks on the data page of the api starter, Team Tasks](starters/api-1.webp)
+![Keys on the team page, with a call to copy](starters/api-2.webp)
+
+An app for programs and AI assistants, with no pages of its own: projects, tasks with a status, a due date and who they are for, and notes, all reached through the API and the tools for assistants at `/mcp`. Its only screens are the team page, where an administrator makes keys, and a data page for the team. A key with the `assistant` role reads everything, adds and changes tasks and notes, and deletes nothing; complete and reopen are standard actions. Nothing is public: an assistant's memory is private.
+
+```sh
+smithable new my-tasks --starter api
+```
+
+See it live: coming soon.
+
