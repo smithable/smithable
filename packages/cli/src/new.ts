@@ -31,7 +31,7 @@ import {
 } from "./from-page.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { addLibraryPictures, dropMissingPictures, writePictures } from "./pictures.js";
+import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
 
 /**
@@ -216,17 +216,14 @@ export async function create(
       mkdirSync(dirname(join(dir, path)), { recursive: true });
       writeFileSync(join(dir, path), text);
     }
-  // The page's pictures as sample pictures (never linked to the site); the library's where its
-  // list says (samples/<n>.webp, and hero.webp, which the texts name as images/hero.webp).
-  writePictures(
+  // The starter's own pictures (a drafted app's texts may still use them), then the page's as
+  // sample pictures (never linked to the site) or the library's where its list says
+  // (samples/<n>.webp, and hero.webp): the hero picked for this app replaces the starter's.
+  placePictures(
     dir,
+    STARTER_ASSETS[name] ?? {},
     pictures.map((p) => (fromPage ? { ...p, file: `samples/${p.file}` } : p)),
   );
-  // Its pictures, which a drafted app's texts may still use.
-  for (const [file, data] of Object.entries(STARTER_ASSETS[name] ?? {})) {
-    mkdirSync(dirname(join(dir, file)), { recursive: true });
-    writeFileSync(join(dir, file), Buffer.from(data, "base64"));
-  }
   if (options.describe) dropMissingPictures(dir, io);
   const code = await generate(dir, io, { tools: true, force: false });
   if (code !== 0) return code;
