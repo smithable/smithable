@@ -16,7 +16,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
     "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}" +
     "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
-    "[data-sm-text][contenteditable=true]{outline:2px solid #e8590c!important;outline-offset:2px;background:#fff4e6}";
+    "[data-sm-text][contenteditable=true]{outline:2px solid #e8590c!important;outline-offset:2px;background:#fff4e6}" +
+    // What the last change touched, outlined briefly and fading (motion.md 9a); still, without motion.
+    "@keyframes sm-flash{from{outline-color:#e8590c}to{outline-color:transparent}}" +
+    "[data-sm-flash]{outline:3px solid #e8590c!important;outline-offset:3px;animation:sm-flash 1.6s ease-out forwards}" +
+    "@media (prefers-reduced-motion:reduce){[data-sm-flash]{animation:none}}";
   document.head.append(style);
   // Studio's origin, learned from its first message; until then only "ready" (which carries
   // nothing) goes out, to any origin.
@@ -28,6 +32,20 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
   const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
+
+  // What a change touched: its field, table or form, or text, flashed once.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
+    const found = [];
+    for (const concept of event.data.concepts ?? []) {
+      const selector = concept.startsWith("text:")
+        ? '[data-sm-text="' + CSS.escape(concept.slice(5)) + '"]'
+        : '[data-sm-concept="' + CSS.escape(concept) + '"]';
+      document.querySelectorAll(selector).forEach((element) => found.push(element));
+    }
+    for (const element of found) element.setAttribute("data-sm-flash", "");
+    setTimeout(() => found.forEach((element) => element.removeAttribute("data-sm-flash")), 1600);
+  });
 
   window.addEventListener("message", (event) => {
     // Only the page this preview is in: Studio.
