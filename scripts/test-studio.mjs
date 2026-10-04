@@ -305,42 +305,51 @@ try {
     const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     if (!ux.includes("shipped: success") || !ux.includes("truck")) throw new Error(ux);
   });
-  await step("look and feel: a theme and density are chosen without touching code", async () => {
-    const theme = page.getByRole("region", { name: "Font and density" });
-    await theme.getByRole("button", { name: "Compact" }).click();
-    await theme.getByRole("button", { name: "Compact", pressed: true }).waitFor({ timeout: 60000 });
-    const themes = page.getByRole("list", { name: "Themes" });
-    // The project's own theme has its card, named with its file.
-    await themes
-      .getByRole("button", { name: /Forest/ })
-      .getByText("themes/forest.yml", { exact: false })
-      .waitFor();
-    // The theme swaps a font package, so the app's server restarts: the preview keeps the last
-    // page on screen meanwhile (never an empty panel) and says Updating… from the start.
-    await page.locator('iframe[title="App preview"]').waitFor();
-    await page.evaluate(() => {
-      const watch = { gaps: 0, updating: false };
-      window.__previewWatch = watch;
-      window.__previewTimer = setInterval(() => {
-        if (!document.querySelector('iframe[title="App preview"]')) watch.gaps++;
-        for (const el of document.querySelectorAll("span"))
-          if (el.textContent === "Updating…") watch.updating = true;
-      }, 50);
-    });
-    await themes.getByRole("button", { name: /Playful/ }).click();
-    await trace.getByText("Use the playful theme").first().waitFor({ timeout: 60000 });
-    await themes
-      .getByRole("button", { name: /Playful/, pressed: true })
-      .waitFor({ timeout: 60000 });
-    await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 });
-    const watch = await page.evaluate(() => {
-      clearInterval(window.__previewTimer);
-      return window.__previewWatch;
-    });
-    if (watch.gaps)
-      throw new Error(`the preview was empty in ${watch.gaps} checks during the restart`);
-    if (!watch.updating) throw new Error("the preview never said Updating…");
-  });
+  await step(
+    "look and feel: a theme, density and motion are chosen without touching code",
+    async () => {
+      const theme = page.getByRole("region", { name: "Font, density and motion" });
+      await theme.getByRole("button", { name: "Compact" }).click();
+      await theme
+        .getByRole("button", { name: "Compact", pressed: true })
+        .waitFor({ timeout: 60000 });
+      await theme.getByRole("button", { name: "Lively" }).click();
+      await theme
+        .getByRole("button", { name: "Lively", pressed: true })
+        .waitFor({ timeout: 60000 });
+      const themes = page.getByRole("list", { name: "Themes" });
+      // The project's own theme has its card, named with its file.
+      await themes
+        .getByRole("button", { name: /Forest/ })
+        .getByText("themes/forest.yml", { exact: false })
+        .waitFor();
+      // The theme swaps a font package, so the app's server restarts: the preview keeps the last
+      // page on screen meanwhile (never an empty panel) and says Updating… from the start.
+      await page.locator('iframe[title="App preview"]').waitFor();
+      await page.evaluate(() => {
+        const watch = { gaps: 0, updating: false };
+        window.__previewWatch = watch;
+        window.__previewTimer = setInterval(() => {
+          if (!document.querySelector('iframe[title="App preview"]')) watch.gaps++;
+          for (const el of document.querySelectorAll("span"))
+            if (el.textContent === "Updating…") watch.updating = true;
+        }, 50);
+      });
+      await themes.getByRole("button", { name: /Playful/ }).click();
+      await trace.getByText("Use the playful theme").first().waitFor({ timeout: 60000 });
+      await themes
+        .getByRole("button", { name: /Playful/, pressed: true })
+        .waitFor({ timeout: 60000 });
+      await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 });
+      const watch = await page.evaluate(() => {
+        clearInterval(window.__previewTimer);
+        return window.__previewWatch;
+      });
+      if (watch.gaps)
+        throw new Error(`the preview was empty in ${watch.gaps} checks during the restart`);
+      if (!watch.updating) throw new Error("the preview never said Updating…");
+    },
+  );
   await step("undoing a theme puts back the packages it swapped (its font)", async () => {
     const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
     await page.getByRole("button", { name: "Undo", exact: true }).click();
@@ -576,8 +585,8 @@ try {
     await page.getByRole("button", { name: "Your app", exact: true }).first().click();
     await page.getByRole("tab", { name: "Look" }).click();
     const look = (name) => page.getByRole("region", { name });
-    await look("Font and density").getByRole("button", { name: "Comfortable" }).click();
-    await look("Font and density")
+    await look("Font, density and motion").getByRole("button", { name: "Comfortable" }).click();
+    await look("Font, density and motion")
       .getByRole("button", { name: "Comfortable", pressed: true })
       .waitFor({ timeout: 60000 });
     await look("Colors of choices").getByLabel("Color of Draft").first().selectOption("warning");
