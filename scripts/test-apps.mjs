@@ -860,6 +860,7 @@ async function statusFlow(base) {
       .getByText('key "Uptime monitor"')
       .first()
       .waitFor({ timeout: 10000 });
+    await open(page, `${base}/team`);
     if ((await api("/maintenances")).status !== 404)
       throw new Error("a model not offered answered");
     // A record lists no list of related records (they are reached from their own route).
