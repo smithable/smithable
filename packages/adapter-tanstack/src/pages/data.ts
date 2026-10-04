@@ -226,7 +226,9 @@ ${
       named.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
 `
     : ""
-}    const removedUser = (id: string) => (named.has(id) ? named.get(id) : \`a removed user (#\${id})\`);
+}    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    const removedUser = (id: string) =>
+      named.get(id) ?? (id.startsWith("key:") ? \`a key (#\${id.slice(4)})\` : \`a removed user (#\${id})\`);
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
