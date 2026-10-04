@@ -214,6 +214,8 @@ const ESSENTIAL = new Set([
   // A starter's actions are its flow (the status page's resolve): refused, they are corrected;
   // still refused after the last round, they are dropped and named (see lastRoundDrops).
   "addAction",
+  // A booking's places: refused (one that could never fill), corrected rather than lost.
+  "setCapacity",
   "addModel",
   "addField",
   "addPage",
@@ -229,6 +231,7 @@ const ESSENTIAL = new Set([
  */
 const lastRoundDrops = (step: Step) =>
   step.op === "addAction" ||
+  step.op === "setCapacity" ||
   (step.op === "addField" &&
     (Boolean(step.args.formula) || String(step.args.type ?? "").includes("=")));
 
@@ -548,7 +551,8 @@ export async function draftProjectByOperations(options: {
           .filter((r) => lastRoundDrops(r.step))
           .map((r) => {
             const { action, model, field } = r.step.args;
-            return `${r.step.op} ${String(action ?? (model ? `${model}.${field}` : ""))}: ${r.message}`;
+            const what = action ?? (model ? (field ? `${model}.${field}` : model) : "");
+            return `${r.step.op} ${String(what)}: ${r.message}`;
           });
         if (done.length > 0)
           return {
