@@ -4,12 +4,14 @@ import { validateSpec } from "./spec.js";
 import {
   BUILT_IN_THEMES,
   checkContrast,
+  FONTS,
   parseTheme,
   themeNamed,
   themeThumbnail,
   withBackground,
 } from "./theme.js";
-import { validateUx } from "./ux.js";
+import { THEME_LIBRARY } from "./theme-library.js";
+import { emptyUx, THEME_PRESETS, validateUx } from "./ux.js";
 
 const forest = `smithableTheme: 0.1
 name: forest
@@ -27,12 +29,28 @@ dark:
 `;
 const parse = (text: string) => parseTheme({ path: "themes/forest.yml", text });
 
-test("the built-in themes read in both modes", () => {
-  expect(BUILT_IN_THEMES.map((t) => t.name)).toEqual(["modern", "minimal", "playful", "corporate"]);
+test("the thirteen built-in themes read in both modes, each under its own name", () => {
+  const names = BUILT_IN_THEMES.map((t) => t.name);
+  expect(names).toEqual([...THEME_PRESETS]);
+  expect(names).toHaveLength(13);
+  expect(new Set(names).size).toBe(13);
+  expect(names.slice(0, 4)).toEqual(["modern", "minimal", "playful", "corporate"]);
   for (const theme of BUILT_IN_THEMES) {
+    expect(theme.source).toBe("built-in");
+    expect(FONTS, theme.name).toContain(theme.font);
     expect(checkContrast(theme.light), `${theme.name} light`).toEqual([]);
     expect(checkContrast(theme.dark), `${theme.name} dark`).toEqual([]);
   }
+});
+
+test("the theme library's nine are theme files a project could have written", () => {
+  expect(Object.keys(THEME_LIBRARY)).toEqual(THEME_PRESETS.slice(4));
+  for (const [name, text] of Object.entries(THEME_LIBRARY)) {
+    const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
+    expect(diagnostics, name).toEqual([]);
+    expect(theme?.name).toBe(name);
+  }
+  expect(emptyUx().theme.preset).toBe("modern");
 });
 
 test("a theme of three colors per mode gets the rest derived, and reads", () => {
@@ -103,7 +121,7 @@ test("the ux file may name a project theme, and says which exist when it cannot"
   );
   expect(missing.diagnostics[0]).toMatchObject({
     code: "unknown-preset",
-    hint: "Available: modern, minimal, playful, corporate.",
+    hint: `Available: ${THEME_PRESETS.join(", ")}.`,
   });
   expect(themeNamed("forest", [theme])?.source).toBe("project");
   expect(themeNamed("modern", [{ ...theme, name: "modern" }])?.source).toBe("project");

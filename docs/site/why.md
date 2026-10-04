@@ -30,7 +30,7 @@ Everything on this site runs on your own machine, with no account: the engine, t
 
 ## Designed, not improvised
 
-Looks come from four designed themes in light and dark, a brand color the palette is derived from with readable contrast, and a library of page patterns: lists, records, forms, dashboards, calendars, articles, calculators, landing pages. Presentation lives in `smithable.ux.yml`, apart from what the app does, so a change of look never touches a rule.
+Looks come from thirteen built-in themes in light and dark, a brand color the palette is derived from with readable contrast, and a library of page patterns: lists, records, forms, dashboards, calendars, articles, calculators, landing pages. Presentation lives in `smithable.ux.yml`, apart from what the app does, so a change of look never touches a rule.
 
 ## What it is not
 
