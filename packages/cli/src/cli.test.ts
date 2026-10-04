@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
 import { administered } from "./new.js";
@@ -82,4 +85,40 @@ test("a new project's administrator is the one given, never the starter's sample
   expect(administered(without, "johan@mine.ax")["smithable.auth.yml"]).toContain(
     "admins: [johan@mine.ax]",
   );
+});
+
+test("validate --json gives every finding with its code, for programs", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-validate-"));
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Demo }\nmodels:\n  Member:\n    fields:\n      name: string!\n      cardNumber: string\npages:\n  members: { crud: Member }\n",
+  );
+  writeFileSync(
+    join(dir, "smithable.auth.yml"),
+    "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\n",
+  );
+  const io = captureIo();
+  expect(await run(["validate", dir, "--json"], io)).toBe(0);
+  expect(io.stderr).toBe("");
+  const result = JSON.parse(io.stdout) as {
+    valid: boolean;
+    diagnostics: { code: string; severity: string; line: number; file: string }[];
+  };
+  expect(result.valid).toBe(true);
+  expect(result.diagnostics.map((d) => `${d.severity} ${d.code} ${d.line}`)).toContain(
+    "warning card-data 7",
+  );
+  expect(result.diagnostics.find((d) => d.code === "card-data")?.file).toBe(
+    join(dir, "smithable.yml"),
+  );
+  // An invalid project: the errors, exit code 1, still one JSON document.
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Demo }\nmodels:\n  member: {}\n",
+  );
+  const bad = captureIo();
+  expect(await run(["validate", dir, "--json"], bad)).toBe(1);
+  const refused = JSON.parse(bad.stdout) as { valid: boolean; diagnostics: { code: string }[] };
+  expect(refused.valid).toBe(false);
+  expect(refused.diagnostics.map((d) => d.code)).toContain("invalid-name");
 });
