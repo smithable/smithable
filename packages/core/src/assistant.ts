@@ -131,10 +131,13 @@ export function assistantOffer(
         ? [...new Set([...offered.visitors.read, ...offered.visitors.create])]
         : offered.models;
   const deletes = scope === "api" && caller !== "visitor" && auth.api?.assistants?.delete === true;
+  // Inside the app "Ask" only reads, unless the auth file's assistant block says it may change.
+  const changes = scope === "api" || auth.assistant?.may === "change";
 
   const actions = ir.actions.filter(
     (a) =>
       !a.custom &&
+      changes &&
       caller !== "visitor" &&
       (scope === "app" || offered.actions.includes(a.name)) &&
       reachable.includes(a.on) &&
@@ -147,8 +150,8 @@ export function assistantOffer(
     const access = modelAccess(model, auth);
     const can = {
       read: may(access.read, caller),
-      add: may(access.create, caller),
-      change: caller !== "visitor" && may(access.write, caller),
+      add: changes && may(access.create, caller),
+      change: changes && caller !== "visitor" && may(access.write, caller),
       delete: deletes && may(access.delete, caller),
     };
     if (!can.read && !can.add) continue;
@@ -384,3 +387,14 @@ function describeKind(
 /** Marks which reference fields may take "me": those that refer to a user. */
 export const refersToUser = (filter: FieldFilter) =>
   filter.by === "reference" && filter.model === USER_MODEL;
+
+/**
+ * Whether a caller gets "Ask" in the app (the auth file's `assistant` block), and with what: a
+ * model as well, or the wording rules only, which is all a visitor ever gets.
+ */
+export function asksWith(auth: AuthIR, caller: AssistantCaller): "nothing" | "rules" | "model" {
+  const who = auth.assistant?.for;
+  if (!who) return "nothing";
+  if (caller === "visitor") return who === "anyone" ? "rules" : "nothing";
+  return who === "anyone" || who === "signed-in" || who.includes(caller.role) ? "model" : "nothing";
+}
