@@ -88,7 +88,7 @@ test("without a users page nothing of it is generated", () => {
   expect(file(app, "src/lib/auth.ts")).not.toContain("invitation");
 });
 
-test("a model named Item with the API on: page() never shadows its table, items", () => {
+test("a model named Item with the API on: find() never shadows its table, items", () => {
   const itemIr = validateSpec({
     path: "smithable.yml",
     text: "smithable: 0.1\napp: { name: Acme }\nmodels:\n  Item:\n    fields: { price: money, twice: { type: money, formula: price * 2 } }\npages:\n  items: { crud: Item }\n  team: { users: manage }\n",
@@ -101,7 +101,7 @@ test("a model named Item with the API on: page() never shadows its table, items"
     generateApp(itemIr, { smithableVersion: "0.0.0", auth, content: emptyContent() }),
     "src/generated/item.server.ts",
   );
-  const page = server.slice(server.indexOf("async page("));
+  const page = server.slice(server.indexOf("async find("));
   expect(page).toContain(".from(schema.items)");
   expect(page).toMatch(/return \{ items: rows\.map\(\w+\), total \};/);
   expect(page.slice(0, page.indexOf("\n  },"))).not.toMatch(/const items\b/);

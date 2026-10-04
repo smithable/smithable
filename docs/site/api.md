@@ -81,6 +81,21 @@ curl -s -X POST https://status.example.com/api/v1/incidents/3/actions/resolve -H
 
 What the app lets anyone read or add (`public` in `smithable.auth.yml`) can be called without a key, as a visitor. A status page that shows its incidents to everyone lets a program list and read them too: `curl -s https://status.example.com/api/v1/incidents`. Changing, deleting and actions always need a key, and so does everything when nothing is public. Without a key, the description at `/api/v1/openapi.json` and the tools at `/mcp` show only what a visitor may do.
 
+### Filter, search, sort and add up
+
+A list takes the list page's filters as query parameters, behind the same access:
+
+```sh
+curl -s "https://status.example.com/api/v1/incidents?status=investigating,identified" -H "Authorization: Bearer $KEY"
+curl -s "https://status.example.com/api/v1/incidents?component=Payments&sort=-detectedAt" -H "Authorization: Bearer $KEY"
+curl -s "https://status.example.com/api/v1/incidents?detectedAt=2026-10-01..2026-10-31&search=payment" -H "Authorization: Bearer $KEY"
+```
+
+- A field and a value: a choice field's value, or several with commas; `true` or `false` for a yes/no field; a number, an amount or a date, or a range `from..to` with either side left out (both ends included; through the tools for assistants, `over` and `under` leave the ends out); a reference by its record's id or by its title. `mine=true` keeps the caller's own records.
+- `search` looks in the text fields, as the list page's search box does; `sort` names a field, with `-` in front for the highest first; `limit` and `page` as above.
+- `sum=total` adds a number field up over every record that fits, not only the page given (`"sums": { "total": 1250 }`). `total` in the answer always counts every record that fits.
+- An unknown field or value is refused with the ones that exist.
+
 ## 4. When the app says no
 
 A refusal is a JSON problem (`application/problem+json`) in the app's own words, with the HTTP status that fits:
@@ -109,17 +124,26 @@ A refusal is a JSON problem (`application/problem+json`) in the app's own words,
 
 ## 6. For AI assistants
 
-With `assistants: true` in the `api` block (the status starter has it), the same offer is also there as tools for AI assistants, at `/mcp` in the Model Context Protocol, with the same keys. Point an assistant that speaks MCP over HTTP (Claude, ChatGPT and others) at `https://status.example.com/mcp` with the header `Authorization: Bearer <key>`. Asked for its tools, the status app answers:
+With `assistants: true` in the `api` block (the status starter has it), the same offer is also there as tools for AI assistants, at `/mcp` in the Model Context Protocol, with the same keys. Point an assistant that speaks MCP over HTTP (Claude, ChatGPT and others) at `https://status.example.com/mcp` with the header `Authorization: Bearer <key>`.
 
-```text
-find_components, read_component, add_component, change_component,
-find_incidents, read_incident, add_incident, change_incident, resolve
-```
+The tools are the same seven for every app, whatever its size:
 
-There are no delete tools unless the auth file says `assistants: { delete: true }`. A refusal comes back as the tool's error, in the app's words, so the assistant can read it and try again:
+| Tool | What it does |
+|---|---|
+| `find` | Records of one kind, with `where`, `search`, `sort`, the `fields` wanted, a `limit` (10 unless said, 50 at most) and the total, as `{ columns, rows, total }` |
+| `measure` | A number worked out by the app: how many, or the sum, average, min or max of a number field (`"of": "sum total"`), optionally `by` a field or by month |
+| `read` | One record with all its fields |
+| `add` | Add a record |
+| `change` | Change fields of a record |
+| `run` | One of the app's standard actions on a record |
+| `describe` | What a kind of record means: its fields, rules and actions |
+
+With the tools comes a short summary of the app, one line per kind of record, as the server's instructions; an assistant reads it once and asks for `describe` only when it needs more. Each tool is marked as reading only or as changing what exists, so an assistant that asks its user before a risky call knows which. The key's role decides what is offered: a narrow key is not told of what it cannot reach, and without a key an assistant gets what anyone may read or add (§3). There is a `delete` tool only when the auth file says `assistants: { delete: true }`, and only for a role that may delete.
+
+A refusal comes back as the tool's error, in the app's words, so the assistant can read it and try again:
 
 ```json
-{ "content": [{ "type": "text", "text": "There is no tool \"listIncidents\"." }], "isError": true }
+{ "content": [{ "type": "text", "text": "There is no field \"colour\" to filter by. Fields: title, status, component, detectedAt, resolvedAt, summary." }], "isError": true }
 ```
 
 Each request carries one message (no batches), so every tool call counts toward the key's 60 a minute.
