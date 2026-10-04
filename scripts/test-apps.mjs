@@ -882,6 +882,13 @@ async function statusFlow(base) {
       throw new Error(`find_incidents gave ${JSON.stringify(found)}`);
     const refused = await rpc("tools/call", { name: "delete_incident", arguments: { id: 1 } });
     if (!refused.isError) throw new Error("a delete tool answered");
+    // One message per request: a batch would run many calls for one count of the limit.
+    const batch = await fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${shown}`, "content-type": "application/json" },
+      body: JSON.stringify([{ jsonrpc: "2.0", id: 1, method: "ping" }]),
+    });
+    if (batch.status !== 400) throw new Error(`a batch was answered with ${batch.status}`);
     const described = await (await fetch(`${base}/api/v1/openapi.json`)).json();
     if (!described.paths?.["/api/v1/incidents/{id}/actions/resolve"])
       throw new Error("the description lacks resolve");
