@@ -6,7 +6,7 @@ The difference from prompt-to-code builders: **Smithable understands the applica
 
 **Status:** beta. The engine, CLI, Studio and MCP server in this repository work on their own, on your machine, with no account. The hosted service (smithable.ai, a private beta) lives in a separate repository and builds on them.
 
-**Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the six starters](https://docs.smithable.ai/starters.html), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
+**Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the seven starters](https://docs.smithable.ai/starters.html), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
 
 ![The marketplace starter, Torget: a catalog with search, filters and photos](docs/site/starters/marketplace-1.webp)
 
@@ -38,7 +38,7 @@ smithable mcp                                   # the same operations as tools f
 smithable deploy --target docker                # release checks, then the container
 ```
 
-The six starters, with pictures: [docs.smithable.ai/starters](https://docs.smithable.ai/starters.html). `smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker; [running an app on your own machine](https://docs.smithable.ai/self-host.html) covers deploying, backups and updates.
+The seven starters, with pictures: [docs.smithable.ai/starters](https://docs.smithable.ai/starters.html). `smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker; [running an app on your own machine](https://docs.smithable.ai/self-host.html) covers deploying, backups and updates.
 
 ## The repository
 

@@ -1,0 +1,7 @@
+smithableUx: 0.1
+tones:
+  Task.status:
+    doing: warning
+    done: success
+theme:
+  preset: modern

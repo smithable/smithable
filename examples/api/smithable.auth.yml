@@ -1,0 +1,20 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  member:
+    description: A team member who works with the tasks and notes.
+  assistant:
+    description: "The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes."
+defaultRole: member
+# What programs and assistants reach with a key made on the team page. A key acts with its role:
+# give an assistant's key the assistant role, which reads everything, adds and changes tasks and
+# notes, and deletes nothing. Nothing is public: an assistant's memory is private.
+api:
+  models: all
+  actions: all
+  assistants: true
+admins: [admin@team-tasks.example]

@@ -981,6 +981,78 @@ async function statusFlow(base) {
 }
 
 /**
+ * The app for programs and assistants (docs/design/api-only.md §4): an admin makes a key with the
+ * assistant role in the browser; with it a program lists, adds, changes and completes a task, is
+ * refused a delete, and an assistant reads the tools' list.
+ */
+async function apiFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/team`);
+    const keys = page.locator('[data-kit="keys"]');
+    await keys.getByLabel("What it is for").fill("Assistant");
+    await keys.getByLabel("Role").selectOption("assistant");
+    await keys.getByRole("button", { name: "Make a key" }).click();
+    const key = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 });
+    const api = (path, init = {}) =>
+      fetch(`${base}/api/v1${path}`, {
+        ...init,
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      });
+    const listed = await (await api("/tasks")).json();
+    if (!listed.items?.some((t) => t.title === "Draft the newsletter"))
+      throw new Error(`listing tasks gave ${JSON.stringify(listed).slice(0, 200)}`);
+    const project = (await (await api("/projects")).json()).items[0];
+    const added = await api("/tasks", {
+      method: "POST",
+      body: JSON.stringify({ title: "Send the invoice", project: project.id }),
+    });
+    const task = await added.json();
+    if (added.status !== 201 || task.status !== "todo")
+      throw new Error(`adding gave ${added.status} ${JSON.stringify(task)}`);
+    const changed = await (
+      await api(`/tasks/${task.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "doing" }),
+      })
+    ).json();
+    if (changed.status !== "doing") throw new Error(`changing gave ${JSON.stringify(changed)}`);
+    const done = await (await api(`/tasks/${task.id}/actions/complete`, { method: "POST" })).json();
+    if (done.status !== "done") throw new Error(`completing gave ${JSON.stringify(done)}`);
+    // The assistant role deletes nothing: refused, in the app's words.
+    const refused = await api(`/tasks/${task.id}`, { method: "DELETE" });
+    if (refused.status !== 403) throw new Error(`deleting gave ${refused.status}`);
+    const tools = await fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+    });
+    const names = (await tools.json()).result.tools.map((tool) => tool.name);
+    for (const name of [
+      "find_tasks",
+      "add_task",
+      "change_task",
+      "complete",
+      "reopen",
+      "find_notes",
+    ])
+      if (!names.includes(name)) throw new Error(`the tools are ${names.join(", ")}`);
+    console.log(
+      "  ✓ browser: an admin makes a key with the assistant role; with it a program lists, adds, changes and completes a task, is refused a delete, and an assistant reads the tools' list",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("api flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Several pictures (a post's gallery, added by an operation): an admin adds two at once,
  * describes them and moves the second first; they are served in that order, the first as the
  * cover; removing one deletes its file and keeps the other.
@@ -2788,6 +2860,7 @@ for (const [index, example] of examples.entries()) {
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "status") await statusFlow(base);
+      if (example === "api") await apiFlow(base);
       if (example === "invoicing") {
         await copyFlow(base);
         await formulaFlow(base);
