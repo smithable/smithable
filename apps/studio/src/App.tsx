@@ -84,7 +84,7 @@ export function App() {
       };
     });
   // What the newest change touched (not an undo), for the preview to flash once it has it.
-  const last = project?.trace.at(-1);
+  const last = project?.trace[0];
   const changeKey = last && !last.isUndo && !last.undone ? `${last.at}:${last.description}` : "";
   const concepts = changeKey ? touched(last?.operation).join("\n") : "";
   const highlight = useMemo(
