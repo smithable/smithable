@@ -175,8 +175,8 @@ The five questions (ARCHITECTURE §2.4): common (an assistant in an app is becom
 ## 10. Steps
 
 1. **Core:** the tools and the summary described from the spec, the auth file and a role; `where` as the condition grammar with ranges, references and `mine`. (Fable. Built 2026-10-04: `assistantOffer` in `packages/core/src/assistant.ts`. Measured on the six starters, as an administrator inside the app: 6 or 7 tools of about 860 to 1,040 tokens whatever the number of models, and a summary of about 60 to 250 tokens; booking with six models is about 1,150 in all.)
-2. **Adapter:** `where`, `search`, `sort`, counting and adding up in the data modules; the seven tools at `/mcp` and the same as query parameters on the API. This is backlog item 12, reshaped. (A, core parts reviewed by Fable.)
-3. **The bench** of §9, on the tools alone through `/mcp`, before any panel exists: it settles decision 1 with numbers. (C.)
+2. **Adapter:** `where`, `search`, `sort`, counting and adding up in the data modules; the seven tools at `/mcp` and the same as query parameters on the API. This is backlog item 12, reshaped. (A, core parts reviewed by Fable.) (Built 2026-10-05.)
+3. **The bench** of §9, on the tools alone through `/mcp`, before any panel exists: it settles decision 1 with numbers. (C.) (Run 2026-10-04 and 05 on the six starters, 130 questions on the old tools and the same plus four deletes on the seven: Sonnet 4.6 130/130 then 134/134, Haiku 4.5 124/130 then 131/134, Mistral Small 105/130 then 119/134; tokens in per question down 21, 24 and 32 %; a tool's result about 50 tokens where it was 650; no answer wrong any more because a model added up rows itself. The first run on the seven tools was a few answers short: names matched exactly, a search wanted the whole phrase, computed fields could not be measured, a largest value did not say whose it was, and a sum per client gave ids. Each was a gap in a tool, closed before the tools merged.)
 4. **The wording rules for questions**, a pure function from a sentence and the spec to a tool call. (Fable.)
 5. **The kit's panel:** the rules first, then the model's tool loop, the results shown by the app, the confirmation cards. As the administrator's inspector first, since that needs no new grammar. (A.)
 6. **The `assistant` block** and `setAssistant`, and "Ask" for the people who use the app. (Fable for core, A.) (The block, `setAssistant`, the summary sentence and `asksWith` in core: built 2026-10-04. Inside the app the offer only reads unless the block says `may: change`.)
@@ -185,7 +185,7 @@ The five questions (ARCHITECTURE §2.4): common (an assistant in an app is becom
 
 ## 11. Decisions (Johan, 2026-10-04: yes to all six)
 
-1. **Seven tools and a summary of the app replace a tool per model and verb**, for outside assistants and for "Ask" alike, if the bench shows fewer tokens with answers at least as often right. Recommended: yes.
+1. **Seven tools and a summary of the app replace a tool per model and verb**, for outside assistants and for "Ask" alike, if the bench shows fewer tokens with answers at least as often right. Recommended: yes. **Settled 2026-10-05: it does, for every model tried (step 3); the seven tools are what `/mcp` serves.**
 2. **The `assistant` block in the auth file**: who gets "Ask" and whether it may change things; off unless written; reading only unless `may: change`. Recommended: yes.
 3. **Visitors get answers by the wording rules only, never a model.** Recommended: yes.
 4. **A change through "Ask" is always confirmed by the person in the app, and it never deletes.** Recommended: yes.
