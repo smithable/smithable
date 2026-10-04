@@ -1,6 +1,8 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
+defaultAccess: private
+roles:
+  admin:
+    description: Manages the guest list and seating plan.
 admins: [johan@smithable.ai]
