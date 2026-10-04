@@ -1,13 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
+  cached,
   openAICompatible,
   type Proposal,
   type Provider,
   parsePolicy,
   proposeChange,
+  type ResponseStore,
   route,
   type Usage,
 } from "@smithable/ai";
@@ -45,8 +47,9 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
       }),
     );
   if (env.SMITHABLE_MODEL && env.SMITHABLE_MODEL_URL) {
-    // "0.1/0.3": euros per million input and output tokens.
-    const [input = 0, output = 0] = (env.SMITHABLE_MODEL_PRICE ?? "0/0").split("/").map(Number);
+    // "0.1/0.3": euros per million input and output tokens; without it, a known model's list
+    // price (in dollars), or nothing.
+    const [input = 0, output = 0] = (env.SMITHABLE_MODEL_PRICE ?? "").split("/").map(Number);
     providers.push(
       openAICompatible({
         name: "smithable",
@@ -55,14 +58,31 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
         ...(env.SMITHABLE_MODEL_KEY ? { apiKey: env.SMITHABLE_MODEL_KEY } : {}),
         tier: "smithable",
         location: env.SMITHABLE_MODEL_LOCATION === "elsewhere" ? "elsewhere" : "eu",
-        price: { input, output },
+        ...(env.SMITHABLE_MODEL_PRICE ? { price: { input, output } } : {}),
       }),
     );
   }
   // A frontier model through the user's own Claude Code: SMITHABLE_FRONTIER=claude-code.
   if (env.SMITHABLE_FRONTIER === "claude-code")
     providers.push(claudeCode(env.SMITHABLE_FRONTIER_MODEL || undefined));
-  return providers;
+  // The benchmark's and tests' response cache (SMITHABLE_LLM_CACHE=<folder>): a request seen
+  // before is answered from the folder. Never on unless set.
+  const folder = env.SMITHABLE_LLM_CACHE;
+  return folder ? providers.map((p) => cached(p, folderStore(folder))) : providers;
+}
+
+/** Answers kept as files in a folder, by their key. */
+function folderStore(folder: string): ResponseStore {
+  const path = (key: string) => join(folder, key.slice(0, 2), `${key}.json`);
+  return {
+    async get(key) {
+      return existsSync(path(key)) ? readFileSync(path(key), "utf8") : undefined;
+    },
+    async set(key, value) {
+      mkdirSync(dirname(path(key)), { recursive: true });
+      writeFileSync(path(key), value);
+    },
+  };
 }
 
 /** The model's proposal for a request, dry-run against the project; nothing is applied. */
@@ -142,14 +162,16 @@ export function usageLine(usage: Usage[], generator?: string): string {
   const last = usage.at(-1);
   if (generator && !last) return `Generator (${generator}) · 0 tokens`;
   if (!last) return "No model was used";
-  const tokens = usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
-  // Mistral's prices are in euros, Claude Code reports dollars: each is totalled on its own.
+  const input = usage.reduce((sum, u) => sum + u.inputTokens, 0);
+  const output = usage.reduce((sum, u) => sum + u.outputTokens, 0);
+  const fromCache = usage.filter((u) => u.cached).length;
+  // A price given in euros, a list price or Claude Code in dollars: each is totalled on its own.
   const costs = (["EUR", "USD"] as const).flatMap((currency) => {
     const list = usage.filter((u) => u.currency === currency);
     const sum = list.reduce((n, u) => n + u.cost, 0);
     return list.length ? [`${currency === "EUR" ? "€" : "$"}${sum.toFixed(4)}`] : [];
   });
-  return `${TIER_NAMES[last.tier]} (${last.model}) · ${tokens.toLocaleString("en")} tokens · ${costs.join(" + ")}`;
+  return `${TIER_NAMES[last.tier]} (${last.model}) · ${(input + output).toLocaleString("en")} tokens (${input.toLocaleString("en")} in, ${output.toLocaleString("en")} out)${costs.length ? ` · ${costs.join(" + ")}` : ""}${fromCache ? ` · ${fromCache} of ${usage.length} calls from the cache` : ""}`;
 }
 
 /**
