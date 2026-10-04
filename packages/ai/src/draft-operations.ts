@@ -487,6 +487,30 @@ export function openLinked(files: ProjectFiles, done: Step[]): ProjectFiles {
   return result.files;
 }
 
+/** The validator's warnings that mean a visitor finds the app broken or too open. */
+const VISITOR_FLAWS = new Set([
+  "public-page-closed-records",
+  "shortcut-closed",
+  "contact-form-closed",
+  "public-personal-data",
+  "mine-public",
+  "visitors-read-drafts",
+]);
+
+/**
+ * What a valid draft still gets wrong for visitors, in the validator's words: a public page
+ * whose records they may not read, a contact form they cannot send, a person's contact details
+ * open to anyone. The draft goes back to the model with these once (deterministic to find; the
+ * remedy depends on what the description meant, so it is the model's to choose).
+ */
+export function visitorFlaws(files: ProjectFiles): string[] {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  if (!ir) return [];
+  return validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir)
+    .diagnostics.filter((d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code))
+    .map((d) => d.message);
+}
+
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
   auth: files["smithable.auth.yml"],
@@ -538,6 +562,9 @@ export async function draftProjectByOperations(options: {
     let prompt = `Description: ${options.description}${languageNote(options.description)}${shape}`;
     let round = 0;
     let refused: { step: Step; message: string }[] = [];
+    // A valid draft's flaws for visitors go back once; what that round drops is still named.
+    let asked = false;
+    let droppedBefore: string[] = [];
     while (round < MAX_ROUNDS) {
       round += 1;
       let answer: { operations?: Step[] };
@@ -547,6 +574,15 @@ export async function draftProjectByOperations(options: {
         };
       } catch (error) {
         problem = error instanceof Error ? error.message : String(error);
+        // The round about a valid draft's flaws failing leaves the draft as it was.
+        if (asked && done.length > 0)
+          return {
+            kind: "draft",
+            files: toFiles(files),
+            usage,
+            operations: done,
+            ...(droppedBefore.length ? { dropped: droppedBefore } : {}),
+          };
         // A broken answer (cut off, not JSON) is asked for once more.
         if (/JSON|Unexpected|position/.test(problem) && round < MAX_ROUNDS) continue;
         break;
@@ -561,6 +597,7 @@ export async function draftProjectByOperations(options: {
             files: toFiles(openLinked(closeShared(files, done), done)),
             usage,
             operations: done,
+            ...(droppedBefore.length ? { dropped: droppedBefore } : {}),
           };
         problem = refused.length
           ? refused.map((r) => `${r.step.op}: ${r.message}`).join("\n")
@@ -573,27 +610,40 @@ export async function draftProjectByOperations(options: {
       files = outcome.files;
       refused = outcome.refused;
       const last = round === MAX_ROUNDS;
-      const essential = refused.filter(
-        (r) => ESSENTIAL.has(r.step.op) && !(last && lastRoundDrops(r.step)),
-      );
+      // After the flaws went back, the draft was already valid: a refused remedy is left out.
+      const essential = asked
+        ? []
+        : refused.filter((r) => ESSENTIAL.has(r.step.op) && !(last && lastRoundDrops(r.step)));
       if (essential.length === 0) {
         // Refused extras (a text, a color) are left out rather than failing the draft, and an
         // action or formula field still refused after the last round is named.
-        const dropped = refused
-          .filter((r) => lastRoundDrops(r.step))
-          .map((r) => {
-            const { action, model, field } = r.step.args;
-            const what = action ?? (model ? (field ? `${model}.${field}` : model) : "");
-            return `${r.step.op} ${String(what)}: ${r.message}`;
-          });
-        if (done.length > 0)
-          return {
-            kind: "draft",
-            files: toFiles(openLinked(closeShared(files, done), done)),
-            usage,
-            operations: done,
-            ...(dropped.length ? { dropped } : {}),
-          };
+        const dropped = [
+          ...droppedBefore,
+          ...refused
+            .filter((r) => lastRoundDrops(r.step))
+            .map((r) => {
+              const { action, model, field } = r.step.args;
+              const what = action ?? (model ? (field ? `${model}.${field}` : model) : "");
+              return `${r.step.op} ${String(what)}: ${r.message}`;
+            }),
+        ];
+        if (done.length > 0) {
+          files = openLinked(closeShared(files, done), done);
+          const flaws = asked || last ? [] : visitorFlaws(files);
+          if (flaws.length === 0)
+            return {
+              kind: "draft",
+              files: toFiles(files),
+              usage,
+              operations: done,
+              ...(dropped.length ? { dropped } : {}),
+            };
+          asked = true;
+          droppedBefore = dropped;
+          refused = [];
+          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list), or with no operations if it is as intended.`;
+          continue;
+        }
         problem =
           refused.map((r) => `${r.step.op}: ${r.message}`).join("\n") ||
           "Nothing could be applied.";

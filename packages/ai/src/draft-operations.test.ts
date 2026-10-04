@@ -434,3 +434,81 @@ test("a public landing page's button to a list of public records opens that list
   ]);
   expect(openLinked(closed, [])).toBe(closed);
 });
+
+test("a valid draft that a visitor would find broken goes back to the model once, with the validator's words", async () => {
+  const library = [
+    { op: "setApp", args: { name: "Tool library" } },
+    { op: "addModel", args: { model: "Tool", fields: { name: "string!" } } },
+    { op: "addPage", args: { page: "tools", model: "Tool" } },
+    { op: "addLandingPage", args: { page: "home", route: "/" } },
+    { op: "addSection", args: { page: "home", section: "catalogue", records: "Tool" } },
+    { op: "setPublic", args: { pages: ["home"] } },
+  ];
+  const prompts: string[] = [];
+  const provider = (answers: unknown[]): Provider => ({
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 1, output: 3 },
+    async complete(request) {
+      prompts.push(request.user);
+      const answer = answers[Math.min(prompts.length, answers.length) - 1];
+      return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
+    },
+  });
+  // The landing page is public and shows tools, which visitors may not read: the model is told,
+  // and opens the tools.
+  const fixed = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        { operations: library },
+        { operations: [{ op: "setPublic", args: { pages: ["home"], read: ["Tool"] } }] },
+      ]),
+    ],
+  });
+  if (fixed.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(2);
+  expect(prompts[1]).toContain("Visitors can open home, but may not read Tool");
+  expect(fixed.files["smithable.auth.yml"]).toContain("read: [Tool]");
+  expect(fixed.operations?.at(-1)).toEqual({
+    op: "setPublic",
+    args: { pages: ["home"], read: ["Tool"] },
+  });
+
+  // It is asked once: an answer that leaves it, or a remedy that cannot be applied, still gives
+  // the draft that was valid before.
+  for (const second of [
+    { operations: [] },
+    { operations: [{ op: "setPublic", args: { read: ["Nothing"] } }] },
+  ]) {
+    prompts.length = 0;
+    const kept = await draftProjectByOperations({
+      description: "a tool library",
+      providers: [provider([{ operations: library }, second])],
+    });
+    if (kept.kind !== "draft") throw new Error("no draft");
+    expect(prompts).toHaveLength(2);
+    expect(kept.files["smithable.auth.yml"]).toContain("pages: [home]");
+    expect(kept.files["smithable.auth.yml"]).not.toContain("read:");
+    expect(checkSpecFiles(kept.files)).toEqual([]);
+  }
+
+  // A draft without such a flaw costs no second call.
+  prompts.length = 0;
+  const fine = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            ...library.slice(0, 5),
+            { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+          ],
+        },
+      ]),
+    ],
+  });
+  expect(fine.kind).toBe("draft");
+  expect(prompts).toHaveLength(1);
+});
