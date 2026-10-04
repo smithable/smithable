@@ -3129,6 +3129,29 @@ for (const [index, example] of examples.entries()) {
         },
       ).catch(() => {});
       await asyncStep(
+        "a request may carry at most 1 MB, said by its length: more is refused (413), and one without a length too (411)",
+        async () => {
+          const big = await fetch(`${base}/`, {
+            method: "POST",
+            headers: { "content-type": "application/octet-stream" },
+            body: new Uint8Array(1_000_001),
+          });
+          if (big.status !== 413) throw new Error(`1 MB and a byte gave ${big.status}`);
+          const chunked = await fetch(`${base}/`, {
+            method: "POST",
+            body: new ReadableStream({
+              start(c) {
+                c.enqueue(new Uint8Array(10));
+                c.close();
+              },
+            }),
+            duplex: "half",
+          });
+          if (chunked.status !== 411)
+            throw new Error(`a body without a length gave ${chunked.status}`);
+        },
+      ).catch(() => {});
+      await asyncStep(
         "changes are limited per address, and a made-up X-Forwarded-For is no new address",
         async () => {
           // All at once, and well over the burst of 60: the burst refills at one a second, so a
