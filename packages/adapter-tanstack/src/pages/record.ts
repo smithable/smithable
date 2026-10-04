@@ -409,7 +409,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? \`a removed user (#\${r.who})\`),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
