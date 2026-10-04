@@ -1,0 +1,14 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#78543B"
+    background: "#F7F3EB"
+    font: Source Sans 3
+pages:
+  items:
+    table:
+      view: cards
+      columns: [name, summary]
+      sort: name

@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Maintains the family recipe collection and manages shopping lists.
+  member:
+    description: Reads family recipes and manages shared shopping lists.
+defaultRole: member
+admins: [johan@smithable.ai]

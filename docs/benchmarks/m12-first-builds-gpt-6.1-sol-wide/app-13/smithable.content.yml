@@ -1,0 +1,8 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Car
+    pluralLabel: Cars
+pages:
+  items:
+    title: Cars

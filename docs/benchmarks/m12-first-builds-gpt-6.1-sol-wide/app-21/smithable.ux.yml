@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  huoltotyot:
+    table:
+      sort: scheduledAt
+      columns: [vehicle, description, scheduledAt, status]
+  laskut:
+    table:
+      columns: [number, customer, issueDate, dueDate, total, status]
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#2563eb"
+    font: Inter

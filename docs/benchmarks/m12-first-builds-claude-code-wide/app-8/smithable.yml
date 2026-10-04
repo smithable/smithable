@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Swap Shelf
+  description: Colleagues offer things they no longer need and others claim them.
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text
+      category: furniture | books | electronics | kitchen | stationery | plants | other
+      condition: likeNew | good | worn
+      pickupSpot: string
+      status: available | claimed | gone
+      claimedBy: User
+    access:
+      delete: [owner, admin]
+      write: [owner, admin]
+pages:
+  shelf:
+    route: /
+    crud: Item
+    search: [title, description, pickupSpot]
+    filters: [category, condition, status]
+    sortable: [title, createdAt]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  team:
+    users: manage
+actions:
+  claim:
+    on: Item
+    when:
+      status: available
+    set:
+      status: claimed
+      claimedBy: ME()
+    allow: [member, admin]
+    intent: Claim an available item for yourself.
+  markGone:
+    on: Item
+    when:
+      status: claimed
+    set:
+      status: gone
+    allow: [member, admin]
+    intent: Mark the item as picked up.
+  release:
+    on: Item
+    when:
+      status: claimed
+    set:
+      status: available
+    allow: [member, admin]
+    intent: Put a claimed item back on the shelf.

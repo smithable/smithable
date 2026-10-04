@@ -1,0 +1,87 @@
+smithable: 0.1
+app:
+  name: Agency Sales
+  description: A shared sales pipeline for tracking agency leads, deals, and who follows up when.
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      status: new | contacted | qualified | unqualified
+      accountManager: User
+      notes: text
+      deals: Deal[]
+      followUps: FollowUp[]
+    access:
+      write: [sales, admin]
+      delete: [admin]
+  Deal:
+    fields:
+      name: string!
+      customer: Customer!
+      status: open | proposal | negotiation | won | lost
+      value: money
+      expectedCloseDate: date
+      assignee: User
+      notes: text
+      followUps: FollowUp[]
+    access:
+      write: [sales, admin]
+      delete: [admin]
+  FollowUp:
+    fields:
+      subject: string!
+      customer: Customer!
+      deal: Deal
+      assignee: User!
+      dueAt: datetime!
+      status: pending | completed | canceled
+      notes: text
+      completedAt: datetime
+pages:
+  customers:
+    crud: Customer
+    actions: [qualifyLead]
+    search: [name, email]
+  deals:
+    crud: Deal
+    actions: [markWon, markLost]
+    search: [name]
+  follow-ups:
+    crud: FollowUp
+    actions: [completeFollowUp, takeFollowUp]
+  team:
+    users: manage
+actions:
+  qualifyLead:
+    on: Customer
+    when:
+      status: [new, contacted]
+    set:
+      status: qualified
+  markWon:
+    on: Deal
+    when:
+      status: [open, proposal, negotiation]
+    set:
+      status: won
+  markLost:
+    on: Deal
+    when:
+      status: [open, proposal, negotiation]
+    set:
+      status: lost
+  completeFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: completed
+      completedAt: NOW()
+  takeFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      assignee: ME()

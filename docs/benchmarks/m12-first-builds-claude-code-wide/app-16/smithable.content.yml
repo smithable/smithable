@@ -1,0 +1,9 @@
+smithableContent: 0.1
+models:
+  WaitingListEntry:
+    label: Waiting list entry
+    pluralLabel: Waiting list
+  Plot:
+    fields:
+      size:
+        label: Size (m²)

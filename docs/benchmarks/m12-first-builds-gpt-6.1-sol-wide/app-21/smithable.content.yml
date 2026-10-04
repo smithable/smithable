@@ -1,0 +1,91 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Asiakas
+    pluralLabel: Asiakkaat
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      phone:
+        label: Puhelin
+      notes:
+        label: Muistiinpanot
+  Vehicle:
+    label: Auto
+    pluralLabel: Autot
+    fields:
+      registrationNumber:
+        label: Rekisterinumero
+      customer:
+        label: Asiakas
+      make:
+        label: Merkki
+      model:
+        label: Malli
+      year:
+        label: Vuosimalli
+      notes:
+        label: Muistiinpanot
+  ServiceJob:
+    label: Huoltotyö
+    pluralLabel: Huoltotyöt
+    fields:
+      vehicle:
+        label: Auto
+      description:
+        label: Työn kuvaus
+      scheduledAt:
+        label: Huoltoaika
+      status:
+        label: Tila
+        values:
+          scheduled: Varattu
+          inProgress: Työn alla
+          completed: Valmis
+          canceled: Peruttu
+      mileage:
+        label: Mittarilukema (km)
+      workPerformed:
+        label: Tehdyt työt
+      completedAt:
+        label: Valmistumisaika
+  Invoice:
+    label: Lasku
+    pluralLabel: Laskut
+    fields:
+      number:
+        label: Laskunumero
+      customer:
+        label: Asiakas
+      serviceJob:
+        label: Huoltotyö
+      issueDate:
+        label: Laskun päiväys
+      dueDate:
+        label: Eräpäivä
+      total:
+        label: Loppusumma
+      status:
+        label: Tila
+        values:
+          draft: Luonnos
+          sent: Lähetetty
+          paid: Maksettu
+          canceled: Peruttu
+      paidAt:
+        label: Maksuaika
+      notes:
+        label: Muistiinpanot
+pages:
+  asiakkaat:
+    title: Asiakkaat
+  autot:
+    title: Autot
+  huoltotyot:
+    title: Huoltotyöt
+  laskut:
+    title: Laskut
+  tiimi:
+    title: Tiimi

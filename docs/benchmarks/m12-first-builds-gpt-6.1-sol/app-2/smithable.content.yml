@@ -1,0 +1,20 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Company
+    pluralLabel: Companies
+  Contact:
+    fields:
+      customer:
+        label: Company
+  Deal:
+    fields:
+      customer:
+        label: Company
+  FollowUp:
+    fields:
+      customer:
+        label: Company
+pages:
+  customers:
+    title: Companies

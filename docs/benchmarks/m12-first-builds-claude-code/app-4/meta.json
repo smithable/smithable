@@ -1,0 +1,10 @@
+{
+  "description": "A tool library where neighbors lend each other tools.",
+  "starter": "marketplace",
+  "wordStarter": "records",
+  "questions": [
+    "Who can browse the tools without signing in?",
+    "How should borrowing work in the app?",
+    "What should each tool listing hold?"
+  ]
+}

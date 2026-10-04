@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  shoots:
+    table:
+      columns: [title, client, scheduledAt, location, status]
+      sort: scheduledAt
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    font: Inter

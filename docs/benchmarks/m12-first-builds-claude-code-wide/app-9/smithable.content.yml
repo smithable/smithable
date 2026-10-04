@@ -1,0 +1,11 @@
+smithableContent: 0.1
+models:
+  Album:
+    fields:
+      recordLabel:
+        label: Label
+      condition:
+        values:
+          nearMint: Near mint
+          veryGoodPlus: Very good plus
+          veryGood: Very good

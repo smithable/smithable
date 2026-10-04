@@ -1,0 +1,10 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Are our online services working?
+      subtitle: The current state of the municipality's online services, any ongoing disruptions and planned maintenance.
+      button: Past incidents
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones

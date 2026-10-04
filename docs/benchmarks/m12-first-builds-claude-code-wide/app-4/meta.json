@@ -1,0 +1,10 @@
+{
+  "description": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
+  "starter": "records",
+  "wordStarter": "crm",
+  "questions": [
+    "Who will use the app?",
+    "How should practice be recorded?",
+    "Should individual lessons be kept as records, or just each pupil's regular weekly slot?"
+  ]
+}

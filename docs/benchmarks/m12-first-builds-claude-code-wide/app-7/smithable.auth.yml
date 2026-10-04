@@ -1,0 +1,14 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, catalog]
+  read: [Item]
+roles:
+  admin:
+    description: Keeps the flea market tidy.
+  member:
+    description: Sells and saves items.
+defaultRole: member
+admins: [johan@smithable.ai]

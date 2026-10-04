@@ -1,0 +1,19 @@
+smithableUx: 0.1
+pages:
+  quotes:
+    table:
+      columns: [client, description, amount, quotedOn, status]
+      sort: -quotedOn
+  payments:
+    table:
+      columns: [client, quote, amount, paidOn]
+      sort: -paidOn
+tones:
+  Quote.status:
+    accepted: success
+    declined: danger
+    sent: warning
+theme:
+  preset: minimal
+  brand:
+    primary: "#2563eb"
