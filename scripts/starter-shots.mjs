@@ -96,7 +96,10 @@ try {
         await open(page, `${base}${path}`);
         await page.waitForTimeout(500); // pictures and fonts settle
         const file = join(out, `${starter}-${n + 1}.webp`);
-        writeFileSync(file, await webp(browser, await page.screenshot({ fullPage })));
+        writeFileSync(
+          file,
+          await webp(browser, await page.screenshot({ fullPage, animations: "disabled" })),
+        );
         copyFileSync(file, join(opts.copy, `${starter}-${n + 1}.webp`));
         console.log(`${file}  (${path} as ${who})`);
         await context.close();
