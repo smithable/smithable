@@ -351,6 +351,31 @@ ${tests.join("\n\n")}
     // value is stored.
     expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+
+    // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
+${roles.some((r) => r !== null && r !== "admin") ? `    expect(() => forgetInLog(signedIn(${JSON.stringify(roles.find((r) => r !== null && r !== "admin") ?? null)}), { model: ${JSON.stringify(model.name)}, record: made.id })).toThrow(AccessDenied);\n` : ""}    forgetInLog(signedIn("admin"), { model: ${JSON.stringify(model.name)}, record: made.id });
+    const after = db.select().from(auditLog).where(and(eq(auditLog.model, ${JSON.stringify(model.name)}), eq(auditLog.recordId, made.id))).all();
+    expect(after.map((l) => l.title)).toEqual([null, null, null]);
+    const forgot = db.select().from(auditLog).where(eq(auditLog.action, "forgotten in the log")).all().at(-1);
+    expect(forgot).toMatchObject({ title: null, details: { model: ${JSON.stringify(model.name)}, record: made.id } });
+  });
+
+  test("keeps the client's details and a deleted record's name 90 days, and a line 12 months", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const line = (daysAgo: number) =>
+      db
+        .insert(auditLog)
+        .values({ at: new Date(Date.now() - daysAgo * day), who: "test", action: "deleted", title: "Old", address: "10.0.0.1", browser: "test" })
+        .returning()
+        .get();
+    const recent = line(10);
+    const older = line(100);
+    const oldest = line(400);
+    pruneAudit();
+    const row = (id: number) => db.select().from(auditLog).where(eq(auditLog.id, id)).get();
+    expect(row(recent.id)).toMatchObject({ title: "Old", address: "10.0.0.1" });
+    expect(row(older.id)).toMatchObject({ title: null, address: null, browser: null, action: "deleted" });
+    expect(row(oldest.id)).toBeUndefined();
   });
 });`);
   }
@@ -367,7 +392,7 @@ ${audited ? 'import { and, eq } from "drizzle-orm";\n' : standard.length ? 'impo
 import { db } from "#/db";
 import { ${[...tables, ...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
-${imports.join("\n")}
+${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${imports.join("\n")}
 
 let counter = 0;
 const next = () => ++counter;
