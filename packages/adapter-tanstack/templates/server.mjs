@@ -70,7 +70,8 @@ serve({
       if (refused)
         return new Response(
           refused === 413 ? "The request is larger than 1 MB." : "Say the request's length.",
-          { status: refused, headers: HEADERS },
+          // The body was not read: the connection closes, so no unread bytes meet the next request.
+          { status: refused, headers: { ...HEADERS, Connection: "close" } },
         );
       const response = await next();
       for (const [name, value] of Object.entries(HEADERS))
