@@ -3201,8 +3201,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -6771,7 +6774,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "8a301f46 generated",
+  "src/lib/auth.ts": "6ef04a47 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -8736,7 +8739,8 @@ export const auth = betterAuth({
         after: async (created) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          const used = invitationOf(email);
+          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          const used = openInvitation(email);
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
@@ -8750,8 +8754,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -9999,7 +10006,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "0d33db09 generated",
+  "src/lib/auth.ts": "6566d2fe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -12646,8 +12653,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -14229,7 +14239,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "32d6392e generated",
+  "src/lib/auth.ts": "d084e7ef generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -15330,8 +15340,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -16811,7 +16824,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "e7b96f20 generated",
+  "src/lib/auth.ts": "f19825b1 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -17832,8 +17845,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -18682,7 +18698,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "55c0fde1 generated",
+  "src/lib/auth.ts": "d2166766 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -21822,7 +21838,8 @@ export const auth = betterAuth({
         after: async (created) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          const used = invitationOf(email);
+          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          const used = openInvitation(email);
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
@@ -21836,8 +21853,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -23872,7 +23892,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "a520fe87 generated",
+  "src/lib/auth.ts": "59228314 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
