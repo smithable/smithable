@@ -1178,3 +1178,26 @@ test("removePage takes the page off a hero's button, in either style, and keeps 
     expect(removed.files.spec).toMatch(/landing:\n {6}hero:/);
   }
 });
+
+test("a word no argument takes is refused with what to write, and a list given twice adds up", () => {
+  const setPublic = findOperation("setPublic");
+  if (!setPublic) throw new Error("no setPublic");
+  expect(() => parseOperationArgs(setPublic, ["--pages", "home", "items"])).toThrow(
+    '"items" is left over: a list is written with commas, e.g. --pages home,items.',
+  );
+  expect(parseOperationArgs(setPublic, ["--pages", "home", "--pages", "items"])).toEqual({
+    pages: ["home", "items"],
+  });
+  expect(parseOperationArgs(setPublic, ["--pages", "home,items"])).toEqual({
+    pages: ["home", "items"],
+  });
+  const renameField = findOperation("renameField");
+  if (!renameField) throw new Error("no renameField");
+  expect(() => parseOperationArgs(renameField, ["Customer", "phone", "mobile", "extra"])).toThrow(
+    '"extra" is more than renameField takes: renameField <model> <from> <to>.',
+  );
+  expect(() =>
+    parseOperationArgs(renameField, ["Customer", "phone", "mobile", "--colour", "red"]),
+  ).toThrow("renameField has no option --colour.");
+  expect(() => parseOperationArgs(setPublic, ["--pages"])).toThrow("--pages needs a value.");
+});
