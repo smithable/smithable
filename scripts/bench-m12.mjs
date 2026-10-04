@@ -200,6 +200,16 @@ function contentTexts(dir, ir) {
 }
 
 /** The deterministic facts about one kept draft, against the starter it began from. */
+/** The second set's apps for programs and assistants (docs/design/api-only.md §5). */
+const API_APPS = [
+  { text: "A backend for my habit app: habits, daily check-ins and streaks.", api: true },
+  {
+    text: "Somewhere my AI assistant keeps my tasks and notes, by project.",
+    api: true,
+    assistant: true,
+  },
+];
+
 /** Warnings about what is public that send a valid draft back to the model once (#266). */
 const PUBLIC_FLAWS = [
   "public-personal-data",
@@ -252,6 +262,19 @@ function score(dir, description, starter, lang, meta = {}) {
   const auth = draft.auth;
   const mentionsPublic = /\b(visitors?|public|site)\b/i.test(description);
   const landing = (draft.ir?.pages ?? []).some((p) => p.pattern?.kind === "landing");
+  // An app for programs and assistants (api-only.md §5): no landing page, an api block, tools when
+  // the description names an assistant, and a role other than admin for keys.
+  const apiApp = API_APPS.find((w) => w.text === description);
+  const apiChecks = apiApp
+    ? [
+        [!landing, "a landing page"],
+        [Boolean(auth?.api), "no api block"],
+        [!apiApp.assistant || Boolean(auth?.api?.assistants), "no tools for the assistant"],
+        [(auth?.roles ?? []).some((r) => r.name !== "admin"), "no role but admin for keys"],
+      ]
+        .filter(([ok]) => !ok)
+        .map(([, why]) => why)
+    : undefined;
   const list = (xs) => (xs?.length ? xs.join(", ") : "none");
   return {
     starter,
@@ -272,6 +295,7 @@ function score(dir, description, starter, lang, meta = {}) {
       : "?",
     warnings: warnings.length ? `${warnings.length} (${codes.join(", ")})` : "0",
     flaws: flaws.length ? `**${flaws.join(", ")}**` : "none",
+    apiApp: apiChecks ? (apiChecks.length ? `**${apiChecks.join("; ")}**` : "yes") : "",
     reused: list(reused),
     samples: `${withSamples} / ${draft.ir?.models.length ?? 0}`,
     landing: `${mentionsPublic ? "mentions visitors" : "no mention"}; ${landing ? "landing page" : "no landing page"}`,
@@ -310,11 +334,11 @@ function scorecard(rows) {
       ? `${r.starter} (words: ${r.wordStarter})`
       : r.starter;
   const flawed = rows.filter((r) => r.flaws !== "none").length;
-  return `${flawed} of ${rows.length} drafts end with a warning about what is public (*Public flaws left*: ${PUBLIC_FLAWS.join(", ")}); since #266 a draft with one goes back to the model once to fix it.
+  return `${flawed} of ${rows.length} drafts end with a warning about what is public (*Public flaws left*: ${PUBLIC_FLAWS.join(", ")}); since #266 a draft with one goes back to the model once to fix it. *API app*, for the second set's two descriptions of apps for programs and assistants: "yes" when the draft has no landing page, an \`api\` block, tools when the description names an assistant, and a role other than admin for keys; otherwise what it lacks.
 
-| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |${head}
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
-${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.flaws} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
+| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | API app | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |${head}
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
+${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.flaws} | ${r.apiApp} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names what the draft dropped because it could not be made valid: an action by its name, anything else (a formula field, a capacity) with its operation. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
 }
@@ -432,6 +456,8 @@ const WIDE = [
     text: "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
     lang: "de",
   },
+  // At the end, so the rows above keep their numbers.
+  ...API_APPS,
 ];
 const set = args.set === "wide" ? WIDE : DESCRIPTIONS.map((text) => ({ text }));
 if (!["core", "wide"].includes(args.set)) throw new Error(`--set is core or wide, not ${args.set}`);
