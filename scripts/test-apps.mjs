@@ -145,6 +145,8 @@ async function serve(dir, port, mode) {
     stop();
     throw new Error(`${error.message}. The server said:\n${output.slice(-2000)}`);
   }
+  // What the server has written so far: its access and app log lines.
+  stop.output = () => output;
   return stop;
 }
 
@@ -2305,6 +2307,32 @@ for (const [index, example] of examples.entries()) {
         `  ${absent ? "✓" : "✗"} the production build has no development sign-in or setup notes`,
       );
       if (!absent) failures.push(`${example} development sign-in in production`);
+      await asyncStep(
+        "a request's trace id is continued from traceparent, answered, and on its access line (who, path without query values)",
+        async () => {
+          const path = ir.pages.find((p) => publicPages.includes(p.id))?.route ?? "/sign-in";
+          const id = "4bf92f3577b34da6a3ce929d0e0e4736";
+          const answer = await fetch(`${base}${path}?q=secret`, {
+            headers: { traceparent: `00-${id}-00f067aa0ba902b7-01` },
+          });
+          if (!answer.headers.get("traceparent")?.startsWith(`00-${id}-`))
+            throw new Error(`answered with traceparent ${answer.headers.get("traceparent")}`);
+          // The line is written as the answer goes out: wait for it.
+          let line;
+          for (let i = 0; !line && i < 50; i++) {
+            line = stop
+              .output()
+              .split("\n")
+              .find((l) => l.includes(`"trace":"${id}"`) && l.includes('"log":"access"'));
+            if (!line) await new Promise((r) => setTimeout(r, 100));
+          }
+          if (!line) throw new Error("no access line with the trace id");
+          const access = JSON.parse(line);
+          if (access.path !== `${path}?q` || access.who !== "visitor" || access.status !== 200)
+            throw new Error(`access line: ${line}`);
+          if (line.includes("secret")) throw new Error("the query's value is in the access line");
+        },
+      );
       await asyncStep(
         "production pages carry the security headers, and the Content Security Policy blocks nothing they need",
         async () => {
