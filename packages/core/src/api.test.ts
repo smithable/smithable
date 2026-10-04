@@ -137,7 +137,7 @@ test("setApi sets, changes and turns off what is offered", () => {
   });
   if (!all.ok) throw new Error(all.message);
   expect(all.description).toBe(
-    "Offer every model, also ones added later, to other programs, and let them run every standard action",
+    "Offer every model, also ones added later, to other programs, and let them run every standard action, also as tools for AI assistants",
   );
   expect(all.files.auth).toContain(
     "api:\n  models: all\n  except: [Subscriber]\n  actions: all\n  assistants: true\n",

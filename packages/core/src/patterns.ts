@@ -36,7 +36,7 @@ import type { AnyOperation, Effect, Refusal } from "./operation.js";
 import type { JsonSchema } from "./section.js";
 import { checkFilterFields } from "./sections/list-keys.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
-import { COMPONENT_PATTERN } from "./sections/names.js";
+import { COMPONENT_PATTERN, FIELD_NAME_PATTERN } from "./sections/names.js";
 import {
   articlesOperations,
   calculatorOperations,
@@ -300,6 +300,7 @@ const dashboard: PagePattern<"dashboard"> = {
   schema: {
     type: "object",
     description: "Tiles of a dashboard, in order: numbers, charts by month, latest records.",
+    propertyNames: { pattern: FIELD_NAME_PATTERN.source },
     additionalProperties: {
       type: "object",
       additionalProperties: false,
@@ -1081,6 +1082,15 @@ function readDashboard(
   for (const { key: name, keyNode, value } of mapEntries(ctx, node, `the dashboard of ${where}`) ??
     []) {
     const itemWhere = `"${name}" in the dashboard of ${where}`;
+    // A tile's name is a name in the generated code too: camelCase, like a field's.
+    if (!FIELD_NAME_PATTERN.test(name)) {
+      ctx.error(
+        keyNode,
+        "invalid-name",
+        `A tile's name starts with a lowercase letter and uses only letters and digits, like "totalFuelCost": "${name}".`,
+      );
+      continue;
+    }
     const options = checkKeys(ctx, mapEntries(ctx, value, itemWhere) ?? [], itemWhere, {
       allowed: ["count", "sum", "average", "list", "query", "where", "by", "limit"],
       content: ["label", "title"],

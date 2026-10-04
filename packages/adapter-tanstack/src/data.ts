@@ -363,15 +363,15 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
   const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
   // A list's rows as the viewer gets them: formulas worked out, related records kept for the
-  // totals left out.
-  const asListed = (rows: string, lead: string) =>
+  // totals left out. No local of its own: a model's table may have any name (items, for Item).
+  const asListed = (rows: string, lead: string, tail = "") =>
     aggregatedLists(model).length
       ? `// The related records are here for the totals only: some may not be the viewer's to read.
     ${lead}${rows}.map((row) => {
       const { ${aggregatedLists(model).join(", ")}, ...listed } = ${compute("row")};
       return listed;
-    });`
-      : `${lead}${formulas ? `${rows}.map(${withFormulasName(model)})` : rows};`;
+    })${tail};`
+      : `${lead}${formulas ? `${rows}.map(${withFormulasName(model)})` : rows}${tail};`;
   const titleColumn = titleField(model);
   const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
   const access = modelAccess(model, auth);
@@ -594,12 +594,7 @@ ${
       limit,
       offset,
     });
-    ${
-      formulas || aggregatedLists(model).length
-        ? `${asListed("rows", "const items = ")}
-    return { items, total };`
-        : "return { items: rows, total };"
-    }
+    ${asListed("rows", "return { items: ", ", total }")}
   },
 `
     : ""
