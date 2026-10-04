@@ -5282,6 +5282,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -7320,7 +7322,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/where.ts": "e02cfb63 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "6550e4f7 generated",
+  "src/lib/auth.ts": "1e974e1e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -10609,6 +10611,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -14458,7 +14462,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c81057f8 generated",
+  "src/lib/auth.ts": "0cfc4733 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -16423,6 +16427,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -17816,7 +17822,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "bafbecb5 generated",
+  "src/lib/auth.ts": "6dde9690 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -20488,6 +20494,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -22239,7 +22247,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "0aec6d30 generated",
+  "src/lib/auth.ts": "4cae539b generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -23343,6 +23351,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -24990,7 +25000,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "ad79e256 generated",
+  "src/lib/auth.ts": "29190f59 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -26003,6 +26013,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -26949,7 +26961,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "40087649 generated",
+  "src/lib/auth.ts": "1460da06 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -32483,6 +32495,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -35035,7 +35049,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/where.ts": "e02cfb63 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "6976476b generated",
+  "src/lib/auth.ts": "cb61dd0a generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",

@@ -192,6 +192,8 @@ export const auth = betterAuth({
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
