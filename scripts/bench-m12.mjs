@@ -7,6 +7,18 @@
 // facts only (what the draft kept of its starter, access, what is public, warnings, reuse of the
 // starter's texts, sample records), for the reader to judge. `--score <kept dir>` scores a run's
 // kept files again without calling a model, and puts the table into that run's report.
+//
+// What it may cost (Johan, 2026-10-04): a full run (both sets) at most once a day, by session C,
+// at the end of the day's merges; in between only the descriptions a change is about, once.
+// - `--only 3,7,11` or `--only invoicing` (the starter a description got in the last full run)
+//   runs just those and merges their rows into the last full report, marked as reruns.
+// - A full run within 20 hours of the last one (its time is in <report folder>/meta.json) is
+//   refused unless `--force`.
+// - The model's answers are kept by request (SMITHABLE_LLM_CACHE, ~/.cache/smithable/llm unless
+//   set; `--no-cache` turns it off), so a rerun whose prompts did not change pays only for what
+//   is new. Each row says how many of its calls the cache answered.
+// - Leave SMITHABLE_MODEL_PRICE unset to count Mistral's list price (in dollars, see
+//   packages/ai's listPrice); the report gives tokens in and out and their cost.
 import { spawnSync } from "node:child_process";
 import {
   cpSync,
@@ -18,7 +30,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
 import { closestStarter } from "../packages/ai/dist/index.js";
@@ -36,8 +48,17 @@ const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-bench-m12-"));
 const { values: args } = parseArgs({
-  options: { score: { type: "string" }, set: { type: "string", default: "core" } },
+  options: {
+    score: { type: "string" },
+    set: { type: "string", default: "core" },
+    only: { type: "string" },
+    force: { type: "boolean", default: false },
+    "no-cache": { type: "boolean", default: false },
+  },
 });
+// The response cache, for every `smithable` the bench starts (see the header).
+if (args["no-cache"]) delete process.env.SMITHABLE_LLM_CACHE;
+else process.env.SMITHABLE_LLM_CACHE ??= join(homedir(), ".cache/smithable/llm");
 
 const SPECS = ["smithable.yml", "smithable.auth.yml", "smithable.ux.yml", "smithable.content.yml"];
 const read = (dir, file) =>
@@ -345,10 +366,79 @@ if (!["core", "wide"].includes(args.set)) throw new Error(`--set is core or wide
 // Each draft's spec files, kept next to the report so what the model made can be read later.
 const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}${args.set === "wide" ? "-wide" : ""}`;
 const kept = join(repo, "docs/benchmarks", slug);
-rmSync(kept, { recursive: true, force: true });
+const stampFile = join(kept, "meta.json");
+const rowsFile = join(kept, "rows.json");
+const HOURS = 20;
+const today = new Date().toISOString().slice(0, 10);
 
-const rows = [];
-for (const [i, { text: description, lang }] of set.entries()) {
+// A targeted run merges into the last full one; a full one waits 20 hours after the last.
+let rows = [];
+let chosen = set.map((_, i) => i);
+if (args.only) {
+  rows = existsSync(rowsFile) ? JSON.parse(readFileSync(rowsFile, "utf8")) : rowsOfReport();
+  if (!rows.length)
+    throw new Error(`No full run of this set to merge into (${slug}); run the set in full first.`);
+  chosen = args.only
+    .split(",")
+    .map((s) => s.trim())
+    .flatMap((part) =>
+      /^\d+$/.test(part)
+        ? [Number(part) - 1]
+        : rows.flatMap((r, i) => (r.starter === part ? [i] : [])),
+    )
+    .filter((i) => i >= 0 && i < set.length);
+  if (!chosen.length) throw new Error(`--only ${args.only} names no description of this set.`);
+} else {
+  const last = existsSync(stampFile)
+    ? JSON.parse(readFileSync(stampFile, "utf8")).lastFullRun
+    : undefined;
+  if (last && Date.now() - Date.parse(last) < HOURS * 3600_000 && !args.force)
+    throw new Error(
+      `The last full run of this set was at ${last}: one a day (${HOURS} hours apart). Run what a change is about with --only, or pass --force.`,
+    );
+  rmSync(kept, { recursive: true, force: true });
+}
+
+/** The rows of a report written before rows.json was kept: its table, summaries and meta files. */
+function rowsOfReport() {
+  const file = join(repo, "docs/benchmarks", `${slug}.md`);
+  if (!existsSync(file)) return [];
+  const text = readFileSync(file, "utf8");
+  const start = text.indexOf("| Description |");
+  const table = text.slice(start, text.indexOf("\n\n", start));
+  return table
+    .split("\n")
+    .slice(2)
+    .map((line, i) => {
+      const [description, starter, created, typecheck, tokens, cost, time] = line
+        .split("|")
+        .slice(1, -1)
+        .map((c) => c.trim());
+      const metaFile = join(kept, `app-${i + 1}`, "meta.json");
+      const meta = existsSync(metaFile) ? JSON.parse(readFileSync(metaFile, "utf8")) : {};
+      const section = text.split(`\n### ${i + 1}. `)[1]?.split("\n### ")[0] ?? "";
+      const body = /```text\n([\s\S]*?)\n```/.exec(section)?.[1] ?? "";
+      return {
+        description,
+        starter,
+        created: created === "yes",
+        typecheck: typecheck === "yes",
+        tokens: Number(tokens.replaceAll(",", "")),
+        cost: Number(cost.slice(1)),
+        currency: cost[0],
+        seconds: Number.parseInt(time, 10),
+        summary: created === "yes" ? body : "",
+        error: created === "yes" ? "" : body,
+        meta: { wordStarter: meta.wordStarter, questions: meta.questions, dropped: meta.dropped },
+        ...(set[i]?.lang ? { lang: set[i].lang } : {}),
+      };
+    });
+}
+
+let fromCache = 0;
+for (const i of chosen) {
+  const { text: description, lang } = set[i];
+  if (args.only) rmSync(join(kept, `app-${i + 1}`), { recursive: true, force: true });
   const dir = join(root, `app-${i + 1}`);
   // What the first step would ask: `new --yes` asks nothing, so the questions come from clarify.
   const wordStarter = closestStarter(description, STARTERS);
@@ -369,7 +459,11 @@ for (const [i, { text: description, lang }] of set.entries()) {
     maxBuffer: 64 * 1024 * 1024,
   });
   const out = `${run.stdout}${run.stderr}`;
-  const used = /\(([^)]+)\) · ([\d,]+) tokens · ([€$])([\d.]+)/.exec(out);
+  const used =
+    /\(([^)]+)\) · ([\d,]+) tokens(?: \(([\d,]+) in, ([\d,]+) out\))? · ([€$])([\d.]+)(?: · (\d+) of (\d+) calls from the cache)?/.exec(
+      out,
+    );
+  const number = (text) => Number((text ?? "0").replaceAll(",", ""));
   const typecheck =
     existsSync(join(dir, "package.json")) &&
     spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" }).status === 0;
@@ -383,12 +477,17 @@ for (const [i, { text: description, lang }] of set.entries()) {
     starter: /Starting from the (\w+) starter/.exec(out)?.[1] ?? "?",
     created: run.status === 0,
     typecheck,
-    tokens: Number((used?.[2] ?? "0").replaceAll(",", "")),
-    cost: Number(used?.[4] ?? 0),
-    currency: used?.[3] ?? "€",
+    tokens: number(used?.[2]),
+    tokensIn: number(used?.[3]),
+    tokensOut: number(used?.[4]),
+    cost: Number(used?.[6] ?? 0),
+    currency: used?.[5] ?? "€",
+    fromCache: number(used?.[7]),
+    ...(args.only ? { rerun: today } : {}),
+    ...(lang ? { lang } : {}),
     seconds: Math.round((Date.now() - started) / 1000),
     summary: out
-      .slice(out.indexOf("\n", out.indexOf("tokens ·")) + 1, out.indexOf("Create this app?"))
+      .slice(out.indexOf("\n", out.search(/ tokens (\(|·)/)) + 1, out.indexOf("Create this app?"))
       .trim(),
     error: run.status === 0 ? "" : out.slice(-600),
   };
@@ -402,32 +501,52 @@ for (const [i, { text: description, lang }] of set.entries()) {
     .filter(Boolean)
     .join(", ");
   row.meta = { wordStarter, questions, dropped };
-  rows.push(row);
+  rows[i] = row;
+  fromCache += row.fromCache;
   if (existsSync(join(kept, `app-${i + 1}`)))
     writeFileSync(
       join(kept, `app-${i + 1}`, "meta.json"),
       `${JSON.stringify({ description, starter: row.starter, wordStarter, questions, ...(dropped && { dropped }), ...(lang && { lang }) }, null, 2)}\n`,
     );
   console.log(
-    `${i + 1}. ${row.created ? "created" : "failed"} (${row.starter}) · ${row.tokens} tokens · ${row.currency}${row.cost}`,
+    `${i + 1}. ${row.created ? "created" : "failed"} (${row.starter}) · ${row.tokensIn} in, ${row.tokensOut} out · ${row.currency}${row.cost.toFixed(4)}${row.fromCache ? ` · ${row.fromCache} calls from the cache` : ""}`,
   );
 }
+mkdirSync(kept, { recursive: true });
+writeFileSync(rowsFile, `${JSON.stringify(rows, null, 2)}\n`);
+const stamp = existsSync(stampFile) ? JSON.parse(readFileSync(stampFile, "utf8")) : {};
+if (!args.only) stamp.lastFullRun = new Date().toISOString();
+writeFileSync(stampFile, `${JSON.stringify(stamp, null, 2)}\n`);
 
 const yes = (v) => (v ? "yes" : "**no**");
-const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${new Date().toISOString().slice(0, 10)})
+const sum = (key) => rows.reduce((n, r) => n + (r[key] ?? 0), 0);
+const reruns = rows.filter((r) => r.rerun);
+// Each currency on its own: a price given in euros, Mistral's list price in dollars.
+const costs = () =>
+  ["€", "$"]
+    .flatMap((c) => {
+      const these = rows.filter((r) => r.currency === c);
+      return these.length
+        ? [
+            `${c}${these.reduce((n, r) => n + r.cost, 0).toFixed(4)}${c === "$" ? " (Mistral's list price)" : ""}`,
+          ]
+        : [];
+    })
+    .join(" + ");
+const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${stamp.lastFullRun?.slice(0, 10) ?? today}${reruns.length ? `; ${reruns.length} rerun since` : ""})
 
-The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${rows.reduce((n, r) => n + r.tokens, 0).toLocaleString("en")} tokens, ${rows[0]?.currency ?? "€"}${rows.reduce((n, r) => n + r.cost, 0).toFixed(4)}.
+The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""}
 
-| Description | Starter | Created | Type-checks | Tokens | Cost | Time |
-|---|---|---|---|---|---|---|
-${rows.map((r) => `| ${r.description} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokens.toLocaleString("en")} | ${r.currency}${r.cost.toFixed(4)} | ${r.seconds} s |`).join("\n")}
+| Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Time |
+|---|---|---|---|---|---|---|---|---|
+${rows.map((r) => `| ${r.description}${r.rerun ? ` *(rerun ${r.rerun})*` : ""} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokensIn === undefined ? "–" : r.tokensIn.toLocaleString("en")} | ${r.tokensOut === undefined ? "–" : r.tokensOut.toLocaleString("en")} | ${r.currency}${r.cost.toFixed(4)} | ${r.fromCache ?? "–"} | ${r.seconds} s |`).join("\n")}
 
 Each created app's four spec files are in [${slug}/](${slug}/), one folder per description (app-1 …).
 
 ${SCORE_START}
 ## Scorecard (scripts/bench-m12.mjs --score)
 
-${scorecard(rows.map((r, i) => (existsSync(join(kept, `app-${i + 1}`, "smithable.yml")) ? { n: i + 1, ...score(join(kept, `app-${i + 1}`), r.description, r.starter, set[i].lang, r.meta) } : null)).filter(Boolean))}
+${scorecard(rows.map((r, i) => (r && existsSync(join(kept, `app-${i + 1}`, "smithable.yml")) ? { n: i + 1, ...score(join(kept, `app-${i + 1}`), r.description, r.starter, set[i].lang, r.meta) } : null)).filter(Boolean))}
 ${SCORE_END}
 
 ## Summaries, for review
@@ -436,4 +555,6 @@ ${rows.map((r, i) => `### ${i + 1}. ${r.description}\n\n${r.created ? `\`\`\`tex
 `;
 const file = `docs/benchmarks/${slug}.md`;
 writeFileSync(join(repo, file), report);
-console.log(`\nWrote ${file}. The apps are in ${root}`);
+console.log(
+  `\nWrote ${file}. The apps are in ${root}. ${fromCache} model calls came from the cache (${process.env.SMITHABLE_LLM_CACHE ?? "off"}).`,
+);
