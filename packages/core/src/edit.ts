@@ -130,7 +130,15 @@ export class YamlEditor {
       this.splice(before ? key.range[0] - before[0].length : key.range[0], end, "");
       return;
     }
-    const start = this.lineStart(key.range[0]);
+    // The comment lines right above it, at its indent, are about it and go with it.
+    let start = this.lineStart(key.range[0]);
+    const indent = key.range[0] - start;
+    while (start > 0) {
+      const above = this.lineStart(start - 1);
+      const line = this.source.slice(above, start - 1);
+      if (!/^\s*#/.test(line) || line.length - line.trimStart().length !== indent) break;
+      start = above;
+    }
     this.splice(start, Math.min(this.lineEnd(end - 1) + 1, this.source.length), "");
   }
 
