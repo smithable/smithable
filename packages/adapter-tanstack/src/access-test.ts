@@ -167,18 +167,20 @@ ${Object.entries(expected(access, role))
   });`);
     // A record's page carries its related records as their own model shows them: a visitor is
     // not told who added them.
-    for (const list of signedIn && access.read.public && !access.read.where
-      ? listFields(model)
-      : []) {
+    // Both records fit their public conditions (a list of values with its first one).
+    for (const list of signedIn && access.read.public ? listFields(model) : []) {
       const child = ir.models.find((m) => m.name === list.type.model);
       const back = child?.fields.find(
         (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model.name,
       );
       const childRead = child && modelAccess(child, auth).read;
-      if (!child || child.ownedBy || !back || !childRead?.public || childRead.where) continue;
-      tests.push(`  test("a visitor reading a ${model.name.toLowerCase()} is not told who added its ${list.name}", async () => {
-    const parent = insert${model.name}(stranger.id);
-    insert${child.name}(stranger.id, { ${back.name}Id: parent.id });
+      if (!child || child.ownedBy || !back || !childRead?.public) continue;
+      const childFits = Object.entries(childRead.where ?? {}).map(
+        ([k, v]) => `, ${k}: ${JSON.stringify(Array.isArray(v) ? v[0] : v)}`,
+      );
+      tests.push(`  test("a visitor reading the ${model.name.toLowerCase()} is not told who added its ${list.name}", async () => {
+    const parent = insert${model.name}(stranger.id${fits});
+    insert${child.name}(stranger.id, { ${back.name}Id: parent.id${childFits.join("")} });
     const related = (await ${data}.get(null, parent.id))?.${list.name} ?? [];
     expect(related.length).toBeGreaterThan(0);
     for (const row of related) expect(row.ownerId).toBeNull();
