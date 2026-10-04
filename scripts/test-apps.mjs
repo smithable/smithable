@@ -823,11 +823,47 @@ async function statusFlow(base) {
     if (!/^smk_[A-Za-z0-9_-]{20,}$/.test(shown ?? "")) throw new Error(`the key shown is ${shown}`);
     const keyRow = keys.locator('[data-part="key-row"]', { hasText: "Uptime monitor" });
     await keyRow.getByText(`${shown?.slice(0, 10)}…`).waitFor();
+    // The API with that key: what the auth file offers, as the key's role may.
+    const api = (path, init = {}) =>
+      fetch(`${base}/api/v1${path}`, {
+        ...init,
+        headers: { authorization: `Bearer ${shown}`, "content-type": "application/json" },
+      });
+    if ((await fetch(`${base}/api/v1/incidents`)).status !== 401)
+      throw new Error("the API answered without a key");
+    const listed = await api("/incidents");
+    const listing = await listed.json();
+    if (listed.status !== 200 || !listing.items?.length || !listing.items[0].title)
+      throw new Error(
+        `listing incidents gave ${listed.status} ${JSON.stringify(listing).slice(0, 200)}`,
+      );
+    const added = await api("/incidents", {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Search is slow",
+        status: "investigating",
+        detectedAt: new Date().toISOString(),
+      }),
+    });
+    const incident = await added.json();
+    if (added.status !== 201 || !incident.id)
+      throw new Error(`adding gave ${added.status} ${JSON.stringify(incident)}`);
+    const resolved = await (
+      await api(`/incidents/${incident.id}/actions/resolve`, { method: "POST" })
+    ).json();
+    if (resolved.status !== "resolved")
+      throw new Error(`resolving gave ${JSON.stringify(resolved)}`);
+    if ((await api("/maintenances")).status !== 404)
+      throw new Error("a model not offered answered");
+    const described = await (await fetch(`${base}/api/v1/openapi.json`)).json();
+    if (!described.paths?.["/api/v1/incidents/{id}/actions/resolve"])
+      throw new Error("the description lacks resolve");
     page.once("dialog", (d) => d.accept());
     await keyRow.getByRole("button", { name: "Revoke" }).click();
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
+    if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
-      "  ✓ browser: an admin makes an API key on the team page, sees it once, and revokes it",
+      "  ✓ browser: an admin makes an API key on the team page; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is; revoked, it stops",
     );
   } catch (error) {
     console.log(
