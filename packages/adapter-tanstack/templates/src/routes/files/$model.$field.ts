@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PICTURES } from "#/generated/pictures";
 import { allows } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { BadPicture, PICTURE_MAX_BYTES, savePicture } from "#/kit/uploads";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/files/$model/$field")({
           const known =
             error instanceof BadPicture ||
             (error instanceof Error && error.message.startsWith("Too many "));
-          if (!known) console.error(error);
+          if (!known) log.error("A picture could not be stored", { error });
           return new Response(
             known ? (error as Error).message : "The picture could not be stored.",
             {
