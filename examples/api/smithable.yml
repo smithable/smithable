@@ -57,3 +57,4 @@ actions:
       status: done
     set:
       status: todo
+    intent: Open a finished task again.
