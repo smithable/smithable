@@ -560,6 +560,37 @@ test("a valid draft that a visitor would find broken goes back to the model once
   expect(back.files["smithable.auth.yml"]).not.toContain("read:");
   expect(back.operations?.at(-1)).toEqual({ op: "setPublic", args: { read: [] } });
 
+  // A field no app may hold (a card number, a password) is taken out by the engine itself,
+  // with no call to the model; what the person gets says so in its operations.
+  prompts.length = 0;
+  const paying = await draftProjectByOperations({
+    description: "a tool library",
+    providers: [
+      provider([
+        {
+          operations: [
+            library[0],
+            {
+              op: "addModel",
+              args: {
+                model: "Member",
+                fields: { name: "string!", cardNumber: "string", password: "string" },
+              },
+            },
+            { op: "addPage", args: { page: "members", model: "Member" } },
+          ],
+        },
+      ]),
+    ],
+  });
+  if (paying.kind !== "draft") throw new Error("no draft");
+  expect(prompts).toHaveLength(1);
+  expect(paying.files["smithable.yml"]).not.toContain("cardNumber");
+  expect(paying.files["smithable.yml"]).not.toContain("password");
+  expect(paying.operations?.filter((o) => o.op === "removeField").map((o) => o.args.field)).toEqual(
+    ["cardNumber", "password"],
+  );
+
   // A draft without such a flaw costs no second call.
   prompts.length = 0;
   const fine = await draftProjectByOperations({

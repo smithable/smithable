@@ -10,6 +10,7 @@ import {
   operationsFor,
   type ProjectFiles,
   pageModels,
+  sensitiveKind,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -486,6 +487,34 @@ export function openLinked(files: ProjectFiles, done: Step[]): ProjectFiles {
   return result.files;
 }
 
+/** Fields an app must not hold whatever the description says: card data, passwords and keys. */
+const MUST_NOT_HOLD = new Set(["card-data", "secret-field"]);
+
+/**
+ * A draft's field that looks like a payment card's number or a password is taken out again: no
+ * description makes it right to store one, so this is not left to the model. A field something
+ * else in the draft still needs stays, and its warning with it.
+ */
+export function dropForbidden(files: ProjectFiles, done: Step[]): ProjectFiles {
+  let next = files;
+  const read = validateSpec({ path: "smithable.yml", text: files.spec });
+  for (const model of read.ir?.models ?? [])
+    for (const field of model.fields) {
+      const kind = sensitiveKind(field);
+      if (!kind || !MUST_NOT_HOLD.has(kind)) continue;
+      const step: Step = { op: "removeField", args: { model: model.name, field: field.name } };
+      const result = applyOperation(next, step.op, step.args);
+      if (!result.ok) continue;
+      next = result.files;
+      done.push(step);
+    }
+  return next;
+}
+
+/** The mends every draft gets, in order, each adding the operations it applied to `done`. */
+const mended = (files: ProjectFiles, done: Step[]) =>
+  dropForbidden(openLinked(closeShared(files, done), done), done);
+
 /** The validator's warnings that mean a visitor finds the app broken or too open. */
 const VISITOR_FLAWS = new Set([
   "public-page-closed-records",
@@ -606,7 +635,7 @@ export async function draftProjectByOperations(options: {
         // In a correction round an empty answer drops what was refused; a first answer with
         // nothing in it is no draft.
         if (done.length > 0) {
-          if (!best) files = openLinked(closeShared(files, done), done);
+          if (!best) files = mended(files, done);
           return draftOf(droppedBefore);
         }
         problem = refused.length
@@ -638,7 +667,7 @@ export async function draftProjectByOperations(options: {
             }),
         ];
         if (done.length > 0) {
-          files = openLinked(closeShared(files, done), done);
+          files = mended(files, done);
           const found = flawsOf(files);
           if (!best || weigh(found) < best.score)
             best = { files, count: done.length, score: weigh(found) };
