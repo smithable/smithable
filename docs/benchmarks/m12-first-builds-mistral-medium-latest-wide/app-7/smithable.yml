@@ -14,17 +14,8 @@ models:
       place: string
       available: bool = true
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      latest:
-        records: Item
-        where:
-          available: true
   catalog:
-    route: /items
+    route: /
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
@@ -37,4 +28,11 @@ pages:
   saved:
     crud: Item
     favorites: only
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
 navigation: [catalog, myItems, saved]

@@ -3,7 +3,7 @@ pages:
   matches:
     table:
       sort: -date
-      view: cards
+      columns: [date, homeTeam, awayTeam, homeScore, awayScore, status]
     icon: calendar
   teams:
     table:
@@ -13,9 +13,8 @@ pages:
     table:
       view: cards
     icon: user
-  results:
-    icon: receipt
 tones:
   Match.status:
-    played: success
+    completed: success
     canceled: danger
+    inProgress: warning

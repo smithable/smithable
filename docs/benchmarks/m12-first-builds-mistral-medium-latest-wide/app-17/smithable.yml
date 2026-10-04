@@ -12,8 +12,6 @@ models:
       durationMinutes: int! = 30
       price: money!
     access:
-      create: [admin]
-      write: [admin]
       delete: [admin]
   Stylist:
     fields:
@@ -21,10 +19,8 @@ models:
       bio: text
       portrait: picture
     access:
-      create: [admin]
-      write: [admin]
       delete: [admin]
-  Appointment:
+  Session:
     fields:
       service: Service!
       stylist: Stylist!
@@ -35,43 +31,39 @@ models:
         type: int
         formula: capacity - COUNT(bookings)
     access:
-      create: [admin]
-      write: [admin]
       delete: [admin]
   Booking:
     fields:
-      appointment: Appointment! unique
+      session: Session! unique
       customerName: string!
       customerEmail: email!
       customerPhone: phone
-    access:
-      create: [customer, admin]
-      read: [owner, admin]
-      write: [owner, admin]
-      delete: [owner, admin]
+      notes: text
+    capacity:
+      per: session
+      max: session.capacity
 pages:
-  tjanster:
+  services:
     crud: Service
     access: [admin]
-  stylister:
+  stylists:
     crud: Stylist
     access: [admin]
-  tider:
-    crud: Appointment
+  sessions:
+    crud: Session
     access: [admin]
-  mina-bokningar:
+  my-bookings:
     crud: Booking
-    access: [customer, admin]
-  hem:
+  home:
     route: /
     landing:
       hero:
       footer:
-      tjanster:
+      services:
         records: Service
-      stylister:
+      stylists:
         records: Stylist
-  schema:
+  schedule:
     calendar:
-      model: Appointment
+      model: Session
       starts: startsAt

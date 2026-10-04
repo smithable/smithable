@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Bird Sightings
-  description: A place for our birdwatching club to record and share bird sightings.
+  description: A place to record and share bird sightings for our birdwatching club.
 models:
   Sighting:
     fields:
@@ -22,3 +22,4 @@ pages:
         records: Sighting
   team:
     users: manage
+navigation: [sightings, team]

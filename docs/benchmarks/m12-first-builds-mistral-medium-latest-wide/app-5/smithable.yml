@@ -5,32 +5,37 @@ models:
   Client:
     fields:
       name: string!
-      email: email!
+      email: email
       phone: phone
+      address: text
   Shoot:
     fields:
       name: string!
-      date: date!
       client: Client!
+      date: date!
+      location: string
       description: text
   Invoice:
     fields:
       number: string! unique
       client: Client!
       shoot: Shoot
-      date: date! = TODAY()
-      dueDate: date
-      status: draft | sent | paid | overdue
-      total: money
+      issuedOn: date!
+      dueOn: date
+      status: draft | sent | overdue | paid
+      total: money!
       notes: text
 pages:
   clients:
     crud: Client
+    search: [name, email]
   shoots:
     crud: Shoot
   invoices:
     crud: Invoice
     actions: [markSent, markPaid]
+    filters: [status, client]
+    search: [number]
 actions:
   markSent:
     on: Invoice

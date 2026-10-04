@@ -5,61 +5,65 @@ app:
   currency: EUR
   timezone: Europe/Berlin
 models:
-  PickupTime:
-    fields:
-      date: date!
-      startTime: string!
-      endTime: string!
-      notes: text
   Product:
     fields:
       name: string!
       description: text
       price: money!
-      category: obst | gemuese | backwaren | sonstiges
+      category: string
       available: bool = true
       image: url
   PreOrder:
     fields:
       customerName: string!
+      customerEmail: email
       customerPhone: phone
       product: Product!
       quantity: int!
       orderDate: date = TODAY()
       pickupDate: date!
-      status: offen | bestaetigt | abgeholt | storniert
+      status: pending | confirmed | pickedUp | canceled
+      notes: text
+  PickupTime:
+    fields:
+      date: date!
+      startTime: string!
+      endTime: string!
+      maxSlots: int! = 10
       notes: text
 pages:
-  abholzeiten:
-    crud: PickupTime
-    filters: [date]
   produkte:
     crud: Product
     search: [name, category]
   vorbestellungen:
     crud: PreOrder
-    actions: [confirmPreOrder, markAsPickedUp, cancelPreOrder]
-    search: [customerName, customerPhone]
+    search: [customerName, customerEmail, product]
     filters: [status, pickupDate, product]
+    sortable: [orderDate, pickupDate, customerName]
+    actions: [confirmPreOrder, markAsPickedUp, cancelPreOrder]
+  abholzeiten:
+    crud: PickupTime
   team:
     users: manage
 actions:
   confirmPreOrder:
     on: PreOrder
     when:
-      status: offen
+      status: pending
     set:
-      status: bestaetigt
+      status: confirmed
+    intent: Bestätige die Vorbestellung.
   markAsPickedUp:
     on: PreOrder
     when:
-      status: bestaetigt
+      status: confirmed
     set:
-      status: abgeholt
+      status: pickedUp
+    intent: Markiere die Vorbestellung als abgeholt.
   cancelPreOrder:
     on: PreOrder
     when:
-      status: [offen, bestaetigt]
+      status: [pending, confirmed]
     set:
-      status: storniert
-navigation: [produkte, vorbestellungen, abholzeiten, team]
+      status: canceled
+    intent: Storniere die Vorbestellung.

@@ -3,9 +3,12 @@ pages:
   ingredients:
     table:
       sort: name
+      columns: [name, category, currentStock, minStockLevel, unit]
   suppliers:
     table:
       sort: name
-  stock:
+      columns: [name, contactPerson, email, phone]
+  stock-updates:
     table:
-      sort: -lastUpdated
+      sort: -date
+      columns: [date, ingredient, type, quantity, supplier, notes]

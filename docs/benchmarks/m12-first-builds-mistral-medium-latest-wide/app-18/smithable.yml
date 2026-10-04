@@ -10,11 +10,9 @@ models:
       number: string! unique
       status: draft | sent | accepted | rejected
       total: money!
+      description: text
       validUntil: date
-      notes: text
       customer: Customer!
-    access:
-      delete: [admin]
   Invoice:
     fields:
       number: string! unique
@@ -23,10 +21,7 @@ models:
       total: money!
       dueDate: date
       paidAt: datetime
-      notes: text
       customer: Customer!
-    access:
-      delete: [admin]
   Customer:
     fields:
       name: string!
@@ -35,62 +30,60 @@ models:
       segment: private | company | municipality
       notes: text
       accountManager: User
-    access:
-      delete: [admin]
 pages:
   offerter:
     crud: Quote
     sortable: [number, total, validUntil, createdAt]
-    actions: [sendQuote, acceptQuote, rejectQuote]
+    actions: [acceptQuote, rejectQuote, sendQuote]
     search: [number, customer]
     filters: [status, customer]
   fakturor:
     crud: Invoice
     sortable: [number, total, dueDate, createdAt]
-    actions: [sendInvoice, markAsPaid]
+    actions: [markInvoicePaid, sendInvoice]
     search: [number, customer]
     filters: [status, customer]
-  team:
-    users: manage
   kunder:
     crud: Customer
     search: [name, email]
     sortable: [name, createdAt]
+  team:
+    users: manage
 actions:
-  sendQuote:
-    on: Quote
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: Skicka offert till kund.
   acceptQuote:
     on: Quote
     when:
       status: sent
     set:
       status: accepted
-    intent: Acceptera offert.
+    intent: Acceptera en offert.
   rejectQuote:
     on: Quote
     when:
       status: sent
     set:
       status: rejected
-    intent: Avvisa offert.
-  sendInvoice:
-    on: Invoice
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: Skicka faktura till kund.
-  markAsPaid:
+    intent: Avvisa en offert.
+  markInvoicePaid:
     on: Invoice
     when:
       status: sent
     set:
       status: paid
       paidAt: NOW()
-    intent: Markera faktura som betald.
+    intent: Markera en faktura som betald.
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka en offert till kunden.
+  sendInvoice:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka en faktura till kunden.
 navigation: [kunder, offerter, fakturor, team]

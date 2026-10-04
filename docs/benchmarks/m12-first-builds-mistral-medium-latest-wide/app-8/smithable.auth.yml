@@ -3,13 +3,4 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: private
-public:
-  pages: [home, catalog]
-  read: [Item]
-roles:
-  admin:
-    description: Keeps the swap shelf tidy.
-  member:
-    description: Offers and claims items.
-defaultRole: member
 admins: [johan@smithable.ai]

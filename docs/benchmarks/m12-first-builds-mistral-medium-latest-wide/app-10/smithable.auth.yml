@@ -5,4 +5,10 @@ defaultAccess: private
 public:
   pages: [home, artifacts]
   read: [Artifact]
+roles:
+  admin:
+    description: Manages the museum collection.
+  visitor:
+    description: Browses the collection.
+defaultRole: visitor
 admins: [johan@smithable.ai]
