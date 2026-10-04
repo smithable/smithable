@@ -1,4 +1,4 @@
-import { ACCESS_OPERATIONS } from "../ir.js";
+import { ACCESS_OPERATIONS, USER_MODEL } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { didYouMean } from "../suggest.js";
@@ -114,4 +114,60 @@ const setAccess: Operation<{ target: string; roles?: string[] }> = {
   },
 };
 
-export const accessOperations: AnyOperation[] = [setAccess];
+const setOwner: Operation<{ model: string; field?: string }> = {
+  name: "setOwner",
+  summary:
+    'Say whose a record is: the user in one of its User fields (the account manager, the salesperson who handles it) instead of whoever created it. Without a field, the creator again. "The owner" in the access rules is then that user.',
+  schema: {
+    type: "object",
+    required: ["model"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      field: refTo(
+        { ref: "field", model: "model", label: "Owner" },
+        {
+          description:
+            "A field of the model that refers to User, e.g. accountManager. Leave it out to make the creator the owner again.",
+        },
+      ),
+    },
+  },
+  positional: ["model", "field"],
+  describe: ({ model, field }) =>
+    field
+      ? `${humanize(plural(model))} belong to their ${humanize(field).toLowerCase()}`
+      : `${humanize(plural(model))} belong to whoever created them`,
+  destructive: () => false,
+  apply({ spec }, { model, field }, ir) {
+    const found = ir.models.find((m) => m.name === model);
+    if (!found)
+      throw new OperationError(
+        `There is no model named "${model}". ${
+          didYouMean(
+            model,
+            ir.models.map((m) => m.name),
+          ) ?? ""
+        }`.trim(),
+      );
+    const path = ["models", model, "ownedBy"];
+    if (!field) {
+      if (spec.has(path)) spec.remove(path);
+      return [];
+    }
+    const users = found.fields
+      .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many)
+      .map((f) => f.name);
+    if (!users.includes(field))
+      throw new OperationError(
+        users.length
+          ? `The owner is one of ${model}'s fields that refer to a user: ${users.join(", ")}.`
+          : `${model} has no field that refers to a user. Add one first, e.g. addField ${model} handledBy User.`,
+      );
+    if (spec.has(path)) spec.set(path, field);
+    else spec.add(["models", model], "ownedBy", field);
+    return [];
+  },
+};
+
+export const accessOperations: AnyOperation[] = [setAccess, setOwner];
