@@ -843,9 +843,9 @@ async function statusFlow(base) {
       });
     // Without a key a program is a visitor (api-only.md §3.4): it reads what anyone may read,
     // and is refused the rest; a key that is not valid is refused, never taken for a visitor.
-    const open = await fetch(`${base}/api/v1/incidents`);
-    if (open.status !== 200 || !(await open.json()).items?.length)
-      throw new Error(`a visitor could not read the public incidents (${open.status})`);
+    const visitorList = await fetch(`${base}/api/v1/incidents`);
+    if (visitorList.status !== 200 || !(await visitorList.json()).items?.length)
+      throw new Error(`a visitor could not read the public incidents (${visitorList.status})`);
     const keyless = await fetch(`${base}/api/v1/incidents`, {
       method: "POST",
       headers: { "content-type": "application/json" },
