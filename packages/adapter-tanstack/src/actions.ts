@@ -27,6 +27,7 @@ import {
   names,
   ownerKey,
   relatedTitle,
+  SCHEMA_IMPORT,
   type Texts,
 } from "./shared.js";
 
@@ -356,7 +357,7 @@ ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", mode
 ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringify(target.name)}, ${w}.inserted[${i}], viewer);`).join("\n")}`;
   return `${HEADER}import { eq } from "drizzle-orm";
 import { db } from "#/db";
-import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";
+${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
@@ -586,7 +587,7 @@ function copyActionServer(
   const usesF = values.some((v) => v.includes("F."));
   const pick = (from: string, keys: string[]) => keys.map((k) => `${k}: ${from}.${k}`).join(", ");
   return `${HEADER}import { db } from "#/db";
-import { ${[n.table, ...lists.map((l) => l.ln.table)].sort().join(", ")} } from "#/db/schema";
+${SCHEMA_IMPORT}
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";

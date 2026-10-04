@@ -102,7 +102,11 @@ export function landingRoute(
               const target = ir.pages.find((p) => p.id === id) as PageIR;
               const icon = LUCIDE[pageIcon(ux, target)];
               imports.add("lucide-react", icon);
-              return `{ to: ${JSON.stringify(target.route)}, label: ${JSON.stringify(t.pageTitle(id))}, icon: ${icon} }`;
+              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${JSON.stringify(t.pageTitle(id))}, icon: ${icon} }`;
+              // A page behind sign-in is a shortcut only for those who may open it.
+              if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
+              imports.add("#/kit/access", "allows");
+              return `...(allows(pageAccess[${JSON.stringify(id)}], viewer) ? [${shortcut}] : [])`;
             })
             .join(", ")}]}`
               : ""
