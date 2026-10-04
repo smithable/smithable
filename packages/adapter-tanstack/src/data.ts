@@ -1,6 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
   type AuthIR,
+  apiOffers,
   type Condition,
   type FieldIR,
   humanize,
@@ -306,6 +307,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const capped = ir.pages.some(
     (p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name),
   );
+  // A model the API offers is listed a page at a time, counted and sliced in the query.
+  const paged = apiOffers(auth, ir).models.includes(model.name);
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -359,6 +362,16 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const withClause = (entries: string[], indent: string) =>
     entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
   const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
+  // A list's rows as the viewer gets them: formulas worked out, related records kept for the
+  // totals left out.
+  const asListed = (rows: string, lead: string) =>
+    aggregatedLists(model).length
+      ? `// The related records are here for the totals only: some may not be the viewer's to read.
+    ${lead}${rows}.map((row) => {
+      const { ${aggregatedLists(model).join(", ")}, ...listed } = ${compute("row")};
+      return listed;
+    });`
+      : `${lead}${formulas ? `${rows}.map(${withFormulasName(model)})` : rows};`;
   const titleColumn = titleField(model);
   const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
   const access = modelAccess(model, auth);
@@ -390,7 +403,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     "inArray",
     "sql",
     ...(referenced && titleColumn !== "id" ? ["asc"] : []),
-    ...(access.create.public || capped || capacity || holds.length ? ["count"] : []),
+    ...(access.create.public || capped || paged || capacity || holds.length ? ["count"] : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
@@ -566,17 +579,31 @@ ${
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     });
+    ${asListed("rows", "return ")}
+  },
+${
+  paged
+    ? `
+  /** A page of the ${n.pluralLabel.toLowerCase()} the viewer may read, newest first, and how many there are: for the API. */
+  async page(viewer: Viewer | null, limit: number, offset: number) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const total = db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
+    const rows = await db.query.${n.table}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { desc }) => [desc(t.id)],
+      limit,
+      offset,
+    });
     ${
-      aggregatedLists(model).length
-        ? `// The related records are here for the totals only: some may not be the viewer's to read.
-    return rows.map((row) => {
-      const { ${aggregatedLists(model).join(", ")}, ...listed } = ${compute("row")};
-      return listed;
-    });`
-        : `return ${formulas ? `rows.map(${withFormulasName(model)})` : "rows"};`
+      formulas || aggregatedLists(model).length
+        ? `${asListed("rows", "const items = ")}
+    return { items, total };`
+        : "return { items: rows, total };"
     }
   },
-
+`
+    : ""
+}
 ${
   capped
     ? `  /** How many ${n.pluralLabel.toLowerCase()} the viewer may read, for a data page's overview; none to read: null. */
