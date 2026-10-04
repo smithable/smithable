@@ -227,14 +227,16 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
   // What a stranger is shown (api-only.md §3.4): the reading and adding anyone may do, no key.
   const { visitors } = apiParts(ir, auth, t);
   const visitorPaths: Record<string, unknown> = {};
-  for (const { model, path } of models) {
+  for (const { model, n, path } of models) {
     const list = paths[`/api/v1/${path}`] as Record<string, unknown>;
     const one = paths[`/api/v1/${path}/{id}`] as Record<string, unknown>;
     const read = visitors.read.includes(model.name);
     const add = visitors.create.includes(model.name);
     if (read || add)
       visitorPaths[`/api/v1/${path}`] = {
-        ...(read ? { get: list.get } : {}),
+        ...(read
+          ? { get: { ...(list.get as object), summary: `${n.pluralLabel} anyone may read` } }
+          : {}),
         ...(add ? { post: list.post } : {}),
       };
     if (read) visitorPaths[`/api/v1/${path}/{id}`] = { parameters: one.parameters, get: one.get };
@@ -331,20 +333,25 @@ export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
 /** The routes: list and add, one record, its actions, and the description. */
 export function apiRoutes(ir: SpecIR, auth: AuthIR, t: Texts): Record<string, string> {
   const { models, actions, visitors } = apiParts(ir, auth, t);
+  const users = ir.pages.find((p) => p.pattern.kind === "users");
   const files: Record<string, string> = {
     "src/routes/api/v1/openapi[.]json.ts": `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
-// signed in (the users page's download), all a program may call; otherwise what anyone may read
+// signed in as someone who may open the users page (its download), all a program may call; otherwise what anyone may read
 // or add, which in an app with nothing public is nothing (no model or field names to a stranger).
 import { createFileRoute } from "@tanstack/react-router";
 import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
-import { callerOf } from "#/kit/api.server";
+${users ? 'import { pageAccess } from "#/generated/pages";\nimport { allows } from "#/kit/access";\n' : ""}import { callerOf } from "#/kit/api.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const Route = createFileRoute("/api/v1/openapi.json")({
   server: {
     handlers: {
-      GET: async ({ request }) =>
-        Response.json(callerOf(request).viewer || (await currentViewer()) ? OPENAPI : VISITOR_OPENAPI),
+      GET: async ({ request }) => {
+        // A key; or signed in as someone who may open the users page, where keys are made.
+        const session = await currentViewer();
+        const whole = callerOf(request).viewer || ${users ? `(session && allows(pageAccess[${JSON.stringify(users.id)}], session))` : "session"};
+        return Response.json(whole ? OPENAPI : VISITOR_OPENAPI);
+      },
     },
   },
 });

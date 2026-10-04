@@ -6,7 +6,7 @@
 import { ZodError } from "zod";
 import { keyViewer } from "#/generated/keys.server";
 import { AccessDenied, Conflict, type Viewer } from "./access";
-import { address, count, TooMany } from "./limit";
+import { address, count, TooMany, writeAllowed } from "./limit";
 import { traceWho } from "./trace.server";
 
 const MAX_BODY = 1_000_000;
@@ -126,6 +126,9 @@ async function call(
 ): Promise<Response> {
   try {
     const { viewer, keyless } = callerOf(request);
+    // A write without a key is held to a visitor's limit (10 a minute per address), as a
+    // contact form is, whether it may add or not.
+    if (!viewer && request.method !== "GET") writeAllowed(null, request.headers);
     if (!viewer && !(open && keyless))
       return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
     const body =

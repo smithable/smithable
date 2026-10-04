@@ -119,6 +119,6 @@ test("an app with nothing public describes nothing to a stranger: no model or fi
   expect(visitor).toContain('"paths": {}');
   expect(visitor).not.toContain("Customer");
   expect(file(files, "src/routes/api/v1/openapi[.]json.ts")).toContain(
-    "callerOf(request).viewer || (await currentViewer()) ? OPENAPI : VISITOR_OPENAPI",
+    'callerOf(request).viewer || (session && allows(pageAccess["team"], session))',
   );
 });
