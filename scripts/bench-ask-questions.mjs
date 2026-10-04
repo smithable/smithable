@@ -303,6 +303,15 @@ export const QUESTIONS = {
     {
       q: "How much is still to be paid to us?",
       kind: "number",
+      // Read two ways: what is sent and overdue, or that and the drafts, when the answer says so.
+      also: {
+        when: /draft/i,
+        expect: (d) =>
+          sum(
+            d.Invoice.filter((i) => i.status !== "paid"),
+            (i) => invoiceTotal(d, i),
+          ),
+      },
       expect: (d) =>
         sum(
           d.Invoice.filter((i) => ["sent", "overdue"].includes(i.status)),
@@ -865,7 +874,7 @@ export const QUESTIONS = {
 };
 
 /** Whether an answer's text gives what the question asks (all but `change`, which reads records). */
-export function answered(question, text, expected) {
+export function answered(question, text, expected, also) {
   const flat = (s) => String(s).toLowerCase().replace(/\s+/g, " ");
   // "2,770.50", "2 770,50 €", "three": the same numbers.
   const WORDS = [
@@ -894,7 +903,11 @@ export function answered(question, text, expected) {
   ];
   const hasNumber = (s, x) => numbers(s).some((v) => Math.abs(v - x) < 0.01 + Math.abs(x) * 0.0005);
   const t = flat(text);
-  if (question.kind === "number") return hasNumber(text, expected);
+  if (question.kind === "number")
+    return (
+      hasNumber(text, expected) ||
+      (also !== undefined && question.also.when.test(text) && hasNumber(text, also))
+    );
   if (question.kind === "text")
     return expected.every((w) => t.includes(flat(w)) || dateIn(text, w));
   if (question.kind === "names")
