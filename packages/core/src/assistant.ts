@@ -15,8 +15,8 @@ export type AssistantCaller = { role: string } | "visitor";
 
 /** How a field can be matched in `where`. Long texts and pictures are found by `search` only. */
 export type FieldFilter =
-  /** One of a choice field's values, or a list of them. */
-  | { field: string; by: "value"; values: string[] }
+  /** One of a choice field's values, or a list of them; `labels` are the words people see. */
+  | { field: string; by: "value"; values: string[]; labels?: Record<string, string> }
   | { field: string; by: "yesNo" }
   /** A number or date: the value itself, or `{ from, to }`. */
   | { field: string; by: "number" | "date" }
@@ -33,6 +33,8 @@ export interface AssistantKind {
   /** The field a record is known by. */
   title: string;
   may: { read: boolean; add: boolean; change: boolean; delete: boolean };
+  /** The stored fields with the labels people see, for reading a question by its words. */
+  fields: { name: string; label: string }[];
   filters: FieldFilter[];
   /** Stored number fields: what `measure` can add up or average. */
   numbers: string[];
@@ -69,10 +71,11 @@ const DATES = ["date", "datetime"];
 const SHORT_TEXTS = ["string", "email", "phone", "url"];
 
 /** How a stored field is matched, or nothing when it is found by `search` only. */
-function filterOf(field: FieldIR): FieldFilter | undefined {
+function filterOf(field: FieldIR, labels?: Record<string, string>): FieldFilter | undefined {
   if (storageOf(field) === "none") return undefined;
   const { type, name } = field;
-  if (type.kind === "choice") return { field: name, by: "value", values: type.values };
+  if (type.kind === "choice")
+    return { field: name, by: "value", values: type.values, ...(labels ? { labels } : {}) };
   if (type.kind === "relation") return { field: name, by: "reference", model: type.model };
   if (type.name === "bool") return { field: name, by: "yesNo" };
   if (NUMBERS.includes(type.name)) return { field: name, by: "number" };
@@ -152,13 +155,18 @@ export function assistantOffer(
     const text = content.models[model.name];
     const label = text?.label ?? humanize(model.name);
     const pluralLabel = text?.pluralLabel ?? humanize(plural(model.name));
-    const filters = can.read ? model.fields.flatMap((f) => filterOf(f) ?? []) : [];
+    const filters = can.read
+      ? model.fields.flatMap((f) => filterOf(f, text?.fields[f.name]?.values) ?? [])
+      : [];
     kinds.push({
       model: model.name,
       label,
       pluralLabel,
       title: titleField(model),
       may: can,
+      fields: model.fields
+        .filter((f) => storageOf(f) !== "none")
+        .map((f) => ({ name: f.name, label: text?.fields[f.name]?.label ?? humanize(f.name) })),
       filters,
       numbers: filters.filter((f) => f.by === "number").map((f) => f.field),
       by: filters
