@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { dataKey, tableNames, titleField } from "@smithable/adapter-tanstack";
 import { dataDiffSql, type ModelIR, restoreOrder, snake } from "@smithable/core";
+import { BUSY_MS } from "./database.js";
 import type { Io } from "./io.js";
 import { loadSpec } from "./validate.js";
 
@@ -115,7 +116,7 @@ export function restoreAt(
     return 1;
   }
   const writing = Boolean(options.bringBack?.length || options.undoChanges?.length);
-  const live = new DatabaseSync(db, { readOnly: !writing || !options.yes });
+  const live = new DatabaseSync(db, { readOnly: !writing || !options.yes, timeout: BUSY_MS });
   live.exec(`ATTACH DATABASE '${then.replace(/'/g, "''")}' AS past`);
   const has = (schema: string, name: string) =>
     Boolean(

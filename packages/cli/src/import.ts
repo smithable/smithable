@@ -23,7 +23,7 @@ import {
   type SpecIR,
   titleField,
 } from "@smithable/core";
-import { databasePath } from "./database.js";
+import { BUSY_MS, databasePath } from "./database.js";
 
 type ImportEffect = Extract<Effect, { kind: "import-records" }>;
 
@@ -61,7 +61,7 @@ export function prepareImport(
       message: "The app has no database yet: run it once (smithable run), then import.",
     });
   const db = existsSync(databasePath(dir))
-    ? new DatabaseSync(databasePath(dir), { readOnly: true })
+    ? new DatabaseSync(databasePath(dir), { readOnly: true, timeout: BUSY_MS })
     : undefined;
   const rows: Record<string, StoredValue>[] = [];
   try {
@@ -130,7 +130,7 @@ export function insertImport(
   auth: AuthIR,
   owner: string | null,
 ): void {
-  const db = new DatabaseSync(databasePath(dir));
+  const db = new DatabaseSync(databasePath(dir), { timeout: BUSY_MS });
   const now = Date.now();
   db.exec("BEGIN");
   try {
@@ -164,7 +164,7 @@ export function importOwner(
   wanted = process.env.SMITHABLE_IMPORT_OWNER,
 ): { id: string; email: string } | null {
   if (!existsSync(databasePath(dir))) return null;
-  const db = new DatabaseSync(databasePath(dir), { readOnly: true });
+  const db = new DatabaseSync(databasePath(dir), { readOnly: true, timeout: BUSY_MS });
   const find = (sql: string, value: string) =>
     db.prepare(sql).get(value) as { id: string; email: string } | undefined;
   try {
