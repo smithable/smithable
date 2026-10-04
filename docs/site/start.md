@@ -24,7 +24,7 @@ cd my-crm
 smithable studio          # Builder and Studio in the browser
 ```
 
-`--starter <name>` picks another of the [six starters](starters.md).
+`--starter <name>` picks another of the [seven starters](starters.md).
 
 `smithable new` also takes `--describe "a site to show my dogs"`: it asks up to three questions, then drafts the app. Or `--from https://example.com`: a page's text, menu and forms describe the app instead, and `--with-pictures` takes its pictures as sample pictures, after asking whether you may use them. Both need a model; see [AI setup](../ai.md).
 
