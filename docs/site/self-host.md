@@ -14,6 +14,8 @@ Security check (release):
   ✓ Type check (pnpm typecheck)
   ✓ Tests (pnpm test)
   ✓ Dependencies (OSV-Scanner (image v2.6.0))
+  ✓ Dependencies, at their source (the packages' advisory lists)
+      Accepted, since it is in Better Auth's organization plugin, which a generated app does not use: better-auth@1.7.7: GHSA-fmh4-wcc4-5jm3 (high) better-auth: Organization invitations can be accepted by an unverified account
   ✓ Secrets (Gitleaks (image v8.30.1))
   ✓ Code (Semgrep (image 1.178.0))
   ✓ Smoke tests (pnpm test:smoke)
@@ -25,7 +27,7 @@ Deploying acme-crm to Docker on this machine…
 Deployed: http://localhost:8410 (data in the Docker volume acme-crm-data).
 ```
 
-It took three minutes, most of it the security scans. A failed check stops the deploy; findings are never suppressed. The default port is 3000. `--target ssh://user@host` deploys to Docker on another machine over SSH, and `--url https://crm.example.com` gives the app its public address.
+It took three minutes, most of it the security scans. A failed check stops the deploy; findings are never suppressed. "Dependencies, at their source" reads each package's own advisory list on GitHub, where a hole is published days before the scanners' databases list it. An "Accepted" line is an advisory that names an installed version and does not reach a generated app, with the reason; it is shown every time. Without a network, or past GitHub's sixty calls an hour (set `GITHUB_TOKEN` to any token to lift that), the check fails rather than pass unchecked. The default port is 3000. `--target ssh://user@host` deploys to Docker on another machine over SSH, and `--url https://crm.example.com` gives the app its public address.
 
 The container serves plain HTTP. In front of it, put a proxy that handles HTTPS for your domain (Caddy, nginx or Traefik), and deploy with `--url` set to the address people use.
 
