@@ -198,6 +198,10 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
   // "--name value" gives an argument by name: a list as "a,b", an object as "a=x,b=y"; a boolean
   // needs no value ("--use").
   const values: string[] = [];
+  // For each word no option took: the list option given just before it, if any ("--pages home
+  // items": items), to say how a list is written.
+  const after: (string | undefined)[] = [];
+  let lastList: string | undefined;
   for (let i = 0; i < words.length; i++) {
     // "--dry-run" names dryRun.
     const key = /^--([\w-]+)$/
@@ -216,15 +220,21 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
     }
     if (key === undefined || !properties[key] || next === undefined) {
       values.push(words[i] as string);
+      after.push(lastList);
       continue;
     }
     const value = words[++i] as string;
+    lastList = type === "array" ? key : undefined;
     args[key] =
       type === "array"
-        ? value
-            .split(",")
-            .map((v) => v.trim())
-            .filter(Boolean)
+        ? // Repeated ("--pages home --pages items") adds to the list given before.
+          [
+            ...((args[key] as string[] | undefined) ?? []),
+            ...value
+              .split(",")
+              .map((v) => v.trim())
+              .filter(Boolean),
+          ]
         : type === "object"
           ? // Repeated ("--set a=1 --set b=2") adds to the pairs given before.
             {
@@ -250,6 +260,29 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
       args[spec] = scalarOf(values[index] as string, properties[spec]?.type);
     }
   });
+  // A word nothing took is refused, never dropped: on an operation about what is public, a list
+  // value lost without a word would open or close the wrong thing.
+  if (!op.positional.some((p) => p.startsWith("..."))) {
+    const index = op.positional.length;
+    const word = values[index];
+    if (word !== undefined) {
+      const list = after[index];
+      const flag = (k: string) => `--${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+      if (list)
+        throw new OperationError(
+          `"${word}" is left over: a list is written with commas, e.g. ${flag(list)} ${[...((args[list] as string[]) ?? []), word].join(",")}.`,
+        );
+      if (word.startsWith("--")) {
+        const known = word.slice(2).replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+        throw new OperationError(
+          properties[known] ? `${word} needs a value.` : `${op.name} has no option ${word}.`,
+        );
+      }
+      throw new OperationError(
+        `"${word}" is more than ${op.name} takes: ${op.name} ${op.positional.map((p) => `<${p}>`).join(" ")}${Object.keys(properties).some((k) => !op.positional.includes(k)) ? " [--options]" : ""}.`,
+      );
+    }
+  }
   return args;
 }
 
