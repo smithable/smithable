@@ -7341,6 +7341,7 @@ function checkReferences(viewer: Viewer | null, values: BookingValues): void {
 }
 
 export const bookingData = {
+  shownTo,
   /** A condition for the bookings the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(bookingAccess.read, viewer);
@@ -7394,17 +7395,6 @@ export const bookingData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a booking the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.bookings.ownerId })
-        .from(schema.bookings)
-        .where(and(eq(schema.bookings.id, id), bookingData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: BookingValues) {
@@ -7643,6 +7633,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const classTypeData = {
+  shownTo,
   /** A condition for the class types the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(classTypeAccess.read, viewer);
@@ -7683,17 +7674,6 @@ export const classTypeData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a class type the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.classTypes.ownerId })
-        .from(schema.classTypes)
-        .where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: ClassTypeValues) {
@@ -8162,6 +8142,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const instructorData = {
+  shownTo,
   /** A condition for the instructors the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(instructorAccess.read, viewer);
@@ -8202,17 +8183,6 @@ export const instructorData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a instructor the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.instructors.ownerId })
-        .from(schema.instructors)
-        .where(and(eq(schema.instructors.id, id), instructorData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: InstructorValues) {
@@ -8471,6 +8441,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const messageData = {
+  shownTo,
   /** A condition for the messages the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(messageAccess.read, viewer);
@@ -8511,17 +8482,6 @@ export const messageData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a message the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.messages.ownerId })
-        .from(schema.messages)
-        .where(and(eq(schema.messages.id, id), messageData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: MessageValues) {
@@ -8793,6 +8753,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const postData = {
+  shownTo,
   /** A condition for the posts the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(postAccess.read, viewer);
@@ -8834,17 +8795,6 @@ export const postData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a post the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.posts.ownerId })
-        .from(schema.posts)
-        .where(and(eq(schema.posts.id, id), postData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: PostValues) {
@@ -9143,6 +9093,7 @@ function checkReferences(viewer: Viewer | null, values: SessionValues): void {
 }
 
 export const sessionData = {
+  shownTo,
   /** A condition for the sessions the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(sessionAccess.read, viewer);
@@ -9187,22 +9138,11 @@ export const sessionData = {
       where: and(eq(schema.sessions.id, id), sessionData.readable(viewer)),
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer) } },
     });
-    const row = found && shownTo(viewer, found);
+    const row = found && { ...shownTo(viewer, found), bookings: found.bookings.map((r) => bookingData.shownTo(viewer, r)) };
     if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
     const all = await db.query.sessions.findFirst({ where: eq(schema.sessions.id, id), with: { bookings: true } });
     return { ...withSessionFormulas({ ...row, bookings: all?.bookings ?? [] }), bookings: row.bookings };
-  },
-
-  /** Who owns a session the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.sessions.ownerId })
-        .from(schema.sessions)
-        .where(and(eq(schema.sessions.id, id), sessionData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: SessionValues) {
@@ -13309,25 +13249,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "1518628e generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "819ea083 generated",
+  "src/generated/booking.server.ts": "6358dab7 generated",
   "src/generated/booking.ts": "330b667f generated",
-  "src/generated/class-type.server.ts": "e589ba7d generated",
+  "src/generated/class-type.server.ts": "0a86861e generated",
   "src/generated/class-type.ts": "b9f640fb generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
-  "src/generated/instructor.server.ts": "6ef9492c generated",
+  "src/generated/instructor.server.ts": "3a4a6624 generated",
   "src/generated/instructor.ts": "f1647450 generated",
-  "src/generated/message.server.ts": "8b47231c generated",
+  "src/generated/message.server.ts": "3cf74974 generated",
   "src/generated/message.ts": "4c0e0fa3 generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
-  "src/generated/post.server.ts": "db963705 generated",
+  "src/generated/post.server.ts": "93ceaa9a generated",
   "src/generated/post.ts": "d35b4817 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "8a14babc generated",
+  "src/generated/session.server.ts": "46e3549c generated",
   "src/generated/session.ts": "622c256c generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -14198,10 +14138,11 @@ export const customerData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.customers.findFirst({
+    const found = await db.query.customers.findFirst({
       where: and(eq(schema.customers.id, id), customerData.readable(viewer)),
       with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) } },
     });
+    const row = found && { ...found, orders: found.orders.map((r) => orderData.shownTo(viewer, r)) };
     return row ? row : null;
   },
 
@@ -14627,6 +14568,7 @@ function checkReferences(viewer: Viewer | null, values: OrderValues): void {
 }
 
 export const orderData = {
+  shownTo,
   /** A condition for the orders the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(orderAccess.read, viewer);
@@ -14662,17 +14604,6 @@ export const orderData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? withOrderFormulas(row) : null;
-  },
-
-  /** Who owns a order the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.orders.ownerId })
-        .from(schema.orders)
-        .where(and(eq(schema.orders.id, id), orderData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: OrderValues) {
@@ -16686,12 +16617,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "492105eb generated",
+  "src/generated/customer.server.ts": "2e4d8390 generated",
   "src/generated/customer.ts": "fe2f334e generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "d14e410f generated",
+  "src/generated/order.server.ts": "438e8f0e generated",
   "src/generated/order.ts": "4eba3439 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "4d2fc346 generated",
@@ -17957,6 +17888,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const businessProfileData = {
+  shownTo,
   /** A condition for the business profiles the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(businessProfileAccess.read, viewer);
@@ -17990,17 +17922,6 @@ export const businessProfileData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a business profile the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.businessProfiles.ownerId })
-        .from(schema.businessProfiles)
-        .where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: BusinessProfileValues) {
@@ -18240,6 +18161,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const clientData = {
+  shownTo,
   /** A condition for the clients the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(clientAccess.read, viewer);
@@ -18272,19 +18194,8 @@ export const clientData = {
       where: and(eq(schema.clients.id, id), clientData.readable(viewer)),
       with: { invoices: { where: invoiceData.readable(viewer) } },
     });
-    const row = found && shownTo(viewer, found);
+    const row = found && { ...shownTo(viewer, found), invoices: found.invoices.map((r) => invoiceData.shownTo(viewer, r)) };
     return row ? row : null;
-  },
-
-  /** Who owns a client the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.clients.ownerId })
-        .from(schema.clients)
-        .where(and(eq(schema.clients.id, id), clientData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: ClientValues) {
@@ -18683,6 +18594,7 @@ function checkReferences(viewer: Viewer | null, values: InvoiceValues): void {
 }
 
 export const invoiceData = {
+  shownTo,
   /** A condition for the invoices the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceAccess.read, viewer);
@@ -18720,22 +18632,11 @@ export const invoiceData = {
       where: and(eq(schema.invoices.id, id), invoiceData.readable(viewer)),
       with: { client: { columns: { id: true, name: true } }, lines: { where: invoiceLineData.readable(viewer) } },
     });
-    const row = found && shownTo(viewer, found);
+    const row = found && { ...shownTo(viewer, found), lines: found.lines.map((r) => invoiceLineData.shownTo(viewer, r)) };
     if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
     const all = await db.query.invoices.findFirst({ where: eq(schema.invoices.id, id), with: { lines: true } });
     return { ...withInvoiceFormulas({ ...row, lines: all?.lines ?? [] }), lines: row.lines };
-  },
-
-  /** Who owns a invoice the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.invoices.ownerId })
-        .from(schema.invoices)
-        .where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: InvoiceValues) {
@@ -19073,6 +18974,7 @@ function checkReferences(viewer: Viewer | null, values: InvoiceLineValues): void
 }
 
 export const invoiceLineData = {
+  shownTo,
   /** A condition for the invoice lines the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceLineAccess.read, viewer);
@@ -19108,17 +19010,6 @@ export const invoiceLineData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? withInvoiceLineFormulas(row) : null;
-  },
-
-  /** Who owns a invoice line the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.invoiceLines.ownerId })
-        .from(schema.invoiceLines)
-        .where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: InvoiceLineValues) {
@@ -21132,18 +21023,18 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "09aaeee3 generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "2168db67 generated",
+  "src/generated/business-profile.server.ts": "8807e527 generated",
   "src/generated/business-profile.ts": "70449542 generated",
-  "src/generated/client.server.ts": "60455564 generated",
+  "src/generated/client.server.ts": "6cb21ef3 generated",
   "src/generated/client.ts": "050eb240 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "cd506734 generated",
+  "src/generated/invoice-line.server.ts": "35cc4d8a generated",
   "src/generated/invoice-line.ts": "7f9521f9 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "3ef56d70 generated",
+  "src/generated/invoice.server.ts": "f5ab43cf generated",
   "src/generated/invoice.ts": "721281fb generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -21843,6 +21734,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const itemData = {
+  shownTo,
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(itemAccess.read, viewer);
@@ -23883,7 +23775,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
-  "src/generated/item.server.ts": "fa885bfb generated",
+  "src/generated/item.server.ts": "eea9a15f generated",
   "src/generated/item.ts": "dc271fff generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
@@ -24588,6 +24480,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const itemData = {
+  shownTo,
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(itemAccess.read, viewer);
@@ -24621,17 +24514,6 @@ export const itemData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? withItemFormulas(row) : null;
-  },
-
-  /** Who owns a item the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.items.ownerId })
-        .from(schema.items)
-        .where(and(eq(schema.items.id, id), itemData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: ItemValues) {
@@ -25851,7 +25733,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "be8af428 generated",
+  "src/generated/item.server.ts": "c4622c2a generated",
   "src/generated/item.ts": "d6dbcd71 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -28380,6 +28262,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 export const componentData = {
+  shownTo,
   /** A condition for the components the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(componentAccess.read, viewer);
@@ -28426,19 +28309,8 @@ export const componentData = {
       where: and(eq(schema.components.id, id), componentData.readable(viewer)),
       with: { incidents: { where: incidentData.readable(viewer) } },
     });
-    const row = found && shownTo(viewer, found);
+    const row = found && { ...shownTo(viewer, found), incidents: found.incidents.map((r) => incidentData.shownTo(viewer, r)) };
     return row ? row : null;
-  },
-
-  /** Who owns a component the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.components.ownerId })
-        .from(schema.components)
-        .where(and(eq(schema.components.id, id), componentData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: ComponentValues) {
@@ -28815,6 +28687,7 @@ function checkReferences(viewer: Viewer | null, values: IncidentValues): void {
 }
 
 export const incidentData = {
+  shownTo,
   /** A condition for the incidents the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentAccess.read, viewer);
@@ -28864,19 +28737,8 @@ export const incidentData = {
       where: and(eq(schema.incidents.id, id), incidentData.readable(viewer)),
       with: { component: { columns: { id: true, name: true } }, updates: { where: incidentUpdateData.readable(viewer) } },
     });
-    const row = found && shownTo(viewer, found);
+    const row = found && { ...shownTo(viewer, found), updates: found.updates.map((r) => incidentUpdateData.shownTo(viewer, r)) };
     return row ? row : null;
-  },
-
-  /** Who owns a incident the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.incidents.ownerId })
-        .from(schema.incidents)
-        .where(and(eq(schema.incidents.id, id), incidentData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: IncidentValues) {
@@ -29170,6 +29032,7 @@ function checkReferences(viewer: Viewer | null, values: IncidentUpdateValues): v
 }
 
 export const incidentUpdateData = {
+  shownTo,
   /** A condition for the incident updates the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentUpdateAccess.read, viewer);
@@ -29205,17 +29068,6 @@ export const incidentUpdateData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a incident update the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.incidentUpdates.ownerId })
-        .from(schema.incidentUpdates)
-        .where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: IncidentUpdateValues) {
@@ -29613,6 +29465,7 @@ function checkReferences(viewer: Viewer | null, values: MaintenanceValues): void
 }
 
 export const maintenanceData = {
+  shownTo,
   /** A condition for the maintenances the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(maintenanceAccess.read, viewer);
@@ -29648,17 +29501,6 @@ export const maintenanceData = {
     });
     const row = found && shownTo(viewer, found);
     return row ? row : null;
-  },
-
-  /** Who owns a maintenance the viewer may read, for the server only (a message to its owner). */
-  ownerOf(viewer: Viewer | null, id: number): string | null {
-    return (
-      db
-        .select({ ownerId: schema.maintenances.ownerId })
-        .from(schema.maintenances)
-        .where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer)))
-        .get()?.ownerId ?? null
-    );
   },
 
   async create(viewer: Viewer | null, values: MaintenanceValues) {
@@ -33116,17 +32958,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "c751bc84 generated",
+  "src/generated/component.server.ts": "e0cbc69c generated",
   "src/generated/component.ts": "a4ec356f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
-  "src/generated/incident-update.server.ts": "1862c9e5 generated",
+  "src/generated/incident-update.server.ts": "77874b5d generated",
   "src/generated/incident-update.ts": "20a029b3 generated",
-  "src/generated/incident.server.ts": "f8bc55ae generated",
+  "src/generated/incident.server.ts": "88752866 generated",
   "src/generated/incident.ts": "81235c4d generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
-  "src/generated/maintenance.server.ts": "58b77d45 generated",
+  "src/generated/maintenance.server.ts": "053c7105 generated",
   "src/generated/maintenance.ts": "d8f14068 generated",
   "src/generated/mcp.server.ts": "86ffa077 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
