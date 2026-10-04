@@ -1,0 +1,94 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Keeps track of who has which plot, the waiting list for plots and each member's yearly fee.
+models:
+  Member:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: string
+      memberSince: date = TODAY()
+      notes: text
+      plots: Plot[]
+      fees: Fee[]
+  Plot:
+    fields:
+      number: string! unique
+      size: decimal
+      member: Member
+      status: vacant | let
+      notes: text
+  WaitingListEntry:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      addedOn: date! = TODAY()
+      status: waiting | offered | allotted | withdrawn
+      notes: text
+  Fee:
+    fields:
+      member: Member!
+      year: int!
+      amount: money!
+      status: due | paid
+      paidOn: date
+pages:
+  plots:
+    crud: Plot
+    search: [number]
+    filters: [status, member]
+    actions: [vacate]
+  members:
+    crud: Member
+    search: [name, email, phone]
+  waiting-list:
+    crud: WaitingListEntry
+    search: [name, email]
+    filters: [status]
+    actions: [offerPlot, markAllotted, withdraw]
+  fees:
+    crud: Fee
+    filters: [status, year, member]
+    actions: [markPaid]
+  team:
+    users: manage
+actions:
+  markPaid:
+    on: Fee
+    when:
+      status: due
+    set:
+      status: paid
+      paidOn: TODAY()
+    intent: Record that a member has paid the yearly fee.
+  offerPlot:
+    on: WaitingListEntry
+    when:
+      status: waiting
+    set:
+      status: offered
+    intent: Note that a plot has been offered to this person.
+  markAllotted:
+    on: WaitingListEntry
+    when:
+      status: offered
+    set:
+      status: allotted
+    intent: Note that the person accepted a plot.
+  withdraw:
+    on: WaitingListEntry
+    when:
+      status: [waiting, offered]
+    set:
+      status: withdrawn
+    intent: Take the person off the waiting list.
+  vacate:
+    on: Plot
+    when:
+      status: let
+    set:
+      status: vacant
+    intent: Mark a plot as vacant when its member gives it up.

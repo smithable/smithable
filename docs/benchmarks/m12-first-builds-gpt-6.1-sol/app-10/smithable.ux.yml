@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  items:
+    table:
+      columns: [name, kind, servings]
+  shopping-items:
+    table:
+      columns: [name, quantity, shoppingList, purchased]
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#52734D"
+    background: "#FAF7F0"
+    font: Nunito Sans

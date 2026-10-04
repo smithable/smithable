@@ -1,0 +1,13 @@
+smithableUx: 0.1
+pages:
+  catalog:
+    table:
+      view: cards
+      columns: [photos, title, price]
+theme:
+  preset: modern
+  density: comfortable
+  brand:
+    primary: "#28704A"
+    background: "#FAF7F0"
+    font: Inter

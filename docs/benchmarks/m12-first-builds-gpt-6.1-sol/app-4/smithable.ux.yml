@@ -1,0 +1,7 @@
+smithableUx: 0.1
+theme:
+  preset: modern
+  density: comfortable
+  brand:
+    primary: "#15803D"
+    font: Inter

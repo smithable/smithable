@@ -1,0 +1,11 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: Administers the invoicing app.
+  member:
+    description: A freelancer managing their own clients, invoices and payments.
+defaultRole: member
+admins: [johan@smithable.ai]

@@ -1,0 +1,28 @@
+smithable: 0.1
+app:
+  name: Our Wedding Guests
+  description: Manage our wedding guest list, RSVP responses, meal choices and seating assignments.
+models:
+  SeatingTable:
+    fields:
+      name: string!
+      capacity: int!
+      guests: Guest[]
+  Guest:
+    fields:
+      name: string!
+      rsvp: pending | attending | declined
+      mealChoice: undecided | meat | fish | vegetarian | vegan
+      dietaryRequirements: text
+      table: SeatingTable
+      seatNumber: int
+      notes: text
+pages:
+  guests:
+    crud: Guest
+    search: [name, notes]
+    filters: [rsvp, mealChoice, table]
+  tables:
+    crud: SeatingTable
+  team:
+    users: manage

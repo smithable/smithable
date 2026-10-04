@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  items:
+    table:
+      sort: -addedOn
+theme:
+  preset: minimal
+  brand:
+    primary: "#38734B"
+    font: Inter

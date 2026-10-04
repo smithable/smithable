@@ -1,0 +1,24 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Municipal online service status
+      subtitle: Check service availability and read the latest updates on outages and maintenance.
+      button: View incident history
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    services:
+      title: Online services
+    open:
+      title: Current incidents
+    recent:
+      title: Resolved incidents
+    planned:
+      title: Planned maintenance
+  components:
+    title: Services
+models:
+  Component:
+    label: Service
+    pluralLabel: Services

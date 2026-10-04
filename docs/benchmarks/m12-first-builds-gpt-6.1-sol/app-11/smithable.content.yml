@@ -1,0 +1,18 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: API service status
+      subtitle: Check current service availability, follow incident updates, and review planned maintenance.
+      button: View incident history
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    services:
+      title: Service components
+    open:
+      title: Active incidents
+    recent:
+      title: Resolved incidents
+    planned:
+      title: Planned maintenance

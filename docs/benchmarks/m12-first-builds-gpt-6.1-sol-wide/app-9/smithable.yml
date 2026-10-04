@@ -1,0 +1,22 @@
+smithable: 0.1
+app:
+  name: My Vinyl Collection
+  description: Keep track of your vinyl albums, artists, record condition and what you paid.
+  currency: USD
+  timezone: Europe/Mariehamn
+models:
+  Item:
+    fields:
+      name: string!
+      artist: string!
+      condition: unknown | mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
+      pricePaid: money
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  items:
+    crud: Item
+    search: [name, artist]
+    filters: [condition]

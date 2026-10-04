@@ -1,0 +1,16 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#0F766E"
+    font: Inter
+pages:
+  invoices:
+    table:
+      sort: -issuedOn
+      columns: [number, client, issuedOn, dueOn, status, total]
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger

@@ -1,0 +1,10 @@
+{
+  "description": "Invoices for my photography work: clients, shoots and what is still unpaid.",
+  "starter": "invoicing",
+  "wordStarter": "invoicing",
+  "questions": [
+    "How do shoots and invoices relate?",
+    "How should unpaid amounts be tracked?",
+    "Should clients be able to see anything without signing in?"
+  ]
+}

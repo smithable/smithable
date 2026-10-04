@@ -1,0 +1,27 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Job post
+    pluralLabel: Job posts
+    fields:
+      place:
+        label: Location
+      available:
+        label: Open for applications
+  Application:
+    fields:
+      resume:
+        label: Resume link
+pages:
+  catalog:
+    title: Jobs
+  home:
+    hero:
+      title: Find your next local opportunity
+      subtitle: Explore jobs on your union's board and sign in to submit an application.
+      button: Browse jobs
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    latest:
+      title: Open opportunities

@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  sightings:
+    table:
+      columns: [species, place, seenOn, observer, count]
+      sort: -seenOn
+    icon: star
+  species:
+    table:
+      sort: name
+    icon: book
+theme:
+  preset: modern
+  brand:
+    primary: "#2f7d4f"

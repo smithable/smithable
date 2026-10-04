@@ -1,0 +1,73 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Kunde
+    pluralLabel: Kunden
+    fields:
+      name:
+        label: Name
+      email:
+        label: E-Mail
+      phone:
+        label: Telefon
+      notes:
+        label: Notizen
+  Product:
+    label: Produkt
+    pluralLabel: Produkte
+    fields:
+      name:
+        label: Name
+      description:
+        label: Beschreibung
+      unit:
+        label: Einheit
+      price:
+        label: Preis je Einheit
+      available:
+        label: Verfügbar
+  Order:
+    label: Vorbestellung
+    pluralLabel: Vorbestellungen
+    fields:
+      number:
+        label: Bestellnummer
+      customer:
+        label: Kunde
+      status:
+        label: Status
+        values:
+          draft: Entwurf
+          placed: Bestellt
+          ready: Abholbereit
+          collected: Abgeholt
+          canceled: Storniert
+      pickupAt:
+        label: Abholzeit
+      placedAt:
+        label: Bestellt am
+      notes:
+        label: Notizen
+  OrderLine:
+    label: Bestellposition
+    pluralLabel: Bestellpositionen
+    fields:
+      order:
+        label: Vorbestellung
+      product:
+        label: Produkt
+      quantity:
+        label: Menge
+      unitPrice:
+        label: Preis je Einheit
+      total:
+        label: Positionsbetrag
+pages:
+  orders:
+    title: Vorbestellungen
+  products:
+    title: Produkte
+  customers:
+    title: Kunden
+  order-lines:
+    title: Bestellpositionen

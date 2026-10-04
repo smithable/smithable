@@ -1,0 +1,25 @@
+smithableUx: 0.1
+tones:
+  Preorder.status:
+    ready: warning
+    pickedUp: success
+    canceled: danger
+pages:
+  vorbestellungen:
+    table:
+      columns: [pickupSlot, status, note]
+    icon: cart
+  produkte:
+    table:
+      columns: [name, price, unit, available]
+    icon: package
+  abholzeiten:
+    table:
+      sort: -startsAt
+    icon: calendar
+theme:
+  preset: modern
+  brand:
+    primary: "#4d7c0f"
+    background: "#f7f3ea"
+    font: Nunito Sans

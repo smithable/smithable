@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  waiting-list:
+    table:
+      sort: joinedOn
+  fees:
+    table:
+      sort: -year
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#39734D"
+    font: Inter

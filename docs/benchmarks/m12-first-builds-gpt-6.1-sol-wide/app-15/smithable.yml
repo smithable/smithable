@@ -1,0 +1,22 @@
+smithable: 0.1
+app:
+  name: Club Bird Sightings
+  description: Keep a shared record of the birds our club sees, including species, place, date and observer.
+  timezone: Europe/Mariehamn
+models:
+  Item:
+    fields:
+      name: string!
+      place: string!
+      addedOn: date! = TODAY()
+      seenBy: string!
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  items:
+    crud: Item
+    search: [name, place, seenBy]
+  team:
+    users: manage

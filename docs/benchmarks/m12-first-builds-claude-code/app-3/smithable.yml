@@ -1,0 +1,124 @@
+smithable: 0.1
+app:
+  name: Ledgerly
+  description: "Simple invoicing for freelancers: keep track of clients, invoices and the payments that settle them."
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Payment:
+    fields:
+      paidOn: date! = TODAY()
+      amount: money!
+      method: bankTransfer | card | cash | other
+      note: string
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      payments: Payment[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+      paid:
+        type: money
+        formula: SUM(payments.amount)
+      balance:
+        type: money
+        formula: total - paid
+pages:
+  clients:
+    crud: Client
+    search: [name, email]
+  payments:
+    crud: Payment
+    filters: [method, paidOn]
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    dashboard:
+      received:
+        sum: Payment.amount
+        by: paidOn
+      outstanding:
+        sum: Invoice.balance
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.balance
+        where:
+          status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
+      latest:
+        list: Invoice
+        limit: 5
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      faq:
+      callToAction:
+        button: overview
+  invoices:
+    crud: Invoice
+    search: [number]
+    filters: [status, client, issuedOn]
+    actions: [markSent, markOverdue, markPaid, duplicate]
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The due date passed without full payment.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    add:
+      Payment:
+        paidOn: TODAY()
+        amount:
+        method:
+    intent: The client paid the invoice; the payment is recorded.
+  duplicate:
+    on: Invoice
+    copy:
+      number:
+      status: draft
+      issuedOn: TODAY()
+    with: [lines]
+    intent: Start a new invoice from an earlier one.

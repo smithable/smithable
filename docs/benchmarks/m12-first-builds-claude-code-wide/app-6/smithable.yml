@@ -1,0 +1,83 @@
+smithable: 0.1
+app:
+  name: Tidy Ledger
+  description: One place for our cleaning company to invoice its households every month and see what has been paid.
+  currency: EUR
+models:
+  Household:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      address: text
+      notes: text
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      household: Household!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid, markOverdue, duplicateInvoice]
+    filters: [status, household, issuedOn]
+    search: [number]
+  households:
+    crud: Household
+    search: [name, email, phone]
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+  team:
+    users: manage
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the household.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The household paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The household has not paid by the due date.
+  duplicateInvoice:
+    on: Invoice
+    copy:
+      status: draft
+      number:
+      issuedOn: TODAY()
+      dueOn: DATEADD(TODAY(), 30, "day")
+    with: [lines]
+    intent: Start next month's invoice for the same household from this one.

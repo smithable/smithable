@@ -1,0 +1,24 @@
+smithableUx: 0.1
+pages:
+  customers:
+    table:
+      columns: [name, email, status, accountManager]
+  deals:
+    table:
+      columns: [name, customer, status, value, assignee, expectedCloseDate]
+  follow-ups:
+    table:
+      columns: [subject, customer, deal, assignee, dueAt, status]
+      sort: dueAt
+tones:
+  Deal.status:
+    won: success
+    lost: danger
+  FollowUp.status:
+    completed: success
+theme:
+  preset: modern
+  density: compact
+  brand:
+    primary: "#2563eb"
+    font: Inter
