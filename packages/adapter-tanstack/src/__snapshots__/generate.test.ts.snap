@@ -2924,6 +2924,13 @@ export const noteAccess: ModelAccess = {
   delete: { public: false, roles: ["admin", "member"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || noteAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: NoteValues): void {
   if (values.projectId != null && !projectData.canRead(viewer, values.projectId))
@@ -2931,6 +2938,7 @@ function checkReferences(viewer: Viewer | null, values: NoteValues): void {
 }
 
 export const noteData = {
+  shownTo,
   /** A condition for the notes the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(noteAccess.read, viewer);
@@ -2950,12 +2958,13 @@ export const noteData = {
   /** The notes the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(noteAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.notes.findMany({
+    const found = await db.query.notes.findMany({
       where: and(noteData.readable(viewer), where),
       with: { project: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -2963,13 +2972,14 @@ export const noteData = {
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(noteAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(schema.notes).where(noteData.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.notes.findMany({
+    const found = await db.query.notes.findMany({
       where: noteData.readable(viewer),
       with: { project: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
       offset,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
 
@@ -2980,10 +2990,11 @@ export const noteData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.notes.findFirst({
+    const found = await db.query.notes.findFirst({
       where: and(eq(schema.notes.id, id), noteData.readable(viewer)),
       with: { project: { columns: { id: true, name: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
 
@@ -3217,7 +3228,15 @@ export const projectAccess: ModelAccess = {
   delete: { public: false, roles: ["admin", "member"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || projectAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const projectData = {
+  shownTo,
   /** A condition for the projects the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(projectAccess.read, viewer);
@@ -3237,11 +3256,12 @@ export const projectData = {
   /** The projects the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(projectAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.projects.findMany({
+    const found = await db.query.projects.findMany({
       where: and(projectData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -3249,12 +3269,13 @@ export const projectData = {
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(projectAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(schema.projects).where(projectData.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.projects.findMany({
+    const found = await db.query.projects.findMany({
       where: projectData.readable(viewer),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
       offset,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
 
@@ -3265,10 +3286,11 @@ export const projectData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.projects.findFirst({
+    const found = await db.query.projects.findFirst({
       where: and(eq(schema.projects.id, id), projectData.readable(viewer)),
       with: { tasks: { where: taskData.readable(viewer), with: { assignee: { columns: { id: true, name: true } } } }, notes: { where: noteData.readable(viewer) } },
     });
+    const row = found && { ...shownTo(viewer, found), tasks: found.tasks.map((r) => taskData.shownTo(viewer, r)), notes: found.notes.map((r) => noteData.shownTo(viewer, r)) };
     return row ? row : null;
   },
 
@@ -3506,6 +3528,13 @@ export const taskAccess: ModelAccess = {
   delete: { public: false, roles: ["admin", "member"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || taskAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: TaskValues): void {
   if (values.projectId != null && !projectData.canRead(viewer, values.projectId))
@@ -3513,6 +3542,7 @@ function checkReferences(viewer: Viewer | null, values: TaskValues): void {
 }
 
 export const taskData = {
+  shownTo,
   /** A condition for the tasks the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(taskAccess.read, viewer);
@@ -3532,12 +3562,13 @@ export const taskData = {
   /** The tasks the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(taskAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.tasks.findMany({
+    const found = await db.query.tasks.findMany({
       where: and(taskData.readable(viewer), where),
       with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -3545,13 +3576,14 @@ export const taskData = {
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(taskAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(schema.tasks).where(taskData.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.tasks.findMany({
+    const found = await db.query.tasks.findMany({
       where: taskData.readable(viewer),
       with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
       offset,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
 
@@ -3562,10 +3594,11 @@ export const taskData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.tasks.findFirst({
+    const found = await db.query.tasks.findFirst({
       where: and(eq(schema.tasks.id, id), taskData.readable(viewer)),
       with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
 
@@ -6141,12 +6174,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
   "src/generated/mcp.server.ts": "cc479d24 generated",
-  "src/generated/note.server.ts": "702677c1 generated",
+  "src/generated/note.server.ts": "7f598f47 generated",
   "src/generated/note.ts": "4bbd09eb generated",
   "src/generated/pages.ts": "4b852c85 generated",
-  "src/generated/project.server.ts": "1b5175c7 generated",
+  "src/generated/project.server.ts": "18f514d1 generated",
   "src/generated/project.ts": "3dee7710 generated",
-  "src/generated/task.server.ts": "b2914833 generated",
+  "src/generated/task.server.ts": "634d2874 generated",
   "src/generated/task.ts": "a2db981c generated",
   "src/generated/users.server.ts": "bacb5017 generated",
   "src/generated/users.test.ts": "b228c678 generated",
