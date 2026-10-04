@@ -131,12 +131,39 @@ export const ${n.table}Favorites = sqliteTable(
     ];
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
+  for (const used of ["index", "integer", "text"]) imports.add(used);
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${pictures ? 'import type { Picture } from "#/kit/uploads";\n' : ""}
-${[...authBlock, ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
+
+/**
+ * Who changed what (docs/design/logging.md §3.3), in every app: written by src/kit/audit.server.ts
+ * in the change's own transaction, never edited by the app.
+ */
+const AUDIT_TABLE = `export const auditLog = sqliteTable(
+  "audit_log",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    trace: text(),
+    /** A user's id, a key's name, "visitor", or "the app" for its own work. */
+    who: text().notNull(),
+    role: text(),
+    address: text(),
+    browser: text(),
+    /** created, changed, deleted, copied, or an action's name. */
+    action: text().notNull(),
+    model: text(),
+    recordId: integer(),
+    title: text(),
+    fields: text({ mode: "json" }).$type<string[]>(),
+    details: text({ mode: "json" }).$type<Record<string, unknown>>(),
+  },
+  (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);`;
 
 export function column(field: FieldIR): { expr: string; uses: string } {
   let expr: string;
