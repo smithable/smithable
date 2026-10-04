@@ -126,4 +126,25 @@ Mistral and Claude named a salon's records (services, stylists); OpenAI kept the
 
 Ten descriptions built by Claude Opus 5.5 (through Claude Code), gpt-6.1-sol and Mistral Medium 3.5, shown to Johan as A, B and C in a shuffled order, the start page and the main list of each. His answer was an overall lean to "C" (better landing pages and data, and a gallery view for the tool library rather than rows). Mapped through the key, "C" was Claude Opus 5.5 on 5 sheets, Mistral Medium on 4 and gpt-6.1-sol on 1. That is no clear winner, with a lean to Claude; the landing page, the sample data and the choice of view decide. The heroes on those sheets were the starter's own, not the picked ones (fixed on fable/hero-pick). Round 2 puts Sonnet 4.6 and Haiku 4.5 through Bedrock beside Opus 5.5, with one answer asked per sheet.
 
+## Blind comparison, round 2
+
+The same ten descriptions built by Claude Opus 5.5 (round 1's apps), and by Claude Sonnet 4.6 and Claude Haiku 4.5 through Bedrock's EU profiles, as A, B and C in a shuffled order with the question on each sheet; one answer per sheet, "none" allowed. The heroes come from the fixed picker (#242) for all three.
+
+| Sheet | Johan's pick | Model | His reason, condensed |
+|---|---|---|---|
+| 1. Yoga studio | none | | Haiku's and Sonnet's have a blog ("news & articles") that may not belong; Opus's lacks class types and messages |
+| 2. Invoicing | B | Sonnet 4.6 | a better heading, more complete; its app name is too long for the header. Opus's list showed "Something went wrong" (a formula bug since fixed on main) |
+| 3. Tool library | A | Opus 5.5 | shows the tools before sign-in; the other two open on a sign-in page |
+| 4. Conference | C | Opus 5.5 | the better landing page and heading, and a schedule (Haiku's has none) |
+| 5. Status page | none | | Sonnet's landing button leads to the incident history, which needs sign-in |
+| 6. Hair salon (Swedish) | C | Opus 5.5 | calls the services "behandlingar" |
+| 7. Car log | B | Sonnet 4.6 | all similar; Sonnet's a bit more complete |
+| 8. Wedding | B | Sonnet 4.6 | correct and the most complete |
+| 9. Bird sightings | none | | Sonnet's has a landing page and data; Opus's has species as well as sightings |
+| 10. Allotments | none | | Opus's is the most complete and filters by member, but a plot marked vacant has a tenant |
+
+**Tally:** Sonnet 4.6 3 (2, 7, 8), Opus 5.5 3 (3, 4, 6), Haiku 4.5 0, no preference 4. Sonnet through AWS in the EU matches Opus on Johan's picks, and Haiku is never the one he would start from. With round 1 (Opus 5 of 10 against gpt-6.1-sol and Mistral Medium), this agrees with the bench: Sonnet and Opus build the most, and Haiku builds thin.
+
+What he saw that is not about the model (sent on, 2026-10-04): the same hero on all three yoga apps (variety among equally good matches), closed apps opening on sign-in where showing the content first fits (the tool library), a long app name in the header, a landing button to a page that needs sign-in, and sample data that contradicts itself (a vacant plot with a tenant).
+
 Tonight's daily Mistral run, on the same main as the other two, will give Mistral's averages on today's prompt, and Mistral Large becomes another column.
