@@ -11,6 +11,7 @@ import {
   type SpecIR,
   storesPictures,
   USER_MODEL,
+  uniquePerOwner,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { calendarStart } from "./pages/calendar.js";
@@ -27,7 +28,6 @@ import {
   references,
   storedFields,
   tableNames,
-  uniquePerOwner,
 } from "./shared.js";
 
 // ── Database ─────────────────────────────────────────────────────────────────
