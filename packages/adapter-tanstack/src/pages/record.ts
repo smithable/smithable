@@ -16,6 +16,7 @@ import {
 import { askedFields } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { reserveElement, savedToggle } from "../data.js";
+import { hasKeys } from "../keys.js";
 import {
   appStart,
   attr,
@@ -350,6 +351,7 @@ export function detailRoute(
   const router = favorite || offered.some((a) => !a.copy);
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
+  const keys = history && auth ? hasKeys(ir, auth) : false;
   const viewer = contact || favorite || offered.length > 0;
   const buttons = [
     ...offered.map(
@@ -367,8 +369,12 @@ ${
   // The contact block imports some of the same: each name once.
   history
     ? contact
-      ? 'import { and, desc } from "drizzle-orm";\nimport { auditLog } from "#/db/schema";\n'
-      : 'import { createServerFn } from "@tanstack/react-start";\nimport { and, desc, eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { auditLog, user } from "#/db/schema";\n'
+      ? 'import { and, desc } from "drizzle-orm";\nimport { ' +
+        (keys ? "apiKey, auditLog" : "auditLog") +
+        ' } from "#/db/schema";\n'
+      : 'import { createServerFn } from "@tanstack/react-start";\nimport { and, desc, eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { ' +
+        (keys ? "apiKey, auditLog, user" : "auditLog, user") +
+        ' } from "#/db/schema";\n'
     : ""
 }import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
@@ -385,7 +391,14 @@ const getHistory = createServerFn()
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
     if (viewer?.role !== "admin") return null;
-    const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));${
+      keys
+        ? `
+    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+      people.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);`
+        : ""
+    }
     return db
       .select()
       .from(auditLog)
