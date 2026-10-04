@@ -3164,7 +3164,6 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };
           audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },
@@ -6533,7 +6532,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "5b1e038c generated",
+  "src/lib/auth.ts": "8a301f46 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -8463,8 +8462,8 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "sales" } };
         },
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };
+          const email = created.email.toLowerCase();
           const used = invitationOf(email);
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
@@ -9726,7 +9725,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "27b4ae97 generated",
+  "src/lib/auth.ts": "0d33db09 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -12336,7 +12335,6 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };
           audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },
@@ -13928,7 +13926,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "7986e8a4 generated",
+  "src/lib/auth.ts": "32d6392e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -14992,7 +14990,6 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };
           audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },
@@ -16482,7 +16479,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "026f3e12 generated",
+  "src/lib/auth.ts": "e7b96f20 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -17466,7 +17463,6 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };
           audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },
@@ -18325,7 +18321,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "8bc04af5 generated",
+  "src/lib/auth.ts": "55c0fde1 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -21431,8 +21427,8 @@ export const auth = betterAuth({
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "staff" } };
         },
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };
+          const email = created.email.toLowerCase();
           const used = invitationOf(email);
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
@@ -23481,7 +23477,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "68613cb5 generated",
+  "src/lib/auth.ts": "a520fe87 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
