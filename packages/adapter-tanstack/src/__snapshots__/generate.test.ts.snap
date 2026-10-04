@@ -6546,7 +6546,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "babd39ec kit",
+  "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -8314,6 +8314,7 @@ import { expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
+import { forgetInLog } from "#/kit/audit.server";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
@@ -8376,6 +8377,10 @@ test("only the page's roles manage users; an administrator cannot change or remo
   // What touches security keeps its values in the audit log: from what to what, and who.
   expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: "sales", to: "admin" } });
   expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@acme.example" } });
+  // Forget in the log: every line naming them goes blank, by id or by address (an invitation).
+  db.insert(auditLog).values({ who: admin.id, action: "invited", details: { email: "users-test-colleague@acme.example", role: "admin" } }).run();
+  forgetInLog(admin, { user: colleague.id });
+  expect(JSON.stringify(db.select().from(auditLog).all())).not.toContain("users-test-colleague@");
 
   const pending = await invite(admin, "users-test-pending@acme.example", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
@@ -9754,7 +9759,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "6e9a4b7d generated",
-  "src/generated/users.test.ts": "28485ed6 generated",
+  "src/generated/users.test.ts": "144bc234 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/AppShell.tsx": "2236ff19 kit",
@@ -9767,7 +9772,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "babd39ec kit",
+  "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -13995,7 +14000,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "babd39ec kit",
+  "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -16573,7 +16578,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "babd39ec kit",
+  "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -18444,7 +18449,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "babd39ec kit",
+  "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -21407,6 +21412,7 @@ import { expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
+import { forgetInLog } from "#/kit/audit.server";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
@@ -21469,6 +21475,10 @@ test("only the page's roles manage users; an administrator cannot change or remo
   // What touches security keeps its values in the audit log: from what to what, and who.
   expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: "staff", to: "admin" } });
   expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@example.com" } });
+  // Forget in the log: every line naming them goes blank, by id or by address (an invitation).
+  db.insert(auditLog).values({ who: admin.id, action: "invited", details: { email: "users-test-colleague@example.com", role: "admin" } }).run();
+  forgetInLog(admin, { user: colleague.id });
+  expect(JSON.stringify(db.select().from(auditLog).all())).not.toContain("users-test-colleague@");
 
   const pending = await invite(admin, "users-test-pending@example.com", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
@@ -23609,7 +23619,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "e04eb3bf generated",
-  "src/generated/users.test.ts": "86832a89 generated",
+  "src/generated/users.test.ts": "9686475c generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Articles.tsx": "4d0a8e9d kit",
@@ -23627,7 +23637,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "babd39ec kit",
+  "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
