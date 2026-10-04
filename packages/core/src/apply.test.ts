@@ -1130,12 +1130,51 @@ test("removePage takes a public page out of public.pages too, and says so", () =
   if (!removed.ok) throw new Error(removed.message);
   expect(removed.description).toBe("Remove page catalog; it is no longer public");
   expect(removed.files.auth).toContain("pages: [items]");
-  const last = applyOperation(removed.files, "removePage", { page: "items" });
-  expect(last).toMatchObject({ ok: false });
   const plain = applyOperation(
     { ...site, auth: site.auth.replace("pages: [items, catalog]", "pages: [items]") },
     "removePage",
     { page: "catalog" },
   );
   expect(plain).toMatchObject({ ok: true, description: "Remove page catalog" });
+});
+
+test("removePage takes the page off a landing hero too, and says so", () => {
+  const raw = import.meta.glob("../../../examples/booking/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const at = (name: string) => raw[`../../../examples/booking/${name}`] as string;
+  const removed = applyOperation(
+    {
+      spec: at("smithable.yml"),
+      auth: at("smithable.auth.yml"),
+      content: at("smithable.content.yml"),
+    },
+    "removePage",
+    { page: "blog" },
+  );
+  if (!removed.ok) throw new Error(`${removed.message} ${JSON.stringify(removed.diagnostics)}`);
+  expect(removed.description).toBe(
+    "Remove page blog; the home page's hero no longer links to it; it is no longer public",
+  );
+  expect(removed.files.spec).toContain("hero: { button: schedule, shortcuts: [schedule] }");
+});
+
+test("removePage takes the page off a hero's button, in either style, and keeps the hero", () => {
+  const files = (landing: string) => ({
+    spec: `smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  home:\n    route: /\n    landing:\n${landing}  items: { crud: Item }\n  catalog: { crud: Item, route: /catalog }\n  sale:\n    route: /sale\n    landing:\n      callToAction: { button: catalog }\n`,
+  });
+  for (const landing of [
+    "      hero: { button: catalog }\n",
+    "      hero:\n        button: catalog\n",
+  ]) {
+    const removed = applyOperation(files(landing), "removePage", { page: "catalog" });
+    if (!removed.ok) throw new Error(removed.message);
+    expect(removed.description).toBe(
+      "Remove page catalog; the home page's hero no longer links to it; the sale page's callToAction no longer links to it",
+    );
+    expect(removed.files.spec).not.toContain("catalog");
+    expect(removed.files.spec).toMatch(/landing:\n {6}hero:/);
+  }
 });

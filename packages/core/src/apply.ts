@@ -149,8 +149,9 @@ export function applyOperation(
     // page removed); one of them may refuse, when something it owns still needs what went away.
     for (const effect of effects) {
       for (const s of SECTIONS) {
-        const refused = s.follow?.(editors.spec, effect, before.ir);
-        if (refused) return fail(refused.refusal);
+        const followed = s.follow?.(editors.spec, effect, before.ir);
+        if (followed && "refusal" in followed) return fail(followed.refusal);
+        if (followed) notes.push(followed.note);
       }
       for (const c of COMPANIONS) {
         const editor = editors[c.key];
