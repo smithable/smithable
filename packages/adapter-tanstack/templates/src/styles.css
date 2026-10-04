@@ -71,8 +71,10 @@
   dialog {
     translate: 0 var(--motion-distance);
   }
+  /* The drawer slides from the edge without overshooting it. */
   dialog[data-kit="drawer"] {
     translate: -100% 0;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   }
   dialog[open],
   dialog[open]::backdrop {

@@ -1406,7 +1406,8 @@ async function visualChecks(dir, base) {
         [1440, 900],
         [390, 844],
       ]) {
-        await page.emulateMedia({ colorScheme });
+        // Under "reduce motion", so no element is read in the middle of easing in.
+        await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
         await page.setViewportSize({ width, height });
         for (const path of paths) {
           await open(page, `${base}${path}`);
