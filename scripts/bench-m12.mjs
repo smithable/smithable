@@ -452,6 +452,15 @@ for (const i of chosen) {
       (q) => q.question,
     );
   } catch {}
+  // Each answer the model gives is kept as one file in the cache: the files `new` adds, with the
+  // calls the cache answered, are its drafting calls (the first step's was primed by clarify).
+  const answers = () =>
+    process.env.SMITHABLE_LLM_CACHE && existsSync(process.env.SMITHABLE_LLM_CACHE)
+      ? readdirSync(process.env.SMITHABLE_LLM_CACHE, { recursive: true }).filter((f) =>
+          String(f).endsWith(".json"),
+        ).length
+      : 0;
+  const before = answers();
   const started = Date.now();
   const run = spawnSync("node", [cli, "new", dir, "--describe", description, "--yes"], {
     cwd: repo,
@@ -483,6 +492,8 @@ for (const i of chosen) {
     cost: Number(used?.[6] ?? 0),
     currency: used?.[5] ?? "€",
     fromCache: number(used?.[7]),
+    // The first draft and its correction rounds (with the cache on).
+    calls: process.env.SMITHABLE_LLM_CACHE ? answers() - before + number(used?.[7]) : undefined,
     ...(args.only ? { rerun: today } : {}),
     ...(lang ? { lang } : {}),
     seconds: Math.round((Date.now() - started) / 1000),
@@ -535,11 +546,11 @@ const costs = () =>
     .join(" + ");
 const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${stamp.lastFullRun?.slice(0, 10) ?? today}${reruns.length ? `; ${reruns.length} rerun since` : ""})
 
-The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""}
+The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""} *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
-| Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Time |
-|---|---|---|---|---|---|---|---|---|
-${rows.map((r) => `| ${r.description}${r.rerun ? ` *(rerun ${r.rerun})*` : ""} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokensIn === undefined ? "–" : r.tokensIn.toLocaleString("en")} | ${r.tokensOut === undefined ? "–" : r.tokensOut.toLocaleString("en")} | ${r.currency}${r.cost.toFixed(4)} | ${r.fromCache ?? "–"} | ${r.seconds} s |`).join("\n")}
+| Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
+|---|---|---|---|---|---|---|---|---|---|
+${rows.map((r) => `| ${r.description}${r.rerun ? ` *(rerun ${r.rerun})*` : ""} | ${r.starter} | ${yes(r.created)} | ${yes(r.typecheck)} | ${r.tokensIn === undefined ? "–" : r.tokensIn.toLocaleString("en")} | ${r.tokensOut === undefined ? "–" : r.tokensOut.toLocaleString("en")} | ${r.currency}${r.cost.toFixed(4)} | ${r.fromCache ?? "–"} | ${r.calls === undefined ? "–" : r.calls} | ${r.seconds} s |`).join("\n")}
 
 Each created app's four spec files are in [${slug}/](${slug}/), one folder per description (app-1 …).
 
