@@ -49,7 +49,6 @@ models:
       per: talk
       max: talk.capacity
     access:
-      read: [admin, attendee, owner]
       create: [admin, attendee]
       delete: [admin, owner]
 pages:

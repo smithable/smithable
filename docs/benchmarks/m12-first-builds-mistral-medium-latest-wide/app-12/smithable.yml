@@ -9,6 +9,8 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+    access:
+      delete: [admin]
   Incident:
     fields:
       title: string!
@@ -19,13 +21,15 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
-      write: [admin, staff]
+      delete: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
+    access:
+      delete: [admin, staff]
   Maintenance:
     fields:
       title: string!
@@ -33,6 +37,8 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
+    access:
+      delete: [admin, staff]
 pages:
   home:
     route: /
@@ -55,21 +61,21 @@ pages:
     crud: Incident
   incidents:
     crud: Incident
-    search: [title, summary]
     filters: [status, component]
-    sortable: [title, detectedAt, resolvedAt, status]
+    search: [title, summary]
+    access: [admin, staff]
   updates:
     crud: IncidentUpdate
+    access: [admin, staff]
   components:
     crud: Component
-    search: [name, description]
-    filters: [status]
     access: [admin]
   maintenance:
     crud: Maintenance
-    filters: [component]
+    access: [admin, staff]
   overview:
     crud: Incident
+    access: [admin, staff]
   team:
     users: manage
     access: [admin]

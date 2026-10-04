@@ -1,0 +1,117 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Asiakas
+    pluralLabel: Asiakkaat
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      phone:
+        label: Puhelin
+      notes:
+        label: Muistiinpanot
+  Car:
+    label: Auto
+    pluralLabel: Autot
+    fields:
+      registrationNumber:
+        label: Rekisterinumero
+      make:
+        label: Merkki
+      model:
+        label: Malli
+      year:
+        label: Vuosimalli
+      customer:
+        label: Asiakas
+      notes:
+        label: Muistiinpanot
+  Service:
+    label: Palvelu
+    pluralLabel: Palvelut
+    fields:
+      name:
+        label: Nimi
+      description:
+        label: Kuvaus
+      price:
+        label: Hinta
+  WorkOrder:
+    label: Huoltotö
+    pluralLabel: Huoltotyöt
+    fields:
+      number:
+        label: Tunnus
+      car:
+        label: Auto
+      status:
+        label: Tila
+        values:
+          pending: Odottaa
+          inProgress: Käsittelyssä
+          completed: Valmis
+          canceled: Peruutettu
+      description:
+        label: Kuvaus
+      startDate:
+        label: Alkamispäivä
+      endDate:
+        label: Päätöspäivä
+      total:
+        label: Yhteensä
+      notes:
+        label: Muistiinpanot
+  WorkItem:
+    label: Työrivi
+    pluralLabel: Työrivit
+    fields:
+      workOrder:
+        label: Huoltotö
+      service:
+        label: Palvelu
+      quantity:
+        label: Määrä
+      unitPrice:
+        label: Yksikköhinta
+      total:
+        label: Yhteensä
+      notes:
+        label: Muistiinpanot
+  Invoice:
+    label: Lasku
+    pluralLabel: Laskut
+    fields:
+      number:
+        label: Laskun numero
+      workOrder:
+        label: Huoltotö
+      customer:
+        label: Asiakas
+      status:
+        label: Tila
+        values:
+          draft: Luonnos
+          sent: Lähetetty
+          paid: Maksettu
+          canceled: Peruutettu
+      issueDate:
+        label: Laskutuspäivä
+      dueDate:
+        label: Eräpäivä
+      total:
+        label: Yhteensä
+      notes:
+        label: Muistiinpanot
+pages:
+  asiakkaat:
+    title: Asiakkaat
+  autot:
+    title: Autot
+  huoltotyot:
+    title: Huoltotyöt
+  laskut:
+    title: Laskut
+  palvelut:
+    title: Palvelut

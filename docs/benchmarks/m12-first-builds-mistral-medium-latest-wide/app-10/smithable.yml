@@ -7,7 +7,7 @@ models:
     fields:
       name: string!
       description: text
-      category: painting | sculpture | artifact | document
+      category: artifact | painting | sculpture | document | other
       image: url
       period: string
       origin: string
@@ -20,7 +20,8 @@ models:
 pages:
   artifacts:
     crud: Artifact
-    search: [name, description, period, origin, story]
+    search: [name, description, story, period, origin]
+    sortable: [name, period, addedOn]
   home:
     route: /
     landing:

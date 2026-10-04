@@ -9,13 +9,29 @@ models:
       email: email
       phone: phone
       attending: yes | no | maybe
-      mealChoice: vegetarian | meat | fish | vegan
-      seatingTable: string
+      mealChoice: standard | vegetarian | vegan | glutenFree
+      tableNumber: int
       notes: text
-      group: string
+      partySize: int = 1
+    access:
+      delete: [admin]
+      write: [admin]
+      create: [admin]
+  Table:
+    fields:
+      number: int! unique
+      capacity: int!
+      location: string
+      notes: text
+    access:
+      delete: [admin]
+      write: [admin]
+      create: [admin]
 pages:
   guests:
     crud: Guest
-    search: [name, email, seatingTable, group]
-  team:
-    users: manage
+    search: [name, email, notes]
+    filters: [attending, mealChoice, tableNumber]
+  tables:
+    crud: Table
+navigation: [guests, tables]
