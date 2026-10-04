@@ -33,18 +33,37 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
   const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
 
-  // What a change touched: its field, table or form, or text, flashed once.
+  // What a change touched: its field, table or form, or text, flashed once. What the page does
+  // not show yet (a renamed field, until the update reaches the page) flashes when it appears.
+  const flashing = new WeakMap();
+  const flash = (element) => {
+    clearTimeout(flashing.get(element));
+    element.setAttribute("data-sm-flash", "");
+    flashing.set(element, setTimeout(() => element.removeAttribute("data-sm-flash"), 1600));
+  };
+  let watching = null;
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
-    const found = [];
-    for (const concept of event.data.concepts ?? []) {
-      const selector = concept.startsWith("text:")
-        ? '[data-sm-text="' + CSS.escape(concept.slice(5)) + '"]'
-        : '[data-sm-concept="' + CSS.escape(concept) + '"]';
-      document.querySelectorAll(selector).forEach((element) => found.push(element));
-    }
-    for (const element of found) element.setAttribute("data-sm-flash", "");
-    setTimeout(() => found.forEach((element) => element.removeAttribute("data-sm-flash")), 1600);
+    const selector = (event.data.concepts ?? [])
+      .map((concept) =>
+        concept.startsWith("text:")
+          ? '[data-sm-text="' + CSS.escape(concept.slice(5)) + '"]'
+          : '[data-sm-concept="' + CSS.escape(concept) + '"]',
+      )
+      .join(",");
+    if (!selector) return;
+    watching?.disconnect();
+    const found = document.querySelectorAll(selector);
+    if (found.length) return found.forEach(flash);
+    const observer = new MutationObserver(() => {
+      const now = document.querySelectorAll(selector);
+      if (!now.length) return;
+      observer.disconnect();
+      now.forEach(flash);
+    });
+    watching = observer;
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 5000);
   });
 
   window.addEventListener("message", (event) => {
