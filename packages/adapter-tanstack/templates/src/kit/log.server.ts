@@ -15,14 +15,15 @@ function write(level: "info" | "warn" | "error", message: string, values: Values
       value instanceof Error ? { message: value.message, stack: value.stack } : value,
     ]),
   );
+  // The kit's fields last: a value named "message" or "level" never replaces them.
   const line = {
+    ...named,
     time: new Date().toISOString(),
     log: "app",
     level,
     trace: traceId(),
     who: traceWhoNow(),
     message,
-    ...named,
   };
   (level === "info" ? process.stdout : process.stderr).write(`${JSON.stringify(line)}\n`);
 }
