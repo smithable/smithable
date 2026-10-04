@@ -62,7 +62,9 @@ test("a theme of three colors per mode gets the rest derived, and reads", () => 
     font: "Nunito Sans",
     radius: "12px",
     chroma: 0.22,
+    motion: "subtle",
   });
+  expect(parse(`${forest}motion: lively\n`).theme?.motion).toBe("lively");
   const light = theme?.light as Record<string, string>;
   expect(Object.keys(light)).toHaveLength(28);
   expect(light.primary).toBe("#2f6b3a");
@@ -93,8 +95,11 @@ test("a theme that does not read, or is not a theme, is refused with the reason"
   expect(pale.diagnostics.find((d) => d.code === "theme-contrast")?.message).toMatch(
     /foreground on background is [\d.]+:1; it needs 4.5:1/,
   );
-  const wrong = parse("smithableTheme: 0.1\nfont: Comic Sans\nlight: { background: red }\n");
+  const wrong = parse(
+    "smithableTheme: 0.1\nfont: Comic Sans\nmotion: bouncy\nlight: { background: red }\n",
+  );
   expect(wrong.diagnostics.map((d) => d.code).sort()).toEqual([
+    "invalid-value",
     "invalid-value",
     "invalid-value",
     "missing-key",

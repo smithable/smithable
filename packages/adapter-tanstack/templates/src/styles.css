@@ -57,8 +57,58 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+  /* Motion (the theme's --motion-* in theme.css, all 0 under "reduce motion"): dialogs and the
+     menu drawer open and close, notices and new rows ease in, page changes cross-fade. */
+  dialog,
+  dialog::backdrop {
+    opacity: 0;
+    transition:
+      opacity var(--motion-slow) var(--motion-ease),
+      translate var(--motion-slow) var(--motion-ease),
+      overlay var(--motion-slow) allow-discrete,
+      display var(--motion-slow) allow-discrete;
+  }
+  dialog {
+    translate: 0 var(--motion-distance);
+  }
+  dialog[data-kit="drawer"] {
+    translate: -100% 0;
+  }
+  dialog[open],
+  dialog[open]::backdrop {
+    opacity: 1;
+    translate: 0 0;
+  }
+  @starting-style {
+    dialog[open],
+    dialog[open]::backdrop {
+      opacity: 0;
+    }
+    dialog[open] {
+      translate: 0 var(--motion-distance);
+    }
+    dialog[open][data-kit="drawer"] {
+      translate: -100% 0;
+    }
+  }
+  [role="status"],
+  [role="alert"],
+  [data-kit="model-table"] tbody tr {
+    animation: kit-ease-in var(--motion-fast) var(--motion-ease) both;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--motion-slow);
+  }
   /* A preset may set tables' numbers in even columns (corporate does). */
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);
+  }
+}
+
+@keyframes kit-ease-in {
+  from {
+    opacity: 0;
+    translate: 0 calc(var(--motion-distance) / 2);
   }
 }

@@ -1426,9 +1426,26 @@ async function visualChecks(dir, base) {
         }
       }
     }
+    // The theme's motion, and none at all for a visitor who asks for less: the variables the
+    // kit's dialogs, drawer, notices, rows and page changes take their durations from.
+    for (const reducedMotion of ["no-preference", "reduce"]) {
+      await page.emulateMedia({ reducedMotion });
+      await open(page, `${base}${paths[0]}`);
+      const motion = await page.evaluate(() =>
+        ["--motion-fast", "--motion-slow", "--motion-distance"].map((v) =>
+          getComputedStyle(document.documentElement).getPropertyValue(v).trim(),
+        ),
+      );
+      const still = motion.every((v) => /^0(ms|px)$/.test(v));
+      if (reducedMotion === "reduce" && !still)
+        problems.push(`reduce motion: still moves (${motion.join(", ")})`);
+      if (reducedMotion === "no-preference" && (still || motion.some((v) => !v)))
+        problems.push(`the theme's motion is missing (${motion.join(", ")})`);
+    }
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     const ok = problems.length === 0;
     console.log(
-      `  ${ok ? "✓" : "✗"} visual checks: ${paths.length} pages, light and dark, desktop and phone: no accessibility violations or sideways scrolling${ok ? "" : `\n    ${problems.slice(0, 10).join("\n    ")}`}`,
+      `  ${ok ? "✓" : "✗"} visual checks: ${paths.length} pages, light and dark, desktop and phone: no accessibility violations or sideways scrolling; the theme's motion, none under "reduce motion"${ok ? "" : `\n    ${problems.slice(0, 10).join("\n    ")}`}`,
     );
     if (!ok) failures.push("visual checks");
   } finally {
