@@ -142,5 +142,7 @@ test("motion is a theme value: the preset's own, the ux file's over it, set with
   const set = applyOperation({ spec }, "setTheme", { motion: "lively" });
   if (!set.ok) throw new Error(set.message);
   expect(set.description).toBe("Set the look: lively motion");
+  const still = applyOperation({ spec }, "setTheme", { motion: "none" });
+  expect(still).toMatchObject({ ok: true, description: "Set the look: no motion" });
   expect(set.files.ux).toContain("motion: lively");
 });
