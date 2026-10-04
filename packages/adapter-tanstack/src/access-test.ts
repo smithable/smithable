@@ -87,7 +87,6 @@ function testValue(field: FieldIR, model: ModelIR): string {
 export function accessTestSource(ir: SpecIR, auth: AuthIR): string {
   const signedIn = auth.signIn !== "none";
   const roles: (string | null)[] = [...(signedIn ? auth.roles.map((r) => r.name) : []), null];
-  const tables = ir.models.map((m) => camel(plural(m.name)));
   const helpers = ir.models.map((model) => {
     // Every stored field: required and unique ones get a value, the rest are left empty.
     const fields = model.fields.filter(
@@ -115,7 +114,7 @@ ${usesN ? "  const n = next();\n" : ""}  return { ${entries.join(", ")} } as con
 
 function insert${model.name}(owner: string | null, values: Record<string, unknown> = {}) {
   return db
-    .insert(${camel(plural(model.name))})
+    .insert(schema.${camel(plural(model.name))})
     .values({ ...${camel(model.name)}Values(owner), ...values${ownerColumn} })
     .returning()
     .get();
@@ -210,7 +209,7 @@ ${Object.entries(expected(access, role))
       const max = maxField ? 1 : capacity.max;
       tests.push(`  test("a capacity: at most ${max} per ${per.name}, and the number cannot go below what is taken", async () => {
     const viewer = signedIn(${JSON.stringify(reader)});
-    const place = db.insert(${camel(plural(target?.name ?? ""))}).values({ ...${fill}${signedIn && !target?.ownedBy ? ", ownerId: viewer.id" : ""} }).returning().get();
+    const place = db.insert(schema.${camel(plural(target?.name ?? ""))}).values({ ...${fill}${signedIn && !target?.ownedBy ? ", ownerId: viewer.id" : ""} }).returning().get();
     for (let i = 0; i < ${max}; i++)
       await ${data}.create(signedIn(${JSON.stringify(reader)}), { ...${values}(viewer.id), ${per.name}Id: place.id });
     await expect(${data}.create(signedIn(${JSON.stringify(reader)}), { ...${values}(viewer.id), ${per.name}Id: place.id })).rejects.toThrow("full");${
@@ -256,7 +255,7 @@ ${tests.join("\n\n")}
     const counter = fresh
       ? `    const ask = () => {\n      const n = next();\n      return { ${askedValues.join(", ")} };\n    };\n`
       : "";
-    const table = camel(plural(model.name));
+    const table = `schema.${camel(plural(model.name))}`;
     // Refused, the action writes nothing: the record is as it was (an update it began rolls back).
     const before = (record: string) =>
       `    const ${record}Before = JSON.stringify(db.select().from(${table}).where(eq(${table}.id, ${record}.id)).get());\n`;
@@ -390,7 +389,7 @@ ${roles.some((r) => r !== null && r !== "admin") ? `    expect(() => forgetInLog
 // "Own" records are owned by the user; "others" by someone else.
 ${audited ? 'import { and, eq } from "drizzle-orm";\n' : standard.length ? 'import { eq } from "drizzle-orm";\n' : ""}import { describe, expect, test } from "vitest";
 import { db } from "#/db";
-import { ${[...tables, ...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";
+${signedIn || audited ? `import { ${[...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";\n` : ""}import * as schema from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
 ${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${imports.join("\n")}
 

@@ -32,10 +32,11 @@ import {
   ownerKey,
   references,
   relatedTitle,
+  SCHEMA_IMPORT,
   shownFields,
   storedFields,
   type Texts,
-  tableNames,
+  tableRef,
   titleField,
   userFields,
 } from "./shared.js";
@@ -174,7 +175,7 @@ export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { ${n.table} } from "#/db/schema";
+${SCHEMA_IMPORT}
 import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
@@ -428,7 +429,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     : [];
   const perField = capacity && model.fields.find((f) => f.name === capacity.per);
   const perTarget =
-    perField?.type.kind === "relation" ? tableNames(modelNamed(ir, perField.type.model)).table : "";
+    perField?.type.kind === "relation" ? tableRef(modelNamed(ir, perField.type.model)) : "";
   const capacityMax = capacity
     ? typeof capacity.max === "number"
       ? String(capacity.max)
@@ -443,7 +444,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       : "";
   const holdChecks = holds.map((m) => {
     const c = m.capacity as { per: string; max: string; where?: Condition };
-    const tn = tableNames(m);
+    const tn = { table: tableRef(m) };
     const field = c.max.split(".")[1];
     const conditions = [
       `eq(${tn.table}.${c.per}Id, id)`,
@@ -497,7 +498,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ].join("");
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
-import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favorites ? [favorites] : [])])].sort().join(", ")} } from "#/db/schema";
+${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
@@ -575,7 +576,7 @@ ${
   /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
   async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}${ordered ? ", order?: SQL" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.${n.table}.findMany({
+    const rows = await db.query.${n.tableKey}.findMany({
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     });
@@ -588,7 +589,7 @@ ${
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.${n.table}.findMany({
+    const rows = await db.query.${n.tableKey}.findMany({
       where: ${self}.readable(viewer),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
@@ -625,14 +626,14 @@ ${
 `
     : ""
 }  async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.${n.table}.findFirst({
+    const row = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
     });
 ${
   hiddenTotals.length
     ? `    if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
-    const all = await db.query.${n.table}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map((l) => `${l}: true`).join(", ")} } });
+    const all = await db.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map((l) => `${l}: true`).join(", ")} } });
     return { ...${compute(`{ ...row, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
     : `    return row ? ${compute("row")} : null;`
 }
