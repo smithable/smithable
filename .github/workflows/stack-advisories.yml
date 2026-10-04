@@ -16,9 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # The script needs Node alone: no pnpm, so nothing of a package manager to cache
+      # (setup-node would look for pnpm because package.json names it).
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
+          package-manager-cache: false
       - name: Pins against their packages' advisory lists
         env:
           GITHUB_TOKEN: ${{ github.token }}
