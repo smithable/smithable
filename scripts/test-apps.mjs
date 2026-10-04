@@ -841,8 +841,46 @@ async function statusFlow(base) {
         ...init,
         headers: { authorization: `Bearer ${shown}`, "content-type": "application/json" },
       });
-    if ((await fetch(`${base}/api/v1/incidents`)).status !== 401)
-      throw new Error("the API answered without a key");
+    // Without a key a program is a visitor (api-only.md §3.4): it reads what anyone may read,
+    // and is refused the rest; a key that is not valid is refused, never taken for a visitor.
+    const visitorList = await fetch(`${base}/api/v1/incidents`);
+    if (visitorList.status !== 200 || !(await visitorList.json()).items?.length)
+      throw new Error(`a visitor could not read the public incidents (${visitorList.status})`);
+    const keyless = await fetch(`${base}/api/v1/incidents`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Not mine to add" }),
+    });
+    if (keyless.status !== 401)
+      throw new Error(`a visitor could add an incident (${keyless.status})`);
+    // Writes without a key are held to a visitor's limit, 10 a minute per address.
+    let held = 0;
+    for (let n = 2; n <= 11 && !held; n++) {
+      const tried = await fetch(`${base}/api/v1/incidents`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      if (tried.status === 429) held = n;
+    }
+    if (held !== 11)
+      throw new Error(`the eleventh keyless write was not held (${held || "never"})`);
+    const wrong = await fetch(`${base}/api/v1/incidents`, {
+      headers: { authorization: "Bearer smk_not_a_key" },
+    });
+    if (wrong.status !== 401)
+      throw new Error(`a wrong key was taken for a visitor (${wrong.status})`);
+    const strangerSees = await (await fetch(`${base}/api/v1/openapi.json`)).json();
+    if (
+      !strangerSees.paths?.["/api/v1/incidents"]?.get ||
+      strangerSees.paths["/api/v1/incidents"].post ||
+      Object.keys(strangerSees.paths).some((p) => p.includes("/actions/"))
+    )
+      throw new Error("the description shows a stranger more than reading");
+    // Signed in, the users page's download is the whole description, what a key reaches.
+    const downloaded = await (await page.request.get(`${base}/api/v1/openapi.json`)).json();
+    if (!downloaded.paths?.["/api/v1/incidents/{id}/actions/resolve"])
+      throw new Error("the signed-in download is not the whole description");
     const listed = await api("/incidents");
     const listing = await listed.json();
     if (listed.status !== 200 || !listing.items?.length || !listing.items[0].title)
@@ -902,6 +940,17 @@ async function statusFlow(base) {
       throw new Error(`find_incidents gave ${JSON.stringify(found)}`);
     const refused = await rpc("tools/call", { name: "delete_incident", arguments: { id: 1 } });
     if (!refused.isError) throw new Error("a delete tool answered");
+    // An assistant without a key is a visitor too: finding and reading what anyone may read.
+    const strangerTools = await (
+      await fetch(`${base}/mcp`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+      })
+    ).json();
+    const offered = strangerTools.result.tools.map((tool) => tool.name).sort();
+    if (offered.join() !== "find_components,find_incidents,read_component,read_incident")
+      throw new Error(`a stranger's tools are ${offered.join(", ")}`);
     // One message per request: a batch would run many calls for one count of the limit.
     const batch = await fetch(`${base}/mcp`, {
       method: "POST",
@@ -909,7 +958,9 @@ async function statusFlow(base) {
       body: JSON.stringify([{ jsonrpc: "2.0", id: 1, method: "ping" }]),
     });
     if (batch.status !== 400) throw new Error(`a batch was answered with ${batch.status}`);
-    const described = await (await fetch(`${base}/api/v1/openapi.json`)).json();
+    const described = await (
+      await fetch(`${base}/api/v1/openapi.json`, { headers: { authorization: `Bearer ${shown}` } })
+    ).json();
     if (!described.paths?.["/api/v1/incidents/{id}/actions/resolve"])
       throw new Error("the description lacks resolve");
     page.once("dialog", (d) => d.accept());
@@ -917,7 +968,7 @@ async function statusFlow(base) {
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
     if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
-      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); revoked, it stops",
+      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); without a key a program or assistant reads only what anyone may, is refused the rest and held to ten writes a minute; revoked, it stops",
     );
   } catch (error) {
     console.log(

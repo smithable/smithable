@@ -21496,6 +21496,280 @@ export const OPENAPI = {
     }
   ]
 };
+
+/** What a stranger is shown: the reading and adding anyone may do; nothing in a closed app. */
+export const VISITOR_OPENAPI = {
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Northwind Status",
+    "version": "1",
+    "description": "Is it working? The state of our services, live."
+  },
+  "paths": {
+    "/api/v1/components": {
+      "get": {
+        "summary": "Components anyone may read",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of components"
+          },
+          "401": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/components/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "summary": "One component",
+        "responses": {
+          "200": {
+            "description": "The record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents": {
+      "get": {
+        "summary": "Incidents anyone may read",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of incidents"
+          },
+          "401": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "summary": "One incident",
+        "responses": {
+          "200": {
+            "description": "The record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Component": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "operational",
+              "degraded",
+              "down",
+              "maintenance"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ]
+      },
+      "Incident": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved"
+            ]
+          },
+          "component": {
+            "type": "integer",
+            "description": "The id of a Component"
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "title",
+          "status",
+          "detectedAt"
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+};
 "
 `;
 
@@ -22951,7 +23225,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // The app's records and actions as tools for AI assistants (docs/design/integrations.md §5b):
 // what the auth file's \`api\` block offers, with the spec's own words as the descriptions, called
 // as the key's role through the data functions, exactly as the API is.
-import type { Viewer } from "#/kit/access";
+import { AccessDenied, type Viewer } from "#/kit/access";
 import { NotFound } from "#/kit/api.server";
 import type { Tool } from "#/kit/mcp.server";
 import { componentFromApi, componentToApi, incidentFromApi, incidentToApi } from "./api.server";
@@ -23195,10 +23469,72 @@ export const TOOLS: Tool[] = [
   }
 ];
 
+/** What a visitor without a key gets: finding and reading what anyone may read, adding what anyone may add. */
+export const VISITOR_TOOLS: Tool[] = [
+  {
+    "name": "find_components",
+    "description": "List components anyone may read, 100 at a time (page 1, 2, …).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "read_component",
+    "description": "One component, by its id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "The record's id"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "find_incidents",
+    "description": "List incidents anyone may read, 100 at a time (page 1, 2, …).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "read_incident",
+    "description": "One incident, by its id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "The record's id"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  }
+];
+
 /** A record the key may read, or a refusal that says so. */
 async function found<R extends { id: number }>(
   data: { get: (viewer: Viewer | null, id: number) => Promise<R | null | undefined> },
-  viewer: Viewer,
+  viewer: Viewer | null,
   id: unknown,
   label: string,
 ): Promise<R> {
@@ -23207,8 +23543,14 @@ async function found<R extends { id: number }>(
   return row;
 }
 
-/** Calls one tool as the key. */
-export async function callTool(viewer: Viewer, name: string, args: Record<string, unknown>): Promise<unknown> {
+/** An action is a key's: a visitor is never offered one (VISITOR_TOOLS), and is refused here too. */
+const keyed = (viewer: Viewer | null): Viewer => {
+  if (!viewer) throw new AccessDenied(false);
+  return viewer;
+};
+
+/** Calls one tool as the key, or as a visitor without one. */
+export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "find_components": {
       const page = Math.max(1, Number(args.page) || 1);
@@ -23239,7 +23581,7 @@ export async function callTool(viewer: Viewer, name: string, args: Record<string
       return incidentToApi(await incidentData.update(viewer, row.id, incidentFromApi(fields, row) as never));
     }
     case "resolve":
-      return incidentToApi(await runResolve(viewer, Number(args.id)));
+      return incidentToApi(await runResolve(keyed(viewer), Number(args.id)));
     default:
       throw new NotFound(\`There is no tool "\${name}".\`);
   }
@@ -23937,7 +24279,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { componentFromApi, componentToApi } from "#/generated/api.server";
 import { componentData } from "#/generated/component.server";
-import { apiCall, NotFound } from "#/kit/api.server";
+import { apiCall, NotFound, openApiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof componentData.get>[0], id: string) => {
   const row = await componentData.get(viewer, Number(id));
@@ -23948,7 +24290,7 @@ const found = async (viewer: Parameters<typeof componentData.get>[0], id: string
 export const Route = createFileRoute("/api/v1/components/$id")({
   server: {
     handlers: {
-      GET: ({ request, params }) => apiCall(request, async (viewer) => componentToApi(await found(viewer, params.id))),
+      GET: ({ request, params }) => openApiCall(request, async (viewer) => componentToApi(await found(viewer, params.id))),
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
@@ -23971,13 +24313,13 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { componentFromApi, componentToApi } from "#/generated/api.server";
 import { componentData } from "#/generated/component.server";
-import { apiCall } from "#/kit/api.server";
+import { apiCall, openApiCall } from "#/kit/api.server";
 
 export const Route = createFileRoute("/api/v1/components/")({
   server: {
     handlers: {
       GET: ({ request }) =>
-        apiCall(request, async (viewer) => {
+        openApiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
           const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
           const page = Math.max(1, Number(query.get("page")) || 1);
@@ -24025,7 +24367,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { incidentFromApi, incidentToApi } from "#/generated/api.server";
 import { incidentData } from "#/generated/incident.server";
-import { apiCall, NotFound } from "#/kit/api.server";
+import { apiCall, NotFound, openApiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof incidentData.get>[0], id: string) => {
   const row = await incidentData.get(viewer, Number(id));
@@ -24036,7 +24378,7 @@ const found = async (viewer: Parameters<typeof incidentData.get>[0], id: string)
 export const Route = createFileRoute("/api/v1/incidents/$id")({
   server: {
     handlers: {
-      GET: ({ request, params }) => apiCall(request, async (viewer) => incidentToApi(await found(viewer, params.id))),
+      GET: ({ request, params }) => openApiCall(request, async (viewer) => incidentToApi(await found(viewer, params.id))),
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
@@ -24059,13 +24401,13 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { incidentFromApi, incidentToApi } from "#/generated/api.server";
 import { incidentData } from "#/generated/incident.server";
-import { apiCall } from "#/kit/api.server";
+import { apiCall, openApiCall } from "#/kit/api.server";
 
 export const Route = createFileRoute("/api/v1/incidents/")({
   server: {
     handlers: {
       GET: ({ request }) =>
-        apiCall(request, async (viewer) => {
+        openApiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
           const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
           const page = Math.max(1, Number(query.get("page")) || 1);
@@ -24082,12 +24424,27 @@ export const Route = createFileRoute("/api/v1/incidents/")({
 
 exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/openapi[.]json.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-// The API's description in the OpenAPI format: what a program may call, with no key needed to read it.
+// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
+// signed in as someone who may open the users page (its download), all a program may call; otherwise what anyone may read
+// or add, which in an app with nothing public is nothing (no model or field names to a stranger).
 import { createFileRoute } from "@tanstack/react-router";
-import { OPENAPI } from "#/generated/api.server";
+import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
+import { pageAccess } from "#/generated/pages";
+import { allows } from "#/kit/access";
+import { callerOf } from "#/kit/api.server";
+import { currentViewer } from "#/lib/viewer.server";
 
 export const Route = createFileRoute("/api/v1/openapi.json")({
-  server: { handlers: { GET: () => Response.json(OPENAPI) } },
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        // A key; or signed in as someone who may open the users page, where keys are made.
+        const session = await currentViewer();
+        const whole = callerOf(request).viewer || (session && allows(pageAccess["team"], session));
+        return Response.json(whole ? OPENAPI : VISITOR_OPENAPI);
+      },
+    },
+  },
 });
 "
 `;
@@ -25132,14 +25489,14 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // The app's tools for AI assistants (docs/design/integrations.md §5b), at /mcp: connect an
 // assistant here with a key made on the users page, as Authorization: Bearer <key>.
 import { createFileRoute } from "@tanstack/react-router";
-import { callTool, TOOLS } from "#/generated/mcp.server";
+import { callTool, TOOLS, VISITOR_TOOLS } from "#/generated/mcp.server";
 import { handleMcp } from "#/kit/mcp.server";
 import { problem } from "#/kit/api.server";
 
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
-      POST: ({ request }) => handleMcp(request, { name: "Northwind Status", tools: TOOLS, call: callTool }),
+      POST: ({ request }) => handleMcp(request, { name: "Northwind Status", tools: TOOLS, visitorTools: VISITOR_TOOLS, call: callTool }),
       GET: () => problem(405, "This server answers POST requests only (no event stream)."),
     },
   },
@@ -26088,7 +26445,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/monitoring.ts": "44cd9703 generated",
   "src/generated/actions/resolve.server.ts": "9c70ec3c generated",
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
-  "src/generated/api.server.ts": "e251c1ea generated",
+  "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/component.server.ts": "af8ce18d generated",
   "src/generated/component.ts": "a4ec356f generated",
@@ -26102,7 +26459,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.server.ts": "97184a3d generated",
   "src/generated/maintenance.ts": "d8f14068 generated",
-  "src/generated/mcp.server.ts": "bcf4a603 generated",
+  "src/generated/mcp.server.ts": "86ffa077 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "15c188dd generated",
@@ -26126,14 +26483,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "6121a7ed kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/api.server.ts": "d99c4edd kit",
+  "src/kit/api.server.ts": "48c55c80 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
   "src/kit/log.server.ts": "f64505b5 kit",
   "src/kit/mail.ts": "4673e657 kit",
-  "src/kit/mcp.server.ts": "d5b0641b kit",
+  "src/kit/mcp.server.ts": "1aa7ef5c kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
@@ -26146,12 +26503,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "10b74ab0 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
-  "src/routes/api/v1/components/$id.ts": "21010aeb generated",
-  "src/routes/api/v1/components/index.ts": "a83a6cce generated",
+  "src/routes/api/v1/components/$id.ts": "45b5815f generated",
+  "src/routes/api/v1/components/index.ts": "f3b17702 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
-  "src/routes/api/v1/incidents/$id.ts": "72c4b9dd generated",
-  "src/routes/api/v1/incidents/index.ts": "b325331d generated",
-  "src/routes/api/v1/openapi[.]json.ts": "e57fe423 generated",
+  "src/routes/api/v1/incidents/$id.ts": "c9e3ef8f generated",
+  "src/routes/api/v1/incidents/index.ts": "333774eb generated",
+  "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/components/$id.tsx": "35024930 generated",
   "src/routes/components/index.tsx": "2cdf77e5 generated",
   "src/routes/components/new.tsx": "872a5c00 generated",
@@ -26165,7 +26522,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/maintenance/$id.tsx": "f94bd412 generated",
   "src/routes/maintenance/index.tsx": "28bdc3ff generated",
   "src/routes/maintenance/new.tsx": "67635ee5 generated",
-  "src/routes/mcp.ts": "d2796a40 generated",
+  "src/routes/mcp.ts": "ed9035cf generated",
   "src/routes/overview/index.tsx": "a6c168d7 generated",
   "src/routes/sign-in.tsx": "c9a35e7c generated",
   "src/routes/team/index.tsx": "5d5faa8f generated",
