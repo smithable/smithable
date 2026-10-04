@@ -451,6 +451,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const self = n.data;
   // The record's title as the audit log keeps it, and a create with its line.
   const titleKey = titleField(model);
+  // Worked out, never entered: not a change of their own in the audit log.
+  const computedKeys = model.fields.filter((f) => f.formula).map((f) => f.name);
   const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();
         audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });
         return made;`;
@@ -657,7 +659,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
         const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();
         const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });
         return after;
       });
     } catch (error) {
