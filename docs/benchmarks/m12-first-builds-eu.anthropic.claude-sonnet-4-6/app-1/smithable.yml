@@ -1,0 +1,111 @@
+smithable: 0.1
+app:
+  name: YogaBook
+  description: Class schedule and online booking for a yoga studio.
+  currency: EUR
+  timezone: Europe/London
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: beginner | allLevels | advanced
+      durationMinutes: int! = 60
+    access:
+      create: [admin]
+  Instructor:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+    access:
+      create: [admin]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      session: Session! unique
+    capacity:
+      per: session
+      max: session.capacity
+  Post:
+    fields:
+      title: string!
+      address: string unique
+      summary: text
+      cover: picture
+      body: markdown!
+      publishedOn: date
+      status: draft | published
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  my-bookings:
+    crud: Booking
+    mine: true
+  sessions:
+    crud: Session
+    access: [admin]
+    filters: [classType, instructor, startsAt]
+  class-types:
+    crud: ClassType
+    access: [admin]
+    search: [name]
+  instructors:
+    crud: Instructor
+    access: [admin]
+    search: [name]
+  messages:
+    crud: Message
+    access: [admin]
+  blog:
+    articles: Post
+  posts:
+    crud: Post
+    access: [admin]
+  admin:
+    data: all
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, blog]
+      footer:
+      classes:
+        records: ClassType
+      gallery:
+      faq:
+      callToAction:
+        button: schedule
+      news:
+        records: Post
+        where:
+          status: published
+      contact:
+        form: Message
+navigation: [home, schedule, blog, my-bookings, class-types, instructors, sessions, posts, messages, admin]

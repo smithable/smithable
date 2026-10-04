@@ -1,0 +1,29 @@
+smithableUx: 0.1
+pages:
+  schedule:
+    icon: calendar
+  my-bookings:
+    icon: clipboard
+    table:
+      columns: [slot, status, notes]
+    form:
+      control:
+        notes: textarea
+  stylists:
+    icon: user
+  services:
+    icon: tag
+  messages:
+    icon: mail
+  slots:
+    table:
+      sort: startsAt
+      columns: [startsAt, stylist, service, capacity]
+tones:
+  Booking.status:
+    confirmed: success
+    canceled: danger
+theme:
+  preset: modern
+  brand:
+    primary: "#b45309"

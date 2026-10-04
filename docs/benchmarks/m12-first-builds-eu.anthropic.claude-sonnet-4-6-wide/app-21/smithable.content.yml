@@ -1,0 +1,87 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Asiakas
+    pluralLabel: Asiakkaat
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      phone:
+        label: Puhelin
+      address:
+        label: Osoite
+      notes:
+        label: Muistiinpanot
+  Car:
+    label: Auto
+    pluralLabel: Autot
+    fields:
+      customer:
+        label: Asiakas
+      make:
+        label: Merkki
+      model:
+        label: Malli
+      year:
+        label: Vuosimalli
+      licensePlate:
+        label: Rekisterinumero
+      vin:
+        label: Valmistenumero (VIN)
+      notes:
+        label: Muistiinpanot
+  ServiceJob:
+    label: Huoltotyö
+    pluralLabel: Huoltotyöt
+    fields:
+      car:
+        label: Auto
+      description:
+        label: Kuvaus
+      status:
+        label: Tila
+        values:
+          tyonAlla: Työn alla
+      scheduledAt:
+        label: Ajoitettu
+      completedAt:
+        label: Valmistui
+      laborCost:
+        label: Työkustannus
+      partsCost:
+        label: Varaosien hinta
+      total:
+        label: Yhteensä
+      notes:
+        label: Muistiinpanot
+  Invoice:
+    label: Lasku
+    pluralLabel: Laskut
+    fields:
+      number:
+        label: Laskunumero
+      serviceJob:
+        label: Huoltotyö
+      status:
+        label: Tila
+        values:
+          lahetetty: Lähetetty
+      issuedAt:
+        label: Laskupäivä
+      dueAt:
+        label: Eräpäivä
+      amount:
+        label: Summa
+      notes:
+        label: Muistiinpanot
+pages:
+  customers:
+    title: Asiakkaat
+  cars:
+    title: Autot
+  service-jobs:
+    title: Huoltotyöt
+  invoices:
+    title: Laskut

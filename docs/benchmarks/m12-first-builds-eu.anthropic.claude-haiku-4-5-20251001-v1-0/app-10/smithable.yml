@@ -1,0 +1,55 @@
+smithable: 0.1
+app:
+  name: Family Recipe Collection
+  description: A place to keep and organize family recipes with ingredients and shopping lists.
+models:
+  Recipe:
+    fields:
+      name: string!
+      description: text
+      servings: int = 4
+      prepTime: int
+      cookTime: int
+      difficulty: easy | medium | hard
+      addedOn: date! = TODAY()
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Ingredient:
+    fields:
+      name: string!
+      quantity: decimal!
+      unit: string!
+      recipe: Recipe!
+  ShoppingList:
+    fields:
+      name: string!
+      createdOn: date! = TODAY()
+      completed: bool = false
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  ShoppingItem:
+    fields:
+      name: string!
+      quantity: decimal!
+      unit: string!
+      checked: bool = false
+      shoppingList: ShoppingList!
+pages:
+  recipes:
+    crud: Recipe
+    search: [name, description]
+    filters: [difficulty]
+  shopping-lists:
+    crud: ShoppingList
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      recipes:
+        records: Recipe
+navigation: [recipes, shopping-lists]

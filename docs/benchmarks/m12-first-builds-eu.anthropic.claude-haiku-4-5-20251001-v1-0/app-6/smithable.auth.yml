@@ -1,0 +1,15 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: private
+roles:
+  admin:
+    description: Manages the job board.
+  member:
+    description: Posts jobs and applies for positions.
+defaultRole: member
+admins: [johan@smithable.ai]
+public:
+  pages: [jobs]
+  read: [JobPost]

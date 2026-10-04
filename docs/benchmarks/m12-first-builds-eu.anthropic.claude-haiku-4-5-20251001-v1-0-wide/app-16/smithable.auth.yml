@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages plots, members, waiting list and fees.
+  member:
+    description: Views their own plot and fee information.
+defaultRole: member
+admins: [johan@smithable.ai]

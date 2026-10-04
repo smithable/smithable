@@ -1,0 +1,9 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  collector:
+    description: Manages the vinyl collection.
+defaultRole: collector
+admins: [johan@smithable.ai]

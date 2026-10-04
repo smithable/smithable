@@ -1,0 +1,15 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, abholzeiten]
+  read: [{ Product: { where: { available: true } } }, PickupSlot]
+  create: [Message]
+roles:
+  admin:
+    description: Hofladenbesitzer. Verwaltet Produkte, Abholzeiten und Bestellungen.
+  customer:
+    description: Kunde. Kann Produkte ansehen und Vorbestellungen aufgeben.
+defaultRole: customer
+admins: [johan@smithable.ai]

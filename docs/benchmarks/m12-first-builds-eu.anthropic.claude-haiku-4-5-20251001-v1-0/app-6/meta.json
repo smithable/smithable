@@ -1,0 +1,10 @@
+{
+  "description": "A job board for a local union, with job posts and applications.",
+  "starter": "marketplace",
+  "wordStarter": "marketplace",
+  "questions": [
+    "Who can post job listings?",
+    "Can people apply for jobs without signing in?",
+    "What information do job posts include?"
+  ]
+}

@@ -1,0 +1,18 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Welcome to Club FC
+    subtitle: Teams, players, fixtures and results — all in one place.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A team standing at a whiteboard by a window over the harbour
+models:
+  Player:
+    fields:
+      position:
+        values:
+          goalkeeper: Goalkeeper
+          defender: Defender
+          midfielder: Midfielder
+          forward: Forward

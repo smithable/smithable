@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home]
+roles:
+  member:
+    description: A freelancer using the app.
+  admin:
+    description: App administrator.
+defaultRole: member
+admins: [johan@smithable.ai]
