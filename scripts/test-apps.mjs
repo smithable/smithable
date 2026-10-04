@@ -894,6 +894,21 @@ async function statusFlow(base) {
       throw new Error(
         `listing incidents gave ${listed.status} ${JSON.stringify(listing).slice(0, 200)}`,
       );
+    // Filters, search and sort as query parameters (assistant.md §3), behind the same access.
+    const resolvedOnly = await (await api("/incidents?status=resolved")).json();
+    if (!resolvedOnly.items.length || resolvedOnly.items.some((i) => i.status !== "resolved"))
+      throw new Error(`?status=resolved gave ${JSON.stringify(resolvedOnly).slice(0, 200)}`);
+    const payments = await (await api("/incidents?component=Payments")).json();
+    if (payments.total !== 1 || payments.items[0].title !== "Card payments slow at checkout")
+      throw new Error(`?component=Payments gave ${JSON.stringify(payments).slice(0, 200)}`);
+    const searched = await (await api("/incidents?search=certificate")).json();
+    if (searched.total !== 1) throw new Error(`?search=certificate gave ${searched.total}`);
+    const sorted = await (await api("/incidents?sort=detectedAt")).json();
+    if (sorted.items[0]?.title !== "Website unreachable for twenty minutes")
+      throw new Error(`?sort=detectedAt began with ${sorted.items[0]?.title}`);
+    const unknown = await api("/incidents?colour=red");
+    if (unknown.status !== 400 || !(await unknown.json()).title.includes("Fields: title, status"))
+      throw new Error(`an unknown field gave ${unknown.status}`);
     const added = await api("/incidents", {
       method: "POST",
       body: JSON.stringify({
@@ -933,20 +948,67 @@ async function statusFlow(base) {
       return (await answer.json()).result;
     };
     const started = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {} });
-    if (!started?.capabilities?.tools)
-      throw new Error(`initialize gave ${JSON.stringify(started)}`);
-    const names = (await rpc("tools/list", {})).tools.map((tool) => tool.name);
-    if (
-      !names.includes("find_incidents") ||
-      !names.includes("resolve") ||
-      names.some((n) => n.startsWith("delete_"))
-    )
+    if (!started?.capabilities?.tools || !started.instructions?.includes("Incident (incidents)"))
+      throw new Error(`initialize gave ${JSON.stringify(started).slice(0, 300)}`);
+    // The seven tools (assistant.md §3), each marked as reading only or changing what exists.
+    const toolList = (await rpc("tools/list", {})).tools;
+    const names = toolList.map((tool) => tool.name).sort();
+    if (names.join() !== "add,change,describe,find,measure,read,run")
       throw new Error(`the tools are ${names.join(", ")}`);
-    const found = await rpc("tools/call", { name: "find_incidents", arguments: {} });
-    if (found.isError || !found.structuredContent?.items?.length)
-      throw new Error(`find_incidents gave ${JSON.stringify(found)}`);
-    const refused = await rpc("tools/call", { name: "delete_incident", arguments: { id: 1 } });
+    if (!toolList.find((tool) => tool.name === "find").annotations?.readOnlyHint)
+      throw new Error("find is not marked as reading only");
+    const useTool = (name, args) => rpc("tools/call", { name, arguments: args });
+    const found = (
+      await useTool("find", {
+        kind: "Incident",
+        where: { status: "resolved" },
+        fields: ["component"],
+      })
+    ).structuredContent;
+    if (
+      found?.columns?.join() !== "id,title,component" ||
+      !found.total ||
+      !found.rows.some((row) => typeof row[2]?.title === "string")
+    )
+      throw new Error(`find gave ${JSON.stringify(found).slice(0, 300)}`);
+    const counted = (await useTool("measure", { kind: "Incident", by: "status" }))
+      .structuredContent;
+    if (!counted?.rows?.some((r) => r.value === "resolved" && r.number >= 1))
+      throw new Error(`measure gave ${JSON.stringify(counted)}`);
+    // Names as people write them: part of a title in any case, a reference by part of its
+    // title, every word of a search, an action on a record given by its title.
+    const partly = (await useTool("find", { kind: "Incident", where: { title: "CARD PAYMENTS" } }))
+      .structuredContent;
+    if (partly?.total !== 1) throw new Error(`part of a title found ${JSON.stringify(partly)}`);
+    const byComponent = (
+      await useTool("find", { kind: "Incident", where: { component: "payments" } })
+    ).structuredContent;
+    if (byComponent?.total !== 1)
+      throw new Error(`a component by part of its name found ${JSON.stringify(byComponent)}`);
+    const words = (await useTool("find", { kind: "Incident", search: "checkout payments" }))
+      .structuredContent;
+    if (words?.total !== 1) throw new Error(`a search by two words found ${JSON.stringify(words)}`);
+    const nothing = (await useTool("find", { kind: "Incident", search: "volcano" }))
+      .structuredContent;
+    if (!nothing?.note?.includes("A component is matched with where"))
+      throw new Error(`an empty search said ${JSON.stringify(nothing)}`);
+    const byTitle = await useTool("read", {
+      kind: "Incident",
+      id: "Website unreachable for twenty minutes",
+    });
+    if (
+      byTitle.isError ||
+      byTitle.structuredContent?.title !== "Website unreachable for twenty minutes"
+    )
+      throw new Error(`reading by title gave ${JSON.stringify(byTitle)}`);
+    const missing = await useTool("read", { kind: "Incident", id: "No such outage" });
+    if (!missing.isError || !missing.content[0].text.includes("that you may read; find it first"))
+      throw new Error(`a missing title gave ${JSON.stringify(missing)}`);
+    const refused = await useTool("delete", { kind: "Incident", id: 1 });
     if (!refused.isError) throw new Error("a delete tool answered");
+    const wrongField = await useTool("find", { kind: "Incident", where: { colour: "red" } });
+    if (!wrongField.isError || !wrongField.content[0].text.includes("Fields:"))
+      throw new Error(`an unknown field gave ${JSON.stringify(wrongField)}`);
     // An assistant without a key is a visitor too: finding and reading what anyone may read.
     const strangerTools = await (
       await fetch(`${base}/mcp`, {
@@ -956,7 +1018,7 @@ async function statusFlow(base) {
       })
     ).json();
     const offered = strangerTools.result.tools.map((tool) => tool.name).sort();
-    if (offered.join() !== "find_components,find_incidents,read_component,read_incident")
+    if (offered.join() !== "describe,find,measure,read")
       throw new Error(`a stranger's tools are ${offered.join(", ")}`);
     // One message per request: a batch would run many calls for one count of the limit.
     const batch = await fetch(`${base}/mcp`, {
@@ -976,7 +1038,7 @@ async function statusFlow(base) {
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
     if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
-      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); without a key a program or assistant reads only what anyone may, is refused the rest and held to ten writes a minute; revoked, it stops",
+      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists, filters, searches and sorts incidents, adds one and resolves it, a model not offered is not there, the description says what is, and an assistant finds, counts and describes incidents with the seven tools at /mcp (no delete tool); without a key a program or assistant reads only what anyone may, is refused the rest and held to ten writes a minute; revoked, it stops",
     );
   } catch (error) {
     console.log(
@@ -1049,16 +1111,14 @@ async function apiFlow(base) {
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
     });
-    const names = (await tools.json()).result.tools.map((tool) => tool.name);
-    for (const name of [
-      "find_tasks",
-      "add_task",
-      "change_task",
-      "complete",
-      "reopen",
-      "find_notes",
-    ])
-      if (!names.includes(name)) throw new Error(`the tools are ${names.join(", ")}`);
+    // The seven tools, with the assistant's actions under run; no delete tool.
+    const listedTools = (await tools.json()).result.tools;
+    const names = listedTools.map((tool) => tool.name).sort();
+    if (names.join() !== "add,change,describe,find,measure,read,run")
+      throw new Error(`the tools are ${names.join(", ")}`);
+    const runs = listedTools.find((tool) => tool.name === "run").inputSchema.properties.action.enum;
+    if (!runs.includes("complete") || !runs.includes("reopen"))
+      throw new Error(`run offers ${runs.join(", ")}`);
     console.log(
       "  ✓ browser: an admin makes a key with the assistant role; with it a program lists, adds, changes and completes a task, is refused a delete, and an assistant reads the tools' list",
     );
@@ -3184,12 +3244,15 @@ for (const [index, example] of examples.entries()) {
     // reaches tables through the schema namespace, so nothing shadows them.
     if (example === "status")
       step(
-        "models named Row and Value, with a data page and the API on every model, type-check; undo takes them back",
+        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real; undo takes them back",
         () => {
           const ops = [
-            ["addModel", "Row", "label=string!", "amount=money"],
-            ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
+            // Made with the table that refers to it (drizzle-kit's ALTER TABLE leaves the
+            // "values" in REFERENCES unquoted).
             ["addModel", "Value", "name=string!", "amount=int"],
+            ["addModel", "Row", "label=string!", "amount=money", "group=Value"],
+            ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
+            ["addField", "Row", "size", "small | large"],
             ["addDataPage"],
             ["setApi", "all", "--actions", "all", "--assistants", "true"],
           ];
@@ -3198,6 +3261,43 @@ for (const [index, example] of examples.entries()) {
             if (done.code !== 0) throw new Error(done.out);
           }
           run("pnpm", ["typecheck"], dir);
+          // The assistants' measure, run for real through the generated tools: a sum, an
+          // average with a condition, and a sum per value of a field.
+          // As a test of the app's own (its Vitest gives the kit the environment Vite would).
+          const check = join(dir, "src/measure-check.test.ts");
+          writeFileSync(
+            check,
+            `import { expect, test } from "vitest";
+import { callTool } from "./generated/mcp.server";
+
+test("measure sums, averages and sums per value", async () => {
+  const key = { id: "key:0", name: "Check", email: "", role: "admin" } as never;
+  const groups: Record<string, number> = {};
+  for (const name of ["North", "South"]) groups[name] = ((await callTool(key, "add", { kind: "Value", values: { name } })) as { id: number }).id;
+  for (const [label, amount, size, group] of [["a", "10.00", "small", "South"], ["b", "20.50", "large", "South"], ["c", "30.00", "large", "North"], ["d", "1.00", "small", "North"]])
+    await callTool(key, "add", { kind: "Row", values: { label, amount, size, group: groups[group] } });
+  expect(await callTool(key, "measure", { kind: "Row", of: "sum amount" })).toEqual({ sum: 61.5 });
+  // A computed field is worked out in the app and added up there.
+  expect(await callTool(key, "measure", { kind: "Row", of: "sum twice" })).toEqual({ sum: 123 });
+  expect(await callTool(key, "measure", { kind: "Row", of: "average amount", where: { size: "large" } })).toEqual({ average: 25.25 });
+  expect(await callTool(key, "measure", { kind: "Row", of: "sum amount", by: "size" })).toEqual({
+    by: "size",
+    rows: [{ value: "large", number: 50.5 }, { value: "small", number: 11 }],
+  });
+  // The largest says which record holds it; a sum per reference names each group.
+  expect(await callTool(key, "measure", { kind: "Row", of: "max amount" })).toMatchObject({ largest: 30, of: { title: "c" } });
+  expect(await callTool(key, "measure", { kind: "Row", of: "max twice" })).toMatchObject({ largest: 60, of: { title: "c" } });
+  expect(await callTool(key, "measure", { kind: "Row", of: "sum amount", by: "group" })).toMatchObject({
+    rows: [{ title: "North", number: 31 }, { title: "South", number: 30.5 }],
+  });
+});
+`,
+          );
+          try {
+            run("pnpm", ["exec", "vitest", "run", "src/measure-check.test.ts"], dir);
+          } finally {
+            rmSync(check);
+          }
           for (const _ of ops) {
             const undone = smithable(dir, "undo");
             if (undone.code !== 0) throw new Error(undone.out);
