@@ -134,7 +134,20 @@ Johan's idea (2026-10-04). An app's tools for assistants are hard to judge witho
 
 ## 6. What this needs outside the engine
 
-- **The hosted service (B):** a "Connections" page per project for target addresses and secrets, kept encrypted and handed to the app as settings at start; outgoing calls from published apps allowed to the internet but not to the host's own network; per-app limits on outgoing calls (as for mail); the access log covering API and incoming calls; the threat model and data-flows documents.
+- **The hosted service (B):** a "Connections" page per project for target addresses and secrets, kept encrypted and handed to the app as settings at start; outgoing calls from a published app allowed only to the addresses its owner named (6.1), never to the host's own network; per-app limits on outgoing calls (as for mail); the access log covering API and incoming calls; the threat model and data-flows documents.
+### 6.1 Which addresses a hosted app may call
+
+Johan's decision, 2026-10-04: named addresses only, from the beta.
+
+- **By default** a published app's calls leave through the service's proxy to two kinds of address and no other: the hosts of the project's Connections, and the hosts its sign-in providers need from the server, read from `providers` in `smithable.auth.yml` (Google: `oauth2.googleapis.com` and `www.googleapis.com`; Facebook: `graph.facebook.com` and, for the keys of limited-login tokens, `limited.facebook.com`). The provider's sign-in page itself (`accounts.google.com`, `www.facebook.com`) is opened by the browser, not called by the app. Mail and the assistant's model go to the service itself, as before.
+- **"Any public address"** is a switch on the project's Connections page, off until the owner turns it on, with a sentence saying what it means. The refusal of private addresses, the closed ports and the daily limit hold either way.
+- **Ports:** 80 and 443 only. The host itself lets nothing else out but mail, so a connection on another port is refused when it is saved and by the proxy, with the reason, rather than passed and left to time out.
+- **A refused call says so.** The proxy answers 403 with the host's name; the app's deliveries view shows the call as refused; the Connections page lists the hosts refused lately, each with a button to name it. Otherwise custom code that fetches a new address fails without a hint.
+- **Staging** reaches the sign-in hosts only: it has no connections, so it never calls the real targets.
+- **Self-hosted:** nothing changes. The network is the owner's.
+- **Why:** an app that is taken over, or a first build that calls somewhere nobody expected, reaches nothing its owner did not name. It is also the one place such a rule can sit: a list for the whole host does not hold, since the service itself calls model providers, mail and the package registry, whose addresses change.
+- **The sign-in hosts are the stack's knowledge:** they come from the sign-in library, so they are listed here and checked again when a stack profile changes.
+
 - **Terms:** outgoing calls send personal data to whoever the owner names; the DPA and the app owner's own responsibility need a sentence each.
 - **Docs (C):** a how-to for each direction, and one for connecting an automation tool.
 
@@ -156,3 +169,4 @@ Exit for steps 1 to 3: the status starter, with no custom code, takes a monitor'
 4. **The first built-in outgoing call is the general one (tell an address), then mail.** No connection to a named service is built in before the beta; automation tools cover those.
 5. **The order in section 7.**
 6. **The API also offered to AI assistants as tools (section 5b),** as step 1b, with a role-bound key first and acting as the signed-in person later. Recommended.
+7. **A hosted app calls only the addresses its owner named** (6.1), with "any public address" as a switch (Johan, 2026-10-04, after the security review).

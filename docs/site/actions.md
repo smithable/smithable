@@ -123,6 +123,21 @@ actions:
 
 and the invoice page lists them: `actions: [markSent, markPaid, markOverdue, postpone, lateFee, duplicate]`.
 
+## Change or remove one
+
+`setAction` changes an action there is: its intent, the records it is for, or the values it sets. Each part you name replaces what was there, and the rest stays. On the invoicing starter:
+
+```console
+$ smithable op setAction markPaid --when "status=sent | overdue"
+Change the condition of the action markPaid. Undo with: smithable undo
+$ smithable op setAction markSent --intent "The invoice has gone to the customer."
+Change the intent of the action markSent. Undo with: smithable undo
+$ smithable op removeAction markSent
+Remove the action markSent. Undo with: smithable undo
+```
+
+A bare `--when` removes the condition, so the button is offered on every record; `--intent ""` removes the intent. `removeAction` takes the action off the pages that list it and out of what an API offers by name. For anything else (another model, what it adds or copies), remove the action and add it again.
+
 ## Who may press them
 
 An action follows its model's write access: whoever may edit the record may run it. `--allow admin` (or any roles) narrows that, and never widens it. On a list, ticking several rows offers each action that fits at least one of them, as **Postpone (3)**; it changes the ones it fits and skips the others.
