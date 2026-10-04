@@ -45,7 +45,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -7248,13 +7248,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "cae16742 generated",
+  "README.md": "6c385d35 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "163122a0 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
@@ -7395,7 +7395,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -14373,13 +14373,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "c37c586a generated",
+  "README.md": "c949523d generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "6a3dc277 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
@@ -14556,7 +14556,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -17740,13 +17740,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "349145d4 generated",
+  "README.md": "fb4f1863 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "7ffbbcbd generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
@@ -17866,7 +17866,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -22149,13 +22149,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "eefcdcb3 generated",
+  "README.md": "72d2f14e generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "a0ce1f2c generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
@@ -22287,7 +22287,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -24904,13 +24904,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "0806195a generated",
+  "README.md": "ea84412d generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "ecf09785 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
@@ -25032,7 +25032,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -26862,13 +26862,13 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "7aa664a4 generated",
+  "README.md": "f19f8273 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "e26a97c7 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
@@ -26982,7 +26982,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -34914,13 +34914,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "6023d9eb generated",
+  "README.md": "80efd3a6 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "0466ff13 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e4b054e8 generated",
-  "server.mjs": "11fdc40d kit",
+  "server.mjs": "6ea010bf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "88c888e7 kit",
