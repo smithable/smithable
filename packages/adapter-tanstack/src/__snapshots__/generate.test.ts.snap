@@ -3289,6 +3289,7 @@ function BookingPage() {
     <>
       <PageHeader title={\`Booking #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={bookingUi}
         app={app}
         schema={bookingSchema}
@@ -3448,6 +3449,7 @@ function ClassTypePage() {
     <>
       <PageHeader title={row.name || \`Class type #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={classTypeUi}
         app={app}
         schema={classTypeSchema}
@@ -3696,6 +3698,7 @@ function InstructorPage() {
     <>
       <PageHeader title={row.name || \`Instructor #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={instructorUi}
         app={app}
         schema={instructorSchema}
@@ -3872,6 +3875,7 @@ function MessagePage() {
     <>
       <PageHeader title={row.name || \`Message #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={messageUi}
         app={app}
         schema={messageSchema}
@@ -4046,6 +4050,7 @@ function PostPage() {
     <>
       <PageHeader title={row.title || \`Post #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={postUi}
         app={app}
         schema={postSchema}
@@ -4237,6 +4242,7 @@ function SessionPage() {
     <>
       <PageHeader title={\`Session #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
@@ -4618,6 +4624,7 @@ function ClassTypePage() {
     <>
       <PageHeader title={row.name || \`Class type #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={classTypeUi}
         app={app}
         schema={classTypeSchema}
@@ -4873,6 +4880,7 @@ function InstructorPage() {
     <>
       <PageHeader title={row.name || \`Instructor #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={instructorUi}
         app={app}
         schema={instructorSchema}
@@ -5038,6 +5046,7 @@ function MessagePage() {
     <>
       <PageHeader title={row.name || \`Message #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={messageUi}
         app={app}
         schema={messageSchema}
@@ -5202,6 +5211,7 @@ function BookingPage() {
     <>
       <PageHeader title={\`Booking #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={bookingUi}
         app={app}
         schema={bookingSchema}
@@ -5370,6 +5380,7 @@ function PostPage() {
     <>
       <PageHeader title={row.title || \`Post #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={postUi}
         app={app}
         schema={postSchema}
@@ -5637,6 +5648,7 @@ function SessionPage() {
     <>
       <PageHeader title={\`Session #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
@@ -6363,29 +6375,29 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
   "src/routes/__root.tsx": "d8c7196e generated",
-  "src/routes/admin/bookings/$id.tsx": "5ef57140 generated",
+  "src/routes/admin/bookings/$id.tsx": "b6a1277e generated",
   "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
   "src/routes/admin/bookings/new.tsx": "a801addd generated",
-  "src/routes/admin/class-types/$id.tsx": "8c82275f generated",
+  "src/routes/admin/class-types/$id.tsx": "d88fe7dd generated",
   "src/routes/admin/class-types/index.tsx": "a1bbdb49 generated",
   "src/routes/admin/class-types/new.tsx": "a6481283 generated",
   "src/routes/admin/index.tsx": "dc5e3939 generated",
-  "src/routes/admin/instructors/$id.tsx": "20e8bd2a generated",
+  "src/routes/admin/instructors/$id.tsx": "defcd098 generated",
   "src/routes/admin/instructors/index.tsx": "2691e6d9 generated",
   "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
-  "src/routes/admin/messages/$id.tsx": "4374122a generated",
+  "src/routes/admin/messages/$id.tsx": "55392984 generated",
   "src/routes/admin/messages/index.tsx": "2ddc3153 generated",
   "src/routes/admin/messages/new.tsx": "6d8977f3 generated",
-  "src/routes/admin/posts/$id.tsx": "99714c43 generated",
+  "src/routes/admin/posts/$id.tsx": "0de86fa5 generated",
   "src/routes/admin/posts/index.tsx": "0730905d generated",
   "src/routes/admin/posts/new.tsx": "979f6005 generated",
-  "src/routes/admin/sessions/$id.tsx": "6f5082d1 generated",
+  "src/routes/admin/sessions/$id.tsx": "b78f5a2f generated",
   "src/routes/admin/sessions/index.tsx": "73356889 generated",
   "src/routes/admin/sessions/new.tsx": "47205d21 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "df43b8eb generated",
-  "src/routes/class-types/$id.tsx": "a842adfe generated",
+  "src/routes/class-types/$id.tsx": "cedbf880 generated",
   "src/routes/class-types/index.tsx": "9dcfea74 generated",
   "src/routes/class-types/new.tsx": "d60149e8 generated",
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
@@ -6393,20 +6405,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "645364a7 generated",
-  "src/routes/instructors/$id.tsx": "186fe32d generated",
+  "src/routes/instructors/$id.tsx": "23b0d4cb generated",
   "src/routes/instructors/index.tsx": "7ba59287 generated",
   "src/routes/instructors/new.tsx": "f5955aca generated",
-  "src/routes/messages/$id.tsx": "a7acfa05 generated",
+  "src/routes/messages/$id.tsx": "0b045cd7 generated",
   "src/routes/messages/index.tsx": "8f5aca55 generated",
   "src/routes/messages/new.tsx": "d2439c64 generated",
-  "src/routes/my-bookings/$id.tsx": "287ebc56 generated",
+  "src/routes/my-bookings/$id.tsx": "28d0acf8 generated",
   "src/routes/my-bookings/index.tsx": "47c7a3c7 generated",
   "src/routes/my-bookings/new.tsx": "04696793 generated",
-  "src/routes/posts/$id.tsx": "a07ee6e7 generated",
+  "src/routes/posts/$id.tsx": "f88e1241 generated",
   "src/routes/posts/index.tsx": "0f9eebce generated",
   "src/routes/posts/new.tsx": "4235b855 generated",
   "src/routes/schedule/index.tsx": "53cd29d3 generated",
-  "src/routes/sessions/$id.tsx": "c9d1427b generated",
+  "src/routes/sessions/$id.tsx": "12c4ce85 generated",
   "src/routes/sessions/index.tsx": "39a7d23d generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
@@ -8382,6 +8394,7 @@ function CustomerPage() {
     <>
       <PageHeader title={row.name || \`Customer #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={customerUi}
         app={app}
         schema={customerSchema}
@@ -8648,6 +8661,7 @@ function OrderPage() {
     <>
       <PageHeader title={row.number || \`Order #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={orderUi}
         app={app}
         schema={orderSchema}
@@ -9414,13 +9428,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "5393dc89 kit",
   "src/routes/__root.tsx": "72023e6f generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
-  "src/routes/customers/$id.tsx": "379e64db generated",
+  "src/routes/customers/$id.tsx": "fde73f69 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
   "src/routes/customers/index.tsx": "7b79972d generated",
   "src/routes/customers/new.tsx": "297d905c generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
-  "src/routes/orders/$id.tsx": "2a7ff8e1 generated",
+  "src/routes/orders/$id.tsx": "69059aa3 generated",
   "src/routes/orders/index.tsx": "0648ea5f generated",
   "src/routes/orders/new.tsx": "d433e790 generated",
   "src/routes/sign-in.tsx": "3f96f545 generated",
@@ -12134,6 +12148,7 @@ function ClientPage() {
     <>
       <PageHeader title={row.name || \`Client #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={clientUi}
         app={app}
         schema={clientSchema}
@@ -12342,6 +12357,7 @@ function InvoiceLinePage() {
     <>
       <PageHeader title={row.description || \`Invoice line #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={invoiceLineUi}
         app={app}
         schema={invoiceLineSchema}
@@ -12542,6 +12558,7 @@ function InvoicePage() {
         }
       />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={invoiceUi}
         app={app}
         schema={invoiceSchema}
@@ -13469,15 +13486,15 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "5393dc89 kit",
   "src/routes/__root.tsx": "14c028a7 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
-  "src/routes/clients/$id.tsx": "d14d0660 generated",
+  "src/routes/clients/$id.tsx": "f22e9866 generated",
   "src/routes/clients/index.tsx": "814c29dd generated",
   "src/routes/clients/new.tsx": "156ce1da generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "916035f6 generated",
-  "src/routes/invoice-lines/$id.tsx": "2ca1e08d generated",
+  "src/routes/invoice-lines/$id.tsx": "eed486cf generated",
   "src/routes/invoice-lines/index.tsx": "d9e6fe9d generated",
   "src/routes/invoice-lines/new.tsx": "02678970 generated",
-  "src/routes/invoices/$id.tsx": "5551df56 generated",
+  "src/routes/invoices/$id.tsx": "8a139308 generated",
   "src/routes/invoices/index.tsx": "43b6d736 generated",
   "src/routes/invoices/new.tsx": "c2112728 generated",
   "src/routes/overview/index.tsx": "66557c73 generated",
@@ -14591,6 +14608,7 @@ function ItemPage() {
         actions={<SaveButton saved={saved} label={String(row.title || \`Item #\${row.id}\`)} onToggle={toggleSaved} />}
       />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={itemUi}
         app={app}
         schema={itemSchema}
@@ -14962,6 +14980,7 @@ function ItemPage() {
     <>
       <PageHeader title={row.title || \`Item #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={itemUi}
         app={app}
         schema={itemSchema}
@@ -15209,6 +15228,7 @@ function ItemPage() {
         actions={<SaveButton saved={saved} label={String(row.title || \`Item #\${row.id}\`)} onToggle={toggleSaved} />}
       />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={itemUi}
         app={app}
         schema={itemSchema}
@@ -15929,7 +15949,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
-  "src/routes/$id.tsx": "cd71cd0d generated",
+  "src/routes/$id.tsx": "423b2afb generated",
   "src/routes/__root.tsx": "d5881835 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/files/$model.$field.ts": "c26ecf6c kit",
@@ -15937,11 +15957,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "b7451b52 generated",
-  "src/routes/my-items/$id.tsx": "3862106e generated",
+  "src/routes/my-items/$id.tsx": "44ff7064 generated",
   "src/routes/my-items/index.tsx": "9083f0c5 generated",
   "src/routes/my-items/new.tsx": "d4a511a0 generated",
   "src/routes/new.tsx": "b9d18340 generated",
-  "src/routes/saved/$id.tsx": "caf0ef41 generated",
+  "src/routes/saved/$id.tsx": "d6ca9047 generated",
   "src/routes/saved/index.tsx": "662e15ae generated",
   "src/routes/saved/new.tsx": "09d0880f generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
@@ -17091,6 +17111,7 @@ function ItemPage() {
     <>
       <PageHeader title={row.name || \`Item #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={itemUi}
         app={app}
         schema={itemSchema}
@@ -17686,7 +17707,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "9b03a82e generated",
-  "src/routes/items/$id.tsx": "97e50061 generated",
+  "src/routes/items/$id.tsx": "4a6ad927 generated",
   "src/routes/items/index.tsx": "44e568a3 generated",
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
@@ -20868,6 +20889,7 @@ function ComponentPage() {
     <>
       <PageHeader title={row.name || \`Component #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={componentUi}
         app={app}
         schema={componentSchema}
@@ -21286,6 +21308,7 @@ function IncidentPage() {
         }
       />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={incidentUi}
         app={app}
         schema={incidentSchema}
@@ -21613,6 +21636,7 @@ function MaintenancePage() {
     <>
       <PageHeader title={row.title || \`Maintenance #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={maintenanceUi}
         app={app}
         schema={maintenanceSchema}
@@ -22048,6 +22072,7 @@ function IncidentUpdatePage() {
     <>
       <PageHeader title={\`Incident update #\${row.id}\`} />
       <ModelForm
+        key={String(row.updatedAt)}
         ui={incidentUpdateUi}
         app={app}
         schema={incidentUpdateSchema}
@@ -22643,23 +22668,23 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "5393dc89 kit",
   "src/routes/__root.tsx": "10b74ab0 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
-  "src/routes/components/$id.tsx": "180bd41a generated",
+  "src/routes/components/$id.tsx": "7bc4082c generated",
   "src/routes/components/index.tsx": "2cdf77e5 generated",
   "src/routes/components/new.tsx": "872a5c00 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "0bed1abf generated",
-  "src/routes/incidents/$id.tsx": "a9333b17 generated",
+  "src/routes/incidents/$id.tsx": "7f0ced4d generated",
   "src/routes/incidents/index.tsx": "755c4798 generated",
   "src/routes/incidents/new.tsx": "8f10b8a0 generated",
   "src/routes/index.tsx": "b06924e8 generated",
-  "src/routes/maintenance/$id.tsx": "4fe3347c generated",
+  "src/routes/maintenance/$id.tsx": "b2634caa generated",
   "src/routes/maintenance/index.tsx": "28bdc3ff generated",
   "src/routes/maintenance/new.tsx": "67635ee5 generated",
   "src/routes/overview/index.tsx": "a6c168d7 generated",
   "src/routes/sign-in.tsx": "c9a35e7c generated",
   "src/routes/team/index.tsx": "45321d70 generated",
-  "src/routes/updates/$id.tsx": "789d0d1c generated",
+  "src/routes/updates/$id.tsx": "1f7ed77e generated",
   "src/routes/updates/index.tsx": "73707478 generated",
   "src/routes/updates/new.tsx": "c4bd32a9 generated",
   "src/start.ts": "eb3c5e5b kit",
