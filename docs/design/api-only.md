@@ -42,7 +42,9 @@ So there is no `mode:` and no new keyword, and there should not be one:
 - An app for programs often grows a page later (a dashboard, a public status page). With no mode there is nothing to leave.
 - One path through the generator, so everything tested for apps with pages holds for these.
 
-"An app for programs" is then simply: models and actions, a users page, a data page, the `api` block, and nothing public.
+"An app for programs" is then simply: models and actions, a users page, a data page and the `api` block. What a stranger may reach is said under `public`, as for any app, and is nothing unless said (§3.4).
+
+In plain words: there is no setting that turns a project into "an API project", and no second kind of project. It is an ordinary Smithable app that happens to have no pages for visitors. Someone gets one by choosing the `api` starter or by describing it, and can add a page later without converting anything.
 
 **Lists and forms for the records stay** (Johan's question). That is the data page ([data-page.md](data-page.md)): every model with its list, search and a form to create, open, change and delete, for administrators unless its `access` is widened, always through the models' own rules. With `data: all` a model added later is there without anyone naming it. A crud page for a model can still be added like in any app; the starter does not have one.
 
@@ -83,11 +85,23 @@ Generated from the spec like the description itself. No new page and nothing in 
 - **`/` without visitor pages.** It redirects to the first menu page, which sends a signed-out visitor to sign-in. That is right for this app and stays: the sign-in page is its front door, and nothing is shown to someone who is not signed in.
 - **Search engines.** A generated app answers 404 for `/robots.txt`. It should be generated from `public`: the public pages allowed, the rest not, and everything refused when nothing is public. This is its own small item for any app (in A's queue), and it settles the matter for this kind.
 
-### 3.4 Who may read the API's description (decision 3)
+### 3.4 Without a key: the API for anyone (decision 3)
 
-`/api/v1/openapi.json` answers without a key. For an app with public pages that reveals little. For an app that is a company's system of record it shows every offered model and field name to anyone who asks. The spec's own rule is that nothing is exposed unless said.
+Johan, 2026-10-04: an API may be fully public if its maker wants that (opening hours, a catalogue, a status feed, open data).
 
-Proposed: the description needs a key, or an administrator's sign-in in the browser. "Using a key" has the download button, and tools that read a description from an address send the key as they do for any call.
+Today every call needs a key, and `/api/v1/openapi.json` answers anyone with everything that is offered. Both are wrong in the same way: neither follows what the spec already says about who "anyone" is. The auth file has that: `public` lists what a visitor may read and add, with a `where` per model.
+
+Proposed, one rule and no new grammar: **a call without a key is the visitor.**
+
+- It may read the offered models that `public.read` lists, within their `where`, and add a record of the offered models that `public.create` lists. Everything else answers that a key is needed.
+- So a fully public API is `api: { models: all }` with every model under `public.read`. A mixed one (the catalogue open, the orders behind keys) needs nothing more either.
+- Nobody changes or deletes a record without a key, and no action runs without one. `public` has no way to say that, on purpose: a change needs someone to answer for it.
+- The description follows the caller: without a key it describes what a visitor may reach, and nothing else exists as far as it tells; with a key, everything offered. An app with nothing public describes nothing to a stranger, which closes the leak of model and field names.
+- The tools for assistants follow the same rule: without a key, the finding and reading tools for the public models.
+- Limits without a key are per address, with the kit's limiter, and stricter than a key's.
+- Validation says it once when both are first true ("anyone can read tools and loans through the API without a key"), and the summary sentence says it. The warning for personal data in a public model already exists and covers this.
+
+"Using a key" (§3.2) has the download button for the full description.
 
 ### 3.5 Trying it as an assistant (decision 4)
 
@@ -114,7 +128,7 @@ What stays for later, as §5c says: "ask your app" for every signed-in user, act
 - Models: `Project`, `Task` (a status, a due date, who it is for), `Note`.
 - Standard actions: complete and reopen a task.
 - Roles: `admin`; `member` (people who work with the tasks and notes, through a data page of those two models opened to them); and `assistant`, the role keys for assistants get: it reads everything, adds and changes tasks and notes, and deletes nothing. The starter thereby shows the careful role integrations.md §5b asks for, and a first build copies it.
-- Pages: `team` and `admin` only. Nothing public.
+- Pages: `team` and `admin` only. Nothing public: an assistant's memory is private. The how-to shows the one line that opens a model to anyone.
 - `api: { models: all, actions: all, assistants: true }`.
 - Samples for every model, written as a person would. No pictures: no model has one and there is no landing page.
 
@@ -141,7 +155,7 @@ Little. The starter appears in the form. A published app of this kind shows its 
 ## 8. Steps
 
 1. Engine: `removePage` follows `public`; the small faults of §3.1; `robots.txt` from `public`. (A; each small.)
-2. "Using a key" on the users page (§3.2), and the description behind a key (§3.4) if decision 3 is yes. (A.)
+2. "Using a key" on the users page (§3.2), and the API without a key (§3.4) if decision 3 is yes: core says what a visitor is offered (`apiOffers` for no key), the adapter's routes, description and tools follow it. (Fable for core, A.)
 3. First builds (§5): the draft rules, the two benchmark descriptions and the scorecard checks. (A, C.) This needs the starter's files, so it lands with step 4.
 4. The `api` starter (§4), with its `test-apps` flow, samples and its entry on the Starters page. (A, C.)
 5. "Try it as an assistant" (§3.5), if decision 4 is yes: the kit part, the environment settings, the preview's and the gateway's side. (A, B; the gateway's part is small since it already serves a chat model per project.)
@@ -151,5 +165,5 @@ Little. The starter appears in the form. A published app of this kind shows its 
 
 1. **No mode and no keyword:** an app with a users page, a data page and the `api` block is the app for programs. Recommended: yes.
 2. **The starter is `api`, "tasks and notes an assistant keeps", with an `assistant` role**, and is made now rather than after the company website, since it shares nothing with it. Recommended: yes.
-3. **The API's description needs a key or an administrator's sign-in**, for every app, instead of answering anyone. Recommended: yes.
+3. **A call without a key is the visitor** (§3.4): it reads and adds what `public` allows and nothing else, and the description shows a stranger only that. A fully public API is then every model under `public.read`; changing and deleting always need a key. This replaces both "every call needs a key" and "the description answers anyone", for every app. Recommended: yes.
 4. **One test bench, on the administrator's data page of the app itself**, in place of the Code-mode panel of integrations.md §5c; in a published app it is on for administrators and counts against the owner's AI allowance. Recommended: yes.
