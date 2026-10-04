@@ -222,12 +222,17 @@ pages:
   const gen = generateApp(market, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const page = gen.find((f) => f.path === "src/routes/items/$id.tsx")?.content ?? "";
   expect(page).toContain("writeAllowed(viewer, getRequestHeaders());");
-  expect(page).toContain("where(eq(user.id, row.ownerId))");
+  expect(page).toContain("const recipient = itemData.ownerOf(viewer, row.id);");
   expect(page).toContain(
     "await messageData.create(viewer, { name: sender.name, email: sender.email, message: sender.message });",
   );
   expect(page).toContain('<ContactOwner\n        recipient="owner"');
   expect(gen.some((f) => f.path === "src/kit/ContactOwner.tsx")).toBe(true);
+  // Who owns an item is told only to its owner and roles that read every record.
+  const item = gen.find((f) => f.path === "src/generated/item.server.ts")?.content ?? "";
+  expect(item).toContain("function shownTo<R extends { ownerId: string | null }>");
+  expect(item).toContain("const rows = found.map((row) => shownTo(viewer, row));");
+  expect(item).toContain("const row = found && shownTo(viewer, found);");
 });
 
 test("the catalog as the start page: the site's frame at / and its records; a records section opens it", () => {
