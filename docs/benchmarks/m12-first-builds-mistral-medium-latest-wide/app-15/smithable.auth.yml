@@ -4,6 +4,6 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 public:
-  pages: [sightings, home]
+  pages: [sightings]
   read: [Sighting]
 admins: [johan@smithable.ai]

@@ -19,12 +19,12 @@ models:
       name:
         label: Namn
       bio:
-        label: Om mig
+        label: Beskrivning
       portrait:
-        label: Bild
+        label: Porträtt
   Session:
-    label: Tid
-    pluralLabel: Tider
+    label: Tidsbokning
+    pluralLabel: Tidsbokningar
     fields:
       service:
         label: Tjänst
@@ -39,30 +39,27 @@ models:
     pluralLabel: Bokningar
     fields:
       session:
-        label: Tid
+        label: Tidsbokning
       customerName:
         label: Namn
       customerEmail:
         label: E-post
       customerPhone:
         label: Telefon
-      notes:
-        label: Meddelande
 pages:
   home:
     title: Min Frisörsalong
-    subtitle: Boka din tid online
     hero:
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
   schedule:
-    title: Schema
-  sessions:
-    title: Tider
+    title: Boka tid
   services:
     title: Tjänster
   stylists:
     title: Frisörer
-  my-bookings:
+  sessions:
+    title: Tidsbokningar
+  bookings:
     title: Mina bokningar

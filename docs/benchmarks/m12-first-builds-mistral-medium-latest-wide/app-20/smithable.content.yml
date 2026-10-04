@@ -1,8 +1,26 @@
 smithableContent: 0.1
+pages:
+  koti:
+    title: Joogastudio
+    subtitle: Tunnit, ohjaajat ja varaukset verkossa
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+  aikataulu:
+    title: Aikataulu
+  class-types:
+    title: Tuntityypit
+  instructors:
+    title: Ohjaajat
+  sessions:
+    title: Tunnit
+  my-bookings:
+    title: Varaukseni
 models:
   ClassType:
-    label: Tunnin tyyppi
-    pluralLabel: Tunnin tyypit
+    label: Tuntityyppi
+    pluralLabel: Tuntityypit
     fields:
       name:
         label: Nimi
@@ -31,47 +49,16 @@ models:
     pluralLabel: Tunnit
     fields:
       classType:
-        label: Tunnin tyyppi
+        label: Tuntityyppi
       instructor:
         label: Ohjaaja
       startsAt:
         label: Aloitusaika
       capacity:
-        label: Paikkojen määrä
-      placesLeft:
-        label: Vapaat paikat
+        label: Paikkamäärä
   Booking:
     label: Varaus
     pluralLabel: Varaukset
     fields:
       session:
         label: Tunti
-  Message:
-    label: Viestit
-    pluralLabel: Viestit
-    fields:
-      name:
-        label: Nimi
-      email:
-        label: Sähköposti
-      message:
-        label: Viesti
-pages:
-  home:
-    title: Joogastudio
-    hero:
-      image:
-        src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-  schedule:
-    title: Aikataulu
-  class-types:
-    title: Tunnin tyypit
-  instructors:
-    title: Ohjaajat
-  sessions:
-    title: Tunnit
-  my-bookings:
-    title: Omat varaukset
-  messages:
-    title: Viestit

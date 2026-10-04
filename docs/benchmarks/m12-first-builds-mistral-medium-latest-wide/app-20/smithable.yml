@@ -38,15 +38,6 @@ models:
     capacity:
       per: session
       max: session.capacity
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
 pages:
   class-types:
     crud: ClassType
@@ -59,21 +50,18 @@ pages:
     access: [admin]
   my-bookings:
     crud: Booking
-    access: [member]
-  home:
+    access: [member, admin]
+  koti:
     route: /
     landing:
       hero:
+        shortcuts: [aikataulu]
       footer:
       classes:
         records: ClassType
-      contact:
-        form: Message
-      callToAction:
-        button: schedule
-  messages:
-    crud: Message
-    access: [admin]
-  schedule:
-    crud: Session
-navigation: [home, schedule, my-bookings]
+      gallery:
+      faq:
+  aikataulu:
+    calendar:
+      model: Session
+      starts: startsAt

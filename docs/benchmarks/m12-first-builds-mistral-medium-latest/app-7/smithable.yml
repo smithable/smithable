@@ -9,6 +9,10 @@ models:
       description: text
       founded: int
       logo: url
+    access:
+      delete: [admin]
+      write: [admin]
+      create: [admin]
   Player:
     fields:
       name: string!
@@ -17,6 +21,10 @@ models:
       number: int
       birthDate: date
       bio: text
+    access:
+      delete: [admin]
+      write: [admin]
+      create: [admin]
   Match:
     fields:
       homeTeam: Team!
@@ -26,6 +34,10 @@ models:
       status: scheduled | inProgress | completed | canceled
       homeScore: int = 0
       awayScore: int = 0
+    access:
+      delete: [admin]
+      write: [admin]
+      create: [admin]
 pages:
   teams:
     crud: Team
@@ -47,4 +59,6 @@ pages:
         records: Match
         where:
           status: [scheduled, inProgress]
-navigation: [home, teams, players, matches]
+  team:
+    users: manage
+navigation: [home, teams, players, matches, team]
