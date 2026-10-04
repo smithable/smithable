@@ -16,8 +16,16 @@ export type {
   AssistantTool,
   FieldFilter,
 } from "./assistant.js";
-export { assistantOffer, refersToUser } from "./assistant.js";
-export type { ApiIR, ApiOffers, AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
+export { asksWith, assistantOffer, refersToUser } from "./assistant.js";
+export type {
+  ApiIR,
+  ApiOffers,
+  AssistantIR,
+  AuthIR,
+  Provider,
+  RoleIR,
+  SignInIR,
+} from "./auth.js";
 export { AUTH_VERSION, apiOffers, PROVIDERS, reservedDomain, validateAuth } from "./auth.js";
 export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
 export type { ConceptRules } from "./concepts.js";
