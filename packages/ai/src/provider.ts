@@ -167,7 +167,9 @@ export function route(providers: Provider[], policy: Policy): Provider[] {
 }
 
 export function parsePolicy(text: string | undefined): Policy {
-  if (!text) return "eu-only";
+  // Where models may run is a setting: nothing said means the best model configured, wherever
+  // it runs; "eu-only" and "local-only" restrict it.
+  if (!text) return "best-available";
   if (text === "local-only" || text === "eu-only" || text === "best-available") return text;
   if (text.startsWith("allow:"))
     return {

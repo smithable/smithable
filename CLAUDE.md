@@ -35,7 +35,7 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
 
 1. `smithable.yml` is authoritative for functionality. Companions: `smithable.auth.yml` (sign-in, roles), `smithable.ux.yml` (presentation), `smithable.content.yml` (visible text), `smithable.context.yml` (implementation policy; the only one that may name technologies). Never mix their concerns.
 2. All semantic changes go through the operation layer. No client writes the manifest files or app code any other way.
-3. Deterministic before AI, then the cheapest capable model: local (if available) → Smithable model (EU-hosted) → frontier. EU-hosted by default.
+3. Deterministic before AI, then the cheapest capable model: local (if available) → Smithable model → frontier. Where a model may run is a setting, the AI policy (`local-only`, `eu-only`, `best-available`; nothing said means the best model configured). EU-only is a guarantee a project or an organization switches on, not the default; smithable.eu, when it exists, is EU-only in infrastructure and AI.
 4. **Generated apps must never depend on Smithable packages**, either at runtime or at build time. Generated code follows each library's documented idioms (Drizzle schema, TanStack routes, shadcn/ui). Shared behavior goes in the small, no-magic in-repo app kit.
 5. Respect the ownership zones: the compiler never overwrites `src/custom/**` or existing migrations, and neither AI nor humans are expected to edit generated or kit files.
 6. Generation must be deterministic and idempotent: identical input produces byte-identical output.
