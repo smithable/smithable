@@ -75,9 +75,10 @@ export const COMMANDS: Command[] = [
     usage: "validate [path]",
     text: [
       "Check smithable.yml in a directory (default: current) or a given file",
-      "(--plugin <name> also loads a plugin that is not declared yet)",
+      "(--plugin <name> also loads a plugin that is not declared yet;",
+      "--json prints every finding with its code, file and place, for programs)",
     ],
-    options: ["plugin"],
+    options: ["plugin", "json"],
   },
   {
     name: "theme",

@@ -9,7 +9,23 @@ export {
   parseOperationArgs,
 } from "./apply.js";
 export { namesFor } from "./arguments.js";
-export type { ApiIR, ApiOffers, AuthIR, Provider, RoleIR, SignInIR } from "./auth.js";
+export type {
+  AssistantCaller,
+  AssistantKind,
+  AssistantOffer,
+  AssistantTool,
+  FieldFilter,
+} from "./assistant.js";
+export { asksWith, assistantOffer, refersToUser } from "./assistant.js";
+export type {
+  ApiIR,
+  ApiOffers,
+  AssistantIR,
+  AuthIR,
+  Provider,
+  RoleIR,
+  SignInIR,
+} from "./auth.js";
 export { AUTH_VERSION, apiOffers, PROVIDERS, reservedDomain, validateAuth } from "./auth.js";
 export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
 export type { ConceptRules } from "./concepts.js";
@@ -105,6 +121,8 @@ export {
   sortableBy,
 } from "./sections/list-keys.js";
 export { searchableFields } from "./sections/pages.js";
+export type { SensitiveKind } from "./sensitive.js";
+export { sensitiveKind } from "./sensitive.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
 export type { Mode, ThemeIR, TokenName, Tokens } from "./theme.js";
