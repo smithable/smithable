@@ -61,3 +61,138 @@ describe("addAction", () => {
     });
   });
 });
+
+const load = (files: Record<string, unknown>) => raw(files);
+const status = {
+  spec: load(
+    import.meta.glob("../../../../examples/status/smithable.yml", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }),
+  ),
+  auth: load(
+    import.meta.glob("../../../../examples/status/smithable.auth.yml", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }),
+  ),
+};
+const resolveOf = (text: string) => {
+  const action = validateSpec({ path: "smithable.yml", text }).ir?.actions.find(
+    (a) => a.name === "resolve",
+  );
+  if (!action || action.custom) throw new Error("no standard action resolve");
+  return action;
+};
+const run = (files: { spec: string; auth: string }, name: string, words: string[]) => {
+  const operation = findOperation(name);
+  if (!operation) throw new Error(`no ${name}`);
+  return applyOperation(files, name, parseOperationArgs(operation, words));
+};
+
+describe("setAction", () => {
+  test("the intent is replaced, and removed by an empty one; the rest of the action stays", () => {
+    const changed = run(status, "setAction", ["resolve", "--intent", " Close the incident. "]);
+    if (!changed.ok) throw new Error(changed.message);
+    expect(changed.description).toBe("Change the intent of the action resolve");
+    expect(resolveOf(changed.files.spec)).toEqual({
+      ...resolveOf(status.spec),
+      intent: "Close the incident.",
+    });
+    const removed = run({ ...status, spec: changed.files.spec }, "setAction", [
+      "resolve",
+      "--intent",
+      "",
+    ]);
+    if (!removed.ok) throw new Error(removed.message);
+    expect(resolveOf(removed.files.spec).intent).toBeUndefined();
+    // An action without one gets it.
+    const again = run({ ...status, spec: removed.files.spec }, "setAction", [
+      "resolve",
+      "--intent",
+      "Close it.",
+    ]);
+    if (!again.ok) throw new Error(again.message);
+    expect(resolveOf(again.files.spec).intent).toBe("Close it.");
+  });
+
+  test("--when and --set replace the condition and the values; a bare --when removes the condition", () => {
+    const changed = run(status, "setAction", [
+      "resolve",
+      "--when",
+      "status=identified | monitoring",
+      "--set",
+      "status=resolved",
+    ]);
+    if (!changed.ok) throw new Error(changed.message);
+    expect(changed.description).toBe("Change the condition and the values of the action resolve");
+    const action = resolveOf(changed.files.spec);
+    expect(action.when).toEqual({ status: ["identified", "monitoring"] });
+    expect(action.set.map((v) => v.field)).toEqual(["status"]);
+    // What it adds, who may run it and its intent are as they were.
+    const { when: _, set: __, ...rest } = action;
+    const { when: ___, set: ____, ...before } = resolveOf(status.spec);
+    expect(rest).toEqual(before);
+    const open = run(status, "setAction", ["resolve", "--when"]);
+    if (!open.ok) throw new Error(open.message);
+    expect(resolveOf(open.files.spec).when).toBeUndefined();
+  });
+
+  test("what does not fit is refused: no such action, nothing to change, a value the field lacks, a custom action's condition", () => {
+    expect(run(status, "setAction", ["close", "--intent", "x"])).toMatchObject({
+      ok: false,
+      message: 'There is no action named "close".',
+    });
+    expect(run(status, "setAction", ["resolve"])).toMatchObject({
+      ok: false,
+      message: "Say what to change: --intent, --when or --set.",
+    });
+    expect(run(status, "setAction", ["resolve", "--set", "status=gone"])).toMatchObject({
+      ok: false,
+    });
+    expect(run({ spec, auth }, "setAction", ["mergeCustomers", "--when", "name=x"])).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("custom action"),
+    });
+    // A custom action's intent changes like any other.
+    expect(
+      run({ spec, auth }, "setAction", ["mergeCustomers", "--intent", "Merge."]),
+    ).toMatchObject({ ok: true });
+  });
+});
+
+describe("removeAction", () => {
+  test("a standard action goes from the spec, its page and the list programs are offered", () => {
+    const result = run(status, "removeAction", ["resolve"]);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.description).toBe("Remove the action resolve; programs are no longer offered it");
+    const ir = validateSpec({ path: "smithable.yml", text: result.files.spec }).ir;
+    expect(ir?.actions.map((a) => a.name)).toEqual(["identified", "monitoring"]);
+    expect(result.files.spec).toContain("    actions: [identified, monitoring]\n");
+    // The only action the API named: the list goes, the rest of the block stays.
+    expect(result.files.auth).not.toMatch(/^ {2}actions:/m);
+    expect(result.files.auth).toContain("  models: [Component, Incident]");
+  });
+
+  test("the last action takes the page's list and the section with it; a custom one's code stays, and it says so", () => {
+    const result = run({ spec, auth }, "removeAction", ["mergeCustomers"]);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.description).toBe(
+      "Remove the action mergeCustomers; its code in src/custom/actions/ stays",
+    );
+    expect(result.files.spec).not.toMatch(/^actions:/m);
+    expect(result.files.spec).not.toContain("actions: [mergeCustomers]");
+    expect(validateSpec({ path: "smithable.yml", text: result.files.spec }).ir?.actions).toEqual(
+      [],
+    );
+  });
+
+  test("an action there is not is refused", () => {
+    expect(run(status, "removeAction", ["close"])).toMatchObject({
+      ok: false,
+      message: 'There is no action named "close".',
+    });
+  });
+});

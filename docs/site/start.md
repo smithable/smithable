@@ -71,6 +71,7 @@ Release checks first:
   ✓ Type check (pnpm typecheck)
   ✓ Tests (pnpm test)
   ✓ Dependencies (OSV-Scanner)
+  ✓ Dependencies, at their source (the packages' advisory lists)
   ✓ Secrets (Gitleaks)
   ✓ Code (Semgrep)
   ✓ Smoke tests (pnpm test:smoke)
