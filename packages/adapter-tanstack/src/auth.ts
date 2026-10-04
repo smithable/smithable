@@ -82,10 +82,10 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
   // A new account is in the audit log, and so is the invitation it used up.
   const afterCreate = `
         after: async (created) => {
-          const email = created.email.toLowerCase();
           const who = { id: created.id, role: String(created.role) };${
             invitations
               ? `
+          const email = created.email.toLowerCase();
           const used = invitationOf(email);
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
