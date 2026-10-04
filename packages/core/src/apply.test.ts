@@ -230,6 +230,33 @@ describe("operations", () => {
   });
 });
 
+describe("setOwner", () => {
+  test("a record belongs to the user in one of its User fields, or to its creator again", () => {
+    // The CRM's customers belong to their account manager.
+    const creator = ok("setOwner", ["Customer"]);
+    expect(creator.description).toBe("Customers belong to whoever created them");
+    expect(changed(files.spec, creator.files.spec).removed.join("\n")).toContain(
+      "ownedBy: accountManager",
+    );
+    const back = applyOperation({ ...files, spec: creator.files.spec }, "setOwner", {
+      model: "Customer",
+      field: "accountManager",
+    });
+    if (!back.ok) throw new Error(back.message);
+    expect(back.description).toBe("Customers belong to their account manager");
+    expect(back.files.spec).toContain("    ownedBy: accountManager\n");
+  });
+
+  test("the owner is a field that refers to a user; the refusal names them, or how to add one", () => {
+    const wrong = applyOperation(files, "setOwner", { model: "Customer", field: "name" });
+    expect(wrong).toMatchObject({ ok: false });
+    if (!wrong.ok) expect(wrong.message).toContain("accountManager");
+    const none = applyOperation(files, "setOwner", { model: "Order", field: "number" });
+    expect(none).toMatchObject({ ok: false });
+    if (!none.ok) expect(none.message).toContain("addField Order handledBy User");
+  });
+});
+
 describe("setAccess", () => {
   test("changes, adds and removes access exceptions, one line at a time", () => {
     expect(
@@ -777,8 +804,20 @@ test("setApp, setRoles and setPublic build an app's frame from nothing", () => {
   });
   if (!pub.ok) throw new Error(pub.message);
   expect(pub.files.auth).toContain("public:\n  pages: [classes]\n  read: [ClassType]\n");
+  // Opening says nothing more; closing says what visitors lose, in the confirmation.
+  expect(pub.description).toBe("Set what is public: pages classes; read ClassType");
   const closed = applyOperation({ ...blank, ...pub.files }, "setPublic", { read: [] });
   expect(closed.ok && closed.files.auth).not.toContain("read:");
+  expect(closed.ok && closed.description).toBe(
+    "Set what is public: read nothing; visitors can no longer read class types",
+  );
+  const both = applyOperation({ ...blank, ...pub.files }, "setPublic", { pages: [], read: [] });
+  expect(both.ok && both.description).toBe(
+    "Set what is public: pages nothing; read nothing; visitors can no longer open the classes page or read class types",
+  );
+  // The same lists again close nothing.
+  const same = applyOperation({ ...blank, ...pub.files }, "setPublic", { pages: ["classes"] });
+  expect(same.ok && same.description).toBe("Set what is public: pages classes");
   expect(
     applyOperation({ ...blank, ...page.files }, "setPublic", { pages: ["nowhere"] }),
   ).toMatchObject({ ok: false });
@@ -1080,4 +1119,23 @@ test("addField --formula and addModel's long form add computed fields; a shortha
   expect(slip.diagnostics.map((d) => d.hint).join(" ")).toContain(
     'A computed field is written with a formula: `addField Line amount money --formula "quantity * unitPrice"`.',
   );
+});
+
+test("removePage takes a public page out of public.pages too, and says so", () => {
+  const site = {
+    spec: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n  catalog: { crud: Item, route: /catalog }\n",
+    auth: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n\n# Visitors.\npublic:\n  pages: [items, catalog]\n  read: [Item]\n",
+  };
+  const removed = applyOperation(site, "removePage", { page: "catalog" });
+  if (!removed.ok) throw new Error(removed.message);
+  expect(removed.description).toBe("Remove page catalog; it is no longer public");
+  expect(removed.files.auth).toContain("pages: [items]");
+  const last = applyOperation(removed.files, "removePage", { page: "items" });
+  expect(last).toMatchObject({ ok: false });
+  const plain = applyOperation(
+    { ...site, auth: site.auth.replace("pages: [items, catalog]", "pages: [items]") },
+    "removePage",
+    { page: "catalog" },
+  );
+  expect(plain).toMatchObject({ ok: true, description: "Remove page catalog" });
 });
