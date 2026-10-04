@@ -1,7 +1,7 @@
 // Smithable app kit: keys for the API (docs/design/integrations.md §2), on the users page. A key
 // has a name saying what it is for, a role and an optional end date; it is shown once, then only
 // its first characters. Revoking it stops it at once.
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
@@ -19,14 +19,103 @@ export interface KeyRow {
 
 const day = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : "—");
 
+/** What a program needs to call the API: from the spec, like the API's description. */
+export interface KeyUse {
+  /** The app's name, for the assistant's settings. */
+  app: string;
+  /** The path under /api/v1 of the first model offered, for the call to copy. */
+  path?: string;
+  /** Whether the app offers tools for AI assistants at /mcp. */
+  tools: boolean;
+}
+
+/** One block of text to copy, with its button. */
+function Copyable({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-sm">{label}</p>
+      <div className="flex items-start gap-2">
+        <pre className="min-w-0 flex-1 whitespace-pre-wrap break-all rounded bg-muted px-3 py-2 text-xs">
+          {text}
+        </pre>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => navigator.clipboard?.writeText(text)}
+        >
+          Copy
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Using a key": the addresses, a call to copy and an assistant's connection lines, with the
+ * key filled in while it is shown (docs/design/api-only.md §3.2).
+ */
+function UsingAKey({ use, secret }: { use: KeyUse; secret?: string }) {
+  // The app's address as the browser sees it, once on the page (not known on the server).
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
+  const key = secret ?? "<key>";
+  const slug =
+    use.app
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "app";
+  return (
+    <div data-part="using-a-key" className="space-y-3">
+      <h3 className="text-base font-semibold">Using a key</h3>
+      <p className="text-sm text-muted-foreground">
+        The API is at <code>{origin}/api/v1</code>, described at{" "}
+        <code>{origin}/api/v1/openapi.json</code>.{" "}
+        <a
+          href="/api/v1/openapi.json"
+          download="openapi.json"
+          className="underline underline-offset-4"
+        >
+          Download the description
+        </a>
+      </p>
+      {use.path && (
+        <Copyable
+          label="A first call:"
+          text={`curl -H "Authorization: Bearer ${key}" ${origin}/api/v1/${use.path}`}
+        />
+      )}
+      {use.tools && (
+        <Copyable
+          label={`For an AI assistant: the tools are at ${origin}/mcp. Its settings need:`}
+          text={JSON.stringify(
+            {
+              mcpServers: {
+                [slug]: {
+                  type: "http",
+                  url: `${origin}/mcp`,
+                  headers: { Authorization: `Bearer ${key}` },
+                },
+              },
+            },
+            null,
+            2,
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
 export function Keys({
   keys,
   roles,
+  use,
   onMake,
   onRevoke,
 }: {
   keys: KeyRow[];
   roles: RoleOption[];
+  use: KeyUse;
   onMake: (name: string, role: string, until?: string) => Promise<string>;
   onRevoke: (id: number) => Promise<unknown>;
 }) {
@@ -117,6 +206,7 @@ export function Keys({
               Copy
             </Button>
           </div>
+          <UsingAKey use={use} secret={made} />
         </Card>
       )}
       {keys.length > 0 && (
@@ -151,6 +241,7 @@ export function Keys({
           ))}
         </ul>
       )}
+      {!made && <UsingAKey use={use} />}
     </section>
   );
 }

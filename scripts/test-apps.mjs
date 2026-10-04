@@ -823,6 +823,18 @@ async function statusFlow(base) {
     if (!/^smk_[A-Za-z0-9_-]{20,}$/.test(shown ?? "")) throw new Error(`the key shown is ${shown}`);
     const keyRow = keys.locator('[data-part="key-row"]', { hasText: "Uptime monitor" });
     await keyRow.getByText(`${shown?.slice(0, 10)}…`).waitFor();
+    // "Using a key": a call to copy with the key filled in, which works as copied, and the lines
+    // an assistant needs.
+    const using = keys.locator('[data-part="using-a-key"]').first();
+    const call = (await using.locator("pre").first().textContent()) ?? "";
+    const [, header, url] = /^curl -H "([^"]+)" (\S+)$/.exec(call) ?? [];
+    if (header !== `Authorization: Bearer ${shown}` || !url?.endsWith("/api/v1/components"))
+      throw new Error(`the call to copy is ${call}`);
+    if ((await fetch(url, { headers: { authorization: header.split(": ")[1] } })).status !== 200)
+      throw new Error("the call to copy does not work");
+    const tools = (await using.locator("pre").nth(1).textContent()) ?? "";
+    if (!tools.includes(`"url": "${base}/mcp"`) || !tools.includes(`Bearer ${shown}`))
+      throw new Error(`the assistant's lines are ${tools}`);
     // The API with that key: what the auth file offers, as the key's role may.
     const api = (path, init = {}) =>
       fetch(`${base}/api/v1${path}`, {
@@ -905,7 +917,7 @@ async function statusFlow(base) {
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
     if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
-      "  ✓ browser: an admin makes an API key on the team page; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); revoked, it stops",
+      "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); revoked, it stops",
     );
   } catch (error) {
     console.log(
