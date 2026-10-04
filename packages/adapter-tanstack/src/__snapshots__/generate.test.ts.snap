@@ -11282,7 +11282,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invoices } from "#/db/schema";
-import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { afterChange } from "#/generated/hooks";
 import { invoiceSchema } from "#/generated/invoice";
@@ -11391,7 +11391,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invoices } from "#/db/schema";
-import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { afterChange } from "#/generated/hooks";
 import { invoiceSchema } from "#/generated/invoice";
@@ -14590,9 +14590,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/schema.ts": "dc3d0d42 generated",
   "src/db/seed.ts": "d388638c generated",
   "src/generated/access.test.ts": "cad63469 generated",
-  "src/generated/actions/mark-paid.server.ts": "bfc5202e generated",
+  "src/generated/actions/mark-paid.server.ts": "d8bfd9f2 generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
-  "src/generated/actions/mark-sent.server.ts": "adc18796 generated",
+  "src/generated/actions/mark-sent.server.ts": "81f2ba0a generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/business-profile.server.ts": "c7bee412 generated",
