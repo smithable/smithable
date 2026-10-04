@@ -30,3 +30,4 @@ public:
 api:
   models: [Component, Incident]
   actions: [resolve]
+  assistants: true                 # the same as tools for AI assistants, at /mcp (no deleting)
