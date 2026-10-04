@@ -50,6 +50,11 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="filters"",
     "data-part="saved-tabs"",
   ],
+  "src/kit/Keys.tsx": [
+    "data-kit="keys"",
+    "data-part="key"",
+    "data-part="key-row"",
+  ],
   "src/kit/Landing.tsx": [
     "data-kit="landing"",
     "data-part="header"",
