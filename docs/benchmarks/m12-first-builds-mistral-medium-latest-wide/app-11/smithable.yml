@@ -10,7 +10,6 @@ models:
       description: text
       incidents: Incident[]
     access:
-      read: [admin]
       create: [admin]
       write: [admin]
       delete: [admin]
@@ -24,10 +23,9 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
-      read: [admin, staff]
       create: [admin, staff]
       write: [admin, staff]
-      delete: [admin, staff]
+      delete: [admin]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -35,10 +33,9 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
     access:
-      read: [admin, staff]
       create: [admin, staff]
       write: [admin, staff]
-      delete: [admin, staff]
+      delete: [admin]
   Maintenance:
     fields:
       title: string!
@@ -47,10 +44,9 @@ models:
       endsAt: datetime!
       description: text
     access:
-      read: [admin, staff]
       create: [admin, staff]
       write: [admin, staff]
-      delete: [admin, staff]
+      delete: [admin]
 pages:
   incidents:
     crud: Incident

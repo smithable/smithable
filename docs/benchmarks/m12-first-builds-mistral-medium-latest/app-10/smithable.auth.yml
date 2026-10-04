@@ -7,8 +7,8 @@ public:
   read: [Recipe]
 roles:
   admin:
-    description: Manages recipes and shopping lists.
+    description: Manages the app and all data.
   member:
-    description: Views and uses recipes and shopping lists.
+    description: Adds and views recipes and shopping lists.
 defaultRole: member
 admins: [johan@smithable.ai]

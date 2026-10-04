@@ -83,8 +83,6 @@ pages:
       footer:
       classes:
         records: ClassType
-      estimate:
-        custom: ClassPassCalculator
       gallery:
       faq:
       news:
@@ -103,4 +101,3 @@ pages:
   team:
     users: manage
     access: [admin]
-navigation: [home, schedule, my-bookings, blog]
