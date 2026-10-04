@@ -200,6 +200,16 @@ function contentTexts(dir, ir) {
 }
 
 /** The deterministic facts about one kept draft, against the starter it began from. */
+/** Warnings about what is public that send a valid draft back to the model once (#266). */
+const PUBLIC_FLAWS = [
+  "public-personal-data",
+  "public-page-closed-records",
+  "contact-form-closed",
+  "shortcut-closed",
+  "mine-public",
+  "visitors-read-drafts",
+];
+
 function score(dir, description, starter, lang, meta = {}) {
   const draft = check(dir);
   const example = join(repo, "examples", starter);
@@ -237,6 +247,8 @@ function score(dir, description, starter, lang, meta = {}) {
   const withSamples = fitted.filter((f) => /^- /m.test(f.text)).length;
   const warnings = draft.diagnostics.filter((d) => d.severity === "warning");
   const codes = [...new Set(warnings.map((d) => d.code))];
+  // The warnings about what is public that send a draft back to the model once (#266).
+  const flaws = codes.filter((c) => PUBLIC_FLAWS.includes(c));
   const auth = draft.auth;
   const mentionsPublic = /\b(visitors?|public|site)\b/i.test(description);
   const landing = (draft.ir?.pages ?? []).some((p) => p.pattern?.kind === "landing");
@@ -259,6 +271,7 @@ function score(dir, description, starter, lang, meta = {}) {
       ? `pages ${list(auth.public.pages)}; read ${list(auth.public.read)}; create ${list(auth.public.create)}`
       : "?",
     warnings: warnings.length ? `${warnings.length} (${codes.join(", ")})` : "0",
+    flaws: flaws.length ? `**${flaws.join(", ")}**` : "none",
     reused: list(reused),
     samples: `${withSamples} / ${draft.ir?.models.length ?? 0}`,
     landing: `${mentionsPublic ? "mentions visitors" : "no mention"}; ${landing ? "landing page" : "no landing page"}`,
@@ -296,9 +309,12 @@ function scorecard(rows) {
     r.wordStarter && r.wordStarter !== r.starter
       ? `${r.starter} (words: ${r.wordStarter})`
       : r.starter;
-  return `| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |${head}
-|---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
-${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
+  const flawed = rows.filter((r) => r.flaws !== "none").length;
+  return `${flawed} of ${rows.length} drafts end with a warning about what is public (*Public flaws left*: ${PUBLIC_FLAWS.join(", ")}); since #266 a draft with one goes back to the model once to fix it.
+
+| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |${head}
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|${languages ? "---|---|---|---|---|" : ""}
+${rows.map((r, i) => `| ${r.n ?? i + 1} | ${starter(r)} | ${r.questions} | ${r.models} | ${r.pages} | ${r.actions} | ${r.access} | ${r.pageAccess} | ${r.public} | ${r.warnings} | ${r.flaws} | ${r.reused} | ${r.samples} | ${r.landing} |${extra(r)}`).join("\n")}
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names what the draft dropped because it could not be made valid: an action by its name, anything else (a formula field, a capacity) with its operation. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after \`fitSamples\`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one \`new --describe --yes\` printed, with the word-match starter (\`closestStarter\`) beside it when it differs; "Questions" counts what \`smithable clarify\` would ask (\`--yes\` asks nothing), with their language for a description not in English.${languages ? " For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file." : ""}`;
 }
