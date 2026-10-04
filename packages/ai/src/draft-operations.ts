@@ -9,6 +9,7 @@ import {
   type OperationArgs,
   operationsFor,
   type ProjectFiles,
+  pageModels,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -66,7 +67,7 @@ Order: setApp (name, one-sentence description, currency, timezone); addModel for
 When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, standard actions (those with "on"; never its custom ones), roles and access that fit the description, under the same names, leave out what does not fit, and add what the description needs. The app already starts with the starter's default access. Restrict a page or a model to some roles only where the starter does or the description says so: a page without it is open to everyone who signs in. The starter's app name, its people, places and texts are sample content: never reuse them.
 Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". A value worked out from the record's other fields, never entered, is a computed field, written as an object instead of a string: "amount": { "type": "money", "formula": "quantity * unitPrice" } ("= …" in the string is a default, set once). Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Language: everything a person reads is written in the description's language: the app's name and description, the landing page's texts, and, when that language is not English, a label for every model (setText with path [models, <Model>, label] and [models, <Model>, pluralLabel]), field ([models, <Model>, fields, <field>, label]), choice value ([models, <Model>, fields, <field>, values, <value>]) and page ([pages, <page>, title]). Model, field and choice names themselves stay English identifiers; a page's name becomes its address, so it may be a word of that language written with plain letters (boka-nu).
-Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic. Never make a model with an email or phone field readable by visitors (setPublic's read): that publishes people's contact details; keep those in a model that is not public, or collect them with a contact form. An app with shared access is for people who are invited (Smithable adds the team page): call setSignUp anyone only when the description says anybody may join.`;
+Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic. What people come to look at before they join is public even when the rest needs sign-in (the tools of a tool library, the plots of an allotment, a menu, the listings, the classes to book): a landing page, that model's page in setPublic's pages and the model in its read; signing in is then for what a person does (borrow, book, sell) and for the records about people (members, loans, bookings), which are never public. An app for a team's own work (a CRM, invoicing, a help desk, an inventory) has nothing public. A landing page's button leads to a page visitors may open, unless it is the way into the app ("Book now", "Sign in"). Never make a model with an email or phone field, or a field that refers to User, readable by visitors (setPublic's read): that publishes people's names and contact details; keep those in a model that is not public, or collect them with a contact form. An app with shared access is for people who are invited (Smithable adds the team page): call setSignUp anyone only when the description says anybody may join.`;
 
 /**
  * Slips models make in the field shorthand, mended without a model: "unique!" for "! unique",
@@ -455,6 +456,37 @@ export function closeShared(files: ProjectFiles, done: Step[]): ProjectFiles {
   return next;
 }
 
+/**
+ * A public landing page whose button or shortcut leads to a page visitors cannot open sends
+ * them to sign-in (Johan's status page, blind round 2). When that page is a list of records
+ * visitors may read anyway, it is opened to them: nothing more becomes readable than
+ * `public.read` already says. A page for some roles, or of the viewer's own records, stays closed.
+ */
+export function openLinked(files: ProjectFiles, done: Step[]): ProjectFiles {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir).auth;
+  if (!ir || !auth) return files;
+  const open = new Set(auth.public.pages);
+  const linked = ir.pages.flatMap((p) =>
+    p.pattern.kind === "landing" && open.has(p.id)
+      ? p.pattern.sections.flatMap((s) => [...(s.button ? [s.button] : []), ...(s.shortcuts ?? [])])
+      : [],
+  );
+  const more = [...new Set(linked)].filter((id) => {
+    const page = ir.pages.find((p) => p.id === id);
+    if (!page || open.has(id) || page.mine || page.access) return false;
+    if (!["crud", "articles", "calendar"].includes(page.pattern.kind)) return false;
+    const models = pageModels(page);
+    return models.length > 0 && models.every((m) => auth.public.read.includes(m));
+  });
+  if (more.length === 0) return files;
+  const step: Step = { op: "setPublic", args: { pages: [...auth.public.pages, ...more] } };
+  const result = applyOperation(files, step.op, step.args);
+  if (!result.ok) return files;
+  done.push(step);
+  return result.files;
+}
+
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
   auth: files["smithable.auth.yml"],
@@ -526,7 +558,7 @@ export async function draftProjectByOperations(options: {
         if (done.length > 0)
           return {
             kind: "draft",
-            files: toFiles(closeShared(files, done)),
+            files: toFiles(openLinked(closeShared(files, done), done)),
             usage,
             operations: done,
           };
@@ -557,7 +589,7 @@ export async function draftProjectByOperations(options: {
         if (done.length > 0)
           return {
             kind: "draft",
-            files: toFiles(closeShared(files, done)),
+            files: toFiles(openLinked(closeShared(files, done), done)),
             usage,
             operations: done,
             ...(dropped.length ? { dropped } : {}),
