@@ -333,7 +333,7 @@ export const QUESTIONS = {
       check: (a) => named(a.Invoice, "number", "2026-006")?.status === "sent",
     },
     {
-      q: "Fjord Analytics' billing address is now billing@fjordanalytics.example.",
+      q: "Send Fjord Analytics' invoices to billing@fjordanalytics.example from now on.",
       kind: "change",
       check: (a) =>
         named(a.Client, "name", "Fjord Analytics")?.email === "billing@fjordanalytics.example",
@@ -631,6 +631,8 @@ export const QUESTIONS = {
     {
       q: "Which teachers have a portrait?",
       kind: "names",
+      // Pictures are not in the API (nor its tools): it cannot be answered there, so it is skipped.
+      skip: "pictures are not in the API",
       expect: (d) => d.Instructor.filter((i) => i.portrait).map((i) => i.name),
     },
     { q: "How many instructors do we have?", kind: "number", expect: (d) => d.Instructor.length },
@@ -865,12 +867,31 @@ export const QUESTIONS = {
 /** Whether an answer's text gives what the question asks (all but `change`, which reads records). */
 export function answered(question, text, expected) {
   const flat = (s) => String(s).toLowerCase().replace(/\s+/g, " ");
-  const numbers = (s) =>
-    [
+  // "2,770.50", "2 770,50 €", "three": the same numbers.
+  const WORDS = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+  ];
+  const numbers = (s) => [
+    ...[
       ...String(s)
-        .replace(/(\d)[   ,](?=\d{3}\b)/g, "$1")
+        .replace(/(\d)[ \u00a0\u202f,.](?=\d{3}(?!\d))/g, "$1")
+        .replace(/(\d),(\d{1,2})(?!\d)/g, "$1.$2")
         .matchAll(/-?\d+(?:\.\d+)?/g),
-    ].map((m) => Number(m[0]));
+    ].map((m) => Number(m[0])),
+    ...WORDS.flatMap((w, i) => (new RegExp(`\\b${w}\\b`, "i").test(String(s)) ? [i] : [])),
+  ];
   const hasNumber = (s, x) => numbers(s).some((v) => Math.abs(v - x) < 0.01 + Math.abs(x) * 0.0005);
   const t = flat(text);
   if (question.kind === "number") return hasNumber(text, expected);
