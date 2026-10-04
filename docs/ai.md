@@ -34,7 +34,7 @@ export SMITHABLE_MODEL_PRICE=0.1/0.3        # euros per million input/output tok
 
 Without `SMITHABLE_MODEL_PRICE`, a Mistral model Smithable knows (`mistral-small`, `mistral-medium`, `mistral-large`) is counted at Mistral's list price, in dollars; any other model costs nothing in the change trace. The trace shows the tokens in and out and their cost.
 
-For the benchmarks and tests, `SMITHABLE_LLM_CACHE=<folder>` keeps each answer by its request (the model, the instructions, the text and the answer's schema) and answers the same request again from the folder, for nothing. It is never on unless set.
+For the benchmarks and tests, `SMITHABLE_LLM_CACHE=<folder>` keeps each answer by its request (the model, the instructions, the text and the answer's schema) and answers the same request again from the folder, for nothing. It is never on unless set. A kept answer is not asked again when the model behind a name such as `mistral-medium-latest` changes: empty the folder after a model update.
 
 ## A frontier model through Claude Code (tier 3)
 

@@ -1,0 +1,19 @@
+smithableContent: 0.1
+pages:
+  instructors:
+    title: Teachers
+  home:
+    hero:
+      title: Find your calm on the mat
+      subtitle: Classes for every level, taught by experienced teachers. See the schedule and book your place online.
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    classes:
+      title: Our classes
+    teachers:
+      title: Meet our teachers
+models:
+  Instructor:
+    label: Teacher
+    pluralLabel: Teachers
