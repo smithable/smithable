@@ -460,6 +460,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => hasKeys(ir, auth),
       },
       {
+        // Reading a question without a model (docs/design/assistant.md §5): part of the app
+        // once its panel is (step 5); until then no app gets the file.
+        files: ["src/kit/ask.ts"],
+        used: () => false,
+      },
+      {
         // The API as tools for AI assistants (docs/design/integrations.md §5b).
         files: ["src/kit/mcp.server.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth) && Boolean(auth.api?.assistants),
