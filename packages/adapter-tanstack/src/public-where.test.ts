@@ -36,9 +36,11 @@ const file = (auth: AuthIR, path: string) =>
 test("visitors read the records the public condition fits; an owner their own as well", () => {
   const data = file(withOwner, "src/generated/post.server.ts");
   expect(data).toContain('where: { status: "published" }');
-  expect(data).toContain('if (scope === "public") return and(eq(posts.status, "published"));');
   expect(data).toContain(
-    'scope === "own" && viewer ? or(eq(posts.ownerId, viewer.id), and(eq(posts.status, "published"))) : sql`false`',
+    'if (scope === "public") return and(eq(schema.posts.status, "published"));',
+  );
+  expect(data).toContain(
+    'scope === "own" && viewer ? or(eq(schema.posts.ownerId, viewer.id), and(eq(schema.posts.status, "published"))) : sql`false`',
   );
   const test = file(withOwner, "src/generated/access.test.ts");
   expect(test).toContain('test("visitors read only post records where status is published"');
@@ -52,7 +54,9 @@ signIn: none
 public: { pages: [posts], read: [{ Post: { where: { status: published } } }] }
 `);
   const data = file(none, "src/generated/post.server.ts");
-  expect(data).toContain('if (scope === "public") return and(eq(posts.status, "published"));');
+  expect(data).toContain(
+    'if (scope === "public") return and(eq(schema.posts.status, "published"));',
+  );
   expect(data).toContain("return sql`false`;");
   expect(data).not.toContain("or(");
 });
@@ -92,7 +96,7 @@ public: { pages: [home, incidents], read: [{ Incident: { where: { status: [inves
   const files = generateApp(status, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const at = (path: string) => files.find((f) => f.path === path)?.content ?? "";
   const data = at("src/generated/incident.server.ts");
-  expect(data).toContain('inArray(incidents.status, ["investigating","resolved"])');
+  expect(data).toContain('inArray(schema.incidents.status, ["investigating","resolved"])');
   expect(data).toMatch(/import \{ and, eq, inArray, sql/);
   const test = at("src/generated/access.test.ts");
   expect(test).toContain('where status is investigating or resolved"');
