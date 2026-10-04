@@ -43,8 +43,10 @@ models:
 pages:
   customers:
     crud: Customer
+  team:
+    users: manage
 
-navigation: [customers]
+navigation: [customers, team]
 `;
 
 const SUFFIX =
@@ -449,7 +451,7 @@ const NAMES = {
   S: "Smithable ops (no model)",
   A: "Claude Code",
   B: "Claude Code + MCP",
-  M: `smithable ask (${process.env.SMITHABLE_MODEL || process.env.SMITHABLE_LOCAL_MODEL || (process.env.SMITHABLE_FRONTIER ? "Claude Code" : "no model")})`,
+  M: `smithable ask (${process.env.SMITHABLE_MODEL || process.env.SMITHABLE_LOCAL_MODEL || (process.env.SMITHABLE_FRONTIER === "bedrock" ? `${process.env.SMITHABLE_FRONTIER_MODEL} through Amazon Bedrock` : process.env.SMITHABLE_FRONTIER ? "Claude Code" : "no model")})`,
 };
 // Smithable's models are priced in euros, Claude Code in dollars.
 const money = (v, r) =>
@@ -477,7 +479,7 @@ const totals = variants.map((v) => {
 });
 const report = `# M7 benchmark (${new Date().toISOString().slice(0, 10)})
 
-Seven tasks, in order, on the same app: a CRM with customers only (name, email, segment, notes), sample data and the CRM's roles (admin, sales). Each Claude Code task is a fresh headless session (default model, ${sh("claude", ["--version"], repo).stdout.trim()}), with file edits allowed and the shell limited to pnpm, npx and node; B also has the Smithable MCP server. A's repository has no Smithable guidance (AGENTS.md, CLAUDE.md and .mcp.json removed). Every prompt ends with: "${SUFFIX.trim()}"
+Seven tasks, in order, on the same app: a CRM with customers only (name, email, segment, notes) and a team page, sample data and the CRM's roles (admin, sales). Each Claude Code task is a fresh headless session (default model, ${sh("claude", ["--version"], repo).stdout.trim()}), with file edits allowed and the shell limited to pnpm, npx and node; B also has the Smithable MCP server. A's repository has no Smithable guidance (AGENTS.md, CLAUDE.md and .mcp.json removed). Every prompt ends with: "${SUFFIX.trim()}"
 
 After every task the same checks run for all: type-check, build and the app's own tests; the task's check (the database, or a real browser signed in with the development sign-in); every earlier task's check again; and whether \`smithable generate\` still finds the code to be exactly what the spec generates.
 
