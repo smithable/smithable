@@ -110,6 +110,18 @@ describe("YamlEditor changes only what it targets", () => {
     expect(e.text).toContain("      email: email unique\n\npages:");
   });
 
+  test("remove takes the comment right above an entry with it, not one set apart", () => {
+    const text =
+      "a: 1\n\n# About b,\n# on two lines.\nb:\n  # About x.\n  x: 1\n  y: 2\n# About c.\n\nc: 3\n";
+    const e = new YamlEditor(text);
+    e.remove(["b", "x"]);
+    expect(e.text).toBe("a: 1\n\n# About b,\n# on two lines.\nb:\n  y: 2\n# About c.\n\nc: 3\n");
+    e.remove(["b"]);
+    expect(e.text).toBe("a: 1\n\n# About c.\n\nc: 3\n");
+    e.remove(["c"]);
+    expect(e.text).toBe("a: 1\n\n# About c.\n\n");
+  });
+
   test("remove from a flow mapping", () => {
     const e = new YamlEditor("a: { x: 1, y: 2, z: 3 }\n");
     e.remove(["a", "y"]);
