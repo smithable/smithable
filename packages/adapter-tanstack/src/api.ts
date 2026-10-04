@@ -217,26 +217,41 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     },
     security: [{ key: [] }],
   };
+  // Only the helpers some offered field needs.
+  const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
   return `${HEADER}// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
 ${models.map(({ n }) => `import { ${n.schema} } from "${n.module}";`).join("\n")}
 
-const whole = (v: unknown, field: string) => {
+${
+  uses("relation")
+    ? `const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
-const amount = (v: unknown, field: string) => {
+`
+    : ""
+}${
+  uses("money")
+    ? `const amount = (v: unknown, field: string) => {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.trim()) : Number.NaN;
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
-const moment = (v: unknown, field: string) => {
+`
+    : ""
+}${
+  uses("datetime")
+    ? `const moment = (v: unknown, field: string) => {
   const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
+`
+    : ""
+}
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new BadInput("The body must be a JSON object.");
@@ -260,7 +275,7 @@ ${fields.map((f) => `    ${f.name}: ${readCode(f)},`).join("\n")}
   };
 }
 
-/** A ${n.label.toLowerCase()}'s values from a body: all of them, or a change to \\\`current\\\`. */
+/** A ${n.label.toLowerCase()}'s values from a body: all of them, or a change to \`current\`. */
 export function ${camelName}FromApi(body: unknown, current?: Record<string, unknown>) {
   const given = fieldsOf(body, ${literal(writable.map((f) => f.name))});
   const values: Record<string, unknown> = { ...current };
@@ -366,7 +381,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/actions/$action")({
   server: {
     handlers: {
       POST: ({ request, params }) =>
-        apiCall(request, async (viewer, body) => {
+        apiCall(request, async (viewer${own.some((a) => askedFields(a).length) ? ", body" : ""}) => {
           const id = Number(params.id);
           switch (params.action) {
 ${own
