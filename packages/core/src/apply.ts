@@ -141,7 +141,10 @@ export function applyOperation(
   let effects: Effect[];
   const notes: string[] = [];
   try {
-    effects = op.apply(editors, args, before.ir);
+    // What the operation says for the person (a note) is not something the others follow.
+    const done = op.apply(editors, args, before.ir);
+    effects = done.filter((e): e is Effect => !("note" in e));
+    for (const e of done) if ("note" in e) notes.push(e.note);
     // The other sections and the companions follow what the operation did (a field renamed, a
     // page removed); one of them may refuse, when something it owns still needs what went away.
     for (const effect of effects) {
