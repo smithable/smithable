@@ -8,19 +8,13 @@ models:
       name: string!
       bio: text
       portrait: picture
-    access:
-      delete: [admin]
-      create: [admin]
   Service:
     fields:
       name: string!
       description: text
       durationMinutes: int! = 30
       price: money!
-    access:
-      delete: [admin]
-      create: [admin]
-  AppointmentSlot:
+  TimeSlot:
     fields:
       stylist: Stylist!
       service: Service!
@@ -30,19 +24,16 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
-    access:
-      delete: [admin]
-      create: [admin]
   Booking:
     fields:
-      appointmentSlot: AppointmentSlot! unique
+      timeSlot: TimeSlot! unique
       customerName: string!
       customerEmail: email!
       customerPhone: phone
       notes: text
     capacity:
-      per: appointmentSlot
-      max: appointmentSlot.capacity
+      per: timeSlot
+      max: timeSlot.capacity
 pages:
   stylists:
     crud: Stylist
@@ -50,8 +41,8 @@ pages:
   services:
     crud: Service
     access: [admin]
-  appointment-slots:
-    crud: AppointmentSlot
+  time-slots:
+    crud: TimeSlot
     access: [admin]
   my-bookings:
     crud: Booking
@@ -60,7 +51,7 @@ pages:
     landing:
       hero:
       footer:
-      services:
-        records: Service
       stylists:
         records: Stylist
+      services:
+        records: Service

@@ -5,8 +5,8 @@ signIn:
 defaultAccess: shared
 roles:
   admin:
-    description: Manages the society.
+    description: Manages plots, waiting list, and fees.
   member:
-    description: Member of the society.
+    description: Views plots and fees.
 defaultRole: member
 admins: [johan@smithable.ai]

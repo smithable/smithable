@@ -3,13 +3,19 @@ pages:
   leads:
     table:
       sort: -followUpDate
+    form:
+      fieldOrder: [name, company, email, phone, status, source, assignee, followUpDate, notes]
+      columns: 2
   deals:
     table:
       sort: -closeDate
+    form:
+      fieldOrder: [name, lead, value, status, closeDate, assignee, notes]
+      columns: 2
 tones:
   Lead.status:
     qualified: success
-    disqualified: danger
+    lost: danger
   Deal.status:
     won: success
     lost: danger

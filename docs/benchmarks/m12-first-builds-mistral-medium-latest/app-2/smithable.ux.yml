@@ -1,8 +1,5 @@
 smithableUx: 0.1
 pages:
-  deals:
-    table:
-      sort: -value
   follow-ups:
     table:
       sort: dueDate

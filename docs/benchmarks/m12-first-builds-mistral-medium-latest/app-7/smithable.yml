@@ -7,10 +7,8 @@ models:
     fields:
       name: string!
       description: text
-      sport: football | futsal | beach
-      founded: date
-    access:
-      delete: [admin]
+      founded: int
+      logo: url
   Player:
     fields:
       name: string!
@@ -18,39 +16,26 @@ models:
       team: Team!
       number: int
       birthDate: date
-    access:
-      delete: [admin]
+      bio: text
   Match:
     fields:
       homeTeam: Team!
       awayTeam: Team!
       date: datetime!
       location: string
-      status: scheduled | played | canceled
-    access:
-      delete: [admin]
-  Result:
-    fields:
-      match: Match!
-      homeScore: int!
-      awayScore: int!
-      scorers: text
-    access:
-      delete: [admin]
+      status: scheduled | inProgress | completed | canceled
+      homeScore: int = 0
+      awayScore: int = 0
 pages:
   teams:
     crud: Team
-    search: [name]
+    search: [name, description]
   players:
     crud: Player
-    search: [name, position]
-    filters: [team, position]
+    search: [name, position, bio]
   matches:
     crud: Match
-    search: [location]
     filters: [status, homeTeam, awayTeam]
-  results:
-    crud: Result
   home:
     route: /
     landing:
@@ -61,7 +46,5 @@ pages:
       matches:
         records: Match
         where:
-          status: scheduled
-  team:
-    users: manage
-navigation: [home, teams, players, matches, results, team]
+          status: [scheduled, inProgress]
+navigation: [home, teams, players, matches]

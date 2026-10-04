@@ -1,13 +1,13 @@
 smithableUx: 0.1
+tones:
+  PreOrder.status:
+    confirmed: success
+    pickedUp: success
+    canceled: danger
+    pending: warning
 pages:
-  abholzeiten:
-    table:
-      sort: date
-      view: cards
-  produkte:
-    table:
-      sort: name
-      view: cards
   vorbestellungen:
     table:
       sort: -orderDate
+    form:
+      columns: 2

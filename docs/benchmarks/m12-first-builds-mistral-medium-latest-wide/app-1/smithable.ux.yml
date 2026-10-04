@@ -1,18 +1,1 @@
 smithableUx: 0.1
-tones:
-  Quote.status:
-    accepted: success
-    rejected: danger
-    sent: warning
-pages:
-  quotes:
-    table:
-      sort: -issuedOn
-      columns: [client, description, amount, currency, issuedOn, expiresOn, status]
-  payments:
-    table:
-      sort: -paidOn
-      columns: [quote, amount, currency, paidOn, method]
-  clients:
-    table:
-      columns: [name, email, phone]

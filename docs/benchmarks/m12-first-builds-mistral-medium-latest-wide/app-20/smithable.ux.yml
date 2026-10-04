@@ -1,1 +1,14 @@
 smithableUx: 0.1
+pages:
+  schedule:
+    icon: calendar
+  class-types:
+    icon: layers
+  instructors:
+    icon: users
+  sessions:
+    icon: calendar
+  my-bookings:
+    icon: cart
+  messages:
+    icon: mail

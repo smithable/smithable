@@ -3,10 +3,4 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
-roles:
-  admin:
-    description: Administratör. Full åtkomst.
-  sales:
-    description: Säljare. Hanterar kunder, offerter och fakturor.
-defaultRole: sales
 admins: [johan@smithable.ai]

@@ -7,7 +7,7 @@ public:
   read: [Item]
 roles:
   admin:
-    description: Håller loppis sidan ren och snygg.
+    description: Håller loppis-sidan ren och snygg.
   member:
     description: Lägger upp och sparar saker.
 defaultRole: member

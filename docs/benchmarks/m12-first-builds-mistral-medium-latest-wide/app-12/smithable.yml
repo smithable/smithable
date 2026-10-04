@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Municipal Service Status
+  name: Municipality Service Status
   description: Check the current status and outages of our municipality's online services.
 models:
   Component:
@@ -34,18 +34,6 @@ models:
       endsAt: datetime!
       description: text
 pages:
-  incidents:
-    crud: Incident
-    access: [admin, staff]
-  updates:
-    crud: IncidentUpdate
-    access: [admin, staff]
-  components:
-    crud: Component
-    access: [admin]
-  maintenance:
-    crud: Maintenance
-    access: [admin, staff]
   home:
     route: /
     landing:
@@ -57,13 +45,35 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
   history:
+    crud: Incident
+  incidents:
+    crud: Incident
+    search: [title, summary]
+    filters: [status, component]
+    sortable: [title, detectedAt, resolvedAt, status]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    search: [name, description]
+    filters: [status]
+    access: [admin]
+  maintenance:
+    crud: Maintenance
+    filters: [component]
+  overview:
     crud: Incident
   team:
     users: manage
-  admin:
-    data: all
-navigation: [home, history, incidents, updates, maintenance, components, admin, team]
+    access: [admin]
+navigation: [overview, incidents, updates, maintenance, components, team]
 actions:
   identified:
     on: Incident
