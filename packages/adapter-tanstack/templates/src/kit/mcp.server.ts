@@ -4,7 +4,7 @@
 // access, same limiter as the API; a refusal comes back as the tool's error in the app's words,
 // so the assistant can read it.
 import type { Viewer } from "./access";
-import { BadInput, bodyOf, keyOf, problem, refusalOf } from "./api.server";
+import { BadInput, bodyOf, callerOf, problem, refusalOf } from "./api.server";
 
 export interface Tool {
   name: string;
@@ -21,20 +21,27 @@ interface Message {
 
 const PROTOCOL = "2025-06-18";
 
-/** Answers one request to /mcp: the tools offered, and calls to them as the key. */
+/**
+ * Answers one request to /mcp: the tools offered, and calls to them as the key. Without a key, a
+ * visitor gets the tools for what anyone may read or add (`visitorTools`), when there are any.
+ */
 export async function handleMcp(
   request: Request,
   server: {
     name: string;
     tools: Tool[];
-    call: (viewer: Viewer, name: string, args: Record<string, unknown>) => Promise<unknown>;
+    visitorTools: Tool[];
+    call: (viewer: Viewer | null, name: string, args: Record<string, unknown>) => Promise<unknown>;
   },
 ): Promise<Response> {
   let viewer: Viewer | null;
   let body: unknown;
+  let tools = server.tools;
   try {
-    viewer = keyOf(request);
-    if (!viewer) return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
+    const caller = callerOf(request);
+    viewer = caller.viewer;
+    if (!viewer && caller.keyless && server.visitorTools.length) tools = server.visitorTools;
+    else if (!viewer) return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
     body = await bodyOf(request);
   } catch (error) {
     const refused = refusalOf(error);
@@ -59,12 +66,12 @@ export async function handleMcp(
       case "ping":
         return reply({});
       case "tools/list":
-        return reply({ tools: server.tools });
+        return reply({ tools });
       case "tools/call": {
         const name = String(message.params?.name ?? "");
         const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
         try {
-          if (!server.tools.some((t) => t.name === name))
+          if (!tools.some((t) => t.name === name))
             throw new BadInput(`There is no tool "${name}".`);
           const result = await server.call(key, name, args);
           return reply({

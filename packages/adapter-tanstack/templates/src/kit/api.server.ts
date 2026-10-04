@@ -1,4 +1,5 @@
-// Smithable app kit: the API's frame (docs/design/integrations.md §2). Every call is a key's,
+// Smithable app kit: the API's frame (docs/design/integrations.md §2). A call is a key's, or,
+// where the app lets anyone read or add (public), a visitor's without one (api-only.md §3.4);
 // limited per key (60 a minute; a call without a valid key by its address), with a body of at
 // most 1 MB, answered in JSON and refused as a JSON problem in the app's own words. No cookies:
 // it is for programs, not pages. The tools for assistants (mcp.server.ts) use the same pieces.
@@ -89,15 +90,44 @@ export function refusalOf(
   return undefined;
 }
 
+/** A visitor without a key, or the key given (null: a key was given but is not valid). */
+export function callerOf(request: Request): { viewer: Viewer | null; keyless: boolean } {
+  const keyless = !request.headers.get("authorization");
+  return { viewer: keyOf(request), keyless };
+}
+
 /** Runs one call as the key in the Authorization header, with its body when it has one. */
-export async function apiCall(
+export function apiCall(
   request: Request,
   run: (viewer: Viewer, body: unknown) => Promise<unknown>,
   status = 200,
 ): Promise<Response> {
+  return call(request, (viewer, body) => run(viewer as Viewer, body), status, false);
+}
+
+/**
+ * Runs a call anyone may make (what public lets visitors read or add): without a key as the
+ * visitor, through the same data functions; with a key as the key. A key that is not valid is
+ * refused, never taken for a visitor.
+ */
+export function openApiCall(
+  request: Request,
+  run: (viewer: Viewer | null, body: unknown) => Promise<unknown>,
+  status = 200,
+): Promise<Response> {
+  return call(request, run, status, true);
+}
+
+async function call(
+  request: Request,
+  run: (viewer: Viewer | null, body: unknown) => Promise<unknown>,
+  status: number,
+  open: boolean,
+): Promise<Response> {
   try {
-    const viewer = keyOf(request);
-    if (!viewer) return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
+    const { viewer, keyless } = callerOf(request);
+    if (!viewer && !(open && keyless))
+      return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
     const body =
       request.method !== "GET" && request.method !== "DELETE" ? await bodyOf(request) : undefined;
     const result = await run(viewer, body);
