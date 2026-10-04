@@ -453,7 +453,7 @@ pages:
   const closed = warnings("pages: [home], create: [Message]");
   expect(closed).toHaveLength(1);
   expect(closed[0]?.message).toBe(
-    "Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or take home out of public.pages.",
+    "Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or remove the section of home that shows it.",
   );
   // Readable, it is quiet; a contact form adds records and needs no reading.
   expect(warnings("pages: [home, catalog], read: [Tool], create: [Message]")).toEqual([]);

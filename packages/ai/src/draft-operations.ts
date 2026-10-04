@@ -53,7 +53,6 @@ const NOT_FOR_DRAFTS = new Set([
   "renameField",
   "changeField",
   "removePage",
-  "removeSection",
   "setRuleId",
   "setPackage",
 ]);
@@ -504,12 +503,22 @@ const VISITOR_FLAWS = new Set([
  * remedy depends on what the description meant, so it is the model's to choose).
  */
 export function visitorFlaws(files: ProjectFiles): string[] {
+  return flawsOf(files).map((d) => d.message);
+}
+
+function flawsOf(files: ProjectFiles): { code: string; message: string }[] {
   const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
   if (!ir) return [];
-  return validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir)
-    .diagnostics.filter((d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code))
-    .map((d) => d.message);
+  return validateAuth(
+    { path: "smithable.auth.yml", text: files.auth ?? "" },
+    ir,
+  ).diagnostics.filter((d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code));
 }
+
+/** Flaws that expose someone weigh far more than flaws that only look broken. */
+const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
+const weigh = (flaws: { code: string }[]) =>
+  flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
 
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
@@ -562,9 +571,21 @@ export async function draftProjectByOperations(options: {
     let prompt = `Description: ${options.description}${languageNote(options.description)}${shape}`;
     let round = 0;
     let refused: { step: Step; message: string }[] = [];
-    // A valid draft's flaws for visitors go back once; what that round drops is still named.
-    let asked = false;
+    // A valid draft's flaws for visitors go back once each (a remedy may bring a new one: a
+    // model closed to visitors leaves its landing section empty); what those rounds drop is
+    // still named.
+    const told = new Set<string>();
     let droppedBefore: string[] = [];
+    // The best the draft has been, by its flaws: a remedy that makes it worse (personal details
+    // closed in one round and opened again in the next) is not what the person gets.
+    let best: { files: ProjectFiles; count: number; score: number } | undefined;
+    const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => ({
+      kind: "draft",
+      files: toFiles(best?.files ?? files),
+      usage,
+      operations: best ? done.slice(0, best.count) : done,
+      ...(dropped.length ? { dropped } : {}),
+    });
     while (round < MAX_ROUNDS) {
       round += 1;
       let answer: { operations?: Step[] };
@@ -575,14 +596,7 @@ export async function draftProjectByOperations(options: {
       } catch (error) {
         problem = error instanceof Error ? error.message : String(error);
         // The round about a valid draft's flaws failing leaves the draft as it was.
-        if (asked && done.length > 0)
-          return {
-            kind: "draft",
-            files: toFiles(files),
-            usage,
-            operations: done,
-            ...(droppedBefore.length ? { dropped: droppedBefore } : {}),
-          };
+        if (told.size > 0 && done.length > 0) return draftOf(droppedBefore);
         // A broken answer (cut off, not JSON) is asked for once more.
         if (/JSON|Unexpected|position/.test(problem) && round < MAX_ROUNDS) continue;
         break;
@@ -591,14 +605,10 @@ export async function draftProjectByOperations(options: {
       if (steps.length === 0) {
         // In a correction round an empty answer drops what was refused; a first answer with
         // nothing in it is no draft.
-        if (done.length > 0)
-          return {
-            kind: "draft",
-            files: toFiles(openLinked(closeShared(files, done), done)),
-            usage,
-            operations: done,
-            ...(droppedBefore.length ? { dropped: droppedBefore } : {}),
-          };
+        if (done.length > 0) {
+          if (!best) files = openLinked(closeShared(files, done), done);
+          return draftOf(droppedBefore);
+        }
         problem = refused.length
           ? refused.map((r) => `${r.step.op}: ${r.message}`).join("\n")
           : "The answer has no operations.";
@@ -611,7 +621,7 @@ export async function draftProjectByOperations(options: {
       refused = outcome.refused;
       const last = round === MAX_ROUNDS;
       // After the flaws went back, the draft was already valid: a refused remedy is left out.
-      const essential = asked
+      const essential = told.size
         ? []
         : refused.filter((r) => ESSENTIAL.has(r.step.op) && !(last && lastRoundDrops(r.step)));
       if (essential.length === 0) {
@@ -629,19 +639,15 @@ export async function draftProjectByOperations(options: {
         ];
         if (done.length > 0) {
           files = openLinked(closeShared(files, done), done);
-          const flaws = asked || last ? [] : visitorFlaws(files);
-          if (flaws.length === 0)
-            return {
-              kind: "draft",
-              files: toFiles(files),
-              usage,
-              operations: done,
-              ...(dropped.length ? { dropped } : {}),
-            };
-          asked = true;
+          const found = flawsOf(files);
+          if (!best || weigh(found) < best.score)
+            best = { files, count: done.length, score: weigh(found) };
+          const flaws = last ? [] : found.map((f) => f.message);
+          if (!flaws.some((f) => !told.has(f))) return draftOf(dropped);
+          for (const f of flaws) told.add(f);
           droppedBefore = dropped;
           refused = [];
-          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list), or with no operations if it is as intended.`;
+          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
           continue;
         }
         problem =
