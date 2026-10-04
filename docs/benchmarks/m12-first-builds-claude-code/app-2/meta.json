@@ -1,0 +1,10 @@
+{
+  "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
+  "starter": "crm",
+  "wordStarter": "crm",
+  "questions": [
+    "Should everyone on the team see all companies and deals, or only the ones assigned to them?",
+    "What should a deal track?",
+    "What is a follow-up?"
+  ]
+}
