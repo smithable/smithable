@@ -26392,6 +26392,14 @@ describe("Component", () => {
       deleteOwn: false,
     });
   });
+
+  test("a visitor reading the component is not told who added its incidents", async () => {
+    const parent = insertComponent(stranger.id);
+    insertIncident(stranger.id, { componentId: parent.id, status: "investigating" });
+    const related = (await componentData.get(null, parent.id))?.incidents ?? [];
+    expect(related.length).toBeGreaterThan(0);
+    for (const row of related) expect(row.ownerId).toBeNull();
+  });
 });
 
 describe("Incident", () => {
@@ -26461,6 +26469,14 @@ describe("Incident", () => {
       deleteOthers: false,
       deleteOwn: false,
     });
+  });
+
+  test("a visitor reading the incident is not told who added its updates", async () => {
+    const parent = insertIncident(stranger.id, {"status":"investigating"});
+    insertIncidentUpdate(stranger.id, { incidentId: parent.id });
+    const related = (await incidentData.get(null, parent.id))?.updates ?? [];
+    expect(related.length).toBeGreaterThan(0);
+    for (const row of related) expect(row.ownerId).toBeNull();
   });
 });
 
@@ -32949,7 +32965,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "b3c07d9b generated",
   "src/db/seed.ts": "a04b6693 generated",
-  "src/generated/access.test.ts": "d14200e5 generated",
+  "src/generated/access.test.ts": "a01e5c02 generated",
   "src/generated/actions/identified.server.ts": "894599e3 generated",
   "src/generated/actions/identified.ts": "4baad691 generated",
   "src/generated/actions/monitoring.server.ts": "8e8bf8a1 generated",
