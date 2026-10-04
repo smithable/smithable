@@ -1,0 +1,9 @@
+{
+  "description": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
+  "starter": "invoicing",
+  "wordStarter": "booking",
+  "questions": [
+    "Who in your company will use this app to create and send invoices?",
+    "Can households see their invoices without signing in?"
+  ]
+}

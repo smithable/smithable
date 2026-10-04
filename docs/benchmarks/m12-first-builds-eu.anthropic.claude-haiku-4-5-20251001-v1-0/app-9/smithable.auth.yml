@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  technician:
+    description: Handles support tickets and resolves issues.
+  manager:
+    description: Oversees tickets and team performance.
+defaultRole: technician
+admins: [johan@smithable.ai]

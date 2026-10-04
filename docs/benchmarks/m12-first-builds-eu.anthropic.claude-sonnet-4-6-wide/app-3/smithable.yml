@@ -1,0 +1,108 @@
+smithable: 0.1
+app:
+  name: StyleBook
+  description: "Online booking for a hair salon: customers pick a stylist and a free time themselves."
+models:
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+      portrait: picture
+      specialties: string
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Service:
+    fields:
+      name: string!
+      description: text
+      durationMinutes: int! = 60
+      price: money
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Slot:
+    fields:
+      stylist: Stylist!
+      service: Service!
+      startsAt: datetime!
+      capacity: int! = 1
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Booking:
+    fields:
+      slot: Slot! unique
+      notes: text
+      status: confirmed | canceled
+    capacity:
+      per: slot
+      max: slot.capacity
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, my-bookings]
+      footer:
+      features:
+      stylists:
+        records: Stylist
+      services:
+        records: Service
+      contact:
+        form: Message
+  schedule:
+    calendar:
+      model: Slot
+      starts: startsAt
+  my-bookings:
+    crud: Booking
+    mine: true
+    filters: [status]
+    actions: [cancel]
+  slots:
+    crud: Slot
+    access: [admin]
+    filters: [stylist, service]
+    search: [stylist, service]
+  stylists:
+    crud: Stylist
+    access: [admin]
+    search: [name, specialties]
+  services:
+    crud: Service
+    access: [admin]
+    search: [name]
+  messages:
+    crud: Message
+    access: [admin]
+  team:
+    users: manage
+  admin:
+    data: all
+navigation: [schedule, my-bookings, slots, stylists, services, messages, team, admin]
+actions:
+  cancel:
+    on: Booking
+    when:
+      status: confirmed
+    set:
+      status: canceled
+    intent: Cancel a confirmed booking.

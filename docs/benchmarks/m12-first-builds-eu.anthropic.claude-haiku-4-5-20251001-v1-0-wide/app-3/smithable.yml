@@ -1,0 +1,68 @@
+smithable: 0.1
+app:
+  name: Hair Salon Booking
+  description: "Online booking for a hair salon: customers pick a stylist and a free time themselves."
+models:
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+      picture: picture
+    access:
+      create: [admin]
+  Service:
+    fields:
+      name: string!
+      description: text
+      durationMinutes: int! = 60
+      price: money!
+    access:
+      create: [admin]
+  Appointment:
+    fields:
+      stylist: Stylist!
+      service: Service!
+      startsAt: datetime!
+      bookings: Booking[]
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      appointment: Appointment! unique
+    capacity:
+      per: appointment
+      max: 1
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+pages:
+  appointments:
+    crud: Appointment
+    access: [admin]
+  stylists:
+    crud: Stylist
+    access: [admin]
+  services:
+    crud: Service
+    access: [admin]
+  my-bookings:
+    crud: Booking
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      stylists:
+        records: Stylist
+      services:
+        records: Service
+      contact:
+        form: Message
+  admin:
+    data: all
+    access: [admin]
+  team:
+    users: manage
+    access: [admin]

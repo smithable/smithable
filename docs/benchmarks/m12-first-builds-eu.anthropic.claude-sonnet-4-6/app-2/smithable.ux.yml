@@ -1,0 +1,32 @@
+smithableUx: 0.1
+pages:
+  deals:
+    table:
+      sort: expectedCloseDate
+      columns: [title, company, contact, value, status, expectedCloseDate, assignedTo]
+    icon: star
+  follow-ups:
+    table:
+      sort: dueDate
+      columns: [dueDate, type, deal, contact, status, assignedTo]
+    icon: calendar
+  contacts:
+    icon: users
+    table:
+      columns: [firstName, lastName, company, title, email, phone]
+  companies:
+    table:
+      columns: [name, industry, size, accountManager]
+      below:
+        name: website
+    icon: building
+tones:
+  Deal.status:
+    won: success
+    lost: danger
+    negotiation: warning
+  FollowUp.status:
+    done: success
+    skipped: warning
+theme:
+  preset: corporate

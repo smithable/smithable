@@ -1,0 +1,10 @@
+{
+  "description": "A football club's site: teams, players, matches and results.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who can view teams, players, matches and results?",
+    "Who can add or edit records (players, matches, results…)?",
+    "What are the main records the app needs to track?"
+  ]
+}

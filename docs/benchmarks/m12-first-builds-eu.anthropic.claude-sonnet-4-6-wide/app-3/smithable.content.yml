@@ -1,0 +1,13 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: StyleBook
+    hero:
+      button: Book Now
+      image:
+        src: images/hero.webp
+        alt: A hair salon with mirrors, chairs and plants in daylight
+  schedule:
+    title: Schedule
+  my-bookings:
+    title: My Bookings

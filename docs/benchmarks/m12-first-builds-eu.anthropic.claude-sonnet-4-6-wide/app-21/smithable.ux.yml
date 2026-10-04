@@ -1,0 +1,31 @@
+smithableUx: 0.1
+pages:
+  customers:
+    table:
+      columns: [name, email, phone]
+    icon: users
+  cars:
+    table:
+      columns: [licensePlate, make, model, year, customer]
+    icon: tag
+  service-jobs:
+    table:
+      sort: -scheduledAt
+      columns: [description, car, status, scheduledAt, total]
+    icon: clipboard
+  invoices:
+    table:
+      sort: -issuedAt
+      columns: [number, serviceJob, status, issuedAt, dueAt, amount]
+    icon: receipt
+theme:
+  preset: corporate
+tones:
+  ServiceJob.status:
+    tyonAlla: warning
+    valmis: success
+    laskutettu: success
+  Invoice.status:
+    lahetetty: warning
+    maksettu: success
+    peruutettu: danger

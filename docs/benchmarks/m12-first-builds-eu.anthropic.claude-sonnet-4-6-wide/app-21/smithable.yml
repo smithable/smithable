@@ -1,0 +1,115 @@
+smithable: 0.1
+app:
+  name: AutoHuolto
+  description: Pieni autokorjaamo hallitsee asiakkaita, autoja, huoltotöitä ja laskuja yhdessä paikassa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      address: string
+      notes: text
+      cars: Car[]
+  Car:
+    fields:
+      customer: Customer!
+      make: string!
+      model: string!
+      year: int
+      licensePlate: string! unique
+      vin: string unique
+      notes: text
+      serviceJobs: ServiceJob[]
+  ServiceJob:
+    fields:
+      car: Car!
+      description: string!
+      status: avoin | tyonAlla | valmis | laskutettu
+      scheduledAt: date
+      completedAt: date
+      notes: text
+      laborCost: money
+      partsCost: money
+      total:
+        type: money
+        formula: laborCost + partsCost
+  Invoice:
+    fields:
+      number: string! unique
+      serviceJob: ServiceJob!
+      status: luonnos | lahetetty | maksettu | peruutettu
+      issuedAt: date
+      dueAt: date
+      amount: money!
+      notes: text
+pages:
+  customers:
+    crud: Customer
+    search: [name, email, phone]
+  cars:
+    crud: Car
+    search: [licensePlate, vin, make, model]
+    filters: [customer]
+  team:
+    users: manage
+  service-jobs:
+    crud: ServiceJob
+    search: [description]
+    filters: [status, scheduledAt]
+    sortable: [scheduledAt, completedAt]
+    actions: [startWork, markInvoiced, completeJob]
+  invoices:
+    crud: Invoice
+    search: [number]
+    filters: [status, issuedAt, dueAt]
+    sortable: [issuedAt, dueAt, amount]
+    actions: [markPaid, cancelInvoice, sendInvoice]
+actions:
+  startWork:
+    on: ServiceJob
+    when:
+      status: avoin
+    set:
+      status: tyonAlla
+    intent: Merkitse huoltotyö työn alle.
+  markInvoiced:
+    on: ServiceJob
+    when:
+      status: valmis
+    set:
+      status: laskutettu
+    intent: Merkitse huoltotyö laskutetuksi.
+  markPaid:
+    on: Invoice
+    when:
+      status: lahetetty
+    set:
+      status: maksettu
+    intent: Merkitse lasku maksetuksi.
+  cancelInvoice:
+    on: Invoice
+    when:
+      status: [luonnos, lahetetty]
+    set:
+      status: peruutettu
+    intent: Peruuta lasku.
+  completeJob:
+    on: ServiceJob
+    when:
+      status: tyonAlla
+    set:
+      status: valmis
+      completedAt: TODAY()
+    intent: Merkitse huoltotyö valmiiksi.
+  sendInvoice:
+    on: Invoice
+    when:
+      status: luonnos
+    set:
+      status: lahetetty
+      issuedAt: TODAY()
+    intent: Lähetä lasku asiakkaalle.
+navigation: [customers, cars, service-jobs, invoices, team]

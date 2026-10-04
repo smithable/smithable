@@ -1,0 +1,89 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Manage allotment plots, the waiting list and yearly membership fees.
+models:
+  Plot:
+    fields:
+      number: string! unique
+      sizeM2: decimal
+      status: available | occupied
+      notes: text
+  Member:
+    fields:
+      name: string!
+      email: email! unique
+      phone: phone
+      joinedOn: date! = TODAY()
+      plot: Plot
+  WaitingListEntry:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      appliedOn: date! = TODAY()
+      status: waiting | offered | accepted | withdrawn
+      notes: text
+  FeePayment:
+    fields:
+      member: Member!
+      year: int!
+      amount: money!
+      paidOn: date! = TODAY()
+      status: pending | paid | waived
+pages:
+  plots:
+    crud: Plot
+    search: [number, status]
+    filters: [status]
+  members:
+    crud: Member
+    search: [name, email, phone]
+  waiting-list:
+    crud: WaitingListEntry
+    search: [name, email, phone]
+    filters: [status]
+    actions: [assignPlot, markOffered, withdraw]
+  fee-payments:
+    crud: FeePayment
+    filters: [status, year, member]
+    actions: [markPaid, waiveFee]
+  team:
+    users: manage
+actions:
+  assignPlot:
+    on: WaitingListEntry
+    when:
+      status: [waiting, offered]
+    set:
+      status: accepted
+    intent: Offer a plot to someone on the waiting list and mark them as accepted.
+  markOffered:
+    on: WaitingListEntry
+    when:
+      status: waiting
+    set:
+      status: offered
+    intent: Mark a waiting list entry as having been offered a plot.
+  withdraw:
+    on: WaitingListEntry
+    when:
+      status: [waiting, offered]
+    set:
+      status: withdrawn
+    intent: Mark a waiting list applicant as withdrawn.
+  markPaid:
+    on: FeePayment
+    when:
+      status: pending
+    set:
+      status: paid
+      paidOn: TODAY()
+    intent: Mark a fee payment as paid.
+  waiveFee:
+    on: FeePayment
+    when:
+      status: pending
+    set:
+      status: waived
+    intent: Waive a member's yearly fee.

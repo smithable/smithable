@@ -1,0 +1,8 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, sightings]
+  read: [Sighting]
+admins: [johan@smithable.ai]

@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: Invoicely staff.
+  member:
+    description: A freelancer using Invoicely.
+defaultRole: member
+admins: [johan@smithable.ai]
+public:
+  pages: [home]

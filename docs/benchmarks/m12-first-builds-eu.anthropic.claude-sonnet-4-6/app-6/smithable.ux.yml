@@ -1,0 +1,31 @@
+smithableUx: 0.1
+pages:
+  jobs:
+    table:
+      columns: [title, trade, location, type, wage, closingDate, status]
+      sort: closingDate
+    icon: briefcase
+    form:
+      control:
+        description: textarea
+      sections: [{ name: details, fields: [title, trade, type, location, wage, closingDate] }, { name: description, fields: [description] }, { name: status, fields: [status] }]
+      columns: 2
+  applications:
+    icon: clipboard
+    form:
+      control:
+        coverLetter: textarea
+  myApplications:
+    icon: user
+    form:
+      control:
+        coverLetter: textarea
+tones:
+  JobPost.status:
+    open: success
+  Application.status:
+    reviewing: warning
+    accepted: success
+    rejected: danger
+theme:
+  preset: corporate

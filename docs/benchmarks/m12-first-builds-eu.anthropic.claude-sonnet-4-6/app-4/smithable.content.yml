@@ -1,0 +1,15 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Borrow the tools you need from your neighbors
+    subtitle: ToolShare is a neighborhood library of tools. List what you have, borrow what you need.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A green garden with vegetable beds, a greenhouse and fruit trees
+  catalog:
+    title: Browse Tools
+  my-tools:
+    title: My Tools
+  saved:
+    title: Saved Tools

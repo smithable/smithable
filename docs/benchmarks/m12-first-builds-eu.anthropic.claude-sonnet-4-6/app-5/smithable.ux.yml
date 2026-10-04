@@ -1,0 +1,17 @@
+smithableUx: 0.1
+pages:
+  suppliers:
+    icon: truck
+    table:
+      columns: [name, contactName, email, phone]
+  ingredients:
+    icon: tag
+    table:
+      columns: [name, category, unit, reorderLevel, supplier]
+  stock:
+    icon: layers
+    table:
+      sort: -date
+      columns: [ingredient, quantity, date, notes]
+theme:
+  preset: craft
