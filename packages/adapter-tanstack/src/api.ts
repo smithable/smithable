@@ -6,6 +6,7 @@ import {
   type AuthIR,
   apiOffers,
   type FieldIR,
+  humanize,
   kebab,
   type ModelIR,
   plural,
@@ -16,8 +17,12 @@ import {
 import { actionNames, askedFields } from "./actions.js";
 import { HEADER, literal, modelNamed, names, type Texts } from "./shared.js";
 
-/** The fields a program reads and writes: everything but pictures (not in the API yet). */
-const apiFields = (model: ModelIR) => model.fields.filter((f) => !storesPictures(f));
+/**
+ * The fields a program reads and writes: everything but pictures (not in the API yet) and the
+ * lists of related records, which are reached from the other side (their own model's route).
+ */
+const apiFields = (model: ModelIR) =>
+  model.fields.filter((f) => !storesPictures(f) && !(f.type.kind === "relation" && f.type.many));
 const entered = (model: ModelIR) =>
   apiFields(model).filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many));
 const kind = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
@@ -400,4 +405,186 @@ ${own
 `;
   }
   return files;
+}
+
+/** The tools an assistant gets (docs/design/integrations.md §5b), with what each says it does. */
+function mcpTools(ir: SpecIR, auth: AuthIR, t: Texts) {
+  const { models, actions } = apiParts(ir, auth, t);
+  const deletes = auth.api?.assistants?.delete === true;
+  const tools: { name: string; description: string; inputSchema: Record<string, unknown> }[] = [];
+  const id = { id: { type: "integer", description: "The record's id" } };
+  for (const { model, n, path } of models) {
+    const fields = Object.fromEntries(
+      entered(model).map((f) => {
+        return [f.name, { ...fieldSchema(f), description: humanize(f.name) }];
+      }),
+    );
+    const what = n.pluralLabel.toLowerCase();
+    const snake = path.replace(/-/g, "_");
+    const one = kebab(model.name).replace(/-/g, "_");
+    tools.push(
+      {
+        name: `find_${snake}`,
+        description: `List ${what} this key may read, 100 at a time (page 1, 2, …).`,
+        inputSchema: { type: "object", properties: { page: { type: "integer", minimum: 1 } } },
+      },
+      {
+        name: `read_${one}`,
+        description: `One ${n.label.toLowerCase()}, by its id.`,
+        inputSchema: { type: "object", properties: id, required: ["id"] },
+      },
+      {
+        name: `add_${one}`,
+        description: `Add a ${n.label.toLowerCase()}. Amounts as decimal texts ("12.50"), times as ISO texts.`,
+        inputSchema: {
+          type: "object",
+          properties: fields,
+          required: entered(model)
+            .filter((f) => f.required)
+            .map((f) => f.name),
+        },
+      },
+      {
+        name: `change_${one}`,
+        description: `Change a ${n.label.toLowerCase()}: only the fields given.`,
+        inputSchema: { type: "object", properties: { ...id, ...fields }, required: ["id"] },
+      },
+      ...(deletes
+        ? [
+            {
+              name: `delete_${one}`,
+              description: `Delete a ${n.label.toLowerCase()}. It cannot be undone.`,
+              inputSchema: { type: "object", properties: id, required: ["id"] },
+            },
+          ]
+        : []),
+    );
+  }
+  for (const action of actions) {
+    const model = modelNamed(ir, action.on);
+    const asked = askedFields(action);
+    tools.push({
+      name: action.name,
+      description: [
+        action.intent ?? `${action.name} on a ${names(model, t).label.toLowerCase()}`,
+        ...(action.rules ?? []).map((r) => r.text),
+      ].join(" "),
+      inputSchema: {
+        type: "object",
+        properties: {
+          ...id,
+          ...(asked.length
+            ? {
+                values: {
+                  type: "object",
+                  description: `What it asks for: ${asked.map((x) => x.key).join(", ")}`,
+                },
+              }
+            : {}),
+        },
+        required: asked.length ? ["id", "values"] : ["id"],
+      },
+    });
+  }
+  return { tools, models, actions, deletes };
+}
+
+/** src/generated/mcp.server.ts: the tools, and each call through the data functions. */
+export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
+  const { tools, models, actions, deletes } = mcpTools(ir, auth, t);
+  const cases: string[] = [];
+  for (const { model, n, path } of models) {
+    const c = model.name[0]?.toLowerCase() + model.name.slice(1);
+    const snake = path.replace(/-/g, "_");
+    const one = kebab(model.name).replace(/-/g, "_");
+    cases.push(`    case "find_${snake}": {
+      const rows = await ${n.data}.list(viewer);
+      const page = Math.max(1, Number(args.page) || 1);
+      return { items: rows.slice((page - 1) * 100, page * 100).map(${c}ToApi), page, pages: Math.max(1, Math.ceil(rows.length / 100)), total: rows.length };
+    }
+    case "read_${one}":
+      return ${c}ToApi(await found(${n.data}, viewer, args.id, ${JSON.stringify(n.label.toLowerCase())}));
+    case "add_${one}":
+      return ${c}ToApi(await ${n.data}.create(viewer, ${c}FromApi(args) as never));
+    case "change_${one}": {
+      const { id, ...fields } = args;
+      const row = await found(${n.data}, viewer, id, ${JSON.stringify(n.label.toLowerCase())});
+      return ${c}ToApi(await ${n.data}.update(viewer, row.id, ${c}FromApi(fields, row) as never));
+    }${
+      deletes
+        ? `
+    case "delete_${one}": {
+      const row = await found(${n.data}, viewer, args.id, ${JSON.stringify(n.label.toLowerCase())});
+      await ${n.data}.remove(viewer, row.id);
+      return { deleted: row.id };
+    }`
+        : ""
+    }`);
+  }
+  for (const action of actions) {
+    const model = modelNamed(ir, action.on);
+    const c = model.name[0]?.toLowerCase() + model.name.slice(1);
+    const asked = askedFields(action).length > 0;
+    cases.push(`    case ${JSON.stringify(action.name)}:
+      return ${c}ToApi(await ${actionNames(action).run}(viewer, Number(args.id)${asked ? `, ${actionNames(action).asks}.parse(args.values)` : ""}));`);
+  }
+  return `${HEADER}// The app's records and actions as tools for AI assistants (docs/design/integrations.md §5b):
+// what the auth file's \`api\` block offers, with the spec's own words as the descriptions, called
+// as the key's role through the data functions, exactly as the API is.
+import type { Viewer } from "#/kit/access";
+import { NotFound } from "#/kit/api.server";
+import type { Tool } from "#/kit/mcp.server";
+import { ${models
+    .flatMap(({ model }) => {
+      const c = model.name[0]?.toLowerCase() + model.name.slice(1);
+      return [`${c}FromApi`, `${c}ToApi`];
+    })
+    .sort()
+    .join(", ")} } from "./api.server";
+${models.map(({ model, n }) => `import { ${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}
+${actions.map((a) => `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "./actions/${kebab(a.name)}";` : ""}`).join("\n")}
+
+export const TOOLS: Tool[] = ${JSON.stringify(tools, null, 2)};
+
+/** A record the key may read, or a refusal that says so. */
+async function found<R extends { id: number }>(
+  data: { get: (viewer: Viewer | null, id: number) => Promise<R | null | undefined> },
+  viewer: Viewer,
+  id: unknown,
+  label: string,
+): Promise<R> {
+  const row = Number.isInteger(id) ? await data.get(viewer, id as number) : null;
+  if (!row) throw new NotFound(\`No such \${label}, or not one this key may read.\`);
+  return row;
+}
+
+/** Calls one tool as the key. */
+export async function callTool(viewer: Viewer, name: string, args: Record<string, unknown>): Promise<unknown> {
+  switch (name) {
+${cases.join("\n")}
+    default:
+      throw new NotFound(\`There is no tool "\${name}".\`);
+  }
+}
+`;
+}
+
+/** src/routes/mcp.ts: the endpoint assistants connect to. */
+export function mcpRoute(ir: SpecIR): string {
+  return `${HEADER}// The app's tools for AI assistants (docs/design/integrations.md §5b), at /mcp: connect an
+// assistant here with a key made on the users page, as Authorization: Bearer <key>.
+import { createFileRoute } from "@tanstack/react-router";
+import { callTool, TOOLS } from "#/generated/mcp.server";
+import { handleMcp } from "#/kit/mcp.server";
+import { problem } from "#/kit/api.server";
+
+export const Route = createFileRoute("/mcp")({
+  server: {
+    handlers: {
+      POST: ({ request }) => handleMcp(request, { name: ${JSON.stringify(ir.app.name)}, tools: TOOLS, call: callTool }),
+      GET: () => problem(405, "This server answers POST requests only (no event stream)."),
+    },
+  },
+});
+`;
 }
