@@ -87,26 +87,29 @@ function filterOf(field: FieldIR, labels?: Record<string, string>): FieldFilter 
 /** A field in the summary: its name, "*" when required, and what it holds when not a text. */
 function fieldWord(field: FieldIR): string {
   const { type } = field;
+  const name = `${field.name}${field.required && !field.formula ? "*" : ""}`;
+  if (type.kind === "relation") return `${name} -> ${type.model}${type.many ? "[]" : ""}`;
+  // What the field holds goes in parentheses, so it is never read as part of the name ("link
+  // url" was taken for a field called "link url").
   const holds =
     type.kind === "choice"
-      ? ` (${type.values.join(" | ")})`
-      : type.kind === "relation"
-        ? ` -> ${type.model}${type.many ? "[]" : ""}`
-        : type.name === "bool"
-          ? " yes/no"
+      ? type.values.join(" | ")
+      : type.name === "bool"
+        ? "yes/no"
+        : type.name === "money"
+          ? "money"
           : NUMBERS.includes(type.name)
-            ? type.name === "money"
-              ? " money"
-              : " number"
+            ? "number"
             : DATES.includes(type.name) || ["email", "phone", "url"].includes(type.name)
-              ? // "email email" says nothing twice.
+              ? // "email (email)" says nothing twice.
                 type.name === field.name
                 ? ""
-                : ` ${type.name}`
+                : type.name
               : type.name === "picture" || type.name === "pictures"
-                ? " picture"
+                ? "picture"
                 : "";
-  return `${field.name}${field.required && !field.formula ? "*" : ""}${holds}${field.formula ? " (computed)" : ""}`;
+  const notes = [holds, field.formula ? "computed" : ""].filter(Boolean);
+  return `${name}${notes.length ? ` (${notes.join(", ")})` : ""}`;
 }
 
 /**
@@ -175,7 +178,7 @@ export function assistantOffer(
       by: filters
         .filter((f) => ["value", "yesNo", "reference", "date"].includes(f.by))
         .map((f) => f.field),
-      description: describeKind(model, can, actions, content),
+      description: describeKind(model, actions, content),
     });
   }
 
@@ -343,12 +346,7 @@ export function assistantOffer(
 }
 
 /** What `describe` answers for a kind: more words than the summary has room for. */
-function describeKind(
-  model: ModelIR,
-  can: AssistantKind["may"],
-  actions: SpecIR["actions"],
-  content: ContentIR,
-): string {
+function describeKind(model: ModelIR, actions: SpecIR["actions"], content: ContentIR): string {
   const text = content.models[model.name];
   const meaning = [model.description, model.intent].filter(Boolean).join(" ");
   const fields = model.fields
@@ -373,14 +371,15 @@ function describeKind(
         ]
       : [],
   );
-  const allowed = (["read", "add", "change", "delete"] as const).filter((k) => can[k]);
+  // What the caller may do is said by its tools and their kinds, not here: a description is
+  // the same for every caller, so it can be kept once.
   return [
     `${model.name}${meaning ? `: ${meaning}` : ""}`,
     "Fields:",
     ...fields,
     ...(rules.length ? ["Rules:", ...rules] : []),
     ...(on.length ? ["Actions:", ...on] : []),
-    `You may ${allowed.join(", ")}.${model.ownedBy ? ` A record belongs to its ${model.ownedBy}.` : ""}`,
+    ...(model.ownedBy ? [`A record belongs to its ${model.ownedBy}.`] : []),
   ].join("\n");
 }
 
