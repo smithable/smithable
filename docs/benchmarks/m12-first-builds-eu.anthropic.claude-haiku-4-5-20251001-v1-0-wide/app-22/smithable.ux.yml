@@ -1,0 +1,5 @@
+smithableUx: 0.1
+tones:
+  Preorder.status:
+    pending: warning
+    pickedUp: success

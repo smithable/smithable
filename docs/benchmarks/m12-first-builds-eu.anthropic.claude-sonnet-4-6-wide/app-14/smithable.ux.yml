@@ -1,0 +1,23 @@
+smithableUx: 0.1
+pages:
+  guests:
+    table:
+      columns: [name, rsvp, mealChoice, table, plusOne]
+      below:
+        name: email
+      sort: name
+    form:
+      columns: 2
+    icon: users
+  tables:
+    table:
+      columns: [name, seats, notes]
+      sort: name
+    icon: layers
+tones:
+  Guest.rsvp:
+    attending: success
+    declined: danger
+    pending: warning
+theme:
+  preset: pastel

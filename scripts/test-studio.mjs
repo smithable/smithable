@@ -172,29 +172,37 @@ try {
       }
     }
   });
-  await step("adding a field: the summary, the change trace and the preview follow", async () => {
-    await change("Add a field");
-    await page.getByLabel("Name", { exact: true }).fill("website");
-    await page.getByLabel("Holds").selectOption({ label: "Web address" });
-    await page.getByRole("button", { name: "Add field" }).click();
-    await status
-      .getByText("Customers: added a website (a web address)")
-      .waitFor({ timeout: 60000 });
-    await trace.getByText("Customers: added a website (a web address)").waitFor();
-    await page.getByRole("tab", { name: "Your app" }).click();
-    await page.getByText("a web address").first().waitFor();
-    await openPreview("/customers/new");
-    await preview.getByLabel("Website").waitFor({ timeout: 60000 });
-    // Friendly names become spec names.
-    await change("Rename a field");
-    await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
-    await page.getByLabel("New name").fill("Web page");
-    await page.getByText("Customers: the website is now called web page").first().waitFor();
-    await page.getByRole("button", { name: "Rename field" }).click();
-    await status
-      .getByText("Customers: the website is now called web page")
-      .waitFor({ timeout: 60000 });
-  });
+  await step(
+    "adding a field: the summary, the change trace and the preview follow, which flashes what changed",
+    async () => {
+      await change("Add a field");
+      await page.getByLabel("Name", { exact: true }).fill("website");
+      await page.getByLabel("Holds").selectOption({ label: "Web address" });
+      await page.getByRole("button", { name: "Add field" }).click();
+      await status
+        .getByText("Customers: added a website (a web address)")
+        .waitFor({ timeout: 60000 });
+      await trace.getByText("Customers: added a website (a web address)").waitFor();
+      await page.getByRole("tab", { name: "Your app" }).click();
+      await page.getByText("a web address").first().waitFor();
+      await openPreview("/customers/new");
+      await preview.getByLabel("Website").waitFor({ timeout: 60000 });
+      // Friendly names become spec names.
+      await change("Rename a field");
+      await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
+      await page.getByLabel("New name").fill("Web page");
+      await page.getByText("Customers: the website is now called web page").first().waitFor();
+      await page.getByRole("button", { name: "Rename field" }).click();
+      await status
+        .getByText("Customers: the website is now called web page")
+        .waitFor({ timeout: 60000 });
+      // The preview flashes what the change touched once it has reloaded with it (motion 9a).
+      await preview
+        .locator('[data-sm-flash][data-sm-concept="field:Customer.webPage"]')
+        .first()
+        .waitFor({ state: "attached", timeout: 60000 });
+    },
+  );
   await step(
     "removing a field asks first, with what data it loses; its notice's Undo brings it back",
     async () => {

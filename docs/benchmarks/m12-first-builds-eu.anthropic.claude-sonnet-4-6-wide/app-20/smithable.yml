@@ -1,0 +1,132 @@
+smithable: 0.1
+app:
+  name: Joogastudio Varaukset
+  description: Tuntiaikataulu ja verkkovaraukset joogastudiolle.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: aloittelija | kaikkiTasot | edistynyt
+      durationMinutes: int! = 60
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Instructor:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Booking:
+    fields:
+      session: Session! unique
+    capacity:
+      per: session
+      max: session.capacity
+  Post:
+    fields:
+      title: string!
+      address: string unique
+      summary: text
+      cover: picture
+      body: markdown!
+      publishedOn: date
+      status: luonnos | julkaistu
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, blog]
+      footer:
+      classes:
+        records: ClassType
+      gallery:
+      faq:
+      news:
+        records: Post
+        where:
+          status: julkaistu
+      contact:
+        form: Message
+      callToAction:
+        button: my-bookings
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  my-bookings:
+    crud: Booking
+  blog:
+    articles: Post
+  sessions:
+    crud: Session
+    access: [admin]
+  class-types:
+    crud: ClassType
+    access: [admin]
+  instructors:
+    crud: Instructor
+    access: [admin]
+  posts:
+    crud: Post
+    access: [admin]
+    actions: [unpublish, publish]
+  messages:
+    crud: Message
+    access: [admin]
+  admin:
+    data: all
+  team:
+    users: manage
+navigation: [home, schedule, my-bookings, blog, sessions, class-types, instructors, posts, messages, team, admin]
+actions:
+  unpublish:
+    on: Post
+    when:
+      status: julkaistu
+    set:
+      status: luonnos
+    intent: Palauta artikkeli luonnokseksi.
+  publish:
+    on: Post
+    when:
+      status: luonnos
+    set:
+      status: julkaistu
+      publishedOn: TODAY()
+    intent: Julkaise artikkeli.

@@ -1,0 +1,114 @@
+smithable: 0.1
+app:
+  name: Byggfirman
+  description: Håll koll på kunder, offerter och fakturor för ett litet byggföretag.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      address: string
+      notes: text
+      accountManager: User
+    access:
+      delete: [admin]
+  Quote:
+    fields:
+      number: string! unique
+      customer: Customer!
+      status: utkast | skickad | accepterad | avvisad
+      description: text
+      total: money!
+      validUntil: date
+      sentAt: datetime
+      lines: QuoteLine[]
+    access:
+      delete: [admin]
+  QuoteLine:
+    fields:
+      quote: Quote!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      total:
+        type: money
+        formula: quantity * unitPrice
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      quote: Quote
+      status: utkast | skickad | betald | forfallen
+      description: text
+      total: money!
+      dueDate: date
+      sentAt: datetime
+      paidAt: datetime
+    access:
+      delete: [admin]
+pages:
+  customers:
+    crud: Customer
+    search: [name, email, phone]
+  quotes:
+    crud: Quote
+    search: [number]
+    filters: [status, customer]
+    actions: [skickaOffert, accepteraOffert, avvisaOffert]
+  team:
+    users: manage
+  invoices:
+    crud: Invoice
+    search: [number]
+    filters: [status, customer, dueDate]
+    actions: [skickaFaktura, registreraBetald, markForfallenFaktura]
+actions:
+  skickaOffert:
+    on: Quote
+    when:
+      status: utkast
+    set:
+      status: skickad
+      sentAt: NOW()
+    intent: Markera offerten som skickad till kunden.
+  accepteraOffert:
+    on: Quote
+    when:
+      status: skickad
+    set:
+      status: accepterad
+    intent: Markera offerten som accepterad av kunden.
+  avvisaOffert:
+    on: Quote
+    when:
+      status: skickad
+    set:
+      status: avvisad
+    intent: Markera offerten som avvisad av kunden.
+  skickaFaktura:
+    on: Invoice
+    when:
+      status: utkast
+    set:
+      status: skickad
+      sentAt: NOW()
+    intent: Markera fakturan som skickad till kunden.
+  registreraBetald:
+    on: Invoice
+    when:
+      status: [skickad, forfallen]
+    set:
+      status: betald
+      paidAt: NOW()
+    intent: Registrera att fakturan är betald.
+  markForfallenFaktura:
+    on: Invoice
+    when:
+      status: skickad
+    set:
+      status: forfallen
+    intent: Markera fakturan som förfallen.
+navigation: [customers, quotes, invoices, team]

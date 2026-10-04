@@ -1,0 +1,11 @@
+{
+  "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+  "starter": "booking",
+  "wordStarter": "records",
+  "questions": [
+    "Wer kann Vorbestellungen aufgeben?",
+    "Was sollen Besucher ohne Anmeldung sehen können?",
+    "Was gehört zu einem Produkt?"
+  ],
+  "lang": "de"
+}
