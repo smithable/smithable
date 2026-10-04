@@ -59,10 +59,24 @@ export interface ApiIR {
   assistants?: { delete: boolean };
 }
 
+/** What an app's API offers a program: with a key, and to anyone without one. */
+export interface ApiOffers {
+  /** The models offered to a key, with `all` and `except` resolved; its role decides the rest. */
+  models: string[];
+  /** The standard actions offered to a key. */
+  actions: string[];
+  /**
+   * What a call without a key may reach (docs/design/api-only.md §3.4): it is the visitor, so it
+   * reads the offered models `public.read` lists (within their `where`) and adds the offered
+   * ones `public.create` lists. It never changes, deletes or runs an action.
+   */
+  visitors: { read: string[]; create: string[] };
+}
+
 /** The models and standard actions an app's `api` block offers, with `all` and `except` resolved. */
-export function apiOffers(auth: AuthIR, ir: SpecIR): { models: string[]; actions: string[] } {
+export function apiOffers(auth: AuthIR, ir: SpecIR): ApiOffers {
   const api = auth.api;
-  if (!api) return { models: [], actions: [] };
+  if (!api) return { models: [], actions: [], visitors: { read: [], create: [] } };
   const known = ir.models.map((m) => m.name);
   const models =
     api.models === "all"
@@ -73,7 +87,11 @@ export function apiOffers(auth: AuthIR, ir: SpecIR): { models: string[]; actions
     api.actions === "all"
       ? standard.map((a) => a.name)
       : api.actions.filter((name) => standard.some((a) => a.name === name));
-  return { models, actions };
+  const visitors = {
+    read: models.filter((m) => auth.public.read.includes(m)),
+    create: models.filter((m) => auth.public.create.includes(m)),
+  };
+  return { models, actions, visitors };
 }
 
 export interface SignInIR {
