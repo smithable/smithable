@@ -449,6 +449,11 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner}) }`
       : `{ ...values, ownerId: viewer?.id ?? null }`;
   const self = n.data;
+  // The record's title as the audit log keeps it, and a create with its line.
+  const titleKey = titleField(model);
+  const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();
+        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id, title: made.${titleKey} });
+        return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
   const referenceChecks = refs.map(
     (ref) =>
@@ -479,6 +484,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
 import { db } from "#/db";
 import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favorites ? [favorites] : [])])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
@@ -623,9 +629,11 @@ ${
         capacity
           ? `// The count and the insert in one transaction: two people cannot both take the last place.
       row = db.transaction((tx) => {${capacityCheck()}
-        return tx.insert(${n.table}).values(${createValues}).returning().get();
+        ${insertAudited}
       });`
-          : `row = db.insert(${n.table}).values(${createValues}).returning().get();`
+          : `row = db.transaction((tx) => {
+        ${insertAudited}
+      });`
       }
     } catch (error) {
       throw ${capacity ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
@@ -634,7 +642,8 @@ ${
     return row;
   },
 
-  async update(viewer: Viewer | null, id: number, values: ${n.values}) {
+  /** Changes the record; \`what\` names the change in the audit log (an action's name). */
+  async update(viewer: Viewer | null, id: number, values: ${n.values}, what = "changed") {
     const row = db
       .select(${selectOwner})
       .from(${n.table})
@@ -645,13 +654,12 @@ ${
 ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"};
     try {
-      ${
-        capacity || holds.length
-          ? `changed = db.transaction((tx) => {${capacityCheck("id")}${holdChecks.join("")}
-        return tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
-      });`
-          : `changed = db.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();`
-      }
+      changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
+        const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();
+        const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
+        audit(tx, viewer, { action: what, model: "${model.name}", record: id, title: after.${titleKey}, fields: before && changedFields(before, after, Object.keys(updated)) });
+        return after;
+      });
     } catch (error) {
       throw ${capacity || holds.length ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
     }
@@ -671,7 +679,10 @@ ${dropPictures(
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.delete, viewer, ${ownerOf});
     try {
-      db.delete(${n.table}).where(eq(${n.table}.id, id)).run();
+      db.transaction((tx) => {
+        const gone = tx.delete(${n.table}).where(eq(${n.table}.id, id)).returning().get();
+        if (gone) audit(tx, viewer, { action: "deleted", model: "${model.name}", record: id, title: gone.${titleKey} });
+      });
     } catch (error) {
       throw refusal(error);
     }
@@ -695,7 +706,8 @@ ${dropPictures(
     db.transaction((tx) => {
       for (const row of rows)
         try {
-          tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).run();
+          const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
+          if (gone) audit(tx, viewer, { action: "deleted", model: "${model.name}", record: row.id, title: gone.${titleKey} });
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
