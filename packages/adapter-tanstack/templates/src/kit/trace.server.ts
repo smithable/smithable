@@ -22,6 +22,11 @@ export function traceId(): string | undefined {
   return store.getStore()?.traceId;
 }
 
+/** Who the current request is for, as far as known: the app log names them. */
+export function traceWhoNow(): string | undefined {
+  return store.getStore()?.who;
+}
+
 /** Says who the request is for (the viewer, a key), for the access line. */
 export function traceWho(who: string, role?: string): void {
   const trace = store.getStore();
