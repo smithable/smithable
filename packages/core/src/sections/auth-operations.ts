@@ -206,7 +206,7 @@ const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string 
 const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[] }> = {
   name: "setPublic",
   summary:
-    "Set what anyone on the internet may use without signing in: pages to open, models to read, models to create (a contact form). Each list replaces the old one; an empty list closes it.",
+    "Set what anyone on the internet may use without signing in: pages to open, models to read, models to create (a contact form). Each list replaces the old one; an empty list closes it, and the confirmation says what visitors lose.",
   schema: {
     type: "object",
     additionalProperties: false,
@@ -238,12 +238,31 @@ const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[
     if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
     if (Object.keys(args).length === 0)
       throw new OperationError("Say what to set: pages, read or create.");
+    // What was open and no longer is, said in the confirmation: closing something is rarely what
+    // a request for something else meant (a model asked that "only our team posts incidents"
+    // once took the public listing away too).
+    const closed: string[] = [];
+    const several = (names: string[]) =>
+      names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+    const kinds = (models: string[]) =>
+      several(models.map((m) => humanize(plural(m)).toLowerCase()));
     for (const key of ["pages", "read", "create"] as const) {
       const given = args[key];
       if (given === undefined) continue;
       const path = ["public", key];
       // Models that stay readable keep the records they are limited to.
       const before = auth.has(path) ? (auth.get(path) as unknown[]) : [];
+      const gone = before
+        .map((item) =>
+          typeof item === "string" ? item : (Object.keys((item ?? {}) as object)[0] ?? ""),
+        )
+        .filter((name) => name && !given.includes(name));
+      if (gone.length)
+        closed.push(
+          key === "pages"
+            ? `open the ${several(gone)} ${gone.length > 1 ? "pages" : "page"}`
+            : `${key === "read" ? "read" : "add"} ${kinds(gone)}`,
+        );
       const list = given.map(
         (name) =>
           before.find((item) => item && typeof item === "object" && name in (item as object)) ??
@@ -255,7 +274,7 @@ const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[
       else if (auth.has(["public"])) auth.add(["public"], key, list);
       else auth.add([], "public", { [key]: list });
     }
-    return [];
+    return closed.length ? [{ note: `visitors can no longer ${closed.join(" or ")}` }] : [];
   },
 };
 

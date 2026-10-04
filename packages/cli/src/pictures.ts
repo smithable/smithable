@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { type PictureEntry, pickPictures } from "@smithable/ai";
-import { type SpecIR, YamlEditor } from "@smithable/core";
+import { type SpecIR, storesPictures, YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
 
 const LIBRARY = "https://docs.smithable.ai/images";
@@ -92,7 +92,9 @@ export async function addLibraryPictures(options: {
   const picked = pickPictures(index, { description: options.description, ir: options.ir });
   const written: { file: string; alt: string; bytes: Uint8Array }[] = [];
   let n = 0;
-  for (const sample of picked.samples) {
+  // Sample pictures are for records' picture fields; an app without any gets none.
+  const pictured = options.ir.models.some((m) => m.fields.some(storesPictures));
+  for (const sample of pictured ? picked.samples : []) {
     const bytes = await bytesOf(sample.url, fetchFn);
     if (!bytes) continue;
     n += 1;

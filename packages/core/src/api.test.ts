@@ -72,16 +72,19 @@ test("all and except resolve against the spec, and only standard actions of offe
     if (!auth) throw new Error("invalid");
     return apiOffers(auth, ir);
   };
-  expect(offers("")).toEqual({ models: [], actions: [] });
-  expect(offers("api: { models: all, except: [Subscriber], actions: all }\n")).toEqual({
+  expect(offers("")).toEqual({ models: [], actions: [], visitors: { read: [], create: [] } });
+  expect(offers("api: { models: all, except: [Subscriber], actions: all }\n")).toMatchObject({
     models: ["Component", "Incident"],
     actions: ["resolve", "rename"],
   });
-  expect(offers("api: { models: [Incident], actions: all }\n")).toEqual({
+  expect(offers("api: { models: [Incident], actions: all }\n")).toMatchObject({
     models: ["Incident"],
     actions: ["resolve"],
   });
-  expect(offers("api: { models: [Incident] }\n")).toEqual({ models: ["Incident"], actions: [] });
+  expect(offers("api: { models: [Incident] }\n")).toMatchObject({
+    models: ["Incident"],
+    actions: [],
+  });
 });
 
 test("what the block names is checked", () => {
@@ -158,4 +161,24 @@ test("setApi sets, changes and turns off what is offered", () => {
       models: ["Incident"],
     }),
   ).toMatchObject({ ok: false, message: expect.stringContaining("no sign-in") });
+});
+
+test("without a key a call is the visitor: it reads and adds what is both offered and public", () => {
+  const offers = (rest: string) => {
+    const { auth, diagnostics } = read(rest);
+    if (!auth) throw new Error(diagnostics.map((d) => d.message).join("\n"));
+    return apiOffers(auth, ir).visitors;
+  };
+  // Nothing public: nothing without a key, whatever the API offers.
+  expect(offers("api: { models: all }\n")).toEqual({ read: [], create: [] });
+  // Public and offered: readable without a key. Public but not offered: not through the API.
+  expect(
+    offers(
+      "public:\n  read: [Component, { Incident: { where: { status: resolved } } }]\n  create: [Subscriber]\napi: { models: [Incident, Subscriber] }\n",
+    ),
+  ).toEqual({ read: ["Incident"], create: ["Subscriber"] });
+  // A fully public API: every model offered and every model public.
+  expect(
+    offers("public:\n  read: [Component, Incident]\napi: { models: all, except: [Subscriber] }\n"),
+  ).toEqual({ read: ["Component", "Incident"], create: [] });
 });

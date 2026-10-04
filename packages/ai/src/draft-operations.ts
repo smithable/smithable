@@ -9,6 +9,7 @@ import {
   type OperationArgs,
   operationsFor,
   type ProjectFiles,
+  pageModels,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -52,7 +53,6 @@ const NOT_FOR_DRAFTS = new Set([
   "renameField",
   "changeField",
   "removePage",
-  "removeSection",
   "setRuleId",
   "setPackage",
 ]);
@@ -62,11 +62,11 @@ export function draftOperations(): AnyOperation[] {
 }
 
 const GUIDANCE = `You design the first version of a web app as a list of Smithable operations, applied in order to an empty app. Smithable generates the whole app from the result.
-Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess only to change the access the app starts with (shared: a team works on the same records; private: each person sees only their own); setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts; addAction with "on", "set" and usually "when" for a button that moves a record to its next state (resolve an incident, mark an invoice paid, cancel a booking), e.g. { action: "resolve", on: "Incident", when: { status: "investigating | identified" }, set: { status: "resolved", resolvedAt: "NOW()" }, add: { "IncidentUpdate.at": "NOW()", "IncidentUpdate.status": "resolved", "IncidentUpdate.message": "" } }: "add" also creates a related record (a model that refers to this one), and an empty value asks the person for it when they press the button; "copy" (with "with" for its lists) makes a new record from this one ("duplicate invoice"), and "ME()" sets a User field to whoever presses the button ("take ticket"). Never add a custom action (one without "on") unless the description asks for something only code can do: it does nothing until someone writes its code. Booking a place needs no action: the booking refers to what is booked ("session: Session!", with "unique" only when bookings are private, as in the booking starter, where it means one place per person; in a shared app "unique" would allow one booking per session in all) and setCapacity limits the bookings per session to its places ("session.capacity"); the Book button and the places left come with it. A "when" compares choice and yes/no fields only, never numbers.
+Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess only to change the access the app starts with (shared: a team works on the same records; private: each person sees only their own); setRoles when the app has more than one kind of user; setAccess for what only some roles may do; setOwner when a record belongs to someone other than whoever created it ("each customer has an account manager", "the salesperson who handles the order": add a field that refers to User, then setOwner with it, and "owner" in the access means that person); setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts; addAction with "on", "set" and usually "when" for a button that moves a record to its next state (resolve an incident, mark an invoice paid, cancel a booking), e.g. { action: "resolve", on: "Incident", when: { status: "investigating | identified" }, set: { status: "resolved", resolvedAt: "NOW()" }, add: { "IncidentUpdate.at": "NOW()", "IncidentUpdate.status": "resolved", "IncidentUpdate.message": "" } }: "add" also creates a related record (a model that refers to this one), and an empty value asks the person for it when they press the button; "copy" (with "with" for its lists) makes a new record from this one ("duplicate invoice"), and "ME()" sets a User field to whoever presses the button ("take ticket"). Never add a custom action (one without "on") unless the description asks for something only code can do: it does nothing until someone writes its code. Booking a place needs no action: the booking refers to what is booked ("session: Session!", with "unique" only when bookings are private, as in the booking starter, where it means one place per person; in a shared app "unique" would allow one booking per session in all) and setCapacity limits the bookings per session to its places ("session.capacity"); the Book button and the places left come with it. A "when" compares choice and yes/no fields only, never numbers.
 When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, standard actions (those with "on"; never its custom ones), roles and access that fit the description, under the same names, leave out what does not fit, and add what the description needs. The app already starts with the starter's default access. Restrict a page or a model to some roles only where the starter does or the description says so: a page without it is open to everyone who signs in. The starter's app name, its people, places and texts are sample content: never reuse them.
 Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), int, decimal, money, bool, date, datetime, email, phone, url; choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". A value worked out from the record's other fields, never entered, is a computed field, written as an object instead of a string: "amount": { "type": "money", "formula": "quantity * unitPrice" } ("= …" in the string is a default, set once). Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Language: everything a person reads is written in the description's language: the app's name and description, the landing page's texts, and, when that language is not English, a label for every model (setText with path [models, <Model>, label] and [models, <Model>, pluralLabel]), field ([models, <Model>, fields, <field>, label]), choice value ([models, <Model>, fields, <field>, values, <value>]) and page ([pages, <page>, title]). Model, field and choice names themselves stay English identifiers; a page's name becomes its address, so it may be a word of that language written with plain letters (boka-nu).
-Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic. Never make a model with an email or phone field readable by visitors (setPublic's read): that publishes people's contact details; keep those in a model that is not public, or collect them with a contact form. An app with shared access is for people who are invited (Smithable adds the team page): call setSignUp anyone only when the description says anybody may join.`;
+Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic. What people come to look at before they join is public even when the rest needs sign-in (the tools of a tool library, the plots of an allotment, a menu, the listings, the classes to book): a landing page, that model's page in setPublic's pages and the model in its read; signing in is then for what a person does (borrow, book, sell) and for the records about people (members, loans, bookings), which are never public. An app for a team's own work (a CRM, invoicing, a help desk, an inventory) has nothing public. A landing page's button leads to a page visitors may open, unless it is the way into the app ("Book now", "Sign in"). Never make a model with an email or phone field, or a field that refers to User, readable by visitors (setPublic's read): that publishes people's names and contact details; keep those in a model that is not public, or collect them with a contact form. An app with shared access is for people who are invited (Smithable adds the team page): call setSignUp anyone only when the description says anybody may join.`;
 
 /**
  * Slips models make in the field shorthand, mended without a model: "unique!" for "! unique",
@@ -455,6 +455,71 @@ export function closeShared(files: ProjectFiles, done: Step[]): ProjectFiles {
   return next;
 }
 
+/**
+ * A public landing page whose button or shortcut leads to a page visitors cannot open sends
+ * them to sign-in (Johan's status page, blind round 2). When that page is a list of records
+ * visitors may read anyway, it is opened to them: nothing more becomes readable than
+ * `public.read` already says. A page for some roles, or of the viewer's own records, stays closed.
+ */
+export function openLinked(files: ProjectFiles, done: Step[]): ProjectFiles {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir).auth;
+  if (!ir || !auth) return files;
+  const open = new Set(auth.public.pages);
+  const linked = ir.pages.flatMap((p) =>
+    p.pattern.kind === "landing" && open.has(p.id)
+      ? p.pattern.sections.flatMap((s) => [...(s.button ? [s.button] : []), ...(s.shortcuts ?? [])])
+      : [],
+  );
+  const more = [...new Set(linked)].filter((id) => {
+    const page = ir.pages.find((p) => p.id === id);
+    if (!page || open.has(id) || page.mine || page.access) return false;
+    if (!["crud", "articles", "calendar"].includes(page.pattern.kind)) return false;
+    const models = pageModels(page);
+    return models.length > 0 && models.every((m) => auth.public.read.includes(m));
+  });
+  if (more.length === 0) return files;
+  const step: Step = { op: "setPublic", args: { pages: [...auth.public.pages, ...more] } };
+  const result = applyOperation(files, step.op, step.args);
+  if (!result.ok) return files;
+  done.push(step);
+  return result.files;
+}
+
+/** The validator's warnings that mean a visitor finds the app broken or too open. */
+const VISITOR_FLAWS = new Set([
+  "public-page-closed-records",
+  "shortcut-closed",
+  "contact-form-closed",
+  "public-personal-data",
+  "mine-public",
+  "visitors-read-drafts",
+]);
+
+/**
+ * What a valid draft still gets wrong for visitors, in the validator's words: a public page
+ * whose records they may not read, a contact form they cannot send, a person's contact details
+ * open to anyone. The draft goes back to the model with these once (deterministic to find; the
+ * remedy depends on what the description meant, so it is the model's to choose).
+ */
+export function visitorFlaws(files: ProjectFiles): string[] {
+  return flawsOf(files).map((d) => d.message);
+}
+
+function flawsOf(files: ProjectFiles): { code: string; message: string }[] {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  if (!ir) return [];
+  return validateAuth(
+    { path: "smithable.auth.yml", text: files.auth ?? "" },
+    ir,
+  ).diagnostics.filter((d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code));
+}
+
+/** Flaws that expose someone weigh far more than flaws that only look broken. */
+const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
+const weigh = (flaws: { code: string }[]) =>
+  flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
+
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
   auth: files["smithable.auth.yml"],
@@ -506,6 +571,21 @@ export async function draftProjectByOperations(options: {
     let prompt = `Description: ${options.description}${languageNote(options.description)}${shape}`;
     let round = 0;
     let refused: { step: Step; message: string }[] = [];
+    // A valid draft's flaws for visitors go back once each (a remedy may bring a new one: a
+    // model closed to visitors leaves its landing section empty); what those rounds drop is
+    // still named.
+    const told = new Set<string>();
+    let droppedBefore: string[] = [];
+    // The best the draft has been, by its flaws: a remedy that makes it worse (personal details
+    // closed in one round and opened again in the next) is not what the person gets.
+    let best: { files: ProjectFiles; count: number; score: number } | undefined;
+    const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => ({
+      kind: "draft",
+      files: toFiles(best?.files ?? files),
+      usage,
+      operations: best ? done.slice(0, best.count) : done,
+      ...(dropped.length ? { dropped } : {}),
+    });
     while (round < MAX_ROUNDS) {
       round += 1;
       let answer: { operations?: Step[] };
@@ -515,6 +595,8 @@ export async function draftProjectByOperations(options: {
         };
       } catch (error) {
         problem = error instanceof Error ? error.message : String(error);
+        // The round about a valid draft's flaws failing leaves the draft as it was.
+        if (told.size > 0 && done.length > 0) return draftOf(droppedBefore);
         // A broken answer (cut off, not JSON) is asked for once more.
         if (/JSON|Unexpected|position/.test(problem) && round < MAX_ROUNDS) continue;
         break;
@@ -523,13 +605,10 @@ export async function draftProjectByOperations(options: {
       if (steps.length === 0) {
         // In a correction round an empty answer drops what was refused; a first answer with
         // nothing in it is no draft.
-        if (done.length > 0)
-          return {
-            kind: "draft",
-            files: toFiles(closeShared(files, done)),
-            usage,
-            operations: done,
-          };
+        if (done.length > 0) {
+          if (!best) files = openLinked(closeShared(files, done), done);
+          return draftOf(droppedBefore);
+        }
         problem = refused.length
           ? refused.map((r) => `${r.step.op}: ${r.message}`).join("\n")
           : "The answer has no operations.";
@@ -541,27 +620,36 @@ export async function draftProjectByOperations(options: {
       files = outcome.files;
       refused = outcome.refused;
       const last = round === MAX_ROUNDS;
-      const essential = refused.filter(
-        (r) => ESSENTIAL.has(r.step.op) && !(last && lastRoundDrops(r.step)),
-      );
+      // After the flaws went back, the draft was already valid: a refused remedy is left out.
+      const essential = told.size
+        ? []
+        : refused.filter((r) => ESSENTIAL.has(r.step.op) && !(last && lastRoundDrops(r.step)));
       if (essential.length === 0) {
         // Refused extras (a text, a color) are left out rather than failing the draft, and an
         // action or formula field still refused after the last round is named.
-        const dropped = refused
-          .filter((r) => lastRoundDrops(r.step))
-          .map((r) => {
-            const { action, model, field } = r.step.args;
-            const what = action ?? (model ? (field ? `${model}.${field}` : model) : "");
-            return `${r.step.op} ${String(what)}: ${r.message}`;
-          });
-        if (done.length > 0)
-          return {
-            kind: "draft",
-            files: toFiles(closeShared(files, done)),
-            usage,
-            operations: done,
-            ...(dropped.length ? { dropped } : {}),
-          };
+        const dropped = [
+          ...droppedBefore,
+          ...refused
+            .filter((r) => lastRoundDrops(r.step))
+            .map((r) => {
+              const { action, model, field } = r.step.args;
+              const what = action ?? (model ? (field ? `${model}.${field}` : model) : "");
+              return `${r.step.op} ${String(what)}: ${r.message}`;
+            }),
+        ];
+        if (done.length > 0) {
+          files = openLinked(closeShared(files, done), done);
+          const found = flawsOf(files);
+          if (!best || weigh(found) < best.score)
+            best = { files, count: done.length, score: weigh(found) };
+          const flaws = last ? [] : found.map((f) => f.message);
+          if (!flaws.some((f) => !told.has(f))) return draftOf(dropped);
+          for (const f of flaws) told.add(f);
+          droppedBefore = dropped;
+          refused = [];
+          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
+          continue;
+        }
         problem =
           refused.map((r) => `${r.step.op}: ${r.message}`).join("\n") ||
           "Nothing could be applied.";
