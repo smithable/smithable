@@ -3,8 +3,7 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home, catalog]
-  read: [Item]
+  pages: [home]
 roles:
   admin:
     description: Håller loppis-sidan ren och snygg.
