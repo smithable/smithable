@@ -32,6 +32,7 @@ export type Effect =
   | { kind: "change-field"; model: string; field: string; choices: string[] }
   | { kind: "remove-page"; page: string }
   | { kind: "remove-section"; page: string; section: string }
+  | { kind: "remove-action"; action: string }
   /** A rule got an id: its text is the baseline for noticing later edits. */
   | { kind: "rule-identified"; rule: string; text: string }
   /**
