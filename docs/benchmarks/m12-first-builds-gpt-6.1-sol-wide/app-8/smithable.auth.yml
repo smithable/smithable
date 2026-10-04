@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: private
+roles:
+  admin:
+    description: Keeps the office swap shelf tidy and manages invitations.
+  member:
+    description: Offers items and claims things from colleagues.
+defaultRole: member
+admins: [johan@smithable.ai]

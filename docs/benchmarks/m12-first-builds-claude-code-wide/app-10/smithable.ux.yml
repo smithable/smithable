@@ -1,0 +1,18 @@
+smithableUx: 0.1
+pages:
+  items:
+    table:
+      columns: [name, category, period, status]
+      view: cards
+    form:
+      fieldOrder: [name, accessionNumber, summary, story, category, maker, origin, period, link, status, addedOn]
+    icon: building
+tones:
+  Item.status:
+    published: success
+theme:
+  preset: minimal
+  brand:
+    primary: "#7a4b2a"
+    background: "#f6f1e9"
+    font: Source Sans 3

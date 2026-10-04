@@ -1,0 +1,10 @@
+{
+  "description": "A football club's site: teams, players, matches and results.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who will manage teams, players, matches and results?",
+    "What can visitors see without signing in?",
+    "What should each match record include?"
+  ]
+}

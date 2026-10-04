@@ -1,0 +1,21 @@
+smithableUx: 0.1
+pages:
+  albums:
+    table:
+      columns: [title, artist, year, condition, pricePaid]
+      sort: title
+    icon: layers
+  artists:
+    table:
+      sort: name
+    icon: users
+tones:
+  Album.condition:
+    mint: success
+    nearMint: success
+    good: warning
+    poor: danger
+theme:
+  preset: modern
+  brand:
+    primary: "#7c3aed"

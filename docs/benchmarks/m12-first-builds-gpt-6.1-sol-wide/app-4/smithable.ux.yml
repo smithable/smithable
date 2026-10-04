@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  pupils:
+    table:
+      columns: [name, lessonDay, lessonTime, practice]
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#63548C"
+    font: Inter

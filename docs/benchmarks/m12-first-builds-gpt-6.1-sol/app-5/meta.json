@@ -1,0 +1,6 @@
+{
+  "description": "An inventory app for a small bakery: ingredients, suppliers and stock levels.",
+  "starter": "records",
+  "wordStarter": "booking",
+  "questions": ["Who will use the inventory app?", "How should ingredient stock be tracked?"]
+}

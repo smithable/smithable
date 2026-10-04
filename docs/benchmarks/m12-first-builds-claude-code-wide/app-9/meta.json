@@ -1,0 +1,9 @@
+{
+  "description": "My vinyl record collection: albums, artists, condition and what I paid.",
+  "starter": "records",
+  "wordStarter": "crm",
+  "questions": [
+    "Who can see your collection?",
+    "Should artists have their own records, or just be a name on each album?"
+  ]
+}

@@ -1,0 +1,18 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Our club. Our teams. Our football.
+      subtitle: Meet the players, follow upcoming fixtures and catch up on match results.
+      button: Explore our teams
+      image:
+        src: images/hero.webp
+        alt: A team standing at a whiteboard by a window over the harbour
+    teams:
+      title: Our teams
+    fixtures:
+      title: Upcoming fixtures
+    results:
+      title: Match results
+  matches:
+    title: Fixtures and results

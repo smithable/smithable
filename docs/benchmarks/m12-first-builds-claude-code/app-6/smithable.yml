@@ -1,0 +1,100 @@
+smithable: 0.1
+app:
+  name: Union Jobs
+  description: Job posts for union members, and the applications they send.
+  currency: USD
+models:
+  Job:
+    fields:
+      title: string!
+      employer: string!
+      description: text!
+      location: string
+      type: fullTime | partTime | temporary | contract
+      pay: string
+      deadline: date
+      status: open | filled | closed
+      applications: Application[]
+    access:
+      create: [staff, admin]
+      delete: [staff, admin]
+  Application:
+    fields:
+      job: Job!
+      name: string!
+      email: email!
+      phone: phone
+      message: text
+      status: submitted | reviewing | accepted | rejected
+    access:
+      read: [owner, staff, admin]
+pages:
+  jobs:
+    route: /
+    crud: Job
+    search: [title, employer, description, location]
+    filters: [type, status, deadline]
+    sortable: [deadline, createdAt]
+    favorites: true
+    actions: [markFilled, close]
+  myApplications:
+    crud: Application
+    mine: true
+  applications:
+    crud: Application
+    search: [name, email]
+    filters: [job, status]
+    access: [staff, admin]
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Job
+        where:
+          status: open
+  team:
+    users: manage
+navigation: [jobs, myApplications, applications, team]
+actions:
+  startReview:
+    on: Application
+    when:
+      status: submitted
+    set:
+      status: reviewing
+    allow: [staff, admin]
+    intent: Mark an application as being reviewed.
+  accept:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: accepted
+    allow: [staff, admin]
+    intent: Accept an application.
+  reject:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: rejected
+    allow: [staff, admin]
+    intent: Turn down an application.
+  markFilled:
+    on: Job
+    when:
+      status: open
+    set:
+      status: filled
+    allow: [staff, admin]
+    intent: Mark a job as filled.
+  close:
+    on: Job
+    when:
+      status: open
+    set:
+      status: closed
+    allow: [staff, admin]
+    intent: Close a job post without filling it.

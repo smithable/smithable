@@ -1,0 +1,11 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Album
+    pluralLabel: Albums
+    fields:
+      name:
+        label: Album title
+pages:
+  items:
+    title: My Albums

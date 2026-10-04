@@ -1,0 +1,21 @@
+smithableUx: 0.1
+theme:
+  preset: modern
+  density: compact
+  brand:
+    primary: "#2563eb"
+    font: Inter
+pages:
+  customers:
+    table:
+      columns: [name, email, phone, segment, accountManager]
+  contacts:
+    table:
+      columns: [name, customer, jobTitle, email, phone]
+  deals:
+    table:
+      columns: [name, customer, stage, value, expectedCloseDate, assignee]
+  follow-ups:
+    table:
+      columns: [subject, customer, dueAt, assignee, status]
+      sort: dueAt

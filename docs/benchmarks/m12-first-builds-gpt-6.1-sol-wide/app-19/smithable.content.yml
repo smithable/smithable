@@ -1,0 +1,30 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Annons
+    pluralLabel: Annonser
+    fields:
+      title:
+        label: Rubrik
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+pages:
+  catalog:
+    title: Loppisen
+    subtitle: Hitta något du gillar eller logga in och lägg upp en egen annons.
+  home:
+    title: Välkommen
+    hero:
+      title: Ge dina saker ett nytt hem
+      subtitle: Upptäck loppisfynd och sälj det du inte längre behöver. Lägg upp bilder, en beskrivning och ditt pris.
+      image:
+        src: images/hero.webp
+        alt: A snowy village street at dusk with warm lit windows
+    latest:
+      title: Senaste annonserna
+    footer:
+      text: Vår loppis – små fynd och nya hem för gamla favoriter.
