@@ -56,3 +56,24 @@ export function isPreviewMessage(e: MessageEvent): e is MessageEvent<PreviewMess
     (e.data as { source?: string }).source === "smithable-preview"
   );
 }
+
+/**
+ * What a change touched, as the preview marks it: a field ("field:Customer.phone"), a model's
+ * table or form ("model:Customer") or a text ("text:pages.home.hero.title"). The preview flashes
+ * them once it has reloaded with the change.
+ */
+export function touched(
+  operation: { op: string; args: Record<string, unknown> } | undefined,
+): string[] {
+  if (!operation) return [];
+  const { op, args } = operation;
+  const model = typeof args.model === "string" ? args.model : undefined;
+  if (op === "setText" && Array.isArray(args.path)) return [`text:${args.path.join(".")}`];
+  if (model && typeof args.field === "string" && /Field|Label|Help/.test(op))
+    return [`field:${model}.${args.field}`];
+  if (model && op === "renameField" && typeof args.to === "string")
+    return [`field:${model}.${args.to}`];
+  if (model && /^(addModel|setAccess|setCapacity|setModelLabel|setOwner)/.test(op))
+    return [`model:${model}`];
+  return [];
+}

@@ -133,6 +133,23 @@ export async function addLibraryPictures(options: {
 }
 
 /** Writes the pictures under the project's public/images/. */
+/**
+ * A new project's pictures: the starter's own files first (base64, by path), then the pictures
+ * picked for this app. The order matters: a starter's hero and the picked one share a file name
+ * (public/images/hero.webp), and the one picked for this app has to win.
+ */
+export function placePictures(
+  dir: string,
+  starterAssets: Record<string, string>,
+  pictures: { file: string; bytes: Uint8Array }[],
+): void {
+  for (const [file, data] of Object.entries(starterAssets)) {
+    mkdirSync(dirname(join(dir, file)), { recursive: true });
+    writeFileSync(join(dir, file), Buffer.from(data, "base64"));
+  }
+  writePictures(dir, pictures);
+}
+
 export function writePictures(dir: string, pictures: { file: string; bytes: Uint8Array }[]): void {
   for (const picture of pictures) {
     const path = join(dir, "public", "images", picture.file);
