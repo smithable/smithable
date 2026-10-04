@@ -310,6 +310,9 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   );
   // A model the API offers is listed a page at a time, counted and sliced in the query.
   const paged = apiOffers(auth, ir).models.includes(model.name);
+  // Records with an owner the app keeps itself (not a field of the spec): who owns one is told only
+  // to its owner and to roles that read every record, never to a visitor or another member.
+  const ownedAuto = signedIn && !model.ownedBy;
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -510,6 +513,17 @@ ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}
 /** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
 export const ${n.access}: ModelAccess = ${literal(access)};
 ${
+  ownedAuto
+    ? `
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || ${n.access}.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+`
+    : ""
+}
+${
   model.ownedBy && signedIn
     ? `
 /**
@@ -576,10 +590,10 @@ ${
   /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
   async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}${ordered ? ", order?: SQL" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.${n.tableKey}.findMany({
+    const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
-    });
+    });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
   },
 ${
@@ -589,12 +603,12 @@ ${
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.${n.tableKey}.findMany({
+    const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
       where: ${self}.readable(viewer),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
       offset,
-    });
+    });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return { items: ", ", total }")}
   },
 `
@@ -626,9 +640,9 @@ ${
 `
     : ""
 }  async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.${n.tableKey}.findFirst({
+    const ${ownedAuto ? "found" : "row"} = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
-    });
+    });${ownedAuto ? "\n    const row = found && shownTo(viewer, found);" : ""}
 ${
   hiddenTotals.length
     ? `    if (!row) return null;
@@ -639,7 +653,22 @@ ${
 }
   },
 
-  async create(viewer: Viewer | null, values: ${n.values}) {
+${
+  ownedAuto
+    ? `  /** Who owns a ${n.label.toLowerCase()} the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: ${n.table}.ownerId })
+        .from(${n.table})
+        .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
+  },
+
+`
+    : ""
+}  async create(viewer: Viewer | null, values: ${n.values}) {
     check(${n.access}.create, viewer);
 ${
   access.create.public
