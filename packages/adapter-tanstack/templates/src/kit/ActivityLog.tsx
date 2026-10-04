@@ -40,84 +40,87 @@ export function ActivityLog({
   onForget,
 }: {
   lines: ActivityLine[];
-  filters: ActivityFilters;
-  people: { id: string; name: string }[];
-  models: { name: string; label: string }[];
-  actions: string[];
   app: AppUi;
-  onFilter: (next: ActivityFilters) => void;
-  onForget: (target: Forgotten) => Promise<unknown>;
+  /** Without filters (a record's own history), only the lines. */
+  filters?: ActivityFilters;
+  people?: { id: string; name: string }[];
+  models?: { name: string; label: string }[];
+  actions?: string[];
+  onFilter?: (next: ActivityFilters) => void;
+  onForget?: (target: Forgotten) => Promise<unknown>;
 }) {
   const set = (key: keyof ActivityFilters, value: string) =>
-    onFilter({ ...filters, [key]: value || undefined });
+    onFilter?.({ ...filters, [key]: value || undefined });
   const select = "h-control rounded-md border border-input bg-background px-2 text-sm";
   return (
     <div data-kit="activity-log" className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm">
-          Person
-          <select
-            className={select}
-            value={filters.who ?? ""}
-            onChange={(e) => set("who", e.target.value)}
-          >
-            <option value="">Everyone</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          Records
-          <select
-            className={select}
-            value={filters.model ?? ""}
-            onChange={(e) => set("model", e.target.value)}
-          >
-            <option value="">All</option>
-            {models.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          What
-          <select
-            className={select}
-            value={filters.action ?? ""}
-            onChange={(e) => set("action", e.target.value)}
-          >
-            <option value="">Anything</option>
-            {actions.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          From
-          <input
-            type="date"
-            className={select}
-            value={filters.from ?? ""}
-            onChange={(e) => set("from", e.target.value)}
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          To
-          <input
-            type="date"
-            className={select}
-            value={filters.to ?? ""}
-            onChange={(e) => set("to", e.target.value)}
-          />
-        </label>
-      </div>
+      {filters && (
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid gap-1 text-sm">
+            Person
+            <select
+              className={select}
+              value={filters.who ?? ""}
+              onChange={(e) => set("who", e.target.value)}
+            >
+              <option value="">Everyone</option>
+              {people?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            Records
+            <select
+              className={select}
+              value={filters.model ?? ""}
+              onChange={(e) => set("model", e.target.value)}
+            >
+              <option value="">All</option>
+              {models?.map((m) => (
+                <option key={m.name} value={m.name}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            What
+            <select
+              className={select}
+              value={filters.action ?? ""}
+              onChange={(e) => set("action", e.target.value)}
+            >
+              <option value="">Anything</option>
+              {actions?.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            From
+            <input
+              type="date"
+              className={select}
+              value={filters.from ?? ""}
+              onChange={(e) => set("from", e.target.value)}
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            To
+            <input
+              type="date"
+              className={select}
+              value={filters.to ?? ""}
+              onChange={(e) => set("to", e.target.value)}
+            />
+          </label>
+        </div>
+      )}
       {lines.length === 0 ? (
         <p className="text-muted-foreground">Nothing has happened that matches.</p>
       ) : (
@@ -148,7 +151,7 @@ export function ActivityLog({
                     .join(", ")}
                 </span>
               ) : null}
-              {line.forget && (
+              {line.forget && onForget && (
                 <Button
                   type="button"
                   variant="outline"
