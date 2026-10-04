@@ -41,11 +41,13 @@ export const pagesSection: SpecSection<"pages"> = {
   ],
   follow(spec, effect, ir) {
     // Each page follows through its pattern: a search, a tile, an onboarding step.
+    const notes: string[] = [];
     for (const page of ir.pages) {
-      const refused = patternInfo(page).follow(spec, effect, ir);
-      if (refused) return refused;
+      const followed = patternInfo(page).follow(spec, effect, ir);
+      if (followed && "refusal" in followed) return followed;
+      if (followed) notes.push(followed.note);
     }
-    return undefined;
+    return notes.length ? { note: notes.join("; ") } : undefined;
   },
   schema: {
     type: "object",
