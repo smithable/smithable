@@ -21,6 +21,9 @@ export interface ActivityLine {
   forget?: Forgotten;
 }
 
+/** An action's name as its button reads it: markSent → mark sent. */
+const words = (action: string) => action.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+
 export interface ActivityFilters {
   who?: string;
   model?: string;
@@ -96,7 +99,7 @@ export function ActivityLog({
               <option value="">Anything</option>
               {actions?.map((a) => (
                 <option key={a} value={a}>
-                  {a}
+                  {words(a)}
                 </option>
               ))}
             </select>
@@ -139,7 +142,7 @@ export function ActivityLog({
                 )}
               </time>
               <span className="font-medium">{line.who}</span>
-              <span>{line.action}</span>
+              <span>{words(line.action)}</span>
               {line.record && <span className="font-medium">{line.record}</span>}
               {line.fields?.length ? (
                 <span className="text-muted-foreground">({line.fields.join(", ")})</span>

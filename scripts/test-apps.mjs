@@ -813,6 +813,22 @@ async function statusFlow(base) {
     console.log(
       "  ✓ browser: two rows selected, Resolve (1) resolves the one it fits and skips the other",
     );
+
+    // Keys for the API, on the team page: made with a name and a role, shown once, revoked.
+    await open(page, `${base}/team`);
+    const keys = page.locator('[data-kit="keys"]');
+    await keys.getByLabel("What it is for").fill("Uptime monitor");
+    await keys.getByRole("button", { name: "Make a key" }).click();
+    const shown = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 });
+    if (!/^smk_[A-Za-z0-9_-]{20,}$/.test(shown ?? "")) throw new Error(`the key shown is ${shown}`);
+    const keyRow = keys.locator('[data-part="key-row"]', { hasText: "Uptime monitor" });
+    await keyRow.getByText(`${shown?.slice(0, 10)}…`).waitFor();
+    page.once("dialog", (d) => d.accept());
+    await keyRow.getByRole("button", { name: "Revoke" }).click();
+    await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: an admin makes an API key on the team page, sees it once, and revokes it",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -1239,7 +1255,7 @@ async function copyFlow(base) {
     }
     // The record's own history, for administrators: the action, with the field it changed.
     await page
-      .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "markSent" })
+      .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "mark sent" })
       .getByText("(status)")
       .waitFor({ timeout: 10000 });
     console.log(

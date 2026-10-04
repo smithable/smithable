@@ -32,6 +32,7 @@ import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
+import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
@@ -397,6 +398,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               generated("src/generated/users.test.ts", usersTestSource(ir, auth)),
             ]
           : []),
+        // Keys for the API, made on the users page (docs/design/integrations.md §2).
+        ...(hasKeys(ir, auth)
+          ? [
+              generated("src/generated/keys.server.ts", keysModule(auth)),
+              generated("src/generated/keys.test.ts", keysTestSource(auth)),
+            ]
+          : []),
       ];
     },
   },
@@ -432,6 +440,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Chosen rows on a crud list (actions.md §9).
         files: ["src/kit/SelectionBar.tsx"],
         used: ({ ir, auth }) => selects(ir, auth),
+      },
+      {
+        // Keys for the API, on the users page (docs/design/integrations.md §2).
+        files: ["src/kit/Keys.tsx"],
+        used: ({ ir, auth }) => hasKeys(ir, auth),
       },
       {
         files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],

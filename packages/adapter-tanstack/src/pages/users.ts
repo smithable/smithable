@@ -1,6 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import { type AuthIR, humanize, type PageIR, pascal, type SpecIR } from "@smithable/core";
 import { roleLabels } from "../auth.js";
+import { hasKeys } from "../keys.js";
 import { attr, guard, HEADER, indexPath, literal, type Texts } from "../shared.js";
 
 /**
@@ -9,8 +10,10 @@ import { attr, guard, HEADER, indexPath, literal, type Texts } from "../shared.j
  * users. The rules live in src/generated/users.server.ts; the route's server functions pass the
  * viewer and where the invitation links point.
  */
-export function usersRoute(page: PageIR, _ir: SpecIR, t: Texts, auth: AuthIR): string {
+export function usersRoute(page: PageIR, ir: SpecIR, t: Texts, auth: AuthIR): string {
   const component = `${pascal(page.id)}Page`;
+  // Keys for the API, for administrators (docs/design/integrations.md §2).
+  const keys = hasKeys(ir, auth);
   const labels = roleLabels(auth);
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
@@ -27,8 +30,8 @@ import {
   setRole,
   withdrawInvitation,
 } from "#/generated/users.server";
-import { guardPage } from "#/kit/access";
-import { PageHeader } from "#/kit/AppShell";
+${keys ? 'import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";${keys ? '\nimport { Keys } from "#/kit/Keys";' : ""}
 import { inviteAllowed } from "#/kit/limit";
 import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
@@ -41,7 +44,25 @@ const ROLE_OPTIONS = ${literal(
     })),
   )};
 
-const getUsers = createServerFn().handler(async () => listUsers(await currentViewer(), origin()));
+${
+  keys
+    ? `const getUsers = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  // Only administrators see and make keys.
+  return { ...(await listUsers(viewer, origin())), keys: viewer?.role === "admin" ? listKeys(viewer) : [] };
+});
+
+const makeApiKey = createServerFn({ method: "POST" })
+  .validator(z.object({ name: z.string().trim().min(1).max(100), role: z.enum(ROLES), until: z.iso.date().optional() }))
+  .handler(async ({ data }) =>
+    makeKey(await currentViewer(), data.name, data.role, data.until ? new Date(\`\${data.until}T23:59:59Z\`) : undefined),
+  );
+
+const revokeApiKey = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.number().int() }))
+  .handler(async ({ data }) => revokeKey(await currentViewer(), data.id));`
+    : "const getUsers = createServerFn().handler(async () => listUsers(await currentViewer(), origin()));"
+}
 
 const inviteUser = createServerFn({ method: "POST" })
   .validator(z.object({ email: z.email().max(200), role: z.enum(ROLES) }))
@@ -83,7 +104,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => getUsers(),
 });
 
 function ${component}() {
-  const { users, invitations } = Route.useLoaderData();
+  const { users, invitations${keys ? ", keys" : ""} } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async (change: Promise<unknown>) => {
@@ -103,7 +124,23 @@ function ${component}() {
         onRemove={(userId) => then(remove({ data: { userId } }))}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
-      />
+      />${
+        keys
+          ? `
+      {viewer?.role === "admin" && (
+        <Keys
+          keys={keys}
+          roles={ROLE_OPTIONS}
+          onMake={async (name, role, until) => {
+            const key = await makeApiKey({ data: { name, role: role as Role, until } });
+            await router.invalidate();
+            return key;
+          }}
+          onRevoke={(id) => then(revokeApiKey({ data: { id } }))}
+        />
+      )}`
+          : ""
+      }
     </>
   );
 }
