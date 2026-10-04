@@ -1081,3 +1081,22 @@ test("addField --formula and addModel's long form add computed fields; a shortha
     'A computed field is written with a formula: `addField Line amount money --formula "quantity * unitPrice"`.',
   );
 });
+
+test("removePage takes a public page out of public.pages too, and says so", () => {
+  const site = {
+    spec: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n  catalog: { crud: Item, route: /catalog }\n",
+    auth: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n\n# Visitors.\npublic:\n  pages: [items, catalog]\n  read: [Item]\n",
+  };
+  const removed = applyOperation(site, "removePage", { page: "catalog" });
+  if (!removed.ok) throw new Error(removed.message);
+  expect(removed.description).toBe("Remove page catalog; it is no longer public");
+  expect(removed.files.auth).toContain("pages: [items]");
+  const last = applyOperation(removed.files, "removePage", { page: "items" });
+  expect(last).toMatchObject({ ok: false });
+  const plain = applyOperation(
+    { ...site, auth: site.auth.replace("pages: [items, catalog]", "pages: [items]") },
+    "removePage",
+    { page: "catalog" },
+  );
+  expect(plain).toMatchObject({ ok: true, description: "Remove page catalog" });
+});
