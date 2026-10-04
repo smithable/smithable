@@ -27,6 +27,8 @@ export interface Completion {
   outputTokens: number;
   /** What the call cost, when the provider reports it (e.g. Claude Code, in dollars). */
   cost?: { amount: number; currency: Currency };
+  /** Answered from a response cache: nothing was paid for it. */
+  cached?: boolean;
 }
 
 export type Currency = "EUR" | "USD";
@@ -35,9 +37,29 @@ export interface Provider {
   name: string;
   tier: Tier;
   location: Location;
-  /** Euros per million input and output tokens; 0 for a local model. */
+  /** Per million input and output tokens, in `currency`; 0 for a local model. */
   price: { input: number; output: number };
+  /** The currency of `price`: euros unless said. */
+  currency?: Currency;
+  /** The model asked, when the provider names one: a response cache keys on it. */
+  model?: string;
   complete(request: CompletionRequest): Promise<Completion>;
+}
+
+/**
+ * Mistral's list prices per million tokens (mistral.ai/pricing/api, 2026-10-04), in US dollars,
+ * for a model given no price of its own. A "-latest" name follows Mistral's current version
+ * (mistral-medium-latest is Mistral Medium 3.5).
+ */
+const LIST_PRICES: [RegExp, { input: number; output: number }][] = [
+  [/^mistral-medium/, { input: 1.5, output: 7.5 }],
+  [/^mistral-large/, { input: 0.5, output: 1.5 }],
+  [/^mistral-small/, { input: 0.15, output: 0.6 }],
+];
+
+/** A model's list price in US dollars per million tokens, when it is one Smithable knows. */
+export function listPrice(model: string): { input: number; output: number } | undefined {
+  return LIST_PRICES.find(([name]) => name.test(model))?.[1];
 }
 
 export interface OpenAICompatibleOptions {
@@ -58,11 +80,15 @@ export interface OpenAICompatibleOptions {
 export function openAICompatible(options: OpenAICompatibleOptions): Provider {
   // Whether this server took the strict answer schema; unknown until the first call.
   let strict: boolean | undefined;
+  // A price given wins; otherwise a known model's list price, in dollars.
+  const listed = options.price ? undefined : listPrice(options.model);
   return {
     name: options.name,
     tier: options.tier,
     location: options.location,
-    price: options.price ?? { input: 0, output: 0 },
+    model: options.model,
+    price: options.price ?? listed ?? { input: 0, output: 0 },
+    currency: listed ? "USD" : "EUR",
     async complete({ system, user, schema, fallbackSchema }) {
       const post = (answerSchema: object) =>
         fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
@@ -158,6 +184,8 @@ export function parsePolicy(text: string | undefined): Policy {
 
 /** What one model call used, for the change trace. */
 export interface Usage {
+  /** Answered from a response cache: no tokens and no cost. */
+  cached?: boolean;
   provider: string;
   model: string;
   tier: Tier;
@@ -183,13 +211,57 @@ export async function completeJson(
     tier: provider.tier,
     inputTokens: completion.inputTokens,
     outputTokens: completion.outputTokens,
-    // Prices are in euros per million tokens, unless the provider reports its own cost.
+    // Prices are per million tokens in the provider's currency, unless it reports its own cost.
     cost:
       completion.cost?.amount ??
       (completion.inputTokens * provider.price.input +
         completion.outputTokens * provider.price.output) /
         1_000_000,
-    currency: completion.cost?.currency ?? "EUR",
+    currency: completion.cost?.currency ?? provider.currency ?? "EUR",
+    ...(completion.cached ? { cached: true } : {}),
   });
   return JSON.parse(completion.text);
+}
+
+/** Where a response cache keeps its answers: the host decides (a folder, for the CLI). */
+export interface ResponseStore {
+  get(key: string): Promise<string | undefined>;
+  set(key: string, value: string): Promise<void>;
+}
+
+/**
+ * A provider that answers a request it has seen before from the store, by the hash of the
+ * model, the system text, the user text and the schemas, and asks the model only otherwise. For
+ * the benchmark and tests (requests go out at temperature 0); never on for people by default. A
+ * cached answer costs nothing and counts no tokens.
+ */
+export function cached(provider: Provider, store: ResponseStore): Provider {
+  return {
+    ...provider,
+    async complete(request) {
+      const key = await sha256(
+        JSON.stringify([
+          provider.name,
+          provider.model ?? null,
+          request.system,
+          request.user,
+          request.schema,
+          request.fallbackSchema ?? null,
+        ]),
+      );
+      const kept = await store.get(key);
+      if (kept !== undefined) {
+        const { text, model } = JSON.parse(kept) as Completion;
+        return { text, model, inputTokens: 0, outputTokens: 0, cached: true };
+      }
+      const completion = await provider.complete(request);
+      await store.set(key, JSON.stringify(completion));
+      return completion;
+    },
+  };
+}
+
+async function sha256(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
