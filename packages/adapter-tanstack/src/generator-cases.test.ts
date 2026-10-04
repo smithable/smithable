@@ -58,5 +58,7 @@ test("a condition on a yes/no field is a boolean either way", () => {
 
 test("a seed whose dated samples are all dates imports no instant conversion", () => {
   const seed = file("src/db/seed.ts");
-  if (seed.includes("#/kit/zoned")) expect(seed).not.toContain("instantOf");
+  // The calendar brings the zoned helpers in; only the instant conversion stays out.
+  expect(seed).toContain('import { wallTime } from "#/kit/zoned";');
+  expect(seed).not.toContain("instantOf");
 });
