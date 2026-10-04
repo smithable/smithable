@@ -235,7 +235,7 @@ import { expect, test } from "vitest";
 import { db } from "#/db";
 import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
-import { outbox } from "#/kit/mail";
+${other ? 'import { forgetInLog } from "#/kit/audit.server";\n' : ""}import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
 
@@ -308,6 +308,10 @@ ${
   // What touches security keeps its values in the audit log: from what to what, and who.
   expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: ${JSON.stringify(other)}, to: "admin" } });
   expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@${domain}" } });
+  // Forget in the log: every line naming them goes blank, by id or by address (an invitation).
+  db.insert(auditLog).values({ who: admin.id, action: "invited", details: { email: "users-test-colleague@${domain}", role: "admin" } }).run();
+  forgetInLog(admin, { user: colleague.id });
+  expect(JSON.stringify(db.select().from(auditLog).all())).not.toContain("users-test-colleague@");
 `
     : ""
 }
