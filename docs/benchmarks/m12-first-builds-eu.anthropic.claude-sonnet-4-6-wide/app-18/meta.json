@@ -1,0 +1,11 @@
+{
+  "description": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
+  "starter": "crm",
+  "wordStarter": "records",
+  "questions": [
+    "Vilka huvudtyper av poster behöver ni hålla koll på?",
+    "Vem ska kunna använda systemet?",
+    "Vad ska en offert innehålla?"
+  ],
+  "lang": "sv"
+}

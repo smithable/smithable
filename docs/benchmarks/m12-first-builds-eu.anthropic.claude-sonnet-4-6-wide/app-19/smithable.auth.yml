@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home]
+roles:
+  admin:
+    description: Håller loppisen i ordning.
+  member:
+    description: Säljer och sparar annonser.
+defaultRole: member
+admins: [johan@smithable.ai]

@@ -1,0 +1,17 @@
+smithableUx: 0.1
+theme:
+  preset: editorial
+pages:
+  objects:
+    table:
+      columns: [name, category, period, status]
+    form:
+      control:
+        summary: textarea
+        story: textarea
+      sections: [{ name: basics, fields: [name, category, period, material, origin, status] }, { name: description, fields: [summary, story] }, { name: details, fields: [acquisitionDate, image] }]
+    icon: layers
+tones:
+  MuseumObject.status:
+    onDisplay: success
+    onLoan: warning

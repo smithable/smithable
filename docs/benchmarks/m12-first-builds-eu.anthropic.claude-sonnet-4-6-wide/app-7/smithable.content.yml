@@ -1,0 +1,23 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Town Flea Market
+    subtitle: Buy and sell second-hand things right in your town.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An outdoor market with stalls of vegetables and flowers
+  myItems:
+    title: My Listings
+  saved:
+    title: Saved Items
+  catalog:
+    title: Browse Listings
+models:
+  Item:
+    fields:
+      condition:
+        values:
+          likeNew: Like New
+          good: Good
+          worn: Worn

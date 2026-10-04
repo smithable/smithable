@@ -1,0 +1,98 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Tuntityyppi
+    pluralLabel: Tuntityypit
+    fields:
+      name:
+        label: Nimi
+      summary:
+        label: Kuvaus
+      level:
+        label: Taso
+        values:
+          aloittelija: Aloittelija
+          kaikkiTasot: Kaikki tasot
+          edistynyt: Edistynyt
+      durationMinutes:
+        label: Kesto (min)
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+    fields:
+      name:
+        label: Nimi
+      bio:
+        label: Esittely
+      portrait:
+        label: Kuva
+  Session:
+    label: Tunti
+    pluralLabel: Tunnit
+    fields:
+      classType:
+        label: Tuntityyppi
+      instructor:
+        label: Ohjaaja
+      startsAt:
+        label: Alkaa
+      capacity:
+        label: Kapasiteetti
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+    fields:
+      session:
+        label: Tunti
+  Post:
+    label: Artikkeli
+    pluralLabel: Artikkelit
+    fields:
+      title:
+        label: Otsikko
+      summary:
+        label: Tiivistelmä
+      body:
+        label: Sisältö
+      publishedOn:
+        label: Julkaistu
+      status:
+        label: Tila
+        values:
+          luonnos: Luonnos
+          julkaistu: Julkaistu
+  Message:
+    label: Viesti
+    pluralLabel: Viestit
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      message:
+        label: Viesti
+pages:
+  home:
+    title: Etusivu
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+  schedule:
+    title: Aikataulu
+  my-bookings:
+    title: Omat varaukset
+  blog:
+    title: Blogi
+  sessions:
+    title: Tunnit
+  class-types:
+    title: Tuntityypit
+  instructors:
+    title: Ohjaajat
+  posts:
+    title: Artikkelit
+  messages:
+    title: Viestit
+  team:
+    title: Tiimi

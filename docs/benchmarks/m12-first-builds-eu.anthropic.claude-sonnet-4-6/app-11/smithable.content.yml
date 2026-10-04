@@ -1,0 +1,19 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: API Status
+    hero:
+      title: Is our API up?
+      subtitle: Live status of our API services, incidents, and planned maintenance.
+      button: Incident History
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    services:
+      title: Services
+    open:
+      title: Active Incidents
+    recent:
+      title: Recently Resolved
+    planned:
+      title: Planned Maintenance

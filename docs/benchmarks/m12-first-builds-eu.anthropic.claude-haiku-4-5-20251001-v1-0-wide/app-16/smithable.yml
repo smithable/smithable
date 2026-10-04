@@ -1,0 +1,46 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Manage allotment plots, waiting list, and yearly fees for our society.
+  timezone: Europe/Mariehamn
+models:
+  Member:
+    fields:
+      name: string!
+      email: email! unique
+      phone: phone
+      joinedOn: date! = TODAY()
+  Plot:
+    fields:
+      number: string! unique
+      size: decimal
+      member: Member
+      assignedOn: date
+  WaitingList:
+    fields:
+      member: Member! unique
+      position: int!
+      addedOn: date! = TODAY()
+  Fee:
+    fields:
+      member: Member!
+      year: int!
+      amount: money!
+      paid: bool = false
+      paidOn: date
+pages:
+  members:
+    crud: Member
+    access: [admin]
+  plots:
+    crud: Plot
+    access: [admin]
+  waiting-list:
+    crud: WaitingList
+    access: [admin]
+  fees:
+    crud: Fee
+    access: [admin]
+    mine: true
+  team:
+    users: manage

@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  fuel:
+    table:
+      sort: -date
+      columns: [date, mileage, liters, totalCost]
+  service:
+    table:
+      sort: -date
+      columns: [date, mileage, serviceType, cost]
+  costs:
+    table:
+      sort: -date
+      columns: [date, category, description, amount]

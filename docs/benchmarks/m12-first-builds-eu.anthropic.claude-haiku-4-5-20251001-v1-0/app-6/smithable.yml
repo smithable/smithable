@@ -1,0 +1,36 @@
+smithable: 0.1
+app:
+  name: Union Job Board
+  description: A job board for local union members to post and apply for jobs.
+models:
+  JobPost:
+    fields:
+      title: string!
+      description: text!
+      category: string
+      location: string
+      salary: money
+      postedBy: User!
+      status: open | closed
+      applications: Application[]
+  Application:
+    fields:
+      jobPost: JobPost!
+      applicant: User!
+      resume: string
+      coverLetter: text
+      status: submitted | reviewed | accepted | rejected
+      appliedAt: datetime!
+pages:
+  jobs:
+    route: /
+    crud: JobPost
+    search: [title, description, location]
+  myPosts:
+    crud: JobPost
+    mine: true
+  applications:
+    crud: Application
+  team:
+    users: manage
+navigation: [jobs, myPosts, applications]

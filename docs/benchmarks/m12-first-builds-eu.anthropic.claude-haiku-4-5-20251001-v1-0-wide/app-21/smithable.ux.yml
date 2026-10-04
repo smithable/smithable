@@ -1,0 +1,8 @@
+smithableUx: 0.1
+tones:
+  Invoice.status:
+    paid: success
+    sent: warning
+  Service.status:
+    completed: success
+    inProgress: warning

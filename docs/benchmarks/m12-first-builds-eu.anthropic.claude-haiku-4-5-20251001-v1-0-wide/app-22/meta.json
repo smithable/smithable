@@ -1,0 +1,11 @@
+{
+  "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+  "starter": "marketplace",
+  "wordStarter": "records",
+  "questions": [
+    "Wer kann Produkte im Hofladen einsehen und vorbestellen?",
+    "Welche Informationen sollen die Produkte enthalten?",
+    "Wie funktioniert die Abholung: feste Zeiten oder flexible Vereinbarung mit jedem Kunden?"
+  ],
+  "lang": "de"
+}

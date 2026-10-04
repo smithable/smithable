@@ -1,0 +1,19 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Welcome to Our Yoga Studio
+    hero:
+      button: View Schedule
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    callToAction:
+      button: Book a Class
+  schedule:
+    title: Class Schedule
+  my-bookings:
+    title: My Bookings
+  class-types:
+    title: Class Types
+  blog:
+    title: News & Articles

@@ -1,0 +1,10 @@
+{
+  "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
+  "starter": "booking",
+  "wordStarter": "booking",
+  "questions": [
+    "Who can book appointments?",
+    "What information does each stylist's profile show to visitors?",
+    "Can customers book multiple appointments at once, or just one at a time?"
+  ]
+}
