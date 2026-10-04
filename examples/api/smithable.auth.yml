@@ -5,6 +5,8 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
+  admin:
+    description: Runs the team, its keys and the data.
   member:
     description: A team member who works with the tasks and notes.
   assistant:
