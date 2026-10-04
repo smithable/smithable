@@ -68,7 +68,8 @@ export function LandingLayout({
   // Columns when there is something to put in them; otherwise the one line it always had.
   const columns = menu.length > 0 || contact !== undefined;
   const name = site?.home ? (
-    <Link to={site.home} className="min-w-0 truncate text-xl font-bold">
+    // A block, so a long name ends in an ellipsis instead of pushing the header wider.
+    <Link to={site.home} className="block min-w-0 truncate text-xl font-bold">
       {appName}
     </Link>
   ) : (
