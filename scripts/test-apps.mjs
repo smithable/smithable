@@ -1263,22 +1263,22 @@ async function apiSecurityChecks(base, key) {
   await check(
     "a key counts only in the Authorization header, and a malformed one is refused",
     async () => {
-      for (const path of [
-        `/api/v1/maintenances?key=${key}`,
-        `/api/v1/maintenances?access_token=${key}`,
-      ]) {
-        const answer = await fetch(`${base}${path}`);
-        if (answer.status !== 401 && answer.status !== 404)
-          throw new Error(
-            `${path.split("?")[0]} with the key in the address gave ${answer.status}`,
-          );
-      }
-      const posted = await fetch(`${base}/api/v1/incidents?key=${key}`, {
+      const incident = (title) =>
+        JSON.stringify({ title, status: "investigating", detectedAt: new Date().toISOString() });
+      const control = await call("/api/v1/incidents", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title: "From the address" }),
+        body: incident("From the header"),
       });
-      if (posted.ok) throw new Error("a key in the address could add");
+      if (control.status !== 201)
+        throw new Error(`the same incident with the key in its header gave ${control.status}`);
+      for (const name of ["key", "access_token", "api_key"]) {
+        const posted = await fetch(`${base}/api/v1/incidents?${name}=${key}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: incident("From the address"),
+        });
+        if (posted.ok) throw new Error(`a key in the address (?${name}=) could add`);
+      }
       for (const header of [
         "Basic " + btoa(`x:${key}`),
         "Bearer",
@@ -1319,6 +1319,7 @@ async function apiSecurityChecks(base, key) {
   });
   await check("a body cannot set what the app sets: the id, the owner, the dates", async () => {
     for (const extra of [
+      {},
       { id: 9999 },
       { ownerId: "someone" },
       { createdAt: "2000-01-01T00:00:00Z" },
@@ -1334,6 +1335,8 @@ async function apiSecurityChecks(base, key) {
         }),
       });
       const raw = JSON.stringify(extra);
+      if (raw === "{}" && answer.status !== 201)
+        throw new Error(`the body alone gave ${answer.status}`);
       if (answer.ok && raw !== "{}") throw new Error(`a body with ${raw} was taken`);
     }
   });
@@ -1516,6 +1519,8 @@ async function inputSecurityFlow(dir, base) {
             .waitForURL((url) => url.pathname !== "/sign-in", { timeout: 10000 })
             .catch(() => {});
           await visitor.waitForTimeout(500);
+          if (new URL(visitor.url()).pathname === "/sign-in")
+            throw new Error(`redirect=${target}: signing in did not leave /sign-in`);
           if (new URL(visitor.url()).host !== new URL(base).host)
             throw new Error(`redirect=${target} led to ${visitor.url()}`);
         } finally {
@@ -1526,7 +1531,6 @@ async function inputSecurityFlow(dir, base) {
     await check(
       "guessing a sign-in code stops after five tries, even before the right one",
       async () => {
-        const email = "guess@example.com";
         const post = (path, body) =>
           fetch(`${base}/api/auth${path}`, {
             method: "POST",
@@ -1534,20 +1538,31 @@ async function inputSecurityFlow(dir, base) {
             body: JSON.stringify(body),
           });
         const outbox = join(dir, "data", "mail", "outbox");
-        const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
-        const sent = await post("/email-otp/send-verification-otp", { email, type: "sign-in" });
-        if (!sent.ok) throw new Error(`asking for a code gave ${sent.status}`);
-        let code;
-        for (let i = 0; !code && i < 50; i++) {
-          const mails = existsSync(outbox) ? readdirSync(outbox).sort() : [];
-          if (mails.length > before)
-            code = /\b(\d{3}) ?(\d{3})\b/
-              .exec(readFileSync(join(outbox, mails.at(-1)), "utf8"))
-              ?.slice(1)
-              .join("");
-          if (!code) await new Promise((r) => setTimeout(r, 100));
-        }
-        if (!code) throw new Error("no code in the outbox");
+        let mailed = existsSync(outbox) ? readdirSync(outbox).length : 0;
+        const codeFor = async (email) => {
+          const sent = await post("/email-otp/send-verification-otp", { email, type: "sign-in" });
+          if (!sent.ok) throw new Error(`asking for a code gave ${sent.status}`);
+          let code;
+          for (let i = 0; !code && i < 50; i++) {
+            const mails = existsSync(outbox) ? readdirSync(outbox).sort() : [];
+            if (mails.length > mailed)
+              code = /\b(\d{3}) ?(\d{3})\b/
+                .exec(readFileSync(join(outbox, mails.at(-1)), "utf8"))
+                ?.slice(1)
+                .join("");
+            if (!code) await new Promise((r) => setTimeout(r, 100));
+            else mailed = mails.length;
+          }
+          if (!code) throw new Error(`no code for ${email} in the outbox`);
+          return code;
+        };
+        const fresh = await post("/sign-in/email-otp", {
+          email: "fresh@example.com",
+          otp: await codeFor("fresh@example.com"),
+        });
+        if (!fresh.ok) throw new Error(`a fresh code did not sign in (${fresh.status})`);
+        const email = "guess@example.com";
+        const code = await codeFor(email);
         const wrong = String((Number(code) + 1) % 1000000).padStart(6, "0");
         for (let i = 0; i < 5; i++) {
           const guess = await post("/sign-in/email-otp", { email, otp: wrong });
