@@ -5,7 +5,7 @@ import type { FieldIR, PageIR, SpecIR } from "./ir.js";
 import { capitalize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
-import { type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
+import { FONTS, type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
 
 /**
  * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
@@ -185,11 +185,25 @@ export function pageIcon(ux: UxIR, page: PageIR): Icon {
   const model = manages() ?? "";
   return ICON_WORDS.find(([words]) => words.test(model))?.[1] ?? "list";
 }
-export const THEME_PRESETS = ["modern", "minimal", "playful", "corporate"] as const;
+/** The built-in themes' names: the design delivery's four, then the theme library's nine. */
+export const THEME_PRESETS = [
+  "modern",
+  "minimal",
+  "playful",
+  "corporate",
+  "coastal",
+  "navy",
+  "editorial",
+  "woodland",
+  "contrast",
+  "nordic",
+  "pastel",
+  "midnight",
+  "craft",
+] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
-/** Open-license fonts the generated apps can host themselves. */
-export const FONTS = ["Inter", "Nunito Sans", "Source Sans 3"] as const;
+export { FONTS };
 
 export function emptyUx(): UxIR {
   return { theme: { preset: "modern", density: "comfortable" }, pages: {}, tones: {} };
