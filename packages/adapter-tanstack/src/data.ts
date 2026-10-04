@@ -447,7 +447,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ? "values"
     : model.ownedBy
       ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner}) }`
-      : `{ ...values, ownerId: viewer?.id ?? null }`;
+      : `{ ...values, ownerId: personOf(viewer) }`;
   const self = n.data;
   // The record's title as the audit log keeps it, and a create with its line.
   const titleKey = titleField(model);
@@ -485,7 +485,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favorites ? [favorites] : [])])].sort().join(", ")} } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
@@ -503,8 +503,8 @@ ${
  * own, whatever the form sent.
  */
 function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
-  if (viewer && ${n.access}.write.roles.includes(viewer.role)) return given ?? viewer.id;
-  return viewer?.id ?? null;
+  if (viewer && ${n.access}.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
+  return personOf(viewer);
 }
 `
     : ""
