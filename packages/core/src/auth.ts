@@ -763,7 +763,7 @@ function checkAgainstSpec(
       ctx.warning(
         at,
         "public-page-closed-records",
-        `Visitors can open ${name}, but may not read ${closed.join(" or ")}, so the page shows them none: add ${closed.length > 1 ? "them" : "it"} under public.read, or take ${name} out of public.pages.`,
+        `Visitors can open ${name}, but may not read ${closed.join(" or ")}, so the page shows them none: add ${closed.length > 1 ? "them" : "it"} under public.read, or ${page.pattern.kind === "landing" ? `remove the section of ${name} that shows ${closed.length > 1 ? "them" : "it"}` : `take ${name} out of public.pages`}.`,
       );
   }
   // A page of the viewer's own records has nothing to show a visitor, who owns nothing.
