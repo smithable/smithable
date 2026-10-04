@@ -28,6 +28,7 @@ export function hooksModule(ir: SpecIR, t: Texts, plugins: readonly SpecPlugin[]
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { ${tables.join(", ")} } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 ${withHooks.map((p) => `import * as ${p.key.replace(/[^A-Za-z0-9_$]/g, "_")} from "./plugins/${p.key}/hooks";`).join("\n")}${withHooks.length ? "\n" : ""}
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -83,7 +84,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
