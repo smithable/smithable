@@ -1169,12 +1169,21 @@ async function landingFlow(base) {
       .waitFor({ timeout: 10000 });
     if (await page.getByText("Aino Visitor").count())
       throw new Error("the forgotten name is still in the activity");
+    // Signing out is in the log (only a sign-out request, not a session that expired).
+    await page.getByRole("button", { name: "Sign out" }).first().click();
+    await page.waitForURL((url) => !url.pathname.startsWith("/admin"), { timeout: 10000 });
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/admin/activity?action=signed%20out`);
+    await page
+      .locator('[data-part="line"]', { hasText: "signed out" })
+      .first()
+      .waitFor({ timeout: 10000 });
     // A member may not open it.
     await signInAs(page, base, "member");
     await open(page, `${base}/admin`);
     await page.getByText("You are not allowed to do this.").waitFor({ timeout: 10000 });
     console.log(
-      "  ✓ browser: the data page lists every model; an admin opens a message and deletes it, sees it in Activity and forgets it in the log; a member is refused",
+      "  ✓ browser: the data page lists every model; an admin opens a message and deletes it, sees it in Activity and forgets it in the log, and signing out is there too; a member is refused",
     );
   } catch (error) {
     console.log(
