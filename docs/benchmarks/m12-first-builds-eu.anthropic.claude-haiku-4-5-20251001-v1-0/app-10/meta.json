@@ -1,0 +1,10 @@
+{
+  "description": "A recipe collection for a family, with ingredients and shopping lists.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who can access and manage the recipes in this collection?",
+    "What should each recipe record hold?",
+    "Should the app generate shopping lists from selected recipes?"
+  ]
+}

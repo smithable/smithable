@@ -1,0 +1,107 @@
+smithable: 0.1
+app:
+  name: Sales CRM
+  description: Lightweight CRM for a small sales team to manage companies, contacts, deals and follow-ups.
+  currency: USD
+  timezone: America/New_York
+models:
+  Contact:
+    fields:
+      firstName: string!
+      lastName: string!
+      title: string
+      email: email
+      phone: phone
+      notes: text
+      company: Company
+    access:
+      delete: [admin]
+  Deal:
+    fields:
+      title: string!
+      contact: Contact
+      value: money
+      status: prospecting | qualified | proposal | negotiation | won | lost
+      expectedCloseDate: date
+      assignedTo: User
+      notes: text
+      company: Company
+    access:
+      delete: [admin]
+  FollowUp:
+    fields:
+      deal: Deal!
+      contact: Contact
+      dueDate: date!
+      type: call | email | meeting | demo | other
+      notes: text
+      status: pending | done | skipped
+      assignedTo: User
+    access:
+      delete: [admin]
+  Company:
+    fields:
+      name: string!
+      website: url
+      phone: phone
+      email: email
+      industry: string
+      size: micro | small | medium | large | enterprise
+      notes: text
+      accountManager: User
+    access:
+      delete: [admin]
+pages:
+  contacts:
+    crud: Contact
+    search: [firstName, lastName, email, phone]
+    sortable: [firstName, lastName]
+    filters: [company]
+  deals:
+    crud: Deal
+    search: [title]
+    sortable: [title, value, expectedCloseDate]
+    actions: [markWon, markLost]
+    filters: [status, company, expectedCloseDate]
+  follow-ups:
+    crud: FollowUp
+    search: [notes]
+    sortable: [dueDate]
+    actions: [complete, skip]
+    filters: [status, type, dueDate, deal]
+  team:
+    users: manage
+  companies:
+    crud: Company
+    search: [name, email]
+    sortable: [name]
+actions:
+  markWon:
+    on: Deal
+    when:
+      status: [prospecting, qualified, proposal, negotiation]
+    set:
+      status: won
+    intent: Mark a deal as won.
+  markLost:
+    on: Deal
+    when:
+      status: [prospecting, qualified, proposal, negotiation]
+    set:
+      status: lost
+    intent: Mark a deal as lost.
+  complete:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: done
+    intent: Mark a follow-up as done.
+  skip:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: skipped
+    intent: Mark a follow-up as skipped.
+navigation: [companies, contacts, deals, follow-ups, team]

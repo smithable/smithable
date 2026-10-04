@@ -1,0 +1,61 @@
+smithable: 0.1
+app:
+  name: My Vinyl
+  description: "Track your vinyl record collection: albums, artists, condition and what you paid."
+models:
+  Artist:
+    fields:
+      name: string!
+      genre: string
+      country: string
+      notes: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Album:
+    fields:
+      title: string!
+      artist: Artist!
+      year: int
+      label: string
+      genre: string
+      format: lp | ep | single | compilation
+      condition: mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
+      pricePaid: money
+      purchaseDate: date
+      notes: text
+      coverImage: url
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  artists:
+    crud: Artist
+    search: [name, genre, country]
+    sortable: [name, genre, country]
+  overview:
+    dashboard:
+      totalArtists:
+        count: Artist
+      totalAlbums:
+        count: Album
+      totalSpent:
+        sum: Album.pricePaid
+      recentAdditions:
+        list: Album
+        limit: 5
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+  team:
+    users: manage
+  albums:
+    crud: Album
+    search: [title, genre, label]
+    filters: [artist, format, condition, year, purchaseDate]
+    sortable: [title, year, condition, pricePaid, purchaseDate]
+navigation: [overview, albums, artists, team]

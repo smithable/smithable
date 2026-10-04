@@ -1,0 +1,10 @@
+{
+  "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
+  "starter": "crm",
+  "wordStarter": "crm",
+  "questions": [
+    "Who uses this app?",
+    "What are the main kinds of records you need to track?",
+    "Can people outside the team see anything without signing in?"
+  ]
+}

@@ -1,0 +1,91 @@
+smithable: 0.1
+app:
+  name: Union Job Board
+  description: A job board for local union members to post and apply for jobs.
+models:
+  JobPost:
+    fields:
+      title: string!
+      description: text!
+      location: string
+      type: fullTime | partTime | temporary | apprenticeship
+      trade: string
+      wage: money
+      closingDate: date
+      status: open | closed
+    access:
+      create: [admin]
+      delete: [admin]
+  Application:
+    fields:
+      jobPost: JobPost!
+      coverLetter: text
+      resumeUrl: url
+      status: submitted | reviewing | accepted | rejected
+pages:
+  jobs:
+    route: /
+    crud: JobPost
+    search: [title, trade, location]
+    sortable: [closingDate, wage, createdAt]
+    actions: [closeJob, reopenJob]
+  applications:
+    crud: Application
+    access: [admin]
+    filters: [status, jobPost]
+  myApplications:
+    crud: Application
+    mine: true
+    filters: [status, jobPost]
+  home:
+    route: /home
+    landing:
+      hero:
+      footer:
+      features:
+      callToAction:
+        button: jobs
+  team:
+    users: manage
+actions:
+  closeJob:
+    on: JobPost
+    when:
+      status: open
+    set:
+      status: closed
+    allow: [admin]
+    intent: Close a job post so no more applications are accepted.
+  reopenJob:
+    on: JobPost
+    when:
+      status: closed
+    set:
+      status: open
+    allow: [admin]
+    intent: Reopen a closed job post to accept applications again.
+  acceptApplication:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: accepted
+    allow: [admin]
+    intent: Accept an application.
+  rejectApplication:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: rejected
+    allow: [admin]
+    intent: Reject an application.
+  markReviewing:
+    on: Application
+    when:
+      status: submitted
+    set:
+      status: reviewing
+    allow: [admin]
+    intent: Mark an application as under review.
+navigation: [jobs, myApplications, applications, team]

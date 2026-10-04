@@ -1,0 +1,84 @@
+smithable: 0.1
+app:
+  name: CleanBill
+  description: Simple monthly invoicing for a small cleaning company to manage clients and invoices.
+  currency: USD
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      address: text
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      notes: text
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  BusinessProfile:
+    fields:
+      businessName: string!
+      phone: phone
+      email: email
+      address: text
+      bankAccount: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid, markOverdue]
+    search: [number, status]
+    filters: [status, client, issuedOn, dueOn]
+  clients:
+    crud: Client
+    search: [name, email, phone]
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+  team:
+    users: manage
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice was sent to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is past its due date and has not been paid.
+navigation: [overview, invoices, clients, invoice-lines, team]

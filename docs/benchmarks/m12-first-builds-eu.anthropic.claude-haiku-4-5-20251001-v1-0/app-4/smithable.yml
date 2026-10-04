@@ -1,0 +1,38 @@
+smithable: 0.1
+app:
+  name: Tool Library
+  description: Borrow and lend tools with your neighbors.
+models:
+  Booking:
+    fields:
+      borrower: User!
+      borrowedAt: date!
+      returnedAt: date
+      status: active | returned
+      tool: Tool!
+  Tool:
+    fields:
+      name: string!
+      description: text!
+      category: handTools | powerTools | garden | outdoor | other
+      condition: likeNew | good | worn
+      available: bool = true
+pages:
+  bookings:
+    crud: Booking
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Tool
+  tools:
+    crud: Tool
+    search: [name, description]
+    filters: [category, condition, available]
+    sortable: [createdAt]
+  myTools:
+    crud: Tool
+    mine: true
+navigation: [tools, myTools, bookings]

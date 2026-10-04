@@ -1,0 +1,9 @@
+{
+  "description": "A log of my car's fuel, service visits and costs.",
+  "starter": "records",
+  "wordStarter": "status",
+  "questions": [
+    "What kinds of records do you want to track?",
+    "Is this just for you, or will others share the log?"
+  ]
+}

@@ -1,0 +1,8 @@
+smithableUx: 0.1
+tones:
+  Post.status:
+    julkaistu: success
+theme:
+  preset: minimal
+  brand:
+    font: Nunito Sans
