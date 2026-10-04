@@ -57,6 +57,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
       <dialog
         ref={drawer}
         aria-label="Menu"
+        data-kit="drawer"
         className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
         <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
