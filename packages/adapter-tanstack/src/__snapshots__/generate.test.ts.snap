@@ -26016,7 +26016,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/limit.ts": "3e9b587d kit",
   "src/kit/log.server.ts": "f64505b5 kit",
   "src/kit/mail.ts": "4673e657 kit",
-  "src/kit/mcp.server.ts": "3938f5fa kit",
+  "src/kit/mcp.server.ts": "d5b0641b kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",

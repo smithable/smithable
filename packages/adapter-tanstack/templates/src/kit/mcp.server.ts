@@ -84,8 +84,20 @@ export async function handleMcp(
           : fault(-32601, `Unknown method "${message.method}".`);
     }
   };
-  const messages = Array.isArray(body) ? (body as Message[]) : [body as Message];
-  const answers = (await Promise.all(messages.map(answer))).filter((a) => a !== undefined);
-  if (!answers.length) return new Response(null, { status: 202 });
-  return Response.json(Array.isArray(body) ? answers : answers[0]);
+  // One message per request: the protocol version announced has no batches, and each call is
+  // counted against the key's limit as one request.
+  if (Array.isArray(body))
+    return Response.json(
+      {
+        jsonrpc: "2.0",
+        id: null,
+        error: {
+          code: -32600,
+          message: "Send one message per request; batches are not supported.",
+        },
+      },
+      { status: 400 },
+    );
+  const answered = await answer(body as Message);
+  return answered === undefined ? new Response(null, { status: 202 }) : Response.json(answered);
 }
