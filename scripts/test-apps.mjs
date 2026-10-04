@@ -1155,12 +1155,35 @@ async function landingFlow(base) {
     await page
       .getByRole("cell", { name: "Aino Visitor", exact: true })
       .waitFor({ state: "detached", timeout: 10000 });
+    // Activity: the visitor's message and the admin's delete are in the audit log; the deleted
+    // message keeps its name on its delete line until it is forgotten in the log.
+    await open(page, `${base}/admin/activity?model=Message`);
+    const deleted = page.locator('[data-part="line"]', { hasText: "deleted" }).first();
+    await deleted.getByText('Message "Aino Visitor" (deleted)').waitFor({ timeout: 10000 });
+    await page.locator('[data-part="line"]', { hasText: "visitor" }).first().waitFor();
+    await deleted.getByRole("button", { name: "Forget in the log" }).click();
+    await page
+      .locator('[data-part="line"]', { hasText: "deleted" })
+      .first()
+      .getByText(/a deleted message \(#\d+\)/)
+      .waitFor({ timeout: 10000 });
+    if (await page.getByText("Aino Visitor").count())
+      throw new Error("the forgotten name is still in the activity");
+    // Signing out is in the log (only a sign-out request, not a session that expired).
+    await page.getByRole("button", { name: "Sign out" }).first().click();
+    await page.waitForURL((url) => !url.pathname.startsWith("/admin"), { timeout: 10000 });
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/admin/activity?action=signed%20out`);
+    await page
+      .locator('[data-part="line"]', { hasText: "signed out" })
+      .first()
+      .waitFor({ timeout: 10000 });
     // A member may not open it.
     await signInAs(page, base, "member");
     await open(page, `${base}/admin`);
     await page.getByText("You are not allowed to do this.").waitFor({ timeout: 10000 });
     console.log(
-      "  ✓ browser: the data page lists every model; an admin opens a message and deletes it; a member is refused",
+      "  ✓ browser: the data page lists every model; an admin opens a message and deletes it, sees it in Activity and forgets it in the log, and signing out is there too; a member is refused",
     );
   } catch (error) {
     console.log(

@@ -86,7 +86,8 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
             invitations
               ? `
           const email = created.email.toLowerCase();
-          const used = invitationOf(email);
+          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          const used = openInvitation(email);
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
@@ -217,8 +218,11 @@ export const auth = betterAuth({
       create: {
         after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
       },
+      // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
+        after: async (session, ctx) => {
+          if (ctx?.path === "/sign-out") audit(db, signedInAs(session.userId), { action: "signed out" });
+        },
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
