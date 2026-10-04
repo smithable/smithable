@@ -130,24 +130,31 @@ export function Preview({
   // What the last change touched, flashed in the page (motion.md 9a): at once, for a change the
   // page shows without reloading (a text edited in place), and once more when the page that has
   // it says it is ready. Each change flashes once.
+  // The page may say it is ready before Studio hears of the change, so the newest one is kept.
   const flashed = useRef<string | undefined>(undefined);
+  const latest = useRef(highlight);
   useEffect(() => {
+    latest.current = highlight;
     if (!highlight?.concepts.length) return;
-    const flash = () =>
-      frame.current?.contentWindow?.postMessage(
-        { type: "smithable:highlight", concepts: highlight.concepts },
+    frame.current?.contentWindow?.postMessage(
+      { type: "smithable:highlight", concepts: highlight.concepts },
+      previewTarget(),
+    );
+  }, [highlight]);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const now = latest.current;
+      if (!isPreviewMessage(e) || e.data.type !== "ready" || !now?.concepts.length) return;
+      if (flashed.current === now.key) return;
+      flashed.current = now.key;
+      (e.source as Window | null)?.postMessage(
+        { type: "smithable:highlight", concepts: now.concepts },
         previewTarget(),
       );
-    flash();
-    const onMessage = (e: MessageEvent) => {
-      if (!isPreviewMessage(e) || e.data.type !== "ready" || flashed.current === highlight.key)
-        return;
-      flashed.current = highlight.key;
-      flash();
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [highlight]);
+  }, []);
   // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
   const reloading = updating || Boolean(stale);
   return (
