@@ -6415,7 +6415,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "df7c90c9 generated",
   "tsconfig.json": "802b1b64 kit",
-  "tsr.config.json": "5a19a8a5 kit",
+  "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
@@ -9430,7 +9430,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "47211f98 generated",
   "tsconfig.json": "802b1b64 kit",
-  "tsr.config.json": "5a19a8a5 kit",
+  "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
@@ -13489,7 +13489,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "96656d16 generated",
   "tsconfig.json": "802b1b64 kit",
-  "tsr.config.json": "5a19a8a5 kit",
+  "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
@@ -15951,7 +15951,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "83765356 generated",
   "tsconfig.json": "802b1b64 kit",
-  "tsr.config.json": "5a19a8a5 kit",
+  "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
@@ -17695,7 +17695,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "cd3af4c8 generated",
   "tsconfig.json": "802b1b64 kit",
-  "tsr.config.json": "5a19a8a5 kit",
+  "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
@@ -22667,7 +22667,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/theme.css": "f4cc6d16 generated",
   "tests/smoke.spec.ts": "fd8fdf64 generated",
   "tsconfig.json": "802b1b64 kit",
-  "tsr.config.json": "5a19a8a5 kit",
+  "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "2ac5a5ac kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
