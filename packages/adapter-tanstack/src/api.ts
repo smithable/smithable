@@ -38,6 +38,8 @@ export function apiParts(ir: SpecIR, auth: AuthIR, t: Texts) {
     actions: ir.actions.filter(
       (a): a is StandardActionIR => !a.custom && offered.actions.includes(a.name),
     ),
+    /** What a call without a key may do (api-only.md §3.4): read and add, never more. */
+    visitors: offered.visitors,
   };
 }
 
@@ -222,6 +224,33 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     },
     security: [{ key: [] }],
   };
+  // What a stranger is shown (api-only.md §3.4): the reading and adding anyone may do, no key.
+  const { visitors } = apiParts(ir, auth, t);
+  const visitorPaths: Record<string, unknown> = {};
+  for (const { model, n, path } of models) {
+    const list = paths[`/api/v1/${path}`] as Record<string, unknown>;
+    const one = paths[`/api/v1/${path}/{id}`] as Record<string, unknown>;
+    const read = visitors.read.includes(model.name);
+    const add = visitors.create.includes(model.name);
+    if (read || add)
+      visitorPaths[`/api/v1/${path}`] = {
+        ...(read
+          ? { get: { ...(list.get as object), summary: `${n.pluralLabel} anyone may read` } }
+          : {}),
+        ...(add ? { post: list.post } : {}),
+      };
+    if (read) visitorPaths[`/api/v1/${path}/{id}`] = { parameters: one.parameters, get: one.get };
+  }
+  // Only the visitors' models' schemas: a closed app names no model or field to a stranger.
+  const shown = [...visitors.read, ...visitors.create, "Problem"];
+  const visitorApi = {
+    openapi: openapi.openapi,
+    info: openapi.info,
+    paths: visitorPaths,
+    components: {
+      schemas: Object.fromEntries(Object.entries(schemas).filter(([k]) => shown.includes(k))),
+    },
+  };
   // Only the helpers some offered field needs.
   const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
   return `${HEADER}// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
@@ -295,37 +324,57 @@ ${writable.map((f) => `      case ${JSON.stringify(f.name)}:\n        ${writeCod
 
 /** The whole API in the OpenAPI format, for tools and agents. */
 export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
+
+/** What a stranger is shown: the reading and adding anyone may do; nothing in a closed app. */
+export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
 `;
 }
 
 /** The routes: list and add, one record, its actions, and the description. */
 export function apiRoutes(ir: SpecIR, auth: AuthIR, t: Texts): Record<string, string> {
-  const { models, actions } = apiParts(ir, auth, t);
+  const { models, actions, visitors } = apiParts(ir, auth, t);
+  const users = ir.pages.find((p) => p.pattern.kind === "users");
   const files: Record<string, string> = {
-    "src/routes/api/v1/openapi[.]json.ts": `${HEADER}// The API's description in the OpenAPI format: what a program may call, with no key needed to read it.
+    "src/routes/api/v1/openapi[.]json.ts": `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
+// signed in as someone who may open the users page (its download), all a program may call; otherwise what anyone may read
+// or add, which in an app with nothing public is nothing (no model or field names to a stranger).
 import { createFileRoute } from "@tanstack/react-router";
-import { OPENAPI } from "#/generated/api.server";
+import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
+${users ? 'import { pageAccess } from "#/generated/pages";\nimport { allows } from "#/kit/access";\n' : ""}import { callerOf } from "#/kit/api.server";
+import { currentViewer } from "#/lib/viewer.server";
 
 export const Route = createFileRoute("/api/v1/openapi.json")({
-  server: { handlers: { GET: () => Response.json(OPENAPI) } },
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        // A key; or signed in as someone who may open the users page, where keys are made.
+        const session = await currentViewer();
+        const whole = callerOf(request).viewer || ${users ? `(session && allows(pageAccess[${JSON.stringify(users.id)}], session))` : "session"};
+        return Response.json(whole ? OPENAPI : VISITOR_OPENAPI);
+      },
+    },
+  },
 });
 `,
   };
   for (const { model, n, path } of models) {
     const camelName = model.name[0]?.toLowerCase() + model.name.slice(1);
     const own = actions.filter((a) => a.on === model.name);
+    // What anyone may read or add takes a call without a key too, as the visitor.
+    const reads = visitors.read.includes(model.name) ? "openApiCall" : "apiCall";
+    const adds = visitors.create.includes(model.name) ? "openApiCall" : "apiCall";
     files[`src/routes/api/v1/${path}/index.ts`] =
       `${HEADER}// ${n.pluralLabel} for programs with a key (docs/design/integrations.md §2): what the key's role may read, a page at a time, and adding one.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { apiCall } from "#/kit/api.server";
+import { ${[...new Set([reads, adds])].sort().join(", ")} } from "#/kit/api.server";
 
 export const Route = createFileRoute("/api/v1/${path}/")({
   server: {
     handlers: {
       GET: ({ request }) =>
-        apiCall(request, async (viewer) => {
+        ${reads}(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
           const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
           const page = Math.max(1, Number(query.get("page")) || 1);
@@ -333,7 +382,7 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           return { items: items.map(${camelName}ToApi), page, pages: Math.max(1, Math.ceil(total / limit)), total };
         }),
       POST: ({ request }) =>
-        apiCall(request, async (viewer, body) => ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never)), 201),
+        ${adds}(request, async (viewer, body) => ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never)), 201),
     },
   },
 });
@@ -343,7 +392,7 @@ export const Route = createFileRoute("/api/v1/${path}/")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { apiCall, NotFound } from "#/kit/api.server";
+import { ${reads === "openApiCall" ? "apiCall, NotFound, openApiCall" : "apiCall, NotFound"} } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) => {
   const row = await ${n.data}.get(viewer, Number(id));
@@ -354,7 +403,7 @@ const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) =>
 export const Route = createFileRoute("/api/v1/${path}/$id")({
   server: {
     handlers: {
-      GET: ({ request, params }) => apiCall(request, async (viewer) => ${camelName}ToApi(await found(viewer, params.id))),
+      GET: ({ request, params }) => ${reads}(request, async (viewer) => ${camelName}ToApi(await found(viewer, params.id))),
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
@@ -481,12 +530,28 @@ function mcpTools(ir: SpecIR, auth: AuthIR, t: Texts) {
       },
     });
   }
-  return { tools, models, actions, deletes };
+  // A visitor's tools: finding and reading what anyone may read, adding what anyone may add.
+  const { visitors } = apiParts(ir, auth, t);
+  const visitorTools = models.flatMap(({ model, path }) => {
+    const snake = path.replace(/-/g, "_");
+    const one = kebab(model.name).replace(/-/g, "_");
+    const names = [
+      ...(visitors.read.includes(model.name) ? [`find_${snake}`, `read_${one}`] : []),
+      ...(visitors.create.includes(model.name) ? [`add_${one}`] : []),
+    ];
+    return tools
+      .filter((tool) => names.includes(tool.name))
+      .map((tool) => ({
+        ...tool,
+        description: tool.description.replace("this key may read", "anyone may read"),
+      }));
+  });
+  return { tools, visitorTools, models, actions, deletes };
 }
 
 /** src/generated/mcp.server.ts: the tools, and each call through the data functions. */
 export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
-  const { tools, models, actions, deletes } = mcpTools(ir, auth, t);
+  const { tools, visitorTools, models, actions, deletes } = mcpTools(ir, auth, t);
   const cases: string[] = [];
   for (const { model, n, path } of models) {
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
@@ -521,12 +586,12 @@ export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const asked = askedFields(action).length > 0;
     cases.push(`    case ${JSON.stringify(action.name)}:
-      return ${c}ToApi(await ${actionNames(action).run}(viewer, Number(args.id)${asked ? `, ${actionNames(action).asks}.parse(args.values)` : ""}));`);
+      return ${c}ToApi(await ${actionNames(action).run}(keyed(viewer), Number(args.id)${asked ? `, ${actionNames(action).asks}.parse(args.values)` : ""}));`);
   }
   return `${HEADER}// The app's records and actions as tools for AI assistants (docs/design/integrations.md §5b):
 // what the auth file's \`api\` block offers, with the spec's own words as the descriptions, called
 // as the key's role through the data functions, exactly as the API is.
-import type { Viewer } from "#/kit/access";
+${actions.length ? 'import { AccessDenied, type Viewer } from "#/kit/access";' : 'import type { Viewer } from "#/kit/access";'}
 import { NotFound } from "#/kit/api.server";
 import type { Tool } from "#/kit/mcp.server";
 import { ${models
@@ -541,10 +606,13 @@ ${actions.map((a) => `import { ${actionNames(a).run} } from "./actions/${kebab(a
 
 export const TOOLS: Tool[] = ${JSON.stringify(tools, null, 2)};
 
+/** What a visitor without a key gets: finding and reading what anyone may read, adding what anyone may add. */
+export const VISITOR_TOOLS: Tool[] = ${JSON.stringify(visitorTools, null, 2)};
+
 /** A record the key may read, or a refusal that says so. */
 async function found<R extends { id: number }>(
   data: { get: (viewer: Viewer | null, id: number) => Promise<R | null | undefined> },
-  viewer: Viewer,
+  viewer: Viewer | null,
   id: unknown,
   label: string,
 ): Promise<R> {
@@ -553,8 +621,18 @@ async function found<R extends { id: number }>(
   return row;
 }
 
-/** Calls one tool as the key. */
-export async function callTool(viewer: Viewer, name: string, args: Record<string, unknown>): Promise<unknown> {
+${
+  actions.length
+    ? `/** An action is a key's: a visitor is never offered one (VISITOR_TOOLS), and is refused here too. */
+const keyed = (viewer: Viewer | null): Viewer => {
+  if (!viewer) throw new AccessDenied(false);
+  return viewer;
+};
+
+`
+    : ""
+}/** Calls one tool as the key, or as a visitor without one. */
+export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
 ${cases.join("\n")}
     default:
@@ -569,14 +647,14 @@ export function mcpRoute(ir: SpecIR): string {
   return `${HEADER}// The app's tools for AI assistants (docs/design/integrations.md §5b), at /mcp: connect an
 // assistant here with a key made on the users page, as Authorization: Bearer <key>.
 import { createFileRoute } from "@tanstack/react-router";
-import { callTool, TOOLS } from "#/generated/mcp.server";
+import { callTool, TOOLS, VISITOR_TOOLS } from "#/generated/mcp.server";
 import { handleMcp } from "#/kit/mcp.server";
 import { problem } from "#/kit/api.server";
 
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
-      POST: ({ request }) => handleMcp(request, { name: ${JSON.stringify(ir.app.name)}, tools: TOOLS, call: callTool }),
+      POST: ({ request }) => handleMcp(request, { name: ${JSON.stringify(ir.app.name)}, tools: TOOLS, visitorTools: VISITOR_TOOLS, call: callTool }),
       GET: () => problem(405, "This server answers POST requests only (no event stream)."),
     },
   },
