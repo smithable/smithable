@@ -34,15 +34,16 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey } from "#/db/schema";
-import { AccessDenied, type Viewer } from "#/kit/access";
+import { AccessDenied, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 
 export const KEY_ROLES = ${literal(auth.roles.map((r) => r.name))} as const;
 
 const hash = (key: string) => createHash("sha256").update(key).digest("hex");
 
+/** An administrator, a person: a key with the admin role never makes or revokes keys. */
 function admin(viewer: Viewer | null): Viewer {
-  if (viewer?.role !== "admin") throw new AccessDenied(viewer !== null);
+  if (viewer?.role !== "admin" || !personOf(viewer)) throw new AccessDenied(viewer !== null);
   return viewer;
 }
 
@@ -130,13 +131,14 @@ export function keysTestSource(auth: AuthIR): string {
   return `${HEADER}// A key's life: made by an administrator, standing for its role, revoked or past its end.
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { apiKey, auditLog } from "#/db/schema";
+import { apiKey, auditLog, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { keyViewer, listKeys, makeKey, revokeKey } from "./keys.server";
+import { removeUser } from "./users.server";
 
 const admin = { id: "keys-test-admin", name: "Keys test admin", email: "keys-test-admin@example.com", role: "admin" };
 
-test("an administrator makes a key; it stands for its role until revoked or past its end", () => {
+test("an administrator makes a key; it stands for its role until revoked or past its end", async () => {
   const key = makeKey(admin, "Billing sync", ${JSON.stringify(role)});
   expect(key).toMatch(/^smk_/);
   expect(keyViewer(\`Bearer \${key}\`)).toMatchObject({ id: expect.stringMatching(/^key:/), name: "Billing sync", role: ${JSON.stringify(role)} });
@@ -151,12 +153,26 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(keyViewer(\`Bearer \${old}\`)).toBeNull();
   expect(keyViewer("Bearer smk_madeup")).toBeNull();
   expect(keyViewer(null)).toBeNull();
-${other ? `  expect(() => makeKey({ ...admin, id: "keys-test-other", role: ${JSON.stringify(other)} }, "Mine", ${JSON.stringify(other)})).toThrow(AccessDenied);\n` : ""}  // What touches security keeps its values: the key's name and role, never the key.
+${other ? `  expect(() => makeKey({ ...admin, id: "keys-test-other", role: ${JSON.stringify(other)} }, "Mine", ${JSON.stringify(other)})).toThrow(AccessDenied);\n` : ""}  // A key cannot make keys, whatever its role.
+  const adminKey = makeKey(admin, "Admin key", "admin");
+  expect(() => makeKey(keyViewer(\`Bearer \${adminKey}\`), "Minted", "admin")).toThrow(AccessDenied);
+  revokeKey(admin, listKeys(admin).find((k) => k.name === "Admin key")?.id ?? 0);
+  // A key goes with the person who made it.
+  const maker = { id: "keys-test-maker", name: "Maker", email: "keys-test-maker@example.com", role: "admin" };
+  db.insert(user).values(maker).run();
+  const theirs = makeKey(maker, "Theirs", ${JSON.stringify(role)});
+  await removeUser(admin, maker.id);
+  expect(keyViewer(\`Bearer \${theirs}\`)).toBeNull();
+  // What touches security keeps its values: the key's name and role, never the key.
   const lines = db.select().from(auditLog).all().filter((l) => l.action.startsWith("key "));
   expect(lines.map((l) => [l.action, l.who, l.details?.name])).toEqual([
     ["key made", admin.id, "Billing sync"],
     ["key revoked", admin.id, "Billing sync"],
     ["key made", admin.id, "Old"],
+    ["key made", admin.id, "Admin key"],
+    ["key revoked", admin.id, "Admin key"],
+    ["key made", maker.id, "Theirs"],
+    ["key revoked", admin.id, "Theirs"],
   ]);
 });
 `;
