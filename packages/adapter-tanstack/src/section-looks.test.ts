@@ -127,7 +127,7 @@ test("robots.txt lets search engines read the public pages and nothing else", ()
     );
   };
   expect(robots("public: { pages: [home, items], read: [Item] }\n")).toContain(
-    'const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nDisallow: /\\n";',
+    'const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";',
   );
   expect(robots("")).toContain('const ROBOTS = "User-agent: *\\nDisallow: /\\n";');
 });
