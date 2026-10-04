@@ -157,6 +157,16 @@ const auth: Companion = {
       else editor.removeAndPrune(pages, 0);
       return { note: "it is no longer public" };
     }
+    // A removed action is no longer one programs are offered by name.
+    if (effect.kind === "remove-action") {
+      const actions = ["api", "actions"];
+      const listed = editor.has(actions) ? editor.get(actions) : undefined;
+      if (!Array.isArray(listed) || !listed.includes(effect.action)) return undefined;
+      const rest = (listed as string[]).filter((a) => a !== effect.action);
+      if (rest.length) editor.set(actions, rest);
+      else editor.remove(actions);
+      return { note: "programs are no longer offered it" };
+    }
     // What visitors may read (`Post: { where: { status: published } }`) follows the field it
     // names, and refuses to lose it: reading would otherwise widen silently.
     if (
