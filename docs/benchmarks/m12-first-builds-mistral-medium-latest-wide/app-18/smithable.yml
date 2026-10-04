@@ -5,49 +5,54 @@ app:
   currency: SEK
   timezone: Europe/Stockholm
 models:
-  Quote:
-    fields:
-      number: string! unique
-      status: draft | sent | accepted | rejected
-      total: money!
-      description: text
-      validUntil: date
-      customer: Customer!
-  Invoice:
-    fields:
-      number: string! unique
-      quote: Quote
-      status: draft | sent | paid | overdue
-      total: money!
-      dueDate: date
-      paidAt: datetime
-      customer: Customer!
   Customer:
     fields:
       name: string!
       email: email unique
       phone: phone
-      segment: private | company | municipality
       notes: text
       accountManager: User
+    access:
+      delete: [admin]
+  Quote:
+    fields:
+      number: string! unique
+      customer: Customer!
+      status: draft | sent | accepted | rejected
+      total: money!
+      description: text
+      validUntil: date
+    access:
+      delete: [admin]
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      quote: Quote
+      status: draft | sent | paid | overdue
+      total: money!
+      dueDate: date
+      paidAt: datetime
+    access:
+      delete: [admin]
 pages:
-  offerter:
-    crud: Quote
-    sortable: [number, total, validUntil, createdAt]
-    actions: [acceptQuote, rejectQuote, sendQuote]
-    search: [number, customer]
-    filters: [status, customer]
-  fakturor:
-    crud: Invoice
-    sortable: [number, total, dueDate, createdAt]
-    actions: [markInvoicePaid, sendInvoice]
-    search: [number, customer]
-    filters: [status, customer]
   kunder:
     crud: Customer
     search: [name, email]
     sortable: [name, createdAt]
-  team:
+  offerter:
+    crud: Quote
+    search: [number, customer]
+    filters: [status, customer]
+    sortable: [number, total, validUntil, createdAt]
+    actions: [acceptQuote, rejectQuote]
+  fakturor:
+    crud: Invoice
+    search: [number, customer]
+    filters: [status, customer]
+    sortable: [number, total, dueDate, createdAt]
+    actions: [markInvoicePaid]
+  anvandare:
     users: manage
 actions:
   acceptQuote:
@@ -56,14 +61,14 @@ actions:
       status: sent
     set:
       status: accepted
-    intent: Acceptera en offert.
+    intent: Acceptera en skickad offert.
   rejectQuote:
     on: Quote
     when:
       status: sent
     set:
       status: rejected
-    intent: Avvisa en offert.
+    intent: Avvisa en skickad offert.
   markInvoicePaid:
     on: Invoice
     when:
@@ -71,19 +76,5 @@ actions:
     set:
       status: paid
       paidAt: NOW()
-    intent: Markera en faktura som betald.
-  sendQuote:
-    on: Quote
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: Skicka en offert till kunden.
-  sendInvoice:
-    on: Invoice
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: Skicka en faktura till kunden.
-navigation: [kunder, offerter, fakturor, team]
+    intent: Markera en skickad faktura som betald.
+navigation: [kunder, offerter, fakturor, anvandare]

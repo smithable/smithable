@@ -38,7 +38,6 @@ models:
       customerName: string!
       customerEmail: email!
       customerPhone: phone
-      notes: text
     capacity:
       per: session
       max: session.capacity
@@ -52,7 +51,7 @@ pages:
   sessions:
     crud: Session
     access: [admin]
-  my-bookings:
+  bookings:
     crud: Booking
   home:
     route: /
@@ -63,6 +62,7 @@ pages:
         records: Service
       stylists:
         records: Stylist
+      contact:
   schedule:
     calendar:
       model: Session
