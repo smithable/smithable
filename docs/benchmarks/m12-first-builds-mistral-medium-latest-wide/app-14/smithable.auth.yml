@@ -3,12 +3,4 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
-roles:
-  admin:
-    description: Manages the guest list and seating.
-  guest:
-    description: Views their own RSVP.
-defaultRole: guest
-public:
-  pages: [home]
 admins: [johan@smithable.ai]

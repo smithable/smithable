@@ -5,23 +5,15 @@ app:
 models:
   Album:
     fields:
-      title: string!
+      name: string!
       artist: string!
-      year: int
       condition: mint | nearMint | veryGood | good | fair | poor
-      pricePaid: money
-      catalogNumber: string
+      purchasePrice: money
+      releaseYear: int
       notes: text
+      coverImage: url
 pages:
   albums:
     crud: Album
-    search: [title, artist, catalogNumber, notes]
-    filters: [condition, year]
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      albums:
-        records: Album
-navigation: [albums]
+    search: [name, artist, notes]
+    filters: [condition, releaseYear]

@@ -3,7 +3,6 @@ tones:
   Ticket.priority:
     critical: danger
     high: warning
-    low: success
   Ticket.status:
     open: warning
     resolved: success

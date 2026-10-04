@@ -5,7 +5,7 @@ app:
   currency: SEK
 pages:
   home:
-    route: /
+    route: /welcome
     landing:
       hero:
       footer:
@@ -14,16 +14,19 @@ pages:
         where:
           available: true
   catalog:
-    route: /saker
+    route: /
     crud: Item
+    favorites: true
     search: [title, description, place]
     filters: [category, price, condition, available]
     sortable: [price, createdAt]
-    favorites: true
     contact: owner
   myItems:
     crud: Item
     mine: true
+  saved:
+    crud: Item
+    favorites: only
 models:
   Item:
     fields:
@@ -31,8 +34,8 @@ models:
       photos: pictures
       description: text!
       price: money
-      category: klaeder | moebler | leksaker | boecker | elektronik | sport | annat
-      condition: ny | somNy | bra | sliten
+      category: klaeder | moebler | leksaker | boecker | elektronik | sport | oevrigt
+      condition: ny | naestanNy | bra | sliten
       place: string
       available: bool = true
-navigation: [catalog, myItems]
+navigation: [catalog, myItems, saved]

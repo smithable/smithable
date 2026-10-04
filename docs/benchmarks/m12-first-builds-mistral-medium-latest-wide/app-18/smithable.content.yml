@@ -14,11 +14,11 @@ models:
           accepted: Accepterad
           rejected: Avvisad
       total:
-        label: Totalt
+        label: Totalt belopp
+      description:
+        label: Beskrivning
       validUntil:
         label: Giltig till
-      notes:
-        label: Anteckningar
       customer:
         label: Kund
   Invoice:
@@ -37,13 +37,11 @@ models:
           paid: Betald
           overdue: Försenad
       total:
-        label: Totalt
+        label: Totalt belopp
       dueDate:
         label: Förfallodatum
       paidAt:
         label: Betald datum
-      notes:
-        label: Anteckningar
       customer:
         label: Kund
   Customer:

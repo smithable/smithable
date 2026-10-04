@@ -2,27 +2,30 @@ smithable: 0.1
 app:
   name: Local Museum Collection
   description: Browse the museum's objects and their stories online.
-pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      featured:
-        records: Artifact
-        where:
-          status: onDisplay
-  artifacts:
-    crud: Artifact
-    search: [name, description, story]
 models:
   Artifact:
     fields:
       name: string!
       description: text
-      category: string
-      period: string
+      category: painting | sculpture | artifact | document
       image: url
+      period: string
+      origin: string
       story: text
-      status: onDisplay | inStorage | onLoan
+      addedOn: date! = TODAY()
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  artifacts:
+    crud: Artifact
+    search: [name, description, period, origin, story]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      artifacts:
+        records: Artifact
 navigation: [artifacts]
