@@ -32,7 +32,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
     <div data-kit="app-shell" className="min-h-screen lg:flex">
       {/* Desktop: a sidebar. */}
       <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
-        <p className="px-6 pt-7 pb-6 text-2xl font-bold">
+        <p className="px-6 pt-7 pb-6 text-2xl font-bold [overflow-wrap:anywhere]">
           <AppName {...shell} />
         </p>
         <Navigation {...shell} />

@@ -86,3 +86,24 @@ test("a landing page's own theme is a second scope in theme.css, and its font is
     ]),
   );
 });
+
+test("a hero's shortcut to a page behind sign-in shows only to those who may open it", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Status }\nmodels:\n  Incident: { fields: { title: string! } }\npages:\n  home:\n    route: /\n    landing:\n      hero: { shortcuts: [open, history] }\n  open: { crud: Incident }\n  history: { crud: Incident, route: /history }\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { pages: [home, open], read: [Incident] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const home =
+    generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
+      (f) => f.path === "src/routes/index.tsx",
+    )?.content ?? "";
+  expect(home).toContain('{ to: "/open", label: "Open"');
+  expect(home).toContain('...(allows(pageAccess["history"], viewer) ? [{ to: "/history"');
+  expect(home).toMatch(/import \{ [^}]*\ballows\b[^}]*\} from "#\/kit\/access";/);
+});
