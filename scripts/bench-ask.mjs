@@ -365,19 +365,29 @@ for (const starter of rescore ? [] : starters) {
   const base = `http://localhost:${PORT}`;
   let stop = await serveDev(dir, PORT);
   const run = mcp(base, key);
+  // The app's summary, when it gives one (the server's instructions), goes with the tools.
+  const instructions =
+    (
+      await run("initialize", {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: { name: "bench-ask", version: "1" },
+      })
+    ).instructions ?? "";
   const list = (await run("tools/list")).tools;
   const tools = { list, run };
-  const deletes = list.some((t) => /^delete_|^remove_/.test(t.name));
+  const deletes = list.some((t) => /^(delete|remove)(_|$)/.test(t.name));
   if (!sizes[starter]) {
     sizes[starter] = {
       type: "size",
       starter,
       tools: list.length,
       tokens: Math.ceil(JSON.stringify(list).length / 4),
+      summary: Math.ceil(instructions.length / 4),
     };
     keep(sizes[starter]);
   }
-  const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Today is ${today}. Answer briefly, in plain text.`;
+  const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Today is ${today}. Answer briefly, in plain text.${instructions ? `\n\n${instructions}` : ""}`;
   const reset = async () => {
     stop();
     copyFileSync(pristine, join(dir, "data/db/app.db"));
@@ -498,7 +508,8 @@ const adds = (q) =>
   (q.kind === "number" &&
     /how many|total|together|average|in all|owe|still to be paid|cost together/i.test(q.q));
 /** Worked out by the model itself: no tool of the app's that counts or adds was called. */
-const byModel = (r) => !(r.trace ?? []).some((t) => /^(count|sum|total|aggregate|summar)/i.test(t));
+const byModel = (r) =>
+  !(r.trace ?? []).some((t) => /^(measure|count|sum|total|aggregate|summar)/i.test(t));
 const totals = models.map((m) => {
   const rows = results_.filter((r) => r.model === m && r.outcome !== "skipped");
   const k = (o) => rows.filter((r) => r.outcome === o).length;
@@ -524,10 +535,13 @@ ${totals.join("\n")}
 
 The tools each starter offers (\`tools/list\`, about four characters a token):
 
-| Starter | Tools | Their size (tokens) |
-|---|---|---|
+| Starter | Tools | Their size (tokens) | The app's summary (tokens) |
+|---|---|---|---|
 ${Object.entries(sizes)
-  .map(([s, x]) => `| ${s} | ${x.tools} | ${x.tokens.toLocaleString("en")} |`)
+  .map(
+    ([s, x]) =>
+      `| ${s} | ${x.tools} | ${x.tokens.toLocaleString("en")} | ${(x.summary ?? 0).toLocaleString("en")} |`,
+  )
   .join("\n")}
 
 ## Per starter

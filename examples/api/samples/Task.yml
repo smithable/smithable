@@ -1,0 +1,8 @@
+# Tasks across the projects, in every state, some with a due date.
+- { title: Choose the photos for the front page, project: Website relaunch, status: done, dueDate: 2026-09-26 }
+- { title: Write the texts for the services page, project: Website relaunch, status: doing, dueDate: 2026-10-09, details: "Three short sections and a line for each price." }
+- { title: Check the site on a phone, project: Website relaunch, status: todo, dueDate: 2026-10-14 }
+- { title: Ask Sara for the opening hours, project: Autumn newsletter, status: done }
+- { title: Draft the newsletter, project: Autumn newsletter, status: todo, dueDate: 2026-10-10, details: "Lead with the new opening hours, then the two autumn offers." }
+- { title: Book the movers, project: Office move, status: doing, dueDate: 2026-10-20, details: "Two quotes so far; the second is cheaper but cannot do a Saturday." }
+- { title: Order boxes, project: Office move, status: todo }
