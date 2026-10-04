@@ -1044,8 +1044,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[0]?.title);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -6457,7 +6458,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "a29fd775 generated",
   "src/db/seed.ts": "d49bc7e4 generated",
-  "src/generated/access.test.ts": "e1b647e8 generated",
+  "src/generated/access.test.ts": "a5ffe938 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/booking.server.ts": "62168209 generated",
   "src/generated/booking.ts": "9ec9d400 generated",
@@ -7157,8 +7158,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[0]?.title);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -9608,7 +9610,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "97ca0658 generated",
   "src/db/seed.ts": "39cef010 generated",
-  "src/generated/access.test.ts": "6881b7e4 generated",
+  "src/generated/access.test.ts": "62e6f16c generated",
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -10591,8 +10593,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[0]?.title);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -13779,7 +13782,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "dc3d0d42 generated",
   "src/db/seed.ts": "d388638c generated",
-  "src/generated/access.test.ts": "1f037960 generated",
+  "src/generated/access.test.ts": "c954aab0 generated",
   "src/generated/actions/mark-paid.server.ts": "d8166f11 generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
   "src/generated/actions/mark-sent.server.ts": "0bb6bc29 generated",
@@ -14319,8 +14322,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[0]?.title);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -16321,7 +16325,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "0d802f59 generated",
   "src/db/seed.ts": "088a3106 generated",
-  "src/generated/access.test.ts": "18bfc339 generated",
+  "src/generated/access.test.ts": "758a6bfd generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
@@ -16830,8 +16834,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[0]?.title);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -18147,7 +18152,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3f96f60a generated",
   "src/db/seed.ts": "fee52e69 generated",
-  "src/generated/access.test.ts": "1ab310a5 generated",
+  "src/generated/access.test.ts": "fb1be0a1 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
@@ -19176,8 +19181,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[0]?.title);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -23226,7 +23232,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3e28a99c generated",
   "src/db/seed.ts": "fa375893 generated",
-  "src/generated/access.test.ts": "b1a43648 generated",
+  "src/generated/access.test.ts": "6cf69458 generated",
   "src/generated/actions/identified.server.ts": "f19cbecd generated",
   "src/generated/actions/identified.ts": "4baad691 generated",
   "src/generated/actions/monitoring.server.ts": "eb5924b3 generated",
