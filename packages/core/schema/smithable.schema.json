@@ -711,6 +711,9 @@
           "dashboard": {
             "type": "object",
             "description": "Tiles of a dashboard, in order: numbers, charts by month, latest records.",
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
             "additionalProperties": {
               "type": "object",
               "additionalProperties": false,
