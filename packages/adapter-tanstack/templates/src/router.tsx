@@ -21,6 +21,8 @@ export function getRouter() {
     defaultPendingComponent: Loading,
     defaultPendingMs: 300,
     defaultPendingMinMs: 300,
+    // Page changes cross-fade where the browser has view transitions (the theme's motion).
+    defaultViewTransition: true,
     ssr: ssrOptions(),
   });
 }

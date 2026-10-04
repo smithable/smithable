@@ -58,6 +58,8 @@ export interface ThemeIR {
   radius: string;
   shadow: string;
   density: "comfortable" | "compact";
+  /** How much the app moves: none, subtle (short fades and slides) or lively (a little more). */
+  motion: "none" | "subtle" | "lively";
   /** The most chroma a brand color keeps on this theme (quiet themes stay quiet). */
   chroma: number;
   light: Tokens;
@@ -75,12 +77,19 @@ export const SHADOWS = {
 } as const;
 
 /**
- * Each built-in preset's font, corner radius, shadow, chroma cap and density (the design
+ * Each built-in preset's font, corner radius, shadow, chroma cap, density and motion (the design
  * delivery's, with the shapes that tell them apart at a glance, 2026-10-02).
  */
 const FOUNDATIONS: Record<
   keyof typeof PRESET_TOKENS,
-  { font: string; radius: string; shadow: string; chroma: number; density: ThemeIR["density"] }
+  {
+    font: string;
+    radius: string;
+    shadow: string;
+    chroma: number;
+    density: ThemeIR["density"];
+    motion: ThemeIR["motion"];
+  }
 > = {
   modern: {
     font: "Inter",
@@ -88,6 +97,7 @@ const FOUNDATIONS: Record<
     shadow: SHADOWS.small,
     chroma: 0.22,
     density: "comfortable",
+    motion: "subtle",
   },
   minimal: {
     font: "Inter",
@@ -95,6 +105,7 @@ const FOUNDATIONS: Record<
     shadow: SHADOWS.none,
     chroma: 0.08,
     density: "comfortable",
+    motion: "subtle",
   },
   playful: {
     font: "Nunito Sans",
@@ -102,6 +113,7 @@ const FOUNDATIONS: Record<
     shadow: SHADOWS.tinted,
     chroma: 0.22,
     density: "comfortable",
+    motion: "lively",
   },
   corporate: {
     font: "Source Sans 3",
@@ -109,6 +121,7 @@ const FOUNDATIONS: Record<
     shadow: SHADOWS.none,
     chroma: 0.16,
     density: "compact",
+    motion: "subtle",
   },
 };
 
@@ -150,6 +163,7 @@ export function parseTheme(file: { path: string; text: string }): {
       "radius",
       "shadow",
       "density",
+      "motion",
       "chroma",
       "light",
       "dark",
@@ -197,6 +211,13 @@ export function parseTheme(file: { path: string; text: string }): {
       byKey.get("density")?.value ?? root,
       "invalid-value",
       `"density" is comfortable or compact.`,
+    );
+  const motion = optional("motion") ?? "subtle";
+  if (motion !== "none" && motion !== "subtle" && motion !== "lively")
+    ctx.error(
+      byKey.get("motion")?.value ?? root,
+      "invalid-value",
+      `"motion" is none, subtle or lively.`,
     );
   const chromaNode = byKey.get("chroma")?.value;
   const chroma =
@@ -259,6 +280,7 @@ export function parseTheme(file: { path: string; text: string }): {
       radius,
       shadow: SHADOWS[shadowName as keyof typeof SHADOWS],
       density: density as ThemeIR["density"],
+      motion: motion as ThemeIR["motion"],
       chroma,
       light: modes.light as Tokens,
       dark: modes.dark as Tokens,
