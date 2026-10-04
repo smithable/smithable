@@ -865,6 +865,10 @@ async function statusFlow(base) {
       Object.keys(strangerSees.paths).some((p) => p.includes("/actions/"))
     )
       throw new Error("the description shows a stranger more than reading");
+    // Signed in, the users page's download is the whole description, what a key reaches.
+    const downloaded = await (await page.request.get(`${base}/api/v1/openapi.json`)).json();
+    if (!downloaded.paths?.["/api/v1/incidents/{id}/actions/resolve"])
+      throw new Error("the signed-in download is not the whole description");
     const listed = await api("/incidents");
     const listing = await listed.json();
     if (listed.status !== 200 || !listing.items?.length || !listing.items[0].title)
