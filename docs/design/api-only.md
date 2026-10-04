@@ -97,7 +97,7 @@ Proposed, one rule and no new grammar: **a call without a key is the visitor.**
 - So a fully public API is `api: { models: all }` with every model under `public.read`. A mixed one (the catalogue open, the orders behind keys) needs nothing more either.
 - Nobody changes or deletes a record without a key, and no action runs without one. `public` has no way to say that, on purpose: a change needs someone to answer for it.
 - The description follows the caller: without a key it describes what a visitor may reach, and nothing else exists as far as it tells; with a key, everything offered. An app with nothing public describes nothing to a stranger, which closes the leak of model and field names.
-- The tools for assistants follow the same rule: without a key, the finding and reading tools for the public models.
+- **The tools for assistants always need a key** (Johan, 2026-10-04). Reading public records without a key is for plain calls only. A tool call costs the app no more than a plain one (the assistant's own model is paid by whoever runs it), but a tools connection is held open far longer than a single call, so it is the larger target for misuse, and nobody needs it open: an owner who wants a public catalogue reachable by assistants makes a key with a read-only role and hands it out. No setting for it until someone asks.
 - Limits without a key are per address, with the kit's limiter, and stricter than a key's.
 - Validation says it once when both are first true ("anyone can read tools and loans through the API without a key"), and the summary sentence says it. The warning for personal data in a public model already exists and covers this.
 
@@ -109,7 +109,7 @@ Johan's question, 2026-10-04. Three things, each already in the app, and none ne
 
 - **What is offered at all** is the `api` block: the models, the standard actions, and `assistants: true`. Deleting is a tool only with `assistants: { delete: true }`.
 - **What this assistant may do** is the role of its key. An administrator makes the key on the users page with a name, a role and an optional end date, and gives it to the assistant. The assistant gets a tool only for what that role may do, and a refusal in the app's words for the rest. The starter's `assistant` role is the example: it reads everything, adds and changes tasks and notes, deletes nothing.
-- **Without a key** it is the visitor (§3.4): finding and reading what is public.
+- **Without a key** there are no tools at all (§3.4). What is public can be read without a key by plain calls only.
 
 So permissions are chosen where they are chosen for people: by role, in the auth file, and by which role a key is given. An assistant acting as the signed-in person, with that person's rights, is the later step (§7).
 
