@@ -88,12 +88,12 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
               ? `
           const used = invitationOf(email);
           if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", title: email, details: { email, role: used.role } });
+            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
           db.delete(invitation).where(eq(invitation.email, email)).run();`
               : ""
           }
-          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },`;
   const tables = invitations
     ? "account, invitation, session, user, verification"
@@ -203,7 +203,7 @@ export const auth = betterAuth({
               ? `
           const refused = joinRefusal(email);
           if (refused) {
-            audit(db, null, { action: "sign-in refused", model: "User", title: email, details: { email, reason: refused } });
+            audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }`
               : ""
