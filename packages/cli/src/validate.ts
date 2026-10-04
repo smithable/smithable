@@ -32,6 +32,8 @@ export function loadSpec(
   io: Io,
   /** Plugins to load besides the declared ones, e.g. one being written. */
   extraPlugins: string[] = [],
+  /** When given, every finding is collected here as well (`validate --json`). */
+  found?: Diagnostic[],
 ): {
   ir?: SpecIR;
   auth?: AuthIR;
@@ -53,6 +55,7 @@ export function loadSpec(
     return { path };
   }
   const print = (diagnostics: Diagnostic[]) => {
+    found?.push(...diagnostics);
     for (const d of diagnostics) io.err(`${formatDiagnostic(d)}\n`);
   };
   const failed = (file: string, diagnostics: Diagnostic[]) => {
@@ -176,7 +179,20 @@ function projectFiles(dir: string, name: string): string[] {
 }
 
 /** `smithable validate [path]`: a directory containing smithable.yml, or the file itself. */
-export function validate(target: string, io: Io, extraPlugins: string[] = []): number {
+export function validate(
+  target: string,
+  io: Io,
+  extraPlugins: string[] = [],
+  json = false,
+): number {
+  if (json) {
+    // For a program: every finding with its code, file and place, and whether the project is
+    // valid. Nothing else is printed, so the output is one JSON document.
+    const found: Diagnostic[] = [];
+    const { ir } = loadSpec(target, { ...io, err: () => {} }, extraPlugins, found);
+    io.out(`${JSON.stringify({ valid: Boolean(ir), diagnostics: found }, null, 2)}\n`);
+    return ir ? 0 : 1;
+  }
   const { ir, path } = loadSpec(target, io, extraPlugins);
   if (!ir) return 1;
   io.out(
