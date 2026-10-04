@@ -86,3 +86,23 @@ test("a request without an id gets one; an unexpected database error is logged a
     "taken:email",
   );
 });
+
+test("a request that throws still has its access line; an all-zero id is not continued", async () => {
+  const zero = new Request("http://app.test/boom", {
+    headers: { traceparent: `00-${"0".repeat(32)}-00f067aa0ba902b7-01` },
+  });
+  const written = await lines(() =>
+    trace
+      .traced(zero, undefined, async () => {
+        throw new TypeError("broken");
+      })
+      .catch(() => undefined),
+  );
+  expect(written[0]).toMatchObject({
+    log: "access",
+    status: 500,
+    error: "TypeError",
+    path: "/boom",
+  });
+  expect(written[0]?.trace).not.toBe("0".repeat(32));
+});
