@@ -1517,6 +1517,21 @@ async function visualChecks(dir, base) {
   }
 }
 
+/** /robots.txt: served as text, refusing all that is not public. */
+async function robotsCheck(base) {
+  const response = await fetch(`${base}/robots.txt`);
+  const text = await response.text();
+  const ok =
+    response.status === 200 &&
+    response.headers.get("content-type")?.startsWith("text/plain") &&
+    text.startsWith("User-agent: *\n") &&
+    text.endsWith("Disallow: /\n");
+  console.log(
+    `  ${ok ? "✓" : "✗"} robots.txt: the public pages allowed, the rest refused${ok ? "" : `\n    ${response.status} ${text}`}`,
+  );
+  if (!ok) failures.push("robots.txt");
+}
+
 /** In the invoicing app, a new member is welcomed by the onboarding, then edits it in settings. */
 async function onboardingFlow(base) {
   const browser = await chromium.launch();
@@ -2720,6 +2735,7 @@ for (const [index, example] of examples.entries()) {
     try {
       const base = `http://localhost:${port + 100}`;
       await visualChecks(dir, base);
+      await robotsCheck(base);
       if (example === "crm") {
         await browserFlow(base);
         await filtersFlow(base);
