@@ -80,6 +80,9 @@ export interface OpenAICompatibleOptions {
 export function openAICompatible(options: OpenAICompatibleOptions): Provider {
   // Whether this server took the strict answer schema; unknown until the first call.
   let strict: boolean | undefined;
+  // Temperature 0 for the same answer to the same request, unless the server refuses it (some
+  // reasoning models take only their default): then it is left out, for this server.
+  let steady = true;
   // A price given wins; otherwise a known model's list price, in dollars.
   const listed = options.price ? undefined : listPrice(options.model);
   return {
@@ -102,7 +105,7 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
           },
           body: JSON.stringify({
             model: options.model,
-            temperature: 0,
+            ...(steady ? { temperature: 0 } : {}),
             messages: [
               { role: "system", content: system },
               { role: "user", content: user },
@@ -115,6 +118,10 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
         });
       let current = strict === false && fallbackSchema ? fallbackSchema : schema;
       let response = await post(current);
+      if (response.status === 400 && steady && /temperature/.test(await response.clone().text())) {
+        steady = false;
+        response = await post(current);
+      }
       // A 400 for the strict schema: the server's JSON Schema support stops short of it. The
       // simpler schema is tried once, and kept for this server.
       if (response.status === 400 && fallbackSchema && current !== fallbackSchema) {
@@ -167,7 +174,9 @@ export function route(providers: Provider[], policy: Policy): Provider[] {
 }
 
 export function parsePolicy(text: string | undefined): Policy {
-  if (!text) return "eu-only";
+  // Where models may run is a setting: nothing said means the best model configured, wherever
+  // it runs; "eu-only" and "local-only" restrict it.
+  if (!text) return "best-available";
   if (text === "local-only" || text === "eu-only" || text === "best-available") return text;
   if (text.startsWith("allow:"))
     return {

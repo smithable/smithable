@@ -1598,7 +1598,7 @@ async function askFlow(dir) {
       async () => {
         const result = await smithableAsync(
           dir,
-          { ...coder, SMITHABLE_CODER_LOCATION: "" },
+          { ...coder, SMITHABLE_CODER_LOCATION: "", SMITHABLE_AI_POLICY: "eu-only" },
           "code",
           "action:mergeCustomers",
           "anything",

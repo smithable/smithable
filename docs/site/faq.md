@@ -28,7 +28,7 @@ A private beta at [smithable.ai](https://smithable.ai), by invitation, with a fr
 
 ## Where does my data live?
 
-On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region, and model calls go to an EU-hosted model. The hosted service's legal documents are drafts until the public beta and say exactly what is kept and for how long.
+On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its sub-processors (in the beta, an EU-hosted one), and a project that must keep them in the EU says so with the `eu-only` policy. The hosted service's legal documents are drafts until the public beta and say exactly what is kept and for how long.
 
 ## What can it build today?
 

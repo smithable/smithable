@@ -43,7 +43,7 @@ If you use [Claude Code](https://claude.com/claude-code), Smithable can use it a
 ```bash
 export SMITHABLE_FRONTIER=claude-code
 export SMITHABLE_FRONTIER_MODEL=sonnet     # optional; Claude Code's default otherwise
-export SMITHABLE_AI_POLICY=best-available  # Claude is not EU-hosted, so eu-only never uses it
+# With SMITHABLE_AI_POLICY=eu-only Claude is never used: it is not EU-hosted.
 ```
 
 Smithable runs `claude -p` with no tools, no MCP servers and an empty working directory: it only answers, and cannot read or change the project. Its cost is reported in dollars.
@@ -59,7 +59,7 @@ export SMITHABLE_AI_POLICY=allow:claude-code,smithable  # Claude runs outside th
 smithable code query:churnRisk "rank by days since the last order"
 ```
 
-The coder is subject to the same AI policy as every model call: Claude Code counts as outside the EU, so the default `eu-only` refuses it until the policy allows it. A coder of your own (`SMITHABLE_CODER_COMMAND`) says where it runs with `SMITHABLE_CODER_LOCATION=local` or `eu`; unsaid, it counts as outside the EU too.
+The coder is subject to the same AI policy as every model call: Claude Code counts as outside the EU, so a project with the `eu-only` policy refuses it. A coder of your own (`SMITHABLE_CODER_COMMAND`) says where it runs with `SMITHABLE_CODER_LOCATION=local` or `eu`; unsaid, it counts as outside the EU too.
 
 `smithable ask` runs the coder by itself when its proposal adds a query. `smithable code hooks "email the customer when an order ships"` has it write a hook in `src/custom/hooks.ts`, what happens after a record is created, changed or deleted, or once a day; `ask` points there when a request describes such behaviour. The coder is asked to read only the project, edit only `src/custom/`, and run only the type check (Claude Code runs with `--permission-mode dontAsk` and path-scoped rules). It never runs the tests: they execute the code it wrote, so Smithable runs them itself afterwards. Be clear about the boundary: the coder is a program running with your privileges, and those rules are its tool's settings, not a sandbox. What Smithable guarantees is what gets committed: every changed file, ignored file and Git hook is checked, and so are the installed packages, build output and dev database, before any test runs (except the caches the preview's dev server writes, and Smithable's own snapshots and token log). A change anywhere else undoes everything: Git's undo, the hooks put back, build output removed, packages installed again, and a changed dev database named so it can be restored. A failing type check or test undoes everything too. The result is one commit that `smithable undo` reverts. Measured: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code for $0.45 with Sonnet.
 
@@ -73,9 +73,9 @@ For a section of `smithable.yml` Smithable does not know, `smithable teach <sect
 
 | Policy | Allowed |
 |---|---|
-| `eu-only` (default) | Local models and EU-hosted ones |
+| `best-available` (default) | Any configured model, the cheapest capable one first |
+| `eu-only` | Local models and EU-hosted ones |
 | `local-only` | Only models on this machine |
-| `best-available` | Any configured model |
 | `allow:local,smithable` | Only the named providers |
 
 A request worded like an everyday change ("Customers should have a phone number", "Only admins may delete customers", "Show orders first in the menu") becomes operations without any model, in milliseconds and offline; anything that does not resolve to exactly one model, field or page goes to the cheapest allowed tier first. A model gets two chances to repair an answer that does not apply; after that, or when it says no operation can do it while a stronger model is allowed, the request goes to the next tier. An unclear request gets a question back instead of a guess, and a request that needs custom code is said to need it.

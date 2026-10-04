@@ -1,5 +1,5 @@
 // A theme is data (docs/design/look.md §3): a font, a corner radius, a shadow and the color
-// tokens the app kit uses, in light and dark mode. The four built-in presets are themes; a
+// tokens the app kit uses, in light and dark mode. The thirteen built-in presets are themes; a
 // project's own live in themes/<name>.yml and are checked like the built-ins: every pair of
 // text and background the kit puts together must read. A theme never ships CSS or code.
 import { isScalar, LineCounter, parseDocument } from "yaml";
@@ -7,8 +7,11 @@ import { contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./color.js";
 import { checkKeys, mapEntries, ParseContext, readString } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
+import { THEME_LIBRARY } from "./theme-library.js";
 import { PRESET_TOKENS } from "./theme-presets.js";
-import { FONTS } from "./ux.js";
+
+/** Open-license fonts the generated apps can host themselves. */
+export const FONTS = ["Inter", "Nunito Sans", "Source Sans 3"] as const;
 
 export type Mode = "light" | "dark";
 
@@ -108,17 +111,6 @@ const FOUNDATIONS: Record<
     density: "compact",
   },
 };
-
-/** The four themes Smithable ships, from the design delivery's tokens. */
-export const BUILT_IN_THEMES: readonly ThemeIR[] = (
-  Object.keys(PRESET_TOKENS) as (keyof typeof PRESET_TOKENS)[]
-).map((name) => ({
-  name,
-  source: "built-in",
-  ...FOUNDATIONS[name],
-  light: { ...PRESET_TOKENS[name].light },
-  dark: { ...PRESET_TOKENS[name].dark },
-}));
 
 /** A theme by name among the built-ins and the project's; the project's wins a clash. */
 export function themeNamed(name: string, themes: readonly ThemeIR[] = []): ThemeIR | undefined {
@@ -453,3 +445,28 @@ export function tokensOf(theme: ThemeIR, mode: Mode, over: Partial<Tokens> = {})
     out[name] = over[name] ?? theme[mode][name];
   return out;
 }
+
+/**
+ * The themes Smithable ships: the four from the design delivery's tokens, then the nine of the
+ * theme library, read with the parser and the checks a project's own theme gets. (At the end
+ * of the module: the parser's constants must exist before it runs.)
+ */
+export const BUILT_IN_THEMES: readonly ThemeIR[] = [
+  ...(Object.keys(PRESET_TOKENS) as (keyof typeof PRESET_TOKENS)[]).map(
+    (name): ThemeIR => ({
+      name,
+      source: "built-in",
+      ...FOUNDATIONS[name],
+      light: { ...PRESET_TOKENS[name].light },
+      dark: { ...PRESET_TOKENS[name].dark },
+    }),
+  ),
+  ...Object.entries(THEME_LIBRARY).map(([name, text]): ThemeIR => {
+    const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
+    if (!theme)
+      throw new Error(
+        `The built-in theme "${name}" is not valid: ${diagnostics.map((d) => d.message).join(" ")}`,
+      );
+    return { ...theme, source: "built-in" };
+  }),
+];

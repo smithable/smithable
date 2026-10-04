@@ -125,3 +125,31 @@ test("a response cache answers a request it has seen, for nothing", async () => 
     [false, 10],
   ]);
 });
+
+test("a server that takes only its default temperature is asked again without one, and from then on", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    bodies.push(body);
+    if ("temperature" in body)
+      return Response.json(
+        {
+          error: {
+            message: "Unsupported value: 'temperature' does not support 0 with this model.",
+          },
+        },
+        { status: 400 },
+      );
+    return Response.json({ model: "m", choices: [{ message: { content: "{}" } }], usage: {} });
+  });
+  const provider = openAICompatible({
+    name: "x",
+    baseUrl: "http://x/v1",
+    model: "m",
+    tier: "frontier",
+    location: "elsewhere",
+  });
+  await completeJson(provider, { system: "s", user: "u", schema: {} }, []);
+  await completeJson(provider, { system: "s", user: "v", schema: {} }, []);
+  expect(bodies.map((b) => "temperature" in b)).toEqual([true, false, false]);
+});
