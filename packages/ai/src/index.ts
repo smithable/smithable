@@ -7,6 +7,7 @@ export {
   closeShared,
   draftOperations,
   draftProjectByOperations,
+  dropForbidden,
   openLinked,
   visitorFlaws,
 } from "./draft-operations.js";
