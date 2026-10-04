@@ -318,6 +318,42 @@ ${unchanged("again")}  });`);
 ${tests.join("\n\n")}
 });`);
   }
+  // The audit log (docs/design/logging.md §3.3): for the first model some role may create,
+  // change and delete its own records of, the three lines name that person and the change.
+  const audited = signedIn
+    ? ir.models
+        .flatMap((model) =>
+          roles.map((role) => ({ model, role, can: expected(modelAccess(model, auth), role) })),
+        )
+        .find(({ role, can }) => role !== null && can.create && can.changeOwn && can.deleteOwn)
+    : undefined;
+  if (audited) {
+    const { model, role } = audited;
+    const data = `${camel(model.name)}Data`;
+    const values = `${camel(model.name)}Values`;
+    describes.push(`describe("the audit log", () => {
+  test("names who created, changed and deleted a record, and what changed", async () => {
+    const viewer = signedIn(${JSON.stringify(role)});
+    const made = await ${data}.create(viewer, ${values}(viewer.id));
+    await ${data}.update(viewer, made.id, ${values}(viewer.id));
+    await ${data}.remove(viewer, made.id);
+    const lines = db
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.model, ${JSON.stringify(model.name)}), eq(auditLog.recordId, made.id)))
+      .all();
+    expect(lines.map((l) => [l.action, l.who, l.role])).toEqual([
+      ["created", viewer.id, viewer.role],
+      ["changed", viewer.id, viewer.role],
+      ["deleted", viewer.id, viewer.role],
+    ]);
+    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
+    expect(lines[2]?.title).toBe(lines[1]?.title);
+    expect(lines[2]?.title).toBeTruthy();
+    expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
+  });
+});`);
+  }
   const imports = [
     ...ir.models.map((m) => `import { ${camel(m.name)}Data } from "./${kebab(m.name)}.server";`),
     ...standard.map(
@@ -327,9 +363,9 @@ ${tests.join("\n\n")}
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
 // "Own" records are owned by the user; "others" by someone else.
-${standard.length ? 'import { eq } from "drizzle-orm";\n' : ""}import { describe, expect, test } from "vitest";
+${audited ? 'import { and, eq } from "drizzle-orm";\n' : standard.length ? 'import { eq } from "drizzle-orm";\n' : ""}import { describe, expect, test } from "vitest";
 import { db } from "#/db";
-import { ${[...tables, ...(signedIn ? ["user"] : [])].sort().join(", ")} } from "#/db/schema";
+import { ${[...tables, ...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
 ${imports.join("\n")}
 
