@@ -1204,10 +1204,10 @@ async function copyFlow(base) {
     await open(page, `${base}/invoices`);
     await page.getByRole("cell", { name: "2026-006", exact: true }).click();
     await page.waitForURL(/\/invoices\/\d+$/);
-    await page.getByRole("button", { name: "Mark sent" }).click();
-    await page
-      .getByRole("button", { name: "Mark sent" })
-      .waitFor({ state: "detached", timeout: 10000 });
+    // The header's actions are there twice (wide and narrow screens): the first is the visible one.
+    const markSent = page.getByRole("button", { name: "Mark sent" });
+    await markSent.first().click();
+    await markSent.first().waitFor({ state: "detached", timeout: 10000 });
     for (let i = 0; (await page.getByLabel("Status").inputValue()) !== "sent"; i++) {
       if (i === 50) throw new Error("the form still shows the status from before the action");
       await page.waitForTimeout(100);
