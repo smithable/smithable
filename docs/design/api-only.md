@@ -1,6 +1,6 @@
 # An app for programs and assistants (an app that is only an API)
 
-Status: 2026-10-04, by Fable, from Johan's idea. A design; nothing here is built. Four decisions for Johan at the end.
+Status: 2026-10-04, by Fable, from Johan's idea. Johan said yes to all four decisions (§9) the same day; nothing here is built yet.
 
 ## 1. What it is, and who wants it
 
@@ -103,6 +103,16 @@ Proposed, one rule and no new grammar: **a call without a key is the visitor.**
 
 "Using a key" (§3.2) has the download button for the full description.
 
+### 3.4b Who decides what an assistant may do
+
+Johan's question, 2026-10-04. Three things, each already in the app, and none new for assistants:
+
+- **What is offered at all** is the `api` block: the models, the standard actions, and `assistants: true`. Deleting is a tool only with `assistants: { delete: true }`.
+- **What this assistant may do** is the role of its key. An administrator makes the key on the users page with a name, a role and an optional end date, and gives it to the assistant. The assistant gets a tool only for what that role may do, and a refusal in the app's words for the rest. The starter's `assistant` role is the example: it reads everything, adds and changes tasks and notes, deletes nothing.
+- **Without a key** it is the visitor (§3.4): finding and reading what is public.
+
+So permissions are chosen where they are chosen for people: by role, in the auth file, and by which role a key is given. An assistant acting as the signed-in person, with that person's rights, is the later step (§7).
+
 ### 3.5 Trying it as an assistant (decision 4)
 
 [integrations.md](integrations.md) §5c put a test bench in Studio's Code mode, so that Builder would not have two boxes to type in. It is not built. Johan's proposal now is to have it on the administrator's pages of the app itself, which is the better home:
@@ -161,7 +171,7 @@ Little. The starter appears in the form. A published app of this kind shows its 
 5. "Try it as an assistant" (§3.5), if decision 4 is yes: the kit part, the environment settings, the preview's and the gateway's side. (A, B; the gateway's part is small since it already serves a chat model per project.)
 6. A how-to on the docs site, "An app for programs and assistants": make it, make a key, the first call, connect an assistant, try it on the bench. (C.)
 
-## 9. Decisions for Johan
+## 9. Decisions (Johan, 2026-10-04: yes to all four)
 
 1. **No mode and no keyword:** an app with a users page, a data page and the `api` block is the app for programs. Recommended: yes.
 2. **The starter is `api`, "tasks and notes an assistant keeps", with an `assistant` role**, and is made now rather than after the company website, since it shares nothing with it. Recommended: yes.
