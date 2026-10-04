@@ -6,6 +6,7 @@ import {
   type ProjectFiles,
   parseOperationArgs,
 } from "./apply.js";
+import { validateSpec } from "./spec.js";
 
 const files = {
   spec: Object.values(
@@ -456,6 +457,15 @@ test("addQuery and addTile put a custom query on a new dashboard", () => {
   });
   expect(second).toMatchObject({ ok: true });
   expect(apply("addTile", ["customers", "x", "count", "Customer"])).toMatchObject({ ok: false });
+  // A tile's name is a name in the generated code too: camelCase, in the operation and the file.
+  expect(apply("addTile", ["overview", "total-count", "count", "Customer"])).toMatchObject({
+    ok: false,
+  });
+  const kebab = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\nmodels:\n  Customer: { fields: { name: text } }\npages:\n  board:\n    dashboard:\n      total-count: { count: Customer }\n",
+  });
+  expect(kebab.diagnostics.map((d) => d.code)).toContain("invalid-name");
   expect(apply("addQuery", ["churnRisk", "Client"])).toMatchObject({ ok: false });
 });
 
