@@ -308,7 +308,7 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
     const scalar = field.type.kind === "scalar" ? field.type.name : field.type.kind;
     if ("asked" in v) return `${field.name}: asked[${JSON.stringify(key)}],`;
     // ME(): the signed-in person who pressed the button (an action is never a visitor's).
-    if ("me" in v) return `${field.name}Id: viewer?.id,`;
+    if ("me" in v) return `${field.name}Id: personOf(viewer),`;
     const code =
       "formula" in v
         ? stored(field, compile(v.formula, model, "row"))
@@ -343,7 +343,7 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
       const changed = tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get();
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });
       const inserted = [
-${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: viewer?.id ?? null }).returning().get(),`).join("\n")}
+${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: personOf(viewer) }).returning().get(),`).join("\n")}
       ] as const;
 ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });`).join("\n")}
       return { changed, inserted };
@@ -354,7 +354,7 @@ ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringi
   return `${HEADER}import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";
-import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
@@ -584,7 +584,7 @@ function copyActionServer(
   const pick = (from: string, keys: string[]) => keys.map((k) => `${k}: ${from}.${k}`).join(", ");
   return `${HEADER}import { db } from "#/db";
 import { ${[n.table, ...lists.map((l) => l.ln.table)].sort().join(", ")} } from "#/db/schema";
-import { AccessDenied, check, type Viewer } from "#/kit/access";
+import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
@@ -617,12 +617,12 @@ ${lists
   .join("\n")}
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
-    const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: viewer?.id ?? null }).returning().get();
+    const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: personOf(viewer) }).returning().get();
     audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
-      const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: viewer?.id ?? null }).returning().get();
+      const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: personOf(viewer) }).returning().get();
       audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });
       return copy;
     });`,

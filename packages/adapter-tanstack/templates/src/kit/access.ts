@@ -37,6 +37,14 @@ export class AccessDenied extends Error {
 /** A change the database refused, as a code the form turns into words: "taken:<column>" or "in-use". */
 export class Conflict extends Error {}
 
+/**
+ * The person a viewer is, for owning records: their user id, or null for an API key, which is a
+ * role and not a person (docs/design/integrations.md §2).
+ */
+export function personOf(viewer: Viewer | null): string | null {
+  return viewer && !viewer.id.startsWith("key:") ? viewer.id : null;
+}
+
 /** Whether the viewer may do something; `ownerId` is the owner of the record involved, if any. */
 export function allows(rule: Rule, viewer: Viewer | null, ownerId?: string | null): boolean {
   if (rule.public) return true;

@@ -1,6 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import type { AuthIR, SpecIR } from "@smithable/core";
 import { roleLabels } from "./auth.js";
+import { hasKeys } from "./keys.js";
 import { HEADER, literal } from "./shared.js";
 
 /** The users page's id (there is one). */
@@ -21,12 +22,12 @@ export function usersServerModule(ir: SpecIR, auth: AuthIR): string {
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { asc, eq } from "drizzle-orm";
+import { ${hasKeys(ir, auth) ? "and, asc, eq, isNull" : "asc, eq"} } from "drizzle-orm";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { ${hasKeys(ir, auth) ? "apiKey, invitation, user" : "invitation, user"} } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { check, type Viewer } from "#/kit/access";
+import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
@@ -57,8 +58,10 @@ export interface InvitationRow {
 /** Where invitation links point: the app's public address, or the address this request used. */
 export const origin = () => process.env.BETTER_AUTH_URL ?? getRequestUrl().origin;
 
+/** Who may manage users: a person with the page's role; an API key never, whatever its role. */
 function manager(viewer: Viewer | null): Viewer {
   check(RULE, viewer);
+  if (!personOf(viewer)) throw new AccessDenied(true);
   return viewer as Viewer;
 }
 
@@ -188,7 +191,19 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
-    db.transaction((tx) => {
+    db.transaction((tx) => {${
+      hasKeys(ir, auth)
+        ? `
+      // Their keys go with them: a key outlives nobody who made it.
+      for (const key of tx
+        .update(apiKey)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKey.createdById, userId), isNull(apiKey.revokedAt)))
+        .returning()
+        .all())
+        audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });`
+        : ""
+    }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });

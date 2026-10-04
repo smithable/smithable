@@ -1093,7 +1093,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { bookings, sessions } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -1177,7 +1177,7 @@ export const bookingData = {
       row = db.transaction((tx) => {
       const taken = tx.select({ n: count() }).from(bookings).where(and(eq(bookings.sessionId, values.sessionId))).get()?.n ?? 0;
       if (taken >= (tx.select({ n: sessions.capacity }).from(sessions).where(eq(sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
-        const made = tx.insert(bookings).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(bookings).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Booking", record: made.id });
         return made;
       });
@@ -1381,7 +1381,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { classTypes } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -1442,7 +1442,7 @@ export const classTypeData = {
     let row: typeof classTypes.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(classTypes).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(classTypes).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "ClassType", record: made.id });
         return made;
       });
@@ -1879,7 +1879,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { instructors } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -1941,7 +1941,7 @@ export const instructorData = {
     let row: typeof instructors.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(instructors).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(instructors).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Instructor", record: made.id });
         return made;
       });
@@ -2170,7 +2170,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { messages } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -2233,7 +2233,7 @@ export const messageData = {
     let row: typeof messages.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(messages).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(messages).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Message", record: made.id });
         return made;
       });
@@ -2471,7 +2471,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { posts } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { deletePicture } from "#/kit/uploads";
@@ -2533,7 +2533,7 @@ export const postData = {
     let row: typeof posts.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(posts).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(posts).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Post", record: made.id });
         return made;
       });
@@ -2790,7 +2790,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { bookings, sessions } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -2872,7 +2872,7 @@ export const sessionData = {
     let row: typeof sessions.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(sessions).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(sessions).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Session", record: made.id });
         return made;
       });
@@ -6937,25 +6937,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "d49bc7e4 generated",
   "src/generated/access.test.ts": "6a8773fd generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "2cab4562 generated",
+  "src/generated/booking.server.ts": "5784890e generated",
   "src/generated/booking.ts": "9ec9d400 generated",
-  "src/generated/class-type.server.ts": "038049df generated",
+  "src/generated/class-type.server.ts": "5851549b generated",
   "src/generated/class-type.ts": "acadda4f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "48eecec6 generated",
-  "src/generated/instructor.server.ts": "8ca1ee4f generated",
+  "src/generated/instructor.server.ts": "9a189f5b generated",
   "src/generated/instructor.ts": "dd86d8e3 generated",
-  "src/generated/message.server.ts": "e8395cfa generated",
+  "src/generated/message.server.ts": "6cd3491e generated",
   "src/generated/message.ts": "7f5e91c2 generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
-  "src/generated/post.server.ts": "9b8f207c generated",
+  "src/generated/post.server.ts": "ac521ed0 generated",
   "src/generated/post.ts": "cd2cc271 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "72000184 generated",
+  "src/generated/session.server.ts": "d44ccc88 generated",
   "src/generated/session.ts": "63803330 generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -6976,7 +6976,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "8a6937ce kit",
+  "src/kit/access.ts": "6121a7ed kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -7769,7 +7769,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { customers } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -7790,8 +7790,8 @@ export const customerAccess: ModelAccess = {
  * own, whatever the form sent.
  */
 function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
-  if (viewer && customerAccess.write.roles.includes(viewer.role)) return given ?? viewer.id;
-  return viewer?.id ?? null;
+  if (viewer && customerAccess.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
+  return personOf(viewer);
 }
 
 export const customerData = {
@@ -8222,7 +8222,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { orders } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -8286,7 +8286,7 @@ export const orderData = {
     let row: typeof orders.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(orders).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(orders).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Order", record: made.id });
         return made;
       });
@@ -8544,7 +8544,7 @@ import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { check, type Viewer } from "#/kit/access";
+import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
@@ -8575,8 +8575,10 @@ export interface InvitationRow {
 /** Where invitation links point: the app's public address, or the address this request used. */
 export const origin = () => process.env.BETTER_AUTH_URL ?? getRequestUrl().origin;
 
+/** Who may manage users: a person with the page's role; an API key never, whatever its role. */
 function manager(viewer: Viewer | null): Viewer {
   check(RULE, viewer);
+  if (!personOf(viewer)) throw new AccessDenied(true);
   return viewer as Viewer;
 }
 
@@ -10259,15 +10261,15 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "bc71c15c generated",
+  "src/generated/customer.server.ts": "f3eb0972 generated",
   "src/generated/customer.ts": "e4cd5bb6 generated",
   "src/generated/hooks.ts": "5721824b generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "71f70e7b generated",
+  "src/generated/order.server.ts": "9a2bb863 generated",
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
-  "src/generated/users.server.ts": "6e9a4b7d generated",
+  "src/generated/users.server.ts": "4d2fc346 generated",
   "src/generated/users.test.ts": "144bc234 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -10281,7 +10283,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
-  "src/kit/access.ts": "8a6937ce kit",
+  "src/kit/access.ts": "6121a7ed kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -11506,7 +11508,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { businessProfiles } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -11559,7 +11561,7 @@ export const businessProfileData = {
     let row: typeof businessProfiles.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(businessProfiles).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(businessProfiles).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "BusinessProfile", record: made.id });
         return made;
       });
@@ -11767,7 +11769,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { clients } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -11823,7 +11825,7 @@ export const clientData = {
     let row: typeof clients.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(clients).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(clients).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Client", record: made.id });
         return made;
       });
@@ -12182,7 +12184,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { invoices } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -12255,7 +12257,7 @@ export const invoiceData = {
     let row: typeof invoices.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(invoices).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(invoices).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Invoice", record: made.id });
         return made;
       });
@@ -12554,7 +12556,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { invoiceLines } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -12618,7 +12620,7 @@ export const invoiceLineData = {
     let row: typeof invoiceLines.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(invoiceLines).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(invoiceLines).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "InvoiceLine", record: made.id });
         return made;
       });
@@ -14593,18 +14595,18 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "81f2ba0a generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "7a1b779e generated",
+  "src/generated/business-profile.server.ts": "c7bee412 generated",
   "src/generated/business-profile.ts": "2abbba11 generated",
-  "src/generated/client.server.ts": "2dd58b98 generated",
+  "src/generated/client.server.ts": "be9e5e9c generated",
   "src/generated/client.ts": "262b8aa5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "5a1756ed generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "e685f2f9 generated",
+  "src/generated/invoice-line.server.ts": "235fa07d generated",
   "src/generated/invoice-line.ts": "ad44efd2 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "4b34f1c5 generated",
+  "src/generated/invoice.server.ts": "bbcf87dd generated",
   "src/generated/invoice.ts": "a7bbf4f2 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -14621,7 +14623,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "8a6937ce kit",
+  "src/kit/access.ts": "6121a7ed kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -15279,7 +15281,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { items, itemsFavorites } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { deletePicture } from "#/kit/uploads";
@@ -15353,7 +15355,7 @@ export const itemData = {
     let row: typeof items.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(items).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(items).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         return made;
       });
@@ -17291,7 +17293,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
-  "src/generated/item.server.ts": "63855398 generated",
+  "src/generated/item.server.ts": "3935d434 generated",
   "src/generated/item.ts": "53aaac1e generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
@@ -17310,7 +17312,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "8a6937ce kit",
+  "src/kit/access.ts": "6121a7ed kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -17971,7 +17973,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { items } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -18025,7 +18027,7 @@ export const itemData = {
     let row: typeof items.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(items).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(items).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         return made;
       });
@@ -19207,7 +19209,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "cfd6e9a1 generated",
+  "src/generated/item.server.ts": "c2b162fd generated",
   "src/generated/item.ts": "f20dc810 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -19222,7 +19224,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "8a6937ce kit",
+  "src/kit/access.ts": "6121a7ed kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -20288,7 +20290,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { incidentUpdates, incidents } from "#/db/schema";
-import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
@@ -20330,7 +20332,7 @@ export async function runIdentified(viewer: Viewer | null, id: number) {
       const changed = tx.update(incidents).set(one.values).where(eq(incidents.id, one.id)).returning().get();
       audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(incidentUpdates).values({ ...one.added0, ownerId: viewer?.id ?? null }).returning().get(),
+        tx.insert(incidentUpdates).values({ ...one.added0, ownerId: personOf(viewer) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "identified" } });
       return { changed, inserted };
@@ -20364,7 +20366,7 @@ export async function runIdentifiedMany(viewer: Viewer | null, ids: number[]) {
       const changed = tx.update(incidents).set(p.values).where(eq(incidents.id, p.id)).returning().get();
       audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(incidentUpdates).values({ ...p.added0, ownerId: viewer?.id ?? null }).returning().get(),
+        tx.insert(incidentUpdates).values({ ...p.added0, ownerId: personOf(viewer) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "identified" } });
       return { changed, inserted };
@@ -20424,7 +20426,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { incidentUpdates, incidents } from "#/db/schema";
-import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
@@ -20466,7 +20468,7 @@ export async function runMonitoring(viewer: Viewer | null, id: number) {
       const changed = tx.update(incidents).set(one.values).where(eq(incidents.id, one.id)).returning().get();
       audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(incidentUpdates).values({ ...one.added0, ownerId: viewer?.id ?? null }).returning().get(),
+        tx.insert(incidentUpdates).values({ ...one.added0, ownerId: personOf(viewer) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "monitoring" } });
       return { changed, inserted };
@@ -20500,7 +20502,7 @@ export async function runMonitoringMany(viewer: Viewer | null, ids: number[]) {
       const changed = tx.update(incidents).set(p.values).where(eq(incidents.id, p.id)).returning().get();
       audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(incidentUpdates).values({ ...p.added0, ownerId: viewer?.id ?? null }).returning().get(),
+        tx.insert(incidentUpdates).values({ ...p.added0, ownerId: personOf(viewer) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "monitoring" } });
       return { changed, inserted };
@@ -20560,7 +20562,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { incidentUpdates, incidents } from "#/db/schema";
-import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
@@ -20603,7 +20605,7 @@ export async function runResolve(viewer: Viewer | null, id: number) {
       const changed = tx.update(incidents).set(one.values).where(eq(incidents.id, one.id)).returning().get();
       audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, fields: ["status","resolvedAt"] });
       const inserted = [
-        tx.insert(incidentUpdates).values({ ...one.added0, ownerId: viewer?.id ?? null }).returning().get(),
+        tx.insert(incidentUpdates).values({ ...one.added0, ownerId: personOf(viewer) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "resolve" } });
       return { changed, inserted };
@@ -20637,7 +20639,7 @@ export async function runResolveMany(viewer: Viewer | null, ids: number[]) {
       const changed = tx.update(incidents).set(p.values).where(eq(incidents.id, p.id)).returning().get();
       audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, fields: ["status","resolvedAt"] });
       const inserted = [
-        tx.insert(incidentUpdates).values({ ...p.added0, ownerId: viewer?.id ?? null }).returning().get(),
+        tx.insert(incidentUpdates).values({ ...p.added0, ownerId: personOf(viewer) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "resolve" } });
       return { changed, inserted };
@@ -20692,6 +20694,747 @@ export const resolveMany = createServerFn({ method: "POST" })
 "
 `;
 
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/generated/api.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
+// spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
+// by each model's own schema, as a form's are.
+import { BadInput } from "#/kit/api.server";
+import { componentSchema } from "#/generated/component";
+import { incidentSchema } from "#/generated/incident";
+
+const whole = (v: unknown, field: string) => {
+  if (Number.isInteger(v)) return v as number;
+  throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
+};
+const moment = (v: unknown, field: string) => {
+  const d = typeof v === "string" ? new Date(v) : undefined;
+  if (d && !Number.isNaN(d.getTime())) return d;
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+};
+
+/** The body as an object of known fields, or a refusal naming the first unknown one. */
+function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw new BadInput("The body must be a JSON object.");
+  const unknown = Object.keys(body).find((k) => !known.includes(k));
+  if (unknown) throw new BadInput(\`There is no field "\${unknown}" to set. Fields: \${known.join(", ")}.\`);
+  return body as Record<string, unknown>;
+}
+
+/** A component as the API gives it. */
+export function componentToApi(row: Record<string, any>) {
+  return {
+    id: row.id as number,
+    name: row.name ?? null,
+    status: row.status ?? null,
+    description: row.description ?? null,
+    incidents: row.incidentsId ?? null,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+  };
+}
+
+/** A component's values from a body: all of them, or a change to \`current\`. */
+export function componentFromApi(body: unknown, current?: Record<string, unknown>) {
+  const given = fieldsOf(body, ["name", "status", "description"]);
+  const values: Record<string, unknown> = { ...current };
+  for (const [key, v] of Object.entries(given))
+    switch (key) {
+      case "name":
+        values.name = v;
+        break;
+      case "status":
+        values.status = v;
+        break;
+      case "description":
+        values.description = v;
+        break;
+    }
+  return componentSchema.parse(values);
+}
+
+/** A incident as the API gives it. */
+export function incidentToApi(row: Record<string, any>) {
+  return {
+    id: row.id as number,
+    title: row.title ?? null,
+    status: row.status ?? null,
+    component: row.componentId ?? null,
+    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
+    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
+    summary: row.summary ?? null,
+    updates: row.updatesId ?? null,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+  };
+}
+
+/** A incident's values from a body: all of them, or a change to \`current\`. */
+export function incidentFromApi(body: unknown, current?: Record<string, unknown>) {
+  const given = fieldsOf(body, ["title", "status", "component", "detectedAt", "resolvedAt", "summary"]);
+  const values: Record<string, unknown> = { ...current };
+  for (const [key, v] of Object.entries(given))
+    switch (key) {
+      case "title":
+        values.title = v;
+        break;
+      case "status":
+        values.status = v;
+        break;
+      case "component":
+        values.componentId = v === null ? null : whole(v, "component");
+        break;
+      case "detectedAt":
+        values.detectedAt = v === null ? null : moment(v, "detectedAt");
+        break;
+      case "resolvedAt":
+        values.resolvedAt = v === null ? null : moment(v, "resolvedAt");
+        break;
+      case "summary":
+        values.summary = v;
+        break;
+    }
+  return incidentSchema.parse(values);
+}
+
+/** The whole API in the OpenAPI format, for tools and agents. */
+export const OPENAPI = {
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Northwind Status",
+    "version": "1",
+    "description": "Is it working? The state of our services, live."
+  },
+  "paths": {
+    "/api/v1/components": {
+      "get": {
+        "summary": "Components the key's role may read",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of components"
+          },
+          "401": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a component",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Component"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/components/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "summary": "One component",
+        "responses": {
+          "200": {
+            "description": "The record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Change a component (the fields given)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Component"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a component",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents": {
+      "get": {
+        "summary": "Incidents the key's role may read",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of incidents"
+          },
+          "401": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a incident",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Incident"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "summary": "One incident",
+        "responses": {
+          "200": {
+            "description": "The record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Change a incident (the fields given)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Incident"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a incident",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents/{id}/actions/resolve": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "post": {
+        "summary": "The incident is over, with an update saying so. The component's state stays what the team sets.",
+        "responses": {
+          "200": {
+            "description": "Done: the record as it is now"
+          },
+          "403": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused, with the app's own words",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Component": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "operational",
+              "degraded",
+              "down",
+              "maintenance"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "incidents": {
+            "type": "integer",
+            "description": "The id of a Incident"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ]
+      },
+      "Incident": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved"
+            ]
+          },
+          "component": {
+            "type": "integer",
+            "description": "The id of a Component"
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "updates": {
+            "type": "integer",
+            "description": "The id of a IncidentUpdate"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "title",
+          "status",
+          "detectedAt"
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "key": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A key made on the users page"
+      }
+    }
+  },
+  "security": [
+    {
+      "key": []
+    }
+  ]
+};
+"
+`;
+
 exports[`../../../examples/status/smithable.yml > file list and generated code > src/generated/app.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import type { AppUi } from "#/kit/model";
@@ -20705,7 +21448,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { components } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -20761,7 +21504,7 @@ export const componentData = {
     let row: typeof components.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(components).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(components).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Component", record: made.id });
         return made;
       });
@@ -21094,7 +21837,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { incidents } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
@@ -21165,7 +21908,7 @@ export const incidentData = {
     let row: typeof incidents.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(incidents).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(incidents).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Incident", record: made.id });
         return made;
       });
@@ -21421,7 +22164,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { incidentUpdates } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -21484,7 +22227,7 @@ export const incidentUpdateData = {
     let row: typeof incidentUpdates.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(incidentUpdates).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(incidentUpdates).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: made.id });
         return made;
       });
@@ -21696,15 +22439,16 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey } from "#/db/schema";
-import { AccessDenied, type Viewer } from "#/kit/access";
+import { AccessDenied, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 
 export const KEY_ROLES = ["admin", "staff"] as const;
 
 const hash = (key: string) => createHash("sha256").update(key).digest("hex");
 
+/** An administrator, a person: a key with the admin role never makes or revokes keys. */
 function admin(viewer: Viewer | null): Viewer {
-  if (viewer?.role !== "admin") throw new AccessDenied(viewer !== null);
+  if (viewer?.role !== "admin" || !personOf(viewer)) throw new AccessDenied(viewer !== null);
   return viewer;
 }
 
@@ -21790,13 +22534,14 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // A key's life: made by an administrator, standing for its role, revoked or past its end.
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { apiKey, auditLog } from "#/db/schema";
+import { apiKey, auditLog, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { keyViewer, listKeys, makeKey, revokeKey } from "./keys.server";
+import { removeUser } from "./users.server";
 
 const admin = { id: "keys-test-admin", name: "Keys test admin", email: "keys-test-admin@example.com", role: "admin" };
 
-test("an administrator makes a key; it stands for its role until revoked or past its end", () => {
+test("an administrator makes a key; it stands for its role until revoked or past its end", async () => {
   const key = makeKey(admin, "Billing sync", "staff");
   expect(key).toMatch(/^smk_/);
   expect(keyViewer(\`Bearer \${key}\`)).toMatchObject({ id: expect.stringMatching(/^key:/), name: "Billing sync", role: "staff" });
@@ -21812,12 +22557,26 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(keyViewer("Bearer smk_madeup")).toBeNull();
   expect(keyViewer(null)).toBeNull();
   expect(() => makeKey({ ...admin, id: "keys-test-other", role: "staff" }, "Mine", "staff")).toThrow(AccessDenied);
+  // A key cannot make keys, whatever its role.
+  const adminKey = makeKey(admin, "Admin key", "admin");
+  expect(() => makeKey(keyViewer(\`Bearer \${adminKey}\`), "Minted", "admin")).toThrow(AccessDenied);
+  revokeKey(admin, listKeys(admin).find((k) => k.name === "Admin key")?.id ?? 0);
+  // A key goes with the person who made it.
+  const maker = { id: "keys-test-maker", name: "Maker", email: "keys-test-maker@example.com", role: "admin" };
+  db.insert(user).values(maker).run();
+  const theirs = makeKey(maker, "Theirs", "staff");
+  await removeUser(admin, maker.id);
+  expect(keyViewer(\`Bearer \${theirs}\`)).toBeNull();
   // What touches security keeps its values: the key's name and role, never the key.
   const lines = db.select().from(auditLog).all().filter((l) => l.action.startsWith("key "));
   expect(lines.map((l) => [l.action, l.who, l.details?.name])).toEqual([
     ["key made", admin.id, "Billing sync"],
     ["key revoked", admin.id, "Billing sync"],
     ["key made", admin.id, "Old"],
+    ["key made", admin.id, "Admin key"],
+    ["key revoked", admin.id, "Admin key"],
+    ["key made", maker.id, "Theirs"],
+    ["key revoked", admin.id, "Theirs"],
   ]);
 });
 "
@@ -21828,7 +22587,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { maintenances } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -21891,7 +22650,7 @@ export const maintenanceData = {
     let row: typeof maintenances.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(maintenances).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
+        const made = tx.insert(maintenances).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Maintenance", record: made.id });
         return made;
       });
@@ -22129,12 +22888,12 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { apiKey, invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { check, type Viewer } from "#/kit/access";
+import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
@@ -22165,8 +22924,10 @@ export interface InvitationRow {
 /** Where invitation links point: the app's public address, or the address this request used. */
 export const origin = () => process.env.BETTER_AUTH_URL ?? getRequestUrl().origin;
 
+/** Who may manage users: a person with the page's role; an API key never, whatever its role. */
 function manager(viewer: Viewer | null): Viewer {
   check(RULE, viewer);
+  if (!personOf(viewer)) throw new AccessDenied(true);
   return viewer as Viewer;
 }
 
@@ -22297,6 +23058,14 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
     throw new Error("The last administrator cannot be removed.");
   try {
     db.transaction((tx) => {
+      // Their keys go with them: a key outlives nobody who made it.
+      for (const key of tx
+        .update(apiKey)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKey.createdById, userId), isNull(apiKey.revokedAt)))
+        .returning()
+        .all())
+        audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
@@ -22767,6 +23536,177 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     </html>
   );
 }
+"
+`;
+
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/components/$id.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// One component for programs with a key: read, change (the fields given) or delete it.
+import { createFileRoute } from "@tanstack/react-router";
+import { componentFromApi, componentToApi } from "#/generated/api.server";
+import { componentData } from "#/generated/component.server";
+import { apiCall, NotFound } from "#/kit/api.server";
+
+const found = async (viewer: Parameters<typeof componentData.get>[0], id: string) => {
+  const row = await componentData.get(viewer, Number(id));
+  if (!row) throw new NotFound("No such component, or not one this key may read.");
+  return row;
+};
+
+export const Route = createFileRoute("/api/v1/components/$id")({
+  server: {
+    handlers: {
+      GET: ({ request, params }) => apiCall(request, async (viewer) => componentToApi(await found(viewer, params.id))),
+      PATCH: ({ request, params }) =>
+        apiCall(request, async (viewer, body) => {
+          const row = await found(viewer, params.id);
+          return componentToApi(await componentData.update(viewer, row.id, componentFromApi(body, row) as never));
+        }),
+      DELETE: ({ request, params }) =>
+        apiCall(request, async (viewer) => {
+          const row = await found(viewer, params.id);
+          await componentData.remove(viewer, row.id);
+        }),
+    },
+  },
+});
+"
+`;
+
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/components/index.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// Components for programs with a key (docs/design/integrations.md §2): what the key's role may read, a page at a time, and adding one.
+import { createFileRoute } from "@tanstack/react-router";
+import { componentFromApi, componentToApi } from "#/generated/api.server";
+import { componentData } from "#/generated/component.server";
+import { apiCall } from "#/kit/api.server";
+
+export const Route = createFileRoute("/api/v1/components/")({
+  server: {
+    handlers: {
+      GET: ({ request }) =>
+        apiCall(request, async (viewer) => {
+          const query = new URL(request.url).searchParams;
+          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
+          const page = Math.max(1, Number(query.get("page")) || 1);
+          const rows = await componentData.list(viewer);
+          return {
+            items: rows.slice((page - 1) * limit, page * limit).map(componentToApi),
+            page,
+            pages: Math.max(1, Math.ceil(rows.length / limit)),
+            total: rows.length,
+          };
+        }),
+      POST: ({ request }) =>
+        apiCall(request, async (viewer, body) => componentToApi(await componentData.create(viewer, componentFromApi(body) as never)), 201),
+    },
+  },
+});
+"
+`;
+
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/incidents/$id.actions.$action.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// The standard actions offered on a incident, for programs with a key.
+import { createFileRoute } from "@tanstack/react-router";
+import { incidentToApi } from "#/generated/api.server";
+import { runResolve } from "#/generated/actions/resolve.server";
+import { apiCall, NotFound } from "#/kit/api.server";
+
+export const Route = createFileRoute("/api/v1/incidents/$id/actions/$action")({
+  server: {
+    handlers: {
+      POST: ({ request, params }) =>
+        apiCall(request, async (viewer) => {
+          const id = Number(params.id);
+          switch (params.action) {
+            case "resolve":
+              return incidentToApi(await runResolve(viewer, id));
+            default:
+              throw new NotFound(\`There is no action "\${params.action}" here.\`);
+          }
+        }),
+    },
+  },
+});
+"
+`;
+
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/incidents/$id.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// One incident for programs with a key: read, change (the fields given) or delete it.
+import { createFileRoute } from "@tanstack/react-router";
+import { incidentFromApi, incidentToApi } from "#/generated/api.server";
+import { incidentData } from "#/generated/incident.server";
+import { apiCall, NotFound } from "#/kit/api.server";
+
+const found = async (viewer: Parameters<typeof incidentData.get>[0], id: string) => {
+  const row = await incidentData.get(viewer, Number(id));
+  if (!row) throw new NotFound("No such incident, or not one this key may read.");
+  return row;
+};
+
+export const Route = createFileRoute("/api/v1/incidents/$id")({
+  server: {
+    handlers: {
+      GET: ({ request, params }) => apiCall(request, async (viewer) => incidentToApi(await found(viewer, params.id))),
+      PATCH: ({ request, params }) =>
+        apiCall(request, async (viewer, body) => {
+          const row = await found(viewer, params.id);
+          return incidentToApi(await incidentData.update(viewer, row.id, incidentFromApi(body, row) as never));
+        }),
+      DELETE: ({ request, params }) =>
+        apiCall(request, async (viewer) => {
+          const row = await found(viewer, params.id);
+          await incidentData.remove(viewer, row.id);
+        }),
+    },
+  },
+});
+"
+`;
+
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/incidents/index.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// Incidents for programs with a key (docs/design/integrations.md §2): what the key's role may read, a page at a time, and adding one.
+import { createFileRoute } from "@tanstack/react-router";
+import { incidentFromApi, incidentToApi } from "#/generated/api.server";
+import { incidentData } from "#/generated/incident.server";
+import { apiCall } from "#/kit/api.server";
+
+export const Route = createFileRoute("/api/v1/incidents/")({
+  server: {
+    handlers: {
+      GET: ({ request }) =>
+        apiCall(request, async (viewer) => {
+          const query = new URL(request.url).searchParams;
+          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
+          const page = Math.max(1, Number(query.get("page")) || 1);
+          const rows = await incidentData.list(viewer);
+          return {
+            items: rows.slice((page - 1) * limit, page * limit).map(incidentToApi),
+            page,
+            pages: Math.max(1, Math.ceil(rows.length / limit)),
+            total: rows.length,
+          };
+        }),
+      POST: ({ request }) =>
+        apiCall(request, async (viewer, body) => incidentToApi(await incidentData.create(viewer, incidentFromApi(body) as never)), 201),
+    },
+  },
+});
+"
+`;
+
+exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/openapi[.]json.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// The API's description in the OpenAPI format: what a program may call, with no key needed to read it.
+import { createFileRoute } from "@tanstack/react-router";
+import { OPENAPI } from "#/generated/api.server";
+
+export const Route = createFileRoute("/api/v1/openapi.json")({
+  server: { handlers: { GET: () => Response.json(OPENAPI) } },
+});
 "
 `;
 
@@ -24589,6 +25529,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "generated: src/generated/actions/monitoring.ts",
   "generated: src/generated/actions/resolve.server.ts",
   "generated: src/generated/actions/resolve.ts",
+  "generated: src/generated/api.server.ts",
   "generated: src/generated/app.ts",
   "generated: src/generated/component.server.ts",
   "generated: src/generated/component.ts",
@@ -24625,6 +25566,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/aggregate.ts",
+  "kit: src/kit/api.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
@@ -24643,6 +25585,12 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/router.tsx",
   "generated: src/routes/__root.tsx",
   "kit: src/routes/api/auth/$.ts",
+  "generated: src/routes/api/v1/components/$id.ts",
+  "generated: src/routes/api/v1/components/index.ts",
+  "generated: src/routes/api/v1/incidents/$id.actions.$action.ts",
+  "generated: src/routes/api/v1/incidents/$id.ts",
+  "generated: src/routes/api/v1/incidents/index.ts",
+  "generated: src/routes/api/v1/openapi[.]json.ts",
   "generated: src/routes/components/$id.tsx",
   "generated: src/routes/components/index.tsx",
   "generated: src/routes/components/new.tsx",
@@ -24703,28 +25651,29 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/schema.ts": "b3c07d9b generated",
   "src/db/seed.ts": "fa375893 generated",
   "src/generated/access.test.ts": "88c1eb0b generated",
-  "src/generated/actions/identified.server.ts": "f72475bb generated",
+  "src/generated/actions/identified.server.ts": "dddbeb07 generated",
   "src/generated/actions/identified.ts": "4baad691 generated",
-  "src/generated/actions/monitoring.server.ts": "d6583731 generated",
+  "src/generated/actions/monitoring.server.ts": "90c28041 generated",
   "src/generated/actions/monitoring.ts": "44cd9703 generated",
-  "src/generated/actions/resolve.server.ts": "e5711da4 generated",
+  "src/generated/actions/resolve.server.ts": "b876797c generated",
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
+  "src/generated/api.server.ts": "52392990 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "d22d9e06 generated",
+  "src/generated/component.server.ts": "66c83a62 generated",
   "src/generated/component.ts": "c47f2a48 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e1272348 generated",
-  "src/generated/incident-update.server.ts": "df27f6ac generated",
+  "src/generated/incident-update.server.ts": "cdfaa948 generated",
   "src/generated/incident-update.ts": "0e7d4c32 generated",
-  "src/generated/incident.server.ts": "284b8832 generated",
+  "src/generated/incident.server.ts": "35beb45a generated",
   "src/generated/incident.ts": "ca312beb generated",
-  "src/generated/keys.server.ts": "9ed42991 generated",
-  "src/generated/keys.test.ts": "7a8606fe generated",
-  "src/generated/maintenance.server.ts": "292ec85a generated",
+  "src/generated/keys.server.ts": "cf688a74 generated",
+  "src/generated/keys.test.ts": "98cb6509 generated",
+  "src/generated/maintenance.server.ts": "c5bac8aa generated",
   "src/generated/maintenance.ts": "ce9b2f03 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
-  "src/generated/users.server.ts": "e04eb3bf generated",
+  "src/generated/users.server.ts": "15c188dd generated",
   "src/generated/users.test.ts": "9686475c generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/ActivityLog.tsx": "edade83d kit",
@@ -24743,8 +25692,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
-  "src/kit/access.ts": "8a6937ce kit",
+  "src/kit/access.ts": "6121a7ed kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
+  "src/kit/api.server.ts": "b18235b9 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -24763,6 +25713,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "5393dc89 kit",
   "src/routes/__root.tsx": "10b74ab0 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/v1/components/$id.ts": "21010aeb generated",
+  "src/routes/api/v1/components/index.ts": "59f6ebb9 generated",
+  "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
+  "src/routes/api/v1/incidents/$id.ts": "72c4b9dd generated",
+  "src/routes/api/v1/incidents/index.ts": "d4ea2510 generated",
+  "src/routes/api/v1/openapi[.]json.ts": "e57fe423 generated",
   "src/routes/components/$id.tsx": "d8b4b2ac generated",
   "src/routes/components/index.tsx": "2cdf77e5 generated",
   "src/routes/components/new.tsx": "872a5c00 generated",
