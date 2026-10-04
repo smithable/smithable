@@ -662,7 +662,7 @@ function checkAgainstSpec(
     ctx.warning(
       accessAt,
       "capacity-unique-shared",
-      `${model.name}.${per.name} is unique, and with shared access that means one ${one} per ${per.name} in all: the capacity of ${capacity.max} is never reached. "unique" is one per person only when records are private.`,
+      `${model.name}.${per.name} is unique, and ${model.name} records are not private to their owners, so that means one ${one} per ${per.name} in all: the capacity of ${capacity.max} is never reached. "unique" is one per person only when each person reads just their own records.`,
       `Remove "unique" from ${per.name}, or make the model's records private.`,
     );
   }
