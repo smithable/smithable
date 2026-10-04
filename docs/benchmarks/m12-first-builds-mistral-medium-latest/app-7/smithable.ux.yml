@@ -3,7 +3,6 @@ pages:
   matches:
     table:
       sort: -date
-      columns: [date, homeTeam, awayTeam, homeScore, awayScore, status]
     icon: calendar
   teams:
     table:

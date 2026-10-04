@@ -10,8 +10,6 @@ models:
       email: email!
       address: text
       invoices: Invoice[]
-    access:
-      delete: [admin]
   InvoiceLine:
     fields:
       description: string!
@@ -21,8 +19,6 @@ models:
         type: money
         formula: quantity * unitPrice
       invoice: Invoice!
-    access:
-      delete: [admin]
   Invoice:
     fields:
       number: string! unique
@@ -36,30 +32,3 @@ models:
       total:
         type: money
         formula: SUM(lines.amount)
-    access:
-      delete: [admin]
-pages:
-  clients:
-    crud: Client
-  invoice-lines:
-    crud: InvoiceLine
-  invoices:
-    crud: Invoice
-    actions: [markSent, markPaid]
-  team:
-    users: manage
-actions:
-  markSent:
-    on: Invoice
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: The invoice went to the client.
-  markPaid:
-    on: Invoice
-    when:
-      status: [sent, overdue]
-    set:
-      status: paid
-    intent: The client paid the invoice.

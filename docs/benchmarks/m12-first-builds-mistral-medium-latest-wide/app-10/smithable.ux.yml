@@ -3,3 +3,4 @@ pages:
   artifacts:
     table:
       view: cards
+      columns: [name, category, period, origin]

@@ -31,19 +31,13 @@ models:
       customerEmail: email!
       customerPhone: phone
       notes: text
-    capacity:
-      per: timeSlot
-      max: timeSlot.capacity
 pages:
   stylists:
     crud: Stylist
-    access: [admin]
   services:
     crud: Service
-    access: [admin]
   time-slots:
     crud: TimeSlot
-    access: [admin]
   my-bookings:
     crud: Booking
   home:
@@ -55,3 +49,6 @@ pages:
         records: Stylist
       services:
         records: Service
+  book-now:
+    crud: TimeSlot
+    filters: [stylist, service, startsAt]
