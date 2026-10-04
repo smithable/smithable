@@ -233,7 +233,8 @@ ${models
               : \`a deleted \${label?.toLowerCase()} (#\${r.recordId})\`
             : undefined,
         fields: r.fields,
-        details: r.details,
+        // As text: what touches security, by name and value.
+        details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
         forget:
           gone && r.action === "deleted" && r.model
             ? { model: r.model, record: r.recordId as number }

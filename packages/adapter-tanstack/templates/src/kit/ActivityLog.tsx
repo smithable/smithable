@@ -16,7 +16,7 @@ export interface ActivityLine {
   record?: string;
   fields?: string[] | null;
   /** What touches security, with its values (never a secret). */
-  details?: Record<string, unknown> | null;
+  details?: Record<string, string> | null;
   /** When the line is about a deleted record or a removed user: what Forget blanks. */
   forget?: Forgotten;
 }
@@ -144,7 +144,7 @@ export function ActivityLog({
               {line.details && Object.keys(line.details).length ? (
                 <span className="text-muted-foreground">
                   {Object.entries(line.details)
-                    .map(([k, v]) => `${k}: ${String(v)}`)
+                    .map(([k, v]) => `${k}: ${v}`)
                     .join(", ")}
                 </span>
               ) : null}
