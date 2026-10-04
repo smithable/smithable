@@ -173,7 +173,13 @@ public: { pages: [customer], read: [Customers], write: [Note] }
         "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [customers, notes, team] }\n",
         team,
       ),
-    ).toEqual(["error no-sign-in", "error no-sign-in"]);
+    ).toEqual([
+      "error no-sign-in",
+      "error no-sign-in",
+      // The two lists are open to visitors, who may read neither model.
+      "warning public-page-closed-records",
+      "warning public-page-closed-records",
+    ]);
     expect(
       codes(
         "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: maybe }\ndefaultAccess: private\n",
@@ -185,6 +191,7 @@ public: { pages: [customer], read: [Customers], write: [Note] }
     expect(codes("smithableAuth: 0.1\nsignIn: none\npublic: { pages: [notes] }\n")).toEqual([
       "error no-sign-in",
       "warning unreachable-page",
+      "warning public-page-closed-records",
     ]);
   });
 
@@ -408,4 +415,49 @@ actions:
   ).toEqual([
     'The action "resolve" allows viewer and adds a Update, but viewer may not create Update records, so viewer still cannot run it.',
   ]);
+});
+
+test("a public page that shows records visitors may not read is warned about", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Tool library }
+models:
+  Tool:
+    fields: { name: string! }
+  Loan:
+    fields: { tool: Tool! }
+  Message:
+    fields: { text: text! }
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      tools: { records: Tool }
+      contact: { form: Message }
+      footer:
+  catalog: { crud: Tool }
+  loans: { crud: Loan }
+`,
+  }).ir;
+  const warnings = (rest: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\nroles: { admin: {} }\npublic: { ${rest} }\n`,
+      },
+      ir,
+    ).diagnostics.filter((d) => d.code === "public-page-closed-records");
+  // The landing page shows tools as cards: a visitor who may not read them sees none.
+  const closed = warnings("pages: [home], create: [Message]");
+  expect(closed).toHaveLength(1);
+  expect(closed[0]?.message).toBe(
+    "Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or take home out of public.pages.",
+  );
+  // Readable, it is quiet; a contact form adds records and needs no reading.
+  expect(warnings("pages: [home, catalog], read: [Tool], create: [Message]")).toEqual([]);
+  // A page that is not public is not a visitor's business.
+  expect(warnings("pages: [home], read: [Tool], create: [Message]")).toEqual([]);
+  expect(warnings("pages: [home, loans], read: [Tool], create: [Message]")).toHaveLength(1);
 });
