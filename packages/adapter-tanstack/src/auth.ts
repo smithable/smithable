@@ -256,13 +256,15 @@ export async function currentViewer(): Promise<Viewer | null> {
   }
   return `${HEADER}import { getRequestHeaders } from "@tanstack/react-start/server";
 import type { Viewer } from "#/kit/access";
+import { traceWho } from "#/kit/trace.server";
 import { auth } from "#/lib/auth";
 
-/** The signed-in user of the current request, or null. */
+/** The signed-in user of the current request, or null; the access line names them. */
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
   const { id, name, email, role } = session.user;
+  traceWho(id, role);
   return { id, name, email, role };
 }
 `;
