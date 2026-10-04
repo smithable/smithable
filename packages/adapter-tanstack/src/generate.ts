@@ -278,7 +278,7 @@ function limitsReadme(ir: SpecIR, auth?: AuthIR): string {
   const signIn = auth && hasSignIn(auth);
   return `## Limits
 
-${signIn ? "A signed-in person may make 60 changes a minute, a visitor 10 a minute per address" : "A visitor may make 10 changes a minute per address"}${signIn && hasInvitations(ir, auth) ? ", and an administrator may send 20 invitations an hour" : ""}; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process${signIn ? "; sign-in attempts are limited by Better Auth itself (3 per 10 seconds)" : ""}. Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw.
+${signIn ? "A signed-in person may make 60 changes a minute, a visitor 10 a minute per address" : "A visitor may make 10 changes a minute per address"}${signIn && hasInvitations(ir, auth) ? ", and an administrator may send 20 invitations an hour" : ""}; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process${signIn ? "; sign-in attempts are limited by Better Auth itself (3 per 10 seconds)" : ""}. Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 `;
 }
