@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { type AssistantOffer, assistantOffer } from "./assistant.js";
+import { applyOperation } from "./apply.js";
+import { type AssistantOffer, asksWith, assistantOffer } from "./assistant.js";
 import { type AuthIR, validateAuth } from "./auth.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
@@ -123,11 +124,89 @@ test("without a key the caller is the visitor: what is public, to read and to ad
 });
 
 test("inside the app the assistant reaches what the person may, and never deletes", () => {
-  const auth = authOf("api: { models: [Customer], assistants: { delete: true } }\n");
+  const auth = authOf(
+    "api: { models: [Customer], assistants: { delete: true } }\nassistant: { for: [admin], may: change }\n",
+  );
   const inside = assistantOffer(ir, auth, { role: "admin" }, { scope: "app" });
   expect(inside.kinds.map((k) => k.model)).toEqual(["Customer", "Order"]);
   expect(names(inside.tools)).not.toContain("delete");
   expect(inside.actions).toEqual(["ship"]);
+});
+
+test("the assistant block: who gets Ask, whether it may change things, and what a visitor gets", () => {
+  // Without the block nobody gets it.
+  const none = authOf("");
+  expect(asksWith(none, { role: "admin" })).toBe("nothing");
+  // Some roles, reading only: inside the app it finds and counts and nothing more.
+  const reading = authOf("assistant: { for: [admin, sales] }\n");
+  expect(reading.assistant).toEqual({ for: ["admin", "sales"], may: "read" });
+  expect(asksWith(reading, { role: "sales" })).toBe("model");
+  expect(asksWith(reading, { role: "viewer" })).toBe("nothing");
+  expect(asksWith(reading, "visitor")).toBe("nothing");
+  expect(names(assistantOffer(ir, reading, { role: "sales" }, { scope: "app" }).tools)).toEqual([
+    "find",
+    "measure",
+    "read",
+    "describe",
+  ]);
+  // "change" adds adding, changing and the actions; never deleting.
+  const changing = authOf("assistant: { for: signed-in, may: change }\n");
+  expect(asksWith(changing, { role: "viewer" })).toBe("model");
+  expect(names(assistantOffer(ir, changing, { role: "sales" }, { scope: "app" }).tools)).toEqual([
+    "find",
+    "measure",
+    "read",
+    "add",
+    "change",
+    "run",
+    "describe",
+  ]);
+  // Visitors are answered by the wording rules only, never a model.
+  const open = authOf("public: { read: [Order] }\nassistant: { for: anyone }\n");
+  expect(asksWith(open, "visitor")).toBe("rules");
+  expect(asksWith(open, { role: "viewer" })).toBe("model");
+
+  const codes = (rest: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {} }\ndefaultRole: sales\n${rest}`,
+      },
+      ir,
+    )
+      .diagnostics.filter((d) => d.code !== "open-shared-access")
+      .map((d) => `${d.severity} ${d.code}`);
+  expect(codes("assistant: { for: [support] }\n")).toEqual(["error unknown-role"]);
+  expect(codes("assistant: { may: change }\n")).toEqual(["error missing-key"]);
+  expect(codes("assistant: { for: everyone }\n")).toEqual(["error invalid-value"]);
+  expect(codes("assistant: { for: [admin], may: delete }\n")).toEqual(["error invalid-value"]);
+  // For anyone with nothing public: there is nothing to answer a visitor with.
+  expect(codes("assistant: { for: anyone }\n")).toEqual(["warning assistant-nothing-public"]);
+});
+
+test("setAssistant switches Ask on for roles, for everyone or for anyone, and off again", () => {
+  const files = {
+    spec,
+    auth: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {} }\ndefaultRole: sales\n",
+  };
+  const on = applyOperation(files, "setAssistant", { for: ["admin", "sales"] });
+  if (!on.ok) throw new Error(on.message);
+  expect(on.description).toBe("Admin and Sales can ask the app questions; it changes nothing");
+  expect(on.files.auth).toContain("assistant:\n  for: [admin, sales]\n");
+  const more = applyOperation(on.files, "setAssistant", { for: ["signed-in"], may: "change" });
+  if (!more.ok) throw new Error(more.message);
+  expect(more.description).toBe(
+    "Everyone who signs in can ask the app questions; it may also add and change records and run actions, each confirmed by the person",
+  );
+  expect(more.files.auth).toContain("assistant:\n  for: signed-in\n  may: change\n");
+  const off = applyOperation(more.files, "setAssistant", {});
+  if (!off.ok) throw new Error(off.message);
+  expect(off.description).toBe('Nobody gets "Ask"');
+  expect(off.files.auth).not.toContain("assistant");
+  expect(applyOperation(files, "setAssistant", { for: ["support"] })).toMatchObject({ ok: false });
+  expect(applyOperation(files, "setAssistant", { for: ["anyone", "admin"] })).toMatchObject({
+    ok: false,
+  });
 });
 
 test("what each field can be matched by, what can be added up, and what a kind's description says", () => {
@@ -185,7 +264,13 @@ test("few tokens: every starter's tools and summary stay within a budget", () =>
       { path: "smithable.auth.yml", text: at("smithable.auth.yml") },
       starterIr,
     ).auth as AuthIR;
-    const offer = assistantOffer(starterIr, auth, { role: "admin" }, { scope: "app" });
+    // With everything "Ask" can have: the tools that change things too.
+    const offer = assistantOffer(
+      starterIr,
+      { ...auth, assistant: { for: "signed-in", may: "change" } },
+      { role: "admin" },
+      { scope: "app" },
+    );
     // About 3.6 characters a token. The tools do not grow with the app; the summary is a line
     // a model. A change that makes either heavier should be a decision, not an accident.
     expect(JSON.stringify(offer.tools).length, `${starter}: tools`).toBeLessThan(4000);
