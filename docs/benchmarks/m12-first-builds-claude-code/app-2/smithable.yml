@@ -1,0 +1,95 @@
+smithable: 0.1
+app:
+  name: Pipeline CRM
+  description: A simple CRM for a small sales team to track companies, contacts, deals and follow-ups.
+  currency: EUR
+models:
+  Company:
+    fields:
+      name: string!
+      website: url
+      phone: phone
+      industry: string
+      segment: smb | enterprise | government
+      notes: text
+      accountManager: User
+      contacts: Contact[]
+      deals: Deal[]
+    access:
+      delete: [admin]
+  Contact:
+    fields:
+      name: string!
+      jobTitle: string
+      email: email unique
+      phone: phone
+      company: Company
+      notes: text
+  Deal:
+    fields:
+      title: string!
+      company: Company!
+      contact: Contact
+      value: money
+      stage: lead | qualified | proposal | negotiation | won | lost
+      expectedClose: date
+      closedAt: datetime
+      lostReason: text
+      salesperson: User
+      followUps: FollowUp[]
+    access:
+      delete: [admin]
+  FollowUp:
+    fields:
+      subject: string!
+      dueDate: date!
+      deal: Deal
+      contact: Contact
+      assignee: User
+      status: open | done
+      doneAt: datetime
+      notes: text
+pages:
+  deals:
+    crud: Deal
+    search: [title]
+    actions: [markWon, markLost]
+  companies:
+    crud: Company
+    search: [name, industry]
+  contacts:
+    crud: Contact
+    search: [name, email, phone]
+    filters: [company]
+  follow-ups:
+    crud: FollowUp
+    search: [subject]
+    actions: [complete]
+  team:
+    users: manage
+actions:
+  markWon:
+    on: Deal
+    when:
+      stage: [lead, qualified, proposal, negotiation]
+    set:
+      stage: won
+      closedAt: NOW()
+    intent: Close the deal as won.
+  markLost:
+    on: Deal
+    when:
+      stage: [lead, qualified, proposal, negotiation]
+    set:
+      stage: lost
+      closedAt: NOW()
+      lostReason:
+    intent: Close the deal as lost and note why.
+  complete:
+    on: FollowUp
+    when:
+      status: open
+    set:
+      status: done
+      doneAt: NOW()
+    intent: Mark the follow-up as done.

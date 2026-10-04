@@ -20,7 +20,16 @@ export type {
   OpenAICompatibleOptions,
   Policy,
   Provider,
+  ResponseStore,
   Tier,
   Usage,
 } from "./provider.js";
-export { allowedBy, completeJson, openAICompatible, parsePolicy, route } from "./provider.js";
+export {
+  allowedBy,
+  cached,
+  completeJson,
+  listPrice,
+  openAICompatible,
+  parsePolicy,
+  route,
+} from "./provider.js";
