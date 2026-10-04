@@ -354,7 +354,7 @@ ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringi
   return `${HEADER}import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";
-import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
