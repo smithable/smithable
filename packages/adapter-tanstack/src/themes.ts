@@ -1,5 +1,5 @@
 // src/theme.css: the theme's tokens (docs/design/look.md §3) as CSS variables the app kit's
-// styles use, with the brand color's changes on top and the ux file's density.
+// styles use, with the brand color's changes on top and the ux file's density and motion.
 import {
   type Mode,
   type ThemeIR,
@@ -18,6 +18,21 @@ const HEADER =
 const DENSITY = {
   comfortable: { control: "2.75rem", row: "4rem", cell: "1rem", card: "1.5rem" },
   compact: { control: "2.25rem", row: "3.25rem", cell: "0.75rem", card: "1.25rem" },
+};
+
+/**
+ * Durations, easing and travel per motion setting, for the kit's dialogs, drawer, notices, rows
+ * and page changes: nothing longer than a fifth of a second.
+ */
+const MOTION = {
+  none: { fast: "0ms", slow: "0ms", ease: "linear", distance: "0px" },
+  subtle: { fast: "120ms", slow: "180ms", ease: "cubic-bezier(0.2, 0, 0, 1)", distance: "6px" },
+  lively: {
+    fast: "150ms",
+    slow: "200ms",
+    ease: "cubic-bezier(0.34, 1.3, 0.64, 1)",
+    distance: "14px",
+  },
 };
 
 /** Fonts hosted by the app itself (Fontsource, OFL); the package is added to package.json. */
@@ -129,6 +144,7 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
     const theme = themeOf(from, themes);
     const font = themeFont(from, themes);
     const density = DENSITY[from.theme.density];
+    const motion = MOTION[from.theme.motion];
     const shape = SHAPES[theme.name] ?? (SHAPES.modern as Shape);
     return {
       light: `${selector} {
@@ -140,6 +156,10 @@ ${block(tokens(from, theme, "light"), "  ")}
   --row-height: ${density.row};
   --cell-padding: ${density.cell};
   --card-padding: ${density.card};
+  --motion-fast: ${motion.fast};
+  --motion-slow: ${motion.slow};
+  --motion-ease: ${motion.ease};
+  --motion-distance: ${motion.distance};
   --heading-weight: ${shape.weight};
   --heading-tracking: ${shape.tracking};
   --card-border: ${shape.border};
@@ -150,7 +170,7 @@ ${block(tokens(from, theme, "light"), "  ")}
       dark: `  ${selector} {
 ${block(tokens(from, theme, "dark"), "    ")}
   }`,
-      comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}`,
+      comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}, motion ${from.theme.motion}`,
     };
   };
   const app = scope(":root", ux);
@@ -170,6 +190,15 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
 @media (pointer: coarse) {
   :root${pages.map((p) => `,\n  [data-page="${p.id}"]`).join("")} {
     --control-height: 2.75rem;
+  }
+}
+
+/* A visitor who asks for less motion gets none, whatever the theme says. */
+@media (prefers-reduced-motion: reduce) {
+  :root${pages.map((p) => `,\n  [data-page="${p.id}"]`).join("")} {
+    --motion-fast: 0ms;
+    --motion-slow: 0ms;
+    --motion-distance: 0px;
   }
 }
 

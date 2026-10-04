@@ -21,6 +21,8 @@ export interface UxIR {
     background?: string;
     font?: string;
     density: "comfortable" | "compact";
+    /** How much the app moves; a visitor's reduced-motion setting always wins. */
+    motion: "none" | "subtle" | "lively";
   };
   pages: Record<string, PageUx>;
   /** Colors of choice values by meaning, by "Model.field"; values not listed are neutral. */
@@ -206,7 +208,11 @@ export type ThemePreset = (typeof THEME_PRESETS)[number];
 export { FONTS };
 
 export function emptyUx(): UxIR {
-  return { theme: { preset: "modern", density: "comfortable" }, pages: {}, tones: {} };
+  return {
+    theme: { preset: "modern", density: "comfortable", motion: "subtle" },
+    pages: {},
+    tones: {},
+  };
 }
 
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
@@ -574,7 +580,7 @@ function readSectionLooks(
   return looks;
 }
 
-/** A theme's keys (preset, brand, density) into `target`: the app's, or a landing page's own. */
+/** A theme's keys (preset, brand, density, motion) into `target`: the app's, or a landing page's own. */
 function readTheme(
   ctx: ParseContext,
   value: ParsedNode | null,
@@ -583,9 +589,10 @@ function readTheme(
   target: Partial<UxIR["theme"]>,
 ): void {
   let densityGiven = false;
+  let motionGiven = false;
   let backgroundAt: ParsedNode | null = null;
   for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
-    allowed: ["preset", "brand", "density"],
+    allowed: ["preset", "brand", "density", "motion"],
     later: ["radius", "darkMode"],
   })) {
     if (entry.key === "preset") {
@@ -605,6 +612,12 @@ function readTheme(
       if (density === "comfortable" || density === "compact") target.density = density;
       else if (density !== undefined)
         ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
+    } else if (entry.key === "motion") {
+      const motion = readString(ctx, entry.value, `"motion"`);
+      motionGiven = true;
+      if (motion === "none" || motion === "subtle" || motion === "lively") target.motion = motion;
+      else if (motion !== undefined)
+        ctx.error(entry.value, "invalid-value", `"motion" must be none, subtle or lively.`);
     } else {
       for (const brand of checkKeys(ctx, mapEntries(ctx, entry.value, `"brand"`) ?? [], `"brand"`, {
         allowed: ["primary", "background", "font"],
@@ -646,6 +659,9 @@ function readTheme(
   // Without a density of its own, a theme's own (corporate is compact).
   const own = target.preset ? themeNamed(target.preset, themes)?.density : undefined;
   if (!densityGiven && own) target.density = own;
+  // The same for motion (playful is lively).
+  const moves = target.preset ? themeNamed(target.preset, themes)?.motion : undefined;
+  if (!motionGiven && moves) target.motion = moves;
 }
 
 /** A form's groups: a list of { name, fields }, no field in two of them. */

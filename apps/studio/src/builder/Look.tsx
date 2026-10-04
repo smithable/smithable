@@ -103,7 +103,7 @@ export function Look({
           run={run}
         />
       </Group>
-      <Group title="Font and density">
+      <Group title="Font, density and motion">
         <Segmented
           label="Font"
           value={theme.font ?? "none"}
@@ -118,6 +118,16 @@ export function Look({
             ["compact", "Compact"],
           ]}
           onChange={(density) => run("setTheme", { density })}
+        />
+        <Segmented
+          label="Motion"
+          value={theme.motion}
+          options={[
+            ["none", "None"],
+            ["subtle", "Subtle"],
+            ["lively", "Lively"],
+          ]}
+          onChange={(motion) => run("setTheme", { motion })}
         />
       </Group>
       <Group title="Pages">
