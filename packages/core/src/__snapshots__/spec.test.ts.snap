@@ -1,5 +1,270 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "intent": "Mark a task as done.",
+      "name": "complete",
+      "on": "Task",
+      "set": [
+        {
+          "field": "status",
+          "value": "done",
+        },
+      ],
+      "when": {
+        "status": [
+          "todo",
+          "doing",
+        ],
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "reopen",
+      "on": "Task",
+      "set": [
+        {
+          "field": "status",
+          "value": "todo",
+        },
+      ],
+      "when": {
+        "status": "done",
+      },
+    },
+  ],
+  "app": {
+    "description": "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.",
+    "name": "Team Tasks",
+    "timezone": "Europe/Stockholm",
+  },
+  "extensions": {},
+  "models": [
+    {
+      "access": {
+        "create": [
+          "admin",
+          "member",
+        ],
+        "delete": [
+          "admin",
+          "member",
+        ],
+        "write": [
+          "admin",
+          "member",
+        ],
+      },
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "tasks",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Task",
+          },
+          "unique": false,
+        },
+        {
+          "name": "notes",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Note",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Project",
+    },
+    {
+      "access": {
+        "delete": [
+          "admin",
+          "member",
+        ],
+        "write": [
+          "admin",
+          "member",
+          "assistant",
+        ],
+      },
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "project",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Project",
+          },
+          "unique": false,
+        },
+        {
+          "default": "todo",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "todo",
+              "doing",
+              "done",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "dueDate",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "name": "assignee",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+        {
+          "name": "details",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Task",
+    },
+    {
+      "access": {
+        "delete": [
+          "admin",
+          "member",
+        ],
+        "write": [
+          "admin",
+          "member",
+          "assistant",
+        ],
+      },
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "project",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Project",
+          },
+          "unique": false,
+        },
+        {
+          "name": "body",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Note",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "team",
+        "admin",
+      ],
+    },
+  ],
+  "pages": [
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+    },
+    {
+      "access": [
+        "admin",
+        "member",
+      ],
+      "id": "admin",
+      "pattern": {
+        "all": true,
+        "kind": "data",
+        "models": [
+          "Project",
+          "Task",
+          "Note",
+        ],
+      },
+      "route": "/admin",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
 {
   "actions": [],
