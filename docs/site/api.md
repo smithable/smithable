@@ -77,13 +77,17 @@ curl -s -X POST https://status.example.com/api/v1/incidents/3/actions/resolve -H
 { "id": 3, "title": "Checkout is slow", "status": "resolved", "resolvedAt": "2026-10-04T06:54:25.856Z", "…": "…" }
 ```
 
+### Without a key
+
+What the app lets anyone read or add (`public` in `smithable.auth.yml`) can be called without a key, as a visitor. A status page that shows its incidents to everyone lets a program list and read them too: `curl -s https://status.example.com/api/v1/incidents`. Changing, deleting and actions always need a key, and so does everything when nothing is public. Without a key, the description at `/api/v1/openapi.json` and the tools at `/mcp` show only what a visitor may do.
+
 ## 4. When the app says no
 
 A refusal is a JSON problem (`application/problem+json`) in the app's own words, with the HTTP status that fits:
 
 | What happened | Status | The answer |
 |---|---|---|
-| No key, or a revoked or expired one | 401 | `{"status": 401, "title": "A valid key is needed: Authorization: Bearer <key>."}` |
+| No key for what needs one, or a revoked, expired or wrong key | 401 | `{"status": 401, "title": "A valid key is needed: Authorization: Bearer <key>."}` |
 | Resolving an incident that is already resolved | 409 | `{"status": 409, "title": "This cannot be done now."}` |
 | A field the record does not have | 400 | `{"status": 400, "title": "There is no field \"colour\" to set. Fields: title, status, component, detectedAt, resolvedAt, summary."}` |
 | A value that does not fit (a missing title, an unknown status) | 422 | the fields and what is wrong with each, under `errors` |

@@ -106,3 +106,19 @@ test("a model named Item with the API on: page() never shadows its table, items"
   expect(page).toMatch(/return \{ items: rows\.map\(\w+\), total \};/);
   expect(page.slice(0, page.indexOf("\n  },"))).not.toMatch(/const items\b/);
 });
+
+test("an app with nothing public describes nothing to a stranger: no model or field names", () => {
+  const closed = authOf(`${OPEN}api: { models: all }\n`);
+  const files = generateApp(ir, {
+    smithableVersion: "0.0.0",
+    auth: closed,
+    content: emptyContent(),
+  });
+  const api = file(files, "src/generated/api.server.ts");
+  const visitor = api.slice(api.indexOf("export const VISITOR_OPENAPI"));
+  expect(visitor).toContain('"paths": {}');
+  expect(visitor).not.toContain("Customer");
+  expect(file(files, "src/routes/api/v1/openapi[.]json.ts")).toContain(
+    'callerOf(request).viewer || (session && allows(pageAccess["team"], session))',
+  );
+});
