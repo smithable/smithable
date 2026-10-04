@@ -1,6 +1,6 @@
 # Ask your app: an assistant in the app, and tools that cost few tokens
 
-Status: 2026-10-04, by Fable, on Johan's go. A design; nothing here is built. Six decisions for Johan at the end.
+Status: 2026-10-04, by Fable, on Johan's go. Johan said yes to all six decisions (§11) the same day; nothing here is built yet.
 
 Johan, 2026-10-04: "The MCP working solidly with as few tokens needed as possible is a key feature of Smithable. And this will be used both on the admin page and for potential end users."
 
@@ -44,7 +44,15 @@ Seven tools whatever the app's size, and a short description of the app in place
 | `run` | One of the app's standard actions on a record |
 | `describe` | What a kind of record means: its fields' meanings, its rules, its actions; only when the summary is not enough |
 
-Delete is an eighth tool only where the spec says so, as today.
+Delete is an eighth tool only where the spec says so, as today (`api: { assistants: { delete: true } }`), and only for a key whose role may delete.
+
+**Whether an outside assistant asks its user before deleting** (Johan's question, 2026-10-04) is that assistant's doing, not the app's: the app sees a tool call and cannot see whether a person approved it. What the app does:
+
+- Each tool says what kind it is, in the protocol's own way: `find`, `measure`, `read` and `describe` are marked as reading only; `change`, `run` and `delete` as changing what exists; `add` as only adding. Assistants that ask their user before a risky call go by these marks.
+- A delete needs both the line in the spec and a role that may delete, so an owner who wants an assistant that can never delete gives its key a role that cannot.
+- Every delete is in Activity under the key's name, and the host's backups bring a record back.
+
+"Ask" in the app never deletes, whatever the spec says (decision 4): there the app itself is the one asking the person, and a delete stays a thing done on the page.
 
 **The app's summary** goes with the tools as the server's instructions. It is generated from the spec, one line per kind of record:
 
@@ -174,7 +182,7 @@ The five questions (ARCHITECTURE §2.4): common (an assistant in an app is becom
 7. **The service:** the model's address for previews and published apps, the limits, the counts on the usage page. (B.)
 8. **Voice:** the read-aloud button, then the microphone setting. (A.)
 
-## 11. Decisions for Johan
+## 11. Decisions (Johan, 2026-10-04: yes to all six)
 
 1. **Seven tools and a summary of the app replace a tool per model and verb**, for outside assistants and for "Ask" alike, if the bench shows fewer tokens with answers at least as often right. Recommended: yes.
 2. **The `assistant` block in the auth file**: who gets "Ask" and whether it may change things; off unless written; reading only unless `may: change`. Recommended: yes.
