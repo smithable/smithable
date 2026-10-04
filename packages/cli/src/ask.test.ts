@@ -9,6 +9,23 @@ test("a change a wording rule read says so, not that no model was used", () => {
   expect(usageLine([])).toBe("No model was used");
 });
 
+test("what a request used: tokens in and out, the cost, and the calls the cache answered", () => {
+  const call = {
+    provider: "smithable",
+    model: "m",
+    tier: "smithable" as const,
+    currency: "USD" as const,
+  };
+  expect(
+    usageLine([
+      { ...call, inputTokens: 1000, outputTokens: 200, cost: 0.003 },
+      { ...call, inputTokens: 0, outputTokens: 0, cost: 0, cached: true },
+    ]),
+  ).toBe(
+    "Smithable model (m) · 1,200 tokens (1,000 in, 200 out) · $0.0030 · 1 of 2 calls from the cache",
+  );
+});
+
 test("a proposal's outcome is logged under its id, for training data", () => {
   const dir = mkdtempSync(join(tmpdir(), "smithable-ask-"));
   proposalOutcome(dir, "p1", "declined");

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { openAICompatible } from "./provider.js";
+import { cached, completeJson, listPrice, openAICompatible, type Usage } from "./provider.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -65,4 +65,63 @@ test("a server that refuses the strict schema gets the simpler one, and keeps ge
   // The second call goes straight to the simpler schema.
   expect(bodies).toHaveLength(3);
   expect(bodies[2]).not.toContain('"anyOf"');
+});
+
+test("a known model without a price of its own costs its list price, in dollars", async () => {
+  vi.stubGlobal("fetch", async () =>
+    Response.json({
+      model: "mistral-medium-2604",
+      choices: [{ message: { content: "{}" } }],
+      usage: { prompt_tokens: 1_000_000, completion_tokens: 100_000 },
+    }),
+  );
+  const mistral = openAICompatible({
+    name: "smithable",
+    baseUrl: "https://api.example/v1",
+    model: "mistral-medium-latest",
+    tier: "smithable",
+    location: "eu",
+  });
+  const usage: Usage[] = [];
+  await completeJson(mistral, { system: "s", user: "u", schema: {} }, usage);
+  expect(usage[0]).toMatchObject({ cost: 1.5 + 0.75, currency: "USD" });
+  expect(listPrice("a-model-nobody-knows")).toBeUndefined();
+});
+
+test("a response cache answers a request it has seen, for nothing", async () => {
+  let calls = 0;
+  vi.stubGlobal("fetch", async () => {
+    calls++;
+    return Response.json({
+      model: "m",
+      choices: [{ message: { content: '{"n":1}' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 2 },
+    });
+  });
+  const kept = new Map<string, string>();
+  const store = {
+    get: async (key: string) => kept.get(key),
+    set: async (key: string, value: string) => void kept.set(key, value),
+  };
+  const provider = cached(
+    openAICompatible({
+      name: "x",
+      baseUrl: "http://x/v1",
+      model: "m",
+      tier: "local",
+      location: "local",
+    }),
+    store,
+  );
+  const usage: Usage[] = [];
+  const ask = (user: string) => completeJson(provider, { system: "s", user, schema: {} }, usage);
+  expect(await ask("one")).toEqual({ n: 1 });
+  expect(await ask("one")).toEqual({ n: 1 });
+  await ask("two");
+  expect(calls).toBe(2);
+  expect(usage.map((u) => [u.cached ?? false, u.inputTokens])).toEqual([
+    [false, 10],
+    [true, 0],
+    [false, 10],
+  ]);
 });
