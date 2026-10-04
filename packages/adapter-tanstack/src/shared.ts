@@ -119,11 +119,24 @@ export function tableNames(model: ModelIR) {
   return { table: camel(pluralName), sqlTable: snake(pluralName) };
 }
 
+/**
+ * How generated code refers to a model's table: through the schema namespace
+ * (`import * as schema from "#/db/schema"`), so no local can shadow it, whatever the model is
+ * called (a model named Row has the table rows).
+ */
+export const tableRef = (model: ModelIR) => `schema.${tableNames(model).table}`;
+
+/** The namespace import that tableRef needs. */
+export const SCHEMA_IMPORT = 'import * as schema from "#/db/schema";';
+
 // Names derived from a model, used consistently across files.
 export function names(model: ModelIR, t: Texts) {
   const pluralName = plural(model.name);
   return {
     ...tableNames(model),
+    /** The table as generated code refers to it; `tableKey` is its name, e.g. for db.query. */
+    table: tableRef(model),
+    tableKey: tableNames(model).table,
     ui: `${camel(model.name)}Ui`,
     schema: `${camel(model.name)}Schema`,
     list: `list${pascal(pluralName)}`,
@@ -265,9 +278,17 @@ export function importList() {
       modules.set(module, set);
       return this;
     },
+    /** A namespace import ("* as schema") gets a line of its own. */
     render(): string {
       return [...modules]
-        .map(([m, names]) => `import { ${[...names].join(", ")} } from "${m}";\n`)
+        .map(([m, all]) => {
+          const spaces = [...all].filter((name) => name.startsWith("* as "));
+          const named = [...all].filter((name) => !name.startsWith("* as "));
+          return [
+            ...spaces.map((name) => `import ${name} from "${m}";\n`),
+            ...(named.length ? [`import { ${named.join(", ")} } from "${m}";\n`] : []),
+          ].join("");
+        })
         .join("");
     },
     names(): Set<string> {

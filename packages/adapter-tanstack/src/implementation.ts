@@ -59,14 +59,14 @@ export function implementationIndex(ir: SpecIR, auth: AuthIR): Record<string, Ge
       n.remove,
     ]);
     file(concept, `${base}.server.ts`, [n.access, n.data]);
-    file(concept, "src/db/schema.ts", [n.table]);
+    file(concept, "src/db/schema.ts", [n.tableKey]);
     entry(concept).tables.push(tableNames(model).sqlTable);
     entry(concept).tests.push({ file: "src/generated/access.test.ts", name: model.name });
     const stored = storedFields(model);
     for (const field of model.fields) {
       const fieldConcept = `field:${model.name}.${field.name}`;
       if (stored.includes(field)) {
-        file(fieldConcept, "src/db/schema.ts", [`${n.table}.${dataKey(field)}`]);
+        file(fieldConcept, "src/db/schema.ts", [`${n.tableKey}.${dataKey(field)}`]);
         entry(fieldConcept).tables.push(`${tableNames(model).sqlTable}.${dataKey(field)}`);
       }
       if (field.formula || field.defaultFormula) {
