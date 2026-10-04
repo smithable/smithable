@@ -1237,7 +1237,14 @@ async function copyFlow(base) {
       if (i === 50) throw new Error("the form still shows the status from before the action");
       await page.waitForTimeout(100);
     }
-    console.log("  ✓ browser: after an action on its page, the record's form shows the new values");
+    // The record's own history, for administrators: the action, with the field it changed.
+    await page
+      .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "markSent" })
+      .getByText("(status)")
+      .waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: after an action on its page, the record's form shows the new values, and its history the action",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,

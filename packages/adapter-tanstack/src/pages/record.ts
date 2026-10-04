@@ -348,6 +348,8 @@ export function detailRoute(
   });
   // A copy opens the new record instead of reloading this one: it needs no router.
   const router = favorite || offered.some((a) => !a.copy);
+  // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
+  const history = Boolean(auth && hasSignIn(auth) && !within);
   const viewer = contact || favorite || offered.length > 0;
   const buttons = [
     ...offered.map(
@@ -361,24 +363,59 @@ export function detailRoute(
       : []),
   ];
   return `${HEADER}import { createFileRoute, notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
-import { app } from "#/generated/app";
+${
+  // The contact block imports some of the same: each name once.
+  history
+    ? contact
+      ? 'import { and, desc } from "drizzle-orm";\nimport { auditLog } from "#/db/schema";\n'
+      : 'import { createServerFn } from "@tanstack/react-start";\nimport { and, desc, eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { auditLog, user } from "#/db/schema";\n'
+    : ""
+}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
 ${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
-import { PageHeader } from "#/kit/AppShell";
+${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-${sections.length || favorite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
-${contact ? contact.fn : ""}export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
+${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${sections.length || favorite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
+${contact ? contact.fn : ""}${
+  history
+    ? `/** The record's lines in the audit log, newest first: administrators only, nobody else. */
+const getHistory = createServerFn()
+  .validator((id: number) => id)
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    if (viewer?.role !== "admin") return null;
+    const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    return db
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.model, ${JSON.stringify(model.name)}), eq(auditLog.recordId, id)))
+      .orderBy(desc(auditLog.id))
+      .limit(50)
+      .all()
+      .map((r) => ({
+        id: r.id,
+        at: r.at,
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? \`a removed user (#\${r.who})\`),
+        action: r.action,
+        fields: r.fields,
+        details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
+      }));
+  });
+
+`
+    : ""
+}export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
     if (!found) throw notFound();
-    return { ...found${options ? `, options: ${options.expr}` : ""} };
+    return { ...found${options ? `, options: ${options.expr}` : ""}${history ? ", history: await getHistory({ data: Number(params.id) })" : ""} };
   },
   component: ${component},
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${options ? ", options" : ""}${favorite ? ", saved" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const { row, canWrite, canDelete${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite
@@ -442,7 +479,17 @@ ${
       </section>
 `
     : ""
-}${contact ? `      ${contact.element}\n` : ""}${sections.join("\n")}
+}${contact ? `      ${contact.element}\n` : ""}${sections.join("\n")}${
+  history
+    ? `
+      {history && history.length > 0 && (
+        <section className="mt-10 max-w-3xl">
+          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <ActivityLog lines={history} app={app} />
+        </section>
+      )}`
+    : ""
+}
     </>
   );
 }
