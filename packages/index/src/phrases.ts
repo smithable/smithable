@@ -219,7 +219,8 @@ function newField(phrase: string, scope: Scope, requiredByDefault = false): NewF
   };
   flag(/\b(?:required|mandatory|which must be filled in|that must be filled in)\b/, true);
   flag(/\b(?:optional|not required)\b/, false);
-  text = dropArticles(text);
+  // "a VAT number field", "a status column": the word names what it is, not the field.
+  text = dropArticles(text).replace(/(\S)\s+(?:field|column)$/, "$1");
   if (!text) return undefined;
   // "belongs to a customer", "linked to a customer", "for a customer": a reference.
   const reference = /^(?:belongs to|linked to|refers to|references|assigned to|for|of) (.+)$/.exec(
