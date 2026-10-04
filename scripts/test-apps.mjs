@@ -853,8 +853,50 @@ async function statusFlow(base) {
     ).json();
     if (resolved.status !== "resolved")
       throw new Error(`resolving gave ${JSON.stringify(resolved)}`);
+    // The incident's history names the key that added and resolved it, not a person.
+    await open(page, `${base}/incidents/${incident.id}`);
+    await page
+      .locator('[data-kit="activity-log"]')
+      .getByText('key "Uptime monitor"')
+      .first()
+      .waitFor({ timeout: 10000 });
+    await open(page, `${base}/team`);
     if ((await api("/maintenances")).status !== 404)
       throw new Error("a model not offered answered");
+    // A record lists no list of related records (they are reached from their own route).
+    const component = (await (await api("/components")).json()).items[0];
+    if ("incidents" in component) throw new Error("a component lists its incidents as a field");
+    // The same as tools for an AI assistant, with the same key.
+    const rpc = async (method, params) => {
+      const answer = await fetch(`${base}/mcp`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${shown}`, "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      return (await answer.json()).result;
+    };
+    const started = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {} });
+    if (!started?.capabilities?.tools)
+      throw new Error(`initialize gave ${JSON.stringify(started)}`);
+    const names = (await rpc("tools/list", {})).tools.map((tool) => tool.name);
+    if (
+      !names.includes("find_incidents") ||
+      !names.includes("resolve") ||
+      names.some((n) => n.startsWith("delete_"))
+    )
+      throw new Error(`the tools are ${names.join(", ")}`);
+    const found = await rpc("tools/call", { name: "find_incidents", arguments: {} });
+    if (found.isError || !found.structuredContent?.items?.length)
+      throw new Error(`find_incidents gave ${JSON.stringify(found)}`);
+    const refused = await rpc("tools/call", { name: "delete_incident", arguments: { id: 1 } });
+    if (!refused.isError) throw new Error("a delete tool answered");
+    // One message per request: a batch would run many calls for one count of the limit.
+    const batch = await fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${shown}`, "content-type": "application/json" },
+      body: JSON.stringify([{ jsonrpc: "2.0", id: 1, method: "ping" }]),
+    });
+    if (batch.status !== 400) throw new Error(`a batch was answered with ${batch.status}`);
     const described = await (await fetch(`${base}/api/v1/openapi.json`)).json();
     if (!described.paths?.["/api/v1/incidents/{id}/actions/resolve"])
       throw new Error("the description lacks resolve");
@@ -863,7 +905,7 @@ async function statusFlow(base) {
     await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
     if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
-      "  ✓ browser: an admin makes an API key on the team page; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is; revoked, it stops",
+      "  ✓ browser: an admin makes an API key on the team page; with it a program lists and adds incidents and resolves one, a model not offered is not there, the description says what is, and an assistant finds incidents through /mcp (no delete tool); revoked, it stops",
     );
   } catch (error) {
     console.log(
@@ -2460,15 +2502,16 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "changes are limited per address, and a made-up X-Forwarded-For is no new address",
         async () => {
-          // All at once: one after another, a slow machine refills the burst (one a second)
-          // between them and lets them all through.
+          // All at once, and well over the burst of 60: the burst refills at one a second, so a
+          // busy machine that spreads 65 requests over five seconds let them all through. 200
+          // would need over two minutes of refilling to pass.
           const answers = await Promise.all(
-            Array.from({ length: 65 }, (_, i) =>
+            Array.from({ length: 200 }, (_, i) =>
               fetch(`${base}/`, { method: "POST", headers: { "x-forwarded-for": `10.0.${i}.1` } }),
             ),
           );
           if (!answers.some((answer) => answer.status === 429))
-            throw new Error("65 changes from made-up addresses were all let through");
+            throw new Error("200 changes from made-up addresses were all let through");
         },
       ).catch(() => {});
     } finally {

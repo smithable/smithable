@@ -18,7 +18,7 @@ import {
   standardActionModule,
   standardActionServer,
 } from "./actions.js";
-import { apiModule, apiRoutes } from "./api.js";
+import { apiModule, apiRoutes, mcpModule, mcpRoute } from "./api.js";
 import {
   authModule,
   hasInvitations,
@@ -409,6 +409,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ...Object.entries(apiRoutes(ir, auth, t)).map(([path, source]) =>
                 generated(path, source),
               ),
+              // The same as tools for AI assistants, when the auth file says so (§5b).
+              ...(auth.api?.assistants
+                ? [
+                    generated("src/generated/mcp.server.ts", mcpModule(ir, auth, t)),
+                    generated("src/routes/mcp.ts", mcpRoute(ir)),
+                  ]
+                : []),
             ]
           : []),
       ];
@@ -451,6 +458,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Keys for the API, on the users page (docs/design/integrations.md §2).
         files: ["src/kit/Keys.tsx", "src/kit/api.server.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth),
+      },
+      {
+        // The API as tools for AI assistants (docs/design/integrations.md §5b).
+        files: ["src/kit/mcp.server.ts"],
+        used: ({ ir, auth }) => hasKeys(ir, auth) && Boolean(auth.api?.assistants),
       },
       {
         files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],

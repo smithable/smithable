@@ -12,6 +12,7 @@ import {
   titleField,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
+import { hasKeys } from "../keys.js";
 import {
   attr,
   dataRoute,
@@ -35,7 +36,7 @@ export function dataRoutes(
   const activity = hasSignIn(auth);
   const files: Record<string, string> = {
     "index.tsx": overviewRoute(page, within, { ir, t }, activity),
-    ...(activity ? { "activity.tsx": activityRoute(page, { ir, t }) } : {}),
+    ...(activity ? { "activity.tsx": activityRoute(page, { ir, t }, hasKeys(ir, auth)) } : {}),
   };
   for (const name of page.pattern.models) {
     const model = modelNamed(ir, name);
@@ -135,7 +136,11 @@ ${
  * and when, newest first, filtered from the address; a record by its title now, a deleted one or
  * a removed user by their id, with Forget in the log on their lines.
  */
-function activityRoute(page: PageIR, { ir, t }: Pick<GenContext, "ir" | "t">): string {
+function activityRoute(
+  page: PageIR,
+  { ir, t }: Pick<GenContext, "ir" | "t">,
+  keys: boolean,
+): string {
   const route = `${page.route}/activity`.replace("//", "/");
   const models = ir.models.map((model) => ({
     model,
@@ -147,7 +152,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "#/db";
-import { ${["auditLog", "user", ...models.map(({ n }) => n.table)].sort().join(", ")} } from "#/db/schema";
+import { ${["auditLog", "user", ...(keys ? ["apiKey"] : []), ...models.map(({ n }) => n.table)].sort().join(", ")} } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
@@ -214,7 +219,14 @@ ${models
   )
   .join("\n")}
     ]);
-    const removedUser = (id: string) => (named.has(id) ? named.get(id) : \`a removed user (#\${id})\`);
+${
+  keys
+    ? `    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+      named.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
+`
+    : ""
+}    const removedUser = (id: string) => (named.has(id) ? named.get(id) : \`a removed user (#\${id})\`);
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
