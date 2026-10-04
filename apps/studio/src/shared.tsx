@@ -128,27 +128,41 @@ export function Preview({
     return () => window.removeEventListener("message", onMessage);
   }, [selecting]);
   // What the last change touched, flashed in the page (motion.md 9a): at once, for a change the
-  // page shows without reloading (a text edited in place), and once more when the page that has
-  // it says it is ready. Each change flashes once.
+  // page shows without reloading (a text edited in place), and again to each page that says it
+  // is ready until one answers that it has flashed it. A change may reload the page more than
+  // once, the first time without the new content: marking it done when sent lost the flash.
+  // After a minute it is no longer news.
   // The page may say it is ready before Studio hears of the change, so the newest one is kept.
   const flashed = useRef<string | undefined>(undefined);
+  // What was flashed last, on the frame for tests to read: a flash is over in 1.6 s, this stays.
+  const [flashedConcepts, setFlashedConcepts] = useState<string>();
   const latest = useRef(highlight);
+  const since = useRef(0);
   useEffect(() => {
     latest.current = highlight;
     if (!highlight?.concepts.length) return;
+    since.current = Date.now();
     frame.current?.contentWindow?.postMessage(
-      { type: "smithable:highlight", concepts: highlight.concepts },
+      { type: "smithable:highlight", key: highlight.key, concepts: highlight.concepts },
       previewTarget(),
     );
   }, [highlight]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e)) return;
+      if (e.data.type === "flashed") {
+        if (e.data.key) {
+          flashed.current = e.data.key;
+          if (latest.current?.key === e.data.key)
+            setFlashedConcepts(latest.current.concepts.join(" "));
+        }
+        return;
+      }
       const now = latest.current;
-      if (!isPreviewMessage(e) || e.data.type !== "ready" || !now?.concepts.length) return;
-      if (flashed.current === now.key) return;
-      flashed.current = now.key;
+      if (e.data.type !== "ready" || !now?.concepts.length) return;
+      if (flashed.current === now.key || Date.now() - since.current > 60_000) return;
       (e.source as Window | null)?.postMessage(
-        { type: "smithable:highlight", concepts: now.concepts },
+        { type: "smithable:highlight", key: now.key, concepts: now.concepts },
         previewTarget(),
       );
     };
@@ -242,6 +256,7 @@ export function Preview({
               }}
               key={stale?.key ?? frameKey}
               title="App preview"
+              data-flashed={flashedConcepts}
               src={stale?.src ?? `${url}${current.current}`}
               onLoad={loaded}
               className={cx("h-full w-full border-0", stale && "pointer-events-none opacity-60")}
