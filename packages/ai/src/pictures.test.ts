@@ -100,3 +100,46 @@ test("a starter's tag and a model's name do not make a subject; what the person 
     pickPictures(heroes, { description: "A booking site for a yoga studio", ir: booking }).hero?.id,
   ).toBe("fitness-yoga-class");
 });
+
+test("among heroes that fit as well, the description and the app's name choose: variety, the same app always the same", () => {
+  const heroes: PictureEntry[] = [
+    entry("fitness-yoga-class", "hero", ["hero", "yoga", "studio", "class", "fitness"]),
+    entry("hero-yoga-studio", "hero", ["hero", "studio", "yoga", "fitness", "calm"]),
+    entry("hero-music", "hero", ["hero", "music", "studio"]),
+    entry("hero-library", "hero", ["hero", "library", "book"]),
+    entry("hero-workshop", "hero", ["hero", "workshop", "tool"]),
+    entry("hero-abstract-calm-b", "hero", ["hero", "abstract", "calm"]),
+  ];
+  const named = (name: string) =>
+    validateSpec({ path: "smithable.yml", text: `smithable: 0.1\napp: { name: ${name} }\n` }).ir;
+  const pick = (description: string, name: string) =>
+    pickPictures(heroes, { description, ir: named(name) }).hero?.id;
+  const yoga = "A booking site for a yoga studio";
+  const picked = new Set(
+    ["Stillwater", "Sol Yoga", "Lotus", "Breathe", "Flow", "Om", "Asana", "Prana"].map((n) =>
+      pick(yoga, n),
+    ),
+  );
+  // Both yoga pictures come up, and never the music studio, which only shares "studio".
+  expect([...picked].sort()).toEqual(["fitness-yoga-class", "hero-yoga-studio"]);
+  expect(pick(yoga, "Stillwater")).toBe(pick(yoga, "Stillwater"));
+  // "A tool library … tools" says tools twice: the books are not as good a choice, whatever the name.
+  for (const name of ["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+    expect(pick("A tool library where neighbors lend each other tools", name)).toBe(
+      "hero-workshop",
+    );
+  // A tag ending in "s" is met by the same word: "status", "tools".
+  const plural = [
+    entry("hero-office", "hero", ["hero", "office", "status", "incidents"]),
+    entry("hero-shed", "hero", ["hero", "tools"]),
+    entry("hero-abstract-calm-b", "hero", ["hero", "abstract", "calm"]),
+  ];
+  expect(pickPictures(plural, { description: "A status page for our API" }).hero?.id).toBe(
+    "hero-office",
+  );
+  expect(pickPictures(plural, { description: "Lend a tool to a neighbor" }).hero?.id).toBe(
+    "hero-shed",
+  );
+  // Nothing fits: the calm abstract one, under the name its remake has.
+  expect(pick("Quarterly compliance filings", "Alpha")).toBe("hero-abstract-calm-b");
+});
