@@ -46,6 +46,21 @@ export interface AuthIR {
    * app offers nothing. Listing is not granting: a key's role decides what it may do.
    */
   api?: ApiIR;
+  /**
+   * "Ask" in the app (docs/design/assistant.md §6): who gets it and whether it may change
+   * things. Absent: the people who use the app do not get it.
+   */
+  assistant?: AssistantIR;
+}
+
+export interface AssistantIR {
+  /**
+   * The roles that get "Ask"; `signed-in` is everyone who signs in; `anyone` is visitors too,
+   * who are answered by the wording rules only, never by a model.
+   */
+  for: "signed-in" | "anyone" | string[];
+  /** `read` (the default): it finds and counts. `change`: it also adds, changes and runs actions, each confirmed. */
+  may: "read" | "change";
 }
 
 export interface ApiIR {
@@ -173,6 +188,7 @@ export function validateAuth(
         "admins",
         "public",
         "api",
+        "assistant",
       ],
       later: ["user", "teams"],
     }).map((e) => [e.key, e]),
@@ -324,6 +340,8 @@ export function validateAuth(
       "invalid-api",
       `"api" needs sign-in: a key is made by an administrator in the app, and "signIn" is "none".`,
     );
+  const assistant = byKey.get("assistant");
+  if (assistant) readAssistant(ctx, assistant, auth, roleNames);
   // "models: all" also offers models added later. That is said where it is chosen (setApi's
   // confirmation, the summary), not as a warning on every later change.
 
@@ -441,6 +459,76 @@ function readAllOrList(
  * The `api` block: what other programs may reach with a key.
  * `{ models: all | [..], except: [..], actions: all | [..], assistants: true | { delete: true } }`.
  */
+/** `assistant: { for: [admin, staff] | signed-in | anyone, may: read | change }`. */
+function readAssistant(ctx: ParseContext, entry: Entry, auth: AuthIR, roleNames: string[]): void {
+  const where = `"assistant"`;
+  const byKey = new Map(
+    checkKeys(ctx, mapEntries(ctx, entry.value, where) ?? [], where, {
+      allowed: ["for", "may"],
+    }).map((e) => [e.key, e]),
+  );
+  const who = byKey.get("for");
+  if (!who) {
+    ctx.error(
+      entry.keyNode,
+      "missing-key",
+      `"assistant" needs "for": the roles that get it, like [admin, staff], or signed-in, or anyone.`,
+    );
+    return;
+  }
+  let whom: AssistantIR["for"];
+  if (isScalar(who.value)) {
+    const word = readString(ctx, who.value, `"for" in "assistant"`);
+    if (word !== "signed-in" && word !== "anyone") {
+      if (word !== undefined)
+        ctx.error(
+          who.value,
+          "invalid-value",
+          `"for" in "assistant" is a list of roles, like [admin], or signed-in (everyone who signs in), or anyone (visitors too).`,
+        );
+      return;
+    }
+    whom = word;
+  } else {
+    const roles = readNameList(ctx, who.value, `"for" in "assistant"`);
+    for (const { name, at } of roles)
+      if (!roleNames.includes(name))
+        ctx.error(
+          at,
+          "unknown-role",
+          `There is no role named "${name}".`,
+          didYouMean(name, roleNames),
+        );
+    if (roles.length === 0) return;
+    whom = roles.map((r) => r.name);
+  }
+  const mayEntry = byKey.get("may");
+  const may = mayEntry ? readString(ctx, mayEntry.value, `"may" in "assistant"`) : "read";
+  if (may !== "read" && may !== "change") {
+    if (may !== undefined)
+      ctx.error(
+        mayEntry?.value ?? entry.keyNode,
+        "invalid-value",
+        `"may" in "assistant" is read (it finds and counts) or change (it also adds, changes and runs actions, each confirmed).`,
+      );
+    return;
+  }
+  if (auth.signIn === "none" && whom !== "anyone")
+    ctx.error(
+      who.value,
+      "no-sign-in",
+      `Nobody signs in to this app ("signIn" is "none"), so "Ask" can only be for anyone.`,
+    );
+  // Visitors are answered over what is public: with nothing public there is nothing to ask about.
+  if (whom === "anyone" && auth.public.read.length === 0)
+    ctx.warning(
+      who.value,
+      "assistant-nothing-public",
+      `"Ask" is for anyone, but visitors may read nothing (public.read is empty), so it has nothing to answer them with.`,
+    );
+  auth.assistant = { for: whom, may };
+}
+
 function readApi(ctx: ParseContext, entry: Entry, auth: AuthIR): ApiNodes | undefined {
   const where = `"api"`;
   const nodes: ApiNodes = { modelNames: [], exceptNames: [], actionNames: [] };
