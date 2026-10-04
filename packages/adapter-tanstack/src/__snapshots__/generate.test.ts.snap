@@ -2903,7 +2903,7 @@ export const sessionData = {
       }
         const before = tx.select().from(sessions).where(eq(sessions.id, id)).get();
         const after = tx.update(sessions).set(updated).where(eq(sessions.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Session", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Session", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["placesLeft"].includes(k))) });
         return after;
       });
     } catch (error) {
@@ -6955,7 +6955,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.server.ts": "9b8f207c generated",
   "src/generated/post.ts": "cd2cc271 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "154cd799 generated",
+  "src/generated/session.server.ts": "72000184 generated",
   "src/generated/session.ts": "63803330 generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -8313,7 +8313,7 @@ export const orderData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(orders).where(eq(orders.id, id)).get();
         const after = tx.update(orders).set(updated).where(eq(orders.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["shippingCost"].includes(k))) });
         return after;
       });
     } catch (error) {
@@ -10264,7 +10264,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "5721824b generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "3148c6c6 generated",
+  "src/generated/order.server.ts": "71f70e7b generated",
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "6e9a4b7d generated",
@@ -12282,7 +12282,7 @@ export const invoiceData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(invoices).where(eq(invoices.id, id)).get();
         const after = tx.update(invoices).set(updated).where(eq(invoices.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
         return after;
       });
     } catch (error) {
@@ -12645,7 +12645,7 @@ export const invoiceLineData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(invoiceLines).where(eq(invoiceLines.id, id)).get();
         const after = tx.update(invoiceLines).set(updated).where(eq(invoiceLines.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
         return after;
       });
     } catch (error) {
@@ -14601,10 +14601,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/hooks.ts": "5a1756ed generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "8761f2bb generated",
+  "src/generated/invoice-line.server.ts": "e685f2f9 generated",
   "src/generated/invoice-line.ts": "ad44efd2 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "b9e1a089 generated",
+  "src/generated/invoice.server.ts": "4b34f1c5 generated",
   "src/generated/invoice.ts": "a7bbf4f2 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
