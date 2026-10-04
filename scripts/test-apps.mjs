@@ -853,6 +853,13 @@ async function statusFlow(base) {
     ).json();
     if (resolved.status !== "resolved")
       throw new Error(`resolving gave ${JSON.stringify(resolved)}`);
+    // The incident's history names the key that added and resolved it, not a person.
+    await open(page, `${base}/incidents/${incident.id}`);
+    await page
+      .locator('[data-kit="activity-log"]')
+      .getByText('key "Uptime monitor"')
+      .first()
+      .waitFor({ timeout: 10000 });
     if ((await api("/maintenances")).status !== 404)
       throw new Error("a model not offered answered");
     // A record lists no list of related records (they are reached from their own route).
