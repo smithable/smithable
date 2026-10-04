@@ -20707,16 +20707,12 @@ const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
-const amount = (v: unknown, field: string) => {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.trim()) : Number.NaN;
-  if (Number.isFinite(n)) return n;
-  throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
-};
 const moment = (v: unknown, field: string) => {
   const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
+
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new BadInput("The body must be a JSON object.");
@@ -20738,7 +20734,7 @@ export function componentToApi(row: Record<string, any>) {
   };
 }
 
-/** A component's values from a body: all of them, or a change to \\\`current\\\`. */
+/** A component's values from a body: all of them, or a change to \`current\`. */
 export function componentFromApi(body: unknown, current?: Record<string, unknown>) {
   const given = fieldsOf(body, ["name", "status", "description"]);
   const values: Record<string, unknown> = { ...current };
@@ -20773,7 +20769,7 @@ export function incidentToApi(row: Record<string, any>) {
   };
 }
 
-/** A incident's values from a body: all of them, or a change to \\\`current\\\`. */
+/** A incident's values from a body: all of them, or a change to \`current\`. */
 export function incidentFromApi(body: unknown, current?: Record<string, unknown>) {
   const given = fieldsOf(body, ["title", "status", "component", "detectedAt", "resolvedAt", "summary"]);
   const values: Record<string, unknown> = { ...current };
@@ -23621,7 +23617,7 @@ export const Route = createFileRoute("/api/v1/incidents/$id/actions/$action")({
   server: {
     handlers: {
       POST: ({ request, params }) =>
-        apiCall(request, async (viewer, body) => {
+        apiCall(request, async (viewer) => {
           const id = Number(params.id);
           switch (params.action) {
             case "resolve":
@@ -25661,7 +25657,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/monitoring.ts": "44cd9703 generated",
   "src/generated/actions/resolve.server.ts": "b876797c generated",
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
-  "src/generated/api.server.ts": "313b1cc5 generated",
+  "src/generated/api.server.ts": "52392990 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/component.server.ts": "66c83a62 generated",
   "src/generated/component.ts": "c47f2a48 generated",
@@ -25719,7 +25715,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/api/v1/components/$id.ts": "21010aeb generated",
   "src/routes/api/v1/components/index.ts": "59f6ebb9 generated",
-  "src/routes/api/v1/incidents/$id.actions.$action.ts": "b3b247d6 generated",
+  "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
   "src/routes/api/v1/incidents/$id.ts": "72c4b9dd generated",
   "src/routes/api/v1/incidents/index.ts": "d4ea2510 generated",
   "src/routes/api/v1/openapi[.]json.ts": "e57fe423 generated",
