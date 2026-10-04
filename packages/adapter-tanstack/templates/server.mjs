@@ -42,6 +42,19 @@ function allowed(request) {
   return true;
 }
 
+/**
+ * The most a request may carry, 1 MB (a picture's limit too): told by Content-Length before
+ * anything is read. A body without a length (sent in chunks) is refused, so nothing unbounded is
+ * ever read into memory.
+ */
+const MAX_BODY = 1_000_000;
+function tooLarge(request) {
+  if (request.method === "GET" || request.method === "HEAD" || !request.body) return undefined;
+  const length = request.headers.get("content-length");
+  if (length === null) return 411;
+  return Number(length) > MAX_BODY ? 413 : undefined;
+}
+
 serve({
   port: Number(process.env.PORT ?? 3000),
   gracefulShutdown: true,
@@ -53,6 +66,12 @@ serve({
           status: 429,
           headers: { "Retry-After": "5", ...HEADERS },
         });
+      const refused = tooLarge(request);
+      if (refused)
+        return new Response(
+          refused === 413 ? "The request is larger than 1 MB." : "Say the request's length.",
+          { status: refused, headers: HEADERS },
+        );
       const response = await next();
       for (const [name, value] of Object.entries(HEADERS))
         if (!response.headers.has(name)) response.headers.set(name, value);
