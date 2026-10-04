@@ -30,7 +30,7 @@ import {
   setRole,
   withdrawInvitation,
 } from "#/generated/users.server";
-${keys ? 'import { KEY_ROLES, listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/access";
+${keys ? 'import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";${keys ? '\nimport { Keys } from "#/kit/Keys";' : ""}
 import { inviteAllowed } from "#/kit/limit";
 import { Users } from "#/kit/Users";
@@ -53,7 +53,7 @@ ${
 });
 
 const makeApiKey = createServerFn({ method: "POST" })
-  .validator(z.object({ name: z.string().trim().min(1).max(100), role: z.enum(KEY_ROLES), until: z.iso.date().optional() }))
+  .validator(z.object({ name: z.string().trim().min(1).max(100), role: z.enum(ROLES), until: z.iso.date().optional() }))
   .handler(async ({ data }) =>
     makeKey(await currentViewer(), data.name, data.role, data.until ? new Date(\`\${data.until}T23:59:59Z\`) : undefined),
   );
@@ -132,7 +132,7 @@ function ${component}() {
           keys={keys}
           roles={ROLE_OPTIONS}
           onMake={async (name, role, until) => {
-            const key = await makeApiKey({ data: { name, role: role as (typeof KEY_ROLES)[number], until } });
+            const key = await makeApiKey({ data: { name, role: role as Role, until } });
             await router.invalidate();
             return key;
           }}
