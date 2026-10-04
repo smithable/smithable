@@ -1,12 +1,64 @@
 smithable: 0.1
 app:
-  name: App
-  timezone: UTC
+  name: Yoga Studio Booking
+  description: Class schedule and online booking for a yoga studio.
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: beginner | allLevels | advanced
+      durationMinutes: int! = 60
+    access:
+      create: [admin]
+  Instructor:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+    access:
+      create: [admin]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      session: Session! unique
+    capacity:
+      per: session
+      max: session.capacity
+  Post:
+    fields:
+      title: string!
+      address: string unique
+      summary: text
+      cover: picture
+      body: markdown!
+      publishedOn: date
+      status: draft | published
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
 pages:
-  admin:
-    data: all
-  team:
-    users: manage
   class-types:
     crud: ClassType
     access: [admin]
@@ -18,69 +70,37 @@ pages:
     access: [admin]
   my-bookings:
     crud: Booking
-    access: [member, admin]
-    mine: true
-    actions: [cancelBooking]
+  posts:
+    crud: Post
+    access: [admin]
+  messages:
+    crud: Message
+    access: [admin]
   home:
     route: /
     landing:
       hero:
       footer:
+      classes:
+        records: ClassType
+      estimate:
+        custom: ClassPassCalculator
+      gallery:
+      faq:
+      news:
+        records: Post
+      contact:
+        form: Message
   schedule:
     calendar:
       model: Session
       starts: startsAt
-models:
-  ClassType:
-    fields:
-      name: string!
-      description: text
-      duration: int! = 60
-      level: beginner | intermediate | advanced
-      color: "string = #6366f1"
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
-  Instructor:
-    fields:
-      name: string!
-      bio: text
-      photo: url
-      email: email! unique
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
-  Session:
-    fields:
-      classType: ClassType!
-      instructor: Instructor!
-      startsAt: datetime!
-      endsAt: datetime!
-      capacity: int! = 20
-      bookings: Booking[]
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
-  Booking:
-    fields:
-      session: Session!
-      member: User!
-      status: booked | attended | cancelled
-      bookedAt: datetime = NOW()
-    capacity:
-      per: session
-      max: session.capacity
-      where:
-        status: [booked, attended]
-navigation: [home, schedule, my-bookings]
-actions:
-  cancelBooking:
-    on: Booking
-    when:
-      status: booked
-    set:
-      status: cancelled
-    intent: Cancel this booking.
+  blog:
+    articles: Post
+  admin:
+    data: all
+    access: [admin]
+  team:
+    users: manage
+    access: [admin]
+navigation: [home, schedule, my-bookings, blog]

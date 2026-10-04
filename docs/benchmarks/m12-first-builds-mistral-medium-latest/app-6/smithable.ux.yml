@@ -4,3 +4,14 @@ pages:
     table:
       sort: -postedAt
       view: cards
+    form:
+      sections: [{ name: details, fields: [title, description, company, location] }, { name: compensation, fields: [salary, type] }]
+      columns: 2
+tones:
+  JobPost.status:
+    open: success
+  Application.status:
+    reviewed: success
+    interviewed: success
+    hired: success
+    rejected: danger

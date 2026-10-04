@@ -1,7 +1,60 @@
 smithableContent: 0.1
 pages:
   home:
+    title: Shop Uptime
+    subtitle: The state of our services, live.
     hero:
       image:
         src: images/hero.webp
         alt: A florist arranging a bouquet in a small shop
+  history:
+    title: Incident History
+  incidents:
+    title: Incidents
+  updates:
+    title: Updates
+  components:
+    title: Components
+  maintenance:
+    title: Maintenance
+  overview:
+    title: Overview
+  team:
+    title: Team
+models:
+  Component:
+    label: Component
+    pluralLabel: Components
+    fields:
+      status:
+        label: Status
+        values:
+          operational: Operational
+          degraded: Degraded
+          down: Down
+          maintenance: Maintenance
+  Incident:
+    label: Incident
+    pluralLabel: Incidents
+    fields:
+      status:
+        label: Status
+        values:
+          investigating: Investigating
+          identified: Identified
+          monitoring: Monitoring
+          resolved: Resolved
+  IncidentUpdate:
+    label: Update
+    pluralLabel: Updates
+    fields:
+      status:
+        label: Status
+        values:
+          investigating: Investigating
+          identified: Identified
+          monitoring: Monitoring
+          resolved: Resolved
+  Maintenance:
+    label: Maintenance
+    pluralLabel: Maintenances

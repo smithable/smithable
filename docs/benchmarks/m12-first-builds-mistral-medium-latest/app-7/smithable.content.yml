@@ -1,8 +1,8 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Football Club
-    subtitle: Teams, players, matches, and results
+    title: Welcome to Football Club
+    subtitle: Teams, players, matches and results
     hero:
       image:
         src: images/hero.webp
@@ -11,57 +11,23 @@ models:
   Team:
     label: Team
     pluralLabel: Teams
-    fields:
-      sport:
-        label: Sport
-        values:
-          football: Football
-          futsal: Futsal
-          beach: Beach Soccer
-      founded:
-        label: Founded
   Player:
     label: Player
     pluralLabel: Players
     fields:
       position:
-        label: Position
         values:
           goalkeeper: Goalkeeper
           defender: Defender
           midfielder: Midfielder
           forward: Forward
-      number:
-        label: Number
-      birthDate:
-        label: Birth Date
   Match:
     label: Match
     pluralLabel: Matches
     fields:
-      homeTeam:
-        label: Home Team
-      awayTeam:
-        label: Away Team
-      date:
-        label: Date
-      location:
-        label: Location
       status:
-        label: Status
         values:
           scheduled: Scheduled
-          played: Played
+          inProgress: In Progress
+          completed: Completed
           canceled: Canceled
-  Result:
-    label: Result
-    pluralLabel: Results
-    fields:
-      match:
-        label: Match
-      homeScore:
-        label: Home Score
-      awayScore:
-        label: Away Score
-      scorers:
-        label: Scorers

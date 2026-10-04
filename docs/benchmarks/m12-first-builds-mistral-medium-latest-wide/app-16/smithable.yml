@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Allotment Society
-  description: Manage plots, waiting list and yearly fees for the allotment society.
+  name: Our Allotment Society
+  description: Track who has which plot, the waiting list and yearly fees for the allotment society.
 models:
   Plot:
     fields:
@@ -29,7 +29,7 @@ models:
       year: int! unique
       amount: money!
       dueDate: date!
-      status: open | paid | overdue
+      status: pending | paid | overdue
       notes: text
     access:
       delete: [admin]
@@ -37,15 +37,65 @@ models:
 pages:
   plots:
     crud: Plot
-    search: [number, size, notes]
+    access: [admin, member]
+    search: [number, notes]
     filters: [status]
+    actions: [reservePlot, assignPlot, markAsAvailable]
   waiting-list:
     crud: WaitingList
+    access: [admin]
     search: [name, email, notes]
     filters: [status]
+    actions: [assignFromWaitingList]
   fees:
     crud: Fee
-    filters: [status, year]
+    access: [admin, member]
+    filters: [year, status]
+    actions: [markAsPaid, markAsOverdue]
   team:
     users: manage
+actions:
+  reservePlot:
+    on: Plot
+    when:
+      status: available
+    set:
+      status: reserved
+    intent: Reserve this plot temporarily.
+  assignFromWaitingList:
+    on: WaitingList
+    when:
+      status: active
+    set:
+      status: assigned
+    intent: Assign a plot to this person from the waiting list.
+  markAsPaid:
+    on: Fee
+    when:
+      status: [pending, overdue]
+    set:
+      status: paid
+    intent: Mark this fee as paid.
+  markAsOverdue:
+    on: Fee
+    when:
+      status: pending
+    set:
+      status: overdue
+    intent: Mark this fee as overdue.
+  assignPlot:
+    on: Plot
+    when:
+      status: [available, reserved]
+    set:
+      status: assigned
+      holder: ME()
+    intent: Assign this plot to a member.
+  markAsAvailable:
+    on: Plot
+    when:
+      status: assigned
+    set:
+      status: available
+    intent: Mark this plot as available.
 navigation: [plots, waiting-list, fees, team]

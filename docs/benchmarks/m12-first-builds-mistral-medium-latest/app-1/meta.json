@@ -2,6 +2,5 @@
   "description": "A booking site for a yoga studio, with classes, teachers and online booking.",
   "starter": "booking",
   "wordStarter": "booking",
-  "questions": [],
-  "dropped": "book"
+  "questions": []
 }

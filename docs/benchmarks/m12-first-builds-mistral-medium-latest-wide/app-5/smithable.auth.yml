@@ -2,8 +2,4 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-roles:
-  member:
-    description: A photographer managing their invoices.
-defaultRole: member
 admins: [johan@smithable.ai]

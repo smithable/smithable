@@ -8,12 +8,11 @@ models:
       title: string!
       photos: pictures
       description: text!
-      category: office | electronics | furniture | books | other
+      category: furniture | electronics | books | kitchen | other
       condition: likeNew | good | worn
       available: bool = true
 pages:
-  catalog:
-    route: /
+  items:
     crud: Item
     search: [title, description]
     filters: [category, condition, available]
@@ -26,11 +25,6 @@ pages:
   saved:
     crud: Item
     favorites: only
-  home:
-    route: /welcome
-    landing:
-      hero:
-      footer:
   team:
     users: manage
-navigation: [catalog, myItems, saved, team]
+navigation: [items, myItems, saved]
