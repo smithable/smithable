@@ -3,7 +3,7 @@ import type { YamlEditor } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
-import { COMPONENT_PATTERN, NAME_PATTERN } from "./names.js";
+import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN } from "./names.js";
 
 const addPage: Operation<{ page: string; model: string; route?: string }> = {
   name: "addPage",
@@ -318,7 +318,11 @@ const addTile: Operation<{
         { ref: "page", label: "Page" },
         { description: "The dashboard page, e.g. overview." },
       ),
-      tile: { type: "string", description: "The tile's name, e.g. outstanding." },
+      tile: {
+        type: "string",
+        pattern: FIELD_NAME_PATTERN.source,
+        description: "The tile's name, camelCase, e.g. outstanding.",
+      },
       measure: { type: "string", enum: ["count", "sum", "average", "list", "query"] },
       of: {
         type: "string",
@@ -345,6 +349,10 @@ const addTile: Operation<{
       ...(by ? { by } : {}),
       ...(limit ? { limit } : {}),
     };
+    if (!FIELD_NAME_PATTERN.test(tile))
+      throw new OperationError(
+        `Tile name "${tile}" must start with a lowercase letter and use only letters and digits, like "totalFuelCost".`,
+      );
     const existing = ir.pages.find((p) => p.id === page);
     if (!existing) {
       if (!NAME_PATTERN.test(page))
