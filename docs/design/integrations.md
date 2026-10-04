@@ -139,8 +139,9 @@ Johan's idea (2026-10-04). An app's tools for assistants are hard to judge witho
 
 Johan's decision, 2026-10-04: named addresses only, from the beta.
 
-- **By default** a published app's calls leave through the service's proxy to two kinds of address and no other: the hosts of the project's Connections, and the hosts its sign-in providers need from the server, read from `providers` in `smithable.auth.yml` (Google: `oauth2.googleapis.com` and `www.googleapis.com`; Facebook: `graph.facebook.com`). Mail and the assistant's model go to the service itself, as before.
+- **By default** a published app's calls leave through the service's proxy to two kinds of address and no other: the hosts of the project's Connections, and the hosts its sign-in providers need from the server, read from `providers` in `smithable.auth.yml` (Google: `oauth2.googleapis.com` and `www.googleapis.com`; Facebook: `graph.facebook.com` and, for the keys of limited-login tokens, `limited.facebook.com`). The provider's sign-in page itself (`accounts.google.com`, `www.facebook.com`) is opened by the browser, not called by the app. Mail and the assistant's model go to the service itself, as before.
 - **"Any public address"** is a switch on the project's Connections page, off until the owner turns it on, with a sentence saying what it means. The refusal of private addresses, the closed ports and the daily limit hold either way.
+- **Ports:** 80 and 443, unless a connection names its own.
 - **A refused call says so.** The proxy answers 403 with the host's name; the app's deliveries view shows the call as refused; the Connections page lists the hosts refused lately, each with a button to name it. Otherwise custom code that fetches a new address fails without a hint.
 - **Staging** reaches the sign-in hosts only: it has no connections, so it never calls the real targets.
 - **Self-hosted:** nothing changes. The network is the owner's.
