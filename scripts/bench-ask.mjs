@@ -310,9 +310,11 @@ if (rescore) {
       question &&
       question.kind !== "change" &&
       r.expected !== undefined &&
+      // Answers kept whole only (early rows kept 240 characters: their judgement then stands).
+      (r.full || (r.answer ?? "").length < 239) &&
       !["error", "gave up", "skipped"].includes(r.outcome)
     )
-      r.outcome = answered(question, r.answer ?? "", r.expected) ? "right" : "wrong";
+      r.outcome = answered(question, r.answer ?? "", r.expected, r.also) ? "right" : "wrong";
   }
   writeFileSync(log, results_.map((r) => JSON.stringify(r)).join("\n") + "\n");
   models.push(...new Set(results_.filter((r) => r.model).map((r) => r.model)));
@@ -335,7 +337,22 @@ for (const starter of rescore ? [] : starters) {
   }).ir;
   if (!spec0.pages.some((p) => p.pattern.kind === "users"))
     op(dir, "addUsersPage", "team", "/team");
-  op(dir, "setApi", "all", "--actions", "all", "--assistants", "true");
+  // Deleting too, where setApi can say so (--assistants-delete, #276).
+  try {
+    op(
+      dir,
+      "setApi",
+      "all",
+      "--actions",
+      "all",
+      "--assistants",
+      "true",
+      "--assistants-delete",
+      "true",
+    );
+  } catch {
+    op(dir, "setApi", "all", "--actions", "all", "--assistants", "true");
+  }
   // The app migrates its database when it starts: once, so the keys' table is there.
   (await serveDev(dir, PORT))();
   const key = adminKey(dir);
@@ -414,11 +431,13 @@ for (const starter of rescore ? [] : starters) {
         }
         let right;
         let expected;
+        let also;
         if (question.kind === "change")
           right = Boolean(question.check(await records(base, key, ir), before));
         else {
           expected = question.expect(before);
-          right = answered(question, r.text, expected);
+          also = question.also?.expect(before);
+          right = answered(question, r.text, expected, also);
         }
         const [pin, pout] = price(model);
         const row = {
@@ -428,6 +447,8 @@ for (const starter of rescore ? [] : starters) {
           q: question.q,
           outcome: r.error ? "error" : r.gaveUp ? "gave up" : right ? "right" : "wrong",
           expected,
+          also,
+          full: true,
           answer: r.text.replace(/\s+/g, " "),
           calls: r.calls,
           toolCalls: r.toolCalls,
@@ -471,6 +492,13 @@ for (const starter of rescore ? [] : starters) {
 // ── Report ──────────────────────────────────────────────────────────────────
 
 const cell = (s) => String(s ?? "").replaceAll("|", "\\|");
+/** A question whose answer is a count, sum or average over records. */
+const adds = (q) =>
+  q.kind === "pairs" ||
+  (q.kind === "number" &&
+    /how many|total|together|average|in all|owe|still to be paid|cost together/i.test(q.q));
+/** Worked out by the model itself: no tool of the app's that counts or adds was called. */
+const byModel = (r) => !(r.trace ?? []).some((t) => /^(count|sum|total|aggregate|summar)/i.test(t));
 const totals = models.map((m) => {
   const rows = results_.filter((r) => r.model === m && r.outcome !== "skipped");
   const k = (o) => rows.filter((r) => r.outcome === o).length;
@@ -481,14 +509,17 @@ const totals = models.map((m) => {
   };
   const reads = rows.filter((r) => !QUESTIONS[r.starter][r.n - 1].kind.startsWith("change"));
   const lookups = reads.length ? reads.filter((r) => r.calls <= 2).length : 0;
-  return `| ${m} | ${k("right")} / ${rows.length} (${Math.round((100 * k("right")) / Math.max(1, rows.length))} %) | ${k("wrong")} | ${k("gave up") + k("error")} | ${avg((r) => r.calls).toFixed(1)} | ${lookups} / ${reads.length} | ${Math.round(avg((r) => r.tokensIn)).toLocaleString("en")} / ${Math.round(avg((r) => r.tokensOut)).toLocaleString("en")} | ${Math.round(avg((r) => r.resultTokens)).toLocaleString("en")} | $${avg((r) => r.cost).toFixed(4)} | ${avg((r) => r.seconds).toFixed(1)} s |`;
+  const added = rows.filter(
+    (r) => r.outcome === "wrong" && adds(QUESTIONS[r.starter][r.n - 1]) && byModel(r),
+  ).length;
+  return `| ${m} | ${k("right")} / ${rows.length} (${Math.round((100 * k("right")) / Math.max(1, rows.length))} %) | ${k("wrong")} | ${added} | ${k("gave up") + k("error")} | ${avg((r) => r.calls).toFixed(1)} | ${lookups} / ${reads.length} | ${Math.round(avg((r) => r.tokensIn)).toLocaleString("en")} / ${Math.round(avg((r) => r.tokensOut)).toLocaleString("en")} | ${Math.round(avg((r) => r.resultTokens)).toLocaleString("en")} | $${avg((r) => r.cost).toFixed(4)} | ${avg((r) => r.seconds).toFixed(1)} s |`;
 });
 const report = `# bench-ask: ${label} (${today})
 
 The questions of [bench-ask-questions.mjs](../../scripts/bench-ask-questions.mjs), asked of each starter's assistant tools at \`/mcp\` with an administrator's key ([bench-ask.mjs](../../scripts/bench-ask.mjs)), by each model: it calls tools until it answers (at most ${MAX_CALLS} model calls). A read is right when its answer gives the number, names, words or pairs worked out from the records; a change is right when the records afterwards say so. Each change starts from the starter's records.
 
-| Model | Right | Wrong | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
-|---|---|---|---|---|---|---|---|---|---|
+| Model | Right | Wrong | Of them, a count or sum the model worked out | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
+|---|---|---|---|---|---|---|---|---|---|---|
 ${totals.join("\n")}
 
 The tools each starter offers (\`tools/list\`, about four characters a token):
