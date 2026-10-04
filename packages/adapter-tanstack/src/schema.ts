@@ -295,8 +295,8 @@ export function seedModule(ir: SpecIR, options: Pick<GenerateOptions, "samples">
       });
       return `    { ${entries.join(", ")} },`;
     });
-    return `if (db.select().from(${n.table}).limit(1).all().length === 0) {
-  db.insert(${n.table})
+    return `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
+  db.insert(schema.${n.table})
     .values([
 ${rows.join("\n")}
     ])
@@ -308,7 +308,7 @@ ${rows.join("\n")}
   // A model that needs a person who signs in gets no sample rows; with no rows at all, the seed
   // has nothing to import.
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
-${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
+${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length ? 'import * as schema from "./schema";\n' : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
   ir.pages.some((p) => p.pattern.kind === "calendar")
     ? `import { app } from "#/generated/app";
 import { ${blocks.some((b) => b.includes("instantOf(")) ? "instantOf, wallTime" : "wallTime"} } from "#/kit/zoned";

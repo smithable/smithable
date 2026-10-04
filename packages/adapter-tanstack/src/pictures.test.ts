@@ -136,11 +136,13 @@ pages:
   const gen = generateApp(market, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const route = gen.find((f) => f.path === "src/routes/items/index.tsx")?.content ?? "";
   expect(route).toContain(
-    'data.f?.price ? inRange(items.price, data.f?.price, "number", 100) : undefined',
+    'data.f?.price ? inRange(schema.items.price, data.f?.price, "number", 100) : undefined',
   );
-  expect(route).toContain('eq(items.available, data.f?.available === "true")');
-  expect(route).toContain('data.f?.owner === "mine" && viewer ? eq(items.ownerId, viewer.id)');
-  expect(route).toContain("const order = orderOf({ price: items.price }, data.sort);");
+  expect(route).toContain('eq(schema.items.available, data.f?.available === "true")');
+  expect(route).toContain(
+    'data.f?.owner === "mine" && viewer ? eq(schema.items.ownerId, viewer.id)',
+  );
+  expect(route).toContain("const order = orderOf({ price: schema.items.price }, data.sort);");
   expect(route).toContain("signedIn={Boolean(viewer)}");
   expect(gen.find((f) => f.path === "src/generated/item.server.ts")?.content).toContain(
     "order?: SQL",
@@ -177,7 +179,7 @@ pages:
   );
   expect(at("src/generated/item.ts")).toContain("export const toggleSavedItem = createServerFn");
   const list = at("src/routes/items/index.tsx");
-  expect(list).toContain('data.view === "saved" ? inArray(items.id, saved) : undefined');
+  expect(list).toContain('data.view === "saved" ? inArray(schema.items.id, saved) : undefined');
   expect(list).toContain("saved={{ ids: saved, onToggle: toggleSaved }}");
   expect(list).toContain("<SavedTabs");
   expect(at("src/routes/items/$id.tsx")).toContain("<SaveButton saved={saved}");
@@ -187,7 +189,7 @@ pages:
     content: emptyContent(),
   });
   const onlyList = only.find((f) => f.path === "src/routes/items/index.tsx")?.content ?? "";
-  expect(onlyList).toContain("inArray(items.id, saved),");
+  expect(onlyList).toContain("inArray(schema.items.id, saved),");
   expect(onlyList).not.toContain("<SavedTabs");
   // Nothing to read from the address: the handler takes no data (an unused one fails tsc).
   expect(onlyList).toContain(".handler(async () => {");
@@ -287,7 +289,7 @@ pages:
   }).ir as SpecIR;
   const gen = generateApp(spec, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const list = gen.find((f) => f.path === "src/routes/my-items/index.tsx")?.content ?? "";
-  expect(list).toContain('eq(items.ownerId, viewer?.id ?? "")');
+  expect(list).toContain('eq(schema.items.ownerId, viewer?.id ?? "")');
   expect(list).not.toContain('kind: "mine"');
   expect(list).not.toContain("<Filters");
   expect(list).toContain("New item");
