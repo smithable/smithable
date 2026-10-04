@@ -306,12 +306,53 @@ test("a model declaring a field every model has keeps the model, without that fi
   expect(draft.files["smithable.yml"]).toContain("tools:");
 });
 
-test("an owner that refers to another model is not left out as automatic", () => {
-  const step = {
-    op: "addModel",
-    args: { model: "Car", fields: { plate: "string!", owner: "Customer!", createdAt: "datetime" } },
+test("an owner that refers to another model becomes that model's reference, by its name", () => {
+  const car = (fields: Record<string, string>) =>
+    repaired({ op: "addModel", args: { model: "Car", fields } })?.args.fields;
+  expect(car({ plate: "string!", owner: "Customer!", createdAt: "datetime" })).toEqual({
+    plate: "string!",
+    customer: "Customer!",
+  });
+  // The name taken already: owner and the model's name.
+  expect(car({ customer: "Customer", owner: "Customer!" })).toEqual({
+    customer: "Customer",
+    ownerCustomer: "Customer!",
+  });
+});
+
+test("a capacity that can never fill goes back to the model; setPublic leaves out pages never added", async () => {
+  const shared = {
+    "smithable.yml": "smithable: 0.1\napp:\n  name: Talks\n",
+    "smithable.auth.yml":
+      "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\n",
   };
-  expect(repaired(step)?.args.fields).toEqual({ plate: "string!", owner: "Customer!" });
+  const draft = await draftProjectByOperations({
+    description: "conference registration",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Talks" } },
+          {
+            op: "addModel",
+            args: { model: "Talk", fields: { title: "string!", seats: "int! = 50" } },
+          },
+          { op: "addModel", args: { model: "Registration", fields: { talk: "Talk! unique" } } },
+          { op: "addPage", args: { page: "talks", model: "Talk" } },
+          { op: "setCapacity", args: { model: "Registration", per: "talk", max: "talk.seats" } },
+          { op: "addLandingPage", args: { page: "home" } },
+          { op: "setPublic", args: { pages: ["home", "history"], read: ["Talk"] } },
+        ],
+      }),
+    ],
+    starter: { name: "booking", files: shared },
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  // The capacity was refused, not shipped with its warning, and is named as left out.
+  expect(draft.files["smithable.yml"]).not.toContain("capacity:");
+  expect(draft.dropped).toEqual([
+    expect.stringMatching(/^setCapacity Registration: .*never reached/),
+  ]);
+  expect(draft.files["smithable.auth.yml"]).toContain("pages: [home]");
 });
 
 test("places left over a list the model gets later: the model first, the computed field after", async () => {
