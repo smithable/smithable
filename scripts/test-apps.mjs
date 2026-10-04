@@ -2581,6 +2581,31 @@ for (const [index, example] of examples.entries()) {
         },
       ).catch(() => {});
       await asyncStep(
+        "a server function answers the app's own pages, and no other site or sibling app",
+        async () => {
+          // A server function's address is its id, which the built pages carry.
+          const assets = join(dir, "dist/client/assets");
+          const id = readdirSync(assets)
+            .filter((file) => file.endsWith(".js"))
+            .map((file) => readFileSync(join(assets, file), "utf8").match(/`([a-f0-9]{64})`/)?.[1])
+            .find(Boolean);
+          if (!id) throw new Error("no server function in the built pages");
+          const call = async (headers) =>
+            (await fetch(`${base}/_serverFn/${id}`, { headers })).status;
+          for (const from of ["cross-site", "same-site"])
+            if ((await call({ "Sec-Fetch-Site": from })) !== 403)
+              throw new Error(`a ${from} call was answered`);
+          if ((await call({ Origin: "https://other.example" })) !== 403)
+            throw new Error("a call from another origin was answered");
+          if ((await call({})) !== 403) throw new Error("a call that names no origin was answered");
+          if ((await call({ "Sec-Fetch-Site": "same-origin" })) === 403)
+            throw new Error("the app's own pages are refused");
+          // An older browser names the page instead; behind a proxy only the host matches.
+          if ((await call({ Origin: `https://localhost:${port}` })) === 403)
+            throw new Error("the app's own address is refused");
+        },
+      ).catch(() => {});
+      await asyncStep(
         "changes are limited per address, and a made-up X-Forwarded-For is no new address",
         async () => {
           // All at once, and well over the burst of 60: the burst refills at one a second, so a
@@ -2719,6 +2744,15 @@ for (const [index, example] of examples.entries()) {
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
+      await asyncStep(
+        "the dev server hands out no file of the app's data (the database, the outbox)",
+        async () => {
+          for (const path of ["/data/db/app.db?raw", "/data/db/app.db?url", "/data/db/app.db"]) {
+            const answer = await fetch(`${base}${path}`);
+            if (answer.status !== 403) throw new Error(`${path} answers ${answer.status}`);
+          }
+        },
+      ).catch(() => {});
       await visualChecks(dir, base);
       if (example === "crm") {
         await browserFlow(base);
