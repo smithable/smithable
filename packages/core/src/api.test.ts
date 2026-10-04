@@ -182,3 +182,25 @@ test("without a key a call is the visitor: it reads and adds what is both offere
     offers("public:\n  read: [Component, Incident]\napi: { models: all, except: [Subscriber] }\n"),
   ).toEqual({ read: ["Component", "Incident"], create: [] });
 });
+
+test("setApi can let assistants delete, which is off unless said", () => {
+  const files = { spec, auth: head };
+  const on = applyOperation(files, "setApi", {
+    models: ["Incident"],
+    assistants: true,
+    assistantsDelete: true,
+  });
+  if (!on.ok) throw new Error(on.message);
+  expect(on.description).toBe(
+    "Offer incidents to other programs, also as tools for AI assistants, which may delete too",
+  );
+  expect(read("", on.files.auth as string).auth?.api?.assistants).toEqual({ delete: true });
+  // Without assistants there is nobody it could be allowed for.
+  expect(
+    applyOperation(files, "setApi", { models: ["Incident"], assistantsDelete: true }),
+  ).toMatchObject({ ok: false });
+  // Setting it again without the option takes it back.
+  const off = applyOperation(on.files, "setApi", { models: ["Incident"], assistants: true });
+  if (!off.ok) throw new Error(off.message);
+  expect(off.files.auth).toContain("assistants: true");
+});
