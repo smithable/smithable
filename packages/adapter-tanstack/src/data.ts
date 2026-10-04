@@ -313,6 +313,16 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   // Records with an owner the app keeps itself (not a field of the spec): who owns one is told only
   // to its owner and to roles that read every record, never to a visitor or another member.
   const ownedAuto = signedIn && !model.ownedBy;
+  // A record page's contact block mails the owner, whom only the server may know.
+  const mailsOwner =
+    ownedAuto &&
+    ir.pages.some(
+      (p) => p.contact?.to === "owner" && "model" in p.pattern && p.pattern.model === model.name,
+    );
+  // Related records shown on a record's page, each as its own model shows it to the viewer.
+  const ownedLists = signedIn
+    ? lists(model).filter((f) => !modelNamed(ir, f.type.model).ownedBy)
+    : [];
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -546,7 +556,7 @@ ${referenceChecks.join("\n")}
 `
     : ""
 }
-export const ${self} = {
+export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(${n.access}.read, viewer);
@@ -640,9 +650,20 @@ ${
 `
     : ""
 }  async get(viewer: Viewer | null, id: number) {
-    const ${ownedAuto ? "found" : "row"} = await db.query.${n.tableKey}.findFirst({
+    const ${ownedAuto || ownedLists.length ? "found" : "row"} = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
-    });${ownedAuto ? "\n    const row = found && shownTo(viewer, found);" : ""}
+    });${
+      !ownedLists.length
+        ? ownedAuto
+          ? "\n    const row = found && shownTo(viewer, found);"
+          : ""
+        : `\n    const row = found && { ...${ownedAuto ? "shownTo(viewer, found)" : "found"}${ownedLists
+            .map(
+              (f) =>
+                `, ${f.name}: found.${f.name}.map((r) => ${names(modelNamed(ir, f.type.model), t).data}.shownTo(viewer, r))`,
+            )
+            .join("")} };`
+    }
 ${
   hiddenTotals.length
     ? `    if (!row) return null;
@@ -654,7 +675,7 @@ ${
   },
 
 ${
-  ownedAuto
+  mailsOwner
     ? `  /** Who owns a ${n.label.toLowerCase()} the viewer may read, for the server only (a message to its owner). */
   ownerOf(viewer: Viewer | null, id: number): string | null {
     return (
