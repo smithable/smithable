@@ -19,7 +19,7 @@ const { values: opts, positionals } = parseArgs({
 });
 
 // Per starter, its two pictures: [page id, "list", "new" or a record's number, who looks, the whole
-// page].
+// page, what to do on the page before the picture].
 // A visitor sees what the public sees; a role signs in through the development sign-in.
 const SHOTS = {
   crm: [
@@ -45,6 +45,22 @@ const SHOTS = {
   status: [
     ["home", "list", "visitor"],
     ["incidents", 1, "admin"],
+  ],
+  api: [
+    ["admin", "tasks", "admin"],
+    // A key just made: the card with the call to copy and an assistant's lines.
+    [
+      "team",
+      "list",
+      "admin",
+      true,
+      async (page) => {
+        const keys = page.locator('[data-kit="keys"]');
+        await keys.getByLabel("What it is for").fill("Assistant");
+        await keys.getByRole("button", { name: "Make a key" }).click();
+        await keys.locator('[data-part="key"]').waitFor({ timeout: 10000 });
+      },
+    ],
   ],
 };
 const starters = positionals.length ? positionals : Object.keys(SHOTS);
@@ -83,7 +99,7 @@ try {
     });
     const stop = await serveDev(dir, port);
     try {
-      for (const [n, [pageId, which, who, fullPage = false]] of SHOTS[starter].entries()) {
+      for (const [n, [pageId, which, who, fullPage = false, before]] of SHOTS[starter].entries()) {
         const spec = ir.pages.find((p) => p.id === pageId);
         if (!spec) throw new Error(`${starter} has no page ${pageId}`);
         const path = which === "list" ? spec.route : `${spec.route.replace(/\/$/, "")}/${which}`;
@@ -94,6 +110,7 @@ try {
         const page = await context.newPage();
         if (who !== "visitor") await signIn(page, base, who);
         await open(page, `${base}${path}`);
+        if (before) await before(page);
         await page.waitForTimeout(500); // pictures and fonts settle
         const file = join(out, `${starter}-${n + 1}.webp`);
         writeFileSync(
