@@ -18,9 +18,9 @@ const t = texts(emptyContent());
 
 test("the hooks module types a hook per model over its stored row and reads the custom hooks", () => {
   const source = hooksModule(ir, t);
-  expect(source).toContain('import type { customers, orders } from "#/db/schema";');
-  expect(source).toContain("Customer: typeof customers.$inferSelect;");
-  expect(source).toContain("Order: typeof orders.$inferSelect;");
+  expect(source).toContain('import type * as schema from "#/db/schema";');
+  expect(source).toContain("Customer: typeof schema.customers.$inferSelect;");
+  expect(source).toContain("Order: typeof schema.orders.$inferSelect;");
   expect(source).toContain('import * as custom from "#/custom/hooks";');
   expect(source).toContain("const sources = (): Hooks[] => [custom.hooks];");
   expect(hooksStub()).toContain('import type { Hooks } from "#/generated/hooks";');

@@ -23,6 +23,7 @@ import {
   literal,
   modelNamed,
   names,
+  SCHEMA_IMPORT,
   type Within,
 } from "../shared.js";
 import { listRoute } from "./list.js";
@@ -152,7 +153,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "#/db";
-import { ${["auditLog", "user", ...(keys ? ["apiKey"] : []), ...models.map(({ n }) => n.table)].sort().join(", ")} } from "#/db/schema";
+import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
+${models.length ? SCHEMA_IMPORT : ""}
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
