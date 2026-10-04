@@ -1,9 +1,9 @@
 import { describeChange } from "@smithable/index";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, EXPECT_RELOAD, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
-import { isPreviewMessage, type Place, shared } from "./preview";
+import { isPreviewMessage, type Place, shared, touched } from "./preview";
 import { ReportDialog } from "./Report";
 import { Preview } from "./shared";
 import { Studio } from "./studio/Studio";
@@ -83,6 +83,14 @@ export function App() {
         builder: selection ? { ...p.builder, selection } : p.builder,
       };
     });
+  // What the newest change touched (not an undo), for the preview to flash once it has it.
+  const last = project?.trace.at(-1);
+  const changeKey = last && !last.isUndo && !last.undone ? `${last.at}:${last.description}` : "";
+  const concepts = changeKey ? touched(last?.operation).join("\n") : "";
+  const highlight = useMemo(
+    () => (changeKey && concepts ? { key: changeKey, concepts: concepts.split("\n") } : undefined),
+    [changeKey, concepts],
+  );
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const box = useSlotBox(slot);
 
@@ -364,6 +372,7 @@ export function App() {
             selecting={selecting}
             onSelecting={setSelecting}
             onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
+            highlight={highlight}
           />
         </div>
       </main>
