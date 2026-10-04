@@ -171,7 +171,7 @@ export function usageLine(usage: Usage[], generator?: string): string {
     const sum = list.reduce((n, u) => n + u.cost, 0);
     return list.length ? [`${currency === "EUR" ? "€" : "$"}${sum.toFixed(4)}`] : [];
   });
-  return `${TIER_NAMES[last.tier]} (${last.model}) · ${(input + output).toLocaleString("en")} tokens (${input.toLocaleString("en")} in, ${output.toLocaleString("en")} out) · ${costs.join(" + ")}${fromCache ? ` · ${fromCache} of ${usage.length} calls from the cache` : ""}`;
+  return `${TIER_NAMES[last.tier]} (${last.model}) · ${(input + output).toLocaleString("en")} tokens (${input.toLocaleString("en")} in, ${output.toLocaleString("en")} out)${costs.length ? ` · ${costs.join(" + ")}` : ""}${fromCache ? ` · ${fromCache} of ${usage.length} calls from the cache` : ""}`;
 }
 
 /**
