@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  catalog:
+    table:
+      view: cards
+theme:
+  preset: playful
+  brand:
+    primary: "#d9480f"

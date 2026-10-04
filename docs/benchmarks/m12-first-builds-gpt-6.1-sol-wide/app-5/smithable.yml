@@ -1,0 +1,106 @@
+smithable: 0.1
+app:
+  name: Photography Invoices
+  description: Manage photography clients, shoots and invoices, and see what is still unpaid.
+  currency: EUR
+models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+      shoots: Shoot[]
+  Shoot:
+    fields:
+      title: string!
+      client: Client!
+      scheduledAt: datetime!
+      location: string
+      status: scheduled | completed | canceled
+      notes: text
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      shoot: Shoot
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid, markOverdue]
+    filters: [status, client, dueOn]
+  clients:
+    crud: Client
+  shoots:
+    crud: Shoot
+    actions: [completeShoot, cancelShoot]
+  invoice-lines:
+    crud: InvoiceLine
+  settings:
+    crud: BusinessProfile
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: Mark an unpaid invoice as overdue after its due date.
+  completeShoot:
+    on: Shoot
+    when:
+      status: scheduled
+    set:
+      status: completed
+    intent: Mark the photography shoot as completed.
+  cancelShoot:
+    on: Shoot
+    when:
+      status: scheduled
+    set:
+      status: canceled
+    intent: Cancel the scheduled photography shoot.

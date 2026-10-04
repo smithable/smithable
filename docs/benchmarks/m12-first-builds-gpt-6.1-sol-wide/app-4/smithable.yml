@@ -1,0 +1,17 @@
+smithable: 0.1
+app:
+  name: Piano Lesson Notebook
+  description: Keep track of your piano pupils, their weekly lesson times and what each pupil practises.
+models:
+  Pupil:
+    fields:
+      name: string!
+      lessonDay: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      lessonTime: string!
+      practice: text
+      notes: text
+pages:
+  pupils:
+    crud: Pupil
+    search: [name, practice]
+    filters: [lessonDay]

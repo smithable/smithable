@@ -1,0 +1,26 @@
+smithableUx: 0.1
+pages:
+  payments:
+    table:
+      sort: -paidOn
+      columns: [paidOn, invoice, amount, method]
+    icon: chart
+  clients:
+    icon: users
+  invoice-lines:
+    icon: list
+  invoices:
+    table:
+      columns: [number, client, issuedOn, dueOn, status, total, balance]
+      sort: -issuedOn
+    icon: receipt
+theme:
+  preset: modern
+  brand:
+    primary: "#0f766e"
+    font: Inter
+tones:
+  Invoice.status:
+    sent: warning
+    paid: success
+    overdue: danger

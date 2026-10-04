@@ -1,0 +1,72 @@
+smithable: 0.1
+app:
+  name: Conference Registration
+  description: Explore conference talks and speakers, register as an attendee, and reserve places at scheduled talks.
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      durationMinutes: int! = 60
+    access:
+      create: [admin]
+  Instructor:
+    fields:
+      name: string!
+      bio: text
+    access:
+      create: [admin]
+  Attendee:
+    fields:
+      name: string!
+      email: email!
+      bookings: Booking[]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 100
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      session: Session! unique
+      attendee: Attendee!
+    capacity:
+      per: session
+      max: session.capacity
+pages:
+  my-bookings:
+    crud: Booking
+  attendees:
+    crud: Attendee
+  sessions:
+    crud: Session
+    access: [admin]
+  class-types:
+    crud: ClassType
+    access: [admin]
+  instructors:
+    crud: Instructor
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule]
+      footer:
+      talks:
+        records: ClassType
+      speakers:
+        records: Instructor
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  admin:
+    data: all

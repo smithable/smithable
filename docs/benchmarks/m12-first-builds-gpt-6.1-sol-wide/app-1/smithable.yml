@@ -1,0 +1,97 @@
+smithable: 0.1
+app:
+  name: Translation Client Ledger
+  description: Keep track of your translation clients, the quotes you give them and the invoices they pay.
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      notes: text
+      quotes: Quote[]
+      invoices: Invoice[]
+  Quote:
+    fields:
+      client: Client!
+      description: text!
+      sourceLanguage: string
+      targetLanguage: string
+      quotedOn: date! = TODAY()
+      amount: money!
+      status: draft | sent | accepted | declined
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      quote: Quote
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      paidOn: date
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  clients:
+    crud: Client
+    search: [name, email, notes]
+  quotes:
+    crud: Quote
+    actions: [sendQuote, acceptQuote, declineQuote]
+    filters: [client, status]
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    filters: [client, status]
+  invoice-lines:
+    crud: InvoiceLine
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+      paidOn: TODAY()
+    intent: Record that the client paid the invoice in full.
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Record that the quote was sent to the client.
+  acceptQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: Record that the client accepted the quote.
+  declineQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: declined
+    intent: Record that the client declined the quote.

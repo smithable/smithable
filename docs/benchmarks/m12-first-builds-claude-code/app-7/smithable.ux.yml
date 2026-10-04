@@ -1,0 +1,23 @@
+smithableUx: 0.1
+tones:
+  Match.status:
+    played: success
+    postponed: warning
+    canceled: danger
+pages:
+  matches:
+    table:
+      sort: -kickoff
+      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
+    icon: calendar
+  players:
+    table:
+      columns: [shirtNumber, name, position, team]
+      view: cards
+    icon: user
+  teams:
+    icon: users
+theme:
+  preset: modern
+  brand:
+    primary: "#15803d"

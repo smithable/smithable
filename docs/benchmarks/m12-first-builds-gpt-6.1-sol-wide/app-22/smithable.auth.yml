@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Verwaltet den Hofladen und die Zugriffsrechte.
+  sales:
+    description: Erfasst Kunden und Vorbestellungen und organisiert die Abholung.
+defaultRole: sales
+admins: [johan@smithable.ai]

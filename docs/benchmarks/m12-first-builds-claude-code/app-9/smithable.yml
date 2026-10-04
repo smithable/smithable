@@ -1,0 +1,55 @@
+smithable: 0.1
+app:
+  name: IT Help Desk
+  description: A help desk where the IT team tracks tickets, their priorities and who handles them.
+  timezone: Europe/Mariehamn
+models:
+  Ticket:
+    fields:
+      title: string!
+      description: text
+      requester: string
+      priority: low | normal | high | urgent
+      status: open | inProgress | resolved | closed
+      assignee: User
+      resolvedAt: datetime
+pages:
+  tickets:
+    crud: Ticket
+    search: [title, description, requester]
+    sortable: [priority, status, createdAt]
+    actions: [take, resolve, close, reopen]
+  team:
+    users: manage
+actions:
+  take:
+    on: Ticket
+    when:
+      status: open
+    set:
+      assignee: ME()
+      status: inProgress
+    intent: Take an open ticket and start working on it.
+  resolve:
+    on: Ticket
+    when:
+      status: [open, inProgress]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    intent: Mark a ticket as resolved.
+  close:
+    on: Ticket
+    when:
+      status: resolved
+    set:
+      status: closed
+    intent: Close a resolved ticket.
+  reopen:
+    on: Ticket
+    when:
+      status: [resolved, closed]
+    set:
+      status: open
+      resolvedAt:
+    intent: Reopen a ticket whose problem came back.

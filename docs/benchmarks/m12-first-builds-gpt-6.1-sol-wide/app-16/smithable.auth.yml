@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Maintains the society's plot records and manages access.
+  member:
+    description: Uses the society's records.
+defaultRole: member
+admins: [johan@smithable.ai]

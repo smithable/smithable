@@ -1,0 +1,79 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Löydä hetki itsellesi
+      subtitle: Katso viikon joogatunnit ja varaa paikkasi verkossa muutamalla klikkauksella.
+      button: Katso tunnit
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    classes:
+      title: Tuntimme
+    instructors:
+      title: Ohjaajamme
+    callToAction:
+      title: Valmis tulemaan matolle?
+      button: Varaa tunti
+    title: Etusivu
+  schedule:
+    title: Tuntikalenteri
+  my-bookings:
+    title: Omat varaukset
+  sessions:
+    title: Tunnit
+  class-types:
+    title: Tuntityypit
+  instructors:
+    title: Ohjaajat
+  admin:
+    title: Ylläpito
+models:
+  ClassType:
+    label: Tuntityyppi
+    pluralLabel: Tuntityypit
+    fields:
+      name:
+        label: Nimi
+      summary:
+        label: Kuvaus
+      level:
+        label: Taso
+        values:
+          allLevels: Kaikille tasoille
+          beginner: Aloittelijat
+          advanced: Edistyneet
+      durationMinutes:
+        label: Kesto (min)
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+    fields:
+      name:
+        label: Nimi
+      bio:
+        label: Esittely
+      portrait:
+        label: Kuva
+  Session:
+    label: Tunti
+    pluralLabel: Tunnit
+    fields:
+      classType:
+        label: Tuntityyppi
+      instructor:
+        label: Ohjaaja
+      startsAt:
+        label: Alkaa
+      capacity:
+        label: Paikkoja
+      bookings:
+        label: Varaukset
+      placesLeft:
+        label: Paikkoja jäljellä
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+    fields:
+      session:
+        label: Tunti

@@ -1,0 +1,77 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Boka din frisörtid på nätet
+      subtitle: Välj behandling, frisör och tid som passar dig – dygnet runt.
+      button: Boka tid
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    services:
+      title: Våra behandlingar
+    stylists:
+      title: Våra frisörer
+    faq:
+      title: Vanliga frågor
+    callToAction:
+      title: Dags för en ny frisyr?
+      button: Boka tid nu
+    title: Hem
+  boka:
+    title: Boka tid
+  mina-bokningar:
+    title: Mina bokningar
+  tider:
+    title: Tider
+  tjanster:
+    title: Tjänster
+  frisorer:
+    title: Frisörer
+  admin:
+    title: Administration
+models:
+  Service:
+    label: Tjänst
+    pluralLabel: Tjänster
+    fields:
+      name:
+        label: Namn
+      summary:
+        label: Beskrivning
+      durationMinutes:
+        label: Längd (minuter)
+      price:
+        label: Pris
+  Stylist:
+    label: Frisör
+    pluralLabel: Frisörer
+    fields:
+      name:
+        label: Namn
+      bio:
+        label: Om frisören
+      portrait:
+        label: Porträtt
+  Slot:
+    label: Tid
+    pluralLabel: Tider
+    fields:
+      service:
+        label: Tjänst
+      stylist:
+        label: Frisör
+      startsAt:
+        label: Starttid
+      capacity:
+        label: Antal platser
+  Booking:
+    label: Bokning
+    pluralLabel: Bokningar
+    fields:
+      slot:
+        label: Tid
+      phone:
+        label: Telefon
+      note:
+        label: Meddelande till frisören

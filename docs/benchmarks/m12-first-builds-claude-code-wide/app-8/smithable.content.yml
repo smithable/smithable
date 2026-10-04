@@ -1,0 +1,6 @@
+smithableContent: 0.1
+pages:
+  shelf:
+    title: Shelf
+  myItems:
+    title: My items

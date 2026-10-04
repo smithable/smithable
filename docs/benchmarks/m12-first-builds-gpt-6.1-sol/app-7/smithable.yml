@@ -1,0 +1,86 @@
+smithable: 0.1
+app:
+  name: Club Football
+  description: A football club site showcasing its teams, players, fixtures and match results.
+models:
+  Team:
+    fields:
+      name: string!
+      summary: text
+      players: Player[]
+      matches: Match[]
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Player:
+    fields:
+      name: string!
+      team: Team!
+      shirtNumber: int
+      position: string
+      summary: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Match:
+    fields:
+      team: Team!
+      opponent: string!
+      kickoff: datetime!
+      venue: string
+      location: home | away
+      status: scheduled | completed | canceled
+      teamScore: int
+      opponentScore: int
+      summary: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  teams:
+    crud: Team
+    search: [name, summary]
+  players:
+    crud: Player
+    search: [name, position]
+    filters: [team]
+  matches:
+    crud: Match
+    actions: [recordResult, cancelMatch]
+    search: [opponent, venue]
+    filters: [team, status, location]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      teams:
+        records: Team
+      fixtures:
+        records: Match
+        where:
+          status: scheduled
+      results:
+        records: Match
+        where:
+          status: completed
+actions:
+  recordResult:
+    on: Match
+    when:
+      status: scheduled
+    set:
+      status: completed
+      teamScore:
+      opponentScore:
+    allow: [admin]
+  cancelMatch:
+    on: Match
+    when:
+      status: scheduled
+    set:
+      status: canceled
+    allow: [admin]

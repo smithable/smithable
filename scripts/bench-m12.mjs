@@ -539,7 +539,7 @@ const costs = () =>
       const these = rows.filter((r) => r.currency === c);
       return these.length
         ? [
-            `${c}${these.reduce((n, r) => n + r.cost, 0).toFixed(4)}${c === "$" ? " (Mistral's list price)" : ""}`,
+            `${c}${these.reduce((n, r) => n + r.cost, 0).toFixed(4)}${c === "$" ? (/^mistral/.test(model) ? " (Mistral's list price)" : model === "claude-code" ? " (as Claude Code reports it)" : "") : ""}`,
           ]
         : [];
     })

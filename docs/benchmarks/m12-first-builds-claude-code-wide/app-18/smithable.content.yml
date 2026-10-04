@@ -1,0 +1,97 @@
+smithableContent: 0.1
+pages:
+  offerter:
+    title: Offerter
+  fakturor:
+    title: Fakturor
+  kunder:
+    title: Kunder
+  offertrader:
+    title: Offertrader
+  fakturarader:
+    title: Fakturarader
+  oversikt:
+    title: Översikt
+models:
+  Customer:
+    label: Kund
+    pluralLabel: Kunder
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      phone:
+        label: Telefon
+      address:
+        label: Adress
+  Quote:
+    label: Offert
+    pluralLabel: Offerter
+    fields:
+      number:
+        label: Nummer
+      customer:
+        label: Kund
+      title:
+        label: Arbete
+      issuedOn:
+        label: Datum
+      validUntil:
+        label: Giltig till
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          accepted: Godkänd
+          declined: Nekad
+  QuoteLine:
+    label: Offertrad
+    pluralLabel: Offertrader
+    fields:
+      quote:
+        label: Offert
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: À-pris
+      amount:
+        label: Belopp
+  Invoice:
+    label: Faktura
+    pluralLabel: Fakturor
+    fields:
+      number:
+        label: Fakturanummer
+      customer:
+        label: Kund
+      quote:
+        label: Offert
+      issuedOn:
+        label: Fakturadatum
+      dueOn:
+        label: Förfallodatum
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          paid: Betald
+          overdue: Förfallen
+  InvoiceLine:
+    label: Fakturarad
+    pluralLabel: Fakturarader
+    fields:
+      invoice:
+        label: Faktura
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: À-pris
+      amount:
+        label: Belopp

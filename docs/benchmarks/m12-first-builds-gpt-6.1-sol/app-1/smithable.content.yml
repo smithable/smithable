@@ -1,0 +1,22 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Make time for your practice
+      subtitle: Explore our yoga classes, meet your teachers and book a place in a session that suits you.
+      button: View the schedule
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    classes:
+      title: Find your class
+    teachers:
+      title: Meet your teachers
+  my-bookings:
+    title: My bookings
+models:
+  ClassType:
+    fields:
+      level:
+        values:
+          allLevels: All levels

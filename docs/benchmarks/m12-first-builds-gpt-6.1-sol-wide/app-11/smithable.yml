@@ -1,0 +1,81 @@
+smithable: 0.1
+app:
+  name: IT Status Board
+  description: An internal status board where staff can see IT system outages, progress updates, and when service is restored.
+models:
+  Component:
+    fields:
+      name: string!
+      status: operational | degraded | down | maintenance
+      description: text
+      incidents: Incident[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      component: Component
+      detectedAt: datetime!
+      resolvedAt: datetime
+      summary: text
+      updates: IncidentUpdate[]
+    access:
+      write: [admin, staff]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+pages:
+  incidents:
+    crud: Incident
+    actions: [identified, monitoring, resolve]
+    filters: [status, component]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    access: [admin]
+  team:
+    users: manage
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause is found and a fix is being worked on.
+    allow: [admin, staff]
+    intent: Mark the cause as identified and add a progress update.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is out. We are watching before we close this.
+    allow: [admin, staff]
+    intent: Mark the incident as being monitored after a fix and add a progress update.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident is resolved.
+    allow: [admin, staff]
+    intent: Resolve the incident, record the restoration time, and add an update; the component status remains manually managed.
