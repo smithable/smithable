@@ -121,6 +121,8 @@ export {
   sortableBy,
 } from "./sections/list-keys.js";
 export { searchableFields } from "./sections/pages.js";
+export type { SensitiveKind } from "./sensitive.js";
+export { sensitiveKind } from "./sensitive.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
 export type { Mode, ThemeIR, TokenName, Tokens } from "./theme.js";
