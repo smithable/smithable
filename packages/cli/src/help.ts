@@ -186,6 +186,7 @@ export const COMMANDS: Command[] = [
     text: [
       "Change the app with an operation, e.g. op addField Customer phone phone",
       '(run "smithable op" for the list, "smithable op <name> --help" for its arguments;',
+      "a list is written with commas, --pages home,items, or the option given again;",
       "a word @path gives a file's text, e.g. op addTheme forest --text @forest.yml;",
       "--yes confirms changes that lose data)",
     ],
