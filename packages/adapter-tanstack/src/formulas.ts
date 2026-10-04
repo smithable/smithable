@@ -45,7 +45,7 @@ export function formulasModuleSource(model: ModelIR, ir: SpecIR): string {
   // A formula that reads no field, like TODAY(), gets an "_r" parameter (unused on purpose).
   const entry = (f: FieldIR, expr: Expr) => {
     const code = stored(f, compile(expr, model, "r"));
-    const param = /\br\./.test(code) ? "r" : "_r";
+    const param = /\br\b/.test(code) ? "r" : "_r";
     return `  ${f.name}: (${param}: Row): ${tsType(f)} => ${code},`;
   };
   const computedEntries = computed.map((f) => entry(f, f.formula as Expr));
