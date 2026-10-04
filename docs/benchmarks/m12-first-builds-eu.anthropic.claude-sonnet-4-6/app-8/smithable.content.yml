@@ -1,0 +1,11 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Welcome to the Conference
+    subtitle: Browse talks, discover speakers, and register your place.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden
+  my-registrations:
+    title: My Registrations

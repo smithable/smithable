@@ -12,6 +12,7 @@ import {
   type Fetch,
   libraryBase,
   libraryIndex,
+  placePictures,
   writePictures,
 } from "./pictures.js";
 
@@ -221,4 +222,18 @@ test("a starter's sample allowedDomains go, and a shared app open to sign-up bec
   expect(files["smithable.auth.yml"]).toContain("selfSignUp: false");
   expect(files["smithable.yml"]).toContain("users: manage");
   expect(out.join("")).toContain("only invited people and the administrator may sign in");
+});
+
+test("the hero picked for the app replaces the starter's, which has the same file name", () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-place-"));
+  placePictures(
+    dir,
+    {
+      "public/images/hero.webp": Buffer.from("starter").toString("base64"),
+      "public/images/logo.webp": Buffer.from("logo").toString("base64"),
+    },
+    [{ file: "hero.webp", bytes: new TextEncoder().encode("picked") }],
+  );
+  expect(readFileSync(join(dir, "public", "images", "hero.webp"), "utf8")).toBe("picked");
+  expect(readFileSync(join(dir, "public", "images", "logo.webp"), "utf8")).toBe("logo");
 });

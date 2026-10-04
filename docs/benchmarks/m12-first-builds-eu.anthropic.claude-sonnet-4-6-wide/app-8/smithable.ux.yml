@@ -1,0 +1,12 @@
+smithableUx: 0.1
+theme:
+  preset: modern
+  brand:
+    primary: "#2d7a4f"
+pages:
+  catalog:
+    icon: tag
+  myItems:
+    icon: package
+  saved:
+    icon: star

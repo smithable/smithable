@@ -1,0 +1,31 @@
+smithableUx: 0.1
+pages:
+  deals:
+    table:
+      columns: [title, companyName, stage, value, assignedTo, followUpAt, expectedCloseDate]
+      sort: followUpAt
+    icon: briefcase
+  overview:
+    icon: chart
+  leads:
+    table:
+      columns: [companyName, contactName, status, source, assignedTo, followUpAt]
+      sort: followUpAt
+    icon: users
+  activities:
+    table:
+      sort: -occurredAt
+    icon: clipboard
+tones:
+  Deal.stage:
+    negotiation: warning
+    won: success
+    lost: danger
+  Lead.status:
+    contacted: warning
+    qualified: success
+    disqualified: danger
+theme:
+  preset: corporate
+  brand:
+    primary: "#2563eb"

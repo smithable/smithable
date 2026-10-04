@@ -1,0 +1,78 @@
+smithable: 0.1
+app:
+  name: Football Club
+  description: Manage teams, players, matches and results for the football club.
+models:
+  Team:
+    fields:
+      name: string!
+      city: string
+      founded: int
+      coach: string
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Player:
+    fields:
+      name: string!
+      number: int
+      position: goalkeeper | defender | midfielder | forward
+      team: Team!
+      dateOfBirth: date
+      nationality: string
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Match:
+    fields:
+      homeTeam: Team!
+      awayTeam: Team!
+      date: date!
+      time: string
+      venue: string
+      homeScore: int
+      awayScore: int
+      status: scheduled | played | cancelled
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Result:
+    fields:
+      match: Match!
+      homeTeamGoals: int!
+      awayTeamGoals: int!
+      date: date! = TODAY()
+      notes: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  teams:
+    crud: Team
+    search: [name, city]
+  players:
+    crud: Player
+    search: [name, nationality]
+    filters: [position, team]
+  matches:
+    crud: Match
+    search: [venue]
+    filters: [status, homeTeam, awayTeam]
+  results:
+    crud: Result
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      teams:
+        records: Team
+      matches:
+        records: Match
+  team:
+    users: manage
+navigation: [teams, players, matches, results, team]

@@ -1,0 +1,9 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: IT System Status
+    hero:
+      button: Incident History
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones

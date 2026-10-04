@@ -1,0 +1,114 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Produkte, Vorbestellungen und Abholzeiten für einen kleinen Hofladen.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      picture: picture
+      price: money!
+      unit: string! = Stück
+      available: bool! = true
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  PickupSlot:
+    fields:
+      date: date!
+      startTime: string!
+      endTime: string!
+      capacity: int! = 10
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
+  Order:
+    fields:
+      pickupSlot: PickupSlot!
+      name: string!
+      email: email!
+      phone: phone
+      notes: text
+      status: offen | bestaetigt | abgeholt | storniert
+    capacity:
+      per: pickupSlot
+      max: pickupSlot.capacity
+  OrderLine:
+    fields:
+      order: Order!
+      product: Product!
+      quantity: int! = 1
+      unitPrice: money!
+pages:
+  products:
+    crud: Product
+    access: [admin]
+  pickup-slots:
+    crud: PickupSlot
+    access: [admin]
+  messages:
+    crud: Message
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      produkte:
+        records: Product
+        where:
+          available: true
+      contact:
+        form: Message
+  abholzeiten:
+    calendar:
+      model: PickupSlot
+      starts: date
+  team:
+    users: manage
+  orders:
+    crud: Order
+    actions: [bestaetigen, abgeholt, stornieren]
+    search: [name, email]
+    filters: [status, pickupSlot]
+  order-lines:
+    crud: OrderLine
+    access: [admin]
+actions:
+  bestaetigen:
+    on: Order
+    when:
+      status: offen
+    set:
+      status: bestaetigt
+    intent: Bestellung als bestätigt markieren.
+  abgeholt:
+    on: Order
+    when:
+      status: bestaetigt
+    set:
+      status: abgeholt
+    intent: Bestellung als abgeholt markieren.
+  stornieren:
+    on: Order
+    when:
+      status: [offen, bestaetigt]
+    set:
+      status: storniert
+    intent: Bestellung stornieren.
+navigation: [home, abholzeiten, orders, products, pickup-slots, order-lines, messages, team]

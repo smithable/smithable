@@ -1,0 +1,8 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: ShootBill
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
