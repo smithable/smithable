@@ -239,7 +239,16 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       };
     if (read) visitorPaths[`/api/v1/${path}/{id}`] = { parameters: one.parameters, get: one.get };
   }
-  const visitorApi = { ...openapi, paths: visitorPaths, security: [] };
+  // Only the visitors' models' schemas: a closed app names no model or field to a stranger.
+  const shown = [...visitors.read, ...visitors.create, "Problem"];
+  const visitorApi = {
+    openapi: openapi.openapi,
+    info: openapi.info,
+    paths: visitorPaths,
+    components: {
+      schemas: Object.fromEntries(Object.entries(schemas).filter(([k]) => shown.includes(k))),
+    },
+  };
   // Only the helpers some offered field needs.
   const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
   return `${HEADER}// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
@@ -313,25 +322,19 @@ ${writable.map((f) => `      case ${JSON.stringify(f.name)}:\n        ${writeCod
 
 /** The whole API in the OpenAPI format, for tools and agents. */
 export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
-${
-  Object.keys(visitorPaths).length
-    ? `
-/** What a call without a key may do: the reading and adding anyone may do. */
+
+/** What a stranger is shown: the reading and adding anyone may do; nothing in a closed app. */
 export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
-`
-    : ""
-}`;
+`;
 }
 
 /** The routes: list and add, one record, its actions, and the description. */
 export function apiRoutes(ir: SpecIR, auth: AuthIR, t: Texts): Record<string, string> {
   const { models, actions, visitors } = apiParts(ir, auth, t);
-  const open = visitors.read.length + visitors.create.length > 0;
   const files: Record<string, string> = {
-    "src/routes/api/v1/openapi[.]json.ts": open
-      ? `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
+    "src/routes/api/v1/openapi[.]json.ts": `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
 // signed in (the users page's download), all a program may call; otherwise what anyone may read
-// or add.
+// or add, which in an app with nothing public is nothing (no model or field names to a stranger).
 import { createFileRoute } from "@tanstack/react-router";
 import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
 import { callerOf } from "#/kit/api.server";
@@ -344,14 +347,6 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
         Response.json(callerOf(request).viewer || (await currentViewer()) ? OPENAPI : VISITOR_OPENAPI),
     },
   },
-});
-`
-      : `${HEADER}// The API's description in the OpenAPI format: what a program may call, with no key needed to read it.
-import { createFileRoute } from "@tanstack/react-router";
-import { OPENAPI } from "#/generated/api.server";
-
-export const Route = createFileRoute("/api/v1/openapi.json")({
-  server: { handlers: { GET: () => Response.json(OPENAPI) } },
 });
 `,
   };
