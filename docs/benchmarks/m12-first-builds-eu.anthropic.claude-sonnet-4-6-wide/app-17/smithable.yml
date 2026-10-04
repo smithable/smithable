@@ -1,0 +1,87 @@
+smithable: 0.1
+app:
+  name: Min Frisörsalong
+  description: Onlinebokning för frisörsalong där kunder kan boka tid själva.
+  timezone: Europe/Stockholm
+models:
+  Service:
+    fields:
+      name: string!
+      description: text
+      durationMinutes: int! = 60
+      price: money!
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+      portrait: picture
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Appointment:
+    fields:
+      service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      capacity: int! = 1
+      bookings: Booking[]
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      appointment: Appointment! unique
+    capacity:
+      per: appointment
+      max: appointment.capacity
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schema, my-bookings]
+      footer:
+      features:
+      services:
+        records: Service
+      stylists:
+        records: Stylist
+      faq:
+      contact:
+        form: Message
+  schema:
+    calendar:
+      model: Appointment
+      starts: startsAt
+  appointments:
+    crud: Appointment
+    access: [admin]
+  services:
+    crud: Service
+    access: [admin]
+  stylists:
+    crud: Stylist
+    access: [admin]
+  my-bookings:
+    crud: Booking
+  messages:
+    crud: Message
+    access: [admin]
+  team:
+    users: manage
+  admin:
+    data: all
+navigation: [home, schema, my-bookings, appointments, services, stylists, messages, team, admin]

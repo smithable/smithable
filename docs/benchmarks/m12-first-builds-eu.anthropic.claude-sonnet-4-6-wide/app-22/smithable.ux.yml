@@ -1,0 +1,25 @@
+smithableUx: 0.1
+pages:
+  pickup-slots:
+    table:
+      sort: date
+    icon: calendar
+  products:
+    table:
+      columns: [name, price, unit, available]
+    icon: tag
+  abholzeiten:
+    icon: calendar
+  orders:
+    table:
+      columns: [name, pickupSlot, status]
+    icon: clipboard
+theme:
+  preset: woodland
+  brand:
+    font: Nunito Sans
+tones:
+  Order.status:
+    bestaetigt: success
+    abgeholt: success
+    storniert: danger

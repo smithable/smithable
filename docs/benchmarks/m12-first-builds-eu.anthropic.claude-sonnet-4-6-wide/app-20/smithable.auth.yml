@@ -1,0 +1,15 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, schedule, blog]
+  read: [ClassType, Instructor, Session, { Post: { where: { status: julkaistu } } }]
+  create: [Message]
+roles:
+  admin:
+    description: Studion henkilökunta. Hallinnoi aikatauluja, tunteja ja ohjaajia.
+  member:
+    description: Oppilas, joka varaa tunteja.
+defaultRole: member
+admins: [johan@smithable.ai]

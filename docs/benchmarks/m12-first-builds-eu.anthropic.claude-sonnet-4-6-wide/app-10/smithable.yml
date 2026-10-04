@@ -1,0 +1,39 @@
+smithable: 0.1
+app:
+  name: Museum Collection
+  description: Browse the museum's collection of objects and their stories.
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      highlights:
+        records: MuseumObject
+        where:
+          status: onDisplay
+  team:
+    users: manage
+  objects:
+    crud: MuseumObject
+    search: [name, summary, story, category, period, material, origin]
+    sortable: [name, acquisitionDate, period]
+models:
+  MuseumObject:
+    fields:
+      name: string!
+      summary: text
+      story: text
+      category: string
+      period: string
+      material: string
+      origin: string
+      acquisitionDate: date
+      image: url
+      status: onDisplay | inStorage | onLoan | archived
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+navigation: [objects, team]

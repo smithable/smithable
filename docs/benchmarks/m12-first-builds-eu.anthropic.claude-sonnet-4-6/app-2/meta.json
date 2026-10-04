@@ -1,0 +1,9 @@
+{
+  "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
+  "starter": "crm",
+  "wordStarter": "crm",
+  "questions": [
+    "Beyond companies and contacts, what are the main deal records?",
+    "Who can access the CRM?"
+  ]
+}

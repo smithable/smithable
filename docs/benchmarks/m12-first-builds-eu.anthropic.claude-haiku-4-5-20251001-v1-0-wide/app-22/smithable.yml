@@ -1,0 +1,52 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Produkte, Vorbestellungen und Abholzeiten für meinen kleinen Hofladen.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      available: bool = true
+  PickupSlot:
+    fields:
+      date: date!
+      startTime: string!
+      endTime: string!
+      maxCapacity: int! = 10
+      description: string
+  Preorder:
+    fields:
+      product: Product!
+      customer: string!
+      email: email!
+      phone: phone
+      quantity: int! = 1
+      pickupTime: datetime!
+      status: pending | confirmed | pickedUp
+pages:
+  products:
+    crud: Product
+  pickupSlots:
+    crud: PickupSlot
+  preorders:
+    crud: Preorder
+    actions: [confirm, markPickedUp]
+  team:
+    users: manage
+actions:
+  confirm:
+    on: Preorder
+    when:
+      status: pending
+    set:
+      status: confirmed
+  markPickedUp:
+    on: Preorder
+    when:
+      status: confirmed
+    set:
+      status: pickedUp

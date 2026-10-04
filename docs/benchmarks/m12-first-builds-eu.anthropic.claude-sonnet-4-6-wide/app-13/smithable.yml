@@ -1,0 +1,62 @@
+smithable: 0.1
+app:
+  name: My Car Log
+  description: A personal log of fuel fill-ups, service visits and costs for my car.
+models:
+  Car:
+    fields:
+      make: string!
+      model: string!
+      year: int!
+      licensePlate: string
+      notes: text
+  FuelLog:
+    fields:
+      car: Car!
+      date: date! = TODAY()
+      odometer: int!
+      liters: decimal!
+      pricePerLiter: money!
+      totalCost:
+        type: money
+        formula: liters * pricePerLiter
+      station: string
+      fullTank: bool! = true
+      notes: text
+  ServiceVisit:
+    fields:
+      car: Car!
+      date: date! = TODAY()
+      odometer: int!
+      type: routine | repair | inspection | tires | other
+      description: text!
+      workshop: string
+      cost: money!
+      nextServiceDate: date
+      nextServiceOdometer: int
+      notes: text
+pages:
+  cars:
+    crud: Car
+    search: [make, model, licensePlate]
+  fuel:
+    crud: FuelLog
+    search: [station]
+    filters: [car, fullTank, date]
+  service:
+    crud: ServiceVisit
+    search: [description, workshop]
+    filters: [car, type, date]
+    sortable: [date, odometer, cost]
+  overview:
+    dashboard:
+      total-fuel-cost:
+        sum: FuelLog.totalCost
+      total-service-cost:
+        sum: ServiceVisit.cost
+      fuel-fill-ups:
+        count: FuelLog
+      recent-service:
+        list: ServiceVisit
+        limit: 5
+navigation: [overview, cars, fuel, service]

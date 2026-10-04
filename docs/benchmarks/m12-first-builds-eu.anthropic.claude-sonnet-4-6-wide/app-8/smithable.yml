@@ -1,0 +1,54 @@
+smithable: 0.1
+app:
+  name: Office Swap Shelf
+  description: Colleagues offer things they no longer need and others claim them.
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      category: stationery | books | electronics | furniture | kitchen | clothing | other
+      condition: likeNew | good | worn
+      available: bool = true
+pages:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [category, condition, available]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+        where:
+          available: true
+  team:
+    users: manage
+actions:
+  markClaimed:
+    on: Item
+    when:
+      available: true
+    set:
+      available: false
+    intent: Mark an item as claimed so colleagues know it is no longer available.
+  putBack:
+    on: Item
+    when:
+      available: false
+    set:
+      available: true
+    intent: Put an item back on the shelf if it was not actually taken.
+navigation: [catalog, myItems, saved, team]

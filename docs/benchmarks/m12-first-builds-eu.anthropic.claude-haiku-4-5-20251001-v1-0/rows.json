@@ -1,0 +1,282 @@
+[
+  {
+    "description": "A booking site for a yoga studio, with classes, teachers and online booking.",
+    "starter": "booking",
+    "created": true,
+    "typecheck": true,
+    "tokens": 20900,
+    "tokensIn": 18307,
+    "tokensOut": 2593,
+    "cost": 0.018,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 65,
+    "summary": "Yoga Studio Booking\n  Class schedule and online booking for a yoga studio.\n\nPages\n  - Home (a landing page: hero, class types, gallery, faq, call to action, posts where status is published, contact and footer)\n  - Schedule (lists sessions)\n  - Sessions (lists sessions; only for admins)\n  - Class types (lists class types; only for admins; visitors see class types on the Home page)\n  - Instructors (lists instructors; only for admins)\n  - Messages (lists messages; only for admins)\n  - Blog (posts as articles, newest first, each on its own page)\n  - Posts (lists posts; only for admins; visitors see posts on the Home page)\n  - My bookings (lists bookings)\n  - Admin (every kind of record, to find, open, change and delete; only for admins)\n\nClass types\n  Class types have:\n  - a name (required)\n  - a summary\n  - a level (all levels, beginner or advanced, all levels by default)\n  - duration minutes (a whole number, required, 60 by default)\n  Only admins can add class types.\n\nInstructors\n  Instructors have:\n  - a name (required)\n  - a bio (formatted text)\n  - a portrait (picture)\n  Only admins can add instructors.\n\nSessions\n  Sessions have:\n  - a class type (a class type, required)\n  - an instructor (an instructor, required)\n  - starts at (a date and time, required)\n  - a capacity (a whole number, required, 12 by default)\n  Each session lists its bookings.\n  The places left is calculated as the capacity minus the number of its bookings.\n  Only admins can add sessions.\n\nBookings\n  Bookings have:\n  - a session (a session, required, unique)\n  At most the session's capacity bookings per session.\n\nPosts\n  Posts have:\n  - a title (required)\n  - address (unique)\n  - a summary\n  - a cover (picture)\n  - a body (formatted text, required)\n  - published on (a date)\n  - status (draft or published, draft by default)\n  Only admins can add posts.\n  Only admins can change posts.\n  Only admins can delete posts.\n\nMessages\n  Messages have:\n  - a name (required)\n  - an email (required)\n  - a message (required)\n  Only admins can see messages.\n  Only admins can change messages.\n  Only admins can delete messages.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Studio staff. Manage the schedule, classes and teachers)\n  - member (A student who books classes)\n  New users get the member role.\n  Open to anyone without signing in: the home page, the schedule page, the blog page, reading class types, reading instructors, reading sessions, reading posts where status is published and adding messages.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 139 files (139 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-1/drizzle.config.ts'\n11 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nbookings 5 columns 1 indexes 2 fks\nclass_types 8 columns 0 indexes 1 fks\ninstructors 7 columns 0 indexes 1 fks\nmessages 7 columns 0 indexes 1 fks\nposts 11 columns 1 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nsessions 9 columns 0 indexes 3 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_glossy_lethal_legion.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-1. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-1\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": []
+    }
+  },
+  {
+    "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
+    "starter": "crm",
+    "created": true,
+    "typecheck": true,
+    "tokens": 19176,
+    "tokensIn": 17910,
+    "tokensOut": 1266,
+    "cost": 0.0103,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 40,
+    "summary": "Sales CRM\n  Lightweight CRM for a small B2B sales team.\n\nPages\n  - Companies (lists companies; search by name or email)\n  - Contacts (lists contacts; search by name or email)\n  - Deals (lists deals; search by name or company; filter by status or company)\n  - Followups (lists follow ups)\n  - Team (who has access: invite people, change roles, remove users)\n\nCompanies\n  Companies have:\n  - a name (required)\n  - an email (unique)\n  - a phone\n  - a segment (smb, enterprise or government, smb by default)\n  - notes\n  Each company can have an account manager (a user).\n\nContacts\n  Contacts have:\n  - a name (required)\n  - an email\n  - a phone\n  - a title\n  - a company (a company, required)\n  - notes\n\nDeals\n  Deals have:\n  - a name (required)\n  - a company (a company, required)\n  - a contact (a contact)\n  - an amount (an amount, required)\n  - status (prospect, qualified, proposal, negotiation, won or lost, prospect by default)\n  - an expected close date\n  - closed at (a date and time)\n  - notes\n\nFollow ups\n  Follow ups have:\n  - a type (call, email, meeting or task, call by default)\n  - a company (a company, required)\n  - a contact (a contact)\n  - a deal (a deal)\n  - a scheduled for (a date and time, required)\n  - completed at (a date and time)\n  - notes\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin (Sales management. Full access)\n  - sales (Works with companies, contacts and deals)\n  New users get the sales role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 98 files (98 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-2/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ncompanies 10 columns 1 indexes 2 fks\ncontacts 10 columns 0 indexes 2 fks\ndeals 12 columns 0 indexes 3 fks\nfollow_ups 11 columns 0 indexes 4 fks\ninvitation 7 columns 2 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_panoramic_nick_fury.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-2. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-2\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "crm",
+      "questions": [
+        "Who uses this app?",
+        "What are the main kinds of records you need to track?",
+        "Can people outside the team see anything without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Invoicing for freelancers, with clients, invoices and payments.",
+    "starter": "invoicing",
+    "created": true,
+    "typecheck": true,
+    "tokens": 57986,
+    "tokensIn": 54519,
+    "tokensOut": 3467,
+    "cost": 0.0299,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 4,
+    "seconds": 50,
+    "summary": "Invoicing\n  Simple invoicing for freelancers. Each user manages their own clients and invoices.\n\nPages\n  - Home (a landing page: hero, features, pricing, faq, call to action and footer)\n  - Clients (lists clients)\n  - Invoice lines (lists invoice lines)\n  - Invoices (lists invoices; “Mark sent”; “Mark paid”)\n  - Overview (a dashboard: latest, outstanding, overdue, paid and invoiced)\n\nBusiness profiles\n  Business profiles have:\n  - a business name (required)\n  - a VAT number\n  - an IBAN\n  - payment term days (a whole number, required, 30 by default)\n  - an invoice footer\n\nClients\n  Clients have:\n  - a name (required)\n  - an email (required)\n  - address\n  - a VAT number\n\nInvoice lines\n  Invoice lines have:\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  - an invoice (an invoice, required)\n  The amount is calculated as the quantity times the unit price.\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a client (a client, required)\n  - issued on (a date, required, today by default)\n  - status (draft, sent, paid or overdue, draft by default)\n  The due on is calculated as the issued on plus 30 days.\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice went to the client.\n\nMark paid\n  For an invoice that is sent or overdue; sets status to paid.\n  The client paid the invoice.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Invoicely staff)\n  - member (A freelancer using Invoicely)\n  New users get the member role.\n  Open to anyone without signing in: the home page.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 99 files (99 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-3/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nbusiness_profiles 9 columns 0 indexes 1 fks\nclients 8 columns 0 indexes 1 fks\ninvoice_lines 9 columns 0 indexes 2 fks\ninvoices 10 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_big_black_tom.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-3. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-3\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Who can sign in and use this app?",
+        "What can clients see without signing in?",
+        "What information do you want to track about payments?"
+      ]
+    }
+  },
+  {
+    "description": "A tool library where neighbors lend each other tools.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 36826,
+    "tokensIn": 35248,
+    "tokensOut": 1578,
+    "cost": 0.0147,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 39,
+    "summary": "Tool Library\n  Borrow and lend tools with your neighbors.\n\nPages\n  - Bookings (lists bookings)\n  - Home (a landing page: hero, tools and footer)\n  - Tools (lists tools; search by name or description; filter by category, condition or available; sort by date added)\n  - My tools (lists tools; only the viewer's own records)\n\nBookings\n  Bookings have:\n  - borrowed at (a date, required)\n  - returned at (a date)\n  - status (active or returned, active by default)\n  - a tool (a tool, required)\n  Each booking can have a borrower (a user).\n\nTools\n  Tools have:\n  - a name (required)\n  - a description (required)\n  - a category (hand tools, power tools, garden, outdoor or other, hand tools by default)\n  - a condition (like new, good or worn, like new by default)\n  - an available (yes or no, true by default)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Keeps the library tidy)\n  - member (Borrows and lends tools)\n  New users get the member role.\n  Open to anyone without signing in: the home page.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 90 files (90 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-4/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nbookings 9 columns 0 indexes 3 fks\nsession 8 columns 2 indexes 1 fks\ntools 9 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_cool_human_robot.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-4. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-4\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Who can use this tool library?",
+        "What can visitors see without signing in?",
+        "What information should each tool listing include?"
+      ]
+    }
+  },
+  {
+    "description": "An inventory app for a small bakery: ingredients, suppliers and stock levels.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 18257,
+    "tokensIn": 17437,
+    "tokensOut": 820,
+    "cost": 0.0073,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 24,
+    "summary": "Bakery Inventory\n  Manage ingredients, suppliers and stock levels for a small bakery.\n\nPages\n  - Ingredients (lists ingredients; search by name or description)\n  - Suppliers (lists suppliers; search by name or contact)\n  - Stock (lists stock levels; search by ingredient; filter by ingredient or recorded at)\n\nIngredients\n  Ingredients have:\n  - a name (required)\n  - a description\n  - a category (flour, sugar, dairy, leavening, flavorings or other, flour by default)\n  - a unit (kg, g, l, ml or pieces, kg by default)\n  - a minimum stock (a number, required)\n  - a current stock (a number, required, 0 by default)\n  - a supplier (a supplier, required)\n\nSuppliers\n  Suppliers have:\n  - a name (required)\n  - a contact (an email address)\n  - a phone\n  - address\n  - delivery days (a whole number)\n\nStock levels\n  Stock levels have:\n  - an ingredient (an ingredient, required)\n  - a quantity (a number, required)\n  - recorded at (a date and time, required, now by default)\n  - notes\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 89 files (89 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-5/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ningredients 11 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nstock_levels 8 columns 0 indexes 2 fks\nsuppliers 9 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_bent_wendell_vaughn.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-5. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-5\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Who uses this app?",
+        "What are the main kinds of records?",
+        "Can visitors see the inventory without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "A job board for a local union, with job posts and applications.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 18404,
+    "tokensIn": 17529,
+    "tokensOut": 875,
+    "cost": 0.0077,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 26,
+    "summary": "Union Job Board\n  A job board for local union members to post and apply for jobs.\n\nPages\n  - Jobs (lists job posts; search by title, description or location)\n  - My posts (lists job posts; only the viewer's own records)\n  - Applications (lists applications)\n  - Team (who has access: invite people, change roles, remove users)\n\nJob posts\n  Job posts have:\n  - a title (required)\n  - a description (required)\n  - a category\n  - a location\n  - a salary (an amount)\n  - status (open or closed, open by default)\n  Each job post can have a posted by (a user).\n  Each job post lists its applications.\n\nApplications\n  Applications have:\n  - a job post (a job post, required)\n  - a resume\n  - a cover letter\n  - status (submitted, reviewed, accepted or rejected, submitted by default)\n  - applied at (a date and time, required)\n  Each application can have an applicant (a user).\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Manages the job board)\n  - member (Posts jobs and applies for positions)\n  New users get the member role.\n  Open to anyone without signing in: the jobs page and reading job posts.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 90 files (90 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-6/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\napplications 10 columns 0 indexes 3 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\njob_posts 11 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_wise_gladiator.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-6. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-6\n  smithable run\n/tmp/smithable-bench-m12-p8Injg/app-6/smithable.auth.yml:15:10  warning  Anyone on the internet can read JobPost, including personal data in postedBy.",
+    "error": "",
+    "meta": {
+      "wordStarter": "marketplace",
+      "questions": [
+        "Who can post job listings?",
+        "Can people apply for jobs without signing in?",
+        "What information do job posts include?"
+      ]
+    }
+  },
+  {
+    "description": "A football club's site: teams, players, matches and results.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 19284,
+    "tokensIn": 17435,
+    "tokensOut": 1849,
+    "cost": 0.013,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 2,
+    "seconds": 26,
+    "summary": "Football Club\n  Manage teams, players, matches and results for the football club.\n\nPages\n  - Home (a landing page: hero, teams, matches and footer)\n  - Teams (lists teams; search by name or city)\n  - Players (lists players; search by name or nationality; filter by position or team)\n  - Matches (lists matches; search by venue; filter by status, home team or away team)\n  - Results (lists results)\n  - Team (who has access: invite people, change roles, remove users)\n\nTeams\n  Teams have:\n  - a name (required)\n  - a city\n  - a founded (a whole number)\n  - a coach\n  Only admins can add teams.\n  Only admins can change teams.\n  Only admins can delete teams.\n\nPlayers\n  Players have:\n  - a name (required)\n  - a number (a whole number)\n  - a position (goalkeeper, defender, midfielder or forward, goalkeeper by default)\n  - a team (a team, required)\n  - a date of birth\n  - a nationality\n  Only admins can add players.\n  Only admins can change players.\n  Only admins can delete players.\n\nMatches\n  Matches have:\n  - a home team (a team, required)\n  - an away team (a team, required)\n  - a date (required)\n  - a time\n  - a venue\n  - a home score (a whole number)\n  - an away score (a whole number)\n  - status (scheduled, played or cancelled, scheduled by default)\n  Only admins can add matches.\n  Only admins can change matches.\n  Only admins can delete matches.\n\nResults\n  Results have:\n  - a match (a match, required)\n  - home team goals (a whole number, required)\n  - away team goals (a whole number, required)\n  - a date (required, today by default)\n  - notes\n  Only admins can add results.\n  Only admins can change results.\n  Only admins can delete results.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin (Manages teams, players, matches and results)\n  - member (Views teams, players, matches and results)\n  New users get the member role.\n  Open to anyone without signing in: the home page, reading teams, reading players, reading matches and reading results.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 100 files (100 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-7/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\nmatches 12 columns 0 indexes 3 fks\nplayers 10 columns 0 indexes 2 fks\nresults 9 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nteams 8 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_smiling_magik.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-7. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-7\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Who can view the site?",
+        "What are the main kinds of records?",
+        "Who manages the site?"
+      ]
+    }
+  },
+  {
+    "description": "Event registration for a conference: talks, speakers and attendees.",
+    "starter": "booking",
+    "created": true,
+    "typecheck": true,
+    "tokens": 19604,
+    "tokensIn": 18304,
+    "tokensOut": 1300,
+    "cost": 0.0109,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 25,
+    "summary": "Conference Registration\n  Event registration for a conference: talks, speakers and attendees.\n\nPages\n  - Home (a landing page: hero, speakers, talks, faq and footer)\n  - Talks (lists talks; only for admins; visitors see talks on the Home page)\n  - Speakers (lists speakers; only for admins; visitors see speakers on the Home page)\n  - Registrations (lists registrations; only for admins)\n\nSpeakers\n  Speakers have:\n  - a name (required)\n  - a bio\n  - an email (required)\n  Only admins can add speakers.\n\nTalks\n  Talks have:\n  - a title (required)\n  - a description\n  - a speaker (a speaker, required)\n  - starts at (a date and time, required)\n  - duration minutes (a whole number, required, 60 by default)\n  - a capacity (a whole number, required, 100 by default)\n  Each talk lists its registrations.\n  The spots left is calculated as the capacity minus the number of its registrations.\n  Only admins can add talks.\n\nRegistrations\n  Registrations have:\n  - a talk (a talk, required, unique)\n  - an attendee name (required)\n  - an attendee email (required)\n  At most the talk's capacity registrations per talk.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Conference organizer. Manage talks, speakers and registrations)\n  - attendee (Conference attendee who registers for talks)\n  New users get the attendee role.\n  Open to anyone without signing in: the home page, reading speakers, reading talks and adding registrations.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 90 files (90 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-8/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nregistrations 7 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nspeakers 7 columns 0 indexes 1 fks\ntalks 11 columns 0 indexes 2 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_secret_guardsmen.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-8. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-8\n  smithable run\n/tmp/smithable-bench-m12-p8Injg/app-8/smithable.auth.yml:7:10  warning  Anyone on the internet can read Speaker, including personal data in email.",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Who can register for the conference?",
+        "What can visitors see without signing in?",
+        "What are the main kinds of records you need to track?"
+      ]
+    }
+  },
+  {
+    "description": "A help desk for an IT team: tickets, priorities and who handles them.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 73088,
+    "tokensIn": 70749,
+    "tokensOut": 2339,
+    "cost": 0.0251,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 6,
+    "seconds": 31,
+    "summary": "Left out, since it could not be made valid:\n  addAction assign: addAction would make smithable.yml invalid. \"set\" of action \"assign\": Ticket.assignee cannot be set, it is a reference.\n\nHelp Desk\n  An IT team's help desk for managing support tickets, priorities and assignments.\n\nPages\n  - Team (who has access: invite people, change roles, remove users)\n  - Tickets (lists tickets; search by title or description; filter by priority or status; sort by priority, status or date added; “Resolve”; “Close”)\n\nTickets\n  Tickets have:\n  - a title (required)\n  - a description\n  - a priority (low, normal or high, low by default)\n  - status (open, in progress, resolved or closed, open by default)\n  - resolved at (a date and time)\n  Each ticket can have an assignee (a user).\n\nResolve\n  For a ticket that is in progress; sets status to resolved and resolved at to now.\n\nClose\n  For a ticket that is resolved; sets status to closed.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - technician (Handles support tickets and resolves issues)\n  - manager (Oversees tickets and team performance)\n  New users get the technician role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 87 files (87 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-9/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\ntickets 10 columns 0 indexes 2 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_noisy_shadowcat.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-9. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-9\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Who can access and manage tickets in this help desk?",
+        "What information should each ticket record hold?",
+        "Can people outside the IT team submit tickets, or only IT team members create and manage them?"
+      ],
+      "dropped": "assign"
+    }
+  },
+  {
+    "description": "A recipe collection for a family, with ingredients and shopping lists.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 18684,
+    "tokensIn": 17434,
+    "tokensOut": 1250,
+    "cost": 0.0097,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 22,
+    "summary": "Family Recipe Collection\n  A place to keep and organize family recipes with ingredients and shopping lists.\n\nPages\n  - Home (a landing page: hero, recipes and footer)\n  - Recipes (lists recipes; search by name or description; filter by difficulty)\n  - Shopping lists (lists shopping lists)\n\nRecipes\n  Recipes have:\n  - a name (required)\n  - a description\n  - servings (a whole number, 4 by default)\n  - a prep time (a whole number)\n  - a cook time (a whole number)\n  - a difficulty (easy, medium or hard, easy by default)\n  - added on (a date, required, today by default)\n  Only admins can add recipes.\n  Only admins can change recipes.\n  Only admins can delete recipes.\n\nIngredients\n  Ingredients have:\n  - a name (required)\n  - a quantity (a number, required)\n  - a unit (required)\n  - a recipe (a recipe, required)\n\nShopping lists\n  Shopping lists have:\n  - a name (required)\n  - created on (a date, required, today by default)\n  - a completed (yes or no, false by default)\n  Only admins can add shopping lists.\n  Only admins can change shopping lists.\n  Only admins can delete shopping lists.\n\nShopping items\n  Shopping items have:\n  - a name (required)\n  - a quantity (a number, required)\n  - a unit (required)\n  - a checked (yes or no, false by default)\n  - a shopping list (a shopping list, required)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Manages recipes and shopping lists)\n  - member (Views recipes and shopping lists)\n  New users get the member role.\n  Open to anyone without signing in: the home page, the recipes page, reading recipes and reading ingredients.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 91 files (91 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-10/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ningredients 8 columns 0 indexes 2 fks\nrecipes 11 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nshopping_items 9 columns 0 indexes 2 fks\nshopping_lists 7 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_thankful_trish_tilby.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-10. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-10\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Who can access and manage the recipes in this collection?",
+        "What should each recipe record hold?",
+        "Should the app generate shopping lists from selected recipes?"
+      ]
+    }
+  },
+  {
+    "description": "A status page for our API, with incidents and planned maintenance.",
+    "starter": "status",
+    "created": true,
+    "typecheck": true,
+    "tokens": 20487,
+    "tokensIn": 18255,
+    "tokensOut": 2232,
+    "cost": 0.016,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 2,
+    "seconds": 28,
+    "summary": "API Status Page\n  Is it working? The state of our services, live.\n\nPages\n  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)\n  - Team (who has access: invite people, change roles, remove users)\n  - Components (lists components; only for admins; visitors see components on the Home page)\n  - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”)\n  - Updates (lists incident updates)\n  - Maintenance (lists maintenances)\n  - Overview (a dashboard: open, per month and latest)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a component (a component)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n  Only staff users and admins can use it.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n  Only staff users and admins can use it.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so. The component's state stays what the team sets.\n  Only staff users and admins can use it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin (Runs the status page and the team)\n  - staff (Writes incidents and their updates)\n  New users get the staff role.\n  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.\n  Other programs can read and change components and incidents with a key, and run resolve.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 117 files (117 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-11/drizzle.config.ts'\n11 tables\naccount 13 columns 1 indexes 1 fks\napi_key 10 columns 1 indexes 0 fks\naudit_log 13 columns 2 indexes 0 fks\ncomponents 7 columns 0 indexes 1 fks\nincident_updates 8 columns 0 indexes 2 fks\nincidents 10 columns 0 indexes 2 fks\ninvitation 7 columns 2 indexes 1 fks\nmaintenances 9 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_bored_misty_knight.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-11. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-11\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "status",
+      "questions": []
+    }
+  },
+  {
+    "description": "A public uptime page for a web shop: which services work, outages and their updates.",
+    "starter": "status",
+    "created": true,
+    "typecheck": true,
+    "tokens": 20461,
+    "tokensIn": 18262,
+    "tokensOut": 2199,
+    "cost": 0.0158,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 3,
+    "seconds": 27,
+    "summary": "Web Shop Status\n  Is it working? The state of our services, live.\n\nPages\n  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)\n  - Team (who has access: invite people, change roles, remove users)\n  - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”)\n  - Updates (lists incident updates)\n  - Components (lists components; only for admins; visitors see components on the Home page)\n  - Maintenance (lists maintenances)\n  - Overview (a dashboard: open, per month and latest)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a component (a component)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n  Only staff users and admins can use it.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n  Only staff users and admins can use it.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so. The component's state stays what the team sets.\n  Only staff users and admins can use it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin (Runs the status page and the team)\n  - staff (Writes incidents and their updates)\n  New users get the staff role.\n  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.\n  Other programs can read and change components and incidents with a key, and run resolve.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 117 files (117 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-p8Injg/app-12/drizzle.config.ts'\n11 tables\naccount 13 columns 1 indexes 1 fks\napi_key 10 columns 1 indexes 0 fks\naudit_log 13 columns 2 indexes 0 fks\ncomponents 7 columns 0 indexes 1 fks\nincident_updates 8 columns 0 indexes 2 fks\nincidents 10 columns 0 indexes 2 fks\ninvitation 7 columns 2 indexes 1 fks\nmaintenances 9 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_jittery_mephisto.sql 🚀\n\nCreated /tmp/smithable-bench-m12-p8Injg/app-12. Start it with:\n\n  cd /tmp/smithable-bench-m12-p8Injg/app-12\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "status",
+      "questions": [
+        "Who manages the status page?",
+        "What kinds of services does the web shop have?"
+      ]
+    }
+  }
+]

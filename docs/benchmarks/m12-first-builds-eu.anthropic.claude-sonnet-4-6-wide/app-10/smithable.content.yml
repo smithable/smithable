@@ -1,0 +1,21 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Explore Our Collection
+    subtitle: Discover the objects and stories that make up our museum's collection.
+    hero:
+      title: Explore Our Collection
+      button: Browse the Collection
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  objects:
+    title: Collection
+models:
+  MuseumObject:
+    fields:
+      status:
+        values:
+          onDisplay: On Display
+          inStorage: In Storage
+          onLoan: On Loan

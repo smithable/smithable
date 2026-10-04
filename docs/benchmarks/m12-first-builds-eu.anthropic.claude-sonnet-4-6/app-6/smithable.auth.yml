@@ -1,0 +1,14 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, jobs]
+  read: [{ JobPost: { where: { status: open } } }]
+roles:
+  admin:
+    description: Manages job posts and oversees applications.
+  member:
+    description: Browses job posts and submits applications.
+defaultRole: member
+admins: [johan@smithable.ai]

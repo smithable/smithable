@@ -1,0 +1,9 @@
+{
+  "description": "The guest list and seating plan for our wedding, with who has answered and their meal choices.",
+  "starter": "records",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who can see the guest list and seating plan?",
+    "What information do you track for each guest?"
+  ]
+}

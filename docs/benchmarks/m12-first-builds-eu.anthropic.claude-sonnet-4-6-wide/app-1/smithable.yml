@@ -1,0 +1,65 @@
+smithable: 0.1
+app:
+  name: My Translation Clients
+  description: Track your freelance translation clients, quotes, and payments in one place.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+      notes: text
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  clients:
+    crud: Client
+    search: [name, email]
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    search: [number, status]
+    filters: [status, client, issuedOn, dueOn]
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice was sent to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+navigation: [overview, clients, invoices]

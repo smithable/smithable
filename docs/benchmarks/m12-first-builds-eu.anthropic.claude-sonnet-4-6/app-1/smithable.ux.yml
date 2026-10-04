@@ -1,0 +1,22 @@
+smithableUx: 0.1
+tones:
+  Post.status:
+    published: success
+pages:
+  sessions:
+    table:
+      sort: -startsAt
+  schedule:
+    icon: calendar
+  my-bookings:
+    icon: star
+  class-types:
+    icon: layers
+  instructors:
+    icon: users
+  blog:
+    icon: book
+theme:
+  preset: woodland
+  brand:
+    font: Nunito Sans

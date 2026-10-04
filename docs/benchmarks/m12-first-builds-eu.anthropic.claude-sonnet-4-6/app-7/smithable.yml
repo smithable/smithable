@@ -1,0 +1,89 @@
+smithable: 0.1
+app:
+  name: Club FC
+  description: A football club's public site showing teams, players, matches and results.
+models:
+  Team:
+    fields:
+      name: string!
+      category: string
+      coach: string
+      description: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Match:
+    fields:
+      date: datetime!
+      opponent: string!
+      home: bool! = true
+      team: Team!
+      venue: string
+      status: scheduled | played | cancelled
+      homeScore: int
+      awayScore: int
+      report: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Player:
+    fields:
+      name: string!
+      position: goalkeeper | defender | midfielder | forward
+      number: int
+      dateOfBirth: date
+      team: Team!
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  teams:
+    crud: Team
+    search: [name, category, coach]
+  matches:
+    crud: Match
+    search: [opponent, venue]
+    filters: [team, status, home]
+    actions: [recordResult, cancelMatch]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      teams:
+        records: Team
+      matches:
+        records: Match
+        where:
+          status: scheduled
+      results:
+        records: Match
+        where:
+          status: played
+  team:
+    users: manage
+  players:
+    crud: Player
+    search: [name, position]
+    filters: [team, position]
+actions:
+  recordResult:
+    on: Match
+    when:
+      status: scheduled
+    set:
+      status: played
+      homeScore:
+      awayScore:
+    intent: Record the final score and mark the match as played.
+  cancelMatch:
+    on: Match
+    when:
+      status: scheduled
+    set:
+      status: cancelled
+    intent: Mark a scheduled match as cancelled.
+navigation: [home, teams, players, matches, team]

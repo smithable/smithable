@@ -1,0 +1,9 @@
+{
+  "description": "My vinyl record collection: albums, artists, condition and what I paid.",
+  "starter": "records",
+  "wordStarter": "crm",
+  "questions": [
+    "Who can browse your collection?",
+    "Besides albums and artists, what else do you want to track per record?"
+  ]
+}
