@@ -1001,6 +1001,9 @@ async function apiFlow(base) {
         ...init,
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       });
+    // Nothing is public: without a key there is nothing to read.
+    if ((await fetch(`${base}/api/v1/tasks`)).status !== 401)
+      throw new Error("the tasks answered without a key");
     const listed = await (await api("/tasks")).json();
     if (!listed.items?.some((t) => t.title === "Draft the newsletter"))
       throw new Error(`listing tasks gave ${JSON.stringify(listed).slice(0, 200)}`);
