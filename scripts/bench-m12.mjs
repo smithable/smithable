@@ -105,7 +105,19 @@ if (!args.model) {
     SMITHABLE_MODEL_LOCATION: "elsewhere",
     SMITHABLE_AI_POLICY: "best-available",
   });
-} else throw new Error(`--model ${args.model}: a mistral-… or gpt-… model, or none for Claude.`);
+} else if (args.model.startsWith("eu.anthropic.")) {
+  // Claude through Amazon Bedrock's EU inference profiles (never global.*), with the signed-in
+  // `aws` command: no key file.
+  Object.assign(process.env, {
+    SMITHABLE_FRONTIER: "bedrock",
+    SMITHABLE_FRONTIER_MODEL: args.model,
+    SMITHABLE_BEDROCK_REGION: process.env.SMITHABLE_BEDROCK_REGION ?? "eu-north-1",
+    SMITHABLE_AI_POLICY: "best-available",
+  });
+} else
+  throw new Error(
+    `--model ${args.model}: a mistral-…, gpt-… or eu.anthropic.… model, or none for Claude.`,
+  );
 // The response cache, for every `smithable` the bench starts (see the header).
 if (args["no-cache"]) delete process.env.SMITHABLE_LLM_CACHE;
 else process.env.SMITHABLE_LLM_CACHE ??= join(homedir(), ".cache/smithable/llm");
@@ -412,6 +424,9 @@ const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}${args.set
 const kept = join(repo, "docs/benchmarks", slug);
 const stampFile = join(kept, "meta.json");
 const rowsFile = join(kept, "rows.json");
+// Bedrock's calls by kind of input token (fresh, cache read, cache write), for the report.
+const usageFile = join(kept, "usage.jsonl");
+if (args.model?.startsWith("eu.anthropic.")) process.env.SMITHABLE_USAGE_LOG = usageFile;
 // Claude's first set once a day; its second set, and every run of a paid model, once a week.
 const HOURS = args.set === "wide" || args.model ? 6 * 24 : 20;
 const today = new Date().toISOString().slice(0, 10);
@@ -443,6 +458,7 @@ if (args.only) {
     );
   rmSync(kept, { recursive: true, force: true });
 }
+mkdirSync(kept, { recursive: true });
 
 /** The rows of a report written before rows.json was kept: its table, summaries and meta files. */
 function rowsOfReport() {
@@ -589,9 +605,20 @@ const costs = () =>
         : [];
     })
     .join(" + ");
+// Prompt caching (Bedrock): how much of the input was the cached system text.
+const usage = existsSync(usageFile)
+  ? readFileSync(usageFile, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+  : [];
+const tokens = (kind) => usage.reduce((n, u) => n + u[kind], 0).toLocaleString("en");
+const caching = usage.length
+  ? `\n\nPrompt caching: of ${usage.length} calls' input, ${tokens("read")} tokens were read from the cache (the fixed system text, at a tenth of the price), ${tokens("write")} written to it (a quarter more than the price) and ${tokens("fresh")} were new.`
+  : "";
 const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${stamp.lastFullRun?.slice(0, 10) ?? today}${reruns.length ? `; ${reruns.length} rerun since` : ""})
 
-The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""} *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""} *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.${caching}
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
