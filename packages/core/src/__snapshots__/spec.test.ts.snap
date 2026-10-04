@@ -25,6 +25,7 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
     {
       "custom": false,
       "input": [],
+      "intent": "Open a finished task again.",
       "name": "reopen",
       "on": "Task",
       "set": [

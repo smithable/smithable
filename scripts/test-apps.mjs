@@ -993,7 +993,9 @@ async function apiFlow(base) {
     await open(page, `${base}/team`);
     const keys = page.locator('[data-kit="keys"]');
     await keys.getByLabel("What it is for").fill("Assistant");
-    await keys.getByLabel("Role").selectOption("assistant");
+    // An assistant's role is the first a key is offered.
+    if ((await keys.getByLabel("Role").inputValue()) !== "assistant")
+      throw new Error("a key does not start with the assistant role");
     await keys.getByRole("button", { name: "Make a key" }).click();
     const key = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 });
     const api = (path, init = {}) =>
@@ -1001,9 +1003,16 @@ async function apiFlow(base) {
         ...init,
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       });
-    // Nothing is public: without a key there is nothing to read.
+    // Nothing is public: without a key there is nothing to read, and the description names no
+    // model or field to a stranger.
     if ((await fetch(`${base}/api/v1/tasks`)).status !== 401)
       throw new Error("the tasks answered without a key");
+    const described = await (await fetch(`${base}/api/v1/openapi.json`)).json();
+    if (
+      Object.keys(described.paths ?? {}).length ||
+      /Task|Project|Note/.test(JSON.stringify(described.components))
+    )
+      throw new Error("a stranger's description names the records");
     const listed = await (await api("/tasks")).json();
     if (!listed.items?.some((t) => t.title === "Draft the newsletter"))
       throw new Error(`listing tasks gave ${JSON.stringify(listed).slice(0, 200)}`);
