@@ -17,6 +17,7 @@ The same rules hold for all three:
 - **Access rules are never bypassed.** Whatever comes in acts with a role and goes through the generated data functions, like a person with that role. Nothing gets a way around `access`.
 - **Secrets and addresses are never in the spec or the repository.** The spec names things (a key's purpose, a target called `statusFeed`); the key itself and the target's address and secret live where settings live: the environment for a self-hosted app, the project's settings on the hosted service.
 - **Nothing depends on Smithable at run time** (rule 4). The generated app answers and calls by itself.
+- **Providers Smithable chooses are EU providers where a good one exists** (mail today, text messages later), and always on smithable.eu; a connection to a service someone names is that service, wherever it runs (ARCHITECTURE §9.5, decided 2026-10-04).
 - **The spec stays free of technology** (rule 1). It says what the app offers and what it tells others; that the wire format is JSON over HTTPS is the adapter's business.
 
 ## 2. The API

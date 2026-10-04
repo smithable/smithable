@@ -281,8 +281,9 @@ describe("the AI policy", () => {
   const eu = scripted([], { name: "mistral", tier: "smithable", location: "eu" });
   const us = scripted([], { name: "claude", tier: "frontier", location: "elsewhere" });
 
-  test("eu-only is the default and keeps projects in the EU or on the machine", () => {
-    expect(parsePolicy(undefined)).toBe("eu-only");
+  test("nothing said uses what is configured; eu-only keeps projects in the EU or on the machine", () => {
+    expect(parsePolicy(undefined)).toBe("best-available");
+    expect(parsePolicy("eu-only")).toBe("eu-only");
     expect(route([us, eu, local], "eu-only").map((p) => p.name)).toEqual(["ollama", "mistral"]);
   });
 

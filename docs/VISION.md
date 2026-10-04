@@ -78,7 +78,7 @@ The bet can be measured, and we will measure it (roadmap M7).
 
 1. **`smithable.yml` is the source of truth for functionality.** It is a neat, compact DSL. Where the DSL cannot express something precisely, scoped natural language inside the spec (`description`, `intent`, `rules`, `examples`) fills the gap. Code is used only where actual programming is required.
 2. **Deterministic before AI, and the cheapest capable model first.** If a generator can make the change, no model is called.
-3. **EU by default, local when you want it.** Hosted services and AI run in the EU. Everything can also run self-hosted or with local models, so an organization can guarantee that nothing leaves its network.
+3. **You decide where it runs.** Everything can run self-hosted or with local models, so an organization can guarantee that nothing leaves its network. On the hosted service, a project or an organization can require that its data and AI calls stay in the EU; without that, AI calls go to the best model for the job, wherever it runs, and the service says which. smithable.eu, when it exists, is the edition where EU-only infrastructure and AI are always on. (Decided 2026-10-04: until then "EU by default" was the principle. It serves EU organizations and nobody else; the promise that serves everyone is that the choice is theirs.)
 4. **Generated applications are ordinary and independent.** The output is a regular, idiomatic web application that a developer who knows the stack would find unsurprising. It has **no runtime or build dependency on Smithable** and keeps working if Smithable disappears.
 5. **Beautiful by default.** Design quality comes from carefully crafted themes and page patterns, not from AI improvisation.
 6. **Open source stands alone.** The engine, CLI, Studio and MCP server are fully useful without an account or subscription. The hosted service builds on the open-source product, never the reverse.
@@ -101,7 +101,7 @@ Principle: **you can do everything yourself; the subscription does it for you.**
 | | Open source (free) | Hosted (free tier and subscription) |
 |---|---|---|
 | Building | Engine, CLI, Studio, MCP server, run locally | Builder and Studio in the browser, nothing to install |
-| AI | Local models, or your own API keys | Smithable model and frontier models via EU providers, with included allowances |
+| AI | Local models, or your own API keys | Smithable model and frontier models with included allowances; EU-only processing as a setting |
 | Publish | Build the container; deploy to your own Docker host (SSH + Compose) or any container platform | One click to EU hosting, with domains, TLS, logs and rollback |
 | Backups | `smithable backup` to your own S3-compatible bucket; manual restore | Automatic, point-in-time restore, verified restores, alerts |
 | Agents | Local MCP server | Remote MCP endpoint, so Claude.ai, ChatGPT and other agents can work on hosted projects |
