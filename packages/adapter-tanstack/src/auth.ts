@@ -79,24 +79,40 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
     : "";
   const refuses = Boolean(domainCheck || invitationCheck);
   const role = invitations ? `openInvitation(email)?.role ?? ${defaultRole}` : defaultRole;
-  const afterCreate = invitations
-    ? `
+  // A new account is in the audit log, and so is the invitation it used up.
+  const afterCreate = `
         after: async (created) => {
+          const email = created.email.toLowerCase();
+          const who = { id: created.id, role: String(created.role) };${
+            invitations
+              ? `
+          const used = invitationOf(email);
+          if (used)
+            audit(db, who, { action: "invitation accepted", model: "User", title: email, details: { email, role: used.role } });
           // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
-        },`
-    : "";
+          db.delete(invitation).where(eq(invitation.email, email)).run();`
+              : ""
+          }
+          audit(db, who, { action: "account created", model: "User", title: created.name, details: { email, role: who.role } });
+        },`;
   const tables = invitations
     ? "account, invitation, session, user, verification"
     : "account, session, user, verification";
   return `${HEADER}import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 ${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
-${invitations || (email && refuses) ? 'import { eq } from "drizzle-orm";\n' : ""}import { db } from "#/db";
-import { ${tables} } from "#/db/schema";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
+import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import { ${tables} } from "#/db/schema";
+import { audit } from "#/kit/audit.server";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ${JSON.stringify(providers)};
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 ${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n` : ""}/** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ${JSON.stringify(auth.admins)};
 ${closed || email ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
@@ -186,11 +202,23 @@ export const auth = betterAuth({
             refuses
               ? `
           const refused = joinRefusal(email);
-          if (refused) throw new APIError("FORBIDDEN", { message: refused });`
+          if (refused) {
+            audit(db, null, { action: "sign-in refused", model: "User", title: email, details: { email, reason: refused } });
+            throw new APIError("FORBIDDEN", { message: refused });
+          }`
               : ""
           }
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${role} } };
         },${afterCreate}
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
