@@ -2636,13 +2636,8 @@ for (const [index, example] of examples.entries()) {
         "models named Row and Value, with a data page and the API on every model, type-check; undo takes them back",
         () => {
           const ops = [
-            [
-              "addModel",
-              "Row",
-              "label=string!",
-              "amount=money",
-              'twice={"type":"money","formula":"amount * 2"}',
-            ],
+            ["addModel", "Row", "label=string!", "amount=money"],
+            ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
             ["addModel", "Value", "name=string!", "amount=int"],
             ["addDataPage"],
             ["setApi", "all", "--actions", "all", "--assistants", "true"],
