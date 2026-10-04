@@ -8,7 +8,7 @@ public:
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 roles:
   admin:
-    description: Runs the status page and the team.
+    description: Runs the service status page and the team.
   staff:
     description: Writes incidents and their updates.
 defaultRole: staff

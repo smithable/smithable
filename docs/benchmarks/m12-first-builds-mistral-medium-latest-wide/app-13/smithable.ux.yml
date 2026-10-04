@@ -1,9 +1,9 @@
 smithableUx: 0.1
 pages:
-  fuel:
+  fuel-entries:
     table:
       sort: -date
-  service:
+  service-visits:
     table:
       sort: -date
   costs:

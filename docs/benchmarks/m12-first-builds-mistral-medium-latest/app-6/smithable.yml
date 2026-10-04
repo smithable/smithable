@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Union Job Board
+  name: Local Union Job Board
   description: A job board for a local union to post jobs and receive applications.
 models:
   JobPost:
@@ -13,8 +13,6 @@ models:
       type: fullTime | partTime | contract | temporary
       status: open | closed
       postedAt: datetime = NOW()
-    access:
-      delete: [admin]
   Application:
     fields:
       jobPost: JobPost!
@@ -23,29 +21,57 @@ models:
       phone: phone
       resume: text
       coverLetter: text
-      status: submitted | reviewed | shortlisted | rejected | hired
-      submittedAt: datetime = NOW()
-    access:
-      delete: [admin]
+      status: submitted | reviewed | interviewed | hired | rejected
+      appliedAt: datetime = NOW()
 pages:
   jobs:
-    route: /
     crud: JobPost
     search: [title, description, company, location]
     filters: [type, status, salary]
-    sortable: [salary, postedAt]
-  myJobs:
-    route: /my-jobs
-    crud: JobPost
-    mine: true
+    sortable: [postedAt, salary]
+    actions: [closeJob]
   applications:
     crud: Application
     access: [admin]
+    actions: [reviewApplication, interviewApplication, hireApplication, rejectApplication]
   home:
-    route: /welcome
+    route: /
     landing:
       hero:
       footer:
-  team:
-    users: manage
-navigation: [jobs, myJobs, applications, team]
+actions:
+  closeJob:
+    on: JobPost
+    when:
+      status: open
+    set:
+      status: closed
+    intent: Close a job post when it is no longer accepting applications.
+  reviewApplication:
+    on: Application
+    when:
+      status: submitted
+    set:
+      status: reviewed
+    intent: Mark an application as reviewed.
+  interviewApplication:
+    on: Application
+    when:
+      status: reviewed
+    set:
+      status: interviewed
+    intent: Mark an application for interview.
+  hireApplication:
+    on: Application
+    when:
+      status: interviewed
+    set:
+      status: hired
+    intent: Mark an application as hired.
+  rejectApplication:
+    on: Application
+    when:
+      status: [submitted, reviewed, interviewed]
+    set:
+      status: rejected
+    intent: Reject an application.

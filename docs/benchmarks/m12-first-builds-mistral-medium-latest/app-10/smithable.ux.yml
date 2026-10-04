@@ -2,17 +2,15 @@ smithableUx: 0.1
 pages:
   recipes:
     table:
-      sort: name
       view: cards
-      columns: [name, category, difficulty, prepTime, cookTime]
+      columns: [name, category, difficulty, servings]
     form:
-      fieldOrder: [name, category, difficulty, servings, prepTime, cookTime, description, instructions, image]
-    icon: book
+      sections: [{ name: details, fields: [name, description, category, difficulty] }, { name: times, fields: [servings, prepTime, cookTime] }, { name: instructions, fields: [instructions] }, { name: media, fields: [image] }]
+      columns: 2
   shopping-lists:
     table:
       sort: -date
       columns: [name, date, status]
-    icon: cart
 tones:
   ShoppingList.status:
     completed: success

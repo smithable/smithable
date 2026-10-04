@@ -1,12 +1,12 @@
 smithable: 0.1
 app:
   name: Conference Registration
-  description: Event registration for a conference with talks, speakers and attendees.
+  description: Event registration system for conference talks, speakers and attendees.
 models:
   Talk:
     fields:
       title: string!
-      summary: text
+      description: text
       startsAt: datetime!
       endsAt: datetime!
       room: string
@@ -14,53 +14,57 @@ models:
       speaker: Speaker!
       registrations: Registration[]
     access:
-      create: [organizer]
-      write: [organizer]
-      delete: [organizer]
+      read: [admin]
+      create: [admin]
+      write: [admin]
+      delete: [admin]
   Speaker:
     fields:
       name: string!
       bio: text
+      email: email!
       photo: picture
-      email: email
-      company: string
     access:
-      create: [organizer]
-      write: [organizer]
-      delete: [organizer]
-  Registration:
-    fields:
-      talk: Talk! unique
-      registeredAt: datetime! = NOW()
-      attendee: Attendee!
-    capacity:
-      per: talk
-      max: talk.capacity
-    access:
-      create: [organizer, attendee]
-      delete: [organizer, owner]
+      read: [admin]
+      create: [admin]
+      write: [admin]
+      delete: [admin]
   Attendee:
     fields:
       name: string!
       email: email! unique
       company: string
-      dietaryRequirements: text
+      phone: phone
     access:
-      create: [organizer, attendee]
-      write: [organizer, owner]
-      delete: [organizer, owner]
+      read: [admin, attendee, owner]
+      create: [admin, attendee]
+      write: [admin, attendee, owner]
+      delete: [admin, owner]
+  Registration:
+    fields:
+      talk: Talk! unique
+      attendee: Attendee!
+      registeredAt: datetime! = NOW()
+    capacity:
+      per: talk
+      max: talk.capacity
+    access:
+      read: [admin, attendee, owner]
+      create: [admin, attendee]
+      delete: [admin, owner]
 pages:
   talks:
     crud: Talk
-    access: [organizer]
+    access: [admin]
   speakers:
     crud: Speaker
-    access: [organizer]
+    access: [admin]
   attendees:
     crud: Attendee
-    access: [organizer]
+    access: [admin]
   registrations:
     crud: Registration
+    access: [admin, attendee]
   home:
     route: /
     landing:
@@ -71,8 +75,3 @@ pages:
       speakers:
         records: Speaker
       contact:
-        form: Attendee
-  team:
-    users: manage
-  admin:
-    data: all

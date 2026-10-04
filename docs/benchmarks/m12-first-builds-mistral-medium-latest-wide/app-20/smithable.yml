@@ -38,6 +38,15 @@ models:
     capacity:
       per: session
       max: session.capacity
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
+      write: [admin]
+      delete: [admin]
 pages:
   class-types:
     crud: ClassType
@@ -50,7 +59,7 @@ pages:
     access: [admin]
   my-bookings:
     crud: Booking
-    access: [member, admin]
+    access: [member]
   home:
     route: /
     landing:
@@ -58,12 +67,13 @@ pages:
       footer:
       classes:
         records: ClassType
+      contact:
+        form: Message
       callToAction:
-        button: sessions
+        button: schedule
+  messages:
+    crud: Message
+    access: [admin]
   schedule:
-    calendar:
-      model: Session
-      starts: startsAt
-  team:
-    users: manage
+    crud: Session
 navigation: [home, schedule, my-bookings]

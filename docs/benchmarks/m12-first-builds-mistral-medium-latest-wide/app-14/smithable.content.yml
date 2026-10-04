@@ -1,19 +1,11 @@
 smithableContent: 0.1
-pages:
-  home:
-    title: Our Wedding
-    subtitle: Join us for our special day
-    hero:
-      image:
-        src: images/hero.webp
-        alt: Close-up of green leaves with dew in soft light
 models:
   Guest:
     label: Guest
     pluralLabel: Guests
     fields:
       name:
-        label: Full Name
+        label: Name
       email:
         label: Email
       phone:
@@ -28,12 +20,15 @@ models:
         label: Meal Choice
         values:
           vegetarian: Vegetarian
-          standard: Standard
+          meat: Meat
+          fish: Fish
           vegan: Vegan
-          glutenFree: Gluten-Free
-      tableNumber:
-        label: Table Number
+      seatingTable:
+        label: Seating Table
       notes:
         label: Notes
       group:
         label: Group
+pages:
+  guests:
+    title: Guests

@@ -3,6 +3,6 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [albums, home]
+  pages: [albums]
   read: [Album]
 admins: [johan@smithable.ai]

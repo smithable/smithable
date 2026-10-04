@@ -1,8 +1,8 @@
 smithableContent: 0.1
 models:
   ClassType:
-    label: Luokkatyyppi
-    pluralLabel: Luokkatyypit
+    label: Tunnin tyyppi
+    pluralLabel: Tunnin tyypit
     fields:
       name:
         label: Nimi
@@ -31,19 +31,31 @@ models:
     pluralLabel: Tunnit
     fields:
       classType:
-        label: Luokkatyyppi
+        label: Tunnin tyyppi
       instructor:
         label: Ohjaaja
       startsAt:
         label: Aloitusaika
       capacity:
-        label: Kapasiteetti
+        label: Paikkojen määrä
+      placesLeft:
+        label: Vapaat paikat
   Booking:
     label: Varaus
     pluralLabel: Varaukset
     fields:
       session:
         label: Tunti
+  Message:
+    label: Viestit
+    pluralLabel: Viestit
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      message:
+        label: Viesti
 pages:
   home:
     title: Joogastudio
@@ -54,10 +66,12 @@ pages:
   schedule:
     title: Aikataulu
   class-types:
-    title: Luokkatyypit
+    title: Tunnin tyypit
   instructors:
     title: Ohjaajat
   sessions:
     title: Tunnit
   my-bookings:
     title: Omat varaukset
+  messages:
+    title: Viestit

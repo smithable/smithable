@@ -1,31 +1,31 @@
-# M12 first builds: mistral-medium-latest, the second set (2026-10-03)
+# M12 first builds: mistral-medium-latest, the second set (2026-10-04)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 22 / 22 created, 22 type-check, 333,691 tokens, €0.1905.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 21 / 22 created, 21 type-check, 370,968 tokens, €0.2031.
 
 | Description | Starter | Created | Type-checks | Tokens | Cost | Time |
 |---|---|---|---|---|---|---|
-| My clients as a freelance translator: who they are, what I quoted and what they paid. | invoicing | yes | yes | 9,794 | €0.0062 | 18 s |
-| A sales pipeline for our six-person web agency: leads, deals and who follows up when. | crm | yes | yes | 9,561 | €0.0058 | 19 s |
-| Online booking for a hair salon: customers pick a stylist and a free time themselves. | booking | yes | yes | 35,666 | €0.0165 | 28 s |
-| A piano teacher's lessons: my pupils, their weekly times and what each one practises. | booking | yes | yes | 9,069 | €0.0042 | 16 s |
-| Invoices for my photography work: clients, shoots and what is still unpaid. | invoicing | yes | yes | 17,373 | €0.0086 | 19 s |
-| Our cleaning company of three sends invoices to households every month; we need one place for them. | invoicing | yes | yes | 26,722 | €0.0135 | 24 s |
-| A town flea market site where anyone can post things to sell, with photos and a price. | marketplace | yes | yes | 8,697 | €0.0046 | 17 s |
-| A swap shelf for our office: colleagues offer things they no longer need and others claim them. | marketplace | yes | yes | 8,652 | €0.0045 | 17 s |
-| My vinyl record collection: albums, artists, condition and what I paid. | records | yes | yes | 8,593 | €0.0045 | 13 s |
-| Our local museum's collection online, so visitors can browse the objects and their stories. | records | yes | yes | 16,546 | €0.0076 | 19 s |
-| An internal status board for our IT systems, so staff see what is down and when it is back. | status | yes | yes | 18,725 | €0.0099 | 23 s |
-| Service status for our municipality's online services, for residents to check outages. | status | yes | yes | 19,278 | €0.0107 | 23 s |
-| A log of my car's fuel, service visits and costs. | records | yes | yes | 8,292 | €0.0039 | 15 s |
-| The guest list and seating plan for our wedding, with who has answered and their meal choices. | records | yes | yes | 9,575 | €0.0065 | 22 s |
-| Bird sightings for our birdwatching club: species, place, date and who saw it. | records | yes | yes | 8,234 | €0.0038 | 14 s |
-| Our allotment society: who has which plot, the waiting list and the yearly fee. | records | yes | yes | 10,139 | €0.0076 | 22 s |
-| Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet. | booking | yes | yes | 10,938 | €0.0080 | 23 s |
-| Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor. | crm | yes | yes | 22,509 | €0.0150 | 35 s |
-| En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris. | marketplace | yes | yes | 20,345 | €0.0126 | 29 s |
-| Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa. | booking | yes | yes | 10,686 | €0.0075 | 21 s |
-| Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. | invoicing | yes | yes | 21,467 | €0.0135 | 31 s |
-| Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | crm | yes | yes | 22,830 | €0.0155 | 37 s |
+| My clients as a freelance translator: who they are, what I quoted and what they paid. | invoicing | yes | yes | 17,783 | €0.0082 | 25 s |
+| A sales pipeline for our six-person web agency: leads, deals and who follows up when. | crm | yes | yes | 10,103 | €0.0064 | 26 s |
+| Online booking for a hair salon: customers pick a stylist and a free time themselves. | booking | yes | yes | 10,024 | €0.0056 | 26 s |
+| A piano teacher's lessons: my pupils, their weekly times and what each one practises. | booking | yes | yes | 9,353 | €0.0043 | 21 s |
+| Invoices for my photography work: clients, shoots and what is still unpaid. | invoicing | yes | yes | 18,690 | €0.0099 | 29 s |
+| Our cleaning company of three sends invoices to households every month; we need one place for them. | invoicing | yes | yes | 35,148 | €0.0158 | 28 s |
+| A town flea market site where anyone can post things to sell, with photos and a price. | marketplace | yes | yes | 8,977 | €0.0046 | 22 s |
+| A swap shelf for our office: colleagues offer things they no longer need and others claim them. | marketplace | yes | yes | 17,093 | €0.0076 | 22 s |
+| My vinyl record collection: albums, artists, condition and what I paid. | records | yes | yes | 8,771 | €0.0044 | 16 s |
+| Our local museum's collection online, so visitors can browse the objects and their stories. | records | yes | yes | 8,716 | €0.0043 | 17 s |
+| An internal status board for our IT systems, so staff see what is down and when it is back. | status | yes | yes | 19,826 | €0.0110 | 29 s |
+| Service status for our municipality's online services, for residents to check outages. | status | yes | yes | 20,947 | €0.0124 | 59 s |
+| A log of my car's fuel, service visits and costs. | records | yes | yes | 8,635 | €0.0041 | 43 s |
+| The guest list and seating plan for our wedding, with who has answered and their meal choices. | records | yes | yes | 9,361 | €0.0055 | 56 s |
+| Bird sightings for our birdwatching club: species, place, date and who saw it. | records | yes | yes | 8,588 | €0.0040 | 47 s |
+| Our allotment society: who has which plot, the waiting list and the yearly fee. | records | yes | yes | 28,293 | €0.0142 | 51 s |
+| Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet. | booking | yes | yes | 11,089 | €0.0078 | 47 s |
+| Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor. | crm | yes | yes | 22,543 | €0.0145 | 52 s |
+| En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris. | marketplace | yes | yes | 22,070 | €0.0143 | 50 s |
+| Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa. | booking | yes | yes | 21,684 | €0.0130 | 40 s |
+| Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. | invoicing | **no** | **no** | 42,479 | €0.0234 | 31 s |
+| Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | crm | yes | yes | 10,795 | €0.0078 | 33 s |
 
 Each created app's four spec files are in [m12-first-builds-mistral-medium-latest-wide/](m12-first-builds-mistral-medium-latest-wide/), one folder per description (app-1 …).
 
@@ -41,41 +41,38 @@ The runs so far:
 6. After #196 and #197 (#199).
 7. After #200 and #201 (#202).
 8. After #204 (#205).
-9. This one: after #206.
+9. After #206 (#207): 22 of 22.
+10. This one: after #211, #212 and #213.
 
-- **All 22 are created and type-check**, for the first time since the third run. 3, the hair salon, works again; it leaves out `book`.
-- **Invoicing:** five descriptions get the invoicing starter, and all keep mark sent and mark paid (2 of 2 in 5, 6 and 21; one in 1).
-  - 21, the Finnish car repair shop, has an invoice total worked out over its service jobs.
-  - 1, 5 and 6 keep one amount per invoice, without lines.
-- **Status keeps 3 of 3 actions** in 11 and 12.
-- **No open sign-up and no public personal data** in this set.
+- **Better: booking.** 3, the hair salon, 17, the Swedish hair salon, and 20, the Finnish yoga studio, book through a capacity on private bookings, and nothing is left out (`book` was left out of 3 in the ninth run). 4, the piano lessons, has no capacity, which a weekly lesson does not need.
+- **Worse: 21, the Finnish car repair shop, fails.** The model declares `owner` on Car and does not rename it when asked, three rounds running, so Car never lands. Reported to session A, with the suggestion that the draft rename or drop it at the last round.
+- **Status keeps 3 of 3 actions; invoicing keeps 2 of 2** in 5 and 6.
 
 ## Scorecard (scripts/bench-m12.mjs --score)
 
 | # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing | Language | App name in it | Labels in it | Landing texts in it | With a text of their own |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | invoicing (words: crm) | 0 | 1 / 4 (has 3) | 1 / 7 (has 4) | 1 / 2 (has 3) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 1 / 3 | no mention; no landing page | en | | | | |
-| 2 | crm | 2 | 0 / 2 (has 2) | 1 / 3 (has 3) | 0 / 1 (has 4) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
-| 3 | booking | 0 | 1 / 6 (has 4) | 2 / 10 (has 5) | 0 / 0 (has 0); left out: book | private; admin, customer (customer) | stylists: admin, services: admin, appointment-slots: admin | pages home, appointment-slots; read Stylist, Service, AppointmentSlot; create Booking | 0 | none | 0 / 4 | no mention; landing page | en | | | | |
-| 4 | booking (words: crm) | 2 | 0 / 6 (has 3) | 0 / 10 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | en | | | | |
+| 2 | crm | 2 | 0 / 2 (has 2) | 1 / 3 (has 3) | 0 / 1 (has 6) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 3 | booking | 0 | 1 / 6 (has 4) | 2 / 10 (has 5) | 0 / 0 (has 0) | private; admin, customer (customer) | stylists: admin, services: admin, time-slots: admin | pages home; read Stylist, Service, TimeSlot; create Booking | 0 | none | 0 / 4 | no mention; landing page | en | | | | |
+| 4 | booking (words: crm) | 2 | 0 / 6 (has 2) | 0 / 10 (has 2) | 0 / 0 (has 0) | private; admin, teacher (teacher) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
 | 5 | invoicing | 0 | 2 / 4 (has 3) | 2 / 7 (has 3) | 2 / 2 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 1 / 3 | no mention; no landing page | en | | | | |
-| 6 | invoicing (words: booking) | 1 | 2 / 4 (has 2) | 2 / 7 (has 3) | 2 / 2 (has 2) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 2 / 2 | no mention; no landing page | en | | | | |
+| 6 | invoicing (words: booking) | 1 | 3 / 4 (has 3) | 3 / 7 (has 4) | 2 / 2 (has 2) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 3 / 3 | no mention; no landing page | en | | | | |
 | 7 | marketplace | 0 | 1 / 1 (has 1) | 4 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none | 1 / 1 | mentions visitors; landing page | en | | | | |
-| 8 | marketplace (words: invoicing) | 2 | 1 / 1 (has 1) | 4 / 4 (has 5) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none | 1 / 1 | no mention; landing page | en | | | | |
-| 9 | records (words: crm) | 0 | 0 / 1 (has 1) | 1 / 2 (has 2) | 0 / 0 (has 0) | private; admin, member (member) | none | pages albums, home; read Album; create none | 0 | none | 0 / 1 | no mention; landing page | en | | | | |
-| 10 | records (words: marketplace) | 0 | 0 / 1 (has 1) | 1 / 2 (has 2) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, artifacts; read Artifact; create none | 0 | none | 0 / 1 | mentions visitors; landing page | en | | | | |
-| 11 | status | 0 | 4 / 4 (has 4) | 5 / 8 (has 6) | 3 / 3 (has 3) | shared; admin, staff (staff) | incidents: admin/staff, updates: admin/staff, components: admin, maintenance: admin/staff | pages none; read none; create none | 0 | none | 4 / 4 | no mention; no landing page | en | | | | |
-| 12 | status | 0 | 4 / 4 (has 4) | 7 / 8 (has 8) | 3 / 3 (has 3) | shared; admin, staff (staff) | incidents: admin/staff, updates: admin/staff, components: admin, maintenance: admin/staff | pages home, history; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | no mention; landing page | en | | | | |
+| 8 | marketplace (words: invoicing) | 2 | 1 / 1 (has 1) | 2 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 1 / 1 | no mention; no landing page | en | | | | |
+| 9 | records (words: crm) | 0 | 0 / 1 (has 1) | 0 / 2 (has 1) | 0 / 0 (has 0) | private; admin, member (member) | none | pages albums; read Album; create none | 0 | none | 0 / 1 | no mention; no landing page | en | | | | |
+| 10 | records (words: marketplace) | 0 | 0 / 1 (has 1) | 1 / 2 (has 2) | 0 / 0 (has 0) | private; admin, visitor (visitor) | none | pages home, artifacts; read Artifact; create none | 0 | none | 0 / 1 | mentions visitors; landing page | en | | | | |
+| 11 | status | 0 | 4 / 4 (has 4) | 5 / 8 (has 6) | 3 / 3 (has 3) | shared; admin, staff (staff) | components: admin | pages none; read none; create none | 0 | none | 4 / 4 | no mention; no landing page | en | | | | |
+| 12 | status | 0 | 4 / 4 (has 4) | 8 / 8 (has 8) | 3 / 3 (has 3) | shared; admin, staff (staff) | components: admin, team: admin | pages home, history; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | no mention; landing page | en | | | | |
 | 13 | records (words: status) | 0 | 0 / 1 (has 3) | 0 / 2 (has 3) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | en | | | | |
-| 14 | records (words: invoicing) | 2 | 0 / 1 (has 1) | 1 / 2 (has 3) | 0 / 0 (has 2) | shared; admin, guest (guest) | guests: admin | pages home; read none; create none | 0 | none | 0 / 1 | no mention; landing page | en | | | | |
-| 15 | records (words: booking) | 0 | 0 / 1 (has 1) | 1 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages home, sightings; read Sighting; create none | 0 | none | 0 / 1 | no mention; landing page | en | | | | |
-| 16 | records (words: booking) | 2 | 0 / 1 (has 3) | 0 / 2 (has 4) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | en | | | | |
-| 17 | booking (words: records) | 0 | 1 / 6 (has 4) | 0 / 10 (has 6) | 0 / 0 (has 0) | private; admin, customer (customer) | tjanster: admin, stylister: admin, tider: admin, mina-bokningar: customer/admin | pages hem, schema; read Service, Stylist, Appointment; create none | 0 | none | 0 / 4 | no mention; landing page | sv | yes (min, frisörsalong) | yes (tid, bokning) | yes (till, min, frisörsalong) | models 4/4, fields 15/17, pages 6/6 |
-| 18 | crm (words: records) | 2 (sv: yes (av, ska, för)) | 1 / 2 (has 3) | 1 / 3 (has 4) | 0 / 1 (has 5) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | sv | yes (byggfirma) | yes (till) | none | models 3/3, fields 20/20, pages 3/4 |
-| 19 | marketplace (words: records) | 0 | 1 / 1 (has 1) | 3 / 4 (has 3) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none | 0 / 1 | no mention; landing page | sv | yes (vår, loppis) | yes (bilder, pris) | no | models 1/1, fields 8/8, pages 0/3 |
-| 20 | booking (words: records) | 0 | 4 / 6 (has 4) | 6 / 10 (has 7) | 0 / 0 (has 0) | private; admin, member (member) | class-types: admin, instructors: admin, sessions: admin, my-bookings: member/admin | pages home, schedule; read ClassType, Instructor, Session; create none | 0 | none | 3 / 4 | no mention; landing page | fi | no | yes (varaus) | no | models 4/4, fields 12/14, pages 6/7 |
-| 21 | invoicing (words: records) | 3 (fi: yes (laskut)) | 1 / 4 (has 4) | 0 / 7 (has 4) | 2 / 2 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 4 | no mention; no landing page | fi | yes (pieni, autokorjaamo) | yes (autot, huoltotyöt) | none | models 4/4, fields 25/25, pages 4/4 |
-| 22 | crm (words: records) | 2 (de: yes (vorbestellungen, den)) | 0 / 2 (has 3) | 1 / 3 (has 4) | 0 / 1 (has 3) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | de | yes (hofladen) | no | none | models 3/3, fields 18/18, pages 3/4 |
+| 14 | records (words: invoicing) | 2 | 0 / 1 (has 1) | 0 / 2 (has 2) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 1 | no mention; no landing page | en | | | | |
+| 15 | records (words: booking) | 0 | 0 / 1 (has 1) | 1 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages sightings, home; read Sighting; create none | 0 | none | 0 / 1 | no mention; landing page | en | | | | |
+| 16 | records (words: booking) | 2 | 0 / 1 (has 3) | 0 / 2 (has 4) | 0 / 0 (has 6) | shared; admin, member (member) | plots: admin/member, waiting-list: admin, fees: admin/member | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | en | | | | |
+| 17 | booking (words: records) | 0 | 2 / 6 (has 4) | 4 / 10 (has 6) | 0 / 0 (has 0) | private; admin, customer (customer) | services: admin, stylists: admin, sessions: admin | pages home, schedule; read Service, Stylist, Session; create Booking | 0 | none | 0 / 4 | no mention; landing page | sv | yes (min, frisörsalong) | yes (tid, bokning) | yes (min, frisörsalong, boka) | models 4/4, fields 16/18, pages 6/6 |
+| 18 | crm (words: records) | 2 (sv: yes (ska, och, offerter)) | 1 / 2 (has 3) | 1 / 3 (has 4) | 0 / 1 (has 5) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | sv | yes (byggfirma) | yes (till) | none | models 3/3, fields 19/19, pages 3/4 |
+| 19 | marketplace (words: records) | 0 | 1 / 1 (has 1) | 4 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none | 0 / 1 | no mention; landing page | sv | yes (vår, loppis) | yes (bilder, pris) | yes (till, vår, loppis) | models 1/1, fields 8/8, pages 4/4 |
+| 20 | booking (words: records) | 0 | 5 / 6 (has 5) | 7 / 10 (has 7) | 0 / 0 (has 0) | private; admin, member (member) | class-types: admin, instructors: admin, sessions: admin, my-bookings: member, messages: admin | pages home, schedule; read ClassType, Instructor, Session; create Message | 0 | none | 3 / 5 | no mention; landing page | fi | no | yes (varaus) | no | models 5/5, fields 16/17, pages 7/7 |
+| 22 | crm (words: records) | 2 (de: yes (die, vorbestellungen, und)) | 0 / 2 (has 3) | 1 / 3 (has 4) | 0 / 1 (has 3) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | de | yes (hofladen) | yes (kunden) | none | models 3/3, fields 20/20, pages 3/4 |
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names actions the draft dropped because they could not be made valid. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one `new --describe --yes` printed, with the word-match starter (`closestStarter`) beside it when it differs; "Questions" counts what `smithable clarify` would ask (`--yes` asks nothing), with their language for a description not in English. For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file.
 <!-- /scorecard -->
@@ -89,40 +86,34 @@ Freelance Translator
   Track clients, quotes, and payments for a freelance translator.
 
 Pages
-  - Clients (lists clients; search by name or email)
-  - Quotes (lists quotes; search by description or client; filter by status or client; “Mark sent”; “Mark accepted”; “Mark rejected”)
-  - Payments (lists payments)
+  - Clients (lists clients)
+  - Quotes (lists quotes; “Mark sent”; “Mark accepted”; “Mark rejected”)
   - Team (who has access: invite people, change roles, remove users)
+  - Payments (lists payments)
 
 Clients
   Clients have:
   - a name (required)
   - an email (required)
   - address
-  - a phone
-  - notes
-  Only the owner and admins can delete clients.
+  - a VAT number
+  Each client lists its quotes.
 
 Quotes
   Quotes have:
+  - a number (required, unique)
   - a client (a client, required)
-  - a description (required)
-  - an amount (an amount, required)
-  - a currency (USD by default)
   - issued on (a date, required, today by default)
-  - expires on (a date)
   - status (draft, sent, accepted or rejected, draft by default)
-  Only the owner and admins can delete quotes.
+  - an amount (an amount, required)
+  - a description
 
 Payments
   Payments have:
   - a quote (a quote, required)
   - an amount (an amount, required)
-  - a currency (USD by default)
   - paid on (a date, required, today by default)
-  - a method
-  - notes
-  Only the owner and admins can delete payments.
+  - a method (bank transfer, cash or online, bank transfer by default)
 
 Mark sent
   For a quote that is draft; sets status to sent.
@@ -144,33 +135,33 @@ Sign-in and access
   - member (A freelance translator using the app)
   New users get the member role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 95 files (95 changed, 0 removed).
+Generated 93 files (93 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-1/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-1/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
-clients 9 columns 0 indexes 1 fks
+clients 8 columns 0 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
-payments 10 columns 0 indexes 2 fks
-quotes 11 columns 0 indexes 2 fks
+payments 8 columns 0 indexes 2 fks
+quotes 10 columns 1 indexes 2 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_gifted_catseye.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_fantastic_trauma.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-1. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-1. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-1
+  cd /tmp/smithable-bench-m12-QEmtl1/app-1
   smithable run
 
-/tmp/smithable-bench-m12-C1pPFr/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
+/tmp/smithable-bench-m12-QEmtl1/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
 		return this.stmt.run(...params);
 		                 ^
 SqliteError: FOREIGN KEY constraint failed
-    at PreparedQuery.run (/tmp/smithable-bench-m12-C1pPFr/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-C1pPFr/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-C1pPFr/app-1/src/db/seed.ts:29:6)
+    at PreparedQuery.run (/tmp/smithable-bench-m12-QEmtl1/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
+    at QueryPromise.run (/tmp/smithable-bench-m12-QEmtl1/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
+    at <anonymous> (/tmp/smithable-bench-m12-QEmtl1/app-1/src/db/seed.ts:29:6)
     at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
     at async node:internal/modules/esm/loader:647:26
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
@@ -185,11 +176,11 @@ Could not add sample data; the app works without it.
 
 ```text
 Web Agency CRM
-  A sales pipeline for a six-person web agency to track leads, deals, and follow-ups.
+  A sales pipeline for our six-person web agency: leads, deals and who follows up when.
 
 Pages
-  - Leads (lists leads; search by name, email or company; sort by name, follow up date or date added; “Qualify lead”; “Disqualify lead”)
-  - Deals (lists deals; search by name or lead; sort by name, value, close date or date added; “Win deal”; “Lose deal”)
+  - Leads (lists leads; search by name, email or company; sort by name, follow up date or date added; “Mark contacted”; “Mark qualified”; “Mark lost”)
+  - Deals (lists deals; search by name or lead; sort by name, value, close date or date added; “Mark proposal”; “Mark negotiation”; “Mark won”)
   - Team (who has access: invite people, change roles, remove users)
 
 Leads
@@ -198,8 +189,8 @@ Leads
   - an email
   - a phone
   - a company
+  - status (new, contacted, qualified or lost, new by default)
   - a source (referral, website, social or other, referral by default)
-  - status (new, contacted, qualified or disqualified, new by default)
   - notes
   - a follow up date
   Each lead can have an assignee (a user).
@@ -216,21 +207,23 @@ Deals
   Each deal can have an assignee (a user).
   Only admins can delete deals.
 
-Qualify lead
-  For a lead that is new or contacted; sets status to qualified.
-  Mark a lead as qualified for further follow-up.
+Mark contacted
+  For a lead that is new; sets status to contacted; asks for the follow up date.
 
-Disqualify lead
-  For a lead that is new, contacted or qualified; sets status to disqualified; asks for the notes.
-  Mark a lead as disqualified with an optional reason.
+Mark qualified
+  For a lead that is contacted; sets status to qualified.
 
-Win deal
-  For a deal that is proposal or negotiation; sets status to won.
-  Mark a deal as won.
+Mark lost
+  For a lead that is new, contacted or qualified; sets status to lost.
 
-Lose deal
-  For a deal that is proposal or negotiation; sets status to lost; asks for the notes.
-  Mark a deal as lost with an optional reason.
+Mark proposal
+  For a deal that is proposal or negotiation; sets status to proposal.
+
+Mark negotiation
+  For a deal that is proposal; sets status to negotiation.
+
+Mark won
+  For a deal that is proposal or negotiation; sets status to won and close date to today.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -240,9 +233,9 @@ Sign-in and access
   - sales (Works with leads and deals)
   New users get the sales role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 91 files (91 changed, 0 removed).
+Generated 95 files (95 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-2/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-2/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 deals 11 columns 0 indexes 3 fks
@@ -252,28 +245,25 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_short_rachel_grey.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_medical_overlord.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-2. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-2. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-2
+  cd /tmp/smithable-bench-m12-QEmtl1/app-2
   smithable run
 ```
 
 ### 3. Online booking for a hair salon: customers pick a stylist and a free time themselves.
 
 ```text
-Left out, since it could not be made valid:
-  addAction book: addAction: "when.placesLeft" must be a string or true or false or a list.
-
 Hair Salon Booking
   Online booking for a hair salon where customers pick a stylist and a free time themselves.
 
 Pages
-  - Home (a landing page: hero, services, stylists and footer)
+  - Home (a landing page: hero, stylists, services and footer)
   - Stylists (lists stylists; only for admins; visitors see stylists on the Home page)
   - Services (lists services; only for admins; visitors see services on the Home page)
-  - Appointment slots (lists appointment slots; only for admins)
+  - Time slots (lists time slots; only for admins)
   - My bookings (lists bookings)
 
 Stylists
@@ -281,8 +271,6 @@ Stylists
   - a name (required)
   - a bio
   - a portrait (picture)
-  Only admins can delete stylists.
-  Only admins can add stylists.
 
 Services
   Services have:
@@ -290,56 +278,52 @@ Services
   - a description
   - duration minutes (a whole number, required, 30 by default)
   - a price (an amount, required)
-  Only admins can delete services.
-  Only admins can add services.
 
-Appointment slots
-  Appointment slots have:
+Time slots
+  Time slots have:
   - a stylist (a stylist, required)
   - a service (a service, required)
   - starts at (a date and time, required)
   - a capacity (a whole number, required, 1 by default)
-  Each appointment slot lists its bookings.
+  Each time slot lists its bookings.
   The places left is calculated as the capacity minus the number of its bookings.
-  Only admins can delete appointment slots.
-  Only admins can add appointment slots.
 
 Bookings
   Bookings have:
-  - an appointment slot (an appointment slot, required, unique)
+  - a time slot (a time slot, required, unique)
   - a customer name (required)
   - a customer email (required)
   - a customer phone
   - notes
-  At most the appointment slot's capacity bookings per appointment slot.
+  At most the time slot's capacity bookings per time slot.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
-  - admin (Salon staff. Manage stylists, services, and appointment slots)
+  - admin (Salon staff. Manage stylists, services, and time slots)
   - customer (A customer who books appointments)
   New users get the customer role.
-  Open to anyone without signing in: the home page, the appointment slots page, reading stylists, reading services, reading appointment slots and adding bookings.
+  Open to anyone without signing in: the home page, reading stylists, reading services, reading time slots and adding bookings.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 96 files (96 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-3/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-3/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
-appointment_slots 9 columns 0 indexes 3 fks
 bookings 9 columns 1 indexes 2 fks
 services 8 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 stylists 7 columns 0 indexes 1 fks
+time_slots 9 columns 0 indexes 3 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_serious_timeslip.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_flippant_scarecrow.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-3. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-3. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-3
+  cd /tmp/smithable-bench-m12-QEmtl1/app-3
   smithable run
 ```
 
@@ -347,13 +331,11 @@ Created /tmp/smithable-bench-m12-C1pPFr/app-3. Start it with:
 
 ```text
 Piano Lessons
-  A piano teacher's lessons: my pupils, their weekly times and what each one practises.
+  A piano teacher's lessons: pupils, their weekly times and what each one practises.
 
 Pages
   - Pupils (lists pupils)
   - Lessons (lists lessons)
-  - Practice (lists practices)
-  - Team (who has access: invite people, change roles, remove users)
 
 Pupils
   Pupils have:
@@ -361,6 +343,7 @@ Pupils
   - an email
   - a phone
   - notes
+  Only teacher users and admins can delete pupils.
 
 Lessons
   Lessons have:
@@ -368,42 +351,33 @@ Lessons
   - a day of week (monday, tuesday, wednesday, thursday, friday, saturday or sunday, monday by default)
   - a start time (required)
   - duration minutes (a whole number, required, 60 by default)
-  - notes
-
-Practices
-  Practices have:
-  - a lesson (a lesson, required)
-  - a date (required)
-  - a piece (required)
-  - minutes (a whole number)
-  - notes
+  - practice focus
+  Only teacher users and admins can delete lessons.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
   - admin
-  - member
-  New users get the member role.
+  - teacher (The piano teacher who manages pupils and lessons)
+  New users get the teacher role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 85 files (85 changed, 0 removed).
+Generated 76 files (76 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-4/drizzle.config.ts'
-8 tables
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-4/drizzle.config.ts'
+6 tables
 account 13 columns 1 indexes 1 fks
-invitation 7 columns 2 indexes 1 fks
 lessons 9 columns 0 indexes 2 fks
-practices 9 columns 0 indexes 2 fks
 pupils 8 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_right_crystal.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_massive_nightshade.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-4. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-4. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-4
+  cd /tmp/smithable-bench-m12-QEmtl1/app-4
   smithable run
 ```
 
@@ -411,21 +385,23 @@ Created /tmp/smithable-bench-m12-C1pPFr/app-4. Start it with:
 
 ```text
 Pages
-  - Clients (lists clients)
+  - Clients (lists clients; search by name or email)
   - Shoots (lists shoots)
-  - Invoices (lists invoices; “Mark sent”; “Mark paid”)
+  - Invoices (lists invoices; search by number; filter by status or client; “Mark sent”; “Mark paid”)
 
 Clients
   Clients have:
   - a name (required)
-  - an email (required)
+  - an email
   - a phone
+  - address
 
 Shoots
   Shoots have:
   - a name (required)
-  - a date (required)
   - a client (a client, required)
+  - a date (required)
+  - a location
   - a description
 
 Invoices
@@ -433,10 +409,10 @@ Invoices
   - a number (required, unique)
   - a client (a client, required)
   - a shoot (a shoot)
-  - a date (required, today by default)
-  - a due date
-  - status (draft, sent, paid or overdue, draft by default)
-  - a total (an amount)
+  - issued on (a date, required)
+  - due on (a date)
+  - status (draft, sent, overdue or paid, draft by default)
+  - a total (an amount, required)
   - notes
 
 Mark sent
@@ -452,35 +428,35 @@ Sign-in and access
   Everyone sees and changes only their own records.
   Roles:
   - admin
-  - member (A photographer managing their invoices)
+  - member
   New users get the member role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 86 files (86 changed, 0 removed).
+Generated 87 files (87 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-5/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-5/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
-clients 7 columns 0 indexes 1 fks
+clients 8 columns 0 indexes 1 fks
 invoices 12 columns 1 indexes 3 fks
 session 8 columns 2 indexes 1 fks
-shoots 8 columns 0 indexes 2 fks
+shoots 9 columns 0 indexes 2 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_broken_wraith.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_mean_azazel.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-5. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-5. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-5
+  cd /tmp/smithable-bench-m12-QEmtl1/app-5
   smithable run
 
-/tmp/smithable-bench-m12-C1pPFr/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
+/tmp/smithable-bench-m12-QEmtl1/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
 		return this.stmt.run(...params);
 		                 ^
 SqliteError: FOREIGN KEY constraint failed
-    at PreparedQuery.run (/tmp/smithable-bench-m12-C1pPFr/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-C1pPFr/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-C1pPFr/app-5/src/db/seed.ts:29:6)
+    at PreparedQuery.run (/tmp/smithable-bench-m12-QEmtl1/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
+    at QueryPromise.run (/tmp/smithable-bench-m12-QEmtl1/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
+    at <anonymous> (/tmp/smithable-bench-m12-QEmtl1/app-5/src/db/seed.ts:29:6)
     at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
     at async node:internal/modules/esm/loader:647:26
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
@@ -494,32 +470,49 @@ Could not add sample data; the app works without it.
 ### 6. Our cleaning company of three sends invoices to households every month; we need one place for them.
 
 ```text
+CleanSweep Invoicing
+  A shared place for our cleaning company to manage monthly invoices to households.
+
 Pages
-  - Clients (lists clients; search by name or email)
-  - Invoices (lists invoices; search by number or client; filter by status or client; “Mark sent”; “Mark paid”)
+  - Clients (lists clients)
+  - Invoice lines (lists invoice lines)
+  - Invoices (lists invoices; “Mark sent”; “Mark paid”)
   - Team (who has access: invite people, change roles, remove users)
 
 Clients
   Clients have:
   - a name (required)
-  - an email
+  - an email (required)
   - address
+  Each client lists its invoices.
+  Only admins can delete clients.
+
+Invoice lines
+  Invoice lines have:
+  - a description (required)
+  - a quantity (a number, required, 1 by default)
+  - a unit price (an amount, required)
+  - an invoice (an invoice, required)
+  The amount is calculated as the quantity times the unit price.
+  Only admins can delete invoice lines.
 
 Invoices
   Invoices have:
   - a number (required, unique)
   - a client (a client, required)
-  - issued on (a date, required)
-  - due on (a date, required)
-  - status (draft, sent or paid, draft by default)
-  - a total (an amount)
+  - issued on (a date, required, today by default)
+  - status (draft, sent, paid or overdue, draft by default)
+  The due on is calculated as the issued on plus 30 days.
+  Each invoice lists its invoice lines.
+  The total is calculated as the total amount of its lines.
+  Only admins can delete invoices.
 
 Mark sent
   For an invoice that is draft; sets status to sent.
   The invoice went to the client.
 
 Mark paid
-  For an invoice that is sent; sets status to paid.
+  For an invoice that is sent or overdue; sets status to paid.
   The client paid the invoice.
 
 Sign-in and access
@@ -530,23 +523,24 @@ Sign-in and access
   - member
   New users get the member role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 86 files (86 changed, 0 removed).
+Generated 91 files (91 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-6/drizzle.config.ts'
-7 tables
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-6/drizzle.config.ts'
+8 tables
 account 13 columns 1 indexes 1 fks
 clients 7 columns 0 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
+invoice_lines 9 columns 0 indexes 2 fks
 invoices 10 columns 1 indexes 2 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_parched_magneto.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_overrated_wallow.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-6. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-6. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-6
+  cd /tmp/smithable-bench-m12-QEmtl1/app-6
   smithable run
 ```
 
@@ -557,10 +551,10 @@ Town Flea Market
   A local marketplace where anyone can post things to sell with photos and a price.
 
 Pages
-  - Home (a landing page: hero, items where available is yes and footer)
   - Catalog (lists items; search by title, description or place; filter by category, price, condition or available; sort by price or date added; records can be saved as favorites; contact the owner by mail)
   - My items (lists items; only the viewer's own records)
   - Saved (lists items; only the viewer's saved records)
+  - Home (a landing page: hero, items and footer)
 
 Items
   Items have:
@@ -584,7 +578,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 88 files (88 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-7/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-7/drizzle.config.ts'
 6 tables
 account 13 columns 1 indexes 1 fks
 items 12 columns 0 indexes 1 fks
@@ -593,11 +587,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_crazy_genesis.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_square_nekra.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-7. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-7. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-7
+  cd /tmp/smithable-bench-m12-QEmtl1/app-7
   smithable run
 ```
 
@@ -608,10 +602,9 @@ Swap Shelf
   Colleagues offer things they no longer need and others claim them.
 
 Pages
-  - Catalog (lists items; search by title or description; filter by category, condition or available; sort by date added; records can be saved as favorites; contact the owner by mail)
+  - Items (lists items; search by title or description; filter by category, condition or available; sort by date added; records can be saved as favorites; contact the owner by mail)
   - My items (lists items; only the viewer's own records)
   - Saved (lists items; only the viewer's saved records)
-  - Home (a landing page: hero and footer)
   - Team (who has access: invite people, change roles, remove users)
 
 Items
@@ -619,7 +612,7 @@ Items
   - a title (required)
   - photos (pictures)
   - a description (required)
-  - a category (office, electronics, furniture, books or other, office by default)
+  - a category (furniture, electronics, books, kitchen or other, furniture by default)
   - a condition (like new, good or worn, like new by default)
   - an available (yes or no, true by default)
 
@@ -627,14 +620,13 @@ Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
-  - admin (Keeps the swap shelf tidy)
-  - member (Offers and claims items)
+  - admin
+  - member
   New users get the member role.
-  Open to anyone without signing in: the home page, the catalog page and reading items.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 92 files (92 changed, 0 removed).
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
+Generated 90 files (90 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-8/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-8/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
@@ -644,11 +636,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_solid_mother_askani.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_overrated_ozymandias.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-8. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-8. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-8
+  cd /tmp/smithable-bench-m12-QEmtl1/app-8
   smithable run
 ```
 
@@ -659,18 +651,17 @@ My Vinyl Collection
   A place to keep and show my vinyl record collection with albums, artists, condition and purchase price.
 
 Pages
-  - Home (a landing page: hero, albums and footer)
-  - Albums (lists albums; search by title, artist, catalog number or notes; filter by condition or year)
+  - Albums (lists albums; search by name, artist or notes; filter by condition or release year)
 
 Albums
   Albums have:
-  - a title (required)
+  - a name (required)
   - an artist (required)
-  - a year (a whole number)
   - a condition (mint, near mint, very good, good, fair or poor, mint by default)
-  - a price paid (an amount)
-  - a catalog number
+  - a purchase price (an amount)
+  - a release year (a whole number)
   - notes
+  - a cover image (a web address)
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -679,11 +670,11 @@ Sign-in and access
   - admin
   - member
   New users get the member role.
-  Open to anyone without signing in: the albums page, the home page and reading albums.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 75 files (75 changed, 0 removed).
+  Open to anyone without signing in: the albums page and reading albums.
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
+Generated 73 files (73 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-9/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-9/drizzle.config.ts'
 5 tables
 account 13 columns 1 indexes 1 fks
 albums 11 columns 0 indexes 1 fks
@@ -691,11 +682,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_third_ultimatum.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_square_black_crow.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-9. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-9. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-9
+  cd /tmp/smithable-bench-m12-QEmtl1/app-9
   smithable run
 ```
 
@@ -706,43 +697,47 @@ Local Museum Collection
   Browse the museum's objects and their stories online.
 
 Pages
-  - Home (a landing page: hero, artifacts where status is on display and footer)
-  - Artifacts (lists artifacts; search by name, description or story)
+  - Home (a landing page: hero, artifacts and footer)
+  - Artifacts (lists artifacts; search by name, description, period, origin or story)
 
 Artifacts
   Artifacts have:
   - a name (required)
   - a description
-  - a category
-  - a period
+  - a category (painting, sculpture, artifact or document, painting by default)
   - an image (a web address)
+  - a period
+  - an origin
   - a story
-  - status (on display, in storage or on loan, on display by default)
+  - added on (a date, required, today by default)
+  Only admins can add artifacts.
+  Only admins can change artifacts.
+  Only admins can delete artifacts.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
-  - admin
-  - member
-  New users get the member role.
+  - admin (Manages the museum collection)
+  - visitor (Browses the collection)
+  New users get the visitor role.
   Open to anyone without signing in: the home page, the artifacts page and reading artifacts.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 73 files (73 changed, 0 removed).
+Generated 74 files (74 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-10/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-10/drizzle.config.ts'
 5 tables
 account 13 columns 1 indexes 1 fks
-artifacts 11 columns 0 indexes 1 fks
+artifacts 12 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_fluffy_maestro.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_left_kulan_gath.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-10. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-10. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-10
+  cd /tmp/smithable-bench-m12-QEmtl1/app-10
   smithable run
 ```
 
@@ -750,13 +745,13 @@ Created /tmp/smithable-bench-m12-C1pPFr/app-10. Start it with:
 
 ```text
 IT Status Board
-  Internal status board for IT systems so staff see what is down and when it is back.
+  Internal status board for IT systems showing what is down and when it will be back.
 
 Pages
-  - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”; only for staff users and admins)
-  - Updates (lists incident updates; only for staff users and admins)
+  - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”)
+  - Updates (lists incident updates)
   - Components (lists components; only for admins)
-  - Maintenance (lists maintenances; only for staff users and admins)
+  - Maintenance (lists maintenances)
   - Team (who has access: invite people, change roles, remove users)
   - Admin (every kind of record, to find, open, change and delete)
 
@@ -766,6 +761,9 @@ Components
   - status (operational, degraded, down or maintenance, operational by default)
   - a description
   Each component lists its incidents.
+  Only admins can see components.
+  Only admins can add components.
+  Only admins can change components.
   Only admins can delete components.
 
 Incidents
@@ -777,7 +775,10 @@ Incidents
   - resolved at (a date and time)
   - a summary (formatted text)
   Each incident lists its incident updates.
-  Only admins can delete incidents.
+  Only staff users and admins can see incidents.
+  Only staff users and admins can add incidents.
+  Only staff users and admins can change incidents.
+  Only staff users and admins can delete incidents.
 
 Incident updates
   Incident updates have:
@@ -785,7 +786,10 @@ Incident updates
   - a date and time (at, required)
   - status (investigating, identified, monitoring or resolved, investigating by default)
   - a message (required)
-  Only admins can delete incident updates.
+  Only staff users and admins can see incident updates.
+  Only staff users and admins can add incident updates.
+  Only staff users and admins can change incident updates.
+  Only staff users and admins can delete incident updates.
 
 Maintenances
   Maintenances have:
@@ -794,19 +798,25 @@ Maintenances
   - starts at (a date and time, required)
   - ends at (a date and time, required)
   - a description
-  Only admins can delete maintenances.
+  Only staff users and admins can see maintenances.
+  Only staff users and admins can add maintenances.
+  Only staff users and admins can change maintenances.
+  Only staff users and admins can delete maintenances.
 
 Identified
   For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).
   The cause is found; the incident moves to identified, with an update saying so.
+  Only staff users and admins can use it.
 
 Monitoring
   For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).
   A fix is out; the incident is watched before it is closed, with an update saying so.
+  Only staff users and admins can use it.
 
 Resolve
   For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).
   The incident is over, with an update saying so.
+  Only staff users and admins can use it.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -818,7 +828,7 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 111 files (111 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-11/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-11/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 components 7 columns 0 indexes 1 fks
@@ -830,29 +840,29 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_new_nomad.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_cultured_bloodscream.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-11. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-11. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-11
+  cd /tmp/smithable-bench-m12-QEmtl1/app-11
   smithable run
 ```
 
 ### 12. Service status for our municipality's online services, for residents to check outages.
 
 ```text
-Municipal Service Status
+Municipality Service Status
   Check the current status and outages of our municipality's online services.
 
 Pages
-  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring and footer)
-  - Incidents (lists incidents; only for staff users and admins; visitors see incidents on the Home page)
-  - Updates (lists incident updates; only for staff users and admins)
-  - Components (lists components; only for admins; visitors see components on the Home page)
-  - Maintenance (lists maintenances; only for staff users and admins)
+  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)
   - History (lists incidents)
-  - Team (who has access: invite people, change roles, remove users)
-  - Admin (every kind of record, to find, open, change and delete)
+  - Incidents (lists incidents; search by title or summary; filter by status or component; sort by title, detected at, resolved at or status)
+  - Updates (lists incident updates)
+  - Components (lists components; search by name or description; filter by status; only for admins; visitors see components on the Home page)
+  - Maintenance (lists maintenances; filter by component)
+  - Overview (lists incidents)
+  - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Components
   Components have:
@@ -906,14 +916,14 @@ Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin (Runs the status page and the team)
+  - admin (Runs the service status page and the team)
   - staff (Writes incidents and their updates)
   New users get the staff role.
   Open to anyone without signing in: the home page, the history page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 116 files (116 changed, 0 removed).
+Generated 108 files (108 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-12/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-12/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 components 7 columns 0 indexes 1 fks
@@ -925,11 +935,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_tricky_killraven.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_red_thunderball.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-12. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-12. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-12
+  cd /tmp/smithable-bench-m12-QEmtl1/app-12
   smithable run
 ```
 
@@ -940,33 +950,34 @@ Car Log
   A log of my car's fuel, service visits and costs.
 
 Pages
-  - Fuel (lists fuels)
-  - Service (lists services)
+  - Fuel entries (lists fuel entries)
+  - Service visits (lists service visits)
   - Costs (lists costs)
 
-Fuels
-  Fuels have:
+Fuel entries
+  Fuel entries have:
   - a date (required)
   - an odometer (a whole number, required)
   - liters (a number, required)
   - a cost (an amount)
   - notes
 
-Services
-  Services have:
+Service visits
+  Service visits have:
   - a date (required)
   - an odometer (a whole number, required)
-  - a description (required)
+  - a provider (required)
+  - a description
   - a cost (an amount)
   - notes
 
 Costs
   Costs have:
   - a date (required)
-  - a description (required)
+  - a category (required)
   - an amount (an amount, required)
-  - a category (fuel, service or other, fuel by default)
-  - notes
+  - a description
+  - a receipt (a web address)
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -978,21 +989,21 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 81 files (81 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-13/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-13/drizzle.config.ts'
 7 tables
 account 13 columns 1 indexes 1 fks
 costs 9 columns 0 indexes 1 fks
-fuels 9 columns 0 indexes 1 fks
-services 9 columns 0 indexes 1 fks
+fuel_entries 9 columns 0 indexes 1 fks
+service_visits 10 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_curious_thunderbolt.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_neat_silver_samurai.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-13. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-13. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-13
+  cd /tmp/smithable-bench-m12-QEmtl1/app-13
   smithable run
 ```
 
@@ -1003,43 +1014,31 @@ Wedding Guest List
   Manage the guest list and seating plan for our wedding, with RSVPs and meal choices.
 
 Pages
-  - Our Wedding (a landing page: hero and footer)
-  - Guests (lists guests; search by full name, email or group; sort by full name, table number or attending; “Confirm attendance”; “Decline attendance”; only for admins)
+  - Guests (lists guests; search by name, email, seating table or group)
   - Team (who has access: invite people, change roles, remove users)
 
 Guests
   Guests have:
-  - a full name (required)
+  - a name (required)
   - an email
   - a phone
   - an attending (yes, no or maybe, yes by default)
-  - a meal choice (vegetarian, standard, vegan or gluten-free, vegetarian by default)
-  - a table number (a whole number)
+  - a meal choice (vegetarian, meat, fish or vegan, vegetarian by default)
+  - a seating table
   - notes
   - a group
-  Only admins can delete guests.
-  Only the owner and admins can change guests.
-
-Confirm attendance
-  For a guest that is maybe; sets attending to yes.
-  Confirm the guest's attendance.
-
-Decline attendance
-  For a guest that is maybe; sets attending to no.
-  Decline the invitation.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin (Manages the guest list and seating)
-  - guest (Views their own RSVP)
-  New users get the guest role.
-  Open to anyone without signing in: the home page.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 83 files (83 changed, 0 removed).
+  - admin
+  - member
+  New users get the member role.
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
+Generated 75 files (75 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-14/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-14/drizzle.config.ts'
 6 tables
 account 13 columns 1 indexes 1 fks
 guests 12 columns 0 indexes 1 fks
@@ -1048,11 +1047,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_chilly_xavin.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_loud_radioactive_man.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-14. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-14. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-14
+  cd /tmp/smithable-bench-m12-QEmtl1/app-14
   smithable run
 ```
 
@@ -1060,7 +1059,7 @@ Created /tmp/smithable-bench-m12-C1pPFr/app-14. Start it with:
 
 ```text
 Bird Sightings
-  A place for our birdwatching club to record and share bird sightings.
+  A place to record and share bird sightings for our birdwatching club.
 
 Pages
   - Home (a landing page: hero, sightings and footer)
@@ -1081,11 +1080,11 @@ Sign-in and access
   - admin
   - member
   New users get the member role.
-  Open to anyone without signing in: the home page, the sightings page and reading sightings.
+  Open to anyone without signing in: the sightings page, the home page and reading sightings.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
 Generated 77 files (77 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-15/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-15/drizzle.config.ts'
 6 tables
 account 13 columns 1 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
@@ -1094,29 +1093,29 @@ sightings 8 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_robust_carnage.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_loud_nitro.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-15. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-15. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-15
+  cd /tmp/smithable-bench-m12-QEmtl1/app-15
   smithable run
 ```
 
 ### 16. Our allotment society: who has which plot, the waiting list and the yearly fee.
 
 ```text
-Allotment Society
-  Manage plots, waiting list and yearly fees for the allotment society.
+Our Allotment Society
+  Track who has which plot, the waiting list and yearly fees for the allotment society.
 
 Pages
-  - Plots (lists plots; search by plot number, size or notes; filter by status)
-  - Waiting list (lists waiting list; search by name, email or notes; filter by status)
-  - Fees (lists yearly fees; filter by status or year)
+  - Plots (lists plots; search by number or notes; filter by status; “Reserve plot”; “Assign plot”; “Mark as available”; only for member users and admins)
+  - Waiting list (lists waiting lists; search by name, email or notes; filter by status; “Assign from waiting list”; only for admins)
+  - Fees (lists fees; filter by year or status; “Mark as paid”; “Mark as overdue”; only for member users and admins)
   - Team (who has access: invite people, change roles, remove users)
 
 Plots
   Plots have:
-  - a plot number (required, unique)
+  - a number (required, unique)
   - a size
   - status (available, assigned or reserved, available by default)
   - notes
@@ -1124,38 +1123,62 @@ Plots
   Only admins can delete plots.
   Only admins can change plots.
 
-Waiting List
-  Waiting List have:
+Waiting lists
+  Waiting lists have:
   - a name (required)
   - an email (required)
   - a phone
   - a date added (required, today by default)
   - status (active, assigned or withdrawn, active by default)
   - notes
-  Only admins can delete waiting list.
-  Only admins can change waiting list.
+  Only admins can delete waiting lists.
+  Only admins can change waiting lists.
 
-Yearly Fees
-  Yearly Fees have:
+Fees
+  Fees have:
   - a year (a whole number, required, unique)
   - an amount (an amount, required)
   - a due date (required)
-  - status (open, paid or overdue, open by default)
+  - status (pending, paid or overdue, pending by default)
   - notes
-  Only admins can delete yearly fees.
-  Only admins can change yearly fees.
+  Only admins can delete fees.
+  Only admins can change fees.
+
+Reserve plot
+  For a plot that is available; sets status to reserved.
+  Reserve this plot temporarily.
+
+Assign from waiting list
+  For a waiting list that is active; sets status to assigned.
+  Assign a plot to this person from the waiting list.
+
+Mark as paid
+  For a fee that is pending or overdue; sets status to paid.
+  Mark this fee as paid.
+
+Mark as overdue
+  For a fee that is pending; sets status to overdue.
+  Mark this fee as overdue.
+
+Assign plot
+  For a plot that is available or reserved; sets status to assigned and holder to whoever presses it.
+  Assign this plot to a member.
+
+Mark as available
+  For a plot that is assigned; sets status to available.
+  Mark this plot as available.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin (Manages the society)
-  - member (Member of the society)
+  - admin (Manages plots, waiting list, and fees)
+  - member (Views plots and fees)
   New users get the member role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 89 files (89 changed, 0 removed).
+Generated 101 files (101 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-16/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-16/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 fees 9 columns 1 indexes 1 fks
@@ -1166,11 +1189,11 @@ user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 waiting_lists 10 columns 0 indexes 1 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_thankful_stryfe.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_stormy_firedrake.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-16. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-16. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-16
+  cd /tmp/smithable-bench-m12-QEmtl1/app-16
   smithable run
 ```
 
@@ -1181,12 +1204,12 @@ Min Frisörsalong
   Onlinebokning för frisörsalong där kunder kan boka tid själva.
 
 Pages
-  - Välkommen till Min Frisörsalong (a landing page: hero, tjänster, stylister and footer)
-  - Tjänster (lists tjänster; only for admins; visitors see tjänster on the Välkommen till Min Frisörsalong page)
-  - Stylister (lists stylister; only for admins; visitors see stylister on the Välkommen till Min Frisörsalong page)
+  - Min Frisörsalong (a landing page: hero, tjänster, frisörer and footer)
+  - Tjänster (lists tjänster; only for admins; visitors see tjänster on the Min Frisörsalong page)
+  - Frisörer (lists frisörer; only for admins; visitors see frisörer on the Min Frisörsalong page)
   - Tider (lists tider; only for admins)
-  - Mina bokningar (lists bokningar; only for customer users and admins)
-  - Schema (a calendar of appointments by week or month)
+  - Mina bokningar (lists bokningar)
+  - Schema (a calendar of sessions by week or month)
 
 Tjänster
   Tjänster have:
@@ -1194,29 +1217,23 @@ Tjänster
   - a beskrivning
   - a varaktighet (minuter) (a whole number, required, 30 by default)
   - pris (an amount, required)
-  Only admins can add tjänster.
-  Only admins can change tjänster.
   Only admins can delete tjänster.
 
-Stylister
-  Stylister have:
+Frisörer
+  Frisörer have:
   - a namn (required)
-  - an om stylisten
-  - a porträtt (picture)
-  Only admins can add stylister.
-  Only admins can change stylister.
-  Only admins can delete stylister.
+  - an om mig
+  - a bild (picture)
+  Only admins can delete frisörer.
 
 Tider
   Tider have:
   - a tjänst (a tjänst, required)
-  - a stylist (a stylist, required)
+  - a frisör (a frisör, required)
   - a starttid (a date and time, required)
   - a kapacitet (a whole number, required, 1 by default)
   Each tid lists its bokningar.
   The places left is calculated as the kapacitet minus the number of its bookings.
-  Only admins can add tider.
-  Only admins can change tider.
   Only admins can delete tider.
 
 Bokningar
@@ -1225,38 +1242,36 @@ Bokningar
   - a namn (required)
   - an e-post (an email address, required)
   - a telefon (a phone number)
-  Only customer users and admins can add bokningar.
-  Only the owner and admins can see bokningar.
-  Only the owner and admins can change bokningar.
-  Only the owner and admins can delete bokningar.
+  - a meddelande
+  At most the session's capacity bokningar per session.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
-  - admin (Salongsägare eller personal som hanterar bokningar och tjänster)
+  - admin (Salongsägare eller personal som hanterar schema och tjänster)
   - customer (Kund som bokar tider)
   New users get the customer role.
-  Open to anyone without signing in: the hem page, the schema page, reading services, reading stylists and reading appointments.
+  Open to anyone without signing in: the home page, the schedule page, reading services, reading stylists, reading sessions and adding bookings.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 97 files (97 changed, 0 removed).
+Generated 98 files (98 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-17/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-17/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
-appointments 9 columns 0 indexes 3 fks
-bookings 8 columns 1 indexes 2 fks
+bookings 9 columns 1 indexes 2 fks
 services 8 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
+sessions 9 columns 0 indexes 3 fks
 stylists 7 columns 0 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_gorgeous_shatterstar.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_lame_spiral.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-17. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-17. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-17
+  cd /tmp/smithable-bench-m12-QEmtl1/app-17
   smithable run
 ```
 
@@ -1267,32 +1282,29 @@ Byggfirma CRM
   Ett enkelt CRM-system för en liten byggfirma för att hantera offerter, kunder och fakturor.
 
 Pages
-  - Offerter (lists offerter; search by offertnummer or kund; filter by status or kund; sort by offertnummer, totalt, giltig till or date added; “Send quote”; “Accept quote”; “Reject quote”)
-  - Fakturor (lists fakturor; search by fakturanummer or kund; filter by status or kund; sort by fakturanummer, totalt, förfallodatum or date added; “Send invoice”; “Mark as paid”)
-  - Team (who has access: invite people, change roles, remove users)
+  - Offerter (lists offerter; search by offertnummer or kund; filter by status or kund; sort by offertnummer, totalt belopp, giltig till or date added; “Accept quote”; “Reject quote”; “Send quote”)
+  - Fakturor (lists fakturor; search by fakturanummer or kund; filter by status or kund; sort by fakturanummer, totalt belopp, förfallodatum or date added; “Mark invoice paid”; “Send invoice”)
   - Kunder (lists kunder; search by namn or e-post; sort by namn or date added)
+  - Team (who has access: invite people, change roles, remove users)
 
 Offerter
   Offerter have:
   - an offertnummer (required, unique)
   - status (utkast, skickad, accepterad or avvisad, utkast by default)
-  - a totalt (an amount, required)
+  - a totalt belopp (an amount, required)
+  - a beskrivning
   - a giltig till (a date)
-  - an anteckningar
   - a kund (a kund, required)
-  Only admins can delete offerter.
 
 Fakturor
   Fakturor have:
   - a fakturanummer (required, unique)
   - an offert (an offert)
   - status (utkast, skickad, betald or försenad, utkast by default)
-  - a totalt (an amount, required)
+  - a totalt belopp (an amount, required)
   - a förfallodatum (a date)
   - a betald datum (a date and time)
-  - an anteckningar
   - a kund (a kund, required)
-  Only admins can delete fakturor.
 
 Kunder
   Kunder have:
@@ -1302,54 +1314,53 @@ Kunder
   - a segment (privat, företag or kommun, privat by default)
   - an anteckningar
   Each kund can have an ansvarig säljare (a user).
-  Only admins can delete kunder.
-
-Send quote
-  For an offert that is utkast; sets status to skickad.
-  Skicka offert till kund.
 
 Accept quote
   For an offert that is skickad; sets status to accepterad.
-  Acceptera offert.
+  Acceptera en offert.
 
 Reject quote
   For an offert that is skickad; sets status to avvisad.
-  Avvisa offert.
+  Avvisa en offert.
+
+Mark invoice paid
+  For a faktura that is skickad; sets status to betald and betald datum to now.
+  Markera en faktura som betald.
+
+Send quote
+  For an offert that is utkast; sets status to skickad.
+  Skicka en offert till kunden.
 
 Send invoice
   For a faktura that is utkast; sets status to skickad.
-  Skicka faktura till kund.
-
-Mark as paid
-  For a faktura that is skickad; sets status to betald and betald datum to now.
-  Markera faktura som betald.
+  Skicka en faktura till kunden.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
-  - admin (Administratör. Full åtkomst)
-  - sales (Säljare. Hanterar kunder, offerter och fakturor)
-  New users get the sales role.
+  - admin
+  - member
+  New users get the member role.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 98 files (98 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-18/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-18/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 customers 10 columns 1 indexes 2 fks
 invitation 7 columns 2 indexes 1 fks
-invoices 12 columns 1 indexes 3 fks
+invoices 11 columns 1 indexes 3 fks
 quotes 10 columns 1 indexes 2 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_wonderful_kingpin.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_lively_nomad.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-18. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-18. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-18
+  cd /tmp/smithable-bench-m12-QEmtl1/app-18
   smithable run
 ```
 
@@ -1360,9 +1371,10 @@ Vår Loppis
   En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.
 
 Pages
-  - Home (a landing page: hero, saker where available is yes and footer)
-  - Catalog (lists saker; search by titel, beskrivning or plats; filter by kategori, pris, skick or tillgänglig; sort by pris or date added; records can be saved as favorites; contact the owner by mail)
-  - My items (lists saker; only the viewer's own records)
+  - Saker att köpa (lists saker; search by titel, beskrivning or plats; filter by kategori, pris, skick or tillgänglig; sort by pris or date added; records can be saved as favorites; contact the owner by mail)
+  - Välkommen till Vår Loppis (a landing page: hero, saker where available is yes and footer)
+  - Mina saker (lists saker; only the viewer's own records)
+  - Sparade saker (lists saker; only the viewer's saved records)
 
 Saker
   Saker have:
@@ -1370,8 +1382,8 @@ Saker
   - a bilder (pictures)
   - a beskrivning (required)
   - pris (an amount)
-  - a kategori (kläder, möbler, leksaker, böcker, elektronik, sport or annat, kläder by default)
-  - a skick (ny, som ny, bra or sliten, ny by default)
+  - a kategori (kläder, möbler, leksaker, böcker, elektronik, sport or övrigt, kläder by default)
+  - a skick (ny, nästan ny, bra or sliten, ny by default)
   - plats
   - a tillgänglig (yes or no, true by default)
 
@@ -1379,14 +1391,14 @@ Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
-  - admin (Håller loppis sidan ren och snygg)
+  - admin (Håller loppis-sidan ren och snygg)
   - member (Lägger upp och sparar saker)
   New users get the member role.
   Open to anyone without signing in: the home page, the catalog page and reading items.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 85 files (85 changed, 0 removed).
+Generated 88 files (88 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-19/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-19/drizzle.config.ts'
 6 tables
 account 13 columns 1 indexes 1 fks
 items 12 columns 0 indexes 1 fks
@@ -1395,11 +1407,11 @@ session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_nebulous_the_captain.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_milky_speedball.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-19. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-19. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-19
+  cd /tmp/smithable-bench-m12-QEmtl1/app-19
   smithable run
 ```
 
@@ -1410,21 +1422,21 @@ Joogastudio
   Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa.
 
 Pages
-  - Joogastudio (a landing page: hero, luokkatyypit, call to action and footer)
-  - Luokkatyypit (lists luokkatyypit; only for admins; visitors see luokkatyypit on the Joogastudio page)
+  - Joogastudio (a landing page: hero, tunnin tyypit, contact, call to action and footer)
+  - Tunnin tyypit (lists tunnin tyypit; only for admins; visitors see tunnin tyypit on the Joogastudio page)
   - Ohjaajat (lists ohjaajat; only for admins)
   - Tunnit (lists tunnit; only for admins)
   - Omat varaukset (lists varaukset; only for member users and admins)
-  - Aikataulu (a calendar of sessions by week or month)
-  - Team (who has access: invite people, change roles, remove users)
+  - Viestit (lists viestit; only for admins)
+  - Aikataulu (lists tunnit)
 
-Luokkatyypit
-  Luokkatyypit have:
+Tunnin tyypit
+  Tunnin tyypit have:
   - a nimi (required)
   - kuvaus
   - a taso (aloittelija, kaikki tasot or edistynyt, aloittelija by default)
   - a kesto (minuuttia) (a whole number, required, 60 by default)
-  Only admins can add luokkatyypit.
+  Only admins can add tunnin tyypit.
 
 Ohjaajat
   Ohjaajat have:
@@ -1435,12 +1447,12 @@ Ohjaajat
 
 Tunnit
   Tunnit have:
-  - a luokkatyyppi (a luokkatyyppi, required)
+  - a tunnin tyyppi (a tunnin tyyppi, required)
   - an ohjaaja (an ohjaaja, required)
   - an aloitusaika (a date and time, required)
-  - a kapasiteetti (a whole number, required, 12 by default)
+  - a paikkojen määrä (a whole number, required, 12 by default)
   Each tunti lists its varaukset.
-  The places left is calculated as the kapasiteetti minus the number of its bookings.
+  The vapaat paikat is calculated as the paikkojen määrä minus the number of its bookings.
   Only admins can add tunnit.
 
 Varaukset
@@ -1448,121 +1460,58 @@ Varaukset
   - a tunti (a tunti, required, unique)
   At most the session's capacity varaukset per session.
 
+Viestit
+  Viestit have:
+  - a nimi (required)
+  - a sähköposti (an email address, required)
+  - a viesti (required)
+  Only admins can see viestit.
+  Only admins can change viestit.
+  Only admins can delete viestit.
+
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees and changes only their own records.
   Roles:
-  - admin (Studiomme työntekijä. Hallinnoi tunnit, luokkatyypit ja ohjaajat)
+  - admin (Studiomme työntekijä. Hallinnoi tunnit, luokat ja opettajat)
   - member (Opiskelija, joka varaa tunteja)
   New users get the member role.
-  Open to anyone without signing in: the home page, the schedule page, reading class types, reading instructors and reading sessions.
+  Open to anyone without signing in: the home page, the schedule page, reading class types, reading instructors, reading sessions and adding messages.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 104 files (104 changed, 0 removed).
+Generated 106 files (106 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-20/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-20/drizzle.config.ts'
 9 tables
 account 13 columns 1 indexes 1 fks
 bookings 5 columns 1 indexes 2 fks
 class_types 8 columns 0 indexes 1 fks
 instructors 7 columns 0 indexes 1 fks
-invitation 7 columns 2 indexes 1 fks
+messages 7 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 sessions 9 columns 0 indexes 3 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_concerned_magik.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_tired_stellaris.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-20. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-20. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-20
+  cd /tmp/smithable-bench-m12-QEmtl1/app-20
   smithable run
 ```
 
 ### 21. Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
 
+Failed:
+
 ```text
-Pieni autokorjaamo
-  Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
+odel (mistral-medium-latest) · 42,479 tokens · €0.0234
+No model drafted a valid project.
+addModel: addModel would make smithable.yml invalid. "owner" is added to every model automatically, so it cannot be declared. Every record already has an owner: whoever created it. To make someone else the owner, add a user field (like "lender: User") and "ownedBy: lender".
+addPage: There is no model named "Car".
+addField: addField would make smithable.yml invalid. There is no model named "Car".
+Without a model, start from a starter: smithable new /tmp/smithable-bench-m12-QEmtl1/app-21 --starter invoicing
 
-Pages
-  - Asiakkaat (lists asiakkaat; search by nimi, sähköposti or puhelinnumero)
-  - Autot (lists autot; search by rekisterinumero, merkki or malli)
-  - Huoltotyöt (lists huoltotyöt; search by kuvaus; filter by tila or auto)
-  - Laskut (lists laskut; filter by tila or asiakas; “Mark sent”; “Mark paid”)
-
-Asiakkaat
-  Asiakkaat have:
-  - a nimi (required)
-  - a sähköposti (an email address)
-  - a puhelinnumero (a phone number)
-  - an osoite
-  Each asiakas lists its autot.
-
-Autot
-  Autot have:
-  - a rekisterinumero (required, unique)
-  - a merkki (required)
-  - a malli (required)
-  - a vuosimalli (a whole number)
-  - asiakas (an asiakas, required)
-  Each auto lists its huoltotyöt.
-
-Huoltotyöt
-  Huoltotyöt have:
-  - an auto (an auto, required)
-  - kuvaus (required)
-  - a tila (odottaa, käynnissä, valmis or peruutettu, odottaa by default)
-  - an alkamispäivä (a date)
-  - a päätöspäivä (a date)
-  - kokonaiskustannus (an amount)
-  - a lasku (a lasku)
-
-Laskut
-  Laskut have:
-  - a laskun numero (required, unique)
-  - asiakas (an asiakas, required)
-  - a laskutuspäivä (a date, required, today by default)
-  - an eräpäivä (a date)
-  - a tila (luonnos, lähetetty, maksettu or myöhästynyt, luonnos by default)
-  Each lasku lists its huoltotyöt.
-  The yhteensä is calculated as the total kokonaiskustannus of its huoltotyöt.
-
-Mark sent
-  For a lasku that is luonnos; sets tila to lähetetty.
-  Lasku lähetetty asiakkaalle.
-
-Mark paid
-  For a lasku that is lähetetty or myöhästynyt; sets tila to maksettu.
-  Asiakas on maksanut laskun.
-
-Sign-in and access
-  People sign in with a code sent to their email.
-  Everyone sees and changes only their own records.
-  Roles:
-  - admin
-  - member
-  New users get the member role.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
-Generated 93 files (93 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-21/drizzle.config.ts'
-8 tables
-account 13 columns 1 indexes 1 fks
-cars 9 columns 1 indexes 2 fks
-customers 8 columns 0 indexes 1 fks
-invoices 10 columns 1 indexes 2 fks
-service_jobs 11 columns 0 indexes 3 fks
-session 8 columns 2 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
-
-[✓] Your SQL migration file ➜ drizzle/0000_grey_outlaw_kid.sql 🚀
-
-Created /tmp/smithable-bench-m12-C1pPFr/app-21. Start it with:
-
-  cd /tmp/smithable-bench-m12-C1pPFr/app-21
-  smithable run
 ```
 
 ### 22. Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.
@@ -1572,46 +1521,51 @@ Hofladen
   Verwaltung von Produkten, Vorbestellungen und Abholzeiten für einen kleinen Hofladen.
 
 Pages
-  - Abholzeiten (lists abholzeiten; filter by datum)
   - Produkte (lists produkte; search by name or kategorie)
-  - Vorbestellungen (lists vorbestellungen; search by kundenname or kundentelefon; filter by status, abholdatum or produkt; “Confirm pre order”; “Mark as picked up”; “Cancel pre order”)
+  - Vorbestellungen (lists vorbestellungen; search by kundenname, kunden-e-mail or produkt; filter by status, abholdatum or produkt; sort by bestelldatum, abholdatum or kundenname; “Confirm pre order”; “Mark as picked up”; “Cancel pre order”)
+  - Abholzeiten (lists abholzeiten)
   - Team (who has access: invite people, change roles, remove users)
-
-Abholzeiten
-  Abholzeiten have:
-  - a datum (a date, required)
-  - a beginn (required)
-  - an ende (required)
-  - a notizen
 
 Produkte
   Produkte have:
   - a name (required)
   - a beschreibung
   - preis (an amount, required)
-  - a kategorie (obst, gemüse, backwaren or sonstiges, obst by default)
+  - a kategorie
   - a verfügbar (yes or no, true by default)
-  - a bild-url
+  - a bild (a web address)
 
 Vorbestellungen
   Vorbestellungen have:
   - a kundenname (required)
+  - a kunden-e-mail (an email address)
   - a kundentelefon (a phone number)
   - a produkt (a produkt, required)
   - a menge (a whole number, required)
   - a bestelldatum (a date, today by default)
   - an abholdatum (a date, required)
-  - status (offen, bestätigt, abgeholt or storniert, offen by default)
+  - status (ausstehend, bestätigt, abgeholt or storniert, ausstehend by default)
+  - a notizen
+
+Abholzeiten
+  Abholzeiten have:
+  - a datum (a date, required)
+  - a beginn (required)
+  - an ende (required)
+  - a maximale plätze (a whole number, required, 10 by default)
   - a notizen
 
 Confirm pre order
-  For a vorbestellung that is offen; sets status to bestätigt.
+  For a vorbestellung that is ausstehend; sets status to bestätigt.
+  Bestätige die Vorbestellung.
 
 Mark as picked up
   For a vorbestellung that is bestätigt; sets status to abgeholt.
+  Markiere die Vorbestellung als abgeholt.
 
 Cancel pre order
-  For a vorbestellung that is offen or bestätigt; sets status to storniert.
+  For a vorbestellung that is ausstehend or bestätigt; sets status to storniert.
+  Storniere die Vorbestellung.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -1623,21 +1577,21 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.
 Generated 94 files (94 changed, 0 removed).
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-C1pPFr/app-22/drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-QEmtl1/app-22/drizzle.config.ts'
 8 tables
 account 13 columns 1 indexes 1 fks
 invitation 7 columns 2 indexes 1 fks
-pickup_times 8 columns 0 indexes 1 fks
-pre_orders 12 columns 0 indexes 2 fks
+pickup_times 9 columns 0 indexes 1 fks
+pre_orders 13 columns 0 indexes 2 fks
 products 10 columns 0 indexes 1 fks
 session 8 columns 2 indexes 1 fks
 user 8 columns 1 indexes 0 fks
 verification 6 columns 1 indexes 0 fks
 
-[✓] Your SQL migration file ➜ drizzle/0000_magical_bromley.sql 🚀
+[✓] Your SQL migration file ➜ drizzle/0000_fat_gwen_stacy.sql 🚀
 
-Created /tmp/smithable-bench-m12-C1pPFr/app-22. Start it with:
+Created /tmp/smithable-bench-m12-QEmtl1/app-22. Start it with:
 
-  cd /tmp/smithable-bench-m12-C1pPFr/app-22
+  cd /tmp/smithable-bench-m12-QEmtl1/app-22
   smithable run
 ```
