@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { STACK_PROFILE } from "@smithable/adapter-tanstack";
+import { affected, lockedVersions, type Read, readAdvisories } from "./advisories.js";
 import { appName } from "./build.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
@@ -51,6 +53,8 @@ export interface Result {
   ok: boolean;
   /** One line per finding, or why the check could not run. */
   findings: string[];
+  /** Said at every run though nothing fails for it: an advisory accepted, with why. */
+  notes?: string[];
 }
 
 const has = (command: string) =>
@@ -126,6 +130,66 @@ function dependencies(dir: string): Result {
     ),
   );
   return { what: TOOLS.osv.what, by: r.by, ok: findings.length === 0, findings };
+}
+
+/** What was read from the packages' advisory lists, kept an hour: GitHub answers sixty calls an hour without a token. */
+const ADVISORIES = "data/.smithable/advisories.json";
+
+/**
+ * Holes the packages' own repositories have published (advisories.ts), which the databases list
+ * days later: the lists of what package.json names, against every installed version.
+ */
+export async function published(
+  dir: string,
+  read: typeof readAdvisories = readAdvisories,
+  accepted: Record<string, string> = STACK_PROFILE.advisories,
+): Promise<Result> {
+  const result = { what: "Dependencies, at their source", by: "the packages' advisory lists" };
+  const manifest = parse<Record<"dependencies" | "devDependencies", Record<string, string>>>(
+    readFileSync(join(dir, "package.json"), "utf8"),
+  );
+  const named = { ...manifest?.dependencies, ...manifest?.devDependencies };
+  const lock = join(dir, "pnpm-lock.yaml");
+  const versions = lockedVersions(existsSync(lock) ? readFileSync(lock, "utf8") : "");
+  // Not installed yet: package.json's own versions (Smithable pins them exactly).
+  for (const [name, version] of Object.entries(named))
+    if (!versions.has(name) && /^\d/.test(version)) versions.set(name, [version]);
+  const packages = Object.fromEntries(
+    Object.keys(named).flatMap((name) => {
+      const version = versions.get(name)?.[0];
+      return version ? [[name, version]] : [];
+    }),
+  );
+  const key = JSON.stringify(packages);
+  const file = join(dir, ADVISORIES);
+  const kept = existsSync(file)
+    ? parse<{ at: number; key: string; read: Read }>(readFileSync(file, "utf8"))
+    : undefined;
+  const fresh = kept && kept.key === key && Date.now() - kept.at < 3_600_000;
+  const lists = fresh
+    ? kept.read
+    : await read(packages, { token: process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN });
+  if (!fresh && !lists.unread.length) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ at: Date.now(), key, read: lists }));
+  }
+  const findings = affected(
+    versions,
+    lists.advisories.filter((a) => !(a.id in accepted)),
+  );
+  if (lists.unread.length)
+    findings.push(
+      `Not read, so not checked: ${lists.unread.join(", ")} (no network, or GitHub's hourly limit: set GITHUB_TOKEN to any token).`,
+    );
+  // Shown at every run, never hidden: what was looked at and found not to reach the app.
+  const notes = lists.advisories
+    .filter((a) => a.id in accepted)
+    .flatMap((a) =>
+      affected(versions, [a]).map(
+        (line) => `Accepted, since ${accepted[a.id]}: ${line.split(";")[0]}`,
+      ),
+    );
+  return { ...result, ok: findings.length === 0, findings, notes };
 }
 
 /** Where scan reports go while they are read: ignored by Git, since they can quote secrets. */
@@ -271,14 +335,14 @@ function command(dir: string, what: string, args: string[]): Result {
  * The checks of a level. Release also needs the built image and the app running: `release`
  * gives their name and address.
  */
-export function checks(
+export async function checks(
   dir: string,
   level: Level,
   release?: { image: string; url: string },
-): Result[] {
+): Promise<Result[]> {
   const results = [command(dir, "Type check", ["typecheck"]), command(dir, "Tests", ["test"])];
   if (level === "fast") return results;
-  results.push(dependencies(dir), secrets(dir), code(dir));
+  results.push(dependencies(dir), await published(dir), secrets(dir), code(dir));
   if (level === "normal") return results;
   if (!release) throw new Error("Release checks need the built image and the running app.");
   results.push(
@@ -297,6 +361,7 @@ export function report(io: Io, level: Level, results: Result[]): number {
     );
     for (const f of r.findings.slice(0, 20)) io.out(`      ${f}\n`);
     if (r.findings.length > 20) io.out(`      … and ${r.findings.length - 20} more\n`);
+    for (const note of r.notes ?? []) io.out(`      ${note}\n`);
   }
   const failed = results.filter((r) => !r.ok).length;
   io.out(
@@ -313,7 +378,7 @@ export function report(io: Io, level: Level, results: Result[]): number {
  * scanned.
  */
 export async function security(dir: string, io: Io, level: Level): Promise<number> {
-  if (level !== "release") return report(io, level, checks(dir, level));
+  if (level !== "release") return report(io, level, await checks(dir, level));
   const name = appName(dir);
   const docker = (args: string[]) => spawnSync("docker", args, { cwd: dir, encoding: "utf8" });
   if (!has("docker")) {
@@ -354,7 +419,7 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
       } catch {}
       await new Promise((r) => setTimeout(r, 500));
     }
-    return report(io, level, checks(dir, level, { image: name, url }));
+    return report(io, level, await checks(dir, level, { image: name, url }));
   } finally {
     docker(["rm", "-f", container]);
   }
@@ -376,7 +441,7 @@ export async function updateSecurity(dir: string, io: Io): Promise<number> {
     discardChanges(dir);
     return 1;
   }
-  const code = report(io, "normal", checks(dir, "normal"));
+  const code = report(io, "normal", await checks(dir, "normal"));
   if (code !== 0) {
     discardChanges(dir);
     io.err("The update was undone: fix the findings above, or update the dependency by hand.\n");
