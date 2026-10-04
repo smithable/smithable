@@ -59,7 +59,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     .add("@tanstack/react-start", "createServerFn")
     .add("drizzle-orm", "and", "gte", "lt")
     .add("zod", "z")
-    .add("#/db/schema", n.table)
+    .add("#/db/schema", "* as schema")
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
     .add(`${n.module}.server`, n.access, n.data)
