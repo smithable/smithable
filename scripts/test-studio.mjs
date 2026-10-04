@@ -223,6 +223,21 @@ try {
       await trace.getByText("Undid: Customers: removed the phone").waitFor();
     },
   );
+  await step(
+    "an action's intent is changed from its own form, and Undo takes it back",
+    async () => {
+      await change("Change what an action says");
+      await page.getByLabel("Action").selectOption("mergeCustomers");
+      await page.getByLabel("Intent").fill("Fold a duplicate customer into the one to keep.");
+      await page.getByRole("button", { name: "Change action" }).click();
+      await trace
+        .getByText(/mergeCustomers/)
+        .first()
+        .waitFor({ timeout: 60000 });
+      await status.getByRole("button", { name: "Undo this change" }).click();
+      await status.getByText(/^Undid: .*mergeCustomers/).waitFor({ timeout: 60000 });
+    },
+  );
   await step("access: only admins may create orders", async () => {
     await change("Who can do what");
     await page.getByLabel("Who can").selectOption({ label: "Create order records" });
