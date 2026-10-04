@@ -28,6 +28,21 @@ export interface Allowed {
 export type ModelAllowed = Record<AccessOperation, Allowed>;
 
 /**
+ * Whether "unique" on a model means unique per owner: its records are read by their owners
+ * only (for some role), so two people may each have one with the same value. Otherwise it is
+ * unique across the app. The adapter's unique indexes and validation use this one test.
+ */
+export function uniquePerOwner(model: ModelIR, auth: AuthIR): boolean {
+  const read = modelAccess(model, auth).read;
+  return (
+    auth.signIn !== "none" &&
+    read.owner &&
+    !read.public &&
+    auth.roles.some((r) => !read.roles.includes(r.name))
+  );
+}
+
+/**
  * The effective access to a model: the defaults of `defaultAccess`, replaced per operation
  * by the model's `access` exceptions, plus what the public section opens (ARCHITECTURE §3.1).
  */
