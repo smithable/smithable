@@ -1239,7 +1239,7 @@ async function copyFlow(base) {
     }
     // The record's own history, for administrators: the action, with the field it changed.
     await page
-      .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "markSent" })
+      .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "mark sent" })
       .getByText("(status)")
       .waitFor({ timeout: 10000 });
     console.log(
