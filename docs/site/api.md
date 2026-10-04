@@ -103,4 +103,21 @@ A refusal is a JSON problem (`application/problem+json`) in the app's own words,
 /api/v1/incidents/{id}/actions/resolve
 ```
 
+## 6. For AI assistants
+
+With `assistants: true` in the `api` block (the status starter has it), the same offer is also there as tools for AI assistants, at `/mcp` in the Model Context Protocol, with the same keys. Point an assistant that speaks MCP over HTTP (Claude, ChatGPT and others) at `https://status.example.com/mcp` with the header `Authorization: Bearer <key>`. Asked for its tools, the status app answers:
+
+```text
+find_components, read_component, add_component, change_component,
+find_incidents, read_incident, add_incident, change_incident, resolve
+```
+
+There are no delete tools unless the auth file says `assistants: { delete: true }`. A refusal comes back as the tool's error, in the app's words, so the assistant can read it and try again:
+
+```json
+{ "content": [{ "type": "text", "text": "There is no tool \"listIncidents\"." }], "isError": true }
+```
+
+Each request carries one message (no batches), so every tool call counts toward the key's 60 a minute.
+
 Each call is in the app's access log under the key (`key:<n>`) in place of a person, and every change it makes is in the activity log like anyone's.
