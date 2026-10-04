@@ -141,11 +141,17 @@ export function repaired(step: Step): Step | undefined {
   if (step.op === "addModel" && step.args.fields && typeof step.args.fields === "object") {
     // Every model already has these: declaring them is a slip, left out. An owner that refers
     // to another model (a car's owner, a customer) is meant differently: its refusal goes back.
+    const declared = step.args.fields as Record<string, unknown>;
     const given = Object.fromEntries(
-      Object.entries(step.args.fields as Record<string, unknown>).filter(
-        ([k, v]) =>
-          !AUTOMATIC_FIELDS.includes(k) || (k === "owner" && !/^User!?$/.test(String(v).trim())),
-      ),
+      Object.entries(declared).flatMap(([k, v]): [string, unknown][] => {
+        if (!AUTOMATIC_FIELDS.includes(k)) return [[k, v]];
+        // An owner that refers to another model (a car's owner, a customer) is that model's
+        // reference by its name: "owner" is the user who created the record.
+        const other = k === "owner" && /^([A-Z]\w*)!?$/.exec(String(v).trim())?.[1];
+        if (!other || other === "User") return [];
+        const name = other[0]?.toLowerCase() + other.slice(1);
+        return [[name in declared ? `owner${other}` : name, v]];
+      }),
     );
     const fields = Object.fromEntries(
       Object.entries(given).map(([k, v]) => {
@@ -226,6 +232,16 @@ const lastRoundDrops = (step: Step) =>
   (step.op === "addField" &&
     (Boolean(step.args.formula) || String(step.args.type ?? "").includes("=")));
 
+/** The capacity-unique-shared warning on these files, as a refusal's words. */
+function neverFills(files: ProjectFiles): string | undefined {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  if (!ir || files.auth === undefined) return undefined;
+  const found = validateAuth({ path: "smithable.auth.yml", text: files.auth }, ir).diagnostics.find(
+    (d) => d.code === "capacity-unique-shared",
+  );
+  return found && `${found.message} ${found.hint ?? ""}`.trim();
+}
+
 /**
  * Applies steps in order: a slip in the field shorthand is mended, a step already applied or
  * already there is skipped, a model referred to before it is added is added first, and a step
@@ -259,7 +275,9 @@ function applyAll(
       }
     }
     if (!result.ok) {
+      // The errors only: a warning on the side (an example administrator) is not the reason.
       const detail = result.diagnostics
+        .filter((d) => d.severity === "error")
         .map((d) => `${d.message}${d.hint ? ` ${d.hint}` : ""}`)
         .join(" ");
       const message = `${result.message}${detail ? ` ${detail}` : ""}`;
@@ -346,6 +364,35 @@ function applyAll(
           continue;
         }
       }
+      // Public pages or models the draft never added (the starter's): left out of the list.
+      if (
+        step.op === "setPublic" &&
+        /There is no (?:page|model) named/.test(message) &&
+        !deferred.has(JSON.stringify(step))
+      ) {
+        deferred.add(JSON.stringify(step));
+        const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+        const pages = new Set(ir?.pages.map((p) => p.id));
+        const models = new Set(ir?.models.map((m) => m.name));
+        const named = (entry: unknown, known: Set<string>) =>
+          typeof entry === "string"
+            ? known.has(entry)
+            : Object.keys(entry as object).every((k) => known.has(k));
+        const keep = (key: string, known: Set<string>) =>
+          Array.isArray(step.args[key])
+            ? { [key]: (step.args[key] as unknown[]).filter((e) => named(e, known)) }
+            : {};
+        queue.unshift({
+          op: "setPublic",
+          args: {
+            ...step.args,
+            ...keep("pages", pages),
+            ...keep("read", models),
+            ...keep("create", models),
+          },
+        });
+        continue;
+      }
       // Invite-only before the team page that invites: the page first, as closeShared does.
       if (
         step.op === "setSignUp" &&
@@ -367,7 +414,15 @@ function applyAll(
       refused.push({ step, message });
       continue;
     }
-    files = result.files;
+    // A capacity that can never fill (a unique reference on records not private to their
+    // owners) is only a warning for a person; a draft gives it back to the model instead.
+    const next = { ...files, ...result.files };
+    const never = neverFills(next);
+    if (never) {
+      refused.push({ step, message: never });
+      continue;
+    }
+    files = next;
     done.push(applied);
   }
   return { files, refused };
