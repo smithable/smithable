@@ -6,6 +6,22 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [tailwindcss(), tanstackStart(), viteReact()],
+  // The dev server hands any file of the project to whoever can reach it (`?raw`). The app's
+  // data is not for that: the database, the uploads, and the outbox with its sign-in codes.
+  // Vite's own list comes first, since naming one replaces it.
+  server: {
+    fs: {
+      deny: [
+        ".env",
+        ".env.*",
+        "*.{crt,pem,key,p12,pfx,cer,der}",
+        ".npmrc",
+        ".yarnrc.yml",
+        "**/.git/**",
+        `${import.meta.dirname}/data/**`,
+      ],
+    },
+  },
   // The libraries every app uses, bundled for the browser as the dev server starts. Otherwise the
   // first visit to a page can find one: Vite optimizes it and reloads, and a page loading at that
   // moment fails ("Failed to fetch dynamically imported module"), which a busy machine makes likely.
