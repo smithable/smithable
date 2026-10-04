@@ -136,7 +136,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   const dir = args[0] ?? ".";
   switch (command) {
     case "validate":
-      return validate(dir, io, values.plugin ? [values.plugin] : []);
+      return validate(dir, io, values.plugin ? [values.plugin] : [], values.json === true);
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
     case "read-page":

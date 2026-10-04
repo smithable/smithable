@@ -33,6 +33,7 @@ import {
 } from "../ir.js";
 import { capitalize } from "../naming.js";
 import type { JsonSchema, SpecSection } from "../section.js";
+import { sensitiveKind, sensitiveMessage } from "../sensitive.js";
 import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
 import { modelOperations, renameInFormulas } from "./model-operations.js";
@@ -286,6 +287,10 @@ function readModel(
     const field = readField(ctx, name, entry);
     if (!field) continue;
     model.fields.push(field);
+    // A name that looks like data an app should not hold, or hold with great care.
+    const sensitive = sensitiveKind(field);
+    if (sensitive)
+      ctx.warning(entry.keyNode, sensitive, sensitiveMessage(sensitive, name, field.name));
     if (field.type.kind === "relation") {
       ctx.reference("model", field.type.model, entry.value);
       relationNodes.set(`${name}.${field.name}`, entry.value ?? entry.keyNode);
