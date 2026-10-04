@@ -667,6 +667,13 @@ async function marketplaceFlow(dir, base) {
     await open(page, `${base}/my-items`);
     if ((await titles()).join() !== "Test lamp")
       throw new Error(`My items shows ${(await titles()).join()}`);
+    // Who sells an item is told to its seller, never to a visitor (the owner is not shown).
+    const owned = /ownerId["']?\s*:\s*"/;
+    const visitorSees = await (await fetch(`${base}/?q=Test%20lamp`)).text();
+    if (!visitorSees.includes("Test lamp") || owned.test(visitorSees))
+      throw new Error("a visitor's page tells who sells the item");
+    const sellerSees = await (await page.request.get(`${base}/my-items`)).text();
+    if (!owned.test(sellerSees)) throw new Error("the seller's own page lost the owner");
     await open(page, `${base}/`);
     await page.getByRole("button", { name: "Save Turntable" }).filter({ visible: true }).click();
     await page.waitForFunction(() =>
@@ -680,7 +687,7 @@ async function marketplaceFlow(dir, base) {
     await page.getByRole("button", { name: "Save Turntable" }).filter({ visible: true }).click();
     await page.getByText("No saved items yet.").waitFor({ timeout: 10000 });
     console.log(
-      "  ✓ browser: a member sells an item and sees only it under My items, and saves and unsaves another",
+      "  ✓ browser: a member sells an item and sees only it under My items, a visitor is not told who sells it, and saves and unsaves another",
     );
 
     await signInAs(page, base, "admin");
