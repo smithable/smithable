@@ -93,7 +93,7 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 ${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
 ${invitations || (email && refuses) ? 'import { eq } from "drizzle-orm";\n' : ""}import { db } from "#/db";
-import { ${tables} } from "#/db/schema";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
+import { ${tables} } from "#/db/schema";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ${JSON.stringify(providers)};
@@ -232,7 +232,7 @@ ${
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
