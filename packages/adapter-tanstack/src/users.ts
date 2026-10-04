@@ -27,6 +27,7 @@ import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
 export const ROLES = ${literal(roles)} as const;
@@ -103,19 +104,22 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
-  db.delete(invitation).where(eq(invitation.email, address)).run();
-  const created = db
-    .insert(invitation)
-    .values({
-      id: randomUUID(),
-      email: address,
-      role,
-      token: randomBytes(24).toString("base64url"),
-      invitedById: by.id,
-      expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
-    })
-    .returning()
-    .get();
+  const created = db.transaction((tx) => {
+    tx.delete(invitation).where(eq(invitation.email, address)).run();
+    audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
+    return tx
+      .insert(invitation)
+      .values({
+        id: randomUUID(),
+        email: address,
+        role,
+        token: randomBytes(24).toString("base64url"),
+        invitedById: by.id,
+        expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
+      })
+      .returning()
+      .get();
+  });
   const result = row(created, origin);
   await sendInvitation(by, result);
   return result;
@@ -128,30 +132,43 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
-  const renewed = db
-    .update(invitation)
-    .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
-    .where(eq(invitation.id, invitationId))
-    .returning()
-    .get();
+  const renewed = db.transaction((tx) => {
+    const sent = tx
+      .update(invitation)
+      .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
+      .where(eq(invitation.id, invitationId))
+      .returning()
+      .get();
+    if (sent)
+      audit(tx, by, { action: "invitation sent again", model: "User", details: { email: sent.email, role: sent.role } });
+    return sent;
+  });
   if (!renewed) throw new Error("This invitation no longer exists.");
   await sendInvitation(by, row(renewed, origin));
 }
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
-  manager(viewer);
-  db.delete(invitation).where(eq(invitation.id, invitationId)).run();
+  const by = manager(viewer);
+  db.transaction((tx) => {
+    const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
+    if (gone)
+      audit(tx, by, { action: "invitation withdrawn", model: "User", details: { email: gone.email, role: gone.role } });
+  });
 }
 
 /** Gives a user another role; never your own, and the last administrator stays one. */
 export async function setRole(viewer: Viewer | null, userId: string, role: Role): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot change your own role.");
-  const target = db.select({ role: user.role }).from(user).where(eq(user.id, userId)).get();
+  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
-  db.update(user).set({ role }).where(eq(user.id, userId)).run();
+  db.transaction((tx) => {
+    tx.update(user).set({ role }).where(eq(user.id, userId)).run();
+    // What touches security keeps its values: who, what they were and what they became.
+    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+  });
 }
 
 /**
@@ -162,12 +179,19 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
 export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
-  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
+  const target = db
+    .select({ role: user.role, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
   if (!target) return;
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
-    db.delete(user).where(eq(user.id, userId)).run();
+    db.transaction((tx) => {
+      tx.delete(user).where(eq(user.id, userId)).run();
+      audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
       throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
@@ -209,13 +233,16 @@ export function usersTestSource(ir: SpecIR, auth: AuthIR): string {
 import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
 
 const ORIGIN = "https://team.example";
+/** The audit log's lines of one kind, oldest first. */
+const audited = (action: string) =>
+  db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@${domain}", role: "admin" };
 db.insert(user).values(admin).run();
 
@@ -241,6 +268,9 @@ test("an invited address signs up with the invited role, and the invitation is u
   const created = await signUp("users-test-invited@${domain}");
   expect(created?.role).toBe(${JSON.stringify(other ?? "admin")});
   expect(db.select().from(invitation).where(eq(invitation.email, "users-test-invited@${domain}")).get()).toBeUndefined();
+  // The audit log has both ends, with their values: who was invited as what, and who accepted.
+  expect(audited("invited").at(-1)).toMatchObject({ who: admin.id, details: { email: "users-test-invited@${domain}", role: ${JSON.stringify(other ?? "admin")} } });
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { role: ${JSON.stringify(other ?? "admin")} } });
 });
 ${
   closed
@@ -275,6 +305,9 @@ ${
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, colleague.id)).get()?.role).toBe("admin");
   await removeUser(admin, colleague.id);
   expect(db.select().from(user).where(eq(user.id, colleague.id)).get()).toBeUndefined();
+  // What touches security keeps its values in the audit log: from what to what, and who.
+  expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: ${JSON.stringify(other)}, to: "admin" } });
+  expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@${domain}" } });
 `
     : ""
 }

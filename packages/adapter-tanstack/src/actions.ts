@@ -341,11 +341,11 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
   const setFields = JSON.stringify(action.set.map((v) => v.field));
   const writes = (p: string) => `{
       const changed = tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get();
-      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, title: changed.${title}, fields: ${setFields} });
+      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });
       const inserted = [
 ${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: viewer?.id ?? null }).returning().get(),`).join("\n")}
       ] as const;
-${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, title: inserted[${i}].${titleField(target)}, details: { by: ${JSON.stringify(action.name)} } });`).join("\n")}
+${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });`).join("\n")}
       return { changed, inserted };
     }`;
   const hooks = (w: string) =>
@@ -618,12 +618,12 @@ ${lists
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
     const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: viewer?.id ?? null }).returning().get();
-    audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, title: created.${titleField(model)}, details: { from: row.id, by: ${JSON.stringify(action.name)} } });
+    audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
       const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: viewer?.id ?? null }).returning().get();
-      audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, title: copy.${titleField(l.listed)}, details: { by: ${JSON.stringify(action.name)} } });
+      audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });
       return copy;
     });`,
   )

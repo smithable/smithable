@@ -1044,9 +1044,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -1151,7 +1151,7 @@ export const bookingData = {
       const taken = tx.select({ n: count() }).from(bookings).where(and(eq(bookings.sessionId, values.sessionId))).get()?.n ?? 0;
       if (taken >= (tx.select({ n: sessions.capacity }).from(sessions).where(eq(sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
         const made = tx.insert(bookings).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Booking", record: made.id, title: made.id });
+        audit(tx, viewer, { action: "created", model: "Booking", record: made.id });
         return made;
       });
     } catch (error) {
@@ -1179,7 +1179,7 @@ export const bookingData = {
       if (taken >= (tx.select({ n: sessions.capacity }).from(sessions).where(eq(sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
         const before = tx.select().from(bookings).where(eq(bookings.id, id)).get();
         const after = tx.update(bookings).set(updated).where(eq(bookings.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Booking", record: id, title: after.id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Booking", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -1416,7 +1416,7 @@ export const classTypeData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(classTypes).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "ClassType", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "ClassType", record: made.id });
         return made;
       });
     } catch (error) {
@@ -1441,7 +1441,7 @@ export const classTypeData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(classTypes).where(eq(classTypes.id, id)).get();
         const after = tx.update(classTypes).set(updated).where(eq(classTypes.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "ClassType", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "ClassType", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -1915,7 +1915,7 @@ export const instructorData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(instructors).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Instructor", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "Instructor", record: made.id });
         return made;
       });
     } catch (error) {
@@ -1940,7 +1940,7 @@ export const instructorData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(instructors).where(eq(instructors.id, id)).get();
         const after = tx.update(instructors).set(updated).where(eq(instructors.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Instructor", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Instructor", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -2207,7 +2207,7 @@ export const messageData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(messages).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Message", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "Message", record: made.id });
         return made;
       });
     } catch (error) {
@@ -2232,7 +2232,7 @@ export const messageData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(messages).where(eq(messages.id, id)).get();
         const after = tx.update(messages).set(updated).where(eq(messages.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Message", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -2507,7 +2507,7 @@ export const postData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(posts).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Post", record: made.id, title: made.title });
+        audit(tx, viewer, { action: "created", model: "Post", record: made.id });
         return made;
       });
     } catch (error) {
@@ -2532,7 +2532,7 @@ export const postData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(posts).where(eq(posts.id, id)).get();
         const after = tx.update(posts).set(updated).where(eq(posts.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Post", record: id, title: after.title, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Post", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -2846,7 +2846,7 @@ export const sessionData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(sessions).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Session", record: made.id, title: made.id });
+        audit(tx, viewer, { action: "created", model: "Session", record: made.id });
         return made;
       });
     } catch (error) {
@@ -2876,7 +2876,7 @@ export const sessionData = {
       }
         const before = tx.select().from(sessions).where(eq(sessions.id, id)).get();
         const after = tx.update(sessions).set(updated).where(eq(sessions.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Session", record: id, title: after.id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Session", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -3092,14 +3092,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@stillwater.example"];
 const APP_NAME = "Stillwater Yoga";
@@ -3156,6 +3163,19 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -6458,27 +6478,27 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "a29fd775 generated",
   "src/db/seed.ts": "d49bc7e4 generated",
-  "src/generated/access.test.ts": "a5ffe938 generated",
+  "src/generated/access.test.ts": "63f0d3b2 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "62168209 generated",
+  "src/generated/booking.server.ts": "2cab4562 generated",
   "src/generated/booking.ts": "9ec9d400 generated",
-  "src/generated/class-type.server.ts": "fa6d76ae generated",
+  "src/generated/class-type.server.ts": "038049df generated",
   "src/generated/class-type.ts": "acadda4f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "48eecec6 generated",
-  "src/generated/instructor.server.ts": "3b8a2848 generated",
+  "src/generated/instructor.server.ts": "8ca1ee4f generated",
   "src/generated/instructor.ts": "dd86d8e3 generated",
-  "src/generated/message.server.ts": "6a414567 generated",
+  "src/generated/message.server.ts": "e8395cfa generated",
   "src/generated/message.ts": "7f5e91c2 generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
-  "src/generated/post.server.ts": "125b7a7d generated",
+  "src/generated/post.server.ts": "9b8f207c generated",
   "src/generated/post.ts": "cd2cc271 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "a907baae generated",
+  "src/generated/session.server.ts": "154cd799 generated",
   "src/generated/session.ts": "63803330 generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -6499,7 +6519,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "d6c9a870 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -6512,7 +6532,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "2464e9fc generated",
+  "src/lib/auth.ts": "8a301f46 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -7158,9 +7178,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -7330,7 +7350,7 @@ export const customerData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(customers).values({ ...values, accountManagerId: ownerFor(viewer, values.accountManagerId) }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Customer", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "Customer", record: made.id });
         return made;
       });
     } catch (error) {
@@ -7355,7 +7375,7 @@ export const customerData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(customers).where(eq(customers.id, id)).get();
         const after = tx.update(customers).set(updated).where(eq(customers.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Customer", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Customer", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -7781,7 +7801,7 @@ export const orderData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(orders).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Order", record: made.id, title: made.number });
+        audit(tx, viewer, { action: "created", model: "Order", record: made.id });
         return made;
       });
     } catch (error) {
@@ -7807,7 +7827,7 @@ export const orderData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(orders).where(eq(orders.id, id)).get();
         const after = tx.update(orders).set(updated).where(eq(orders.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Order", record: id, title: after.number, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -8039,6 +8059,7 @@ import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
 export const ROLES = ["admin", "sales"] as const;
@@ -8115,19 +8136,22 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
-  db.delete(invitation).where(eq(invitation.email, address)).run();
-  const created = db
-    .insert(invitation)
-    .values({
-      id: randomUUID(),
-      email: address,
-      role,
-      token: randomBytes(24).toString("base64url"),
-      invitedById: by.id,
-      expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
-    })
-    .returning()
-    .get();
+  const created = db.transaction((tx) => {
+    tx.delete(invitation).where(eq(invitation.email, address)).run();
+    audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
+    return tx
+      .insert(invitation)
+      .values({
+        id: randomUUID(),
+        email: address,
+        role,
+        token: randomBytes(24).toString("base64url"),
+        invitedById: by.id,
+        expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
+      })
+      .returning()
+      .get();
+  });
   const result = row(created, origin);
   await sendInvitation(by, result);
   return result;
@@ -8140,30 +8164,43 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
-  const renewed = db
-    .update(invitation)
-    .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
-    .where(eq(invitation.id, invitationId))
-    .returning()
-    .get();
+  const renewed = db.transaction((tx) => {
+    const sent = tx
+      .update(invitation)
+      .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
+      .where(eq(invitation.id, invitationId))
+      .returning()
+      .get();
+    if (sent)
+      audit(tx, by, { action: "invitation sent again", model: "User", details: { email: sent.email, role: sent.role } });
+    return sent;
+  });
   if (!renewed) throw new Error("This invitation no longer exists.");
   await sendInvitation(by, row(renewed, origin));
 }
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
-  manager(viewer);
-  db.delete(invitation).where(eq(invitation.id, invitationId)).run();
+  const by = manager(viewer);
+  db.transaction((tx) => {
+    const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
+    if (gone)
+      audit(tx, by, { action: "invitation withdrawn", model: "User", details: { email: gone.email, role: gone.role } });
+  });
 }
 
 /** Gives a user another role; never your own, and the last administrator stays one. */
 export async function setRole(viewer: Viewer | null, userId: string, role: Role): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot change your own role.");
-  const target = db.select({ role: user.role }).from(user).where(eq(user.id, userId)).get();
+  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
-  db.update(user).set({ role }).where(eq(user.id, userId)).run();
+  db.transaction((tx) => {
+    tx.update(user).set({ role }).where(eq(user.id, userId)).run();
+    // What touches security keeps its values: who, what they were and what they became.
+    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+  });
 }
 
 /**
@@ -8174,12 +8211,19 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
 export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
-  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
+  const target = db
+    .select({ role: user.role, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
   if (!target) return;
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
-    db.delete(user).where(eq(user.id, userId)).run();
+    db.transaction((tx) => {
+      tx.delete(user).where(eq(user.id, userId)).run();
+      audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
       throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
@@ -8214,13 +8258,16 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
 
 const ORIGIN = "https://team.example";
+/** The audit log's lines of one kind, oldest first. */
+const audited = (action: string) =>
+  db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@acme.example", role: "admin" };
 db.insert(user).values(admin).run();
 
@@ -8246,6 +8293,9 @@ test("an invited address signs up with the invited role, and the invitation is u
   const created = await signUp("users-test-invited@acme.example");
   expect(created?.role).toBe("sales");
   expect(db.select().from(invitation).where(eq(invitation.email, "users-test-invited@acme.example")).get()).toBeUndefined();
+  // The audit log has both ends, with their values: who was invited as what, and who accepted.
+  expect(audited("invited").at(-1)).toMatchObject({ who: admin.id, details: { email: "users-test-invited@acme.example", role: "sales" } });
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { role: "sales" } });
 });
 
 test("with sign-up closed, an address nobody invited is refused", async () => {
@@ -8269,6 +8319,9 @@ test("only the page's roles manage users; an administrator cannot change or remo
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, colleague.id)).get()?.role).toBe("admin");
   await removeUser(admin, colleague.id);
   expect(db.select().from(user).where(eq(user.id, colleague.id)).get()).toBeUndefined();
+  // What touches security keeps its values in the audit log: from what to what, and who.
+  expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: "sales", to: "admin" } });
+  expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@acme.example" } });
 
   const pending = await invite(admin, "users-test-pending@acme.example", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
@@ -8304,12 +8357,18 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 const ALLOWED_DOMAINS = ["acme.example"];
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@acme.example"];
@@ -8396,13 +8455,31 @@ export const auth = betterAuth({
         before: async (newUser) => {
           const email = newUser.email.toLowerCase();
           const refused = joinRefusal(email);
-          if (refused) throw new APIError("FORBIDDEN", { message: refused });
+          if (refused) {
+            audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
+            throw new APIError("FORBIDDEN", { message: refused });
+          }
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "sales" } };
         },
         after: async (created) => {
+          const who = { id: created.id, role: String(created.role) };
+          const email = created.email.toLowerCase();
+          const used = invitationOf(email);
+          if (used)
+            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
+          db.delete(invitation).where(eq(invitation.email, email)).run();
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -9610,20 +9687,20 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "97ca0658 generated",
   "src/db/seed.ts": "39cef010 generated",
-  "src/generated/access.test.ts": "62e6f16c generated",
+  "src/generated/access.test.ts": "4af2bcd6 generated",
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "cd876b37 generated",
+  "src/generated/customer.server.ts": "bc71c15c generated",
   "src/generated/customer.ts": "e4cd5bb6 generated",
   "src/generated/hooks.ts": "5721824b generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "46b982bb generated",
+  "src/generated/order.server.ts": "3148c6c6 generated",
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
-  "src/generated/users.server.ts": "de07ed11 generated",
-  "src/generated/users.test.ts": "818352a3 generated",
+  "src/generated/users.server.ts": "6e9a4b7d generated",
+  "src/generated/users.test.ts": "28485ed6 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/AppShell.tsx": "2236ff19 kit",
@@ -9636,7 +9713,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "d6c9a870 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -9648,7 +9725,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "030a96c0 generated",
+  "src/lib/auth.ts": "0d33db09 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -10593,9 +10670,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -10659,7 +10736,7 @@ export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const changed = tx.update(invoices).set(p.values).where(eq(invoices.id, p.id)).returning().get();
-      audit(tx, viewer, { action: "markPaid", model: "Invoice", record: changed.id, title: changed.number, fields: ["status"] });
+      audit(tx, viewer, { action: "markPaid", model: "Invoice", record: changed.id, fields: ["status"] });
       const inserted = [
 
       ] as const;
@@ -10768,7 +10845,7 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const changed = tx.update(invoices).set(p.values).where(eq(invoices.id, p.id)).returning().get();
-      audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, title: changed.number, fields: ["status"] });
+      audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, fields: ["status"] });
       const inserted = [
 
       ] as const;
@@ -10887,7 +10964,7 @@ export const businessProfileData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(businessProfiles).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "BusinessProfile", record: made.id, title: made.businessName });
+        audit(tx, viewer, { action: "created", model: "BusinessProfile", record: made.id });
         return made;
       });
     } catch (error) {
@@ -10912,7 +10989,7 @@ export const businessProfileData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(businessProfiles).where(eq(businessProfiles.id, id)).get();
         const after = tx.update(businessProfiles).set(updated).where(eq(businessProfiles.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "BusinessProfile", record: id, title: after.businessName, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "BusinessProfile", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -11151,7 +11228,7 @@ export const clientData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(clients).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Client", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "Client", record: made.id });
         return made;
       });
     } catch (error) {
@@ -11176,7 +11253,7 @@ export const clientData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(clients).where(eq(clients.id, id)).get();
         const after = tx.update(clients).set(updated).where(eq(clients.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Client", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Client", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -11583,7 +11660,7 @@ export const invoiceData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(invoices).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Invoice", record: made.id, title: made.number });
+        audit(tx, viewer, { action: "created", model: "Invoice", record: made.id });
         return made;
       });
     } catch (error) {
@@ -11609,7 +11686,7 @@ export const invoiceData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(invoices).where(eq(invoices.id, id)).get();
         const after = tx.update(invoices).set(updated).where(eq(invoices.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Invoice", record: id, title: after.number, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -11946,7 +12023,7 @@ export const invoiceLineData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(invoiceLines).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "InvoiceLine", record: made.id, title: made.description });
+        audit(tx, viewer, { action: "created", model: "InvoiceLine", record: made.id });
         return made;
       });
     } catch (error) {
@@ -11972,7 +12049,7 @@ export const invoiceLineData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(invoiceLines).where(eq(invoiceLines.id, id)).get();
         const after = tx.update(invoiceLines).set(updated).where(eq(invoiceLines.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, title: after.description, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -12186,14 +12263,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@invoicely.example"];
 const APP_NAME = "Invoicely";
@@ -12250,6 +12334,19 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -13782,24 +13879,24 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "dc3d0d42 generated",
   "src/db/seed.ts": "d388638c generated",
-  "src/generated/access.test.ts": "c954aab0 generated",
-  "src/generated/actions/mark-paid.server.ts": "d8166f11 generated",
+  "src/generated/access.test.ts": "4747d4da generated",
+  "src/generated/actions/mark-paid.server.ts": "d8bfd9f2 generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
-  "src/generated/actions/mark-sent.server.ts": "0bb6bc29 generated",
+  "src/generated/actions/mark-sent.server.ts": "81f2ba0a generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "ecd40003 generated",
+  "src/generated/business-profile.server.ts": "7a1b779e generated",
   "src/generated/business-profile.ts": "2abbba11 generated",
-  "src/generated/client.server.ts": "7eb747a7 generated",
+  "src/generated/client.server.ts": "2dd58b98 generated",
   "src/generated/client.ts": "262b8aa5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "5a1756ed generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "709ffaa8 generated",
+  "src/generated/invoice-line.server.ts": "8761f2bb generated",
   "src/generated/invoice-line.ts": "ad44efd2 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "6c03bb4c generated",
+  "src/generated/invoice.server.ts": "b9e1a089 generated",
   "src/generated/invoice.ts": "a7bbf4f2 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -13817,7 +13914,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "d6c9a870 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -13829,7 +13926,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "9283c2f6 generated",
+  "src/lib/auth.ts": "32d6392e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -14322,9 +14419,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -14521,7 +14618,7 @@ export const itemData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(items).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Item", record: made.id, title: made.title });
+        audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         return made;
       });
     } catch (error) {
@@ -14546,7 +14643,7 @@ export const itemData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(items).where(eq(items.id, id)).get();
         const after = tx.update(items).set(updated).where(eq(items.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Item", record: id, title: after.title, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -14821,14 +14918,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@torget.example"];
 const APP_NAME = "Torget";
@@ -14885,6 +14989,19 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -16325,11 +16442,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "0d802f59 generated",
   "src/db/seed.ts": "088a3106 generated",
-  "src/generated/access.test.ts": "758a6bfd generated",
+  "src/generated/access.test.ts": "e89a39b5 generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
-  "src/generated/item.server.ts": "0dc73f05 generated",
+  "src/generated/item.server.ts": "63855398 generated",
   "src/generated/item.ts": "53aaac1e generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
@@ -16348,7 +16465,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "d6c9a870 kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -16362,7 +16479,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "0086a0c4 generated",
+  "src/lib/auth.ts": "e7b96f20 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -16834,9 +16951,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -17036,7 +17153,7 @@ export const itemData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(items).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Item", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         return made;
       });
     } catch (error) {
@@ -17061,7 +17178,7 @@ export const itemData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(items).where(eq(items.id, id)).get();
         const after = tx.update(items).set(updated).where(eq(items.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Item", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -17274,14 +17391,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = [];
 const APP_NAME = "Our Collection";
@@ -17338,6 +17462,19 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
         },
+        after: async (created) => {
+          const who = { id: created.id, role: String(created.role) };
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+        },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -18152,12 +18289,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3f96f60a generated",
   "src/db/seed.ts": "fee52e69 generated",
-  "src/generated/access.test.ts": "fb1be0a1 generated",
+  "src/generated/access.test.ts": "e36e59a9 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "37667a2c generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "faa8d5e2 generated",
+  "src/generated/item.server.ts": "cfd6e9a1 generated",
   "src/generated/item.ts": "f20dc810 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -18172,7 +18309,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "8a6937ce kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "d6c9a870 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -18184,7 +18321,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "e1fff927 generated",
+  "src/lib/auth.ts": "55c0fde1 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -19181,9 +19318,9 @@ describe("the audit log", () => {
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });
@@ -19235,11 +19372,11 @@ export async function runIdentified(viewer: Viewer | null, id: number) {
   // One transaction: the change and the records it adds, or nothing.
   const written = db.transaction((tx) => {
       const changed = tx.update(incidents).set(one.values).where(eq(incidents.id, one.id)).returning().get();
-      audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, title: changed.title, fields: ["status"] });
+      audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
         tx.insert(incidentUpdates).values({ ...one.added0, ownerId: viewer?.id ?? null }).returning().get(),
       ] as const;
-      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, title: inserted[0].id, details: { by: "identified" } });
+      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "identified" } });
       return { changed, inserted };
     });
   await afterChange("afterUpdate", "Incident", written.changed, viewer);
@@ -19269,11 +19406,11 @@ export async function runIdentifiedMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const changed = tx.update(incidents).set(p.values).where(eq(incidents.id, p.id)).returning().get();
-      audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, title: changed.title, fields: ["status"] });
+      audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
         tx.insert(incidentUpdates).values({ ...p.added0, ownerId: viewer?.id ?? null }).returning().get(),
       ] as const;
-      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, title: inserted[0].id, details: { by: "identified" } });
+      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "identified" } });
       return { changed, inserted };
     }));
   for (const w of written) {
@@ -19371,11 +19508,11 @@ export async function runMonitoring(viewer: Viewer | null, id: number) {
   // One transaction: the change and the records it adds, or nothing.
   const written = db.transaction((tx) => {
       const changed = tx.update(incidents).set(one.values).where(eq(incidents.id, one.id)).returning().get();
-      audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, title: changed.title, fields: ["status"] });
+      audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
         tx.insert(incidentUpdates).values({ ...one.added0, ownerId: viewer?.id ?? null }).returning().get(),
       ] as const;
-      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, title: inserted[0].id, details: { by: "monitoring" } });
+      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "monitoring" } });
       return { changed, inserted };
     });
   await afterChange("afterUpdate", "Incident", written.changed, viewer);
@@ -19405,11 +19542,11 @@ export async function runMonitoringMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const changed = tx.update(incidents).set(p.values).where(eq(incidents.id, p.id)).returning().get();
-      audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, title: changed.title, fields: ["status"] });
+      audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
         tx.insert(incidentUpdates).values({ ...p.added0, ownerId: viewer?.id ?? null }).returning().get(),
       ] as const;
-      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, title: inserted[0].id, details: { by: "monitoring" } });
+      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "monitoring" } });
       return { changed, inserted };
     }));
   for (const w of written) {
@@ -19508,11 +19645,11 @@ export async function runResolve(viewer: Viewer | null, id: number) {
   // One transaction: the change and the records it adds, or nothing.
   const written = db.transaction((tx) => {
       const changed = tx.update(incidents).set(one.values).where(eq(incidents.id, one.id)).returning().get();
-      audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, title: changed.title, fields: ["status","resolvedAt"] });
+      audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, fields: ["status","resolvedAt"] });
       const inserted = [
         tx.insert(incidentUpdates).values({ ...one.added0, ownerId: viewer?.id ?? null }).returning().get(),
       ] as const;
-      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, title: inserted[0].id, details: { by: "resolve" } });
+      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "resolve" } });
       return { changed, inserted };
     });
   await afterChange("afterUpdate", "Incident", written.changed, viewer);
@@ -19542,11 +19679,11 @@ export async function runResolveMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const changed = tx.update(incidents).set(p.values).where(eq(incidents.id, p.id)).returning().get();
-      audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, title: changed.title, fields: ["status","resolvedAt"] });
+      audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, fields: ["status","resolvedAt"] });
       const inserted = [
         tx.insert(incidentUpdates).values({ ...p.added0, ownerId: viewer?.id ?? null }).returning().get(),
       ] as const;
-      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, title: inserted[0].id, details: { by: "resolve" } });
+      audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "resolve" } });
       return { changed, inserted };
     }));
   for (const w of written) {
@@ -19669,7 +19806,7 @@ export const componentData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(components).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Component", record: made.id, title: made.name });
+        audit(tx, viewer, { action: "created", model: "Component", record: made.id });
         return made;
       });
     } catch (error) {
@@ -19694,7 +19831,7 @@ export const componentData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(components).where(eq(components.id, id)).get();
         const after = tx.update(components).set(updated).where(eq(components.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Component", record: id, title: after.name, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Component", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -20073,7 +20210,7 @@ export const incidentData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(incidents).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Incident", record: made.id, title: made.title });
+        audit(tx, viewer, { action: "created", model: "Incident", record: made.id });
         return made;
       });
     } catch (error) {
@@ -20099,7 +20236,7 @@ export const incidentData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(incidents).where(eq(incidents.id, id)).get();
         const after = tx.update(incidents).set(updated).where(eq(incidents.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Incident", record: id, title: after.title, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Incident", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -20392,7 +20529,7 @@ export const incidentUpdateData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(incidentUpdates).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: made.id, title: made.id });
+        audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: made.id });
         return made;
       });
     } catch (error) {
@@ -20418,7 +20555,7 @@ export const incidentUpdateData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(incidentUpdates).where(eq(incidentUpdates.id, id)).get();
         const after = tx.update(incidentUpdates).set(updated).where(eq(incidentUpdates.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "IncidentUpdate", record: id, title: after.id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "IncidentUpdate", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -20664,7 +20801,7 @@ export const maintenanceData = {
     try {
       row = db.transaction((tx) => {
         const made = tx.insert(maintenances).values({ ...values, ownerId: viewer?.id ?? null }).returning().get();
-        audit(tx, viewer, { action: "created", model: "Maintenance", record: made.id, title: made.title });
+        audit(tx, viewer, { action: "created", model: "Maintenance", record: made.id });
         return made;
       });
     } catch (error) {
@@ -20690,7 +20827,7 @@ export const maintenanceData = {
       changed = db.transaction((tx) => {
         const before = tx.select().from(maintenances).where(eq(maintenances.id, id)).get();
         const after = tx.update(maintenances).set(updated).where(eq(maintenances.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Maintenance", record: id, title: after.title, fields: before && changedFields(before, after, Object.keys(updated)) });
+        audit(tx, viewer, { action: what, model: "Maintenance", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
     } catch (error) {
@@ -20907,6 +21044,7 @@ import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
 
 export const ROLES = ["admin", "staff"] as const;
@@ -20983,19 +21121,22 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
-  db.delete(invitation).where(eq(invitation.email, address)).run();
-  const created = db
-    .insert(invitation)
-    .values({
-      id: randomUUID(),
-      email: address,
-      role,
-      token: randomBytes(24).toString("base64url"),
-      invitedById: by.id,
-      expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
-    })
-    .returning()
-    .get();
+  const created = db.transaction((tx) => {
+    tx.delete(invitation).where(eq(invitation.email, address)).run();
+    audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
+    return tx
+      .insert(invitation)
+      .values({
+        id: randomUUID(),
+        email: address,
+        role,
+        token: randomBytes(24).toString("base64url"),
+        invitedById: by.id,
+        expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
+      })
+      .returning()
+      .get();
+  });
   const result = row(created, origin);
   await sendInvitation(by, result);
   return result;
@@ -21008,30 +21149,43 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
-  const renewed = db
-    .update(invitation)
-    .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
-    .where(eq(invitation.id, invitationId))
-    .returning()
-    .get();
+  const renewed = db.transaction((tx) => {
+    const sent = tx
+      .update(invitation)
+      .set({ expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000) })
+      .where(eq(invitation.id, invitationId))
+      .returning()
+      .get();
+    if (sent)
+      audit(tx, by, { action: "invitation sent again", model: "User", details: { email: sent.email, role: sent.role } });
+    return sent;
+  });
   if (!renewed) throw new Error("This invitation no longer exists.");
   await sendInvitation(by, row(renewed, origin));
 }
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
-  manager(viewer);
-  db.delete(invitation).where(eq(invitation.id, invitationId)).run();
+  const by = manager(viewer);
+  db.transaction((tx) => {
+    const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
+    if (gone)
+      audit(tx, by, { action: "invitation withdrawn", model: "User", details: { email: gone.email, role: gone.role } });
+  });
 }
 
 /** Gives a user another role; never your own, and the last administrator stays one. */
 export async function setRole(viewer: Viewer | null, userId: string, role: Role): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot change your own role.");
-  const target = db.select({ role: user.role }).from(user).where(eq(user.id, userId)).get();
+  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
-  db.update(user).set({ role }).where(eq(user.id, userId)).run();
+  db.transaction((tx) => {
+    tx.update(user).set({ role }).where(eq(user.id, userId)).run();
+    // What touches security keeps its values: who, what they were and what they became.
+    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+  });
 }
 
 /**
@@ -21042,12 +21196,19 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
 export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
-  const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
+  const target = db
+    .select({ role: user.role, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
   if (!target) return;
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
-    db.delete(user).where(eq(user.id, userId)).run();
+    db.transaction((tx) => {
+      tx.delete(user).where(eq(user.id, userId)).run();
+      audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
       throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
@@ -21082,13 +21243,16 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { invitation, user } from "#/db/schema";
+import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
 import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
 
 const ORIGIN = "https://team.example";
+/** The audit log's lines of one kind, oldest first. */
+const audited = (action: string) =>
+  db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@example.com", role: "admin" };
 db.insert(user).values(admin).run();
 
@@ -21114,6 +21278,9 @@ test("an invited address signs up with the invited role, and the invitation is u
   const created = await signUp("users-test-invited@example.com");
   expect(created?.role).toBe("staff");
   expect(db.select().from(invitation).where(eq(invitation.email, "users-test-invited@example.com")).get()).toBeUndefined();
+  // The audit log has both ends, with their values: who was invited as what, and who accepted.
+  expect(audited("invited").at(-1)).toMatchObject({ who: admin.id, details: { email: "users-test-invited@example.com", role: "staff" } });
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: created?.id, details: { role: "staff" } });
 });
 
 test("with sign-up closed, an address nobody invited is refused", async () => {
@@ -21137,6 +21304,9 @@ test("only the page's roles manage users; an administrator cannot change or remo
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, colleague.id)).get()?.role).toBe("admin");
   await removeUser(admin, colleague.id);
   expect(db.select().from(user).where(eq(user.id, colleague.id)).get()).toBeUndefined();
+  // What touches security keeps its values in the audit log: from what to what, and who.
+  expect(audited("role changed").at(-1)).toMatchObject({ who: admin.id, role: "admin", details: { user: colleague.id, from: "staff", to: "admin" } });
+  expect(audited("user removed").at(-1)).toMatchObject({ who: admin.id, details: { user: colleague.id, email: "users-test-colleague@example.com" } });
 
   const pending = await invite(admin, "users-test-pending@example.com", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
@@ -21155,12 +21325,18 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
+
+/** Who a session is for, as the audit log names them. */
+function signedInAs(userId: string) {
+  return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
+}
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["ops@northwind.example"];
 const APP_NAME = "Northwind Status";
@@ -21244,13 +21420,31 @@ export const auth = betterAuth({
         before: async (newUser) => {
           const email = newUser.email.toLowerCase();
           const refused = joinRefusal(email);
-          if (refused) throw new APIError("FORBIDDEN", { message: refused });
+          if (refused) {
+            audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
+            throw new APIError("FORBIDDEN", { message: refused });
+          }
           return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "staff" } };
         },
         after: async (created) => {
+          const who = { id: created.id, role: String(created.role) };
+          const email = created.email.toLowerCase();
+          const used = invitationOf(email);
+          if (used)
+            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, created.email.toLowerCase())).run();
+          db.delete(invitation).where(eq(invitation.email, email)).run();
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
         },
+      },
+    },
+    // Signing in and out are in the audit log, as the person who did it.
+    session: {
+      create: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+      },
+      delete: {
+        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed out" }),
       },
     },
     // The app only signs people in with a provider and never calls it afterwards, so the
@@ -23232,28 +23426,28 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "3139019d kit",
   "src/db/schema.ts": "3e28a99c generated",
   "src/db/seed.ts": "fa375893 generated",
-  "src/generated/access.test.ts": "6cf69458 generated",
-  "src/generated/actions/identified.server.ts": "f19cbecd generated",
+  "src/generated/access.test.ts": "8ecd1812 generated",
+  "src/generated/actions/identified.server.ts": "f72475bb generated",
   "src/generated/actions/identified.ts": "4baad691 generated",
-  "src/generated/actions/monitoring.server.ts": "eb5924b3 generated",
+  "src/generated/actions/monitoring.server.ts": "d6583731 generated",
   "src/generated/actions/monitoring.ts": "44cd9703 generated",
-  "src/generated/actions/resolve.server.ts": "cd83c78e generated",
+  "src/generated/actions/resolve.server.ts": "e5711da4 generated",
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "0d53ca85 generated",
+  "src/generated/component.server.ts": "d22d9e06 generated",
   "src/generated/component.ts": "c47f2a48 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e1272348 generated",
-  "src/generated/incident-update.server.ts": "c05e7f4d generated",
+  "src/generated/incident-update.server.ts": "df27f6ac generated",
   "src/generated/incident-update.ts": "0e7d4c32 generated",
-  "src/generated/incident.server.ts": "3ac59005 generated",
+  "src/generated/incident.server.ts": "284b8832 generated",
   "src/generated/incident.ts": "ca312beb generated",
-  "src/generated/maintenance.server.ts": "0e6e23bf generated",
+  "src/generated/maintenance.server.ts": "292ec85a generated",
   "src/generated/maintenance.ts": "ce9b2f03 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
-  "src/generated/users.server.ts": "365732cf generated",
-  "src/generated/users.test.ts": "56ce3b86 generated",
+  "src/generated/users.server.ts": "e04eb3bf generated",
+  "src/generated/users.test.ts": "86832a89 generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
   "src/kit/AppShell.tsx": "2236ff19 kit",
   "src/kit/Articles.tsx": "4d0a8e9d kit",
@@ -23271,7 +23465,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/audit.server.ts": "95294daa kit",
+  "src/kit/audit.server.ts": "d6c9a870 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
@@ -23283,7 +23477,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "8404a82a generated",
+  "src/lib/auth.ts": "a520fe87 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
