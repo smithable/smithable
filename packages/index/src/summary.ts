@@ -332,10 +332,23 @@ export function summarize(
             `Other programs can read and change ${records} with a key${run}.${auth.api.assistants ? " AI assistants can use it too." : ""}`,
           ]
         : [];
+    // "Ask", the assistant in the app (docs/design/assistant.md §6).
+    const ask = auth.assistant;
+    const asking = ask
+      ? [
+          `${
+            ask.for === "anyone"
+              ? "Anyone, visitors too,"
+              : ask.for === "signed-in"
+                ? "Everyone who signs in"
+                : list(ask.for.map((r) => humanize(r)))
+          } can ask the app questions; ${ask.may === "change" ? "it may also add and change records and run actions, each confirmed by the person" : "it changes nothing"}.${ask.for === "anyone" ? " Visitors are answered without a model, over what is public." : ""}`,
+        ]
+      : [];
     sections.push({
       concept: "auth",
       title: "Sign-in and access",
-      sentences: [...access(auth), ...api],
+      sentences: [...access(auth), ...api, ...asking],
     });
   }
   return sections;
