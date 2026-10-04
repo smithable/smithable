@@ -139,8 +139,12 @@ export function applyOperation(
     ),
   } as Editors;
   let effects: Effect[];
+  const notes: string[] = [];
   try {
-    effects = op.apply(editors, args, before.ir);
+    // What the operation says for the person (a note) is not something the others follow.
+    const done = op.apply(editors, args, before.ir);
+    effects = done.filter((e): e is Effect => !("note" in e));
+    for (const e of done) if ("note" in e) notes.push(e.note);
     // The other sections and the companions follow what the operation did (a field renamed, a
     // page removed); one of them may refuse, when something it owns still needs what went away.
     for (const effect of effects) {
@@ -150,8 +154,9 @@ export function applyOperation(
       }
       for (const c of COMPANIONS) {
         const editor = editors[c.key];
-        const refused = editor && c.follow?.(editor, effect, before.ir);
-        if (refused) return fail(refused.refusal);
+        const followed = editor && c.follow?.(editor, effect, before.ir);
+        if (followed && "refusal" in followed) return fail(followed.refusal);
+        if (followed) notes.push(followed.note);
       }
     }
   } catch (error) {
@@ -179,7 +184,7 @@ export function applyOperation(
     ok: true,
     files: { spec: editors.spec.text, ...written },
     added: added.map((a) => ({ path: `themes/${a.theme.name}.yml`, text: a.text })),
-    description: op.describe(args, before.ir),
+    description: [op.describe(args, before.ir), ...notes].join("; "),
     destructive: op.destructive(args, before.ir, after.ir),
     effects,
   };
