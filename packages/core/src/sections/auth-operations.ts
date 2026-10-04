@@ -342,7 +342,7 @@ const setApi: Operation<{
     },
   },
   positional: ["...models"],
-  describe: ({ models = [], actions = [] }) => {
+  describe: ({ models = [], actions = [], assistants }) => {
     if (!models.length) return "Turn the API off";
     const what = models.includes("all")
       ? "every model, also ones added later,"
@@ -352,7 +352,13 @@ const setApi: Operation<{
       : actions.length
         ? `, and let them run ${list(actions.map((a) => humanize(a).toLowerCase()))}`
         : "";
-    return `Offer ${what} to other programs${run}`;
+    const tools =
+      assistants === true
+        ? ", also as tools for AI assistants"
+        : assistants === false
+          ? ", not to AI assistants"
+          : "";
+    return `Offer ${what} to other programs${run}${tools}`;
   },
   destructive: () => false,
   apply({ auth }, { models = [], actions = [], except = [], assistants }, ir) {
