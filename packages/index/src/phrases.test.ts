@@ -206,6 +206,14 @@ describe("other wordings", () => {
       { model: "Product", field: "deliveryDate", type: "date" },
     ],
     ["Customers need a VAT number", { model: "Customer", field: "vatNumber", type: "string" }],
+    [
+      "Add a VAT number field to customers.",
+      { model: "Customer", field: "vatNumber", type: "string" },
+    ],
+    [
+      "Add a nickname column to customers",
+      { model: "Customer", field: "nickname", type: "string" },
+    ],
     ["Products must have a description", { model: "Product", field: "description", type: "text!" }],
     [
       "Customers should have a required phone number",
