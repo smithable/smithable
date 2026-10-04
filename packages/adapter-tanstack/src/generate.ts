@@ -380,7 +380,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // Sign-in (smithable.auth.yml): its kit and files only when the app has sign-in.
     key: "auth",
     kit: [{ files: SIGN_IN_KIT, used: ({ auth }) => hasSignIn(auth) }],
-    files: ({ ir, auth, t }) => {
+    files: ({ ir, auth, t, options }) => {
       if (!hasSignIn(auth)) return [];
       const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");
       const users =
@@ -413,7 +413,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               // The same as tools for AI assistants, when the auth file says so (§5b).
               ...(auth.api?.assistants
                 ? [
-                    generated("src/generated/mcp.server.ts", mcpModule(ir, auth, t)),
+                    generated(
+                      "src/generated/mcp.server.ts",
+                      mcpModule(ir, auth, t, options.content),
+                    ),
                     generated("src/routes/mcp.ts", mcpRoute(ir)),
                   ]
                 : []),
@@ -457,7 +460,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
       {
         // Keys for the API, on the users page (docs/design/integrations.md §2).
-        files: ["src/kit/Keys.tsx", "src/kit/api.server.ts"],
+        files: ["src/kit/Keys.tsx", "src/kit/api.server.ts", "src/kit/where.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth),
       },
       {

@@ -222,7 +222,7 @@ export function assistantOffer(
       {
         name: "measure",
         description:
-          "A number worked out by the app, never by reading rows: how many records, or the sum, average, min or max of a number field, optionally per value of a field or per month of a date.",
+          "A number worked out by the app, never by reading rows: how many records, or the sum, average, min or max of a number field, optionally per value of a field or per month of a date. A min or max names the record that holds it; per reference, each group carries its title, the largest first.",
         inputSchema: {
           type: "object",
           required: ["kind"],
