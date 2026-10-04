@@ -53,6 +53,11 @@ export interface Refusal {
   refusal: string;
 }
 
+/** What a companion changed in step with an operation, said in its confirmation. */
+export interface Note {
+  note: string;
+}
+
 /**
  * What an argument names in the spec, as its schema's `x-smithable` annotation, so forms can
  * offer the names there are: a field of the model (or the page's model) another argument names,
