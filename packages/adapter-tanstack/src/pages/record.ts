@@ -554,7 +554,7 @@ const contact${model.name} = createServerFn({ method: "POST" })
     writeAllowed(viewer, getRequestHeaders());
     const row = await ${n.data}.get(viewer, data.id);
     if (!row) throw new Error("This ${n.label.toLowerCase()} is not there any more.");
-    const recipient = ${contact.to === "owner" ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
+    const recipient = ${contact.to === "owner" && !model.ownedBy ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
     const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;
     if (!to?.email) throw new Error("The ${recipient} cannot be reached.");
     const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
