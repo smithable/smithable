@@ -347,9 +347,9 @@ ${tests.join("\n\n")}
       ["changed", viewer.id, viewer.role],
       ["deleted", viewer.id, viewer.role],
     ]);
-    // The deleted record keeps its name (as it was by then) in the log; no field's value is stored.
-    expect(lines[2]?.title).toBe(lines[1]?.title);
-    expect(lines[2]?.title).toBeTruthy();
+    // Only the line that deleted it keeps the record's name (its title by then); no field's
+    // value is stored.
+    expect(lines.map((l) => Boolean(l.title))).toEqual([false, false, true]);
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
   });
 });`);
