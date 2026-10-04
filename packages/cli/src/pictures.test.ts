@@ -76,7 +76,7 @@ test("a drafted café gets the café hero into the content file and the barista 
 app: { name: Kaffe, description: A café. }
 models:
   Dish:
-    fields: { name: string!, price: money }
+    fields: { name: string!, price: money, photo: picture }
 pages:
   home: { route: /, landing: { hero: { button: menu } } }
   menu: { crud: Dish }
@@ -121,6 +121,23 @@ pages:
   writePictures(dir, written);
   expect(readFileSync(join(dir, "public", "images", "hero.webp"))).toHaveLength(4);
   expect(readFileSync(join(dir, "public", "images", "samples", "1.webp"))).toHaveLength(4);
+});
+
+test("an app whose records have no pictures gets no sample pictures, only its hero", async () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Kaffe }\nmodels:\n  Dish: { fields: { name: string! } }\npages:\n  home: { route: /, landing: { hero: { button: menu } } }\n  menu: { crud: Dish }\n",
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const written = await addLibraryPictures({
+    description: "a café with its menu",
+    ir,
+    files: { "smithable.content.yml": "smithableContent: 0.1\n" },
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index,
+  });
+  expect(written.map((w) => w.file)).toEqual(["hero.webp"]);
 });
 
 test("an unreachable library means no pictures and one line, never an error", async () => {
