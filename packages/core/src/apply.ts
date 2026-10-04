@@ -139,6 +139,7 @@ export function applyOperation(
     ),
   } as Editors;
   let effects: Effect[];
+  const notes: string[] = [];
   try {
     effects = op.apply(editors, args, before.ir);
     // The other sections and the companions follow what the operation did (a field renamed, a
@@ -150,8 +151,9 @@ export function applyOperation(
       }
       for (const c of COMPANIONS) {
         const editor = editors[c.key];
-        const refused = editor && c.follow?.(editor, effect, before.ir);
-        if (refused) return fail(refused.refusal);
+        const followed = editor && c.follow?.(editor, effect, before.ir);
+        if (followed && "refusal" in followed) return fail(followed.refusal);
+        if (followed) notes.push(followed.note);
       }
     }
   } catch (error) {
@@ -179,7 +181,7 @@ export function applyOperation(
     ok: true,
     files: { spec: editors.spec.text, ...written },
     added: added.map((a) => ({ path: `themes/${a.theme.name}.yml`, text: a.text })),
-    description: op.describe(args, before.ir),
+    description: [op.describe(args, before.ir), ...notes].join("; "),
     destructive: op.destructive(args, before.ir, after.ir),
     effects,
   };
