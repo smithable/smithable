@@ -425,6 +425,59 @@ function list(items: string[]): string {
     : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 }
 
+const setAssistant: Operation<{ for?: string[]; may?: "read" | "change" }> = {
+  name: "setAssistant",
+  summary:
+    'Say who gets "Ask", the assistant in the app: some roles, signed-in (everyone who signs in) or anyone (visitors too, who are answered without a model); and whether it only reads or may also change things, each change confirmed by the person. Nobody turns it off. It never deletes.',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      for: {
+        type: "array",
+        items: { type: "string" },
+        description: "Roles, e.g. [admin, staff]; or [signed-in]; or [anyone]. None turns it off.",
+      },
+      may: {
+        type: "string",
+        enum: ["read", "change"],
+        description:
+          "read (the default): it finds and counts. change: it also adds, changes and runs actions.",
+      },
+    },
+  },
+  positional: ["...for"],
+  describe: ({ for: who = [], may }) => {
+    if (!who.length) return 'Nobody gets "Ask"';
+    const whom = who.includes("anyone")
+      ? "Anyone, visitors too,"
+      : who.includes("signed-in")
+        ? "Everyone who signs in"
+        : list(who.map((r) => humanize(r)));
+    return `${whom} can ask the app questions; ${may === "change" ? "it may also add and change records and run actions, each confirmed by the person" : "it changes nothing"}`;
+  },
+  destructive: () => false,
+  apply({ auth }, { for: who = [], may }) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    const path = ["assistant"];
+    if (!who.length) {
+      if (may) throw new OperationError('Say who gets "Ask": roles, signed-in or anyone.');
+      if (auth.has(path)) auth.remove(path);
+      return [];
+    }
+    const word = who.find((w) => w === "signed-in" || w === "anyone");
+    if (word && who.length > 1)
+      throw new OperationError(`"${word}" already covers every role: give it alone.`);
+    const value: Record<string, YamlValue> = {
+      for: word ?? [...new Set(who)],
+      ...(may === "change" ? { may: "change" } : {}),
+    };
+    if (auth.has(path)) auth.set(path, value);
+    else auth.add([], "assistant", value);
+    return [];
+  },
+};
+
 export const authOperations: AnyOperation[] = [
   setSignUp,
   setDefaultAccess,
@@ -434,4 +487,5 @@ export const authOperations: AnyOperation[] = [
   setPublic,
   setPublicWhere,
   setApi,
+  setAssistant,
 ];
