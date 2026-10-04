@@ -10,7 +10,7 @@ import { validateContext } from "./context-file.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { YamlEditor } from "./edit.js";
 import type { Condition, SpecIR } from "./ir.js";
-import type { AnyOperation, Editors, Effect, Refusal } from "./operation.js";
+import type { AnyOperation, Editors, Effect, Note, Refusal } from "./operation.js";
 import { pageModel } from "./patterns.js";
 import { authOperations } from "./sections/auth-operations.js";
 import { contentOperations } from "./sections/content-operations.js";
@@ -26,8 +26,11 @@ export interface Companion {
   /** Problems with the file given the spec (and the project's other files); an error makes it invalid. */
   check(text: string, ir: SpecIR, files?: ProjectFiles): Diagnostic[];
   operations: AnyOperation[];
-  /** Keeps the file in step with what an operation did elsewhere, or refuses the change. */
-  follow?(editor: YamlEditor, effect: Effect, ir: SpecIR): Refusal | undefined;
+  /**
+   * Keeps the file in step with what an operation did elsewhere, or refuses the change; a note
+   * says what it changed, in the operation's confirmation.
+   */
+  follow?(editor: YamlEditor, effect: Effect, ir: SpecIR): Refusal | Note | undefined;
 }
 
 const fieldPath = (m: string, f: string) => ["models", m, "fields", f];
@@ -144,6 +147,16 @@ const auth: Companion = {
   check: (text, ir) => validateAuth({ path: "smithable.auth.yml", text }, ir).diagnostics,
   operations: authOperations,
   follow(editor, effect) {
+    // A removed page is no longer one visitors may open.
+    if (effect.kind === "remove-page") {
+      const pages = ["public", "pages"];
+      const listed = editor.has(pages) ? (editor.get(pages) as string[]) : [];
+      if (!listed.includes(effect.page)) return undefined;
+      const rest = listed.filter((p) => p !== effect.page);
+      if (rest.length) editor.set(pages, rest);
+      else editor.removeAndPrune(pages, 0);
+      return { note: "it is no longer public" };
+    }
     // What visitors may read (`Post: { where: { status: published } }`) follows the field it
     // names, and refuses to lose it: reading would otherwise widen silently.
     if (
