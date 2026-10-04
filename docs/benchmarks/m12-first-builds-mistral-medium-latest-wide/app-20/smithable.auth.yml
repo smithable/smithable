@@ -4,12 +4,11 @@ signIn:
 defaultAccess: private
 roles:
   admin:
-    description: Studiomme työntekijä. Hallinnoi tunnit, luokat ja opettajat.
+    description: Studiomme työntekijä. Hallinnoi aikataulua, tunteja ja ohjaajia.
   member:
     description: Opiskelija, joka varaa tunteja.
 defaultRole: member
 admins: [johan@smithable.ai]
 public:
-  pages: [home, schedule]
+  pages: [koti, aikataulu]
   read: [ClassType, Instructor, Session]
-  create: [Message]
