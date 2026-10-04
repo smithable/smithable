@@ -230,6 +230,33 @@ describe("operations", () => {
   });
 });
 
+describe("setOwner", () => {
+  test("a record belongs to the user in one of its User fields, or to its creator again", () => {
+    // The CRM's customers belong to their account manager.
+    const creator = ok("setOwner", ["Customer"]);
+    expect(creator.description).toBe("Customers belong to whoever created them");
+    expect(changed(files.spec, creator.files.spec).removed.join("\n")).toContain(
+      "ownedBy: accountManager",
+    );
+    const back = applyOperation({ ...files, spec: creator.files.spec }, "setOwner", {
+      model: "Customer",
+      field: "accountManager",
+    });
+    if (!back.ok) throw new Error(back.message);
+    expect(back.description).toBe("Customers belong to their account manager");
+    expect(back.files.spec).toContain("    ownedBy: accountManager\n");
+  });
+
+  test("the owner is a field that refers to a user; the refusal names them, or how to add one", () => {
+    const wrong = applyOperation(files, "setOwner", { model: "Customer", field: "name" });
+    expect(wrong).toMatchObject({ ok: false });
+    if (!wrong.ok) expect(wrong.message).toContain("accountManager");
+    const none = applyOperation(files, "setOwner", { model: "Order", field: "number" });
+    expect(none).toMatchObject({ ok: false });
+    if (!none.ok) expect(none.message).toContain("addField Order handledBy User");
+  });
+});
+
 describe("setAccess", () => {
   test("changes, adds and removes access exceptions, one line at a time", () => {
     expect(
