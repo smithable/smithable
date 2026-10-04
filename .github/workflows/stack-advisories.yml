@@ -1,0 +1,27 @@
+# Every day: the stack profile's pins against their packages' own advisory lists on GitHub
+# (scripts/stack-advisories.mjs). The databases the scanners read list a new hole days later:
+# six advisories of 2026-09-30 were in none of them on 2026-10-04. A failed run means a pinned
+# version has a published hole, or a list could not be read; GitHub mails whoever last changed
+# this file. The fix is to move the pin in packages/adapter-tanstack/src/stack.ts, through the
+# gate. The run's summary also names the pins with a newer patch release, for the weekly bump.
+name: Stack advisories
+on:
+  schedule:
+    - cron: "40 4 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  advisories:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+      - name: Pins against their packages' advisory lists
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          node scripts/stack-advisories.mjs | tee -a "$GITHUB_STEP_SUMMARY"
