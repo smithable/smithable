@@ -76,8 +76,8 @@ test("a few tools whatever the app, and a line per kind of record the caller may
   expect(sales.summary).toBe(
     [
       "Acme CRM: Customers and their orders.",
-      "Customer (customers): name*, email, segment* (smb | enterprise), creditLimit money, notes, accountManager -> User. Title: name.",
-      "Order (orders): number*, customer* -> Customer, status* (draft | placed | shipped), total* money, placedOn date, rush yes/no. Title: number.",
+      "Customer (customers): name*, email, segment* (smb | enterprise), creditLimit (money), notes, accountManager -> User. Title: name.",
+      "Order (orders): number*, customer* -> Customer, status* (draft | placed | shipped), total* (money), placedOn (date), rush (yes/no). Title: number.",
       "Actions: ship (Order, when status is placed).",
       "* required. You act as someone with the role sales.",
     ].join("\n"),
@@ -245,6 +245,8 @@ test("what each field can be matched by, what can be added up, and what a kind's
   expect(customer?.description).toContain("Customer: A company we sell to.");
   expect(customer?.description).toContain("- Orders are held above the credit limit.");
   expect(customer?.description).toContain("A record belongs to its accountManager.");
+  // A description is the same for every caller: what one may do is in its tools, not here.
+  expect(customer?.description).not.toContain("You may");
   expect(order?.description).toContain("- ship: Ship Only when status is placed.");
 });
 
