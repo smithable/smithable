@@ -1020,7 +1020,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { bookings, sessions } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import type { BookingValues } from "./booking";
@@ -1296,7 +1297,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { classTypes } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import type { ClassTypeValues } from "./class-type";
@@ -1697,6 +1699,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { bookings, classTypes, instructors, messages, posts, sessions } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -1757,7 +1760,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
@@ -1777,7 +1780,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { instructors } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { deletePicture } from "#/kit/uploads";
 import { afterChange, afterDelete } from "./hooks";
@@ -2052,7 +2056,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { messages } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { MessageValues } from "./message";
 
@@ -2337,7 +2342,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { posts } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { deletePicture } from "#/kit/uploads";
 import { afterChange, afterDelete } from "./hooks";
 import type { PostValues } from "./post";
@@ -2640,7 +2646,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { and, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { bookings, sessions } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { bookingData } from "./booking.server";
 import { classTypeData } from "./class-type.server";
@@ -2958,6 +2965,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
 import { codeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -3050,7 +3058,7 @@ export const auth = betterAuth({
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
@@ -6219,6 +6227,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
+  "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
@@ -6320,25 +6329,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "d49bc7e4 generated",
   "src/generated/access.test.ts": "0ad49bc4 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "086792b6 generated",
+  "src/generated/booking.server.ts": "f02e810a generated",
   "src/generated/booking.ts": "9ec9d400 generated",
-  "src/generated/class-type.server.ts": "65974591 generated",
+  "src/generated/class-type.server.ts": "86d7ae7d generated",
   "src/generated/class-type.ts": "acadda4f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
-  "src/generated/hooks.ts": "3769a0bf generated",
-  "src/generated/instructor.server.ts": "a62a1ead generated",
+  "src/generated/hooks.ts": "48eecec6 generated",
+  "src/generated/instructor.server.ts": "e2efe253 generated",
   "src/generated/instructor.ts": "dd86d8e3 generated",
-  "src/generated/message.server.ts": "ae6ef6a4 generated",
+  "src/generated/message.server.ts": "65551266 generated",
   "src/generated/message.ts": "7f5e91c2 generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
-  "src/generated/post.server.ts": "593d3e08 generated",
+  "src/generated/post.server.ts": "8f28faec generated",
   "src/generated/post.ts": "cd2cc271 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "467295b9 generated",
+  "src/generated/session.server.ts": "9875ae4b generated",
   "src/generated/session.ts": "63803330 generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -6358,19 +6367,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "6b7a6440 kit",
+  "src/kit/access.ts": "8a6937ce kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
-  "src/kit/mail.ts": "7300d571 kit",
+  "src/kit/log.server.ts": "f64505b5 kit",
+  "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/trace.server.ts": "3b44a34e kit",
+  "src/kit/trace.server.ts": "401cea3b kit",
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "40c21f37 generated",
+  "src/lib/auth.ts": "2464e9fc generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -6400,7 +6410,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/$id.tsx": "cedbf880 generated",
   "src/routes/class-types/index.tsx": "9dcfea74 generated",
   "src/routes/class-types/new.tsx": "d60149e8 generated",
-  "src/routes/files/$model.$field.ts": "c26ecf6c kit",
+  "src/routes/files/$model.$field.ts": "cc327122 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -7075,7 +7085,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { customers } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
@@ -7390,6 +7401,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { customers, orders } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -7446,7 +7458,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
@@ -7511,7 +7523,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { orders } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
 import type { OrderValues } from "./order";
@@ -8084,6 +8097,7 @@ import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
 import { codeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -8216,7 +8230,7 @@ export const auth = betterAuth({
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
@@ -9322,6 +9336,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
+  "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
@@ -9390,12 +9405,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "11dbd27a generated",
+  "src/generated/customer.server.ts": "d02a6f30 generated",
   "src/generated/customer.ts": "e4cd5bb6 generated",
-  "src/generated/hooks.ts": "88a49c58 generated",
+  "src/generated/hooks.ts": "5721824b generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "edb31654 generated",
+  "src/generated/order.server.ts": "e2387c78 generated",
   "src/generated/order.ts": "dd541b19 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "de07ed11 generated",
@@ -9411,18 +9426,19 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
-  "src/kit/access.ts": "6b7a6440 kit",
+  "src/kit/access.ts": "8a6937ce kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
-  "src/kit/mail.ts": "7300d571 kit",
+  "src/kit/log.server.ts": "f64505b5 kit",
+  "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/trace.server.ts": "3b44a34e kit",
+  "src/kit/trace.server.ts": "401cea3b kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "4fab771b generated",
+  "src/lib/auth.ts": "030a96c0 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -10554,7 +10570,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { businessProfiles } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { BusinessProfileValues } from "./business-profile";
 
@@ -10799,7 +10816,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { clients } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
@@ -11094,6 +11112,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { businessProfiles, clients, invoiceLines, invoices } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -11152,7 +11171,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
@@ -11197,7 +11216,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { invoices } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceLineData } from "./invoice-line.server";
@@ -11553,7 +11573,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { invoiceLines } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import type { InvoiceLineValues } from "./invoice-line";
@@ -11845,6 +11866,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
 import { codeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -11937,7 +11959,7 @@ export const auth = betterAuth({
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
@@ -13368,6 +13390,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
+  "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
@@ -13441,18 +13464,18 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "f16afcbc generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "5962dbc4 generated",
+  "src/generated/business-profile.server.ts": "133c0d2a generated",
   "src/generated/business-profile.ts": "2abbba11 generated",
-  "src/generated/client.server.ts": "c4f63994 generated",
+  "src/generated/client.server.ts": "f0021978 generated",
   "src/generated/client.ts": "262b8aa5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/hooks.ts": "753913b6 generated",
+  "src/generated/hooks.ts": "5a1756ed generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "aed5571b generated",
+  "src/generated/invoice-line.server.ts": "19b1f569 generated",
   "src/generated/invoice-line.ts": "ad44efd2 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "8d19fb53 generated",
+  "src/generated/invoice.server.ts": "eaa9d917 generated",
   "src/generated/invoice.ts": "a7bbf4f2 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -13468,19 +13491,20 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "6b7a6440 kit",
+  "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
-  "src/kit/mail.ts": "7300d571 kit",
+  "src/kit/log.server.ts": "f64505b5 kit",
+  "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/trace.server.ts": "3b44a34e kit",
+  "src/kit/trace.server.ts": "401cea3b kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "61271d99 generated",
+  "src/lib/auth.ts": "9283c2f6 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -13975,6 +13999,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { items } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -14030,7 +14055,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
@@ -14050,7 +14075,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { items, itemsFavorites } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { deletePicture } from "#/kit/uploads";
 import { afterChange, afterDelete } from "./hooks";
 import type { ItemValues } from "./item";
@@ -14412,6 +14438,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
 import { codeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -14504,7 +14531,7 @@ export const auth = betterAuth({
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
@@ -15842,6 +15869,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
+  "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
@@ -15913,8 +15941,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/access.test.ts": "337e6691 generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/hooks.ts": "1bccea19 generated",
-  "src/generated/item.server.ts": "9af05a94 generated",
+  "src/generated/hooks.ts": "37667a2c generated",
+  "src/generated/item.server.ts": "1b4812a8 generated",
   "src/generated/item.ts": "53aaac1e generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
@@ -15932,27 +15960,28 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "6b7a6440 kit",
+  "src/kit/access.ts": "8a6937ce kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
-  "src/kit/mail.ts": "7300d571 kit",
+  "src/kit/log.server.ts": "f64505b5 kit",
+  "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/trace.server.ts": "3b44a34e kit",
+  "src/kit/trace.server.ts": "401cea3b kit",
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "dca2a42f generated",
+  "src/lib/auth.ts": "0086a0c4 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
   "src/routes/$id.tsx": "423b2afb generated",
   "src/routes/__root.tsx": "d5881835 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
-  "src/routes/files/$model.$field.ts": "c26ecf6c kit",
+  "src/routes/files/$model.$field.ts": "cc327122 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -16419,6 +16448,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { items } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -16474,7 +16504,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
@@ -16517,7 +16547,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { items } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { ItemValues } from "./item";
 import { withItemFormulas } from "./item.formulas";
@@ -16797,6 +16828,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
 import { codeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -16889,7 +16921,7 @@ export const auth = betterAuth({
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
@@ -17611,6 +17643,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
+  "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
@@ -17672,9 +17705,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "ea88ffb1 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/hooks.ts": "1bccea19 generated",
+  "src/generated/hooks.ts": "37667a2c generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "6e9e840b generated",
+  "src/generated/item.server.ts": "9d984691 generated",
   "src/generated/item.ts": "f20dc810 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -17688,18 +17721,19 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
-  "src/kit/access.ts": "6b7a6440 kit",
+  "src/kit/access.ts": "8a6937ce kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
-  "src/kit/mail.ts": "7300d571 kit",
+  "src/kit/log.server.ts": "f64505b5 kit",
+  "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/trace.server.ts": "3b44a34e kit",
+  "src/kit/trace.server.ts": "401cea3b kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1616c31e generated",
+  "src/lib/auth.ts": "e1fff927 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",
@@ -19061,7 +19095,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { components } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
@@ -19355,6 +19390,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // throws fails that request. Daily jobs run in production, a day after the server started.
 import type { components, incidentUpdates, incidents, maintenances } from "#/db/schema";
 import type { Viewer } from "#/kit/access";
+import { log } from "#/kit/log.server";
 import * as custom from "#/custom/hooks";
 
 export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void>;
@@ -19413,7 +19449,7 @@ export async function runDaily(): Promise<void> {
       try {
         await job();
       } catch (error) {
-        console.error("A daily job failed:", error);
+        log.error("A daily job failed", { error });
       }
     }
 }
@@ -19433,7 +19469,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { incidents } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentUpdateData } from "./incident-update.server";
@@ -19744,7 +19781,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { incidentUpdates } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import type { IncidentUpdateValues } from "./incident-update";
@@ -20000,7 +20038,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { maintenances } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { componentData } from "./component.server";
 import type { MaintenanceValues } from "./maintenance";
@@ -20540,6 +20579,7 @@ import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
 import { codeAllowed } from "#/kit/limit";
+import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -20669,7 +20709,7 @@ export const auth = betterAuth({
           to: address,
           subject: \`Your code for \${APP_NAME}\`,
           text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
-        }).catch((error) => console.error("A sign-in code could not be sent:", error));
+        }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
     tanstackStartCookies(),
@@ -22541,6 +22581,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
+  "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
   "kit: src/kit/search.ts",
@@ -22621,15 +22662,15 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "ed8d22a8 generated",
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "9cae6ab6 generated",
+  "src/generated/component.server.ts": "7dadddca generated",
   "src/generated/component.ts": "c47f2a48 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/hooks.ts": "84c092d9 generated",
-  "src/generated/incident-update.server.ts": "87364642 generated",
+  "src/generated/hooks.ts": "e1272348 generated",
+  "src/generated/incident-update.server.ts": "54a92d88 generated",
   "src/generated/incident-update.ts": "0e7d4c32 generated",
-  "src/generated/incident.server.ts": "eddeb150 generated",
+  "src/generated/incident.server.ts": "973529f6 generated",
   "src/generated/incident.ts": "ca312beb generated",
-  "src/generated/maintenance.server.ts": "0cc77b22 generated",
+  "src/generated/maintenance.server.ts": "ccf9c0bc generated",
   "src/generated/maintenance.ts": "ce9b2f03 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
@@ -22650,19 +22691,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
-  "src/kit/access.ts": "6b7a6440 kit",
+  "src/kit/access.ts": "8a6937ce kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "3e9b587d kit",
-  "src/kit/mail.ts": "7300d571 kit",
+  "src/kit/log.server.ts": "f64505b5 kit",
+  "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
-  "src/kit/trace.server.ts": "3b44a34e kit",
+  "src/kit/trace.server.ts": "401cea3b kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "9a9b192d generated",
+  "src/lib/auth.ts": "8404a82a generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "5393dc89 kit",

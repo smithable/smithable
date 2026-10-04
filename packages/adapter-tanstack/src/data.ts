@@ -478,7 +478,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   return `${HEADER}import { ${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import { ${[...new Set([n.table, ...(perTarget && typeof capacity?.max === "string" ? [perTarget] : []), ...holds.map((m) => tableNames(m).table), ...(favorites ? [favorites] : [])])].sort().join(", ")} } from "#/db/schema";
-import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, refusal, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, readScope, type Viewer } from "#/kit/access";
+import { refusal } from "#/kit/log.server";
 ${referenced && titleColumn !== "id" ? `import { contains } from "#/kit/search";\n` : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
