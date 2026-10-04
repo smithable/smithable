@@ -1,0 +1,26 @@
+smithable: 0.1
+app:
+  name: Piano Lessons
+  description: Schedule and management of piano lessons for pupils, their weekly times and practice assignments.
+models:
+  Pupil:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+  Lesson:
+    fields:
+      pupil: Pupil!
+      startsAt: datetime!
+      durationMinutes: int! = 30
+      practice: text
+pages:
+  pupils:
+    crud: Pupil
+  lessons:
+    crud: Lesson
+  schedule:
+    calendar:
+      model: Lesson
+      starts: startsAt
+navigation: [schedule, lessons, pupils]

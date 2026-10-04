@@ -1,0 +1,10 @@
+{
+  "description": "A help desk for an IT team: tickets, priorities and who handles them.",
+  "starter": "status",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who can open a ticket?",
+    "What do tickets track?",
+    "Can end users follow the progress of their own tickets without signing in?"
+  ]
+}

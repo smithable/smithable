@@ -1,0 +1,26 @@
+smithableUx: 0.1
+pages:
+  recipes:
+    table:
+      columns: [name, category, servings, prepTime, cookTime, isFavorite]
+    icon: book
+    form:
+      sections: [{ name: details, fields: [name, description, category, isFavorite] }, { name: timing, fields: [servings, prepTime, cookTime] }, { name: media, fields: [imageUrl] }]
+      columns: 2
+  ingredients:
+    table:
+      columns: [name, quantity, unit, recipe]
+  shopping-lists:
+    table:
+      columns: [name, date, notes]
+    icon: list
+  shopping-items:
+    table:
+      columns: [name, quantity, unit, shoppingList, checked]
+    icon: cart
+    form:
+      columns: 2
+theme:
+  preset: playful
+  brand:
+    primary: "#e67e22"

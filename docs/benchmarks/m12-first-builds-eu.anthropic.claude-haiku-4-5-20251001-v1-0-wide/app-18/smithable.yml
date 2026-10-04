@@ -1,0 +1,109 @@
+smithable: 0.1
+app:
+  name: Byggfirma
+  description: Hantera offerter, kunder och fakturor för byggfirman.
+  currency: SEK
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      phone: phone
+      quotes: Quote[]
+      invoices: Invoice[]
+  QuoteLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      quote: Quote!
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Quote:
+    fields:
+      number: string! unique
+      customer: Customer!
+      createdOn: date! = TODAY()
+      validUntil:
+        type: date
+        formula: DATEADD(createdOn, 30, "day")
+      status: draft | sent | accepted | rejected
+      lines: QuoteLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date
+        formula: DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+pages:
+  customers:
+    crud: Customer
+  quote-lines:
+    crud: QuoteLine
+  invoice-lines:
+    crud: InvoiceLine
+  quotes:
+    crud: Quote
+    actions: [sendQuote, acceptQuote, rejectQuote]
+  invoices:
+    crud: Invoice
+    actions: [sendInvoice, markPaid]
+  team:
+    users: manage
+actions:
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka offerten till kunden.
+  acceptQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: Kunden accepterade offerten.
+  rejectQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: rejected
+    intent: Kunden avvisade offerten.
+  sendInvoice:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Skicka fakturan till kunden.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Kunden betalade fakturan.

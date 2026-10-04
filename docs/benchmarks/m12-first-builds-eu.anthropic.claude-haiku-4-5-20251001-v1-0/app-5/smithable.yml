@@ -1,0 +1,39 @@
+smithable: 0.1
+app:
+  name: Bakery Inventory
+  description: Manage ingredients, suppliers and stock levels for a small bakery.
+models:
+  Ingredient:
+    fields:
+      name: string!
+      description: text
+      category: flour | sugar | dairy | leavening | flavorings | other
+      unit: kg | g | l | ml | pieces
+      minimumStock: decimal!
+      currentStock: decimal! = 0
+      supplier: Supplier!
+  Supplier:
+    fields:
+      name: string!
+      contact: email
+      phone: phone
+      address: text
+      deliveryDays: int
+  StockLevel:
+    fields:
+      ingredient: Ingredient!
+      quantity: decimal!
+      recordedAt: datetime! = NOW()
+      notes: text
+pages:
+  ingredients:
+    crud: Ingredient
+    search: [name, description]
+  suppliers:
+    crud: Supplier
+    search: [name, contact]
+  stock:
+    crud: StockLevel
+    search: [ingredient]
+    filters: [ingredient, recordedAt]
+navigation: [ingredients, suppliers, stock]

@@ -1,0 +1,31 @@
+smithableUx: 0.1
+pages:
+  pupils:
+    icon: users
+    form:
+      control:
+        notes: textarea
+  pieces:
+    icon: book
+    table:
+      sort: status
+      columns: [pupil, title, composer, status]
+    form:
+      control:
+        notes: textarea
+  lesson-slots:
+    icon: calendar
+    table:
+      sort: dayOfWeek
+      columns: [pupil, dayOfWeek, startTime, durationMinutes, active]
+    form:
+      control:
+        durationMinutes: stepper
+tones:
+  Piece.status:
+    complete: success
+    polishing: warning
+theme:
+  preset: minimal
+  brand:
+    font: Nunito Sans

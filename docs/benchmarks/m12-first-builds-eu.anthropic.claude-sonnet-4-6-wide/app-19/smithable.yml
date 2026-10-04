@@ -1,0 +1,41 @@
+smithable: 0.1
+app:
+  name: Loppisen
+  description: Lägg upp saker du vill sälja och hitta fynd från andra i närheten.
+  currency: SEK
+pages:
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+      callToAction:
+        button: catalog
+  catalog:
+    route: /
+    crud: Item
+    search: [title, place]
+    filters: [category, price, condition, available]
+    sortable: [price, createdAt]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      price: money
+      category: klder | mbler | bcker | elektronik | sport | barn | vrigt
+      condition: somNy | bra | anvnd
+      place: string
+      available: bool = true
+navigation: [catalog, myItems, saved]

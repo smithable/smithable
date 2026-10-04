@@ -1,0 +1,15 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: Salon staff. Manage the schedule, stylists and services.
+  customer:
+    description: A customer who books appointments.
+defaultRole: customer
+admins: [johan@smithable.ai]
+public:
+  pages: [home]
+  read: [Stylist, Service]
+  create: [Message]

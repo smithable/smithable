@@ -1,0 +1,48 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Välkommen till Loppisen
+    subtitle: Hitta fynd eller sälj saker du inte längre behöver.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An empty sports hall with a polished wooden floor and climbing bars on the wall
+  catalog:
+    title: Annonser
+  myItems:
+    title: Mina annonser
+  saved:
+    title: Sparade
+models:
+  Item:
+    label: Annons
+    pluralLabel: Annonser
+    fields:
+      title:
+        label: Titel
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      category:
+        label: Kategori
+        values:
+          klder: Kläder
+          mbler: Möbler
+          bcker: Böcker
+          elektronik: Elektronik
+          sport: Sport
+          barn: Barn
+          vrigt: Övrigt
+      condition:
+        label: Skick
+        values:
+          somNy: Som ny
+          bra: Bra
+          anvnd: Använd
+      place:
+        label: Ort
+      available:
+        label: Tillgänglig

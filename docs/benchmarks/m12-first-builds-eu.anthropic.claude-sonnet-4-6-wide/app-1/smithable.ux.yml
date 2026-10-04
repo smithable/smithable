@@ -1,0 +1,19 @@
+smithableUx: 0.1
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+    sent: warning
+pages:
+  invoices:
+    table:
+      sort: -issuedOn
+    icon: receipt
+  clients:
+    table:
+      columns: [name, email, phone]
+    icon: users
+  overview:
+    icon: chart
+theme:
+  preset: minimal

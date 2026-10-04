@@ -1,0 +1,37 @@
+smithable: 0.1
+app:
+  name: ToolShare
+  description: A neighborhood tool library where people lend and borrow tools from each other.
+pages:
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Tool
+  catalog:
+    route: /
+    crud: Tool
+    search: [title, location]
+    filters: [category, condition, available]
+    sortable: [title, createdAt]
+    favorites: true
+    contact: owner
+  my-tools:
+    crud: Tool
+    mine: true
+  saved:
+    crud: Tool
+    favorites: only
+models:
+  Tool:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      category: handTools | powerTools | garden | plumbing | electrical | measuring | other
+      condition: likeNew | good | worn
+      location: string
+      available: bool = true
+navigation: [catalog, my-tools, saved]

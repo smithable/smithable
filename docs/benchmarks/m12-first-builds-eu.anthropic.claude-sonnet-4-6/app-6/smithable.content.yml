@@ -1,0 +1,17 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Union Job Board
+    hero:
+      title: Find Your Next Union Job
+      subtitle: Browse open positions posted by your local union and apply with confidence.
+      button: Browse Jobs
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  jobs:
+    title: Job Posts
+  myApplications:
+    title: My Applications
+  applications:
+    title: All Applications

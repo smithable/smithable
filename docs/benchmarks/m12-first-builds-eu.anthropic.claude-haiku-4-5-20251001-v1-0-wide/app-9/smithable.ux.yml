@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  albums:
+    table:
+      sort: -addedOn
+tones:
+  Album.condition:
+    mint: success
+    poor: danger

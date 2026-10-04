@@ -1,0 +1,23 @@
+smithableUx: 0.1
+theme:
+  preset: corporate
+tones:
+  Ticket.status:
+    open: warning
+    inProgress: warning
+    resolved: success
+  Ticket.priority:
+    critical: danger
+    high: warning
+pages:
+  tickets:
+    form:
+      control:
+        description: textarea
+    icon: clipboard
+  updates:
+    form:
+      control:
+        message: textarea
+  overview:
+    icon: chart

@@ -1,0 +1,32 @@
+smithableUx: 0.1
+pages:
+  artists:
+    icon: user
+    form:
+      control:
+        notes: textarea
+  overview:
+    icon: chart
+  albums:
+    table:
+      columns: [title, artist, year, format, condition, pricePaid]
+      below:
+        title: label
+    icon: layers
+    form:
+      sections: [{ name: details, fields: [title, artist, year, label, genre, format] }, { name: condition, fields: [condition, pricePaid, purchaseDate] }, { name: more, fields: [coverImage, notes] }]
+      columns: 2
+      control:
+        notes: textarea
+theme:
+  preset: craft
+  brand:
+    font: Source Sans 3
+tones:
+  Album.condition:
+    mint: success
+    nearMint: success
+    veryGoodPlus: success
+    good: warning
+    fair: warning
+    poor: danger
