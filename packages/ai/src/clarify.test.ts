@@ -128,6 +128,10 @@ test("a draft as operations: slips are mended, refusals go back together, extras
   ]);
   expect(model.prompts[1]).toContain("These operations were refused:");
   expect(model.prompts[1]).toContain('"path" is missing');
+  // Dogs are public and name their keeper: the valid draft goes back once with that, and since
+  // the script has no third answer, it stays as it was.
+  expect(model.prompts[2]).toContain("Anyone on the internet can read Dog");
+  expect(model.prompts).toHaveLength(3);
 });
 
 test("a draft as operations fails when nothing could be applied", async () => {
