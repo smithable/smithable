@@ -27,6 +27,7 @@ models:
       details: text
     access:
       delete: [admin, member]
+      write: [admin, member, assistant]
   Note:
     fields:
       title: string!
@@ -34,6 +35,7 @@ models:
       body: text
     access:
       delete: [admin, member]
+      write: [admin, member, assistant]
 pages:
   team:
     users: manage
