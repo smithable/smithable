@@ -23973,7 +23973,7 @@ import {
   setRole,
   withdrawInvitation,
 } from "#/generated/users.server";
-import { KEY_ROLES, listKeys, makeKey, revokeKey } from "#/generated/keys.server";
+import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { Keys } from "#/kit/Keys";
@@ -24001,7 +24001,7 @@ const getUsers = createServerFn().handler(async () => {
 });
 
 const makeApiKey = createServerFn({ method: "POST" })
-  .validator(z.object({ name: z.string().trim().min(1).max(100), role: z.enum(KEY_ROLES), until: z.iso.date().optional() }))
+  .validator(z.object({ name: z.string().trim().min(1).max(100), role: z.enum(ROLES), until: z.iso.date().optional() }))
   .handler(async ({ data }) =>
     makeKey(await currentViewer(), data.name, data.role, data.until ? new Date(\`\${data.until}T23:59:59Z\`) : undefined),
   );
@@ -24077,7 +24077,7 @@ function TeamPage() {
           keys={keys}
           roles={ROLE_OPTIONS}
           onMake={async (name, role, until) => {
-            const key = await makeApiKey({ data: { name, role: role as (typeof KEY_ROLES)[number], until } });
+            const key = await makeApiKey({ data: { name, role: role as Role, until } });
             await router.invalidate();
             return key;
           }}
@@ -24778,7 +24778,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/maintenance/new.tsx": "67635ee5 generated",
   "src/routes/overview/index.tsx": "a6c168d7 generated",
   "src/routes/sign-in.tsx": "c9a35e7c generated",
-  "src/routes/team/index.tsx": "05d8494e generated",
+  "src/routes/team/index.tsx": "ac08d897 generated",
   "src/routes/updates/$id.tsx": "e037dfa2 generated",
   "src/routes/updates/index.tsx": "73707478 generated",
   "src/routes/updates/new.tsx": "c4bd32a9 generated",
