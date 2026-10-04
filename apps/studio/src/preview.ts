@@ -1,6 +1,8 @@
 // Messages from the preview editor in the app's page (packages/cli/src/preview-editor.ts).
 export type PreviewMessage =
   | { type: "ready" }
+  /** The page has flashed what a change touched; `key` is the one Studio sent with it. */
+  | { type: "flashed"; key: string | null }
   /** The page the preview is on now, e.g. "/customers/12". */
   | { type: "navigated"; path: string }
   | {
