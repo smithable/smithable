@@ -7327,6 +7327,13 @@ export const bookingAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || bookingAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: BookingValues): void {
   if (values.sessionId != null && !sessionData.canRead(viewer, values.sessionId))
@@ -7353,12 +7360,13 @@ export const bookingData = {
   /** The bookings the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(bookingAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.bookings.findMany({
+    const found = await db.query.bookings.findMany({
       where: and(bookingData.readable(viewer), where),
       with: { session: { columns: { id: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -7380,11 +7388,23 @@ export const bookingData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.bookings.findFirst({
+    const found = await db.query.bookings.findFirst({
       where: and(eq(schema.bookings.id, id), bookingData.readable(viewer)),
       with: { session: { columns: { id: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a booking the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.bookings.ownerId })
+        .from(schema.bookings)
+        .where(and(eq(schema.bookings.id, id), bookingData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: BookingValues) {
@@ -7615,6 +7635,13 @@ export const classTypeAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || classTypeAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const classTypeData = {
   /** A condition for the class types the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -7635,11 +7662,12 @@ export const classTypeData = {
   /** The class types the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(classTypeAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.classTypes.findMany({
+    const found = await db.query.classTypes.findMany({
       where: and(classTypeData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -7650,10 +7678,22 @@ export const classTypeData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.classTypes.findFirst({
+    const found = await db.query.classTypes.findFirst({
       where: and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a class type the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.classTypes.ownerId })
+        .from(schema.classTypes)
+        .where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: ClassTypeValues) {
@@ -8114,6 +8154,13 @@ export const instructorAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || instructorAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const instructorData = {
   /** A condition for the instructors the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -8134,11 +8181,12 @@ export const instructorData = {
   /** The instructors the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(instructorAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.instructors.findMany({
+    const found = await db.query.instructors.findMany({
       where: and(instructorData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -8149,10 +8197,22 @@ export const instructorData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.instructors.findFirst({
+    const found = await db.query.instructors.findFirst({
       where: and(eq(schema.instructors.id, id), instructorData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a instructor the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.instructors.ownerId })
+        .from(schema.instructors)
+        .where(and(eq(schema.instructors.id, id), instructorData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: InstructorValues) {
@@ -8403,6 +8463,13 @@ export const messageAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || messageAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const messageData = {
   /** A condition for the messages the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -8423,11 +8490,12 @@ export const messageData = {
   /** The messages the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(messageAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.messages.findMany({
+    const found = await db.query.messages.findMany({
       where: and(messageData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -8438,10 +8506,22 @@ export const messageData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.messages.findFirst({
+    const found = await db.query.messages.findFirst({
       where: and(eq(schema.messages.id, id), messageData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a message the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.messages.ownerId })
+        .from(schema.messages)
+        .where(and(eq(schema.messages.id, id), messageData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: MessageValues) {
@@ -8705,6 +8785,13 @@ export const postAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || postAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const postData = {
   /** A condition for the posts the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -8726,11 +8813,12 @@ export const postData = {
   /** The posts the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(postAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.posts.findMany({
+    const found = await db.query.posts.findMany({
       where: and(postData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -8741,10 +8829,22 @@ export const postData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.posts.findFirst({
+    const found = await db.query.posts.findFirst({
       where: and(eq(schema.posts.id, id), postData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a post the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.posts.ownerId })
+        .from(schema.posts)
+        .where(and(eq(schema.posts.id, id), postData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: PostValues) {
@@ -9027,6 +9127,13 @@ export const sessionAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || sessionAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: SessionValues): void {
   if (values.classTypeId != null && !classTypeData.canRead(viewer, values.classTypeId))
@@ -9055,12 +9162,13 @@ export const sessionData = {
   /** The sessions the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(sessionAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.sessions.findMany({
+    const found = await db.query.sessions.findMany({
       where: and(sessionData.readable(viewer), where),
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: true },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return rows.map((row) => {
       const { bookings, ...listed } = withSessionFormulas(row);
@@ -9075,14 +9183,26 @@ export const sessionData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.sessions.findFirst({
+    const found = await db.query.sessions.findFirst({
       where: and(eq(schema.sessions.id, id), sessionData.readable(viewer)),
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer) } },
     });
+    const row = found && shownTo(viewer, found);
     if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
     const all = await db.query.sessions.findFirst({ where: eq(schema.sessions.id, id), with: { bookings: true } });
     return { ...withSessionFormulas({ ...row, bookings: all?.bookings ?? [] }), bookings: row.bookings };
+  },
+
+  /** Who owns a session the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.sessions.ownerId })
+        .from(schema.sessions)
+        .where(and(eq(schema.sessions.id, id), sessionData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: SessionValues) {
@@ -13189,25 +13309,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "1518628e generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "29150d49 generated",
+  "src/generated/booking.server.ts": "819ea083 generated",
   "src/generated/booking.ts": "330b667f generated",
-  "src/generated/class-type.server.ts": "a7c87ba3 generated",
+  "src/generated/class-type.server.ts": "e589ba7d generated",
   "src/generated/class-type.ts": "b9f640fb generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
-  "src/generated/instructor.server.ts": "0cb90e92 generated",
+  "src/generated/instructor.server.ts": "6ef9492c generated",
   "src/generated/instructor.ts": "f1647450 generated",
-  "src/generated/message.server.ts": "c87d1ff0 generated",
+  "src/generated/message.server.ts": "8b47231c generated",
   "src/generated/message.ts": "4c0e0fa3 generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
-  "src/generated/post.server.ts": "8c39e361 generated",
+  "src/generated/post.server.ts": "db963705 generated",
   "src/generated/post.ts": "d35b4817 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "c4e997f8 generated",
+  "src/generated/session.server.ts": "8a14babc generated",
   "src/generated/session.ts": "622c256c generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "ea4d3905 kit",
@@ -14039,6 +14159,7 @@ export const customerAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: false },
 };
 
+
 /**
  * Whose record it is: anyone's for a role that may change everyone's, otherwise the viewer's
  * own, whatever the form sent.
@@ -14492,6 +14613,13 @@ export const orderAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || orderAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: OrderValues): void {
   if (values.customerId != null && !customerData.canRead(viewer, values.customerId))
@@ -14518,20 +14646,33 @@ export const orderData = {
   /** The orders the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(orderAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.orders.findMany({
+    const found = await db.query.orders.findMany({
       where: and(orderData.readable(viewer), where),
       with: { customer: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withOrderFormulas);
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.orders.findFirst({
+    const found = await db.query.orders.findFirst({
       where: and(eq(schema.orders.id, id), orderData.readable(viewer)),
       with: { customer: { columns: { id: true, name: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? withOrderFormulas(row) : null;
+  },
+
+  /** Who owns a order the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.orders.ownerId })
+        .from(schema.orders)
+        .where(and(eq(schema.orders.id, id), orderData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: OrderValues) {
@@ -16545,12 +16686,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "581cf0db generated",
+  "src/generated/customer.server.ts": "492105eb generated",
   "src/generated/customer.ts": "fe2f334e generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "abf2d07d generated",
+  "src/generated/order.server.ts": "d14e410f generated",
   "src/generated/order.ts": "4eba3439 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "4d2fc346 generated",
@@ -17808,6 +17949,13 @@ export const businessProfileAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || businessProfileAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const businessProfileData = {
   /** A condition for the business profiles the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -17828,18 +17976,31 @@ export const businessProfileData = {
   /** The business profiles the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(businessProfileAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.businessProfiles.findMany({
+    const found = await db.query.businessProfiles.findMany({
       where: and(businessProfileData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.businessProfiles.findFirst({
+    const found = await db.query.businessProfiles.findFirst({
       where: and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a business profile the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.businessProfiles.ownerId })
+        .from(schema.businessProfiles)
+        .where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: BusinessProfileValues) {
@@ -18071,6 +18232,13 @@ export const clientAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || clientAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const clientData = {
   /** A condition for the clients the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -18091,19 +18259,32 @@ export const clientData = {
   /** The clients the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(clientAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.clients.findMany({
+    const found = await db.query.clients.findMany({
       where: and(clientData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.clients.findFirst({
+    const found = await db.query.clients.findFirst({
       where: and(eq(schema.clients.id, id), clientData.readable(viewer)),
       with: { invoices: { where: invoiceData.readable(viewer) } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a client the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.clients.ownerId })
+        .from(schema.clients)
+        .where(and(eq(schema.clients.id, id), clientData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: ClientValues) {
@@ -18488,6 +18669,13 @@ export const invoiceAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || invoiceAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: InvoiceValues): void {
   if (values.clientId != null && !clientData.canRead(viewer, values.clientId))
@@ -18514,11 +18702,12 @@ export const invoiceData = {
   /** The invoices the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(invoiceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.invoices.findMany({
+    const found = await db.query.invoices.findMany({
       where: and(invoiceData.readable(viewer), where),
       with: { client: { columns: { id: true, name: true } }, lines: true },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return rows.map((row) => {
       const { lines, ...listed } = withInvoiceFormulas(row);
@@ -18527,14 +18716,26 @@ export const invoiceData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.invoices.findFirst({
+    const found = await db.query.invoices.findFirst({
       where: and(eq(schema.invoices.id, id), invoiceData.readable(viewer)),
       with: { client: { columns: { id: true, name: true } }, lines: { where: invoiceLineData.readable(viewer) } },
     });
+    const row = found && shownTo(viewer, found);
     if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
     const all = await db.query.invoices.findFirst({ where: eq(schema.invoices.id, id), with: { lines: true } });
     return { ...withInvoiceFormulas({ ...row, lines: all?.lines ?? [] }), lines: row.lines };
+  },
+
+  /** Who owns a invoice the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.invoices.ownerId })
+        .from(schema.invoices)
+        .where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: InvoiceValues) {
@@ -18858,6 +19059,13 @@ export const invoiceLineAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || invoiceLineAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: InvoiceLineValues): void {
   if (values.invoiceId != null && !invoiceData.canRead(viewer, values.invoiceId))
@@ -18884,20 +19092,33 @@ export const invoiceLineData = {
   /** The invoice lines the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(invoiceLineAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.invoiceLines.findMany({
+    const found = await db.query.invoiceLines.findMany({
       where: and(invoiceLineData.readable(viewer), where),
       with: { invoice: { columns: { id: true, number: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withInvoiceLineFormulas);
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.invoiceLines.findFirst({
+    const found = await db.query.invoiceLines.findFirst({
       where: and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer)),
       with: { invoice: { columns: { id: true, number: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? withInvoiceLineFormulas(row) : null;
+  },
+
+  /** Who owns a invoice line the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.invoiceLines.ownerId })
+        .from(schema.invoiceLines)
+        .where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: InvoiceLineValues) {
@@ -20911,18 +21132,18 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "09aaeee3 generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "dd5e15ad generated",
+  "src/generated/business-profile.server.ts": "2168db67 generated",
   "src/generated/business-profile.ts": "70449542 generated",
-  "src/generated/client.server.ts": "9b276c2a generated",
+  "src/generated/client.server.ts": "60455564 generated",
   "src/generated/client.ts": "050eb240 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "65f57fce generated",
+  "src/generated/invoice-line.server.ts": "cd506734 generated",
   "src/generated/invoice-line.ts": "7f9521f9 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "348a1470 generated",
+  "src/generated/invoice.server.ts": "3ef56d70 generated",
   "src/generated/invoice.ts": "721281fb generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -21614,6 +21835,13 @@ export const itemAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || itemAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const itemData = {
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -21654,18 +21882,31 @@ export const itemData = {
   /** The items the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
   async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(itemAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.items.findMany({
+    const found = await db.query.items.findMany({
       where: and(itemData.readable(viewer), where),
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.items.findFirst({
+    const found = await db.query.items.findFirst({
       where: and(eq(schema.items.id, id), itemData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a item the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.items.ownerId })
+        .from(schema.items)
+        .where(and(eq(schema.items.id, id), itemData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: ItemValues) {
@@ -22154,7 +22395,8 @@ const contactItem = createServerFn({ method: "POST" })
     writeAllowed(viewer, getRequestHeaders());
     const row = await itemData.get(viewer, data.id);
     if (!row) throw new Error("This item is not there any more.");
-    const to = row.ownerId ? db.select({ email: user.email }).from(user).where(eq(user.id, row.ownerId)).get() : undefined;
+    const recipient = itemData.ownerOf(viewer, row.id);
+    const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;
     if (!to?.email) throw new Error("The owner cannot be reached.");
     const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
     const name = String(row.title);
@@ -23641,7 +23883,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
-  "src/generated/item.server.ts": "26a87759 generated",
+  "src/generated/item.server.ts": "fa885bfb generated",
   "src/generated/item.ts": "dc271fff generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
@@ -23679,7 +23921,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "56226fa7 generated",
+  "src/routes/$id.tsx": "5286e050 generated",
   "src/routes/__root.tsx": "d5881835 generated",
   "src/routes/api/auth/$.ts": "dd1fe1be kit",
   "src/routes/files/$model.$field.ts": "cc327122 kit",
@@ -24338,6 +24580,13 @@ export const itemAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: false },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || itemAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const itemData = {
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -24358,18 +24607,31 @@ export const itemData = {
   /** The items the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(itemAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.items.findMany({
+    const found = await db.query.items.findMany({
       where: and(itemData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withItemFormulas);
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.items.findFirst({
+    const found = await db.query.items.findFirst({
       where: and(eq(schema.items.id, id), itemData.readable(viewer)),
     });
+    const row = found && shownTo(viewer, found);
     return row ? withItemFormulas(row) : null;
+  },
+
+  /** Who owns a item the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.items.ownerId })
+        .from(schema.items)
+        .where(and(eq(schema.items.id, id), itemData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: ItemValues) {
@@ -25589,7 +25851,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "1cd3a3d6 generated",
+  "src/generated/item.server.ts": "be8af428 generated",
   "src/generated/item.ts": "d6dbcd71 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -28110,6 +28372,13 @@ export const componentAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || componentAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 export const componentData = {
   /** A condition for the components the viewer may read. */
   readable(viewer: Viewer | null) {
@@ -28130,10 +28399,11 @@ export const componentData = {
   /** The components the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(componentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.components.findMany({
+    const found = await db.query.components.findMany({
       where: and(componentData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -28141,21 +28411,34 @@ export const componentData = {
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(componentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(schema.components).where(componentData.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.components.findMany({
+    const found = await db.query.components.findMany({
       where: componentData.readable(viewer),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
       offset,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.components.findFirst({
+    const found = await db.query.components.findFirst({
       where: and(eq(schema.components.id, id), componentData.readable(viewer)),
       with: { incidents: { where: incidentData.readable(viewer) } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a component the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.components.ownerId })
+        .from(schema.components)
+        .where(and(eq(schema.components.id, id), componentData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: ComponentValues) {
@@ -28518,6 +28801,13 @@ export const incidentAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || incidentAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: IncidentValues): void {
   if (values.componentId != null && !componentData.canRead(viewer, values.componentId))
@@ -28545,11 +28835,12 @@ export const incidentData = {
   /** The incidents the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(incidentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.incidents.findMany({
+    const found = await db.query.incidents.findMany({
       where: and(incidentData.readable(viewer), where),
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
@@ -28557,22 +28848,35 @@ export const incidentData = {
   async page(viewer: Viewer | null, limit: number, offset: number) {
     if (readScope(incidentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const total = db.select({ n: count() }).from(schema.incidents).where(incidentData.readable(viewer)).get()?.n ?? 0;
-    const rows = await db.query.incidents.findMany({
+    const found = await db.query.incidents.findMany({
       where: incidentData.readable(viewer),
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
       offset,
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.incidents.findFirst({
+    const found = await db.query.incidents.findFirst({
       where: and(eq(schema.incidents.id, id), incidentData.readable(viewer)),
       with: { component: { columns: { id: true, name: true } }, updates: { where: incidentUpdateData.readable(viewer) } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a incident the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.incidents.ownerId })
+        .from(schema.incidents)
+        .where(and(eq(schema.incidents.id, id), incidentData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: IncidentValues) {
@@ -28852,6 +29156,13 @@ export const incidentUpdateAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || incidentUpdateAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: IncidentUpdateValues): void {
   if (values.incidentId != null && !incidentData.canRead(viewer, values.incidentId))
@@ -28878,20 +29189,33 @@ export const incidentUpdateData = {
   /** The incident updates the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(incidentUpdateAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.incidentUpdates.findMany({
+    const found = await db.query.incidentUpdates.findMany({
       where: and(incidentUpdateData.readable(viewer), where),
       with: { incident: { columns: { id: true, title: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.incidentUpdates.findFirst({
+    const found = await db.query.incidentUpdates.findFirst({
       where: and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer)),
       with: { incident: { columns: { id: true, title: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a incident update the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.incidentUpdates.ownerId })
+        .from(schema.incidentUpdates)
+        .where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: IncidentUpdateValues) {
@@ -29275,6 +29599,13 @@ export const maintenanceAccess: ModelAccess = {
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if (viewer && (row.ownerId === viewer.id || maintenanceAccess.read.roles.includes(viewer.role))) return row;
+  return { ...row, ownerId: null };
+}
+
+
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: MaintenanceValues): void {
   if (values.componentId != null && !componentData.canRead(viewer, values.componentId))
@@ -29301,20 +29632,33 @@ export const maintenanceData = {
   /** The maintenances the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(maintenanceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.maintenances.findMany({
+    const found = await db.query.maintenances.findMany({
       where: and(maintenanceData.readable(viewer), where),
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
+    const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const row = await db.query.maintenances.findFirst({
+    const found = await db.query.maintenances.findFirst({
       where: and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer)),
       with: { component: { columns: { id: true, name: true } } },
     });
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
+  },
+
+  /** Who owns a maintenance the viewer may read, for the server only (a message to its owner). */
+  ownerOf(viewer: Viewer | null, id: number): string | null {
+    return (
+      db
+        .select({ ownerId: schema.maintenances.ownerId })
+        .from(schema.maintenances)
+        .where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer)))
+        .get()?.ownerId ?? null
+    );
   },
 
   async create(viewer: Viewer | null, values: MaintenanceValues) {
@@ -32772,17 +33116,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "af8ce18d generated",
+  "src/generated/component.server.ts": "c751bc84 generated",
   "src/generated/component.ts": "a4ec356f generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
-  "src/generated/incident-update.server.ts": "f0232df7 generated",
+  "src/generated/incident-update.server.ts": "1862c9e5 generated",
   "src/generated/incident-update.ts": "20a029b3 generated",
-  "src/generated/incident.server.ts": "e2f7f863 generated",
+  "src/generated/incident.server.ts": "f8bc55ae generated",
   "src/generated/incident.ts": "81235c4d generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
-  "src/generated/maintenance.server.ts": "97184a3d generated",
+  "src/generated/maintenance.server.ts": "58b77d45 generated",
   "src/generated/maintenance.ts": "d8f14068 generated",
   "src/generated/mcp.server.ts": "86ffa077 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
