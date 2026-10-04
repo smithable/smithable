@@ -73,6 +73,7 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
       bedrock(
         env.SMITHABLE_FRONTIER_MODEL,
         env.SMITHABLE_BEDROCK_REGION || env.AWS_REGION || "eu-north-1",
+        env.SMITHABLE_USAGE_LOG,
       ),
     );
   // The benchmark's and tests' response cache (SMITHABLE_LLM_CACHE=<folder>): a request seen

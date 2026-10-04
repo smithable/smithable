@@ -424,7 +424,8 @@ const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}${args.set
 const kept = join(repo, "docs/benchmarks", slug);
 const stampFile = join(kept, "meta.json");
 const rowsFile = join(kept, "rows.json");
-// Bedrock's calls by kind of input token (fresh, cache read, cache write), for the report.
+// Bedrock's calls by kind of input token (fresh, cache read, cache write), for the report. A full
+// run starts the file afresh; `--only` adds its calls to the full run's.
 const usageFile = join(kept, "usage.jsonl");
 if (args.model?.startsWith("eu.anthropic.")) process.env.SMITHABLE_USAGE_LOG = usageFile;
 // Claude's first set once a day; its second set, and every run of a paid model, once a week.
@@ -614,7 +615,7 @@ const usage = existsSync(usageFile)
   : [];
 const tokens = (kind) => usage.reduce((n, u) => n + u[kind], 0).toLocaleString("en");
 const caching = usage.length
-  ? `\n\nPrompt caching: of ${usage.length} calls' input, ${tokens("read")} tokens were read from the cache (the fixed system text, at a tenth of the price), ${tokens("write")} written to it (a quarter more than the price) and ${tokens("fresh")} were new.`
+  ? `\n\nPrompt caching: of the input of the ${usage.length} calls the model answered (the response cache's are not counted), ${tokens("read")} tokens were read from the cache (the fixed system text, at a tenth of the price), ${tokens("write")} written to it (a quarter more than the price) and ${tokens("fresh")} were new.`
   : "";
 const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${stamp.lastFullRun?.slice(0, 10) ?? today}${reruns.length ? `; ${reruns.length} rerun since` : ""})
 

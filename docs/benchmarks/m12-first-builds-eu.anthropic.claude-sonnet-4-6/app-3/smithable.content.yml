@@ -1,0 +1,18 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Invoice with ease
+    hero:
+      title: Invoicing made simple for freelancers
+      subtitle: Create professional invoices, track payments and manage your clients — all in one place.
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  overview:
+    title: Overview
+  invoices:
+    title: Invoices
+  clients:
+    title: Clients
+  payments:
+    title: Payments

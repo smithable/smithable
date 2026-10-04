@@ -1,0 +1,91 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Willkommen im Hofladen
+    subtitle: Frische Produkte direkt vom Hof – jetzt vorbestellen und zur Wunschzeit abholen.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  products:
+    title: Produkte
+  pickup-slots:
+    title: Abholzeiten
+  messages:
+    title: Nachrichten
+  abholzeiten:
+    title: Abholzeiten
+  orders:
+    title: Vorbestellungen
+  order-lines:
+    title: Bestellpositionen
+models:
+  Product:
+    label: Produkt
+    pluralLabel: Produkte
+    fields:
+      name:
+        label: Name
+      description:
+        label: Beschreibung
+      price:
+        label: Preis
+      unit:
+        label: Einheit
+      available:
+        label: Verfügbar
+  PickupSlot:
+    label: Abholzeit
+    pluralLabel: Abholzeiten
+    fields:
+      date:
+        label: Datum
+      startTime:
+        label: Von
+      endTime:
+        label: Bis
+      capacity:
+        label: Max. Bestellungen
+  Message:
+    label: Nachricht
+    pluralLabel: Nachrichten
+    fields:
+      name:
+        label: Name
+      email:
+        label: E-Mail
+      message:
+        label: Nachricht
+  Order:
+    label: Vorbestellung
+    pluralLabel: Vorbestellungen
+    fields:
+      pickupSlot:
+        label: Abholzeit
+      name:
+        label: Name
+      email:
+        label: E-Mail
+      phone:
+        label: Telefon
+      notes:
+        label: Anmerkungen
+      status:
+        label: Status
+        values:
+          offen: Offen
+          bestaetigt: Bestätigt
+          abgeholt: Abgeholt
+          storniert: Storniert
+  OrderLine:
+    label: Bestellposition
+    pluralLabel: Bestellpositionen
+    fields:
+      order:
+        label: Vorbestellung
+      product:
+        label: Produkt
+      quantity:
+        label: Menge
+      unitPrice:
+        label: Einzelpreis

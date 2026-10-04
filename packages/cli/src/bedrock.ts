@@ -21,7 +21,7 @@ const PRICES: [RegExp, { input: number; output: number; write: number; read: num
  * structured; the system text is marked for prompt caching, since it is the same in every call.
  * An `eu.` profile keeps the request in the EU.
  */
-export function bedrock(model: string, region: string): Provider {
+export function bedrock(model: string, region: string, usageLog?: string): Provider {
   const price = PRICES.find(([name]) => name.test(model))?.[1];
   return {
     name: "bedrock",
@@ -98,11 +98,8 @@ export function bedrock(model: string, region: string): Provider {
         const write = u.cacheWriteInputTokens ?? 0;
         const output = u.outputTokens ?? 0;
         // The bench's record of each call's tokens by kind (SMITHABLE_USAGE_LOG=<file>).
-        if (process.env.SMITHABLE_USAGE_LOG)
-          appendFileSync(
-            process.env.SMITHABLE_USAGE_LOG,
-            `${JSON.stringify({ model, fresh, read, write, output })}\n`,
-          );
+        if (usageLog)
+          appendFileSync(usageLog, `${JSON.stringify({ model, fresh, read, write, output })}\n`);
         return {
           text:
             answer !== undefined

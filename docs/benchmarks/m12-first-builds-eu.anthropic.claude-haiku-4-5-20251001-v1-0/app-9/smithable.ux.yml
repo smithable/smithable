@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  tickets:
+    table:
+      columns: [title, priority, status, assignee]
+tones:
+  Ticket.priority:
+    high: danger
+  Ticket.status:
+    resolved: success
+    closed: success

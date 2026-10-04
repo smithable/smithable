@@ -1,0 +1,10 @@
+{
+  "description": "Invoicing for freelancers, with clients, invoices and payments.",
+  "starter": "invoicing",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who can sign in and use this app?",
+    "What can clients see without signing in?",
+    "What information do you want to track about payments?"
+  ]
+}

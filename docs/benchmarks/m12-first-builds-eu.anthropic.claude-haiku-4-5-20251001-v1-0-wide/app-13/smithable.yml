@@ -1,0 +1,39 @@
+smithable: 0.1
+app:
+  name: Car Maintenance Log
+  description: Track your car's fuel consumption, service visits and maintenance costs.
+models:
+  FuelEntry:
+    fields:
+      date: date!
+      mileage: int!
+      liters: decimal!
+      costPerLiter: money!
+      totalCost:
+        type: money
+        formula: liters * costPerLiter
+      notes: text
+  ServiceVisit:
+    fields:
+      date: date!
+      mileage: int!
+      serviceType: string!
+      description: text
+      cost: money!
+      mechanic: string
+      notes: text
+  MaintenanceCost:
+    fields:
+      date: date!
+      category: fuel | service | repair | other
+      description: string!
+      amount: money!
+      notes: text
+pages:
+  fuel:
+    crud: FuelEntry
+  service:
+    crud: ServiceVisit
+  costs:
+    crud: MaintenanceCost
+navigation: [fuel, service, costs]

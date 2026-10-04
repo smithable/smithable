@@ -1,0 +1,104 @@
+smithable: 0.1
+app:
+  name: IT Help Desk
+  description: A help desk for an IT team to manage support tickets, priorities and assignments.
+pages:
+  team:
+    users: manage
+  tickets:
+    crud: Ticket
+    actions: [assign, putOnHold, resolve, close]
+    search: [title, category]
+    sortable: [priority, status, createdAt, resolvedAt]
+  updates:
+    crud: TicketUpdate
+  overview:
+    dashboard:
+      open:
+        count: Ticket
+        where:
+          status: open
+      inProgress:
+        count: Ticket
+        where:
+          status: inProgress
+      critical:
+        count: Ticket
+        where:
+          priority: critical
+      latest:
+        list: Ticket
+        limit: 5
+models:
+  Ticket:
+    fields:
+      title: string!
+      status: open | inProgress | onHold | resolved | closed
+      priority: low | medium | high | critical
+      category: hardware | software | network | access | other
+      description: text!
+      assignee: User
+      resolvedAt: datetime
+      updates: TicketUpdate[]
+  TicketUpdate:
+    fields:
+      ticket: Ticket!
+      at: datetime!
+      status: open | inProgress | onHold | resolved | closed
+      message: text!
+actions:
+  assign:
+    on: Ticket
+    when:
+      status: open
+    set:
+      status: inProgress
+      assignee: ME()
+    add:
+      TicketUpdate:
+        at: NOW()
+        status: inProgress
+        message: Ticket picked up and is now being worked on.
+    allow: [admin, agent]
+    intent: An agent takes the ticket; it moves to in-progress and is assigned to them.
+  putOnHold:
+    on: Ticket
+    when:
+      status: [open, inProgress]
+    set:
+      status: onHold
+    add:
+      TicketUpdate:
+        at: NOW()
+        status: onHold
+        message:
+    allow: [admin, agent]
+    intent: The ticket is waiting on something; it moves to on-hold with a note.
+  resolve:
+    on: Ticket
+    when:
+      status: [open, inProgress, onHold]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      TicketUpdate:
+        at: NOW()
+        status: resolved
+        message:
+    allow: [admin, agent]
+    intent: The issue is fixed; the ticket moves to resolved with a resolution note.
+  close:
+    on: Ticket
+    when:
+      status: resolved
+    set:
+      status: closed
+    add:
+      TicketUpdate:
+        at: NOW()
+        status: closed
+        message: Ticket closed.
+    allow: [admin, agent]
+    intent: The resolved ticket is confirmed closed.
+navigation: [overview, tickets, updates, team]

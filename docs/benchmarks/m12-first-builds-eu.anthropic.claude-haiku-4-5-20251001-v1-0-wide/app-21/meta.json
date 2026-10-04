@@ -1,0 +1,11 @@
+{
+  "description": "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Kuka käyttää sovellusta?",
+    "Mitä asiakkaat näkevät ilman kirjautumista?",
+    "Mitkä ovat sovelluksen pääasialliset tietuetyypit?"
+  ],
+  "lang": "fi"
+}

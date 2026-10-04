@@ -1,0 +1,75 @@
+smithable: 0.1
+app:
+  name: Frisörsalong Bokning
+  description: Bokningssystem för frisörsalong där kunder kan boka tid online.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  ServiceType:
+    fields:
+      name: string!
+      description: text
+      durationMinutes: int! = 30
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  TimeSlot:
+    fields:
+      serviceType: ServiceType!
+      stylist: Stylist!
+      startsAt: datetime!
+      capacity: int! = 1
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  Booking:
+    fields:
+      timeSlot: TimeSlot! unique
+      customerName: string!
+      customerEmail: email!
+      customerPhone: phone!
+    capacity:
+      per: timeSlot
+      max: timeSlot.capacity
+pages:
+  services:
+    crud: ServiceType
+    access: [admin]
+  stylists:
+    crud: Stylist
+    access: [admin]
+  timeslots:
+    crud: TimeSlot
+    access: [admin]
+  bookings:
+    crud: Booking
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: ServiceType
+      stylists:
+        records: Stylist
+      faq:
+  schedule:
+    calendar:
+      model: TimeSlot
+      starts: startsAt
+navigation: [home, schedule, services, stylists, timeslots, bookings]
