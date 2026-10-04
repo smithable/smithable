@@ -22,11 +22,12 @@ const setTheme: Operation<{
   background?: string;
   font?: string;
   density?: string;
+  motion?: string;
   page?: string;
 }> = {
   name: "setTheme",
   summary:
-    'Choose the theme preset, brand color, background color, font or density ("none" removes a color or the font).',
+    'Choose the theme preset, brand color, background color, font, density or motion ("none" removes a color or the font; for motion it means no motion).',
   schema: {
     type: "object",
     additionalProperties: false,
@@ -43,6 +44,11 @@ const setTheme: Operation<{
       },
       font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
       density: { type: "string", enum: ["comfortable", "compact"] },
+      motion: {
+        type: "string",
+        enum: ["none", "subtle", "lively"],
+        description: "How much the app moves; a visitor's reduced-motion setting always wins.",
+      },
       page: refTo(
         { ref: "page", label: "Landing page" },
         { description: "A landing page given its own theme; without it, the app's theme." },
@@ -56,7 +62,11 @@ const setTheme: Operation<{
     const where = page ? ` on the ${page} page` : "";
     const WORDS: Record<string, string> = { primary: "primary color", background: "background" };
     const others = Object.entries(rest).map(([k, v]) =>
-      k === "density" || k === "font" ? `${v} ${k}` : `${WORDS[k] ?? k} ${v}`,
+      k === "motion" && v === "none"
+        ? "no motion"
+        : k === "density" || k === "font" || k === "motion"
+          ? `${v} ${k}`
+          : `${WORDS[k] ?? k} ${v}`,
     );
     const theme = preset === undefined ? "" : `Use the ${preset} theme${where}`;
     if (!others.length) return theme || `Set the look${where}`;
@@ -68,7 +78,9 @@ const setTheme: Operation<{
   apply(editors, { page, ...args }, ir) {
     const ux = editors.ux;
     if (Object.keys(args).length === 0)
-      throw new OperationError("Say what to set: preset, primary, background, font or density.");
+      throw new OperationError(
+        "Say what to set: preset, primary, background, font, density or motion.",
+      );
     // A landing page's own theme lives under the page, with the same keys as the app's.
     if (page !== undefined && ir.pages.find((p) => p.id === page)?.pattern.kind !== "landing")
       throw new OperationError(
@@ -76,10 +88,12 @@ const setTheme: Operation<{
       );
     const at = page === undefined ? ["theme"] : ["pages", page, "theme"];
     // On a page, "none" returns a key to the app's theme; for the app it removes a brand key.
+    // For motion alone, "none" is a value: no motion.
     if (args.preset !== undefined)
       put(ux, [...at, "preset"], page && args.preset === "none" ? undefined : args.preset);
     if (args.density !== undefined)
       put(ux, [...at, "density"], page && args.density === "none" ? undefined : args.density);
+    if (args.motion !== undefined) put(ux, [...at, "motion"], args.motion);
     for (const key of ["primary", "background", "font"] as const) {
       const value = args[key];
       if (value !== undefined) put(ux, [...at, "brand", key], value === "none" ? undefined : value);

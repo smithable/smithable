@@ -37,7 +37,13 @@ tones:
       ir,
     );
     expect(ux).toEqual({
-      theme: { preset: "corporate", primary: "#1d4ed8", font: "Inter", density: "compact" },
+      theme: {
+        preset: "corporate",
+        primary: "#1d4ed8",
+        font: "Inter",
+        density: "compact",
+        motion: "subtle",
+      },
       pages: {
         customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
       },
@@ -49,7 +55,7 @@ tones:
     expect(codes("theme: {}")).toEqual(["invalid-version"]);
     expect(
       codes(`smithableUx: 0.1
-theme: { preset: modrn, brand: { primary: blue, font: Comic Sans }, density: tight }
+theme: { preset: modrn, brand: { primary: blue, font: Comic Sans }, density: tight, motion: wild }
 pages:
   customer: {}
   orders:
@@ -64,6 +70,7 @@ tones:
       "unknown-preset",
       "invalid-color",
       "unknown-font",
+      "invalid-value",
       "invalid-value",
       "unknown-page",
       "unknown-field",

@@ -26,3 +26,15 @@ test("every built-in theme's font is one the app can host: it has a package", ()
   for (const theme of BUILT_IN_THEMES)
     expect(FONT_PACKAGES[theme.font], `${theme.name}: ${theme.font}`).toBeTruthy();
 });
+
+test("the theme's motion is a few variables, all 0 for a visitor who asks for less", () => {
+  const css = (motion: "none" | "subtle" | "lively") =>
+    themeCss({ ...emptyUx(), theme: { ...emptyUx().theme, motion } });
+  const slow = (text: string) => /:root \{[^}]*--motion-slow: ([^;]+);/.exec(text)?.[1];
+  expect(slow(css("none"))).toBe("0ms");
+  expect(slow(css("subtle"))).toBe("180ms");
+  expect(slow(css("lively"))).toBe("200ms");
+  expect(css("lively")).toMatch(
+    /@media \(prefers-reduced-motion: reduce\) \{\s*:root \{\s*--motion-fast: 0ms;\s*--motion-slow: 0ms;\s*--motion-distance: 0px;/,
+  );
+});
