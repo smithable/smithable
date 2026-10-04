@@ -1,0 +1,107 @@
+smithableContent: 0.1
+pages:
+  offerter:
+    title: Offerter
+  invoices:
+    title: Fakturor
+  clients:
+    title: Kunder
+  offert-rader:
+    title: Offertrader
+  invoice-lines:
+    title: Fakturarader
+  settings:
+    title: Företagsuppgifter
+models:
+  BusinessProfile:
+    label: Företagsprofil
+    pluralLabel: Företagsprofiler
+    fields:
+      businessName:
+        label: Företagsnamn
+      vatNumber:
+        label: Momsregistreringsnummer
+      iban:
+        label: IBAN
+      paymentTermDays:
+        label: Betalningsvillkor i dagar
+      invoiceFooter:
+        label: Fakturans sidfot
+  Client:
+    label: Kund
+    pluralLabel: Kunder
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      address:
+        label: Adress
+      vatNumber:
+        label: Momsregistreringsnummer
+  Invoice:
+    label: Faktura
+    pluralLabel: Fakturor
+    fields:
+      number:
+        label: Fakturanummer
+      client:
+        label: Kund
+      issuedOn:
+        label: Fakturadatum
+      dueOn:
+        label: Förfallodatum
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          paid: Betald
+          overdue: Förfallen
+  InvoiceLine:
+    label: Fakturarad
+    pluralLabel: Fakturarader
+    fields:
+      invoice:
+        label: Faktura
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: À-pris
+      amount:
+        label: Belopp
+  Quote:
+    label: Offert
+    pluralLabel: Offerter
+    fields:
+      number:
+        label: Offertnummer
+      client:
+        label: Kund
+      issuedOn:
+        label: Offertdatum
+      validUntil:
+        label: Giltig till
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          accepted: Accepterad
+          declined: Avböjd
+  QuoteLine:
+    label: Offertrad
+    pluralLabel: Offertrader
+    fields:
+      quote:
+        label: Offert
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: À-pris
+      amount:
+        label: Belopp

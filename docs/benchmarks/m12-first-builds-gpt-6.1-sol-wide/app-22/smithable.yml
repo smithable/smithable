@@ -1,0 +1,92 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Produkte, Kundenvorbestellungen und Abholzeiten für den kleinen Hofladen verwalten.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      notes: text
+      orders: Order[]
+    access:
+      write: [sales]
+      delete: [admin]
+  Product:
+    fields:
+      name: string!
+      description: text
+      unit: string!
+      price: money!
+      available: bool! = true
+  Order:
+    fields:
+      number: string! unique
+      customer: Customer!
+      status: draft | placed | ready | collected | canceled
+      pickupAt: datetime!
+      placedAt: datetime
+      notes: text
+      lines: OrderLine[]
+      total:
+        type: money
+        formula: SUM(lines.total)
+    access:
+      write: [sales]
+      delete: [admin]
+  OrderLine:
+    fields:
+      order: Order!
+      product: Product!
+      quantity: decimal! = 1
+      unitPrice: money!
+      total:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  orders:
+    crud: Order
+    actions: [placeOrder, markReady, markCollected, cancelOrder]
+    search: [number]
+    filters: [status, customer, pickupAt]
+  products:
+    crud: Product
+    search: [name, description]
+    filters: [available]
+  customers:
+    crud: Customer
+    search: [name, email]
+  order-lines:
+    crud: OrderLine
+    filters: [order, product]
+  team:
+    users: manage
+actions:
+  placeOrder:
+    on: Order
+    when:
+      status: draft
+    set:
+      status: placed
+      placedAt: NOW()
+  markReady:
+    on: Order
+    when:
+      status: placed
+    set:
+      status: ready
+  markCollected:
+    on: Order
+    when:
+      status: ready
+    set:
+      status: collected
+  cancelOrder:
+    on: Order
+    when:
+      status: [draft, placed, ready]
+    set:
+      status: canceled

@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Conference Registration
+  description: Talks, speakers and registration for attendees of a conference.
+models:
+  Speaker:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+    access:
+      create: [admin]
+  Talk:
+    fields:
+      title: string!
+      summary: text
+      speaker: Speaker!
+      startsAt: datetime!
+      room: string
+      capacity: int! = 100
+      registrations: Registration[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(registrations)
+    access:
+      create: [admin]
+  Registration:
+    fields:
+      talk: Talk! unique
+    capacity:
+      per: talk
+      max: talk.capacity
+pages:
+  my-registrations:
+    crud: Registration
+  schedule:
+    calendar: Talk
+  talks:
+    crud: Talk
+    access: [admin]
+  speakers:
+    crud: Speaker
+    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule]
+      footer:
+      talks:
+        records: Talk
+      speakers:
+        records: Speaker
+      faq:
+      callToAction:
+        button: schedule
+  admin:
+    data: all

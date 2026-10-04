@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  fuel-entries:
+    table:
+      columns: [date, car, odometer, liters, pricePerLiter, totalCost]
+      sort: -date
+  service-visits:
+    table:
+      columns: [date, car, odometer, garage, description, cost]
+      sort: -date
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    font: Inter

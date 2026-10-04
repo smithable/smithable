@@ -1,0 +1,25 @@
+smithableContent: 0.1
+pages:
+  catalog:
+    title: Browse Tools
+  myItems:
+    title: My Tools
+  saved:
+    title: Saved Tools
+  home:
+    hero:
+      title: The tool you need may be next door.
+      subtitle: Browse tools shared by neighbors, contact the owner to arrange a loan, and lend your own tools to help someone else.
+      button: Browse Tools
+      image:
+        src: images/hero.webp
+        alt: A green garden with vegetable beds, a greenhouse and fruit trees
+    latest:
+      title: Available to Borrow
+models:
+  Item:
+    label: Tool
+    pluralLabel: Tools
+    fields:
+      place:
+        label: Neighborhood

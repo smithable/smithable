@@ -1,0 +1,67 @@
+smithable: 0.1
+app:
+  name: Salongens bokning
+  description: En bokningsapp där kunder kan se salongens behandlingar och boka lediga frisörtider på nätet.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      durationMinutes: int! = 30
+      price: money
+    access:
+      create: [admin]
+  Instructor:
+    fields:
+      name: string!
+      bio: text
+    access:
+      create: [admin]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 1
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    access:
+      create: [admin]
+  Booking:
+    fields:
+      session: Session! unique
+    capacity:
+      per: session
+      max: session.capacity
+pages:
+  my-bookings:
+    crud: Booking
+  sessions:
+    crud: Session
+    access: [admin]
+  class-types:
+    crud: ClassType
+    access: [admin]
+  instructors:
+    crud: Instructor
+    access: [admin]
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, my-bookings]
+      footer:
+      classes:
+        records: ClassType
+      callToAction:
+        button: schedule
+  admin:
+    data: all

@@ -186,7 +186,10 @@ ${records
 export function fitsCode(action: StandardActionIR): string {
   const tests = Object.entries(action.when ?? {}).map(([field, wanted]) =>
     typeof wanted === "boolean"
-      ? `${wanted ? "" : "!"}row.${field}`
+      ? // A boolean either way: true only when it is yes; no (or empty) when it is not.
+        wanted
+        ? `row.${field} === true`
+        : `!row.${field}`
       : Array.isArray(wanted)
         ? `${JSON.stringify(wanted)}.includes(String(row.${field}))`
         : `row.${field} === ${JSON.stringify(wanted)}`,

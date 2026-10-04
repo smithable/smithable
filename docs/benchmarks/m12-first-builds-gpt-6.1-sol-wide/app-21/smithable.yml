@@ -1,0 +1,106 @@
+smithable: 0.1
+app:
+  name: Korjaamon arki
+  description: Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      notes: text
+      vehicles: Vehicle[]
+      invoices: Invoice[]
+    access:
+      delete: [admin]
+  Vehicle:
+    fields:
+      registrationNumber: string! unique
+      customer: Customer!
+      make: string!
+      model: string!
+      year: int
+      notes: text
+      jobs: ServiceJob[]
+  ServiceJob:
+    fields:
+      vehicle: Vehicle!
+      description: text!
+      scheduledAt: datetime!
+      status: scheduled | inProgress | completed | canceled
+      mileage: int
+      workPerformed: text
+      completedAt: datetime
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      serviceJob: ServiceJob!
+      issueDate: date!
+      dueDate: date!
+      total: money!
+      status: draft | sent | paid | canceled
+      paidAt: datetime
+      notes: text
+pages:
+  asiakkaat:
+    crud: Customer
+    search: [name, email, phone]
+  autot:
+    crud: Vehicle
+    search: [registrationNumber, make, model]
+    filters: [customer]
+  huoltotyot:
+    crud: ServiceJob
+    filters: [status, vehicle, scheduledAt]
+    actions: [startWork, completeWork, cancelWork]
+  laskut:
+    crud: Invoice
+    search: [number]
+    filters: [status, customer, dueDate]
+    actions: [markSent, markPaid, cancelInvoice]
+  tiimi:
+    users: manage
+actions:
+  startWork:
+    on: ServiceJob
+    when:
+      status: scheduled
+    set:
+      status: inProgress
+  completeWork:
+    on: ServiceJob
+    when:
+      status: inProgress
+    set:
+      status: completed
+      completedAt: NOW()
+      workPerformed:
+  cancelWork:
+    on: ServiceJob
+    when:
+      status: [scheduled, inProgress]
+    set:
+      status: canceled
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+  markPaid:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: paid
+      paidAt: NOW()
+  cancelInvoice:
+    on: Invoice
+    when:
+      status: [draft, sent]
+    set:
+      status: canceled

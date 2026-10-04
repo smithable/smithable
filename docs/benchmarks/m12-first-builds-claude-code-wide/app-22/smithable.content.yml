@@ -1,0 +1,76 @@
+smithableContent: 0.1
+models:
+  Product:
+    label: Produkt
+    pluralLabel: Produkte
+    fields:
+      name:
+        label: Name
+      description:
+        label: Beschreibung
+      price:
+        label: Preis
+      unit:
+        label: Einheit
+      available:
+        label: Verfügbar
+  PickupSlot:
+    label: Abholzeit
+    pluralLabel: Abholzeiten
+    fields:
+      startsAt:
+        label: Beginn
+      endsAt:
+        label: Ende
+      capacity:
+        label: Plätze
+  Preorder:
+    label: Vorbestellung
+    pluralLabel: Vorbestellungen
+    fields:
+      pickupSlot:
+        label: Abholzeit
+      note:
+        label: Anmerkung
+      status:
+        label: Status
+        values:
+          open: Offen
+          ready: Abholbereit
+          pickedUp: Abgeholt
+          canceled: Storniert
+  OrderLine:
+    label: Position
+    pluralLabel: Positionen
+    fields:
+      preorder:
+        label: Vorbestellung
+      product:
+        label: Produkt
+      quantity:
+        label: Menge
+pages:
+  vorbestellungen:
+    title: Vorbestellungen
+  produkte:
+    title: Produkte
+  abholzeiten:
+    title: Abholzeiten
+  home:
+    title: Startseite
+    hero:
+      title: Frisch vom Hof – einfach vorbestellen
+      subtitle: Bestellen Sie Gemüse, Eier und mehr aus unserem Hofladen vor und holen Sie alles zu Ihrer Wunschzeit ab.
+      button: Zum Angebot
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    angebot:
+      title: Unser Angebot
+    faq:
+      title: Häufige Fragen
+    callToAction:
+      title: Jetzt vorbestellen
+      button: Vorbestellung aufgeben
+  admin:
+    title: Verwaltung

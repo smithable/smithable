@@ -1,0 +1,8 @@
+smithableContent: 0.1
+models:
+  Pupil:
+    fields:
+      lessonTime:
+        label: Weekly lesson time
+      practice:
+        label: What to practise

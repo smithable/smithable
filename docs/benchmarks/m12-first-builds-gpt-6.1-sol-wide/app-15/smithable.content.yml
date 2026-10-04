@@ -1,0 +1,15 @@
+smithableContent: 0.1
+models:
+  Item:
+    label: Sighting
+    pluralLabel: Sightings
+    fields:
+      name:
+        label: Species
+      addedOn:
+        label: Date sighted
+      seenBy:
+        label: Seen by
+pages:
+  items:
+    title: Bird sightings

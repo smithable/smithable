@@ -1,0 +1,41 @@
+smithable: 0.1
+app:
+  name: Vår loppis
+  description: Lägg upp saker du vill sälja, med bilder och pris, och fynda bland andras.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+      description: text!
+      price: money
+      category: furniture | clothes | books | kitchen | electronics | toys | other
+      condition: likeNew | good | worn
+      available: bool = true
+pages:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [category, price, condition, available]
+    sortable: [price, createdAt]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+        where:
+          available: true
+navigation: [catalog, myItems, saved]

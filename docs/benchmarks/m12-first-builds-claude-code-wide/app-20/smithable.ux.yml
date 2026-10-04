@@ -1,0 +1,10 @@
+smithableUx: 0.1
+theme:
+  preset: modern
+  brand:
+    primary: "#4f7a5a"
+    background: "#f5f1ea"
+tones:
+  ClassType.level:
+    beginner: success
+    advanced: warning

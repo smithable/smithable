@@ -311,7 +311,7 @@ ${rows.join("\n")}
 ${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length ? `import { ${tables.join(", ")} } from "./schema";\n` : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
   ir.pages.some((p) => p.pattern.kind === "calendar")
     ? `import { app } from "#/generated/app";
-import { instantOf, wallTime } from "#/kit/zoned";
+import { ${blocks.some((b) => b.includes("instantOf(")) ? "instantOf, wallTime" : "wallTime"} } from "#/kit/zoned";
 
 /**
  * A sample moved to this week (0) or the next (1) in the app's time zone, as a wall time

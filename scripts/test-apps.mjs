@@ -2494,15 +2494,16 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "changes are limited per address, and a made-up X-Forwarded-For is no new address",
         async () => {
-          // All at once: one after another, a slow machine refills the burst (one a second)
-          // between them and lets them all through.
+          // All at once, and well over the burst of 60: the burst refills at one a second, so a
+          // busy machine that spreads 65 requests over five seconds let them all through. 200
+          // would need over two minutes of refilling to pass.
           const answers = await Promise.all(
-            Array.from({ length: 65 }, (_, i) =>
+            Array.from({ length: 200 }, (_, i) =>
               fetch(`${base}/`, { method: "POST", headers: { "x-forwarded-for": `10.0.${i}.1` } }),
             ),
           );
           if (!answers.some((answer) => answer.status === 429))
-            throw new Error("65 changes from made-up addresses were all let through");
+            throw new Error("200 changes from made-up addresses were all let through");
         },
       ).catch(() => {});
     } finally {

@@ -1,0 +1,11 @@
+{
+  "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+  "starter": "crm",
+  "wordStarter": "records",
+  "questions": [
+    "Wer erfasst die Vorbestellungen?",
+    "Was dürfen Besucher ohne Anmeldung sehen?",
+    "Wie werden Abholzeiten festgelegt?"
+  ],
+  "lang": "de"
+}

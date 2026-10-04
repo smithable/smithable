@@ -1,0 +1,39 @@
+smithable: 0.1
+app:
+  name: Office Swap Shelf
+  description: Offer things you no longer need and claim useful items from colleagues.
+models:
+  Item:
+    fields:
+      title: string!
+      description: text!
+      category: furniture | electronics | other
+      condition: likeNew | good | worn
+      place: string
+      available: bool = true
+      claimedBy: User
+      claimedAt: datetime
+    access:
+      read: [member, admin]
+pages:
+  catalog:
+    route: /
+    crud: Item
+    actions: [claim]
+    search: [title, description, place]
+    filters: [category, condition, available]
+    sortable: [title, createdAt]
+    contact: owner
+  team:
+    users: manage
+actions:
+  claim:
+    on: Item
+    when:
+      available: true
+    set:
+      available: false
+      claimedBy: ME()
+      claimedAt: NOW()
+    allow: [member, admin]
+    intent: Claim an available item and record who will collect it.

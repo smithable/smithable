@@ -8,16 +8,24 @@
 // starter's texts, sample records), for the reader to judge. `--score <kept dir>` scores a run's
 // kept files again without calling a model, and puts the table into that run's report.
 //
-// What it may cost (Johan, 2026-10-04): a full run (both sets) at most once a day, by session C,
-// at the end of the day's merges; in between only the descriptions a change is about, once.
+// What it may cost (Johan, 2026-10-04): runs draft with Claude through Claude Code (his
+// subscription, no money) unless `--model` names another. Nothing on this machine calls Mistral or
+// OpenAI unless a run names the model; its key file (~/.config/smithable) is read only then.
+// - Daily, after the day's merges: the first set on Claude (20 hours apart). Its second set
+//   (--set wide) once a week (Sundays), or when a pull request changes the drafting or clarify
+//   prompts (say so in the report).
+// - Mistral, for the EU option: once a week (Sunday), `--model mistral-medium-latest` on the first
+//   set as the check on what the beta serves; the wide set only when a prompt changed. Every run
+//   of a named model is six days apart.
+// In between, only the descriptions a change is about, once.
 // - `--only 3,7,11` or `--only invoicing` (the starter a description got in the last full run)
 //   runs just those and merges their rows into the last full report, marked as reruns.
-// - A full run within 20 hours of the last one (its time is in <report folder>/meta.json) is
+// - A full run sooner than that (the time is in <report folder>/meta.json, per model and set) is
 //   refused unless `--force`.
 // - The model's answers are kept by request (SMITHABLE_LLM_CACHE, ~/.cache/smithable/llm unless
 //   set; `--no-cache` turns it off), so a rerun whose prompts did not change pays only for what
 //   is new. Each row says how many of its calls the cache answered.
-// - Leave SMITHABLE_MODEL_PRICE unset to count Mistral's list price (in dollars, see
+// - A Mistral or OpenAI run counts the list price (in dollars, see
 //   packages/ai's listPrice); the report gives tokens in and out and their cost.
 import { spawnSync } from "node:child_process";
 import {
@@ -54,8 +62,50 @@ const { values: args } = parseArgs({
     only: { type: "string" },
     force: { type: "boolean", default: false },
     "no-cache": { type: "boolean", default: false },
+    model: { type: "string" },
   },
 });
+
+// Which model drafts (see the header): Claude through Claude Code unless a run names another.
+// Nothing inherited from the shell picks a paid model; a named one's key file is read only then.
+for (const name of [
+  "SMITHABLE_MODEL",
+  "SMITHABLE_MODEL_URL",
+  "SMITHABLE_MODEL_KEY",
+  "SMITHABLE_MODEL_PRICE",
+  "SMITHABLE_MODEL_LOCATION",
+  "SMITHABLE_FRONTIER",
+  "SMITHABLE_LOCAL_MODEL",
+])
+  delete process.env[name];
+/** KEY=value lines (with or without `export`) of a file in ~/.config/smithable, never printed. */
+const keyFile = (file) =>
+  Object.fromEntries(
+    readFileSync(join(homedir(), ".config/smithable", file), "utf8")
+      .split("\n")
+      .map((line) => /^(?:export\s+)?([A-Z_]+)=(.*)$/.exec(line.trim()))
+      .filter(Boolean)
+      .map(([, key, value]) => [key, value.replace(/^["']|["']$/g, "")]),
+  );
+if (!args.model) {
+  process.env.SMITHABLE_FRONTIER = "claude-code";
+  process.env.SMITHABLE_AI_POLICY = "best-available";
+} else if (args.model.startsWith("mistral-")) {
+  const env = keyFile("mistral.env");
+  Object.assign(process.env, {
+    SMITHABLE_MODEL: args.model,
+    SMITHABLE_MODEL_URL: env.SMITHABLE_MODEL_URL ?? "https://api.mistral.ai/v1",
+    SMITHABLE_MODEL_KEY: env.SMITHABLE_MODEL_KEY,
+  });
+} else if (args.model.startsWith("gpt-")) {
+  Object.assign(process.env, {
+    SMITHABLE_MODEL: args.model,
+    SMITHABLE_MODEL_URL: "https://api.openai.com/v1",
+    SMITHABLE_MODEL_KEY: keyFile("openai.env").OPENAI_API_KEY,
+    SMITHABLE_MODEL_LOCATION: "elsewhere",
+    SMITHABLE_AI_POLICY: "best-available",
+  });
+} else throw new Error(`--model ${args.model}: a mistral-… or gpt-… model, or none for Claude.`);
 // The response cache, for every `smithable` the bench starts (see the header).
 if (args["no-cache"]) delete process.env.SMITHABLE_LLM_CACHE;
 else process.env.SMITHABLE_LLM_CACHE ??= join(homedir(), ".cache/smithable/llm");
@@ -278,13 +328,7 @@ if (args.score) {
   process.exit(0);
 }
 
-const model =
-  process.env.SMITHABLE_MODEL ||
-  process.env.SMITHABLE_LOCAL_MODEL ||
-  (process.env.SMITHABLE_FRONTIER === "claude-code"
-    ? process.env.SMITHABLE_FRONTIER_MODEL || "claude-code"
-    : undefined);
-if (!model) throw new Error("Set up a model first (docs/ai.md).");
+const model = args.model ?? "claude-code";
 
 const DESCRIPTIONS = [
   "A booking site for a yoga studio, with classes, teachers and online booking.",
@@ -368,7 +412,8 @@ const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}${args.set
 const kept = join(repo, "docs/benchmarks", slug);
 const stampFile = join(kept, "meta.json");
 const rowsFile = join(kept, "rows.json");
-const HOURS = 20;
+// Claude's first set once a day; its second set, and every run of a paid model, once a week.
+const HOURS = args.set === "wide" || args.model ? 6 * 24 : 20;
 const today = new Date().toISOString().slice(0, 10);
 
 // A targeted run merges into the last full one; a full one waits 20 hours after the last.
@@ -394,7 +439,7 @@ if (args.only) {
     : undefined;
   if (last && Date.now() - Date.parse(last) < HOURS * 3600_000 && !args.force)
     throw new Error(
-      `The last full run of this set was at ${last}: one a day (${HOURS} hours apart). Run what a change is about with --only, or pass --force.`,
+      `The last full run of this set was at ${last}: ${HOURS === 20 ? "it runs once a day" : "it runs once a week"} (${HOURS} hours apart). Run what a change is about with --only, or pass --force.`,
     );
   rmSync(kept, { recursive: true, force: true });
 }
@@ -539,7 +584,7 @@ const costs = () =>
       const these = rows.filter((r) => r.currency === c);
       return these.length
         ? [
-            `${c}${these.reduce((n, r) => n + r.cost, 0).toFixed(4)}${c === "$" ? " (Mistral's list price)" : ""}`,
+            `${c}${these.reduce((n, r) => n + r.cost, 0).toFixed(4)}${c === "$" ? (/^mistral/.test(model) ? " (Mistral's list price)" : model === "claude-code" ? " (as Claude Code reports it)" : "") : ""}`,
           ]
         : [];
     })

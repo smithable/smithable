@@ -1,0 +1,12 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#3F6B3B"
+    background: "#F7F4EC"
+    font: Source Sans 3
+pages:
+  orders:
+    table:
+      sort: pickupAt
