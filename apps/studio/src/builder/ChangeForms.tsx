@@ -206,6 +206,8 @@ const CHANGES = [
   ["addSection", "A section on a landing page"],
   ["removeSection", "Remove a section"],
   ["addAction", "An action"],
+  ["setAction", "Change what an action says"],
+  ["removeAction", "Remove an action"],
   ["importRecords", "Records from a CSV file"],
 ] as const;
 
@@ -266,6 +268,30 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         )}
         {change === "addSection" && <AddSection spec={spec} run={run} />}
         {change === "addAction" && <AddAction spec={spec} run={run} initial={initial} />}
+        {change === "setAction" && (
+          <FromSchema
+            op="setAction"
+            spec={spec}
+            run={run}
+            initial={{ action: spec.ir.actions[0]?.name ?? "" }}
+            submit="Change action"
+            controls={{ action: actionPicker(spec), when: () => null, set: () => null }}
+            hints={{ intent: "What it is for, in a sentence; an assistant reads it too." }}
+            disabled={!spec.ir.actions.length}
+          />
+        )}
+        {change === "removeAction" && (
+          <FromSchema
+            op="removeAction"
+            spec={spec}
+            run={run}
+            initial={{ action: spec.ir.actions[0]?.name ?? "" }}
+            submit="Remove action"
+            controls={{ action: actionPicker(spec) }}
+            hint="Its buttons go too; a custom action's code stays. Undo brings it back."
+            disabled={!spec.ir.actions.length}
+          />
+        )}
         {change === "removeSection" && (
           <FromSchema
             op="removeSection"
@@ -281,6 +307,18 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
 }
 
 type FormProps = { spec: Spec; run: Run; initial?: Record<string, unknown> };
+
+/** The app's actions to choose from, for the forms that change or remove one. */
+const actionPicker = (spec: Spec) => (value: string, set: (value: string) => void) => (
+  <Label text="Action">
+    <Select
+      aria-label="Action"
+      value={value}
+      onChange={(e) => set(e.target.value)}
+      options={(spec.ir?.actions ?? []).map((a) => a.name)}
+    />
+  </Label>
+);
 
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 
