@@ -68,8 +68,8 @@ export interface ApiOffers {
   /**
    * What a call without a key may reach (docs/design/api-only.md §3.4): it is the visitor, so it
    * reads the offered models `public.read` lists (within their `where`) and adds the offered
-   * ones `public.create` lists. It never changes, deletes or runs an action, and the tools for
-   * assistants are not offered without a key at all.
+   * ones `public.create` lists. It never changes, deletes or runs an action. The tools for
+   * assistants follow the same rule.
    */
   visitors: { read: string[]; create: string[] };
 }
