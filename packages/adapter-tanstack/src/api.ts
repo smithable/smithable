@@ -329,15 +329,20 @@ export function apiRoutes(ir: SpecIR, auth: AuthIR, t: Texts): Record<string, st
   const open = visitors.read.length + visitors.create.length > 0;
   const files: Record<string, string> = {
     "src/routes/api/v1/openapi[.]json.ts": open
-      ? `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, all
-// a program may call; without one, what anyone may read or add.
+      ? `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
+// signed in (the users page's download), all a program may call; otherwise what anyone may read
+// or add.
 import { createFileRoute } from "@tanstack/react-router";
 import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
 import { callerOf } from "#/kit/api.server";
+import { currentViewer } from "#/lib/viewer.server";
 
 export const Route = createFileRoute("/api/v1/openapi.json")({
   server: {
-    handlers: { GET: ({ request }) => Response.json(callerOf(request).viewer ? OPENAPI : VISITOR_OPENAPI) },
+    handlers: {
+      GET: async ({ request }) =>
+        Response.json(callerOf(request).viewer || (await currentViewer()) ? OPENAPI : VISITOR_OPENAPI),
+    },
   },
 });
 `
