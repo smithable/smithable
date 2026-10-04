@@ -750,6 +750,22 @@ function checkAgainstSpec(
           `Visitors can't open ${target} from the ${name} hero's shortcuts: list it under public.pages, or choose another page.`,
         );
   }
+  // A public page shows a visitor only what visitors may read: records of a model that is not
+  // under public.read are simply missing there (an empty catalogue, a landing section with no
+  // cards), which looks broken rather than closed.
+  for (const { name, at } of publicNodes.pages ?? []) {
+    const page = ir.pages.find((p) => p.id === name);
+    if (!page || page.mine) continue;
+    const closed = [...new Set(patternInfo(page).models())].filter(
+      (m) => m !== USER_MODEL && !auth.public.read.includes(m),
+    );
+    if (closed.length)
+      ctx.warning(
+        at,
+        "public-page-closed-records",
+        `Visitors can open ${name}, but may not read ${closed.join(" or ")}, so the page shows them none: add ${closed.length > 1 ? "them" : "it"} under public.read, or take ${name} out of public.pages.`,
+      );
+  }
   // A page of the viewer's own records has nothing to show a visitor, who owns nothing.
   for (const { name, at } of publicNodes.pages ?? []) {
     if (ir.pages.find((p) => p.id === name)?.mine)
