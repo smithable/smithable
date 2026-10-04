@@ -43,6 +43,16 @@ export const STACK_PROFILE = {
     // drizzle-kit stays in production images as an optional peer of better-auth.
     esbuild: "0.28.2",
   },
+  /**
+   * Advisories that name a pinned version and do not reach a generated app, each with why.
+   * `smithable security` and scripts/stack-advisories.mjs show them at every run and do not
+   * fail for them. An advisory with a fixed version is never listed here: the pin moves.
+   */
+  advisories: {
+    // In 1.6.14 and later by the library's own choice, so no version fixes it.
+    "GHSA-fmh4-wcc4-5jm3":
+      "it is in Better Auth's organization plugin, which a generated app does not use",
+  } as Record<string, string>,
   /** Overrides earlier profiles set, which Smithable removes again. */
   retiredOverrides: ["@esbuild-kit/core-utils>esbuild"],
   devDependencies: {
@@ -50,14 +60,14 @@ export const STACK_PROFILE = {
     "@tanstack/router-cli": "1.167.40",
     "@types/better-sqlite3": "9.6.0",
     "@types/nodemailer": "8.0.2",
-    "@types/node": "24.19.0",
+    "@types/node": "24.19.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "drizzle-kit": "0.31.11",
     tsx: "4.23.15",
     typescript: "6.0.3",
-    vite: "8.3.1",
-    vitest: "5.0.2",
+    vite: "8.3.2",
+    vitest: "5.0.3",
   },
 } as const;

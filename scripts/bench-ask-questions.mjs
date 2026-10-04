@@ -495,7 +495,8 @@ export const QUESTIONS = {
       q: 'Post an update on the card payments incident: "Fully recovered, no payments were lost.", status resolved.',
       kind: "change",
       check: (a, b) =>
-        a.IncidentUpdate.length === b.IncidentUpdate.length + 1 &&
+        // At least this update (resolving the incident adds one of its own as well).
+        a.IncidentUpdate.length > b.IncidentUpdate.length &&
         a.IncidentUpdate.some((u) => /Fully recovered/.test(u.message ?? "")),
     },
     {
