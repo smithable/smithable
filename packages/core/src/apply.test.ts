@@ -804,8 +804,20 @@ test("setApp, setRoles and setPublic build an app's frame from nothing", () => {
   });
   if (!pub.ok) throw new Error(pub.message);
   expect(pub.files.auth).toContain("public:\n  pages: [classes]\n  read: [ClassType]\n");
+  // Opening says nothing more; closing says what visitors lose, in the confirmation.
+  expect(pub.description).toBe("Set what is public: pages classes; read ClassType");
   const closed = applyOperation({ ...blank, ...pub.files }, "setPublic", { read: [] });
   expect(closed.ok && closed.files.auth).not.toContain("read:");
+  expect(closed.ok && closed.description).toBe(
+    "Set what is public: read nothing; visitors can no longer read class types",
+  );
+  const both = applyOperation({ ...blank, ...pub.files }, "setPublic", { pages: [], read: [] });
+  expect(both.ok && both.description).toBe(
+    "Set what is public: pages nothing; read nothing; visitors can no longer open the classes page or read class types",
+  );
+  // The same lists again close nothing.
+  const same = applyOperation({ ...blank, ...pub.files }, "setPublic", { pages: ["classes"] });
+  expect(same.ok && same.description).toBe("Set what is public: pages classes");
   expect(
     applyOperation({ ...blank, ...page.files }, "setPublic", { pages: ["nowhere"] }),
   ).toMatchObject({ ok: false });

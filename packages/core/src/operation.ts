@@ -53,7 +53,12 @@ export interface Refusal {
   refusal: string;
 }
 
-/** What a companion changed in step with an operation, said in its confirmation. */
+/**
+ * Something an operation did that the person did not ask for in so many words, said in its
+ * confirmation: what a companion changed in step with it (a removed page is no longer public),
+ * or what the operation itself takes away (visitors can no longer read something). A note is a
+ * clause that follows the description after "; ", so it must read well there.
+ */
 export interface Note {
   note: string;
 }
@@ -120,7 +125,7 @@ export interface Operation<A extends OperationArgs = OperationArgs> {
    */
   destructive(args: A, ir: SpecIR, after?: SpecIR): boolean;
   /** Edits the files, or throws an OperationError explaining why it cannot. */
-  apply(editors: Editors, args: A, ir: SpecIR): Effect[];
+  apply(editors: Editors, args: A, ir: SpecIR): (Effect | Note)[];
 }
 
 export class OperationError extends Error {}
