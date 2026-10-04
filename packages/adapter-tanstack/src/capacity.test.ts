@@ -41,17 +41,19 @@ test("a capacity is checked in the write's transaction, and the referenced recor
   const booking = file("src/generated/booking.server.ts");
   expect(booking).toContain("row = db.transaction((tx) => {");
   expect(booking).toContain(
-    'eq(bookings.sessionId, values.sessionId), eq(bookings.status, "confirmed")',
+    'eq(schema.bookings.sessionId, values.sessionId), eq(schema.bookings.status, "confirmed")',
   );
-  expect(booking).toContain("tx.select({ n: sessions.capacity }).from(sessions)");
+  expect(booking).toContain("tx.select({ n: schema.sessions.capacity }).from(schema.sessions)");
   expect(booking).toContain('throw new Conflict("full")');
-  expect(booking).toContain("ne(bookings.id, id)");
+  expect(booking).toContain("ne(schema.bookings.id, id)");
   expect(booking).toContain("error instanceof Conflict ? error : refusal(error)");
   const session = file("src/generated/session.server.ts");
   expect(session).toContain(
     "if (values.capacity < booked) throw new Conflict(`booked:$" + "{booked}`);",
   );
-  expect(session).toContain('eq(bookings.sessionId, id), eq(bookings.status, "confirmed")');
+  expect(session).toContain(
+    'eq(schema.bookings.sessionId, id), eq(schema.bookings.status, "confirmed")',
+  );
   // With a where, the generated access test leaves the capacity case out (its values may not count).
   expect(file("src/generated/access.test.ts")).not.toContain("a capacity:");
 });
@@ -72,7 +74,7 @@ test("the reservation block: a session's page books and cancels through the data
   // Numbers only, never whose: the places counted over every booking, and the viewer's own.
   const data = file("src/generated/booking.server.ts");
   expect(data).toContain("places(sessionId: number): { taken: number; max: number }");
-  expect(data).toContain('eq(bookings.status, "confirmed")');
+  expect(data).toContain('eq(schema.bookings.status, "confirmed")');
   expect(data).toContain("mine(viewer: Viewer, sessionId: number)");
   const module = file("src/generated/booking.ts");
   expect(module).toContain("export const bookingPlaces = createServerFn()");

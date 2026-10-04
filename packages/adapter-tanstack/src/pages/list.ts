@@ -37,7 +37,7 @@ import {
   relatedTitle,
   standardActions,
   type Texts,
-  tableNames,
+  tableRef,
   type Within,
 } from "../shared.js";
 import { actionButton } from "./record.js";
@@ -235,8 +235,7 @@ export function searchCode(
         return [
           `inArray(${n.table}.${dataKey(f)}, ${names(modelNamed(ir, f.type.model), t).data}.titled(viewer, data.q))`,
         ];
-      const target =
-        f.type.model === USER_MODEL ? "user" : tableNames(modelNamed(ir, f.type.model)).table;
+      const target = f.type.model === USER_MODEL ? "user" : tableRef(modelNamed(ir, f.type.model));
       return [`relatedContains(${n.table}.${dataKey(f)}, ${target}, [${target}.${title}], data.q)`];
     }),
   ];
@@ -252,9 +251,7 @@ export function searchCode(
   const related = fields
     .filter((f) => f.type.kind === "relation" && !byTitle(f))
     .map((f) =>
-      f.type.kind === "relation" && f.type.model === USER_MODEL
-        ? "user"
-        : tableNames(modelNamed(ir, (f.type as { model: string }).model)).table,
+      f.type.kind === "relation" && f.type.model === USER_MODEL ? "user" : "* as schema",
     );
   const placeholder = `Search by ${labels.length > 1 ? `${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}` : labels[0]}`;
   if (filtering) {
@@ -401,7 +398,7 @@ export function listParts(
     route
       .add("@tanstack/react-start", "createServerFn")
       .add("zod", "z")
-      .add("#/db/schema", n.table, ...search.imports.related)
+      .add("#/db/schema", "* as schema", ...search.imports.related)
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
       .add("#/kit/access", "allows");
     if (search.imports.or) route.add("drizzle-orm", "or");
