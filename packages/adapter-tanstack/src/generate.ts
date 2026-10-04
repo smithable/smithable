@@ -38,7 +38,7 @@ import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
-import { indexRoute, pagesModule, rootRoute } from "./pages/root.js";
+import { indexRoute, pagesModule, robotsRoute, rootRoute } from "./pages/root.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
   dataKey,
@@ -369,6 +369,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
       generated("src/routes/__root.tsx", rootRoute(ir, t, auth, ux)),
+      generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),
       generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
       ...(ir.pages.some((p) => p.route === "/")
         ? []
