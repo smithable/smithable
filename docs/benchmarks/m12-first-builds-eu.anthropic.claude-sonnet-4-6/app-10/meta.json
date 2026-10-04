@@ -1,0 +1,10 @@
+{
+  "description": "A recipe collection for a family, with ingredients and shopping lists.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who can browse the recipe collection?",
+    "What are the main kinds of records?",
+    "Can all family members add and edit recipes, or is there one main cook?"
+  ]
+}

@@ -1,0 +1,11 @@
+smithableContent: 0.1
+models:
+  Company:
+    fields:
+      size:
+        values:
+          micro: 1–10
+          small: 11–50
+          medium: 51–200
+          large: 201–1000
+          enterprise: 1000+

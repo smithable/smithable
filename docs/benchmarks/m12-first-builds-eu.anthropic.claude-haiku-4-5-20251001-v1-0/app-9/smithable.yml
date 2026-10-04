@@ -1,0 +1,37 @@
+smithable: 0.1
+app:
+  name: Help Desk
+  description: An IT team's help desk for managing support tickets, priorities and assignments.
+pages:
+  team:
+    users: manage
+  tickets:
+    crud: Ticket
+    search: [title, description]
+    sortable: [priority, status, createdAt]
+    actions: [resolve, close]
+    filters: [priority, status]
+models:
+  Ticket:
+    fields:
+      title: string!
+      description: text
+      priority: low | normal | high
+      status: open | inProgress | resolved | closed
+      assignee: User
+      resolvedAt: datetime
+actions:
+  resolve:
+    on: Ticket
+    when:
+      status: inProgress
+    set:
+      status: resolved
+      resolvedAt: NOW()
+  close:
+    on: Ticket
+    when:
+      status: resolved
+    set:
+      status: closed
+navigation: [tickets, team]

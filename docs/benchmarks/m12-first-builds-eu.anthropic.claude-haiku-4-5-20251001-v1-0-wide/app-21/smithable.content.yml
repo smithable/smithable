@@ -1,0 +1,60 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Asiakas
+    pluralLabel: Asiakkaat
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      phone:
+        label: Puhelin
+      address:
+        label: Osoite
+  Car:
+    label: Auto
+    pluralLabel: Autot
+    fields:
+      make:
+        label: Merkki
+      model:
+        label: Malli
+      licensePlate:
+        label: Rekisterinumero
+      year:
+        label: Vuosi
+      customer:
+        label: Asiakas
+  Invoice:
+    label: Lasku
+    pluralLabel: Laskut
+    fields:
+      number:
+        label: Numero
+      customer:
+        label: Asiakas
+      amount:
+        label: Summa
+      date:
+        label: Päivämäärä
+      dueDate:
+        label: Eräpäivä
+      status:
+        label: Tila
+      notes:
+        label: Huomautukset
+  Service:
+    label: Huoltotyö
+    pluralLabel: Huoltotyöt
+    fields:
+      description:
+        label: Kuvaus
+      car:
+        label: Auto
+      date:
+        label: Päivämäärä
+      status:
+        label: Tila
+      notes:
+        label: Huomautukset

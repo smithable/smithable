@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  guests:
+    table:
+      columns: [name, status, partySize, mealChoice, table]
+tones:
+  Guest.status:
+    accepted: success
+    declined: danger
+    pending: warning

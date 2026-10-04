@@ -1,0 +1,70 @@
+smithable: 0.1
+app:
+  name: Our Wedding
+  description: Guest list and seating plan for our wedding, tracking RSVPs and meal choices.
+models:
+  Table:
+    fields:
+      name: string!
+      seats: int! = 8
+      notes: text
+  Guest:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      rsvp: pending | attending | declined
+      mealChoice: none | meat | fish | vegetarian | vegan
+      dietaryNotes: text
+      plusOne: bool
+      plusOneName: string
+      plusOneMeal: none | meat | fish | vegetarian | vegan
+      table: Table
+      seatNumber: int
+      notes: text
+pages:
+  guests:
+    crud: Guest
+    search: [name, email]
+    filters: [rsvp, mealChoice, table, plusOne]
+    actions: [confirmAttendance, declineInvitation]
+  tables:
+    crud: Table
+  overview:
+    dashboard:
+      totalGuests:
+        count: Guest
+      attending:
+        count: Guest
+        where:
+          rsvp: attending
+      pending:
+        count: Guest
+        where:
+          rsvp: pending
+      declined:
+        count: Guest
+        where:
+          rsvp: declined
+      recentRSVPs:
+        list: Guest
+        limit: 5
+  team:
+    users: manage
+actions:
+  confirmAttendance:
+    on: Guest
+    when:
+      rsvp: pending
+    set:
+      rsvp: attending
+      mealChoice:
+    intent: Mark a guest as attending and record their meal choice.
+  declineInvitation:
+    on: Guest
+    when:
+      rsvp: [pending, attending]
+    set:
+      rsvp: declined
+    intent: Mark a guest as declined.
+navigation: [overview, guests, tables, team]

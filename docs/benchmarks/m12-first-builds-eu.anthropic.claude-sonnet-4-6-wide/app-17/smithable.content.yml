@@ -1,0 +1,64 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Min Frisörsalong
+    hero:
+      button: Se lediga tider
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+  schema:
+    title: Lediga tider
+  my-bookings:
+    title: Mina bokningar
+models:
+  Service:
+    label: Tjänst
+    pluralLabel: Tjänster
+    fields:
+      name:
+        label: Namn
+      description:
+        label: Beskrivning
+      durationMinutes:
+        label: Längd (minuter)
+      price:
+        label: Pris
+  Stylist:
+    label: Stylist
+    pluralLabel: Stylister
+    fields:
+      name:
+        label: Namn
+      bio:
+        label: Om stylisten
+      portrait:
+        label: Porträtt
+  Appointment:
+    label: Tid
+    pluralLabel: Tider
+    fields:
+      service:
+        label: Tjänst
+      stylist:
+        label: Stylist
+      startsAt:
+        label: Starttid
+      capacity:
+        label: Platser
+  Booking:
+    label: Bokning
+    pluralLabel: Bokningar
+    fields:
+      appointment:
+        label: Tid
+  Message:
+    label: Meddelande
+    pluralLabel: Meddelanden
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      message:
+        label: Meddelande
