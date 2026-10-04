@@ -1,0 +1,103 @@
+smithable: 0.1
+app:
+  name: Agency Pipeline
+  description: "A sales pipeline for our web agency: leads, deals and who follows up when."
+  currency: EUR
+models:
+  Lead:
+    fields:
+      company: string!
+      contactName: string
+      email: email
+      phone: phone
+      website: url
+      source: referral | website | outreach | event | other
+      status: new | contacted | qualified | disqualified
+      assignedTo: User
+      nextFollowUp: date
+      notes: text
+      deals: Deal[]
+    access:
+      delete: [admin]
+  Deal:
+    fields:
+      title: string!
+      lead: Lead!
+      stage: proposal | negotiation | won | lost
+      value: money
+      assignedTo: User
+      nextFollowUp: date
+      expectedClose: date
+      closedAt: date
+      lostReason: text
+      notes: text
+    access:
+      delete: [admin]
+pages:
+  deals:
+    crud: Deal
+    search: [title]
+    actions: [markWon, markLost]
+  leads:
+    crud: Lead
+    search: [company, contactName, email]
+    actions: [qualify, disqualify]
+  follow-ups:
+    calendar:
+      model: Deal
+      starts: nextFollowUp
+  overview:
+    dashboard:
+      openPipeline:
+        sum: Deal.value
+        where:
+          stage: [proposal, negotiation]
+      openDeals:
+        count: Deal
+        where:
+          stage: [proposal, negotiation]
+      wonDeals:
+        sum: Deal.value
+        where:
+          stage: won
+        by: closedAt
+      newLeads:
+        list: Lead
+        where:
+          status: new
+        limit: 5
+  team:
+    users: manage
+actions:
+  qualify:
+    on: Lead
+    when:
+      status: [new, contacted]
+    set:
+      status: qualified
+    intent: Mark a lead as a real sales opportunity.
+  disqualify:
+    on: Lead
+    when:
+      status: [new, contacted, qualified]
+    set:
+      status: disqualified
+    intent: Drop a lead that is not a fit.
+  markWon:
+    on: Deal
+    when:
+      stage: [proposal, negotiation]
+    set:
+      stage: won
+      closedAt: TODAY()
+    intent: Close a deal as won.
+  markLost:
+    on: Deal
+    when:
+      stage: [proposal, negotiation]
+    set:
+      stage: lost
+      closedAt: TODAY()
+      lostReason:
+    intent: Close a deal as lost, with the reason.
+navigation: [deals, leads, follow-ups, overview, team]

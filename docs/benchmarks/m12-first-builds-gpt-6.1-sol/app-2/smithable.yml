@@ -1,0 +1,96 @@
+smithable: 0.1
+app:
+  name: Sales Team CRM
+  description: A shared CRM for a small sales team to manage companies, contacts, deals and follow-ups.
+  currency: EUR
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      segment: smb | enterprise | government
+      notes: text
+      accountManager: User
+      contacts: Contact[]
+      deals: Deal[]
+      followUps: FollowUp[]
+    access:
+      write: [sales]
+      delete: [admin]
+  Contact:
+    fields:
+      name: string!
+      customer: Customer!
+      jobTitle: string
+      email: email
+      phone: phone
+      notes: text
+  Deal:
+    fields:
+      name: string!
+      customer: Customer!
+      contact: Contact
+      stage: new | qualified | proposal | won | lost
+      value: money
+      expectedCloseDate: date
+      assignee: User
+      closedAt: datetime
+      notes: text
+  FollowUp:
+    fields:
+      subject: string!
+      customer: Customer!
+      contact: Contact
+      deal: Deal
+      dueAt: datetime!
+      assignee: User
+      status: pending | completed | canceled
+      completedAt: datetime
+      notes: text
+pages:
+  customers:
+    crud: Customer
+    search: [name, email]
+  contacts:
+    crud: Contact
+    search: [name, email, phone]
+    filters: [customer]
+  deals:
+    crud: Deal
+    search: [name]
+    actions: [markWon, markLost]
+  follow-ups:
+    crud: FollowUp
+    search: [subject]
+    actions: [completeFollowUp, cancelFollowUp]
+  team:
+    users: manage
+actions:
+  markWon:
+    on: Deal
+    when:
+      stage: [new, qualified, proposal]
+    set:
+      stage: won
+      closedAt: NOW()
+  markLost:
+    on: Deal
+    when:
+      stage: [new, qualified, proposal]
+    set:
+      stage: lost
+      closedAt: NOW()
+  completeFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: completed
+      completedAt: NOW()
+  cancelFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: canceled

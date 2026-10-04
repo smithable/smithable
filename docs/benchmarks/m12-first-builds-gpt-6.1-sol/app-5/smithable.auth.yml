@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages ingredients and stock levels.
+  member:
+    description: Views ingredient stock levels and maintains supplier details.
+defaultRole: member
+admins: [johan@smithable.ai]

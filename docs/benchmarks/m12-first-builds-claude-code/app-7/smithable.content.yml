@@ -1,0 +1,16 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Welcome to the club
+      subtitle: Follow our teams, meet the players and catch up on fixtures and results.
+      button: See matches
+      image:
+        src: images/hero.webp
+        alt: A team standing at a whiteboard by a window over the harbour
+    fixtures:
+      title: Upcoming fixtures
+    results:
+      title: Latest results
+    teamsList:
+      title: Our teams

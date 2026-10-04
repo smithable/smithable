@@ -1,0 +1,28 @@
+smithable: 0.1
+app:
+  name: Museum Collection
+  description: Explore our local museum's objects and discover the stories behind them.
+models:
+  Item:
+    fields:
+      name: string!
+      summary: text
+      story: text
+      link: url
+      addedOn: date! = TODAY()
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+pages:
+  items:
+    crud: Item
+    search: [name, summary, story]
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [items]
+      footer:
+      items:
+        records: Item

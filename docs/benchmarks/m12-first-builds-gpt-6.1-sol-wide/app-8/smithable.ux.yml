@@ -1,0 +1,12 @@
+smithableUx: 0.1
+pages:
+  catalog:
+    table:
+      view: cards
+      columns: [title, category, condition, place, available, claimedBy]
+theme:
+  preset: modern
+  density: comfortable
+  brand:
+    primary: "#0f766e"
+    font: Inter

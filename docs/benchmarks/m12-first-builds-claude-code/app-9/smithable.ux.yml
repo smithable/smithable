@@ -1,0 +1,21 @@
+smithableUx: 0.1
+pages:
+  tickets:
+    table:
+      below:
+        title: requester
+    form:
+      control:
+        priority: radio
+    icon: clipboard
+tones:
+  Ticket.priority:
+    high: warning
+    urgent: danger
+  Ticket.status:
+    inProgress: warning
+    resolved: success
+theme:
+  preset: corporate
+  brand:
+    primary: "#2563eb"

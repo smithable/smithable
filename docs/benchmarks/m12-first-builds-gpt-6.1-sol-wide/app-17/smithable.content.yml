@@ -1,0 +1,67 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Behandling
+    pluralLabel: Behandlingar
+    fields:
+      name:
+        label: Namn
+      summary:
+        label: Beskrivning
+      durationMinutes:
+        label: Längd i minuter
+      price:
+        label: Pris
+  Instructor:
+    label: Frisör
+    pluralLabel: Frisörer
+    fields:
+      name:
+        label: Namn
+      bio:
+        label: Presentation
+  Session:
+    label: Bokningsbar tid
+    pluralLabel: Bokningsbara tider
+    fields:
+      classType:
+        label: Behandling
+      instructor:
+        label: Frisör
+      startsAt:
+        label: Datum och tid
+      capacity:
+        label: Antal platser
+  Booking:
+    label: Bokning
+    pluralLabel: Bokningar
+    fields:
+      session:
+        label: Frisörtid
+pages:
+  my-bookings:
+    title: Mina bokningar
+  sessions:
+    title: Bokningsbara tider
+  class-types:
+    title: Behandlingar
+  instructors:
+    title: Frisörer
+  schedule:
+    title: Boka tid
+  admin:
+    title: Administration
+  home:
+    title: Välkommen
+    hero:
+      title: Din nästa frisörtid börjar här
+      subtitle: Se våra behandlingar och bokningsbara tider. Logga in med din e-post för att boka och hantera dina bokningar.
+      image:
+        src: images/hero.webp
+        alt: A yoga class stretching on mats in a bright studio
+    classes:
+      title: Våra behandlingar
+    callToAction:
+      title: Hitta en tid som passar dig
+    footer:
+      text: Välkommen till salongen.

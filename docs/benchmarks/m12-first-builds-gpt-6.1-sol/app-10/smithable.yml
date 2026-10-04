@@ -1,0 +1,65 @@
+smithable: 0.1
+app:
+  name: Family Recipe Box
+  description: Keep family recipes, their ingredients, and shared shopping lists in one place.
+  timezone: UTC
+models:
+  Item:
+    fields:
+      name: string!
+      summary: text
+      kind: general | favorite | archived
+      ingredients: text!
+      instructions: text!
+      servings: int
+      link: url
+      addedOn: date! = TODAY()
+    access:
+      create: [admin]
+      write: [admin]
+      delete: [admin]
+  ShoppingList:
+    fields:
+      name: string!
+      status: open | completed
+      items: ShoppingItem[]
+  ShoppingItem:
+    fields:
+      shoppingList: ShoppingList!
+      name: string!
+      quantity: string
+      recipe: Item
+      purchased: bool! = false
+pages:
+  items:
+    crud: Item
+    search: [name, summary, ingredients]
+    filters: [kind]
+  shopping-lists:
+    crud: ShoppingList
+    actions: [completeShoppingList]
+  shopping-items:
+    crud: ShoppingItem
+    filters: [shoppingList, purchased, recipe]
+    actions: [markPurchased, markNeeded]
+  team:
+    users: manage
+actions:
+  markPurchased:
+    on: ShoppingItem
+    when:
+      purchased: false
+    set:
+      purchased: true
+  markNeeded:
+    on: ShoppingItem
+    when:
+      purchased: true
+    set:
+      purchased: false
+  completeShoppingList:
+    on: ShoppingList
+    when:
+      status: open
+    set:
+      status: completed

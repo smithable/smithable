@@ -1,0 +1,17 @@
+smithableUx: 0.1
+pages:
+  fuel:
+    table:
+      sort: -date
+      columns: [date, odometer, liters, total, pricePerLiter, station]
+    icon: truck
+  service:
+    table:
+      sort: -date
+      columns: [date, kind, odometer, workshop, cost]
+    icon: settings
+  expenses:
+    table:
+      sort: -date
+      columns: [date, category, amount, note]
+    icon: receipt

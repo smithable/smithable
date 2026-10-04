@@ -1,0 +1,16 @@
+smithableUx: 0.1
+pages:
+  guests:
+    table:
+      columns: [name, rsvp, mealChoice, dietaryRequirements, table, seatNumber]
+      sort: name
+  tables:
+    table:
+      view: cards
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#856478"
+    background: "#FAF7F5"
+    font: Inter

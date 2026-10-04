@@ -1,0 +1,10 @@
+{
+  "description": "Invoicing for freelancers, with clients, invoices and payments.",
+  "starter": "invoicing",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who manages each freelancer’s records?",
+    "What can clients see without signing in?",
+    "What should payment records hold?"
+  ]
+}

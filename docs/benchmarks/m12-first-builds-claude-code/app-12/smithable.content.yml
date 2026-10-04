@@ -1,0 +1,9 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Is the shop working?
+      subtitle: "The live state of our web shop: checkout, payments, delivery tracking and more, with every outage and its updates."
+      image:
+        src: images/hero.webp
+        alt: A florist arranging a bouquet in a small shop

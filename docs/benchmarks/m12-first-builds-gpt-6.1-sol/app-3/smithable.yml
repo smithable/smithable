@@ -1,0 +1,83 @@
+smithable: 0.1
+app:
+  name: Freelance Ledger
+  description: Manage your freelance business's clients, invoices and payments in one private workspace.
+  currency: EUR
+models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Payment:
+    fields:
+      paidOn: date! = TODAY()
+      amount: money!
+      reference: string
+      notes: text
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      payments: Payment[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+      paidAmount:
+        type: money
+        formula: SUM(payments.amount)
+      balance:
+        type: money
+        formula: total - paidAmount
+pages:
+  clients:
+    crud: Client
+  payments:
+    crud: Payment
+  invoice-lines:
+    crud: InvoiceLine
+  settings:
+    crud: BusinessProfile
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    filters: [status, client]
+    search: [number]
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Mark the invoice as sent to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Mark the invoice as fully paid after recording its payments.

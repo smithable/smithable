@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Borrow the tool, skip the store
+      subtitle: Your neighbors already own the drill, the ladder and the hedge trimmer. Borrow what you need and lend what you have.
+      button: Browse tools
+      image:
+        src: images/hero.webp
+        alt: A green garden with vegetable beds, a greenhouse and fruit trees
+    latest:
+      title: Available now
+  myTools:
+    title: My tools

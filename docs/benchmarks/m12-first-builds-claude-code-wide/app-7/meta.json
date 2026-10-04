@@ -1,0 +1,10 @@
+{
+  "description": "A town flea market site where anyone can post things to sell, with photos and a price.",
+  "starter": "marketplace",
+  "wordStarter": "marketplace",
+  "questions": [
+    "Do people need an account to post something for sale?",
+    "How should buyers get in touch with a seller?",
+    "Besides photos and a price, what should a listing hold?"
+  ]
+}

@@ -1,0 +1,13 @@
+smithableUx: 0.1
+tones:
+  Ticket.priority:
+    urgent: danger
+    high: warning
+  Ticket.status:
+    resolved: success
+theme:
+  preset: modern
+  density: compact
+  brand:
+    primary: "#2563eb"
+    font: Inter

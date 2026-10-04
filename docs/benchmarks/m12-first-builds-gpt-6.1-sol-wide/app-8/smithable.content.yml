@@ -1,0 +1,10 @@
+smithableContent: 0.1
+pages:
+  catalog:
+    title: Swap Shelf
+    subtitle: Offer something you no longer need, or claim an available item and contact its owner to arrange collection.
+models:
+  Item:
+    fields:
+      place:
+        label: Collection location

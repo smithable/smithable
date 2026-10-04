@@ -1,0 +1,12 @@
+smithableUx: 0.1
+pages:
+  items:
+    table:
+      columns: [name, artist, condition, pricePaid]
+      sort: artist
+theme:
+  preset: minimal
+  density: comfortable
+  brand:
+    primary: "#92400e"
+    font: Inter

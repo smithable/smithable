@@ -1,0 +1,12 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin:
+    description: Manages the cleaning company's workspace and team.
+  member:
+    description: Manages shared household clients and invoices.
+defaultRole: member
+admins: [johan@smithable.ai]
