@@ -8,6 +8,7 @@ import {
   formatDiagnostic,
   kebab,
   type OperationArgs,
+  OperationError,
   operationsFor,
   parseOperationArgs,
   type SpecIR,
@@ -73,7 +74,16 @@ export function op(
   const words = values.map((w) =>
     w.startsWith("@") && existsSync(w.slice(1)) ? readFileSync(w.slice(1), "utf8") : w,
   );
-  return runOperation(dir, io, operation.name, parseOperationArgs(operation, words), flags);
+  let args: ReturnType<typeof parseOperationArgs>;
+  try {
+    args = parseOperationArgs(operation, words);
+  } catch (error) {
+    // A word no argument takes, said with what to write instead.
+    if (!(error instanceof OperationError)) throw error;
+    io.err(`${error.message}\n`);
+    return 2;
+  }
+  return runOperation(dir, io, operation.name, args, flags);
 }
 
 /**
