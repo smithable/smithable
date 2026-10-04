@@ -106,6 +106,7 @@ test("a hero's shortcut to a page behind sign-in shows only to those who may ope
   expect(home).toContain('{ to: "/open", label: "Open"');
   expect(home).toContain('...(allows(pageAccess["history"], viewer) ? [{ to: "/history"');
   expect(home).toMatch(/import \{ [^}]*\ballows\b[^}]*\} from "#\/kit\/access";/);
+});
 
 test("robots.txt lets search engines read the public pages and nothing else", () => {
   const ir = validateSpec({
