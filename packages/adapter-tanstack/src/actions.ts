@@ -336,12 +336,17 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
   const askedArg = asked ? ", asked" : "";
   const label = n.label.toLowerCase();
   const title = titleField(model);
-  // The writes of one record's plan, inside a transaction ("tx"), returning what was written.
+  // The writes of one record's plan, inside a transaction ("tx"), each with its audit line,
+  // returning what was written.
+  const setFields = JSON.stringify(action.set.map((v) => v.field));
   const writes = (p: string) => `{
-      changed: tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get(),
-      inserted: [
+      const changed = tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get();
+      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, title: changed.${title}, fields: ${setFields} });
+      const inserted = [
 ${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: viewer?.id ?? null }).returning().get(),`).join("\n")}
-      ] as const,
+      ] as const;
+${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, title: inserted[${i}].${titleField(target)}, details: { by: ${JSON.stringify(action.name)} } });`).join("\n")}
+      return { changed, inserted };
     }`;
   const hooks = (w: string) =>
     `  await afterChange("afterUpdate", ${JSON.stringify(model.name)}, ${w}.changed, viewer);
@@ -350,6 +355,7 @@ ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringi
 import { db } from "#/db";
 import { ${[n.table, ...adds.map((x) => x.tn.table)].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
 import { ${n.data} } from "${n.module}.server";
@@ -386,10 +392,10 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
 ${
   adds.length
     ? `  // One transaction: the change and the records it adds, or nothing.
-  const written = db.transaction((tx) => (${writes("one")}));
+  const written = db.transaction((tx) => ${writes("one")});
 ${hooks("written")}
   return written.changed;`
-    : `  return ${n.data}.update(viewer, id, one.values);`
+    : `  return ${n.data}.update(viewer, id, one.values, ${JSON.stringify(action.name)});`
 }
 }
 
@@ -412,7 +418,7 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
       throw new Error(\`${n.label} "\${String(row.${title} ?? row.id)}": \${why}\`);
     }
   }
-  const written = db.transaction((tx) => plans.map((p) => (${writes("p")})));
+  const written = db.transaction((tx) => plans.map((p) => ${writes("p")}));
   for (const w of written) {
 ${hooks("w").replace(/^ {2}/gm, "    ")}
   }
@@ -579,6 +585,7 @@ function copyActionServer(
   return `${HEADER}import { db } from "#/db";
 import { ${[n.table, ...lists.map((l) => l.ln.table)].sort().join(", ")} } from "#/db/schema";
 import { AccessDenied, check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
 ${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
 import { ${n.data} } from "${n.module}.server";
@@ -611,11 +618,14 @@ ${lists
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
     const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: viewer?.id ?? null }).returning().get();
+    audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, title: created.${titleField(model)}, details: { from: row.id, by: ${JSON.stringify(action.name)} } });
 ${lists
   .map(
-    (l) => `    const ${l.name}Copies = ${l.name}.map((item) =>
-      tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: viewer?.id ?? null }).returning().get(),
-    );`,
+    (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
+      const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: viewer?.id ?? null }).returning().get();
+      audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, title: copy.${titleField(l.listed)}, details: { by: ${JSON.stringify(action.name)} } });
+      return copy;
+    });`,
   )
   .join("\n")}
     return { created${lists.map((l) => `, ${l.name}Copies`).join("")} };
