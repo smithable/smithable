@@ -1,0 +1,153 @@
+// Smithable app kit: keys for the API (docs/design/integrations.md §2), on the users page. A key
+// has a name saying what it is for, a role and an optional end date; it is shown once, then only
+// its first characters. Revoking it stops it at once.
+import { useId, useState } from "react";
+import { Button } from "#/components/ui/button";
+import { Card } from "#/components/ui/card";
+import { Input } from "#/components/ui/input";
+import type { RoleOption } from "./Users";
+
+export interface KeyRow {
+  id: number;
+  name: string;
+  role: string;
+  prefix: string;
+  expiresAt: Date | null;
+  lastUsedAt: Date | null;
+  revokedAt: Date | null;
+}
+
+const day = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : "—");
+
+export function Keys({
+  keys,
+  roles,
+  onMake,
+  onRevoke,
+}: {
+  keys: KeyRow[];
+  roles: RoleOption[];
+  onMake: (name: string, role: string, until?: string) => Promise<string>;
+  onRevoke: (id: number) => Promise<unknown>;
+}) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState(roles[0]?.value ?? "");
+  const [until, setUntil] = useState("");
+  const [made, setMade] = useState<string>();
+  const [failure, setFailure] = useState<string>();
+  const label = (value: string) => roles.find((r) => r.value === value)?.label ?? value;
+  const id = useId();
+  return (
+    <section data-kit="keys" className="mt-10 space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Keys</h2>
+        <p className="text-sm text-muted-foreground">
+          For other programs that use this app's API. A key acts with its role and owns nothing.
+        </p>
+      </div>
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setFailure(undefined);
+          try {
+            setMade(await onMake(name, role, until || undefined));
+            setName("");
+            setUntil("");
+          } catch (error) {
+            setFailure(error instanceof Error ? error.message : "Something went wrong.");
+          }
+        }}
+      >
+        <label htmlFor={`${id}-name`} className="grid gap-1 text-sm">
+          What it is for
+          <Input
+            id={`${id}-name`}
+            required
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          Role
+          <select
+            className="h-control rounded-md border border-input bg-background px-2"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
+            {roles.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label htmlFor={`${id}-until`} className="grid gap-1 text-sm">
+          Ends (optional)
+          <Input
+            id={`${id}-until`}
+            type="date"
+            value={until}
+            onChange={(e) => setUntil(e.target.value)}
+          />
+        </label>
+        <Button type="submit">Make a key</Button>
+      </form>
+      {failure && (
+        <p role="alert" className="text-sm text-destructive">
+          {failure}
+        </p>
+      )}
+      {made && (
+        <Card role="status" className="space-y-2 p-card">
+          <p className="text-sm font-medium">Copy the key now: it is not shown again.</p>
+          <div className="flex items-center gap-2">
+            <code data-part="key" className="break-all rounded bg-muted px-2 py-1 text-sm">
+              {made}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigator.clipboard?.writeText(made)}
+            >
+              Copy
+            </Button>
+          </div>
+        </Card>
+      )}
+      {keys.length > 0 && (
+        <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+          {keys.map((k) => (
+            <li
+              key={k.id}
+              data-part="key-row"
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
+            >
+              <span className="font-medium">{k.name}</span>
+              <span>{label(k.role)}</span>
+              <code className="text-muted-foreground">{k.prefix}…</code>
+              <span className="text-muted-foreground">ends {day(k.expiresAt)}</span>
+              <span className="text-muted-foreground">last used {day(k.lastUsedAt)}</span>
+              {k.revokedAt ? (
+                <span className="ml-auto text-muted-foreground">Revoked {day(k.revokedAt)}</span>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ml-auto h-7"
+                  onClick={() => {
+                    if (confirm(`Revoke "${k.name}"? Programs using it stop working at once.`))
+                      onRevoke(k.id);
+                  }}
+                >
+                  Revoke
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

@@ -14,6 +14,7 @@ import {
   uniquePerOwner,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
+import { hasKeys, KEY_TABLE } from "./keys.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -135,7 +136,7 @@ export const ${n.table}Favorites = sqliteTable(
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${pictures ? 'import type { Picture } from "#/kit/uploads";\n' : ""}
-${[...authBlock, AUDIT_TABLE, ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
