@@ -85,14 +85,31 @@ export function forgetInLog(viewer: Viewer | null, target: Forgotten): number {
   if (viewer?.role !== "admin") throw new AccessDenied(viewer !== null);
   return db.transaction((tx) => {
     const blank = { title: null, address: null, browser: null };
+    // A person is named by their id on what they did and on the line that removed them, and by
+    // their address on invitations and refused sign-ins: both go.
+    const address =
+      "user" in target
+        ? // A removed user's row is gone; the line that removed them has their address.
+          tx
+            .select({ email: sql<string | null>`json_extract(${auditLog.details}, '$.email')` })
+            .from(auditLog)
+            .where(
+              sql`json_extract(${auditLog.details}, '$.user') = ${target.user} and json_extract(${auditLog.details}, '$.email') is not null`,
+            )
+            .get()?.email
+        : undefined;
+    const withoutEmail = { ...blank, details: sql`json_remove(${auditLog.details}, '$.email')` };
     const changed =
       "user" in target
         ? tx.update(auditLog).set(blank).where(eq(auditLog.who, target.user)).run().changes +
           tx
             .update(auditLog)
-            // The line that removed them named them in its details: their address goes too.
-            .set({ ...blank, details: sql`json_remove(${auditLog.details}, '$.email')` })
-            .where(sql`json_extract(${auditLog.details}, '$.user') = ${target.user}`)
+            .set(withoutEmail)
+            .where(
+              address
+                ? sql`json_extract(${auditLog.details}, '$.user') = ${target.user} or json_extract(${auditLog.details}, '$.email') = ${address}`
+                : sql`json_extract(${auditLog.details}, '$.user') = ${target.user}`,
+            )
             .run().changes
         : tx
             .update(auditLog)
