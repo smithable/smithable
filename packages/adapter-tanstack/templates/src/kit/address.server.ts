@@ -16,7 +16,7 @@ export function visitorAddress(request: Request): string | undefined {
 }
 
 /** The header Better Auth's own limits read the address from; set here, never by the visitor. */
-export const ADDRESS_HEADER = "x-smithable-address";
+export const ADDRESS_HEADER = "x-visitor-address";
 
 /** The request with the visitor's address in ADDRESS_HEADER, whatever the visitor sent there. */
 export function withAddress(request: Request): Request {
