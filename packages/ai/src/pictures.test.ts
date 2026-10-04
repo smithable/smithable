@@ -61,3 +61,42 @@ test("nothing fits: the calm abstract hero and the first samples, deterministica
   expect(a.samples).toHaveLength(2);
   expect(a).toEqual(b);
 });
+
+test("a starter's tag and a model's name do not make a subject; what the person wrote does", () => {
+  const heroes: PictureEntry[] = [
+    entry("fitness-yoga-class", "hero", ["hero", "yoga", "fitness", "starter-booking"]),
+    entry("hero-conference", "hero", ["hero", "conference", "talk", "speaker", "event"]),
+    entry("hero-salon", "hero", ["hero", "salon", "hair", "hairdresser"]),
+    entry("hero-library", "hero", ["hero", "library", "book", "reading"]),
+    entry("hero-workshop", "hero", ["hero", "workshop", "tool", "diy"]),
+    entry("hero-abstract-calm", "hero", ["hero", "abstract", "calm"]),
+  ];
+  const booking = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: App }\nmodels:\n  Session:\n    fields: { title: string! }\n  Booking:\n    fields: { session: Session! }\npages:\n  sessions: { crud: Session }\n",
+  }).ir;
+  // A Booking model is not a yoga studio.
+  expect(
+    pickPictures(heroes, { description: "Event registration for a conference", ir: booking }).hero
+      ?.id,
+  ).toBe("hero-conference");
+  expect(
+    pickPictures(heroes, { description: "Bokning för min frisörsalong, a hair salon", ir: booking })
+      .hero?.id,
+  ).toBe("hero-salon");
+  // Nothing the description says fits: the calm one, not the starter's.
+  expect(
+    pickPictures(heroes, { description: "Appointments for my dental practice", ir: booking }).hero
+      ?.id,
+  ).toBe("hero-abstract-calm");
+  // "A tool library … tools" is about tools.
+  expect(
+    pickPictures(heroes, {
+      description: "A tool library where neighbors lend each other tools",
+    }).hero?.id,
+  ).toBe("hero-workshop");
+  // A yoga studio still gets the yoga class.
+  expect(
+    pickPictures(heroes, { description: "A booking site for a yoga studio", ir: booking }).hero?.id,
+  ).toBe("fitness-yoga-class");
+});
