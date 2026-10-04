@@ -3,6 +3,12 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 /** The development database, as the app's src/db/index.ts opens it. */
+/**
+ * How long a connection waits for the app's own write to finish (the preview's dev server holds
+ * the database during a change and its audit line) before giving up with "database is locked".
+ */
+export const BUSY_MS = 5000;
+
 export function databasePath(dir: string): string {
   return join(dir, "data", "db", "app.db");
 }
@@ -17,7 +23,7 @@ export function snapshotDatabase(dir: string, id: string): boolean {
   const target = snapshotPath(dir, id);
   mkdirSync(join(target, ".."), { recursive: true });
   rmSync(target, { force: true });
-  const db = new DatabaseSync(databasePath(dir));
+  const db = new DatabaseSync(databasePath(dir), { timeout: BUSY_MS });
   try {
     db.exec(`VACUUM INTO '${target.replaceAll("'", "''")}'`);
   } finally {
@@ -55,7 +61,7 @@ export function countValues(
   column: string,
 ): { total: number; filled: number } | undefined {
   if (!existsSync(databasePath(dir))) return undefined;
-  const db = new DatabaseSync(databasePath(dir), { readOnly: true });
+  const db = new DatabaseSync(databasePath(dir), { readOnly: true, timeout: BUSY_MS });
   try {
     const row = db
       .prepare(`SELECT count(*) AS total, count("${column}") AS filled FROM "${table}"`)
