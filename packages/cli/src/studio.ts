@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import type { Proposal } from "@smithable/ai";
+import { describedWith, type Proposal } from "@smithable/ai";
 import { BUILT_IN_THEMES, type OperationArgs, themeThumbnail } from "@smithable/core";
 import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
@@ -12,11 +12,18 @@ import { warmTools } from "./generate.js";
 import { git, ownRepository, trailer } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
+import { openQuestions } from "./new.js";
 import { runOperation } from "./op.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
-import { type MakingStage, type Replacement, reopenDatabase, replaceProject } from "./replace.js";
+import {
+  type AskingStage,
+  type MakingStage,
+  type Replacement,
+  reopenDatabase,
+  replaceProject,
+} from "./replace.js";
 import {
   buildReport,
   recordFailure,
@@ -348,7 +355,9 @@ export async function studio(
   let making:
     | {
         description: string;
-        stage: MakingStage | "failed";
+        stage: AskingStage | MakingStage | "failed";
+        /** What the description leaves open, while the person is asked (stage "asking"). */
+        questions?: { about?: string; question: string; options: string[] }[];
         since: string;
         usual?: number;
         files?: { spec?: string; auth?: string; content?: string; ux?: string };
@@ -417,11 +426,21 @@ export async function studio(
       ...(options.home ? { home: options.home } : {}),
       ...(notice ? { notice } : {}),
       ...(making ? { making } : {}),
+      ...(waiting.length ? { waiting } : {}),
     };
   };
 
   /** What a replacement was asked with; a making that fails is tried again with it. */
-  type Asked = Replacement & { wait?: boolean; usual?: number };
+  type Asked = Replacement & {
+    wait?: boolean;
+    usual?: number;
+    /** Studio reads the description and asks what it leaves open, before the draft. */
+    ask?: boolean;
+  };
+  /** Takes the person's answers to the questions that are being asked. */
+  let answer: ((answers: string[]) => void) | undefined;
+  /** What the person typed while their app was being made, to be made once it is in place. */
+  let waiting: string[] = [];
   let asked: Asked | undefined;
   const replaceWith = async (to: Asked) => {
     const result = await capture((io) =>
@@ -462,18 +481,55 @@ export async function studio(
     send("changed", {});
     return result;
   };
+  /**
+   * Reads the description before the draft, when asked to: the starter that is its example,
+   * and the person's answers to what it leaves open, folded into it as the draft takes them.
+   * Asking waits for the person as long as they take; nothing is drafted meanwhile.
+   */
+  const settle = async (to: Asked): Promise<Asked> => {
+    const description = (to.describe ?? "").trim();
+    if (!to.ask || to.answers?.trim()) return to;
+    const open = await openQuestions(description);
+    const starter = to.starter ?? open.starter;
+    if (open.questions.length === 0) return { ...to, ...(starter ? { starter } : {}) };
+    if (making) making = { ...making, stage: "asking", questions: open.questions };
+    send("making", making ?? null);
+    const answers = await new Promise<string[]>((resolve) => {
+      answer = resolve;
+    });
+    answer = undefined;
+    return {
+      ...to,
+      ...(starter ? { starter } : {}),
+      describe: describedWith(
+        description,
+        open.questions.map((q, i) => ({ question: q.question, answer: answers[i] ?? "" })),
+      ),
+    };
+  };
   /** Takes a described app on and answers for it later, through `making`. */
   const startMaking = (to: Asked) => {
     asked = to;
     replaceable = false;
     making = {
       description: (to.describe ?? "").trim(),
-      stage: "drafting",
+      stage: to.ask && !to.answers?.trim() ? "reading" : "drafting",
       since: new Date().toISOString(),
       ...(typeof to.usual === "number" && to.usual > 0 ? { usual: to.usual } : {}),
     };
     send("making", making);
-    void replaceWith(to).catch((error) => {
+    const make = async () => {
+      const settled = await settle(to);
+      // Tried again, it is not asked again; and the bar runs from where the draft begins.
+      asked = { ...settled, ask: false };
+      if (making) {
+        const { questions: _, ...rest } = making;
+        making = { ...rest, stage: "drafting", since: new Date().toISOString() };
+        send("making", making);
+      }
+      return replaceWith(settled);
+    };
+    void make().catch((error) => {
       replaceable = true;
       if (making) making = { ...making, stage: "failed", error: String(error) };
       send("making", making ?? null);
@@ -571,7 +627,13 @@ export async function studio(
         making &&
         making.stage !== "failed" &&
         !["GET", "HEAD"].includes(req.method ?? "GET") &&
-        !["/api/project/replace", "/api/making/retry", "/mcp"].includes(url.pathname) &&
+        ![
+          "/api/project/replace",
+          "/api/making/retry",
+          "/api/making/answer",
+          "/api/waiting",
+          "/mcp",
+        ].includes(url.pathname) &&
         !url.pathname.startsWith("/api/preview/")
       )
         return json(
@@ -707,6 +769,23 @@ export async function studio(
         }
         const result = await replaceWith(to);
         return json(result, result.ok ? 200 : 422);
+      }
+      // The person's answers to what is being asked, in the questions' order ("" skips one).
+      if (req.method === "POST" && url.pathname === "/api/making/answer") {
+        if (making?.stage !== "asking" || !answer)
+          return json({ ok: false, output: "Nothing is being asked." }, 409);
+        const given = (await body()).answers;
+        answer(Array.isArray(given) ? given.map((a) => String(a ?? "")) : []);
+        return json({ ok: true });
+      }
+      // What the person types while their app is being made waits here (so another tab or a
+      // reload shows the same), and is theirs to take back; the page makes it afterwards.
+      if (req.method === "POST" && url.pathname === "/api/waiting") {
+        const { add, remove } = await body();
+        if (typeof add === "string" && add.trim()) waiting = [...waiting, add.trim()].slice(-20);
+        if (typeof remove === "number") waiting = waiting.filter((_, i) => i !== remove);
+        send("waiting", waiting);
+        return json({ ok: true, waiting });
       }
       // A making that failed is tried again as it was asked.
       if (req.method === "POST" && url.pathname === "/api/making/retry") {
