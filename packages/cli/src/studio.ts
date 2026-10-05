@@ -9,7 +9,7 @@ import { BUILT_IN_THEMES, type OperationArgs, themeThumbnail } from "@smithable/
 import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
-import { git, trailer } from "./git.js";
+import { git, ownRepository, trailer } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
@@ -63,6 +63,8 @@ const ENGINES = {
 } as const;
 
 function trace(dir: string): TraceEntry[] {
+  // Only the app's own history: a repository around it is someone else's.
+  if (!ownRepository(dir)) return [];
   const log = git(dir, ["log", "--format=%H%x1f%s%x1f%aI%x1f%b%x1e"]);
   if (!log.ok) return [];
   const entries = log.out.split("\x1e").filter((e) => e.trim());
