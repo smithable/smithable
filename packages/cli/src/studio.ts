@@ -217,6 +217,13 @@ export async function studio(
   };
 
   let app: ChildProcess | undefined;
+  /** The preview's failure to answer, recorded once until it answers (and its report sent once). */
+  let stuck: { report?: "sent" | "offer" } | undefined;
+  const previewAnswers = () =>
+    fetch(`http://127.0.0.1:${previewPort}/health`, { signal: AbortSignal.timeout(2000) }).then(
+      (answer) => answer.ok,
+      () => false,
+    );
   /**
    * Tells Studio to reload the preview once the dev server has taken in a change: a moment
    * first (TanStack Start is still rebuilding after its watcher goes quiet), then the editor
@@ -287,7 +294,10 @@ export async function studio(
       );
       setTimeout(startApp, delay);
     });
-    void warmPreview(previewPort, log);
+    // Once it answers, a preview that is stuck again later is a new failure to report.
+    void warmPreview(previewPort, log).then(async () => {
+      if (await previewAnswers()) stuck = undefined;
+    });
   };
   const stopApp = () => {
     const child = app;
@@ -482,8 +492,12 @@ export async function studio(
       // kept for a report (seen on the hosted beta: a preview that never started).
       if (req.method === "POST" && url.pathname === "/api/preview/stuck") {
         const tail = logs.slice(-40);
-        recordFailure(dir, "preview", { url: preview }, tail.join("\n") || "No log lines.");
-        return json({ log: tail.slice(-12), report: await offerReport() });
+        // Each Retry asks again: recorded, and sent for "always", once while it stays stuck.
+        if (!stuck) {
+          recordFailure(dir, "preview", { url: preview }, tail.join("\n") || "No log lines.");
+          stuck = { report: await offerReport() };
+        }
+        return json({ log: tail.slice(-12), report: stuck.report });
       }
       // Retry: the preview's server starts again, rather than being asked once more.
       if (req.method === "POST" && url.pathname === "/api/preview/restart") {
