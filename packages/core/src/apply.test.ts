@@ -1201,3 +1201,56 @@ test("a word no argument takes is refused with what to write, and a list given t
   ).toThrow("renameField has no option --colour.");
   expect(() => parseOperationArgs(setPublic, ["--pages"])).toThrow("--pages needs a value.");
 });
+
+test("changeField says what records holding a choice value that goes get instead", () => {
+  const result = applyOperation(files, "changeField", {
+    model: "Order",
+    field: "status",
+    type: "draft | placed | onItsWay | canceled",
+    renames: ["shipped=onItsWay"],
+  });
+  if (!result.ok) throw new Error(result.message);
+  expect(result.effects).toContainEqual(
+    expect.objectContaining({ kind: "change-field", renamed: { shipped: "onItsWay" } }),
+  );
+  expect(result.description).toContain("shipped becoming onItsWay");
+  expect(
+    applyOperation(files, "changeField", {
+      model: "Order",
+      field: "status",
+      type: "draft | placed | canceled",
+      renames: ["lost=placed"],
+    }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining('has no value "lost"') });
+  expect(
+    applyOperation(files, "changeField", {
+      model: "Order",
+      field: "status",
+      type: "draft | placed | canceled",
+      renames: ["shipped=gone"],
+    }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining('"gone" is not one of the new values'),
+  });
+});
+
+test("changeField refuses renames that cannot be done as written", () => {
+  const change = (type: string, renames: string[]) =>
+    applyOperation(files, "changeField", { model: "Order", field: "status", type, renames });
+  // A field that must have a value: its records cannot be left empty.
+  expect(change("draft | placed | canceled", ["shipped="])).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("must have a value"),
+  });
+  // No "=": not read as leaving them empty.
+  expect(change("draft | placed | canceled", ["shipped"])).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("write it as old=new"),
+  });
+  // A value that stays keeps its records.
+  expect(change("draft | placed | shipped | canceled", ["draft=placed"])).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("stays one of"),
+  });
+});

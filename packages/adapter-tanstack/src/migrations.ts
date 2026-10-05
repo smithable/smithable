@@ -21,6 +21,15 @@ export function quoteReferences(sql: string): string {
   return sql.replace(/REFERENCES ([A-Za-z_][A-Za-z0-9_]*)\(/g, "REFERENCES `$1`(");
 }
 
+/**
+ * SQL for a choice value that goes: the records holding it get the new one, or nothing ("").
+ */
+export function choiceValueSql(model: string, field: string, from: string, to: string): string {
+  const { table, column } = columnOf(model, field);
+  const quoted = (v: string) => `'${v.replaceAll("'", "''")}'`;
+  return `UPDATE \`${table}\` SET \`${column}\` = ${to ? quoted(to) : "NULL"} WHERE \`${column}\` = ${quoted(from)};\n`;
+}
+
 /** SQL for a custom migration that renames a field's column, keeping its data. */
 export function renameColumnSql(
   model: string,

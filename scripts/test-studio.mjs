@@ -206,6 +206,74 @@ try {
     },
   );
   await step(
+    "a choice field's values are changed in ordinary words, and the records holding one that goes get the one chosen",
+    async () => {
+      await change("Change a field");
+      await page.getByLabel("Kind of record").selectOption("Customer");
+      // A value nothing else names (a formula naming one is refused, as its spec would break).
+      await page.getByLabel("Field", { exact: true }).selectOption({ label: "Segment" });
+      await page.getByLabel("Values").fill("smb, enterprise, public sector");
+      await page.getByLabel("Records with government get").selectOption("publicSector");
+      await page.getByRole("button", { name: "Change field" }).click();
+      await trace
+        .getByText(/public sector/i)
+        .first()
+        .waitFor({ timeout: 90000 });
+      await openPreview("/customers");
+      // A migration restarts the preview, which takes longer than a plain change.
+      await preview
+        .getByText("Public sector")
+        .filter({ visible: true })
+        .first()
+        .waitFor({ timeout: 120000 });
+      if (await preview.getByText("Government", { exact: true }).filter({ visible: true }).count())
+        throw new Error("a customer still shows Government");
+    },
+  );
+  await step(
+    "an action is first a button that changes a record, in plain words: it appears on the records it fits and does what it says",
+    async () => {
+      await change("An action");
+      await page.getByLabel("The button says").fill("Cancel order");
+      await page.getByLabel("On each").selectOption("Order");
+      await page.getByLabel("It sets").selectOption({ label: "Status" });
+      await page.getByLabel("To", { exact: true }).selectOption("canceled");
+      await page.getByLabel("Only when").selectOption({ label: "Status" });
+      await page.getByLabel("Is", { exact: true }).selectOption("placed");
+      await page
+        .getByText(
+          'A "Cancel order" button on each order sets status to canceled, when status is placed.',
+        )
+        .waitFor();
+      await page.getByRole("button", { name: "Add button" }).click();
+      await trace
+        .getByText(/cancel ?order/i)
+        .first()
+        .waitFor({ timeout: 90000 });
+      await openPreview("/orders");
+      // The button is on the placed orders only, and does what it says.
+      const row = preview.locator("tr", { hasText: "ORD-1007" }).filter({ visible: true });
+      // The page answers clicks once React has taken it over; a press made earlier is lost.
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 60000 });
+      for (let attempt = 1; ; attempt++) {
+        await row.getByRole("button", { name: "Cancel order" }).click({ timeout: 60000 });
+        try {
+          await row.getByText("Canceled").waitFor({ timeout: 10000 });
+          break;
+        } catch (error) {
+          if (attempt === 3) throw error;
+        }
+      }
+      if (
+        await preview
+          .locator("tr", { hasText: "Draft" })
+          .getByRole("button", { name: "Cancel order" })
+          .count()
+      )
+        throw new Error("a draft order has the button");
+    },
+  );
+  await step(
     "removing a field asks first, with what data it loses; its notice's Undo brings it back",
     async () => {
       await change("Remove a field");
