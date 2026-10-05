@@ -21,6 +21,22 @@ export interface Offer {
   tools: Tool[];
 }
 
+/**
+ * The tool, when the offer has it and the call names only the kinds and actions it offers this
+ * caller (a narrow key is not told of the rest); otherwise a refusal that says what there is.
+ */
+export function offered(offer: Offer, name: string, args: Record<string, unknown>): Tool {
+  const tool = offer.tools.find((t) => t.name === name);
+  if (!tool) throw new BadInput(`There is no tool "${name}".`);
+  const properties = tool.inputSchema.properties as Record<string, { enum?: unknown[] }>;
+  for (const key of ["kind", "action"]) {
+    const allowed = properties?.[key]?.enum;
+    if (allowed && !allowed.includes(args[key]))
+      throw new BadInput(`"${key}" is one of ${allowed.join(", ")}.`);
+  }
+  return tool;
+}
+
 interface Message {
   jsonrpc?: string;
   id?: string | number | null;
@@ -81,16 +97,7 @@ export async function handleMcp(
         const name = String(message.params?.name ?? "");
         const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
         try {
-          const tool = offer.tools.find((t) => t.name === name);
-          if (!tool) throw new BadInput(`There is no tool "${name}".`);
-          // Only the kinds and actions this tool offers this caller (a narrow key is not told of
-          // the rest).
-          const properties = tool.inputSchema.properties as Record<string, { enum?: unknown[] }>;
-          for (const key of ["kind", "action"]) {
-            const allowed = properties?.[key]?.enum;
-            if (allowed && !allowed.includes(args[key]))
-              throw new BadInput(`"${key}" is one of ${allowed.join(", ")}.`);
-          }
+          offered(offer, name, args);
           // Adding without a key is held to a visitor's limit, as through the API.
           if (!key && name === "add") writeAllowed(null, request.headers);
           const result = await server.call(key, name, args);
