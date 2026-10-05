@@ -308,7 +308,7 @@ export function App() {
               Show preview
             </Button>
           )}
-          {project.home ? (
+          {project.making ? null : project.home ? (
             <a href={project.home} className="text-xs font-medium text-accent hover:underline">
               Publish and share
             </a>

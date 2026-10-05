@@ -6,7 +6,7 @@ import { summarize } from "@smithable/index";
 import { useEffect, useMemo, useState } from "react";
 import { api, type Making as MakingState, type Project } from "./api";
 import { useSpec } from "./engine";
-import { Button } from "./ui";
+import { Button, cx } from "./ui";
 
 const STAGES: Record<MakingState["stage"], string> = {
   drafting: "Drafting your app",
@@ -60,11 +60,17 @@ export function Making({
         <h1 className="text-lg font-semibold">
           {failed ? "Your app could not be made" : "Your app is being made"}
         </h1>
-        {sections.length === 0 && (
-          <blockquote className="border-l-2 border-neutral-300 pl-3 text-sm text-neutral-700">
-            {making.description}
-          </blockquote>
-        )}
+        {/* The person's own words stay in sight: whole while drafting, one line once What it
+            does says what was made of them. */}
+        <blockquote
+          title={making.description}
+          className={cx(
+            "border-l-2 border-neutral-300 pl-3 text-sm text-neutral-700",
+            sections.length > 0 && "truncate",
+          )}
+        >
+          {making.description}
+        </blockquote>
       </div>
       {failed ? (
         <div
