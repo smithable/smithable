@@ -16,7 +16,9 @@ export type PreviewMessage =
   /** A text changed in place; `path` is its place in smithable.content.yml, dot-separated. */
   | { type: "text"; path: string; text: string }
   /** Ctrl+Z in the preview, outside a text field. */
-  | { type: "undo" };
+  | { type: "undo" }
+  /** The page loaded without its stylesheet (the theme's variables are missing). */
+  | { type: "unstyled" };
 
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
 
