@@ -102,8 +102,8 @@ turning free edits of it back into changes exists only for the starters' own des
   usual time, the questions, and from "drafted" on the draft's files, from which the page makes
   "What it does" as Builder does for any app. Each change of stage is also an event to the
   open pages.
-- `POST /api/making/answer` and `/api/making/request` take answers and typed changes; Studio
-  keeps them and makes them when the app is in place: settings as operations, the rest as the
+- `POST /api/making/answer` and `/api/making/request` take answers and typed changes (and
+  take one back); Studio's server keeps them and makes them when the app is in place: settings as operations, the rest as the
   one correction round (a new `adjust` beside the draft, given the applied operations and the
   answers), typed changes through the existing request path.
 - The reader's verdict and questions become part of what `clarify --json` answers, so the
@@ -113,7 +113,18 @@ turning free edits of it back into changes exists only for the starters' own des
 
 **Studio's page (A).** The making screen: description, stage, bar, questions with their
 suggested answers, the waiting requests, then "What it does"; the hand-over to Builder when
-the app is in place. A slot for the animation.
+the app is in place. A slot for the animation. From A's reading (2026-10-05):
+- The waiting answers and requests live in Studio's server, in `making`, not in the page: a
+  reload, a second tab or a phone shows the same "Waiting: …" list, and taking one back is a
+  request to the server too.
+- While the app is being made, Undo, Redo, Look, Change and Select have nothing to act on.
+  They are shown, switched off, with a short reason, so the layout does not move at the
+  hand-over.
+- `making.files` has the shape of the files in `GET /api/project`: the page already turns
+  those into the summary in the browser.
+- The bar ends when the stage is "in place", not when the preview answers; from there the
+  preview panel says "Starting…" as it does today. Otherwise the bar would stand full for the
+  preview's two seconds.
 
 **The service (B).** A described app's claim sends the replace and lets the person into
 Studio at once, without waiting for its answer; it passes the usual time of its recent drafts.
