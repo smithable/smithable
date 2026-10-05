@@ -4,6 +4,7 @@ import {
   humanize,
   type ModelIR,
   parseFieldShorthand,
+  plural,
   type SpecIR,
 } from "@smithable/core";
 import { whoCan, wordsFor } from "./summary.js";
@@ -87,6 +88,11 @@ export function describeChange(
       return roles.length
         ? whoCan(roles, VERBS[verb], things)
         : `Everyone with access can ${VERBS[verb]} ${things} again`;
+    }
+    case "nameRecords": {
+      const one = str("one").trim();
+      const several = str("several").trim() || plural(one);
+      return `${humanize(str("model"))} records are now called ${several.toLowerCase()} (one ${one.toLowerCase()})`;
     }
     case "setText":
       return str("text") ? `Changed a text to “${str("text")}”` : "Put back a text's default";
