@@ -748,6 +748,16 @@ try {
       .getByText("Undid: Customers: added a loyalty code (unique)")
       .waitFor({ timeout: 60000 });
   });
+  // A start is 15 s in a hosted workspace: after an undo the preview opens the database that
+  // was put back, in the process it runs in, and is not started again.
+  await step("an undo does not start the preview again", async () => {
+    await new Promise((r) => setTimeout(r, 3000));
+    const lines = await (await fetch(`${base}/api/logs`)).json();
+    const started = lines.slice(-150).filter((l) => /The preview (answers|stopped)/.test(l));
+    if (started.length) throw new Error(`the preview was started again: ${started[0]}`);
+    if (!(await fetch(`http://localhost:${port + 1}/health`)).ok)
+      throw new Error("the preview does not answer after the undo");
+  });
   await step("Redo makes again the change undone, and then has nothing left to redo", async () => {
     const redo = page.getByRole("button", { name: "Redo", exact: true });
     await redo.click();
