@@ -148,7 +148,7 @@ workspace of its own, claiming a generic one that waited with the records starte
 |---|---|---|
 | A starter with a workspace of its own | about 5 s | the same (the pool keeps one for the CRM) |
 | Any other starter | Studio 15 to 18 s, first page 27 to 29 s | Studio 2 to 3 s, first page 5 to 6 s |
-| A described app | the draft, then the cold path | a waiting workspace is claimed at once and the description is sent at the first build; not measured on the host yet |
+| A described app | the draft, then the cold path (27 to 29 s) | the draft, then about 2 s: the preview answered 32 s after "Build it", of which 5 s were the questions and 24.5 s the replace request with a real draft in it |
 
 As set up on the service: the pool waits as `crm:1,any:2`; the finished projects are made where
 the prepared dependency set is made and are at `/opt/starters/<name>`; a replace that fails has
@@ -161,11 +161,19 @@ is made). The claim calls Studio's API itself with the proxy's token. Nothing of
 needs to survive on the service's side. `--replaceable` is passed only when a workspace nobody
 has claimed starts: a claimed one that is stopped as idle and started again must not get it.
 
+## After an undo
+
+The same way of taking in a database that was put back spares the preview its start after an
+undo, a redo and a change that was rolled back (#358): the snapshot takes the old file's place
+by rename, and the preview opens it in the process it runs in. On the host (B, release with
+engine 2ca3155, a CRM demo, two rounds): the undo request answered in 0.5 and 0.4 s, and the
+preview's page answered 0.7 and 1.0 s after that. Before, it was a dev server start, about 15 s.
+
 ## Next
 
-The same way of taking in a replaced database could spare the preview its restart after an undo
-or a rollback (today Studio stops and starts it, which is the long dead preview of the Studio
-review, 15 s on the host). To try next, with A.
+A described app still keeps the person on the service's "Starting" page until the replace
+request has answered, draft included (about 30 s). Studio could be shown at once and say that
+the app is being made; the time is the draft's either way.
 
 One known leftover: the connection to the old database stays open on the file that is gone until
-the preview's process ends. One connection, for a replacement.
+the preview's process ends. One connection for a replacement or an undo.
