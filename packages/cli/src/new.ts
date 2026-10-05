@@ -117,11 +117,14 @@ export async function create(
   }
   // A starter's own description, or a small edit of it, needs no model: it is the starter, with
   // the edit's operations applied. From here on it is treated as that starter.
+  // Also when that starter is named with it (the hosted form passes the one `clarify` picked,
+  // which is this one). Another starter named, or answers to questions, are for the model.
   let prepared: Record<string, string> | undefined;
-  const known =
-    options.describe && starter === undefined && !options.from
+  const read =
+    options.describe && !options.from && !options.answers
       ? knownStart(options.describe)
       : undefined;
+  const known = read && (starter === undefined || starter === read.name) ? read : undefined;
   if (known) {
     starter = known.name;
     options = { ...options, describe: undefined };
