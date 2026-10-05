@@ -4,7 +4,7 @@
 
 import type { ProjectFiles } from "./apply.js";
 import { validateAuth } from "./auth.js";
-import { lostValues } from "./condition.js";
+import { followRenamed, lostValues } from "./condition.js";
 import { validateContent } from "./content.js";
 import { validateContext } from "./context-file.js";
 import type { Diagnostic } from "./diagnostics.js";
@@ -35,13 +35,44 @@ export interface Companion {
 
 const fieldPath = (m: string, f: string) => ["models", m, "fields", f];
 
+/**
+ * A map keyed by a choice field's values (their texts, their tones) after the field changed: a
+ * renamed value's entry moves to its new name, and entries of values that are gone are removed.
+ * A value that became one the field already had brings nothing along: that one keeps its own.
+ */
+function followValueKeys(
+  editor: YamlEditor,
+  path: string[],
+  effect: Extract<Effect, { kind: "change-field" }>,
+  ir: SpecIR,
+): void {
+  const before = ir.models
+    .find((m) => m.name === effect.model)
+    ?.fields.find((f) => f.name === effect.field)?.type;
+  const had = before?.kind === "choice" ? before.values : [];
+  const keys = Object.keys(editor.get(path) as object);
+  for (const value of keys) {
+    if (effect.choices.includes(value)) continue;
+    const to = effect.renamed?.[value];
+    if (to && !had.includes(to) && !keys.includes(to)) editor.renameKey([...path, value], to);
+    else editor.removeAndPrune([...path, value], 0);
+  }
+}
+
 const content: Companion = {
   key: "content",
   file: "smithable.content.yml",
   empty: "smithableContent: 0.1\n",
   check: (text, ir) => validateContent({ path: "smithable.content.yml", text }, ir).diagnostics,
   operations: contentOperations,
-  follow(editor, effect) {
+  follow(editor, effect, ir) {
+    // The texts of a choice field's values: a renamed value's text goes to its new name, and
+    // those of values that are gone go with them.
+    if (effect.kind === "change-field") {
+      const values = [...fieldPath(effect.model, effect.field), "values"];
+      if (editor.has(values)) followValueKeys(editor, values, effect, ir);
+      return undefined;
+    }
     // A field's texts follow it; a page's and a section's go with them.
     const path =
       effect.kind === "rename-field" || effect.kind === "remove-field"
@@ -77,11 +108,10 @@ const ux: Companion = {
       return undefined;
     }
     if (effect.kind === "change-field") {
-      // Tones of choice values the new type no longer has go with them.
+      // A renamed choice value keeps its tone under its new name; tones of values that are gone
+      // go with them.
       const tones = ["tones", `${effect.model}.${effect.field}`];
-      if (editor.has(tones))
-        for (const value of Object.keys(editor.get(tones) as object))
-          if (!effect.choices.includes(value)) editor.removeAndPrune([...tones, value], 0);
+      if (editor.has(tones)) followValueKeys(editor, tones, effect, ir);
       return undefined;
     }
     if (effect.kind !== "rename-field" && effect.kind !== "remove-field") return undefined;
@@ -189,7 +219,14 @@ const auth: Companion = {
           refusal: `Visitors read ${model} only where ${field} fits; change "read" under "public" in smithable.auth.yml first.`,
         };
       if (effect.kind === "change-field") {
-        const lost = lostValues(where[field] as Condition[string], effect.choices);
+        // A renamed value is followed; one that is gone would widen what visitors read.
+        const wanted = followRenamed(
+          editor,
+          [...read, String(i), model, "where", field],
+          where[field] as Condition[string],
+          effect.renamed,
+        );
+        const lost = lostValues(wanted, effect.choices);
         if (!lost.length) continue;
         return {
           refusal: `Visitors read ${model} only where ${field} is ${lost.join(" or ")}; change "read" under "public" in smithable.auth.yml first.`,
