@@ -63,10 +63,12 @@
                 "additionalProperties": false,
                 "properties": {
                   "id": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A short name to refer to the rule by."
                   },
                   "rule": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The rule, in plain language."
                   }
                 }
               }
@@ -90,6 +92,7 @@
         "properties": {
           "fields": {
             "type": "object",
+            "description": "What a record holds: each field's name and its type.",
             "minProperties": 1,
             "propertyNames": {
               "pattern": "^[a-z][A-Za-z0-9]*$",
@@ -118,13 +121,16 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "pattern": "^\\s*(?:(?:string|text|markdown|int|decimal|money|bool|date|datetime|email|phone|url|picture|pictures)!?|[A-Z][A-Za-z0-9]*!?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$"
+                      "pattern": "^\\s*(?:(?:string|text|markdown|int|decimal|money|bool|date|datetime|email|phone|url|picture|pictures)!?|[A-Z][A-Za-z0-9]*!?|[A-Z][A-Za-z0-9]*\\[\\]|[a-z][A-Za-z0-9]*(?:\\s*\\|\\s*[a-z][A-Za-z0-9]*)+)\\s*$",
+                      "description": "What the field holds: a type (string, money, date, …), another model (Customer, or Order[] for all that refer here), or choices (\"draft | sent | paid\")."
                     },
                     "required": {
-                      "type": "boolean"
+                      "type": "boolean",
+                      "description": "A record cannot be saved without it."
                     },
                     "unique": {
-                      "type": "boolean"
+                      "type": "boolean",
+                      "description": "No two records may hold the same value."
                     },
                     "default": {
                       "type": [
@@ -135,10 +141,12 @@
                       "description": "For choices, \"none\" means no default."
                     },
                     "min": {
-                      "type": "number"
+                      "type": "number",
+                      "description": "The smallest number allowed; for a text, its shortest length."
                     },
                     "max": {
-                      "type": "number"
+                      "type": "number",
+                      "description": "The largest number allowed; for a text, its longest length."
                     },
                     "formula": {
                       "type": "string",
@@ -156,9 +164,12 @@
                         "additionalProperties": false,
                         "properties": {
                           "input": {
-                            "type": "object"
+                            "type": "object",
+                            "description": "The values of the fields the formula reads."
                           },
-                          "expected": {}
+                          "expected": {
+                            "description": "What the formula must give for them."
+                          }
                         }
                       }
                     },
@@ -186,10 +197,12 @@
                             "additionalProperties": false,
                             "properties": {
                               "id": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "A short name to refer to the rule by."
                               },
                               "rule": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "The rule, in plain language."
                               }
                             }
                           }
@@ -214,25 +227,29 @@
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "The roles that may see these records."
               },
               "create": {
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "The roles that may add these records."
               },
               "write": {
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "The roles that may change these records."
               },
               "delete": {
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "The roles that may delete these records."
               }
             }
           },
@@ -291,10 +308,12 @@
                   "additionalProperties": false,
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "A short name to refer to the rule by."
                     },
                     "rule": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The rule, in plain language."
                     }
                   }
                 }
@@ -469,10 +488,12 @@
                   "additionalProperties": false,
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "A short name to refer to the rule by."
                     },
                     "rule": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The rule, in plain language."
                     }
                   }
                 }
@@ -529,10 +550,12 @@
                   "additionalProperties": false,
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "A short name to refer to the rule by."
                     },
                     "rule": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The rule, in plain language."
                     }
                   }
                 }
@@ -661,7 +684,8 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 1,
+                  "description": "A records section: how many it shows."
                 },
                 "form": {
                   "type": "string",
@@ -690,10 +714,12 @@
                         ],
                         "properties": {
                           "input": {
-                            "type": "object"
+                            "type": "object",
+                            "description": "The values entered."
                           },
                           "expected": {
-                            "type": "object"
+                            "type": "object",
+                            "description": "The results they must give."
                           }
                         }
                       }
@@ -748,7 +774,8 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 1,
+                  "description": "A list: how many records it shows."
                 }
               }
             }
@@ -767,10 +794,12 @@
             "description": "Fills the settings record in steps after the first sign-in.",
             "properties": {
               "model": {
-                "type": "string"
+                "type": "string",
+                "description": "The model of the settings record."
               },
               "steps": {
                 "type": "object",
+                "description": "The steps in order, each with the fields it asks for.",
                 "additionalProperties": {
                   "type": "array",
                   "items": {
@@ -819,7 +848,8 @@
                 "additionalProperties": false,
                 "properties": {
                   "model": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The model whose records the calendar shows."
                   },
                   "starts": {
                     "type": "string",
@@ -865,10 +895,12 @@
                   ],
                   "properties": {
                     "input": {
-                      "type": "object"
+                      "type": "object",
+                      "description": "The values entered."
                     },
                     "expected": {
-                      "type": "object"
+                      "type": "object",
+                      "description": "The results they must give."
                     }
                   }
                 }
@@ -890,7 +922,8 @@
                 "additionalProperties": false,
                 "properties": {
                   "model": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The model whose records are the articles."
                   },
                   "title": {
                     "type": "string",
@@ -1024,10 +1057,12 @@
                   "additionalProperties": false,
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "A short name to refer to the rule by."
                     },
                     "rule": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The rule, in plain language."
                     }
                   }
                 }
