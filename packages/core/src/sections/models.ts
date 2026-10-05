@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, type ParsedNode } from "yaml";
-import { lostValues, readCondition } from "../condition.js";
+import { followRenamed, lostValues, readCondition } from "../condition.js";
 import {
   checkKeys,
   type Entry,
@@ -36,7 +36,7 @@ import type { JsonSchema, SpecSection } from "../section.js";
 import { sensitiveKind, sensitiveMessage } from "../sensitive.js";
 import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
-import { modelOperations, renameInFormulas } from "./model-operations.js";
+import { modelOperations, renameInFormulas, renameValuesInFormulas } from "./model-operations.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
@@ -119,10 +119,22 @@ export const modelsSection: SpecSection<"models"> = {
       }
       return undefined;
     }
-    // Nor can a capacity count on a choice value that goes.
+    // Nor can a capacity count on a choice value that goes; one that was renamed is followed,
+    // there and in the formulas that compare with it.
     if (effect.kind === "change-field") {
+      if (effect.renamed)
+        renameValuesInFormulas(spec, ir, effect.model, effect.field, effect.renamed);
       for (const m of ir.models) {
-        const wanted = m.name === effect.model ? m.capacity?.where?.[effect.field] : undefined;
+        const named = m.name === effect.model ? m.capacity?.where?.[effect.field] : undefined;
+        const wanted =
+          named === undefined
+            ? undefined
+            : followRenamed(
+                spec,
+                ["models", m.name, "capacity", "where", effect.field],
+                named,
+                effect.renamed,
+              );
         const lost = wanted === undefined ? [] : lostValues(wanted, effect.choices);
         if (lost.length)
           return {

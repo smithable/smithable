@@ -1,6 +1,6 @@
 import { conditionArgs } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
-import { renameInFormula } from "../formula.js";
+import { renameInFormula, renameTextInFormula } from "../formula.js";
 import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import {
@@ -220,6 +220,9 @@ const changeField: Operation<{ model: string; field: string; type: string; renam
         );
       }
       spec.set([...path, "type"], type);
+      // Its default follows a renamed value.
+      const byDefault = renamed[String((current as { default?: unknown }).default)];
+      if (byDefault) spec.set([...path, "default"], byDefault);
     } else {
       spec.set(path, type);
     }
@@ -432,6 +435,41 @@ function renameInCalculator(
     for (const part of ["input", "expected"] as const)
       if (from in e[part]) spec.renameKey([...base, "examples", String(i), part, from], to);
   });
+}
+
+/**
+ * Follows a choice field's renamed values where formulas compare with them: the model's own
+ * formulas (and their examples' inputs) and `COUNTIF` over it from other models. A value whose
+ * records were left empty is not followed: the formula then names a value that is gone, which
+ * the check refuses.
+ */
+export function renameValuesInFormulas(
+  spec: YamlEditor,
+  ir: SpecIR,
+  m: string,
+  field: string,
+  renamed: Record<string, string>,
+): void {
+  for (const x of ir.models)
+    for (const f of x.fields) {
+      if (!f.formula) continue;
+      const path = [...fieldPath(x.name, f.name), "formula"];
+      const text = spec.has(path) ? spec.get(path) : undefined;
+      if (typeof text !== "string") continue;
+      const next = renameTextInFormula(text, (name, list, value) => {
+        const type = list === undefined ? undefined : x.fields.find((l) => l.name === list)?.type;
+        const ours =
+          list === undefined ? x.name === m : type?.kind === "relation" && type.model === m;
+        return name === field && ours ? renamed[value] || undefined : undefined;
+      });
+      if (next !== text) spec.set(path, next);
+      if (x.name !== m) continue;
+      (f.examples ?? []).forEach((e, i) => {
+        const to = renamed[String(e.input[field])];
+        if (field in e.input && to)
+          spec.set([...fieldPath(x.name, f.name), "examples", String(i), "input", field], to);
+      });
+    }
 }
 
 /**

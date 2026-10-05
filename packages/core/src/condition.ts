@@ -2,6 +2,7 @@
 // and landing records sections all take one, so they read, check, follow and describe it alike.
 import { isScalar, isSeq, type ParsedNode } from "yaml";
 import { type At, mapEntries, type ParseContext } from "./context.js";
+import type { YamlEditor } from "./edit.js";
 import { type Condition, conditionFits, type ModelIR } from "./ir.js";
 import { didYouMean } from "./suggest.js";
 
@@ -84,6 +85,26 @@ export function conditionArgs(where: Record<string, string | boolean | string[]>
 export function lostValues(wanted: Condition[string], choices: string[]): string[] {
   if (typeof wanted === "boolean") return [];
   return (Array.isArray(wanted) ? wanted : [wanted]).filter((v) => !choices.includes(v));
+}
+
+/**
+ * Follows a choice field's renamed values in a condition stored at `path` (its "where" and the
+ * field), and returns what it wants now. A value whose records were left empty ("" in `renamed`)
+ * cannot be followed: it stays, for the caller to refuse as lost.
+ */
+export function followRenamed(
+  editor: YamlEditor,
+  path: string[],
+  wanted: Condition[string],
+  renamed: Record<string, string> = {},
+): Condition[string] {
+  if (typeof wanted === "boolean") return wanted;
+  const before = Array.isArray(wanted) ? wanted : [wanted];
+  const after = [...new Set(before.map((v) => renamed[v] || v))];
+  if (after.join("\n") === before.join("\n")) return wanted;
+  const next = Array.isArray(wanted) ? after : (after[0] as string);
+  editor.set(path, next);
+  return next;
 }
 
 /** "status is published", "status is investigating or identified", "pinned is true". */
