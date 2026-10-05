@@ -16,6 +16,7 @@ import { runOperation } from "./op.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
+import { type Replacement, replaceProject } from "./replace.js";
 import { buildReport, reportChoice, reportText, sendReport, setReportChoice } from "./report.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
@@ -166,7 +167,17 @@ export async function studio(
   dir: string,
   io: Io,
   port: number,
-  options: { host?: string; previewUrl?: string; home?: string; insecure?: boolean } = {},
+  options: {
+    host?: string;
+    previewUrl?: string;
+    home?: string;
+    insecure?: boolean;
+    /**
+     * The project may be replaced by another app, once (a hosted workspace that waits for
+     * whoever claims it; docs/design/fast-start.md). Never for a person's own project.
+     */
+    replaceable?: boolean;
+  } = {},
 ): Promise<number> {
   // On the network, Studio without a token would let anyone who reaches it change the project:
   // a workspace image started without one refuses to run rather than run open.
@@ -206,26 +217,34 @@ export async function studio(
    * an operation that finished quickly made that likely. The operation's own answer does not
    * wait for this.
    */
-  const changed = (data: unknown) =>
-    void new Promise((r) => setTimeout(r, 800))
+  const settled = () =>
+    new Promise((r) => setTimeout(r, 800))
       .then(() =>
         fetch(`http://127.0.0.1:${previewPort}/__smithable/settled`, {
           signal: AbortSignal.timeout(5000),
         }),
       )
-      .catch(() => undefined)
-      .then(() => send("changed", data));
+      .catch(() => undefined);
+  const changed = (data: unknown) => void settled().then(() => send("changed", data));
   // The preview runs with the editor (select, drag columns) through a wrapper config in data/,
   // which Git ignores: the app's own config and builds stay as they are.
   const config = join("data", ".smithable", "preview.vite.config.mjs");
-  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
   // Packages in a pnpm virtual store outside the project (hosted workspaces with a prepared
   // dependency set) may be served too.
   const store = process.env.pnpm_config_virtual_store_dir;
-  writeFileSync(
-    join(dir, config),
-    previewConfig(options.previewUrl, store ? [resolve(dir), resolve(store)] : undefined),
-  );
+  // Written only when it is not there as it should be: a dev server that is running starts
+  // itself again when its settings file is touched.
+  const writePreviewConfig = () => {
+    const text = previewConfig(
+      options.previewUrl,
+      store ? [resolve(dir), resolve(store)] : undefined,
+    );
+    const path = join(dir, config);
+    if (existsSync(path) && readFileSync(path, "utf8") === text) return;
+    mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
+    writeFileSync(path, text);
+  };
+  writePreviewConfig();
   // When the preview stops by itself (a crash), it starts again: at once for the first few
   // stops in a minute, then with a growing pause up to two minutes, and never for good, so a
   // burst of crashes after a broken change does not leave the preview dead until a restart.
@@ -278,6 +297,8 @@ export async function studio(
 
   /** The last proposal a model made, waiting to be applied or dropped. */
   let pending: { id: string; request: string; proposal: Proposal } | undefined;
+  /** Whether the project may still be replaced by another app (once; see the option). */
+  let replaceable = options.replaceable === true;
 
   /** Runs a command with its output captured for the response. */
   const capture = async (fn: (io: Io) => number | Promise<number>) => {
@@ -516,6 +537,35 @@ export async function studio(
           send("changed", {});
         }
         return json(result);
+      }
+      // A workspace that waited for whoever claims it gets their app: once, and only when
+      // Studio was started for that. A finished project comes in under the running preview,
+      // which takes it in as it takes in any change (only what differs is written); an app
+      // made from a description is made with the preview stopped. What Studio remembered of
+      // the old app (its log, a proposal, a notice) goes with it.
+      if (req.method === "POST" && url.pathname === "/api/project/replace") {
+        if (!replaceable)
+          return json({ ok: false, output: "This project is not one that can be replaced." }, 403);
+        replaceable = false;
+        const to = (await body()) as Replacement;
+        const made = typeof to.from !== "string";
+        if (made) stopApp();
+        const result = await capture((io) => replaceProject(dir, io, to));
+        // Refused (nothing was touched) or failed: it can be asked again.
+        if (!result.ok) replaceable = true;
+        writePreviewConfig();
+        pending = undefined;
+        notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+        rmSync(noticeFile, { force: true });
+        if (made) {
+          restarts = [];
+          startApp();
+        } else await settled();
+        // The log starts with the person's app: nothing of the app that was here, and nothing
+        // of what the dev server said while the files under it were being exchanged.
+        logs.length = 0;
+        send("changed", {});
+        return json(result, result.ok ? 200 : 422);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
         const result = await capture((io) => undo(dir, io));
