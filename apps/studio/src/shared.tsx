@@ -57,13 +57,24 @@ export function Preview({
   const server = answer.key === frameKey ? answer.server : "starting";
   // The last page that was up stays on screen while the next one starts (a change can restart
   // the app's server for seconds), instead of an empty panel.
+  // It is the last frame whose page said it was ready: one that loaded an error page while the
+  // server rebuilt never replaces it, so a change shows the old page dimmed, never a white one.
   const [shown, setShown] = useState<{ key: string; src: string; opened: number }>();
+  const now = useRef({ frameKey, opened, url });
+  now.current = { frameKey, opened, url };
   useEffect(() => {
-    if (server === "up") setShown({ key: frameKey, src: `${url}${current.current}`, opened });
-  }, [server, frameKey, url, opened]);
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e) || e.data.type !== "ready") return;
+      if (e.source !== frame.current?.contentWindow) return;
+      const { frameKey: key, opened: at, url: base } = now.current;
+      setShown({ key, src: `${base}${current.current}`, opened: at });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
   // Only across a change to the app: after Go the page asked for comes, not the last one (whose
   // location messages would otherwise put the old address back).
-  const stale = server === "starting" && shown?.opened === opened ? shown : undefined;
+  const stale = shown && shown.key !== frameKey && shown.opened === opened ? shown : undefined;
   useEffect(() => {
     let stopped = false;
     (async () => {
@@ -248,19 +259,42 @@ export function Preview({
               )}
             </div>
           ) : (
-            <iframe
-              ref={(el) => {
-                frame.current = el;
-                // The one window whose messages count, recorded as the frame is (re)made.
-                setPreview(el?.contentWindow ?? null, url);
-              }}
-              key={stale?.key ?? frameKey}
-              title="App preview"
-              data-flashed={flashedConcepts}
-              src={stale?.src ?? `${url}${current.current}`}
-              onLoad={loaded}
-              className={cx("h-full w-full border-0", stale && "pointer-events-none opacity-60")}
-            />
+            <div className="relative h-full">
+              {/* The last ready page, kept (same key, so not loaded again) until the new one is. */}
+              {stale && (
+                <iframe
+                  key={stale.key}
+                  title="Previous preview"
+                  aria-hidden
+                  tabIndex={-1}
+                  src={stale.src}
+                  className="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-60"
+                />
+              )}
+              {server === "up" && (
+                <iframe
+                  ref={(el) => {
+                    frame.current = el;
+                    // The one window whose messages count, recorded as the frame is (re)made.
+                    setPreview(el?.contentWindow ?? null, url);
+                  }}
+                  key={frameKey}
+                  title="App preview"
+                  data-flashed={flashedConcepts}
+                  src={`${url}${current.current}`}
+                  onLoad={loaded}
+                  className={cx("absolute inset-0 h-full w-full border-0", stale && "opacity-0")}
+                />
+              )}
+              {stale && (
+                <p
+                  role="status"
+                  className="absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-neutral-900/80 px-3 py-1 text-xs text-white"
+                >
+                  Updating the preview…
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
