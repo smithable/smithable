@@ -518,6 +518,8 @@ try {
           l.startsWith("The preview's page came without its stylesheet"),
         ).length;
       const before = await unstyled();
+      // A page that had its stylesheet never said otherwise before this step.
+      if (before) throw new Error(`the preview was started again ${before} times for no reason`);
       // As the preview editor says it when the theme's variables are missing once the page loaded.
       const say = () =>
         preview
@@ -525,6 +527,9 @@ try {
           .evaluate(() =>
             window.parent.postMessage({ source: "smithable-preview", type: "unstyled" }, "*"),
           );
+      // The undo before reloads the preview: a frame still loading is about:blank, whose
+      // messages carry Studio's own origin and are rightly not the preview's.
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 });
       await say();
       for (const deadline = Date.now() + 30000; (await unstyled()) === before; ) {
         if (Date.now() > deadline) throw new Error("the preview was not started again");
