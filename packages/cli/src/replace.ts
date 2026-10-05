@@ -45,6 +45,8 @@ const SPEC_FILES = [
  * is coming in under the preview.
  */
 export type MakingStage = "drafting" | "building" | "arriving";
+/** Before the making: the description is read by a model, or the person is asked. */
+export type AskingStage = "reading" | "asking";
 export type Progress = (stage: MakingStage, draft?: Record<string, string>) => void;
 
 /** What decides the install: the same in both means the packages installed here fit. */

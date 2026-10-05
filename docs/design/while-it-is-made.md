@@ -51,39 +51,30 @@ together.
 The bar is honest about being an estimate: it never reaches the end before the app is there, and
 past the usual time it says "Taking a little longer than usual".
 
-## 4. Questions during the draft
+## 4. The questions, in Studio
 
 Today `clarify` does two things in one call: it picks the starter that the draft uses as its
-example, and it asks. To start the draft at 0 s the starter must be known without that call.
+example, and it asks. Asked to (`ask: true`), Studio does this itself, from the description in
+the replace request (it has the engine and the model's address), so the service's own questions
+page goes and no container is started for it (B).
 
-- **The starter:** the reader that uses no model (`read-description.ts`) names the kind of app
-  when it is sure. When it is, the draft starts at once on that starter. When it is not, the
-  `clarify` call comes first, as today, and the draft starts 5 s later. No worse than today in
-  either case. Studio does both itself, from the description in the replace request (it has
-  the engine and the model's address): the service does not ask `clarify` first, which would
-  cost it a container of its own for 2 to 3 s even when no model is needed (B).
-- **The questions** come from two places: the reader's own, at once (it knows what it could
-  not settle: who uses the app, what visitors see), and `clarify`'s, when that call has
-  answered. At most three in all, as today; the reader's first.
-- **The answers** cannot reach a call that is already running. So:
-  - an answer that is a setting is made as an ordinary change when the app is in place, with no
-    model: who may sign up, whether the app is shared or each person's own, which pages and
-    records visitors see. The reader's questions are all of this kind.
-  - any other answer goes to the model once, after the draft, as one round of corrections
-    ("the person also said: …"), the way a draft's flaws go back today. One more call, smaller
-    than a draft, only for people who gave such an answer.
-- **Not answering** is fine at every point: the draft is what it is, as with `--yes`.
+- **A starter's own description** leaves nothing open: no question, no model.
+- **The reader that uses no model** (`read-description.ts`) names the kind of app when it is
+  sure: 53 of the 70 test descriptions, never wrongly. That is the starter. It then asks only
+  what it could not settle of who signs in and what visitors see; where it settled both, the
+  draft starts at once with no question at all (about half of the descriptions).
+- **Otherwise** the model picks the starter and asks, as `clarify` does today, about 5 s.
+- **The answers go into the draft**, folded into the description as today. So the draft starts
+  when the questions are answered or skipped, not before.
 
-What it does to the time, with a person who takes 15 s to answer:
+As first designed, the questions were to be answered while the draft already ran, and an answer
+that is a setting made as an ordinary change afterwards. On a closer look that cannot be done
+without guessing: in an app whose shape the model chose, "visitors may look" does not say which
+pages and records to open. Answering in parallel therefore needs the model once more after the
+draft, a round of corrections; that is the open decision in §8.
 
-| | today | with this |
-|---|---|---|
-| answers are settings | 5 + 15 + 25 + 4 = about 49 s | about 29 s |
-| an answer needs the model | about 49 s | about 29 s, then a correction of about 8 s that shows as a change |
-| skips the questions | about 34 s | about 29 s |
-
-Cost: the `clarify` call as today (or none, when the reader is sure and has no question of the
-model's to wait for: to decide, §8), and the correction round for some.
+What it gives without that round: no question in about half the cases, questions on screen at
+once (no 5 s call before them) in most of the rest, and all of it in Studio.
 
 ## 5. Changes typed during the wait
 
@@ -108,10 +99,10 @@ turning free edits of it back into changes exists only for the starters' own des
   usual time, the questions, and from "drafted" on the draft's files, from which the page makes
   "What it does" as Builder does for any app. Each change of stage is also an event to the
   open pages.
-- `POST /api/making/answer` and `/api/making/request` take answers and typed changes (and
-  take one back); Studio's server keeps them and makes them when the app is in place: settings as operations, the rest as the
-  one correction round (a new `adjust` beside the draft, given the applied operations and the
-  answers), typed changes through the existing request path.
+- `POST /api/making/answer` takes the answers, in the questions' order, and the draft starts.
+  `POST /api/waiting` keeps what the person types meanwhile (and takes one back); it is in
+  `GET /api/project` as `waiting` until the page has made it, through the existing request
+  path, once the app is in place.
 - The reader's verdict and questions become part of what `clarify --json` answers, so the
   service and the command line use one thing.
 - A failure is said on the same screen: a description the model cannot use brings the starter
@@ -146,9 +137,9 @@ reads the description and asks. From B's reading (2026-10-05):
   and a correction.
 
 **Checks.** `test-studio`: a replaceable Studio given a description answers at once and shows
-`making`; an answer that is a setting and a typed change are both made when the stand-in
-model's draft is in place, in that order; without a model the starter comes in and the screen
-says why. A unit test for each of the reader's questions and the operation its answers become.
+`making`; asked to, it asks nothing for a starter's own description and one question, without
+a model, for a description that leaves one thing open; the answer reaches the draft; what is
+typed meanwhile waits and can be taken back.
 
 **Size.** About two days across the three: engine one, the page half to one, the service a few
 hours. The correction round is the least certain part.
@@ -168,13 +159,11 @@ hours. The correction round is the least certain part.
   not slow the page on a small machine or a phone: loaded after the screen is up, stopped when
   the app is in place, still when the person has asked their system for less motion.
 
-## 8. For Johan to decide when it is taken up
+## 8. Decided, and open
 
-1. All of §2's 1 to 5, or first only Studio at once with the bar and "What it does" (1, 2, 5:
-   about a day, and no change to the questions)?
-2. Questions always on the making screen, or still in front when the reader is not sure of the
-   starter (§4 proposes the second: never slower than today)?
-3. The correction round costs one more model call for some first builds. Accept that, or keep
-   only the questions whose answers are settings (free) on the making screen?
-4. When the reader is sure and has its own questions, is the model's `clarify` call still
-   wanted for better questions, or dropped to save its cost and 5 s?
+Decided 2026-10-05 on Fable's advice, Johan having said to start: two stages; the questions
+always in Studio; no `clarify` call when the reader is sure of the kind of app.
+
+Open: answering while the draft already runs. It needs one more call to the model after the
+draft for people whose answers differ from what was assumed (§4). Built first is the version
+without it; this would be added on top.
