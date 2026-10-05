@@ -17,7 +17,14 @@ import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
 import { type Replacement, replaceProject } from "./replace.js";
-import { buildReport, reportChoice, reportText, sendReport, setReportChoice } from "./report.js";
+import {
+  buildReport,
+  recordFailure,
+  reportChoice,
+  reportText,
+  sendReport,
+  setReportChoice,
+} from "./report.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
@@ -210,6 +217,13 @@ export async function studio(
   };
 
   let app: ChildProcess | undefined;
+  /** The preview's failure to answer, recorded once until it answers (and its report sent once). */
+  let stuck: { report?: "sent" | "offer" } | undefined;
+  const previewAnswers = () =>
+    fetch(`http://localhost:${previewPort}/health`, { signal: AbortSignal.timeout(2000) }).then(
+      (answer) => answer.ok,
+      () => false,
+    );
   /**
    * Tells Studio to reload the preview once the dev server has taken in a change: a moment
    * first (TanStack Start is still rebuilding after its watcher goes quiet), then the editor
@@ -280,7 +294,10 @@ export async function studio(
       );
       setTimeout(startApp, delay);
     });
-    void warmPreview(previewPort, log);
+    // Once it answers, a preview that is stuck again later is a new failure to report.
+    void warmPreview(previewPort, log).then(async () => {
+      if (await previewAnswers()) stuck = undefined;
+    });
   };
   const stopApp = () => {
     const child = app;
@@ -299,6 +316,18 @@ export async function studio(
   let pending: { id: string; request: string; proposal: Proposal } | undefined;
   /** Whether the project may still be replaced by another app (once; see the option). */
   let replaceable = options.replaceable === true;
+
+  /**
+   * The last failure, recorded `since` then, is reported at once for someone who chose
+   * "always"; else Studio offers it.
+   */
+  const offerReport = async (since = ""): Promise<"sent" | "offer" | undefined> => {
+    const built = buildReport(dir, logs);
+    const choice = reportChoice();
+    if (!built || built.at < since || choice === "never") return undefined;
+    if (choice !== "always") return "offer";
+    return "sent" in (await sendReport(built).catch(() => ({ url: "" }))) ? "sent" : "offer";
+  };
 
   /** Runs a command with its output captured for the response. */
   const capture = async (fn: (io: Io) => number | Promise<number>) => {
@@ -455,18 +484,30 @@ export async function studio(
           startApp();
           send("changed", {});
         }
-        // A failure of this change (not a refusal, and not an earlier failure) is reported at
-        // once for someone who chose "always"; else Studio offers it.
-        let report: "sent" | "offer" | undefined;
-        const failure = result.ok ? undefined : buildReport(dir, logs);
-        if (failure && failure.at >= asked) {
-          const choice = reportChoice();
-          if (choice === "always")
-            report =
-              "sent" in (await sendReport(failure).catch(() => ({ url: "" }))) ? "sent" : "offer";
-          else if (choice !== "never") report = "offer";
-        }
+        // A failure of this change (not a refusal, and not an earlier failure).
+        const report = result.ok ? undefined : await offerReport(asked);
         return json({ ...result, needsConfirm, report });
+      }
+      // The preview has not answered within Studio's wait: its last log lines, and the failure
+      // kept for a report (seen on the hosted beta: a preview that never started).
+      if (req.method === "POST" && url.pathname === "/api/preview/stuck") {
+        const tail = logs.slice(-40);
+        // Each Retry asks again: recorded, and sent for "always", once while it stays stuck.
+        if (!stuck) {
+          recordFailure(dir, "preview", { url: preview }, tail.join("\n") || "No log lines.");
+          stuck = { report: await offerReport() };
+        }
+        return json({ log: tail.slice(-12), report: stuck.report });
+      }
+      // Whether the preview's own server answers, asked from here (inside a hosted workspace too):
+      // the browser cannot read a status across origins, and a hosted service's "Starting…"
+      // page (503) would pass for the app.
+      if (url.pathname === "/api/preview/answers") return json({ ok: await previewAnswers() });
+      // Retry: the preview's server starts again, rather than being asked once more.
+      if (req.method === "POST" && url.pathname === "/api/preview/restart") {
+        stopApp();
+        startApp();
+        return json({ ok: true });
       }
       // The report of the last failure, exactly as it would be sent, and the person's choice.
       if (req.method === "GET" && url.pathname === "/api/report") {
