@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -38,7 +38,10 @@ export function restoreDatabase(dir: string, id: string): boolean {
   if (!existsSync(source)) return false;
   const target = databasePath(dir);
   for (const suffix of ["-wal", "-shm"]) rmSync(`${target}${suffix}`, { force: true });
-  copyFileSync(source, target);
+  // As another file that takes the old one's place, not written over it: a preview that has the
+  // database open keeps reading the one it opened, whole, until it opens this one.
+  copyFileSync(source, `${target}.incoming`);
+  renameSync(`${target}.incoming`, target);
   return true;
 }
 
