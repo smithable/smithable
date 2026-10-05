@@ -46,6 +46,15 @@ export function lap(step: string): void {
   process.stderr.write(`[time] ${step}: ${Date.now() - lapStart} ms\n`);
   lapStart = Date.now();
 }
+/** Starts the clock again: the first step of a new piece of work is not the wait before it. */
+export function lapFrom(): void {
+  lapStart = Date.now();
+}
+/** One timing of its own, beside the laps (e.g. how long the preview took to answer). */
+export function timed(what: string, since: number): void {
+  if (process.env.SMITHABLE_TIMINGS)
+    process.stderr.write(`[time] ${what}: ${Date.now() - since} ms\n`);
+}
 
 /** Runs a command with inherited output. Returns its exit code. */
 export function exec(command: string, args: string[], cwd: string): number {
