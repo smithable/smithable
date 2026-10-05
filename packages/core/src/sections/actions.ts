@@ -1,5 +1,5 @@
 import { isScalar, type ParsedNode } from "yaml";
-import { lostValues, readCondition } from "../condition.js";
+import { followRenamed, lostValues, readCondition } from "../condition.js";
 import {
   checkKeys,
   type Entry,
@@ -16,6 +16,7 @@ import {
   fieldsUsed,
   parseFormula,
   renameInFormula,
+  renameTextInFormula,
   valueTypeOf,
 } from "../formula.js";
 import {
@@ -143,17 +144,39 @@ export const actionsSection: SpecSection<"actions"> = {
     ];
     if (effect.kind === "remove-field" || effect.kind === "change-field") {
       for (const action of standard) {
-        const wanted = action.on === effect.model ? action.when?.[effect.field] : undefined;
+        const named = action.on === effect.model ? action.when?.[effect.field] : undefined;
+        const renamed = effect.kind === "change-field" ? (effect.renamed ?? {}) : {};
+        const at = ["actions", action.name];
+        // A renamed choice value is followed: in "when", in what the action writes, and in its
+        // formulas that compare with it.
+        const wanted =
+          named === undefined
+            ? undefined
+            : followRenamed(spec, [...at, "when", effect.field], named, renamed);
+        const stillNamed: string[] = [];
+        for (const w of writes(action, effect.model))
+          for (const v of w.values) {
+            if (v.field !== effect.field || !("value" in v) || typeof v.value !== "string")
+              continue;
+            const to = renamed[v.value];
+            if (to) spec.set([...at, ...w.path, v.field], to);
+            stillNamed.push(to || v.value);
+          }
+        if (action.on === effect.model)
+          for (const { path, v } of formulas(action)) {
+            if (!("formula" in v)) continue;
+            const next = renameTextInFormula(v.text, (name, list, value) =>
+              name === effect.field && list === undefined ? renamed[value] || undefined : undefined,
+            );
+            if (next !== v.text) spec.set([...at, ...path], next);
+          }
         const written = writes(action, effect.model).flatMap((w) =>
           w.values.filter((v) => v.field === effect.field),
         );
         const lost =
           effect.kind === "change-field" &&
           ((wanted !== undefined && lostValues(wanted, effect.choices).length > 0) ||
-            written.some(
-              (v) =>
-                "value" in v && typeof v.value === "string" && !effect.choices.includes(v.value),
-            ));
+            stillNamed.some((v) => !effect.choices.includes(v)));
         const uses =
           effect.kind === "remove-field" &&
           (wanted !== undefined ||

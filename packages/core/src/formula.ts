@@ -129,6 +129,44 @@ export function renameInFormula(
   return out + source.slice(from);
 }
 
+/**
+ * Renames text values in a formula where they are compared with a field (`status = "open"`,
+ * `"open" = status`, `COUNTIF(lines.status, "open")`), leaving everything else as written.
+ * `rename` gets the field, the list it is reached through, and the value; it returns the new
+ * value, or undefined to keep it.
+ */
+export function renameTextInFormula(
+  source: string,
+  rename: (field: string, list: string | undefined, value: string) => string | undefined,
+): string {
+  let out = "";
+  let from = 0;
+  const tokens = tokenize(source);
+  const compares = (t?: Token) => t?.type === "op" && (t.text === "=" || t.text === "<>");
+  tokens.forEach((t, i) => {
+    if (t.type !== "str") return;
+    const at = (n: number) => tokens[i + n];
+    const [field, list] =
+      compares(at(-1)) && at(-2)?.type === "id" && at(-3)?.type !== "."
+        ? [at(-2)?.text]
+        : compares(at(1)) && at(2)?.type === "id" && at(3)?.type !== "(" && at(3)?.type !== "."
+          ? [at(2)?.text]
+          : at(-1)?.type === "," &&
+              at(-2)?.type === "id" &&
+              at(-3)?.type === "." &&
+              at(-4)?.type === "id" &&
+              at(-5)?.type === "(" &&
+              at(-6)?.text.toUpperCase() === "COUNTIF"
+            ? [at(-2)?.text, at(-4)?.text]
+            : [];
+    const to = field === undefined ? undefined : rename(field, list, t.text);
+    if (to === undefined || to === t.text) return;
+    out += `${source.slice(from, t.at)}"${to}"`;
+    from = t.at + t.text.length + 2;
+  });
+  return out + source.slice(from);
+}
+
 /** Parses a formula into an expression tree. Throws FormulaError with the offset of the problem. */
 export function parseFormula(source: string): Expr {
   const tokens = tokenize(source);
