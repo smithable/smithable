@@ -389,6 +389,28 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
     },
   );
+  await step("a kind of record is renamed everywhere in one change (finding 8)", async () => {
+    await page.getByRole("tab", { name: "What it does" }).click();
+    const orders = page.getByRole("region", { name: "Orders", exact: true });
+    await orders.getByRole("button", { name: "Orders", exact: true }).click();
+    await orders.getByLabel("Called, for one").fill("Job");
+    // The name for several follows until it is typed.
+    if ((await orders.getByLabel("Called, for several").inputValue()) !== "Jobs")
+      throw new Error("the name for several did not follow");
+    await orders.getByRole("button", { name: "Rename everywhere" }).click();
+    await trace
+      .getByText("Order records are now called jobs (one job)")
+      .first()
+      .waitFor({ timeout: 60000 });
+    // The list page, and so its menu entry, is called Jobs too.
+    if (!(await project()).files.content.includes("title: Jobs"))
+      throw new Error("the orders page kept its title");
+    await page.locator("header").getByRole("button", { name: "Undo", exact: true }).click();
+    await trace
+      .getByText("Undid: Order records are now called jobs (one job)")
+      .first()
+      .waitFor({ timeout: 60000 });
+  });
   await step("colors of a choice and a page's icon, from the Look tab", async () => {
     await page.getByRole("button", { name: "Your app", exact: true }).first().click();
     await page.getByRole("tab", { name: "Look" }).click();
