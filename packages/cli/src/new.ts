@@ -9,7 +9,10 @@ import {
   describedWith,
   draftProject,
   draftProjectByOperations,
+  type Edit,
   type Question,
+  readEdit,
+  STARTER_TEXTS,
 } from "@smithable/ai";
 import {
   fitSamples,
@@ -33,6 +36,27 @@ import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
 import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
+
+/**
+ * The starter a description is, or is a small edit of, where that can be read without a model
+ * (the start page shows a starter's own description; packages/ai starter-descriptions.ts).
+ */
+function knownStart(
+  description: string,
+): { name: string; edit: Exclude<Edit, { kind: "rewrite" }> } | undefined {
+  for (const name of Object.keys(STARTER_TEXTS)) {
+    const files = STARTERS[name];
+    if (!files) continue;
+    const edit = readEdit(name, description, {
+      spec: files["smithable.yml"] ?? "",
+      auth: files["smithable.auth.yml"],
+      content: files["smithable.content.yml"],
+      ux: files["smithable.ux.yml"],
+    });
+    if (edit.kind !== "rewrite") return { name, edit };
+  }
+  return undefined;
+}
 
 /**
  * `smithable new <dir>`: a new project from a starter spec, with sample data. With
@@ -91,6 +115,39 @@ export async function create(
       return 1;
     }
   }
+  // A starter's own description, or a small edit of it, needs no model: it is the starter, with
+  // the edit's operations applied. From here on it is treated as that starter.
+  let prepared: Record<string, string> | undefined;
+  const known =
+    options.describe && starter === undefined && !options.from
+      ? knownStart(options.describe)
+      : undefined;
+  if (known) {
+    starter = known.name;
+    options = { ...options, describe: undefined };
+    if (known.edit.kind === "same")
+      io.out(`This is the ${known.name} starter's own description: no model is needed.\n`);
+    else {
+      const base = STARTERS[known.name] as Record<string, string>;
+      prepared = {
+        ...base,
+        "smithable.yml": known.edit.files.spec,
+        "smithable.auth.yml": known.edit.files.auth ?? "",
+        "smithable.content.yml": known.edit.files.content ?? "",
+        "smithable.ux.yml": known.edit.files.ux ?? "",
+      };
+      io.out(
+        `The ${known.name} starter with what your description changes, read without a model:\n${known.edit.steps
+          .map(
+            (s) =>
+              `  ${s.op} ${Object.values(s.args)
+                .map((v) => (typeof v === "string" ? v : JSON.stringify(v)))
+                .join(" ")}\n`,
+          )
+          .join("")}${known.edit.notes.map((n) => `${n}\n`).join("")}`,
+      );
+    }
+  }
   let name = starter ?? (options.describe ? closestStarter(options.describe, STARTERS) : "crm");
   if (starter !== undefined && STARTERS[starter] === undefined) {
     io.err(`Unknown starter "${starter}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
@@ -119,7 +176,7 @@ export async function create(
       given.map((answer, i) => ({ question: `(${i + 1})`, answer })),
     );
   }
-  let files = STARTERS[name] as Record<string, string>;
+  let files = prepared ?? (STARTERS[name] as Record<string, string>);
   // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
   // from, as hosted workspaces provide) do not count: the install then has little to do.
   const PREPARED = ["node_modules", "pnpm-lock.yaml"];
@@ -239,11 +296,15 @@ export async function create(
  * caller never has to tell a failure from a description that says enough.
  */
 export async function clarify(io: Io, description: string, json: boolean): Promise<number> {
-  const asked = await clarifyProject({
-    description,
-    starters: starterSummaries(),
-    providers: providersFor(),
-  }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
+  // A starter's own description, or a small edit of it: nothing to ask, and no model to ask it.
+  const known = knownStart(description);
+  const asked = known
+    ? { starter: known.name, questions: [], usage: [] }
+    : await clarifyProject({
+        description,
+        starters: starterSummaries(),
+        providers: providersFor(),
+      }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
   const result = {
     ...(asked.starter ? { starter: asked.starter } : {}),
     questions: asked.questions,
