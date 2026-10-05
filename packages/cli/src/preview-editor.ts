@@ -181,6 +181,22 @@ if (typeof window !== "undefined" && window.parent !== window) {
     };
   }
   window.addEventListener("popstate", report);
+  // The owner opens the preview signed in as an administrator: the first time it shows the
+  // sign-in page, once its buttons work, the development "Sign in as admin" is pressed. Once a
+  // browser session, so after signing out the sign-in page stays to try another role.
+  const signIn = setInterval(() => {
+    if (location.pathname !== "/sign-in") return clearInterval(signIn);
+    if (document.body.dataset.hydrated !== "true") return;
+    clearInterval(signIn);
+    try {
+      if (sessionStorage.getItem("smithable:signed-in")) return;
+      sessionStorage.setItem("smithable:signed-in", "1");
+    } catch {
+      return;
+    }
+    [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Sign in as admin")?.click();
+  }, 100);
+  setTimeout(() => clearInterval(signIn), 30000);
   post({ type: "ready" });
 }
 `;
