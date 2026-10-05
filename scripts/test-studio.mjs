@@ -937,6 +937,21 @@ try {
       )
         throw new Error(`the report: ${report.text?.slice(0, 300)}`);
       if (report.text.includes("ORD-1001")) throw new Error("the report holds records");
+      // A refusal is not a failure: a name that does not fit offers no report, not even the
+      // earlier one.
+      const refused = await (
+        await fetch(`http://localhost:${port}/api/op`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: JSON.stringify({
+            name: "addField",
+            args: { model: "Customer", field: "Bad Name", type: "string" },
+          }),
+        })
+      ).json();
+      if (refused.ok || !refused.output.includes("must start with a lowercase letter"))
+        throw new Error(`the name was not refused: ${refused.output}`);
+      if (refused.report) throw new Error(`a refusal offered a report: ${refused.report}`);
       await health();
       // A preview that stops by itself is started again.
       if (spawnSync("pkill", ["-f", `preview.vite.config.mjs --port ${port + 1}`]).status !== 0)
