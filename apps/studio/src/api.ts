@@ -20,7 +20,9 @@ export interface TraceEntry {
 /** A described app being made (docs/design/while-it-is-made.md). */
 export interface Making {
   description: string;
-  stage: "drafting" | "building" | "arriving" | "failed";
+  stage: "reading" | "asking" | "drafting" | "building" | "arriving" | "failed";
+  /** While "asking": what the description leaves open, at most three. */
+  questions?: { about?: string; question: string; options: string[] }[];
   /** When it started (ISO time). */
   since: string;
   /** How long a draft usually takes, in ms. */
@@ -51,6 +53,8 @@ export interface Project {
   notice?: string;
   /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
   making?: Making;
+  /** Requests typed while the app was made, made in order once it is in place. */
+  waiting?: string[];
 }
 
 /** A model's proposal for a request; nothing is applied until it is confirmed. */
@@ -147,8 +151,13 @@ export const api = {
   /** Calls `onEvent` for every change and log line the daemon reports. */
   /** Tries again to make the described app, as it was asked. */
   retryMaking: () => call<{ ok: boolean }>("/api/making/retry", {}),
+  /** The answers to the making's questions, in their order ("" for one skipped). */
+  answerMaking: (answers: string[]) => call<{ ok: boolean }>("/api/making/answer", { answers }),
+  /** Keeps a request for when the app is in place, or takes one back. */
+  waiting: (change: { add: string } | { remove: number }) =>
+    call<{ ok: boolean; waiting: string[] }>("/api/waiting", change),
   events(
-    onEvent: (event: "changed" | "log" | "open" | "making", data: unknown) => void,
+    onEvent: (event: "changed" | "log" | "open" | "making" | "waiting", data: unknown) => void,
   ): () => void {
     const source = new EventSource("/api/events");
     // Also after a reconnect: whatever changed meanwhile is fetched again.
@@ -159,6 +168,9 @@ export const api = {
     source.addEventListener("log", (e) => onEvent("log", JSON.parse((e as MessageEvent).data)));
     source.addEventListener("making", (e) =>
       onEvent("making", JSON.parse((e as MessageEvent).data)),
+    );
+    source.addEventListener("waiting", (e) =>
+      onEvent("waiting", JSON.parse((e as MessageEvent).data)),
     );
     return () => source.close();
   },
