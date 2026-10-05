@@ -229,8 +229,15 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
   const [change, setChange] = useState<(typeof CHANGES)[number][0]>(
     () => CHANGES.find(([op]) => op === prefill?.op)?.[0] ?? "addField",
   );
-  // A proposal's values, for its own form only.
-  const initial = change === prefill?.op ? prefill.args : undefined;
+  // A change that went through starts its form again from the spec as it is now.
+  const [done, setDone] = useState(0);
+  const runAndReset: Run = async (...args) => {
+    const ok = await run(...args);
+    if (ok) setDone((n) => n + 1);
+    return ok;
+  };
+  // A proposal's values, for its own form only, until it went through.
+  const initial = change === prefill?.op && done === 0 ? prefill.args : undefined;
   if (!spec.ir)
     return (
       <p className="p-3 text-sm text-neutral-500">The spec has errors; fix them in Studio mode.</p>
@@ -245,44 +252,48 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
           options={CHANGES.map(([value, label]) => [value, label])}
         />
       </Label>
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-        {change === "addField" && <AddField spec={spec} run={run} initial={initial} />}
-        {change === "changeField" && <ChangeField spec={spec} run={run} initial={initial} />}
-        {change === "renameField" && <RenameField spec={spec} run={run} initial={initial} />}
+      <div key={done} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+        {change === "addField" && <AddField spec={spec} run={runAndReset} initial={initial} />}
+        {change === "changeField" && (
+          <ChangeField spec={spec} run={runAndReset} initial={initial} />
+        )}
+        {change === "renameField" && (
+          <RenameField spec={spec} run={runAndReset} initial={initial} />
+        )}
         {change === "removeField" && (
           <FromSchema
             op="removeField"
             spec={spec}
-            run={run}
+            run={runAndReset}
             initial={initial}
             submit="Remove field"
           />
         )}
-        {change === "addModel" && <AddModel run={run} />}
-        {change === "importRecords" && <ImportRecords spec={spec} run={run} />}
-        {change === "addPage" && <AddPage spec={spec} run={run} initial={initial} />}
-        {change === "setSearch" && <SetSearch spec={spec} run={run} />}
-        {change === "setAccess" && <SetAccess spec={spec} run={run} />}
-        {change === "setNavigation" && <SetNavigation spec={spec} run={run} />}
-        {change === "addTile" && <AddTile spec={spec} run={run} />}
+        {change === "addModel" && <AddModel run={runAndReset} />}
+        {change === "importRecords" && <ImportRecords spec={spec} run={runAndReset} />}
+        {change === "addPage" && <AddPage spec={spec} run={runAndReset} initial={initial} />}
+        {change === "setSearch" && <SetSearch spec={spec} run={runAndReset} />}
+        {change === "setAccess" && <SetAccess spec={spec} run={runAndReset} />}
+        {change === "setNavigation" && <SetNavigation spec={spec} run={runAndReset} />}
+        {change === "addTile" && <AddTile spec={spec} run={runAndReset} />}
         {change === "removePage" && (
           <FromSchema
             op="removePage"
             spec={spec}
-            run={run}
+            run={runAndReset}
             submit="Remove page"
             hint="Its records and their data stay; Undo brings the page back."
             disabled={(spec.ir?.pages.length ?? 0) < 2}
           />
         )}
-        {change === "addSection" && <AddSection spec={spec} run={run} />}
-        {change === "addAction" && <AddAction spec={spec} run={run} initial={initial} />}
-        {change === "setAction" && <SetActionIntent spec={spec} run={run} />}
+        {change === "addSection" && <AddSection spec={spec} run={runAndReset} />}
+        {change === "addAction" && <AddAction spec={spec} run={runAndReset} initial={initial} />}
+        {change === "setAction" && <SetActionIntent spec={spec} run={runAndReset} />}
         {change === "removeAction" && (
           <FromSchema
             op="removeAction"
             spec={spec}
-            run={run}
+            run={runAndReset}
             initial={{ action: spec.ir.actions[0]?.name ?? "" }}
             submit="Remove action"
             controls={{ action: actionPicker(spec) }}
@@ -294,7 +305,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
           <FromSchema
             op="removeSection"
             spec={spec}
-            run={run}
+            run={runAndReset}
             submit="Remove section"
             hint="Its texts go too; Undo brings it back."
           />
