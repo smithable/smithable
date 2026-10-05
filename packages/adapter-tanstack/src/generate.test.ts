@@ -120,17 +120,37 @@ pages:
   );
 });
 
-test("an app without sign-in has no auth library, sign-in page or owners", () => {
+test("an app without sign-in has no sign-in page, auth client or owners", () => {
   const spec = ir(
     "smithable.yml",
     "smithable: 0.1\napp: { name: Board }\nmodels:\n  Customer: { fields: { name: string! } }\npages:\n  customers: { crud: Customer }\n",
   );
   const files = generateApp(spec, options);
   const paths = files.map((f) => f.path);
-  expect(files.find((f) => f.path === "package.json")?.content).not.toContain("better-auth");
   expect(paths).not.toContain("src/routes/sign-in.tsx");
   expect(paths).not.toContain("src/lib/auth-client.ts");
   expect(files.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("ownerId");
+});
+
+// A change to an app never changes what must be installed (a hosted workspace cannot fetch).
+test("every app of a stack profile lists the same packages, whatever it uses", () => {
+  const dependencies = (spec: SpecIR, auth: AuthIR) =>
+    JSON.parse(
+      generateApp(spec, { ...options, auth }).find((f) => f.path === "package.json")?.content ??
+        "{}",
+    ).dependencies;
+  const board = dependencies(
+    ir(
+      "smithable.yml",
+      "smithable: 0.1\napp: { name: Board }\nmodels:\n  Customer: { fields: { name: string! } }\npages:\n  customers: { crud: Customer }\n",
+    ),
+    noSignIn,
+  );
+  expect(Object.keys(board)).toEqual(Object.keys(board).toSorted());
+  for (const [path, text] of Object.entries(examples)) {
+    const auth = authOf(authFiles[path.replace("smithable.yml", "smithable.auth.yml")] as string);
+    expect(dependencies(ir(path, text as string), auth), path).toEqual(board);
+  }
 });
 
 test("a required owner gets a user in the access tests, also for a visitor", () => {

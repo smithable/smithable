@@ -778,6 +778,7 @@ Four things change over time, each on its own track:
 ### 14.1 Everything is recorded
 
 - Every spec file carries its format version (`smithable: 0.1`).
+- Every app of a stack profile lists **the same packages**, whatever it uses: the sign-in library, the Markdown formatter and the three fonts are in every `package.json`, and what an app does not import is not in its build. A change to the app therefore never changes what must be installed, so regenerating needs no package registry (a hosted workspace cannot reach one). Only the packages the owner adds for custom code (`packages` in `smithable.context.yml`) and a new stack profile change the list.
 - A committed, tool-managed **`smithable.lock`** records the Smithable version, adapter version and stack profile that generated the code. Regeneration with a different version is therefore always explicit, never accidental, and generation stays byte-identical for a given lock.
 - Generated apps pin exact dependency versions and commit their package lockfile.
 
