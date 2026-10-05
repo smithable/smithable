@@ -1532,6 +1532,92 @@ try {
         await notStartedAgain(other);
       },
     );
+    await step(
+      "asked to, Studio reads the description itself: it asks only what that leaves open, drafts with the answer, and keeps what is typed meanwhile",
+      async () => {
+        const pool = join(root, "pool");
+        const again = async () => {
+          process.kill(-waiting.pid);
+          await new Promise((r) => setTimeout(r, 1500));
+          waiting = spawn(
+            "node",
+            [cli, "studio", pool, "--port", String(port + 2), "--replaceable"],
+            {
+              detached: true,
+              env: {
+                ...process.env,
+                SMITHABLE_LOCAL_MODEL: "fake-model",
+                SMITHABLE_LOCAL_URL: model.url,
+              },
+            },
+          );
+          await previewUp(port + 3);
+        };
+        const other = `http://localhost:${port + 2}`;
+        const post = (path, body) =>
+          fetch(`${other}${path}`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-smithable": "1" },
+            body: JSON.stringify(body),
+          });
+        const until = async (done, what) => {
+          for (let i = 0; i < 600; i++) {
+            const project = await (await fetch(`${other}/api/project`)).json();
+            if (project.making?.stage === "failed")
+              throw new Error(`the making failed: ${project.making.error}`);
+            if (done(project)) return project;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          throw new Error(`never ${what}`);
+        };
+        // A starter's own description leaves nothing open: no question, and no model.
+        await again();
+        const calls = model.requests.length;
+        const crm = JSON.parse(
+          spawnSync("node", [cli, "starters", "--json"], { encoding: "utf8" }).stdout,
+        ).find((starter) => starter.name === "crm").description;
+        const plain = await replace(port + 2, { describe: crm, ask: true, wait: false });
+        if (plain.status !== 202) throw new Error(JSON.stringify(plain));
+        const asked = new Set();
+        await until((project) => {
+          if (project.making) asked.add(project.making.stage);
+          return !project.making;
+        }, "in place");
+        if (asked.has("asking")) throw new Error("it asked about a starter's own description");
+        if (model.requests.length !== calls) throw new Error("a model was asked for it");
+
+        // The reader knows this is a status page for a team, not what visitors may see: one
+        // question, at once and without a model; the answer goes into what the model drafts from.
+        await again();
+        const taken = await replace(port + 2, {
+          describe: "A status page for our services",
+          ask: true,
+          wait: false,
+        });
+        if (taken.status !== 202) throw new Error(JSON.stringify(taken));
+        const asking = await until((project) => project.making?.stage === "asking", "asked");
+        const questions = asking.making.questions;
+        if (questions.length !== 1 || questions[0].about !== "visitors")
+          throw new Error(`asked ${JSON.stringify(questions)}`);
+        if (model.requests.length !== calls) throw new Error("a model was asked before the draft");
+        // What the person types meanwhile waits in Studio, and may be taken back.
+        await post("/api/waiting", { add: "add a phone number to components" });
+        await post("/api/waiting", { add: "not this one" });
+        const kept = await (await post("/api/waiting", { remove: 1 })).json();
+        if (kept.waiting.join() !== "add a phone number to components")
+          throw new Error(`waiting: ${kept.waiting}`);
+        const answered = await post("/api/making/answer", { answers: ["Yes, they can look"] });
+        if (!answered.ok) throw new Error(`the answer was refused: ${answered.status}`);
+        const made = await until((project) => !project.making, "in place");
+        if (made.waiting?.join() !== "add a phone number to components")
+          throw new Error(`what was typed did not wait: ${made.waiting}`);
+        const drafted = model.requests.slice(calls).map((request) => JSON.stringify(request));
+        if (!drafted.some((text) => text.includes("Yes, they can look")))
+          throw new Error("the answer did not reach the draft");
+        if ((await post("/api/making/answer", { answers: [] })).status !== 409)
+          throw new Error("an answer was taken with nothing asked");
+      },
+    );
   } finally {
     try {
       if (waiting) process.kill(-waiting.pid);
