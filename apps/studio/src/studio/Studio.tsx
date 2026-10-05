@@ -1,5 +1,12 @@
 // Studio mode: the spec as YAML, every operation, the last change's diff, logs and concepts.
-import { type ArgRef, type JsonSchema, operationsFor, refHint } from "@smithable/core";
+import {
+  type ArgRef,
+  defaultColumns,
+  type JsonSchema,
+  operationsFor,
+  pageModel,
+  refHint,
+} from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
@@ -436,14 +443,40 @@ function SpecEditor({
 
 /** What common arguments mean, for operations whose schema doesn't say. */
 
+/**
+ * What a list argument holds now, so its checkboxes open as the app is: a page's columns as its
+ * table shows them, its form's fields in their order.
+ */
+function currentList(op: string, key: string, page: unknown, spec: Spec): string[] | undefined {
+  const found = spec.ir?.pages.find((p) => p.id === page);
+  const model = found && spec.ir?.models.find((m) => m.name === pageModel(found));
+  if (!found || !model) return undefined;
+  const ux = spec.ux?.pages[found.id];
+  if (op === "setColumns" && key === "columns") return ux?.columns ?? defaultColumns(model);
+  if (op === "setFieldOrder" && key === "fields")
+    return ux?.fieldOrder ?? model.fields.map((f) => f.name);
+  return undefined;
+}
+
 /** Any operation, with a form built from its JSON Schema: the same definition MCP tools use. */
 function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
-  const operations = operationsFor(spec.plugins).filter((o) => o.name !== "editSpec");
+  // In order of name, so the adds, the removes and the sets each sit together.
+  const operations = operationsFor(spec.plugins)
+    .filter((o) => o.name !== "editSpec")
+    .sort((a, b) => a.name.localeCompare(b.name));
   const [name, setName] = useState(operations[0]?.name ?? "");
-  const [values, setValues] = useState<ArgValues>({});
+  const [typed, setValues] = useState<ArgValues>({});
   const op = operations.find((o) => o.name === name);
   const properties = (op?.schema.properties ?? {}) as Record<string, JsonSchema>;
   const required = (op?.schema.required as string[] | undefined) ?? [];
+  // A list not yet changed holds what the app has now (the page chosen decides it).
+  const chosen = op ? argumentsOf(op.schema, typed, spec) : {};
+  const values: ArgValues = { ...typed };
+  for (const key of Object.keys(properties))
+    if (values[key] === undefined) {
+      const now = currentList(name, key, chosen.page, spec);
+      if (now) values[key] = now;
+    }
   const effective = op ? argumentsOf(op.schema, values, spec) : {};
   // Each name as typed, against its rule: said under it, and the operation waits.
   const problems = Object.fromEntries(
@@ -510,7 +543,18 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
           required={required.includes(key)}
           values={values}
           effective={effective}
-          setValue={(v) => setValues({ ...values, [key]: v })}
+          setValue={(v) =>
+            // Another page starts its lists again from what that page has.
+            setValues(
+              key === "page"
+                ? Object.fromEntries(
+                    Object.entries({ ...typed, page: v }).filter(
+                      ([k]) => k === "page" || properties[k]?.type !== "array",
+                    ),
+                  )
+                : { ...values, [key]: v },
+            )
+          }
           spec={spec}
           label={key}
           problem={problems[key]}
