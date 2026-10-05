@@ -3317,7 +3317,8 @@ test("measure sums, averages and sums per value", async () => {
   });
   // A computed field is added up over at most 10,000 records in one call; more are refused
   // with how to narrow them, and a narrower call still works.
-  db.insert(schema.rows).values(Array.from({ length: 10_001 }, (_, i) => ({ label: \`bulk \${i}\`, amount: 100, size: "small" }))).run();
+  const bulk = Array.from({ length: 10_001 }, (_, i) => ({ label: \`bulk \${i}\`, amount: 100, size: "small" as const }));
+  for (let i = 0; i < bulk.length; i += 500) db.insert(schema.rows).values(bulk.slice(i, i + 500)).run();
   await expect(callTool(key, "measure", { kind: "Row", of: "sum twice" })).rejects.toThrow("narrow them with where");
   expect(await callTool(key, "measure", { kind: "Row", of: "sum twice", where: { size: "large" } })).toEqual({ sum: 101 });
 });
