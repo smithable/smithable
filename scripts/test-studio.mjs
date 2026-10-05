@@ -990,17 +990,38 @@ try {
     },
   );
   await step("the spec editor checks as you type, and saves an edit as a change", async () => {
+    // The editor's text element answers `value` like a text box (only the lines in view are in
+    // the page), for reading and for setting the whole text.
     const editor = page.getByLabel("smithable.yml");
-    const text = await editor.inputValue();
-    await editor.fill(text.replace("      notes: text\n", "      notes: txt\n"));
+    const text = await editor.evaluate((e) => e.value);
+    const write = (to) =>
+      editor.evaluate((e, value) => {
+        e.value = value;
+      }, to);
+    await write(text.replace("      notes: text\n", "      notes: txt\n"));
+    // The problem is shown in the text where it is, and in the list.
+    await page.locator(".cm-lintRange-error").first().waitFor();
     await page
       .getByRole("list", { name: "Problems" })
       .getByText(/Unknown field type "txt"/)
       .waitFor();
     if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
       throw new Error("Save is enabled");
-    await editor.fill(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
+    await write(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+    // Typed text, and Ctrl+Z in the editor: the editor's own undo, not the app's last change.
+    const changes = await trace.locator("li").count();
+    await editor.focus();
+    await page.keyboard.press("ControlOrMeta+End");
+    await page.keyboard.type("# typed");
+    if (!(await editor.evaluate((e) => e.value)).endsWith("# typed"))
+      throw new Error("typing did not reach the editor");
+    await page.keyboard.press("ControlOrMeta+z");
+    if ((await editor.evaluate((e) => e.value)).endsWith("# typed"))
+      throw new Error("Ctrl+Z in the editor did not undo the typing");
+    await new Promise((r) => setTimeout(r, 500));
+    if ((await trace.locator("li").count()) !== changes)
+      throw new Error("Ctrl+Z in the editor undid a change of the app");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await status.getByText("Edit smithable.yml").waitFor({ timeout: 60000 });
   });
@@ -1151,8 +1172,10 @@ try {
     // An unsaved edit in the spec editor is kept when the file changes under it.
     await page.getByRole("tab", { name: "smithable.yml" }).click();
     const editor = page.getByLabel("smithable.yml");
-    const typed = `${await editor.inputValue()}# unsaved\n`;
-    await editor.fill(typed);
+    const typed = `${await editor.evaluate((e) => e.value)}# unsaved\n`;
+    await editor.evaluate((e, value) => {
+      e.value = value;
+    }, typed);
     const client = new Client({ name: "test", version: "1" });
     await client.connect(
       new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`)),
@@ -1168,9 +1191,11 @@ try {
       .first()
       .waitFor({ timeout: 30000 });
     await page.getByText("smithable.yml changed on disk while you were editing.").waitFor();
-    if ((await editor.inputValue()) !== typed) throw new Error("the unsaved edit was replaced");
+    if ((await editor.evaluate((e) => e.value)) !== typed)
+      throw new Error("the unsaved edit was replaced");
     await page.getByRole("button", { name: "Use the file on disk" }).click();
-    if (!(await editor.inputValue()).includes("vatNumber")) throw new Error("not the file on disk");
+    if (!(await editor.evaluate((e) => e.value)).includes("vatNumber"))
+      throw new Error("not the file on disk");
   });
   await step(
     "Studio is not framed by other sites, and applies only the proposal it showed",
