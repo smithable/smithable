@@ -8,7 +8,14 @@ import { Input } from "#/components/ui/input";
 import type { Answer } from "./assistant.server";
 import { Shown } from "./Inspector";
 
-export function Ask({ ask }: { ask: (question: string) => Promise<Answer> }) {
+export function Ask({
+  ask,
+  confirm,
+}: {
+  ask: (question: string) => Promise<Answer>;
+  /** With may: change: makes a proposed change once the person confirms it. */
+  confirm?: (proposal: string) => Promise<unknown>;
+}) {
   const sheet = useRef<HTMLDialogElement>(null);
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState<{ question: string; answer?: Answer; failed?: string }[]>([]);
@@ -84,7 +91,7 @@ export function Ask({ ask }: { ask: (question: string) => Promise<Answer> }) {
                   {a.answer?.source === "ai" && <Badge>AI</Badge>}
                 </div>
                 {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
-                {a.answer && <Shown answer={a.answer} trace={false} />}
+                {a.answer && <Shown answer={a.answer} trace={false} confirm={confirm} />}
               </li>
             ))}
           </ol>

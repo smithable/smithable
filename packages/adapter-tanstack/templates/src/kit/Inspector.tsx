@@ -110,13 +110,26 @@ export function Inspector({
  * The answer as the app shows it, then (for the inspector) how it came about. Also "Ask"'s
  * (kit Ask), without the calls.
  */
-export function Shown({ answer, trace = true }: { answer: Answer; trace?: boolean }) {
+export function Shown({
+  answer,
+  trace = true,
+  confirm,
+}: {
+  answer: Answer;
+  trace?: boolean;
+  /** "Ask" with may: change: a proposed change is made once the person confirms it. */
+  confirm?: (proposal: string) => Promise<unknown>;
+}) {
   return (
     <>
       {answer.text && <p className="text-sm">{answer.text}</p>}
-      {answer.steps.map((step, i) => (
-        <Result key={`${i}-${step.tool}`} step={step} />
-      ))}
+      {answer.steps.map((step, i) =>
+        step.proposal && step.card && confirm ? (
+          <Proposal key={`${i}-${step.tool}`} step={step} confirm={confirm} />
+        ) : (
+          <Result key={`${i}-${step.tool}`} step={step} />
+        ),
+      )}
       {answer.note && <p className="text-sm text-muted-foreground">{answer.note}</p>}
       <ReadAloud text={spoken(answer)} />
       {trace && (
@@ -200,6 +213,64 @@ export function spoken(answer: Answer): string {
   }
   if (answer.note) parts.push(answer.note);
   return parts.join(" ");
+}
+
+/** A change Ask proposed, as the app words it: made only when the person confirms it, once. */
+function Proposal({
+  step,
+  confirm,
+}: {
+  step: Step;
+  confirm: (proposal: string) => Promise<unknown>;
+}) {
+  const [state, setState] = useState<"open" | "busy" | "done" | "declined">("open");
+  const [failed, setFailed] = useState<string>();
+  const card = step.card as NonNullable<Step["card"]>;
+  return (
+    <div data-proposal className="space-y-2 rounded-md border border-border p-3 text-sm">
+      <p className="font-medium">{card.title}</p>
+      {card.changes.length > 0 && (
+        <ul className="space-y-1">
+          {card.changes.map((c) => (
+            <li key={c.label}>
+              <span className="text-muted-foreground">{c.label}:</span>{" "}
+              {c.from !== undefined && <span className="line-through">{cell(c.from)}</span>}
+              {c.from !== undefined && " → "}
+              {cell(c.to)}
+            </li>
+          ))}
+        </ul>
+      )}
+      {state === "done" && <p className="text-success">Done.</p>}
+      {state === "declined" && <p className="text-muted-foreground">Not done.</p>}
+      {failed && <p className="text-destructive">{failed}</p>}
+      {(state === "open" || state === "busy") && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={state === "busy"}
+            onClick={async () => {
+              setState("busy");
+              setFailed(undefined);
+              try {
+                await confirm(step.proposal as string);
+                setState("done");
+              } catch (error) {
+                setFailed(error instanceof Error ? error.message : String(error));
+                setState("declined");
+              }
+            }}
+          >
+            Confirm
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setState("declined")}>
+            Decline
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** What one call gave: a number, a table, a record, a description, or a proposed change. */

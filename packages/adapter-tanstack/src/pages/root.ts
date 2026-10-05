@@ -67,6 +67,8 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
   // "Ask" in the app (docs/design/assistant.md §6): the button and its answers, for the people
   // the auth file's assistant block names.
   const asking = Boolean(auth.assistant);
+  // A change Ask proposed is made once the person confirms it (may: change).
+  const confirming = auth.assistant?.may === "change";
   // Landing and onboarding pages have their own frame instead of the app's navigation.
   const start = ir.pages.find((p) => p.route === "/");
   const home = start ? ` home={{ to: "/", access: pageAccess[${JSON.stringify(start.id)}] }}` : "";
@@ -108,7 +110,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? '\nimport { Ask } from "#/kit/Ask";\nimport { z } from "zod";\nimport { ask, asks } from "#/generated/ask.server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { z } from "zod";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { pageHeaders } from "#/kit/security";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
@@ -150,7 +152,19 @@ ${
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
   .validator(z.object({ question: z.string().trim().min(1).max(500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));`
+  .handler(async ({ data }) => ask(await currentViewer(), data.question));${
+    confirming
+      ? `
+
+/** A change Ask proposed, made as the person once they confirm it (by the proposal's id alone). */
+const confirmApp = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string().max(100) }))
+  .handler(async ({ data }) => {
+    await confirm(await currentViewer(), data.id, getRequestHeaders());
+    return null;
+  });`
+      : ""
+  }`
     : ""
 }
 
@@ -235,7 +249,7 @@ ${
           {children}
         </AppShell>`
         }
-${asking ? "        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}\n" : ""}        <Scripts />
+${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""} />}\n` : ""}        <Scripts />
       </body>
     </html>
   );
