@@ -143,6 +143,14 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # The checks branch protection requires, as GitHub's own merge goes by (here `check`, which
   # reports on every job of its run). Others are not asked: a run that a newer one cancelled
   # (a pull request opened with the full-ci label starts two) leaves jobs that read as failed.
+  # A required check that reports on other jobs is listed only when those are done: until then
+  # gh says there is none, which is not a failure. An hour, as for the checks to start.
+  for i in $(seq 360); do
+    gh pr checks "$pr" "${repo[@]}" --required 2>&1 | grep -q "no required checks reported" || break
+    merged && { echo "Merged #$pr."; exit 0; }
+    [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
+    sleep 10
+  done
   if ! gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null; then
     merged && { echo "Merged #$pr."; exit 0; }
     gh pr checks "$pr" "${repo[@]}" || true
