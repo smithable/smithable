@@ -154,16 +154,21 @@ const addField: Operation<{
     if (model(ir, m).fields.some((x) => x.name === f))
       throw new OperationError(`${m} already has a field named "${f}".`);
     spec.add(fieldPath(m, f, ir).slice(0, -1), f, formula ? { type, formula } : type);
-    // Shown in its list, in the same change: added to the columns its page names, or, where the
-    // app picks them and already shows five, to those five (fewer: the app shows it anyway).
-    const page = list
-      ? ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === m)
-      : undefined;
-    if (page) {
-      const path = ["pages", page.id, "table", "columns"];
-      const named = ux.get(path);
-      const columns = Array.isArray(named) ? named.map(String) : defaultColumns(model(ir, m));
-      if (Array.isArray(named) || columns.length >= 5) put(ux, path, [...columns, f]);
+    if (!list) return [];
+    // Shown in its list (the model's first list page), in the same change: added to the columns
+    // the page names, or, where the app picks them and would not pick it, to the ones it picks.
+    const page = ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === m);
+    if (!page) throw new OperationError(`${m} has no list page to show it in.`);
+    const path = ["pages", page.id, "table", "columns"];
+    const named = ux.get(path);
+    if (Array.isArray(named)) put(ux, path, [...named.map(String), f]);
+    else {
+      const parsed = parseFieldShorthand(type);
+      const before = model(ir, m);
+      const added = parsed.ok
+        ? defaultColumns({ ...before, fields: [...before.fields, { name: f, ...parsed.value }] })
+        : [];
+      if (!added.includes(f)) put(ux, path, [...defaultColumns(before), f]);
     }
     return [];
   },
