@@ -1698,6 +1698,87 @@ async function inputSecurityFlow(dir, base) {
 }
 
 /**
+ * A session as a target (security): the session a person has open follows what an administrator
+ * does at once (a new role, a removal), and a session cookie kept after signing out signs nobody in.
+ */
+async function sessionFlow(base) {
+  const browser = await chromium.launch();
+  const adminPage = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const staffPage = await (await browser.newContext()).newPage();
+  const cookieOf = async (page) =>
+    (await page.context().cookies()).map((c) => `${c.name}=${c.value}`).join("; ");
+  const who = async (cookie) => {
+    const answer = await fetch(`${base}/api/auth/get-session`, { headers: { cookie } });
+    return answer.ok ? ((await answer.json())?.user ?? null) : null;
+  };
+  const check = async (name, fn) => {
+    try {
+      await fn();
+      console.log(`  ✓ security: ${name}`);
+    } catch (error) {
+      console.log(`  ✗ security: ${name}\n    ${String(error.message).split("\n")[0]}`);
+      failures.push(`security: ${name}`);
+    }
+  };
+  try {
+    await signInAs(staffPage, base, "staff");
+    await signInAs(adminPage, base, "admin");
+    await open(adminPage, `${base}/team`);
+    const role = adminPage.getByLabel("Role of Dev staff").filter({ visible: true }).first();
+    await check("a new role reaches the person's open session at once", async () => {
+      const cookie = await cookieOf(staffPage);
+      if ((await who(cookie))?.role !== "staff") throw new Error("the staff session is not staff");
+      await role.selectOption("admin");
+      await adminPage.waitForTimeout(500);
+      const now = (await who(cookie))?.role;
+      await role.selectOption("staff");
+      await adminPage.waitForTimeout(500);
+      if (now !== "admin") throw new Error(`after the change the session's role is ${now}`);
+      if ((await who(cookie))?.role !== "staff") throw new Error("changing back did not reach it");
+    });
+    await check(
+      "a session cookie kept after signing out signs nobody in, and the next sign-in gets a new one",
+      async () => {
+        const kept = await cookieOf(staffPage);
+        const out = await fetch(`${base}/api/auth/sign-out`, {
+          method: "POST",
+          headers: { cookie: kept, Origin: base, "content-type": "application/json" },
+          body: "{}",
+        });
+        if (!out.ok) throw new Error(`signing out gave ${out.status}`);
+        if (await who(kept)) throw new Error("the kept cookie is still signed in");
+        const replayed = await fetch(`${base}/incidents`, {
+          headers: { cookie: kept },
+          redirect: "manual",
+        });
+        if (replayed.status === 200 && (await replayed.text()).includes("Sign out"))
+          throw new Error("a page opened with the kept cookie");
+        await staffPage.context().clearCookies();
+        await signInAs(staffPage, base, "staff");
+        if ((await cookieOf(staffPage)) === kept)
+          throw new Error("the new sign-in has the old cookie");
+      },
+    );
+    await check("removing a person ends their open session", async () => {
+      const cookie = await cookieOf(staffPage);
+      if (!(await who(cookie))) throw new Error("the staff session is not signed in");
+      await open(adminPage, `${base}/team`);
+      await adminPage
+        .locator("tr", { hasText: "Dev staff" })
+        .getByRole("button", { name: "Remove" })
+        .click();
+      await adminPage.getByRole("button", { name: "Remove user" }).click();
+      await adminPage
+        .locator("tr", { hasText: "Dev staff" })
+        .waitFor({ state: "detached", timeout: 10000 });
+      if (await who(cookie)) throw new Error("the removed person is still signed in");
+    });
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Articles (docs/design/articles.md): visitors see the published ones, in the list, as the home
  * page's cards and on their own page with head tags; a draft is not found; an admin's new
  * article gets its address from its title.
@@ -3501,6 +3582,75 @@ test("the model's tool loop", async () => {
           }
         },
       );
+    // A visitor counting through the tools where only part of a model is public (security): with
+    // incidents public only while investigated, nothing the tools answer a visitor tells of the
+    // others: not their number, their values, their titles, their largest number or their ids.
+    if (example === "status")
+      step(
+        "security: a visitor's tools count, add up, split, find, search and read only the public part of a model",
+        () => {
+          const ops = [
+            ["setPublicWhere", "Incident", "status=investigating"],
+            ["addField", "Incident", "minutes", "int"],
+          ];
+          for (const args of ops) {
+            const done = smithable(dir, "op", ...args);
+            if (done.code !== 0) throw new Error(done.out);
+          }
+          const check = join(dir, "src/partly-public-check.test.ts");
+          writeFileSync(
+            check,
+            `import { expect, test } from "vitest";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { callTool } from "./generated/mcp.server";
+
+const visitor = null;
+const ask = (name: string, args: Record<string, unknown>) => callTool(visitor, name, args);
+
+test("only the public part", async () => {
+  const at = new Date("2026-09-01T10:00:00Z");
+  const shown = db.insert(schema.incidents).values({ title: "Shown outage", status: "investigating", detectedAt: at, minutes: 5 }).returning().get();
+  const hidden = db.insert(schema.incidents).values({ title: "Hidden breach", status: "resolved", detectedAt: at, minutes: 999 }).returning().get();
+  db.insert(schema.incidents).values({ title: "Hidden drill", status: "monitoring", detectedAt: at, minutes: 700 }).run();
+  const seen = db.select().from(schema.incidents).all().filter((r) => r.status === "investigating");
+
+  expect(await ask("measure", { kind: "Incident" })).toEqual({ total: seen.length });
+  const largest = (await ask("measure", { kind: "Incident", of: "max minutes" })) as { largest: number; of: { id: number } };
+  expect(largest.largest).toBeLessThan(700);
+  expect(largest.of.id).not.toBe(hidden.id);
+  const summed = (await ask("measure", { kind: "Incident", of: "sum minutes" })) as { sum: number };
+  expect(summed.sum).toBe(seen.reduce((n, r) => n + (r.minutes ?? 0), 0));
+  const split = (await ask("measure", { kind: "Incident", by: "status" })) as { rows: { value: unknown }[] };
+  expect(split.rows.map((r) => r.value)).toEqual(["investigating"]);
+  expect(await ask("find", { kind: "Incident", where: { status: "resolved" } })).toMatchObject({ total: 0 });
+  expect(await ask("find", { kind: "Incident", search: "Hidden" })).toMatchObject({ total: 0 });
+  expect(await ask("find", { kind: "Incident", search: "Shown" })).toMatchObject({ total: 1 });
+  expect(await ask("find", { kind: "Incident", where: { minutes: { over: 100 } } })).toMatchObject({ total: 0 });
+  expect(await ask("find", { kind: "Incident", where: { minutes: { over: 1 } } })).toMatchObject({ total: 1 });
+  const listed = JSON.stringify(await ask("find", { kind: "Incident", limit: 50 }));
+  expect(listed).not.toContain("Hidden");
+  expect(listed).toContain(shown.title);
+  // The visitor reads the public one, by id and by title; never a hidden one.
+  expect(await ask("read", { kind: "Incident", id: shown.id })).toMatchObject({ title: "Shown outage" });
+  expect(await ask("read", { kind: "Incident", id: "Shown outage" })).toMatchObject({ id: shown.id });
+  await expect(ask("read", { kind: "Incident", id: hidden.id })).rejects.toThrow();
+  await expect(ask("read", { kind: "Incident", id: "Hidden breach" })).rejects.toThrow();
+  expect(JSON.stringify(await ask("describe", { kind: "Incident" }))).not.toContain("Hidden");
+});
+`,
+          );
+          try {
+            run("pnpm", ["exec", "vitest", "run", "src/partly-public-check.test.ts"], dir);
+          } finally {
+            rmSync(check);
+          }
+          for (const _ of ops) {
+            const undone = smithable(dir, "undo");
+            if (undone.code !== 0) throw new Error(undone.out);
+          }
+        },
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -3534,6 +3684,7 @@ test("the model's tool loop", async () => {
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "status") await statusFlow(base);
+      if (example === "status") await sessionFlow(base);
       if (example === "api") await apiFlow(base);
       if (example === "invoicing") {
         await copyFlow(base);
