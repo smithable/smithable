@@ -18,7 +18,13 @@ import {
   validateSpec,
   YamlEditor,
 } from "@smithable/core";
-import { countValues, pruneSnapshots, restoreDatabase, snapshotDatabase } from "./database.js";
+import {
+  countValue,
+  countValues,
+  pruneSnapshots,
+  restoreDatabase,
+  snapshotDatabase,
+} from "./database.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import {
@@ -167,7 +173,9 @@ async function applyAndCheckpoint(
     .ir as SpecIR;
 
   lap("apply and validate");
-  const blocker = requiredButEmpty(dir, before, after, result.effects);
+  const blocker =
+    requiredButEmpty(dir, before, after, result.effects) ??
+    choicesInUse(dir, before, after, result.effects);
   lap("required but empty");
   if (blocker) {
     io.err(`${blocker}\n`);
@@ -251,11 +259,22 @@ async function applyAndCheckpoint(
         ? [{ model: e.model, from: e.from, to: e.to, reference: e.storage === "reference" }]
         : [],
     );
+    // Records holding a choice value that goes get what the change says.
+    const values = result.effects.flatMap((e) =>
+      e.kind === "change-field" && e.renamed
+        ? Object.entries(e.renamed).map(([from, to]) => ({
+            model: e.model,
+            field: e.field,
+            from,
+            to,
+          }))
+        : [],
+    );
     const code = await generate(dir, io, {
       tools: true,
       onlyChanged: true,
       force: false,
-      migration: { name: migrationName(result.description), renames, apply: true },
+      migration: { name: migrationName(result.description), renames, values, apply: true },
     });
     if (code !== 0) return fail(`Regenerating the app failed.`);
     lap("generate and tools");
@@ -308,11 +327,72 @@ export function actionNote(action: string): string {
 }
 
 /**
+ * Stops a choice field losing a value that records or samples still hold, unless the change
+ * says what they get instead: it names the value, how many hold it, and how to say it.
+ */
+function choicesInUse(
+  dir: string,
+  before: SpecIR,
+  after: SpecIR,
+  effects: Effect[],
+): string | undefined {
+  for (const effect of effects) {
+    if (effect.kind !== "change-field" || !effect.choices.length) continue;
+    const old = before.models
+      .find((m) => m.name === effect.model)
+      ?.fields.find((f) => f.name === effect.field);
+    if (old?.type.kind !== "choice") continue;
+    const gone = old.type.values.filter(
+      (v) => !effect.choices.includes(v) && !(v in (effect.renamed ?? {})),
+    );
+    const { table, column } = columnOf(effect.model, effect.field);
+    const file = join(dir, "samples", `${effect.model}.yml`);
+    const rows = existsSync(file) ? new YamlEditor(readFileSync(file, "utf8")).get([]) : [];
+    const samples = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
+    for (const value of gone) {
+      const records = countValue(dir, table, column, value) ?? 0;
+      const inSamples = samples.filter((row) => row?.[effect.field] === value).length;
+      if (!records && !inSamples) continue;
+      const held = [
+        records ? `${records} ${records === 1 ? "record" : "records"}` : "",
+        inSamples ? `${inSamples} ${inSamples === 1 ? "sample" : "samples"}` : "",
+      ]
+        .filter(Boolean)
+        .join(" and ");
+      // Left empty only where the field may be empty.
+      const field = after.models
+        .find((m) => m.name === effect.model)
+        ?.fields.find((f) => f.name === effect.field);
+      const empty = field && !field.required ? ` (or ${value}= to leave them empty)` : "";
+      return `${held} of ${effect.model} still hold "${value}" in ${effect.field}. Say what they get instead: --renames ${value}=${effect.choices[0]}${empty}.`;
+    }
+  }
+  return undefined;
+}
+
+/**
  * A renamed or removed field follows into the project's sample records (samples/<Model>.yml),
  * as it does into the companions: the key is renamed or dropped in every record, comments kept.
  */
 function followInSamples(dir: string, effects: Effect[]): void {
   for (const effect of effects) {
+    // A choice value that goes: each sample holding it gets the new one, or loses it.
+    if (effect.kind === "change-field" && effect.renamed) {
+      const file = join(dir, "samples", `${effect.model}.yml`);
+      if (!existsSync(file)) continue;
+      const editor = new YamlEditor(readFileSync(file, "utf8"));
+      const rows = editor.get([]);
+      for (let i = 0; Array.isArray(rows) && i < rows.length; i++) {
+        const path = [String(i), effect.field];
+        const value = editor.has(path) ? String(editor.get(path)) : undefined;
+        if (value === undefined || !(value in effect.renamed)) continue;
+        const to = effect.renamed[value];
+        if (to) editor.set(path, to);
+        else editor.remove(path);
+      }
+      writeFileSync(file, editor.text);
+      continue;
+    }
     if (effect.kind !== "rename-field" && effect.kind !== "remove-field") continue;
     const file = join(dir, "samples", `${effect.model}.yml`);
     if (!existsSync(file)) continue;
