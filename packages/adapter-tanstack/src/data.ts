@@ -310,7 +310,9 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     (p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name),
   );
   // A model the API offers is listed a page at a time, counted and sliced in the query.
-  const paged = apiOffers(auth, ir).models.includes(model.name);
+  // Finding, counting and adding up: for a model the API offers, and for every model when the
+  // app has "Ask" (docs/design/assistant.md §6), which reads what its person may read.
+  const paged = apiOffers(auth, ir).models.includes(model.name) || Boolean(auth.assistant);
   // Records with an owner the app keeps itself (not a field of the spec): who owns one is told only
   // to its owner and to roles that read every record, never to a visitor or another member.
   const ownedAuto = signedIn && !model.ownedBy;
@@ -580,7 +582,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/api.server";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
