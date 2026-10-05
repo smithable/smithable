@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { STARTER_TEXTS } from "@smithable/ai";
 import { findOperation, SPEC_VERSION } from "@smithable/core";
 import { ask } from "./ask.js";
 import { backup, restore } from "./backup.js";
@@ -164,6 +165,20 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         return 2;
       }
       return clarify(io, args.join(" "), values.json === true);
+    case "starters": {
+      // Each starter with its own description (packages/ai starter-descriptions.ts): the text a
+      // start page shows for it, and that builds it without a model.
+      const starters = Object.entries(STARTER_TEXTS).map(([name, { text }]) => ({
+        name,
+        description: text,
+      }));
+      io.out(
+        values.json === true
+          ? `${JSON.stringify(starters)}\n`
+          : starters.map((s) => `${s.name}\n  ${s.description}\n`).join(""),
+      );
+      return 0;
+    }
     case "run":
       return runDev(dir, io, values.open !== false);
     case "build":
