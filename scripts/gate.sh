@@ -11,6 +11,12 @@
 # and does not get a session through sooner either: a gate tests the worktree as it is when its
 # turn comes, so several small changes in one worktree cost one gate, not one each.
 #
+# When too many are ahead, it does not wait: it exits 75 and says to let CI run the full check
+# instead (the pull request's `full-ci` label; the examples run there as parallel jobs, about six
+# minutes, with no queue). "Too many" is more than GATE_AHEAD_MAX gates ahead, the running one
+# counted: 1 by default, so with two or more ahead, which is about twenty minutes of waiting.
+# Busy alone is not enough (Johan, 2026-10-05). GATE_AHEAD_MAX=99 waits whatever the queue.
+#
 # A change that touches only Studio's web app (apps/studio, scripts/test-studio.mjs) and plain
 # documents skips the example apps: their checks never load it. Everything else is the full
 # check. The exit status is the check's. The lock is released when the gate ends, however it ends.
@@ -49,6 +55,20 @@ fi
 ticket="$queue/$(date +%s%N).$$"
 printf '%s\t%s\n' "$session" "$(pwd)" > "$ticket"
 trap 'rm -f "$ticket"' EXIT
+
+# How many gates are ahead of this one: those whose turn comes first, and the one running.
+ahead=$(waiting | awk -F'\t' -v me="${ticket##*/}" '$1 == me { exit } { n++ } END { print n + 0 }')
+[ -e "$lock.who" ] && ahead=$((ahead + 1))
+if [ "$ahead" -gt "${GATE_AHEAD_MAX:-1}" ]; then
+  cat >&2 <<MSG
+gate.sh: $ahead gates are ahead (about $((ahead * 9)) minutes), so this one does not wait.
+Let CI run the full check instead: run "pnpm lint && pnpm build && pnpm test" here (no lock
+needed), commit, push, and open the pull request with the label full-ci
+(gh pr create --label full-ci …, or gh pr edit <pr> --add-label full-ci). scripts/merge-green.sh
+merges it when that check has passed. To wait here anyway: GATE_AHEAD_MAX=99 scripts/gate.sh
+MSG
+  exit 75
+fi
 exec 9>"$lock"
 said=
 until [ "$(waiting | head -1 | cut -f1)" = "${ticket##*/}" ] && flock -n 9; do
