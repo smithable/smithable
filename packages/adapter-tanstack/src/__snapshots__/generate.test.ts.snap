@@ -7437,7 +7437,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "96ab364d kit",
   "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "4da11b8c kit",
+  "src/kit/assistant.server.ts": "4f545dca kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
