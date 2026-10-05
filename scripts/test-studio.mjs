@@ -454,6 +454,69 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
   await step(
+    "a stylesheet the preview cannot build after a change starts the preview again (finding 3)",
+    async () => {
+      const post = async (path, body) =>
+        (
+          await fetch(`${base}${path}`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-smithable": "1" },
+            body: JSON.stringify(body),
+          })
+        ).json();
+      const failed = async () =>
+        (await (await fetch(`${base}/api/logs`)).json()).filter((l) =>
+          l.startsWith("The preview's stylesheet failed"),
+        ).length;
+      // The undo before restarted the preview: wait for it.
+      for (const deadline = Date.now() + 120000; ; ) {
+        try {
+          if ((await fetch(`http://localhost:${port + 1}/health`)).ok) break;
+        } catch {}
+        if (Date.now() > deadline) throw new Error("the preview did not come back");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      // What Studio asks for is the app's stylesheet, with the theme in it.
+      const sheet = await fetch(`http://localhost:${port + 1}/src/styles.css?direct`);
+      if (!sheet.ok || !(await sheet.text()).includes("--font-body"))
+        throw new Error(`the preview's stylesheet answered ${sheet.status}`);
+      const before = await failed();
+      const custom = join(dir, "src", "custom", "styles.css");
+      const own = readFileSync(custom, "utf8");
+      // Committed as the owner's own edits, so an operation may run after them (undo passes
+      // them by).
+      const commit = (message) =>
+        spawnSync(
+          "git",
+          ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qam", message],
+          { cwd: dir },
+        );
+      writeFileSync(custom, `${own}\n.broken { @apply no-such-utility; }\n`);
+      commit("A stylesheet that does not build");
+      try {
+        const answer = await post("/api/op", { name: "setTheme", args: { primary: "#2563eb" } });
+        if (!answer.ok) throw new Error(answer.output);
+        for (const deadline = Date.now() + 60000; (await failed()) === before; ) {
+          if (Date.now() > deadline) throw new Error("the failing stylesheet was not noticed");
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      } finally {
+        writeFileSync(custom, own);
+        commit("The stylesheet as it was");
+      }
+      const undone = await post("/api/undo", {});
+      if (!undone.ok) throw new Error(undone.output);
+      // The undo starts the preview again; the next steps need it up.
+      for (const deadline = Date.now() + 120000; ; ) {
+        try {
+          if ((await fetch(`http://localhost:${port + 1}/health`)).ok) break;
+        } catch {}
+        if (Date.now() > deadline) throw new Error("the preview did not come back");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    },
+  );
+  await step(
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
       const look = page.getByRole("region", { name: "Theme" });

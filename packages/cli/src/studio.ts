@@ -203,7 +203,9 @@ export async function studio(
    * first (TanStack Start is still rebuilding after its watcher goes quiet), then the editor
    * plugin's /__smithable/settled. Reloading earlier can leave the preview's request hanging;
    * an operation that finished quickly made that likely. The operation's own answer does not
-   * wait for this.
+   * wait for this. A stylesheet the dev server cannot build any more (seen after a look change
+   * and several undos: the preview kept the old look while the change was done) starts the
+   * preview again, once per change; one still failing after that is the app's own error.
    */
   const changed = (data: unknown) =>
     void new Promise((r) => setTimeout(r, 800))
@@ -212,6 +214,17 @@ export async function studio(
           signal: AbortSignal.timeout(5000),
         }),
       )
+      .then(() =>
+        fetch(`http://127.0.0.1:${previewPort}/src/styles.css?direct`, {
+          signal: AbortSignal.timeout(10_000),
+        }),
+      )
+      .then((answer) => {
+        if (answer.status < 500) return;
+        log(`The preview's stylesheet failed (${answer.status}); starting the preview again.\n`);
+        stopApp();
+        startApp();
+      })
       .catch(() => undefined)
       .then(() => send("changed", data));
   // The preview runs with the editor (select, drag columns) through a wrapper config in data/,
