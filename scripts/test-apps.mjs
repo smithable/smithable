@@ -4034,7 +4034,8 @@ const sessionCookie = async (url: string) => {
   vi.resetModules();
   process.env.BETTER_AUTH_URL = url;
   const { auth } = await import("#/lib/auth");
-  return (await auth.$context).authCookies.sessionToken;
+  const context = await auth.$context;
+  return { ...context.authCookies.sessionToken, state: context.createAuthCookie("state") };
 };
 
 test("the session cookie's name and attributes", async () => {
@@ -4042,6 +4043,9 @@ test("the session cookie's name and attributes", async () => {
   expect(https.name).toBe("__Host-better-auth.session_token");
   expect(https.attributes).toMatchObject({ secure: true, path: "/" });
   expect(https.attributes.domain).toBeUndefined();
+  // A sign-in's state cookie stays Secure, and only this address's.
+  expect(https.state.name).toBe("__Host-better-auth.state");
+  expect(https.state.attributes.secure).toBe(true);
   const http = await sessionCookie("http://localhost:3000");
   expect(http.name.startsWith("__Host-")).toBe(false);
 });
