@@ -2,10 +2,11 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Union jobs, posted for our members
-      subtitle: Browse open positions from local employers and apply in a few minutes.
+      title: Good work, found through your union
+      subtitle: Browse the openings shared by the union and apply in a few minutes once you sign in.
+      button: See open jobs
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
     latest:
       title: Open jobs

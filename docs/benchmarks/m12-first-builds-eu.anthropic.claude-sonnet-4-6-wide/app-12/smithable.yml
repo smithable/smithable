@@ -19,7 +19,7 @@ models:
       summary: markdown
       updates: IncidentUpdate[]
     access:
-      write: [admin, staff]
+      write: [admin, writer]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -45,6 +45,10 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
       planned:
         records: Maintenance
   incidents:
@@ -84,7 +88,7 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
+    allow: [admin, writer]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -97,7 +101,7 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
+    allow: [admin, writer]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -111,5 +115,5 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    allow: [admin, staff]
+    allow: [admin, writer]
     intent: The incident is over, with an update saying so.

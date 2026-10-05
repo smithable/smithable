@@ -1,0 +1,60 @@
+smithable: 0.1
+app:
+  name: IT Help Desk
+  description: A place for the IT team to track and resolve support tickets.
+models:
+  Ticket:
+    fields:
+      title: string!
+      description: text!
+      priority: low | normal | high | critical
+      status: new | assigned | inProgress | resolved | closed
+      assignee: User
+      createdBy: User!
+      resolvedAt: datetime
+    access:
+      create: [itStaff]
+      write: [owner]
+      delete: [itStaff]
+    ownedBy: assignee
+pages:
+  tickets:
+    crud: Ticket
+    search: [title, description]
+    actions: [assign, startProgress, resolve, close]
+  admin:
+    data: all
+  team:
+    users: manage
+actions:
+  assign:
+    on: Ticket
+    when:
+      status: [new, assigned]
+    set:
+      status: assigned
+      assignee: ME()
+    intent: Assign the ticket to yourself.
+  startProgress:
+    on: Ticket
+    when:
+      status: [assigned, inProgress]
+    set:
+      status: inProgress
+    intent: Mark the ticket as in progress.
+  resolve:
+    on: Ticket
+    when:
+      status: inProgress
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    intent: Mark the ticket as resolved.
+  close:
+    on: Ticket
+    when:
+      status: resolved
+    set:
+      status: closed
+    intent: Close the ticket.
+navigation: [tickets, team, admin]

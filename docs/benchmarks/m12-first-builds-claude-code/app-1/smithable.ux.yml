@@ -1,7 +1,3 @@
 smithableUx: 0.1
 theme:
-  preset: minimal
-  brand:
-    primary: "#7c6a9e"
-    background: "#f6f2ec"
-    font: Nunito Sans
+  preset: woodland

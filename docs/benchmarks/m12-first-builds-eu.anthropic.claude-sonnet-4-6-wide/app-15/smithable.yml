@@ -1,22 +1,24 @@
 smithable: 0.1
 app:
-  name: BirdWatch Club
-  description: A place for our birdwatching club to record and share bird sightings.
+  name: Birdwatching Club
+  description: Record and share bird sightings for our birdwatching club.
 models:
   Sighting:
     fields:
       species: string!
       place: string!
       seenOn: date! = TODAY()
-      seenBy: string!
       notes: text
 pages:
   sightings:
     crud: Sighting
-    search: [species, place, seenBy]
-    sortable: [species, place, seenOn, seenBy]
+    search: [species, place]
+    filters: [seenOn]
+    sortable: [species, place, seenOn]
   home:
     route: /
     landing:
       hero:
       footer:
+  team:
+    users: manage

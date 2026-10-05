@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Loppisen
-  description: Lägg upp saker du vill sälja och hitta fynd från andra i närheten.
+  description: Köp och sälj begagnade prylar på vår lokala loppis.
   currency: SEK
 pages:
   home:
@@ -11,14 +11,14 @@ pages:
       footer:
       latest:
         records: Item
-      callToAction:
-        button: catalog
+  team:
+    users: manage
   catalog:
     route: /
     crud: Item
     search: [title, place]
-    filters: [category, price, condition, available]
-    sortable: [price, createdAt]
+    filters: [category, price, condition]
+    sortable: [price]
     favorites: true
     contact: owner
   myItems:
@@ -34,8 +34,8 @@ models:
       photos: pictures
       description: text!
       price: money
-      category: klder | mbler | bcker | elektronik | sport | barn | vrigt
-      condition: somNy | bra | anvnd
+      category: klader | mobler | elektronik | sport | barn | bocker | ovrigt
+      condition: somNy | bra | anvand
       place: string
       available: bool = true
-navigation: [catalog, myItems, saved]
+navigation: [catalog, myItems, saved, team]

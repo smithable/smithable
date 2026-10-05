@@ -1,6 +1,6 @@
-# M12 first builds: claude-code, the second set (2026-10-04)
+# M12 first builds: claude-code, the second set (2026-10-04; 2 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 22 / 22 created, 21 type-check, 620,775 tokens (563,311 in, 57,464 out), $1.5571 (as Claude Code reports it; the run was on a subscription); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 22 type-check, 674,998 tokens (614,873 in, 60,125 out), $1.6392 (as Claude Code reports it); 0 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
@@ -26,36 +26,42 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa. | booking | yes | yes | 24,000 | 4,263 | $0.1065 | 0 | 1 | 57 s |
 | Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. | crm | yes | yes | 23,556 | 4,678 | $0.1112 | 0 | 1 | 52 s |
 | Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | booking | yes | yes | 24,000 | 4,882 | $0.1189 | 0 | 1 | 59 s |
+| A backend for my habit app: habits, daily check-ins and streaks. *(rerun 2026-10-05)* | records | yes | **no** | 25,629 | 1,290 | $0.0390 | 0 | 1 | 24 s |
+| Somewhere my AI assistant keeps my tasks and notes, by project. *(rerun 2026-10-05)* | api | yes | yes | 25,933 | 1,371 | $0.0431 | 0 | 1 | 21 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code-wide/](m12-first-builds-claude-code-wide/), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)
 
-| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Starter's texts in the draft | Models with the starter's samples | Visitors / landing | Language | App name in it | Labels in it | Landing texts in it | With a text of their own |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | invoicing (words: crm) | 2 | 1 / 4 (has 3) | 2 / 7 (has 4) | 0 / 2 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 1 / 3 | no mention; no landing page | en | | | | |
-| 2 | crm | 3 | 0 / 2 (has 2) | 1 / 3 (has 5) | 0 / 1 (has 4) | shared; admin, sales (sales) | none | pages none; read none; create none | 1 (no-timezone) | none | 0 / 2 | no mention; no landing page | en | | | | |
-| 3 | booking | 3 | 1 / 6 (has 4) | 4 / 10 (has 7) | 0 / 0 (has 0) | private; admin, customer (customer) | slots: admin, stylists: admin, services: admin | pages home, schedule; read Service, Stylist, Slot; create none | 2 (no-timezone, shortcut-closed) | none | 0 / 4 | no mention; landing page | en | | | | |
-| 4 | records (words: crm) | 3 | 0 / 1 (has 2) | 0 / 2 (has 2) | 0 / 0 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
-| 5 | invoicing | 3 | 3 / 4 (has 4) | 4 / 7 (has 5) | 2 / 2 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 3 / 4 | no mention; no landing page | en | | | | |
-| 6 | invoicing (words: booking) | 3 | 2 / 4 (has 3) | 3 / 7 (has 5) | 2 / 2 (has 4) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | en | | | | |
-| 7 | marketplace | 3 | 1 / 1 (has 1) | 4 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none | 1 / 1 | mentions visitors; landing page | en | | | | |
-| 8 | marketplace (words: invoicing) | 3 | 1 / 1 (has 1) | 1 / 4 (has 3) | 0 / 0 (has 3) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 1 / 1 | no mention; no landing page | en | | | | |
-| 9 | records (words: crm) | 2 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
-| 10 | records (words: marketplace) | 3 | 1 / 1 (has 1) | 2 / 2 (has 2) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, items; read Item; create none | 0 | none | 1 / 1 | mentions visitors; landing page | en | | | | |
-| 11 | status | 3 | 4 / 4 (has 4) | 6 / 8 (has 6) | 3 / 3 (has 3) | shared; admin, it, staff (staff) | none | pages none; read none; create none | 0 | none | 4 / 4 | no mention; no landing page | en | | | | |
-| 12 | status | 2 | 4 / 4 (has 4) | 7 / 8 (has 7) | 3 / 3 (has 3) | shared; admin, staff (staff) | components: admin | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none | 4 / 4 | no mention; landing page | en | | | | |
-| 13 | records (words: status) | 3 | 0 / 1 (has 3) | 0 / 2 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 3 | no mention; no landing page | en | | | | |
-| 14 | records (words: invoicing) | 3 | 0 / 1 (has 2) | 0 / 2 (has 4) | 0 / 0 (has 2) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
-| 15 | records (words: booking) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 2 | no mention; no landing page | en | | | | |
-| 16 | records (words: booking) | 3 | 0 / 1 (has 4) | 0 / 2 (has 5) | 0 / 0 (has 5) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 4 | no mention; no landing page | en | | | | |
-| 17 | booking (words: records) | 3 (sv: yes (kunderna, ett, för)) | 1 / 6 (has 4) | 2 / 10 (has 7) | 0 / 0 (has 0) | private; admin, customer (customer) | tider: admin, tjanster: admin, frisorer: admin | pages home, boka; read Service, Stylist, Slot; create none | 1 (shortcut-closed) | none | 0 / 4 | no mention; landing page | sv | no | yes (tid, bokning, till) | yes (boka, på, nätet) | models 4/4, fields 14/16, pages 7/7 |
-| 18 | invoicing (words: records) | 3 (sv: yes (ska, att, en)) | 2 / 4 (has 5) | 0 / 7 (has 7) | 2 / 2 (has 5) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 0 / 5 | no mention; no landing page | sv | no | yes (till) | none | models 5/5, fields 26/32, pages 6/7 |
-| 19 | marketplace (words: records) | 3 (sv: yes (ska, lägga, saker)) | 1 / 1 (has 1) | 4 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none | 1 / 1 | no mention; landing page | sv | yes (vår, loppis) | yes (bilder, pris, till) | yes (på, vår, loppis) | models 1/1, fields 7/7, pages 4/4 |
-| 20 | booking (words: records) | 3 (fi: yes (asiakkaat, tai)) | 4 / 6 (has 4) | 7 / 10 (has 7) | 0 / 0 (has 0) | private; admin, member (member) | sessions: admin, class-types: admin, instructors: admin | pages home, schedule; read ClassType, Instructor, Session; create none | 1 (shortcut-closed) | none | 3 / 4 | no mention; landing page | fi | no | yes (varaukset, varaus) | yes (ja, verkossa, tunnit) | models 4/4, fields 14/14, pages 7/7 |
-| 21 | crm (words: records) | 3 (fi: yes (asiakkaat, tai)) | 1 / 2 (has 4) | 1 / 3 (has 5) | 0 / 1 (has 4) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none | 1 / 4 | no mention; no landing page | fi | no | no | none | models 4/4, fields 24/27, pages 4/5 |
-| 22 | booking (words: records) | 3 (de: yes (die, vorbestellungen, abholzeiten)) | 0 / 6 (has 4) | 2 / 10 (has 5) | 0 / 0 (has 3) | private; admin, customer (customer) | none | pages home, produkte; read Product; create none | 1 (capacity-no-unique) | none | 0 / 4 | no mention; landing page | de | yes (hofladen) | no | yes (und, hofladen) | models 4/4, fields 14/16, pages 5/5 |
+3 of 24 drafts end with a warning about what is public (*Public flaws left*: public-personal-data, public-page-closed-records, contact-form-closed, shortcut-closed, mine-public, visitors-read-drafts); since #266 a draft with one goes back to the model once to fix it. *API app*, for the second set's two descriptions of apps for programs and assistants: "yes" when the draft has no landing page, an `api` block, tools when the description names an assistant, and a role other than admin for keys; otherwise what it lacks.
+
+| # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | API app | Starter's texts in the draft | Models with the starter's samples | Visitors / landing | Language | App name in it | Labels in it | Landing texts in it | With a text of their own |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | invoicing (words: crm) | 2 | 1 / 4 (has 3) | 2 / 7 (has 4) | 0 / 2 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 1 / 3 | no mention; no landing page | en | | | | |
+| 2 | crm | 3 | 0 / 2 (has 2) | 1 / 3 (has 5) | 0 / 1 (has 4) | shared; admin, sales (sales) | none | pages none; read none; create none | 1 (no-timezone) | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 3 | booking | 3 | 1 / 6 (has 4) | 4 / 10 (has 7) | 0 / 0 (has 0) | private; admin, customer (customer) | slots: admin, stylists: admin, services: admin | pages home, schedule; read Service, Stylist, Slot; create none | 2 (no-timezone, shortcut-closed) | **shortcut-closed** |  | none | 0 / 4 | no mention; landing page | en | | | | |
+| 4 | records (words: crm) | 3 | 0 / 1 (has 2) | 0 / 2 (has 2) | 0 / 0 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 5 | invoicing | 3 | 3 / 4 (has 4) | 4 / 7 (has 5) | 2 / 2 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 3 / 4 | no mention; no landing page | en | | | | |
+| 6 | invoicing (words: booking) | 3 | 2 / 4 (has 3) | 3 / 7 (has 5) | 2 / 2 (has 4) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 3 | no mention; no landing page | en | | | | |
+| 7 | marketplace | 3 | 1 / 1 (has 1) | 4 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none |  | none | 1 / 1 | mentions visitors; landing page | en | | | | |
+| 8 | marketplace (words: invoicing) | 3 | 1 / 1 (has 1) | 1 / 4 (has 3) | 0 / 0 (has 3) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 1 / 1 | no mention; no landing page | en | | | | |
+| 9 | records (words: crm) | 2 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 10 | records (words: marketplace) | 3 | 1 / 1 (has 1) | 2 / 2 (has 2) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, items; read Item; create none | 0 | none |  | none | 1 / 1 | mentions visitors; landing page | en | | | | |
+| 11 | status | 3 | 4 / 4 (has 4) | 6 / 8 (has 6) | 3 / 3 (has 3) | shared; admin, it, staff (staff) | none | pages none; read none; create none | 0 | none |  | none | 4 / 4 | no mention; no landing page | en | | | | |
+| 12 | status | 2 | 4 / 4 (has 4) | 7 / 8 (has 7) | 3 / 3 (has 3) | shared; admin, staff (staff) | components: admin | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none |  | none | 4 / 4 | no mention; landing page | en | | | | |
+| 13 | records (words: status) | 3 | 0 / 1 (has 3) | 0 / 2 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 3 | no mention; no landing page | en | | | | |
+| 14 | records (words: invoicing) | 3 | 0 / 1 (has 2) | 0 / 2 (has 4) | 0 / 0 (has 2) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 15 | records (words: booking) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 16 | records (words: booking) | 3 | 0 / 1 (has 4) | 0 / 2 (has 5) | 0 / 0 (has 5) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 4 | no mention; no landing page | en | | | | |
+| 17 | booking (words: records) | 3 (sv: yes (kunderna, ett, för)) | 1 / 6 (has 4) | 2 / 10 (has 7) | 0 / 0 (has 0) | private; admin, customer (customer) | tider: admin, tjanster: admin, frisorer: admin | pages home, boka; read Service, Stylist, Slot; create none | 1 (shortcut-closed) | **shortcut-closed** |  | none | 0 / 4 | no mention; landing page | sv | no | yes (tid, bokning, till) | yes (boka, på, nätet) | models 4/4, fields 14/16, pages 7/7 |
+| 18 | invoicing (words: records) | 3 (sv: yes (ska, att, en)) | 2 / 4 (has 5) | 0 / 7 (has 7) | 2 / 2 (has 5) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 5 | no mention; no landing page | sv | no | yes (till) | none | models 5/5, fields 26/32, pages 6/7 |
+| 19 | marketplace (words: records) | 3 (sv: yes (ska, lägga, saker)) | 1 / 1 (has 1) | 4 / 4 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 0 | none |  | none | 1 / 1 | no mention; landing page | sv | yes (vår, loppis) | yes (bilder, pris, till) | yes (på, vår, loppis) | models 1/1, fields 7/7, pages 4/4 |
+| 20 | booking (words: records) | 3 (fi: yes (asiakkaat, tai)) | 4 / 6 (has 4) | 7 / 10 (has 7) | 0 / 0 (has 0) | private; admin, member (member) | sessions: admin, class-types: admin, instructors: admin | pages home, schedule; read ClassType, Instructor, Session; create none | 1 (shortcut-closed) | **shortcut-closed** |  | none | 3 / 4 | no mention; landing page | fi | no | yes (varaukset, varaus) | yes (ja, verkossa, tunnit) | models 4/4, fields 14/14, pages 7/7 |
+| 21 | crm (words: records) | 3 (fi: yes (asiakkaat, tai)) | 1 / 2 (has 4) | 1 / 3 (has 5) | 0 / 1 (has 4) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 1 / 4 | no mention; no landing page | fi | no | no | none | models 4/4, fields 24/27, pages 4/5 |
+| 22 | booking (words: records) | 3 (de: yes (die, vorbestellungen, abholzeiten)) | 0 / 6 (has 4) | 2 / 10 (has 5) | 0 / 0 (has 3) | private; admin, customer (customer) | none | pages home, produkte; read Product; create none | 1 (capacity-no-unique) | none |  | none | 0 / 4 | no mention; landing page | de | yes (hofladen) | no | yes (und, hofladen) | models 4/4, fields 14/16, pages 5/5 |
+| 23 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 2) | 0 / 0 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | yes | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 24 | api | 0 | 3 / 3 (has 3) | 2 / 2 (has 2) | 2 / 2 (has 2) | shared; admin, member, assistant (member) | admin: admin/member | pages none; read none; create none | 0 | none | yes | none | 3 / 3 | no mention; no landing page | en | | | | |
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names what the draft dropped because it could not be made valid: an action by its name, anything else (a formula field, a capacity) with its operation. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one `new --describe --yes` printed, with the word-match starter (`closestStarter`) beside it when it differs; "Questions" counts what `smithable clarify` would ask (`--yes` asks nothing), with their language for a description not in English. For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file.
 <!-- /scorecard -->
@@ -1813,4 +1819,147 @@ Created /tmp/smithable-bench-m12-4VaGel/app-22. Start it with:
   smithable run
 /tmp/smithable-bench-m12-4VaGel/app-22/smithable.yml:36:7  warning  Preorder has a capacity per pickupSlot, but "pickupSlot" is not unique: one person can take several places.
     hint: Write "pickupSlot: PickupSlot! unique" for one preorder per person and pickupslot (unique per owner with private access).
+```
+
+### 23. A backend for my habit app: habits, daily check-ins and streaks.
+
+```text
+Habit Tracker
+  A backend for a habit app: each person's habits, daily check-ins and streaks.
+
+Pages
+  - Habits (lists habits; search by name or description; filter by status or frequency; sort by name, current streak, longest streak or started on; “Archive”; “Reactivate”)
+  - Check ins (lists check ins; filter by habit or date)
+
+Habits
+  Habits have:
+  - a name (required)
+  - a description
+  - a frequency (daily, weekdays or weekly, daily by default)
+  - status (active or archived, active by default)
+  - started on (a date, required, today by default)
+  - a current streak (a whole number, 0 by default)
+  - a longest streak (a whole number, 0 by default)
+  Each habit lists its check ins.
+
+Check ins
+  Check ins have:
+  - a habit (a habit, required)
+  - a date (required, today by default)
+  - a note
+
+Archive
+  For a habit that is active; sets status to archived.
+  Stop tracking a habit while keeping its history.
+
+Reactivate
+  For a habit that is archived; sets status to active.
+  Start tracking an archived habit again.
+
+Sign-in and access
+  People sign in with a code sent to their email.
+  Everyone sees and changes only their own records.
+  Roles:
+  - admin
+  - member
+  New users get the member role.
+  Other programs can read and change habits and check ins with a key, and run archive and reactivate.
+No pictures: none of the library's files could be fetched.
+Generated 91 files (91 changed, 0 removed).
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-C77g61/app-23/drizzle.config.ts'
+7 tables
+account 13 columns 1 indexes 1 fks
+audit_log 13 columns 2 indexes 0 fks
+check_ins 7 columns 0 indexes 2 fks
+habits 11 columns 0 indexes 1 fks
+session 8 columns 2 indexes 1 fks
+user 8 columns 1 indexes 0 fks
+verification 6 columns 1 indexes 0 fks
+
+[✓] Your SQL migration file ➜ drizzle/0000_tearful_thing.sql 🚀
+
+Created /tmp/smithable-bench-m12-C77g61/app-23. Start it with:
+
+  cd /tmp/smithable-bench-m12-C77g61/app-23
+  smithable run
+```
+
+### 24. Somewhere my AI assistant keeps my tasks and notes, by project.
+
+```text
+My Projects
+  Tasks and notes, grouped by project, that my AI assistant keeps for me.
+
+Pages
+  - Admin (every kind of record, to find, open, change and delete; only for member users and admins)
+  - Team (who has access: invite people, change roles, remove users)
+
+Projects
+  Projects have:
+  - a name (required)
+  - a description
+  Each project lists its tasks.
+  Each project lists its notes.
+  Only member users and admins can add projects.
+  Only member users and admins can change projects.
+  Only member users and admins can delete projects.
+
+Tasks
+  Tasks have:
+  - a title (required)
+  - a project (a project, required)
+  - status (todo, doing or done, todo by default)
+  - a due date
+  - details
+  Only member users, assistant users and admins can change tasks.
+  Only member users and admins can delete tasks.
+
+Notes
+  Notes have:
+  - a title (required)
+  - a project (a project, required)
+  - a body
+  Only member users, assistant users and admins can change notes.
+  Only member users and admins can delete notes.
+
+Complete
+  For a task that is todo or doing; sets status to done.
+  Mark a task as done.
+
+Reopen
+  For a task that is done; sets status to todo.
+  Open a finished task again.
+
+Sign-in and access
+  People sign in with a code sent to their email.
+  Everyone who signs in sees all records, and changes and deletes the ones they own.
+  Roles:
+  - admin
+  - member (Works with the projects, tasks and notes)
+  - assistant (The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes)
+  New users get the member role.
+  Other programs can read and change every kind of record, also ones added later, with a key, and run complete and reopen. AI assistants can use it too.
+No pictures: none of the library's files could be fetched.
+Generated 117 files (117 changed, 0 removed).
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/tmp/smithable-bench-m12-C77g61/app-24/drizzle.config.ts'
+10 tables
+account 13 columns 1 indexes 1 fks
+api_key 10 columns 1 indexes 0 fks
+audit_log 13 columns 2 indexes 0 fks
+invitation 7 columns 2 indexes 1 fks
+notes 7 columns 0 indexes 2 fks
+projects 6 columns 0 indexes 1 fks
+session 8 columns 2 indexes 1 fks
+tasks 9 columns 0 indexes 2 fks
+user 8 columns 1 indexes 0 fks
+verification 6 columns 1 indexes 0 fks
+
+[✓] Your SQL migration file ➜ drizzle/0000_lazy_luckman.sql 🚀
+
+Created /tmp/smithable-bench-m12-C77g61/app-24. Start it with:
+
+  cd /tmp/smithable-bench-m12-C77g61/app-24
+  smithable run
 ```

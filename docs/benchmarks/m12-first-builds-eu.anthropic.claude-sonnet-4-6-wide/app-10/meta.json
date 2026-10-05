@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "marketplace",
   "questions": [
-    "What information does each object in the collection hold?",
-    "Can visitors search or filter the collection without signing in?",
-    "Who can add or edit objects in the collection?"
+    "Who can add or edit objects in the collection?",
+    "What do you want to record for each object?",
+    "Can visitors search or filter the collection?"
   ]
 }

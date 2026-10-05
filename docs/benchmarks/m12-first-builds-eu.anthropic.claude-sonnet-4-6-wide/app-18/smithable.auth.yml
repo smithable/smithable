@@ -1,12 +1,5 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
-roles:
-  admin:
-    description: Företagsledning. Full åtkomst.
-  sales:
-    description: Arbetar med kunder, offerter och fakturor.
-defaultRole: sales
+defaultAccess: private
 admins: [johan@smithable.ai]

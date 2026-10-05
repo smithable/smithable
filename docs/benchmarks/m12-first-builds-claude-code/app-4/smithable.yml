@@ -1,14 +1,15 @@
 smithable: 0.1
 app:
   name: Toolshed
-  description: Neighbors lend each other tools instead of each buying their own.
+  description: Neighbors lend each other tools instead of buying their own.
+  currency: EUR
 models:
   Tool:
     fields:
       title: string!
       photos: pictures
       description: text!
-      category: powerTools | handTools | garden | ladders | cleaning | other
+      category: power | garden | hand | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -38,17 +39,17 @@ pages:
           available: true
 navigation: [catalog, myTools, saved]
 actions:
-  lendOut:
+  markLent:
     on: Tool
     when:
       available: true
     set:
       available: false
-    intent: Mark a tool as lent to a neighbor.
+    intent: Mark the tool as lent out to a neighbor.
   markReturned:
     on: Tool
     when:
       available: false
     set:
       available: true
-    intent: Mark a lent tool as back and available again.
+    intent: Mark the tool as back and ready to lend again.

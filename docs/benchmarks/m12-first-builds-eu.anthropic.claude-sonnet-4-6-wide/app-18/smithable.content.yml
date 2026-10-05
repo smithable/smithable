@@ -1,4 +1,13 @@
 smithableContent: 0.1
+pages:
+  customers:
+    title: Kunder
+  quotes:
+    title: Offerter
+  invoices:
+    title: Fakturor
+  overview:
+    title: Översikt
 models:
   Customer:
     label: Kund
@@ -12,10 +21,8 @@ models:
         label: Telefon
       address:
         label: Adress
-      notes:
-        label: Anteckningar
-      accountManager:
-        label: Ansvarig
+      orgNumber:
+        label: Organisationsnummer
   Quote:
     label: Offert
     pluralLabel: Offerter
@@ -24,21 +31,19 @@ models:
         label: Nummer
       customer:
         label: Kund
+      issuedOn:
+        label: Datum
+      validUntil:
+        label: Giltig till
       status:
         label: Status
         values:
-          utkast: Utkast
-          skickad: Skickad
-          accepterad: Accepterad
-          avvisad: Avvisad
+          draft: Utkast
+          sent: Skickad
+          accepted: Accepterad
+          rejected: Avböjd
       description:
         label: Beskrivning
-      total:
-        label: Totalt
-      validUntil:
-        label: Giltig till
-      sentAt:
-        label: Skickad datum
   QuoteLine:
     label: Offertrad
     pluralLabel: Offertrader
@@ -49,8 +54,8 @@ models:
         label: Antal
       unitPrice:
         label: À-pris
-      total:
-        label: Summa
+      amount:
+        label: Belopp
   Invoice:
     label: Faktura
     pluralLabel: Fakturor
@@ -61,27 +66,26 @@ models:
         label: Kund
       quote:
         label: Offert
+      issuedOn:
+        label: Fakturadatum
+      dueOn:
+        label: Förfallodatum
       status:
         label: Status
         values:
-          utkast: Utkast
-          skickad: Skickad
-          betald: Betald
-          forfallen: Förfallen
+          draft: Utkast
+          sent: Skickad
+          paid: Betald
+          overdue: Förfallen
+  InvoiceLine:
+    label: Fakturarad
+    pluralLabel: Fakturarader
+    fields:
       description:
         label: Beskrivning
-      total:
-        label: Totalt
-      dueDate:
-        label: Förfallodatum
-      sentAt:
-        label: Skickad datum
-      paidAt:
-        label: Betald datum
-pages:
-  customers:
-    title: Kunder
-  quotes:
-    title: Offerter
-  invoices:
-    title: Fakturor
+      quantity:
+        label: Antal
+      unitPrice:
+        label: À-pris
+      amount:
+        label: Belopp

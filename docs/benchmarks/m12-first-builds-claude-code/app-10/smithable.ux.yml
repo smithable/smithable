@@ -3,18 +3,14 @@ pages:
   recipes:
     table:
       columns: [name, category, servings, minutes, favorite]
-      view: cards
       sort: name
     icon: book
-  shoppingLists:
+  shopping-lists:
     table:
-      columns: [name, shopOn, status]
       sort: -shopOn
     icon: cart
 tones:
   ShoppingList.status:
     done: success
 theme:
-  preset: playful
-  brand:
-    primary: "#c2410c"
+  preset: craft

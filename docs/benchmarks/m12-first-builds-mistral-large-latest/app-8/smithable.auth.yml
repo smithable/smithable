@@ -1,0 +1,8 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+public:
+  pages: [home, talks, speakers]
+  read: [Talk, Speaker]
+admins: [johan@smithable.ai]

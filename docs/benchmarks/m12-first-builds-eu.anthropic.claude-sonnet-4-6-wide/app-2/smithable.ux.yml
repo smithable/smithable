@@ -1,30 +1,58 @@
 smithableUx: 0.1
 pages:
-  deals:
+  follow-ups:
     table:
-      columns: [title, companyName, stage, value, assignedTo, followUpAt, expectedCloseDate]
-      sort: followUpAt
-    icon: briefcase
+      sort: dueDate
+      columns: [dueDate, type, lead, deal, status]
+    icon: calendar
+    form:
+      control:
+        type: radio
+        status: radio
+        notes: textarea
   overview:
     icon: chart
+  team:
+    icon: users
   leads:
     table:
-      columns: [companyName, contactName, status, source, assignedTo, followUpAt]
-      sort: followUpAt
-    icon: users
-  activities:
+      columns: [companyName, contactName, email, service, estimatedValue, source]
+      below:
+        companyName: contactName
+        email: phone
+    icon: star
+    form:
+      sections: [{ name: company, fields: [companyName, service, estimatedValue, source] }, { name: contact, fields: [contactName, email, phone] }, { name: details, fields: [assignedTo, notes] }]
+      columns: 2
+      control:
+        source: radio
+        service: radio
+        notes: textarea
+  deals:
     table:
-      sort: -occurredAt
-    icon: clipboard
+      columns: [title, companyName, value, stage, service, closedAt]
+      below:
+        companyName: contactName
+      sort: -value
+    icon: briefcase
+    form:
+      sections: [{ name: deal, fields: [title, lead, service, value, stage, closedAt] }, { name: contact, fields: [companyName, contactName, email, phone] }, { name: details, fields: [assignedTo, lostReason, notes] }]
+      columns: 2
+      control:
+        stage: radio
+        service: radio
+        notes: textarea
+        lostReason: textarea
 tones:
+  FollowUp.status:
+    done: success
+    skipped: warning
+  Lead.source:
+    referral: success
   Deal.stage:
-    negotiation: warning
     won: success
     lost: danger
-  Lead.status:
-    contacted: warning
-    qualified: success
-    disqualified: danger
+    negotiation: warning
 theme:
   preset: corporate
   brand:

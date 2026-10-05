@@ -2,5 +2,9 @@
   "description": "An internal status board for our IT systems, so staff see what is down and when it is back.",
   "starter": "status",
   "wordStarter": "status",
-  "questions": ["Which IT systems do you want to track?"]
+  "questions": [
+    "Which IT systems do you want to track?",
+    "Who can open and update incidents?",
+    "Can staff see the status board without signing in?"
+  ]
 }

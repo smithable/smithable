@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "booking",
   "questions": [
-    "Who can view the list of plots and members?",
-    "What are the main things you need to track?",
-    "Who can update plot assignments and the waiting list?"
+    "Who can see the list of plots and members?",
+    "What does a plot record hold?",
+    "Who can manage plots, the waiting list, and fees?"
   ]
 }

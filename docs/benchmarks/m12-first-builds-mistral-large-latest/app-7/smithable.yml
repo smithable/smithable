@@ -1,0 +1,52 @@
+smithable: 0.1
+app:
+  name: Greenfield FC
+  description: The teams, players, matches and results of Greenfield Football Club.
+  timezone: Europe/London
+models:
+  Team:
+    fields:
+      name: string!
+      ageGroup: u7 | u9 | u11 | u13 | u15 | u18 | senior | veterans
+      coach: User
+      players: Player[]
+  Player:
+    fields:
+      firstName: string!
+      lastName: string!
+      dateOfBirth: date!
+      position: goalkeeper | defender | midfielder | forward
+      team: Team
+      number: int
+      joinedOn: date! = TODAY()
+  Match:
+    fields:
+      date: datetime!
+      opponent: string!
+      home: bool! = true
+      venue: string
+      team: Team!
+      result: win | draw | loss | upcoming
+      score: string
+      report: text
+pages:
+  teams:
+    crud: Team
+  players:
+    crud: Player
+  matches:
+    crud: Match
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      upcoming-matches:
+        records: Match
+        where:
+          result: upcoming
+      latest-results:
+        records: Match
+        where:
+          result: [win, draw, loss]
+navigation: [teams, players, matches]

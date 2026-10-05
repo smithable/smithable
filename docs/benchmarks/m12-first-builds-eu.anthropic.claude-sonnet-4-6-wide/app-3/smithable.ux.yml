@@ -1,28 +1,24 @@
 smithableUx: 0.1
+tones:
+  Appointment.status:
+    confirmed: success
+    cancelled: danger
+    pending: warning
 pages:
-  schedule:
-    icon: calendar
-  my-bookings:
-    icon: clipboard
+  appointments:
     table:
-      columns: [slot, status, notes]
-    form:
-      control:
-        notes: textarea
+      sort: -startsAt
+      columns: [startsAt, stylist, serviceType, status]
+    icon: calendar
+  my-appointments:
+    table:
+      sort: -startsAt
+      columns: [startsAt, stylist, serviceType, status]
+    icon: calendar
   stylists:
     icon: user
-  services:
+  service-types:
     icon: tag
-  messages:
-    icon: mail
-  slots:
-    table:
-      sort: startsAt
-      columns: [startsAt, stylist, service, capacity]
-tones:
-  Booking.status:
-    confirmed: success
-    canceled: danger
 theme:
   preset: modern
   brand:
