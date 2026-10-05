@@ -419,7 +419,11 @@ try {
         const watch = { gaps: 0, updating: false };
         window.__previewWatch = watch;
         window.__previewTimer = setInterval(() => {
-          if (!document.querySelector('iframe[title="App preview"]')) watch.gaps++;
+          // The new page, or the last ready one kept on screen while it loads.
+          if (
+            !document.querySelector('iframe[title="App preview"], iframe[title="Previous preview"]')
+          )
+            watch.gaps++;
           for (const el of document.querySelectorAll("span"))
             if (el.textContent === "Updating…") watch.updating = true;
         }, 50);
