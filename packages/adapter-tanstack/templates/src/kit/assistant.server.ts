@@ -3,7 +3,7 @@
 // calls the same tools an outside assistant gets. The app runs every call itself and shows what
 // came back; a call that would change something is only proposed, never run here.
 import { type AskKind, readQuestion } from "./ask";
-import { type Offer, offered } from "./mcp.server";
+import { type Offer, offered } from "./tools";
 
 /** A value as JSON carries it: what tools take and give. */
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };

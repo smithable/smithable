@@ -18,7 +18,7 @@ import {
   standardActionModule,
   standardActionServer,
 } from "./actions.js";
-import { apiModule, apiRoutes, mcpModule, mcpRoute } from "./api.js";
+import { apiModule, apiRoutes, askModule, mcpModule, mcpRoute } from "./api.js";
 import {
   authModule,
   hasInvitations,
@@ -423,6 +423,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 : []),
             ]
           : []),
+        // "Ask": the tools over everything the person may read, and ask().
+        ...(auth.assistant
+          ? [generated("src/generated/ask.server.ts", askModule(ir, auth, t, options.content))]
+          : []),
       ];
     },
   },
@@ -461,20 +465,37 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
       {
         // Keys for the API, on the users page (docs/design/integrations.md §2).
-        files: ["src/kit/Keys.tsx", "src/kit/api.server.ts", "src/kit/where.ts"],
+        files: ["src/kit/Keys.tsx", "src/kit/api.server.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth),
+      },
+      {
+        // Finding, counting and adding up in the data modules: for the API and for "Ask".
+        files: ["src/kit/where.ts", "src/kit/refusal.ts"],
+        used: ({ ir, auth }) => hasKeys(ir, auth) || Boolean(auth.assistant),
       },
       {
         // The administrator's inspector on the data page (docs/design/assistant.md §4): the
         // wording rules (§5), the answering loop and the panel.
         files: ["src/kit/ask.ts", "src/kit/assistant.server.ts", "src/kit/Inspector.tsx"],
         used: ({ ir, auth }) =>
-          hasInspector({ ir, auth }) && ir.pages.some((p) => p.pattern.kind === "data"),
+          Boolean(auth.assistant) ||
+          (hasInspector({ ir, auth }) && ir.pages.some((p) => p.pattern.kind === "data")),
       },
       {
         // The API as tools for AI assistants (docs/design/integrations.md §5b).
         files: ["src/kit/mcp.server.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth) && Boolean(auth.api?.assistants),
+      },
+      {
+        // "Ask" for the people who use the app (docs/design/assistant.md §6).
+        files: ["src/kit/Ask.tsx"],
+        used: ({ auth }) => Boolean(auth.assistant),
+      },
+      {
+        // The tools as /mcp and the app's own panels offer and check them.
+        files: ["src/kit/tools.ts"],
+        used: ({ ir, auth }) =>
+          (hasKeys(ir, auth) && Boolean(auth.api?.assistants)) || Boolean(auth.assistant),
       },
       {
         files: ["src/kit/Markdown.tsx", "src/kit/MarkdownFormatted.tsx"],
