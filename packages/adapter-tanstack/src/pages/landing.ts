@@ -106,7 +106,8 @@ export function landingRoute(
               // A page behind sign-in is a shortcut only for those who may open it.
               if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
               imports.add("#/kit/access", "allows");
-              return `...(allows(pageAccess[${JSON.stringify(id)}], viewer) ? [${shortcut}] : [])`;
+              // As const: the route stays its own literal, which a link's "to" takes.
+              return `...(allows(pageAccess[${JSON.stringify(id)}], viewer) ? [${shortcut} as const] : [])`;
             })
             .join(", ")}]}`
               : ""

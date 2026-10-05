@@ -3525,6 +3525,8 @@ for (const [index, example] of examples.entries()) {
             ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
             ["addField", "Row", "size", "small | large"],
             ["addModel", "Value", "name=string!", "amount=int"],
+            // A model with no text to search, offered to programs like the rest (a first build's).
+            ["addModel", "Tally", "count=int!"],
             // A reference added to an existing table, to one named like an SQL word (values):
             // its migration names the table quoted (quoteReferences).
             ["addField", "Row", "group", "Value"],
@@ -3900,6 +3902,36 @@ test("a change Ask proposes is checked, carded, and made once confirmed", async 
           op("setAssistant", "member", "--may", "change");
         },
       );
+    // Shapes first builds made that no example has: a hero shortcut to a page behind sign-in, a
+    // model owned by a required User field, and an API in an app without a users page.
+    if (example === "booking")
+      step(
+        "a hero shortcut to a page behind sign-in, and a model owned by a required User field, type-check",
+        () => {
+          const ops = [
+            ["setShortcuts", "home", "schedule", "blog", "instructors"],
+            ["addModel", "Posting", "title=string!", "poster=User!"],
+            ["setOwner", "Posting", "poster"],
+          ];
+          for (const args of ops) {
+            const done = smithable(dir, "op", ...args);
+            if (done.code !== 0) throw new Error(done.out);
+          }
+          run("pnpm", ["typecheck"], dir);
+          for (const _ of ops) {
+            const undone = smithable(dir, "undo");
+            if (undone.code !== 0) throw new Error(undone.out);
+          }
+        },
+      );
+    if (example === "records")
+      step("an API in an app without a users page type-checks", () => {
+        const done = smithable(dir, "op", "setApi", "all");
+        if (done.code !== 0) throw new Error(done.out);
+        run("pnpm", ["typecheck"], dir);
+        const undone = smithable(dir, "undo");
+        if (undone.code !== 0) throw new Error(undone.out);
+      });
     // A stand-in for the host's model, for Ask's confirmation cards: it proposes starting a task.
     if (example === "api") {
       const stand = await standInModel();
