@@ -1157,7 +1157,7 @@ async function apiFlow(base) {
     await signInAs(page, base, "member");
     await page.goto(`${base}/admin/ask`);
     await page.waitForLoadState("networkidle");
-    if (await page.getByLabel("Question").count())
+    if (await page.getByRole("heading", { name: "Ask the app" }).count())
       throw new Error("a member was given the inspector");
     console.log(
       "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, reads the answer aloud, answers a visitor nothing, and is not a member's",
@@ -1773,6 +1773,47 @@ async function sessionFlow(base) {
         .waitFor({ state: "detached", timeout: 10000 });
       if (await who(cookie)) throw new Error("the removed person is still signed in");
     });
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * "Ask" for the people who use the app (docs/design/assistant.md §6), on the api starter with
+ * setAssistant member: a member asks with the button and is answered from the records they may
+ * read (the rules, no model here); a role the block does not name, and a visitor, get no button.
+ */
+async function askPanelFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "member");
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Ask" });
+    await sheet.getByLabel("Question").fill("how many tasks");
+    await sheet.getByRole("button", { name: "Ask", exact: true }).click();
+    const answered = sheet.locator("[data-answer]").first();
+    await answered.getByText("From your records").waitFor({ timeout: 10000 });
+    const number = await answered.locator(".text-2xl").textContent();
+    if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
+    if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
+      throw new Error("Ask does not say answers may come from an AI");
+    await page.context().clearCookies();
+    await signInAs(page, base, "admin");
+    if (await page.getByRole("button", { name: "Ask", exact: true }).count())
+      throw new Error("a role the assistant block does not name has Ask");
+    await page.context().clearCookies();
+    await open(page, `${base}/sign-in`);
+    if (await page.getByRole("button", { name: "Ask", exact: true }).count())
+      throw new Error("a visitor has Ask");
+    console.log(
+      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a role the assistant block does not name and a visitor have no Ask",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("ask flow");
   } finally {
     await browser.close();
   }
@@ -3651,6 +3692,14 @@ test("only the public part", async () => {
           }
         },
       );
+    // "Ask" for the app's people (docs/design/assistant.md §6), switched on for members by its
+    // operation and kept for the browser flow.
+    if (example === "api")
+      step("op setAssistant gives members Ask, and the app type-checks", () => {
+        const done = smithable(dir, "op", "setAssistant", "member");
+        if (done.code !== 0) throw new Error(done.out);
+        run("pnpm", ["typecheck"], dir);
+      });
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -3686,6 +3735,7 @@ test("only the public part", async () => {
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (example === "api") await apiFlow(base);
+      if (example === "api") await askPanelFlow(base);
       if (example === "invoicing") {
         await copyFlow(base);
         await formulaFlow(base);

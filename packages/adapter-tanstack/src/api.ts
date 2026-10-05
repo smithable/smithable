@@ -6,6 +6,7 @@ import {
   type AssistantCaller,
   type AuthIR,
   apiOffers,
+  asksWith,
   assistantOffer,
   type ContentIR,
   type FieldIR,
@@ -261,13 +262,29 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       schemas: Object.fromEntries(Object.entries(schemas).filter(([k]) => shown.includes(k))),
     },
   };
-  // Only the helpers some offered field needs.
-  const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
   return `${HEADER}// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
-${models.map(({ n }) => `import { ${n.schema} } from "${n.module}";`).join("\n")}
+${conversionsCode(models)}
+
+/** The whole API in the OpenAPI format, for tools and agents. */
+export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
+
+/** What a stranger is shown: the reading and adding anyone may do; nothing in a closed app. */
+export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
+`;
+}
+
+/**
+ * Records as programs and assistants read them (the spec's field names, amounts as decimal texts,
+ * times as ISO texts) and their values back, checked by each model's own schema: the
+ * `<model>ToApi` and `<model>FromApi` functions, with only the helpers some field needs. The
+ * caller imports BadInput.
+ */
+function conversionsCode(models: { model: ModelIR; n: ReturnType<typeof names> }[]): string {
+  const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
+  return `${models.map(({ n }) => `import { ${n.schema} } from "${n.module}";`).join("\n")}
 
 ${
   uses("relation")
@@ -330,14 +347,7 @@ ${writable.map((f) => `      case ${JSON.stringify(f.name)}:\n        ${writeCod
   return ${n.schema}.parse(values);
 }`;
   })
-  .join("\n")}
-
-/** The whole API in the OpenAPI format, for tools and agents. */
-export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
-
-/** What a stranger is shown: the reading and adding anyone may do; nothing in a closed app. */
-export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
-`;
+  .join("\n")}`;
 }
 
 /** The routes: list and add, one record, its actions, and the description. */
@@ -487,11 +497,40 @@ ${own
  * one dispatcher that runs them through each model's data module.
  */
 export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts, content?: ContentIR): string {
-  const { models, actions } = apiParts(ir, auth, t);
-  const callers: AssistantCaller[] = [...auth.roles.map((r) => ({ role: r.name })), "visitor"];
+  return toolsModule(ir, auth, t, content, "api");
+}
+
+/**
+ * src/generated/ask.server.ts: "Ask" in the app (docs/design/assistant.md §6): the same seven tools
+ * over everything the person may read in the app, offered to the callers the auth file's
+ * assistant block names, and `ask`, which answers a question as the signed-in person (visitors
+ * by the wording rules only).
+ */
+export function askModule(ir: SpecIR, auth: AuthIR, t: Texts, content?: ContentIR): string {
+  return toolsModule(ir, auth, t, content, "app");
+}
+
+function toolsModule(
+  ir: SpecIR,
+  auth: AuthIR,
+  t: Texts,
+  content: ContentIR | undefined,
+  scope: "api" | "app",
+): string {
+  const app = scope === "app";
+  const { models, actions } = app
+    ? {
+        models: ir.models.map((model) => ({ model, n: names(model, t) })),
+        actions: ir.actions.filter((a): a is StandardActionIR => !a.custom),
+      }
+    : apiParts(ir, auth, t);
+  const callers: AssistantCaller[] = [
+    ...auth.roles.map((r) => ({ role: r.name })),
+    "visitor" as const,
+  ].filter((c) => !app || asksWith(auth, c) !== "nothing");
   const offers = Object.fromEntries(
     callers.map((caller) => {
-      const offer = assistantOffer(ir, auth, caller, { scope: "api", content });
+      const offer = assistantOffer(ir, auth, caller, { scope, content });
       return [
         caller === "visitor" ? "visitor" : caller.role,
         {
@@ -531,21 +570,54 @@ export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts, content?: ContentI
       return ${c}ToApi(await ${actionNames(action).run}(keyed(viewer), row.id${asked ? `, ${actionNames(action).asks}.parse(args.input ?? {})` : ""}));
     }`;
   });
-  return `${HEADER}// The app's records and actions as tools for AI assistants (docs/design/assistant.md §3): seven
+  // Each caller's kinds of record in the words people use, for the wording rules (only what they read).
+  const words = Object.fromEntries(
+    callers.map((caller) => [
+      caller === "visitor" ? "visitor" : caller.role,
+      assistantOffer(ir, auth, caller, { scope, content }).kinds.map((k) => ({
+        model: k.model,
+        label: k.label,
+        pluralLabel: k.pluralLabel,
+        fields: k.fields,
+        filters: k.filters,
+        numbers: k.numbers,
+        by: k.by,
+      })),
+    ]),
+  );
+  const asks = Object.fromEntries(
+    callers.map((caller) => [
+      caller === "visitor" ? "visitor" : caller.role,
+      asksWith(auth, caller),
+    ]),
+  );
+  return `${HEADER}${
+    app
+      ? `// "Ask" in the app (docs/design/assistant.md §6): the seven tools over everything the person
+// may read, as core describes them for each role the assistant block names, and ask(), which
+// answers a question as the signed-in person: the wording rules first, then the host's model
+// (visitors: the rules only). Every call goes through the data functions, as a page's do.`
+      : `// The app's records and actions as tools for AI assistants (docs/design/assistant.md §3): seven
 // tools whatever the app's size, and the app's summary as the server's instructions, both as core
-// describes them for each caller; every call goes through the data functions, as the API's do.
-${actions.length ? 'import { AccessDenied, type Viewer } from "#/kit/access";' : 'import type { Viewer } from "#/kit/access";'}
-import { BadInput, NotFound } from "#/kit/api.server";
-import type { Offer } from "#/kit/mcp.server";
-import { ${models
-    .flatMap(({ model }) => {
-      const c = model.name[0]?.toLowerCase() + model.name.slice(1);
-      return [`${c}FromApi`, `${c}ToApi`];
-    })
-    .sort()
-    .join(", ")} } from "./api.server";
+// describes them for each caller; every call goes through the data functions, as the API's do.`
+  }
+${actions.length || app ? 'import { AccessDenied, type Viewer } from "#/kit/access";' : 'import type { Viewer } from "#/kit/access";'}
+${app ? 'import type { AskKind } from "#/kit/ask";\nimport { type Answer, answer, hostModel } from "#/kit/assistant.server";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+import type { Offer } from "#/kit/tools";
+${
+  app
+    ? ""
+    : `import { ${models
+        .flatMap(({ model }) => {
+          const c = model.name[0]?.toLowerCase() + model.name.slice(1);
+          return [`${c}FromApi`, `${c}ToApi`];
+        })
+        .sort()
+        .join(", ")} } from "./api.server";`
+}
 ${models.map(({ model, n }) => `import { ${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}
 ${actions.map((a) => `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "./actions/${kebab(a.name)}";` : ""}`).join("\n")}
+${app ? conversionsCode(models) : ""}
 
 /**
  * What each caller is offered (by the key's role, and for a visitor without a key): the tools,
@@ -691,7 +763,34 @@ ${runs.join("\n")}
       throw new NotFound(\`There is no tool "\${name}".\`);
   }
 }
-`;
+${
+  app
+    ? `
+/** How each caller is answered: the rules, then the host's model; a visitor by the rules only. */
+const ASKS: Record<string, string> = ${JSON.stringify(asks)};
+
+/** Each caller's kinds of record in the words people use, for the wording rules. */
+const WORDS: Record<string, AskKind[]> = ${JSON.stringify(words)};
+
+/** Whether the viewer gets "Ask": a role the assistant block names, or a visitor when it says anyone. */
+export function asks(viewer: Viewer | null): boolean {
+  return Object.hasOwn(ASKS, viewer?.role ?? "visitor");
+}
+
+/** A question answered as the person asking (or a visitor), with what they may read and do. */
+export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+  const caller = viewer?.role ?? "visitor";
+  if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  return answer(question, {
+    offer: offerFor(viewer),
+    kinds: WORDS[caller],
+    call: (tool, args) => callTool(viewer, tool, args),
+    model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
+  });
+}
+`
+    : ""
+}`;
 }
 
 /** src/routes/mcp.ts: the endpoint assistants connect to. */
