@@ -16,7 +16,16 @@ export interface Step {
   error?: string;
   /** A change the app did not make: the person would confirm it first. */
   proposed?: boolean;
+  /** Ask with may: change: the proposal kept on the server, and what its card says. */
+  proposal?: string;
+  card?: Card;
   ms: number;
+}
+
+/** A proposed change as the app words it: the record, and each field from what it is to what it becomes. */
+export interface Card {
+  title: string;
+  changes: { label: string; from?: Json; to: Json }[];
 }
 
 export interface Answer {
@@ -61,6 +70,11 @@ interface Parts {
   fetch?: typeof fetch;
   /** What is said when the rules do not read a question and there is no model to ask. */
   unread?: string;
+  /**
+   * Ask with may: change: checks a proposed change as the person would make it and keeps it
+   * for them to confirm; a refusal in the app's words otherwise.
+   */
+  propose?: (tool: string, args: { [key: string]: Json }) => Promise<{ id: string; card: Card }>;
 }
 
 export async function answer(question: string, parts: Parts): Promise<Answer> {
@@ -77,8 +91,15 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     try {
       const found = offered(parts.offer, tool, args);
       // Only a tool marked as reading runs here; anything else is proposed.
-      if (found.annotations?.readOnlyHint !== true) step.proposed = true;
-      else step.result = (await parts.call(tool, args)) as Json;
+      if (found.annotations?.readOnlyHint !== true) {
+        // Kept for the person to confirm only once it is one they may make.
+        if (parts.propose) {
+          const kept = await parts.propose(tool, args);
+          step.proposal = kept.id;
+          step.card = kept.card;
+        }
+        step.proposed = true;
+      } else step.result = (await parts.call(tool, args)) as Json;
     } catch (error) {
       step.error = error instanceof Error ? error.message : String(error);
     }
