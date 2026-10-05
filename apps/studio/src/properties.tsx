@@ -106,7 +106,14 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
           <FieldShapeForm
             field={field}
             models={models}
-            run={(type) => run("changeField", { model: name, field: fieldName, type })}
+            run={(type, renames) =>
+              run("changeField", {
+                model: name,
+                field: fieldName,
+                type,
+                ...(renames.length ? { renames } : {}),
+              })
+            }
           />
         )}
         <TextSetting

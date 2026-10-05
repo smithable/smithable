@@ -149,7 +149,7 @@ const addField: Operation<{ model: string; field: string; type: string; formula?
   },
 };
 
-const changeField: Operation<{ model: string; field: string; type: string }> = {
+const changeField: Operation<{ model: string; field: string; type: string; renames?: string[] }> = {
   name: "changeField",
   summary: "Change a field's type, required flag, uniqueness or default.",
   schema: {
@@ -160,19 +160,39 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
       model: refTo({ ref: "model", label: "Kind of record" }, name),
       field: refTo({ ref: "field", model: "model", label: "Field" }, name),
       type: { ...name, description: 'Field shorthand, e.g. "email! unique".' },
+      renames: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          'For a choice field: what records holding a value that goes get instead, as "old=new" (e.g. doing=inProgress); "old=" leaves them empty.',
+      },
     },
   },
   positional: ["model", "field", "...type"],
-  describe: ({ model, field, type }) => `Change ${model}.${field} to ${type}`,
+  describe: ({ model, field, type, renames = [] }) =>
+    `Change ${model}.${field} to ${type}${renames.length ? `, records with ${renames.map((r) => r.replace("=", " becoming ").replace(/ becoming $/, " left empty")).join(", ")}` : ""}`,
   destructive: ({ model: m, field: f, type }, ir) => {
     return typeKey(field(ir, m, f).type) !== baseType(type);
   },
-  apply({ spec }, { model: m, field: f, type }, ir) {
+  apply({ spec }, { model: m, field: f, type, renames = [] }, ir) {
     checkType(type);
-    field(ir, m, f);
+    const before = field(ir, m, f);
     const parsed = parseFieldShorthand(type);
     const choices =
       parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
+    // A choice value that goes: what the records holding it get instead.
+    const renamed: Record<string, string> = {};
+    for (const pair of renames) {
+      const [from = "", to = ""] = pair.split("=").map((s) => s.trim());
+      const old = before.type.kind === "choice" ? before.type.values : [];
+      if (!old.includes(from))
+        throw new OperationError(
+          `${m}.${f} has no value "${from}" to replace. Values: ${old.join(", ")}.`,
+        );
+      if (to && !choices.includes(to))
+        throw new OperationError(`"${to}" is not one of the new values: ${choices.join(", ")}.`);
+      renamed[from] = to;
+    }
     const path = fieldPath(m, f, ir);
     const current = spec.get(path);
     if (typeof current === "object" && current !== null) {
@@ -186,7 +206,15 @@ const changeField: Operation<{ model: string; field: string; type: string }> = {
     } else {
       spec.set(path, type);
     }
-    return [{ kind: "change-field", model: m, field: f, choices }];
+    return [
+      {
+        kind: "change-field",
+        model: m,
+        field: f,
+        choices,
+        ...(Object.keys(renamed).length ? { renamed } : {}),
+      },
+    ];
   },
 };
 

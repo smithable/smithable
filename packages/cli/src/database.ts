@@ -55,6 +55,27 @@ export function pruneSnapshots(dir: string, keep: Set<string>): number {
 }
 
 /** How many rows of a table have a value (or no value) in a column; undefined without a database. */
+/** How many records hold one value in a column; undefined without a database. */
+export function countValue(
+  dir: string,
+  table: string,
+  column: string,
+  value: string,
+): number | undefined {
+  if (!existsSync(databasePath(dir))) return undefined;
+  const db = new DatabaseSync(databasePath(dir), { readOnly: true, timeout: BUSY_MS });
+  try {
+    const row = db
+      .prepare(`SELECT count(*) AS n FROM "${table}" WHERE "${column}" = ?`)
+      .get(value) as { n: number };
+    return Number(row.n);
+  } catch {
+    return undefined;
+  } finally {
+    db.close();
+  }
+}
+
 export function countValues(
   dir: string,
   table: string,

@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  choiceValueSql,
   generateApp,
   quoteReferences,
   renameColumnSql,
@@ -56,6 +57,8 @@ export interface MigrationPlan {
   name: string;
   /** Stored fields to rename; `reference` for a reference column (customer_id). */
   renames: { model: string; from: string; to: string; reference: boolean }[];
+  /** A choice field's values that go, and what the records holding them get ("" clears). */
+  values?: { model: string; field: string; from: string; to: string }[];
   /** Apply the migration to the dev database now. */
   apply: boolean;
 }
@@ -338,7 +341,10 @@ async function createMigration(
     const current = await api.generateSQLiteDrizzleJson(schema, prev.id, "snake_case");
     const statements = migration.renames.length
       ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
-      : (await api.generateSQLiteMigration(prev, current)).map(quoteReferences);
+      : [
+          ...(await api.generateSQLiteMigration(prev, current)).map(quoteReferences),
+          ...valueSql(migration),
+        ];
     if (statements.length === 0) return true;
     const idx = last.idx + 1;
     const tag = `${numbered(idx)}_${migration.name}`;
@@ -455,12 +461,34 @@ function migrate(
   };
   const before = newest();
   if (!run(["exec", "drizzle-kit", "generate", ...name])) return false;
-  const tag = newest();
+  let tag = newest();
   if (tag && tag !== before) {
     const file = join(dir, "drizzle", `${tag}.sql`);
     writeFileSync(file, quoteReferences(readFileSync(file, "utf8")));
   }
+  // Records holding a choice value that goes get the new one: in the new migration, or in one of
+  // its own when the schema did not change (a choice is stored as text).
+  const updates = valueSql(migration);
+  if (updates.length) {
+    if (!tag || tag === before) {
+      if (!run(["exec", "drizzle-kit", "generate", "--custom", ...name])) return false;
+      tag = newest();
+    }
+    const file = join(dir, "drizzle", `${tag}.sql`);
+    const sql = readFileSync(file, "utf8");
+    writeFileSync(
+      file,
+      [sql.trim() ? sql.trimEnd() : "", ...updates]
+        .filter(Boolean)
+        .join("--> statement-breakpoint\n"),
+    );
+  }
   return true;
+}
+
+/** The SQL that gives records holding a choice value that goes the new one. */
+function valueSql(migration: MigrationPlan | undefined): string[] {
+  return (migration?.values ?? []).map((v) => choiceValueSql(v.model, v.field, v.from, v.to));
 }
 
 /**

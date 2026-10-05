@@ -29,7 +29,14 @@ export type Effect =
   | { kind: "rename-field"; model: string; from: string; to: string; storage: Storage }
   | { kind: "remove-field"; model: string; field: string; storage: Storage }
   /** A field's type changed; `choices` are its choice values now (none if not a choice). */
-  | { kind: "change-field"; model: string; field: string; choices: string[] }
+  | {
+      kind: "change-field";
+      model: string;
+      field: string;
+      choices: string[];
+      /** A choice field's old values and what records holding them get instead ("" clears them). */
+      renamed?: Record<string, string>;
+    }
   | { kind: "remove-page"; page: string }
   | { kind: "remove-section"; page: string; section: string }
   | { kind: "remove-action"; action: string }
