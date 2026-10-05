@@ -200,7 +200,10 @@ const CALCULATOR_SCHEMA: JsonSchema = {
       items: {
         type: "object",
         required: ["input", "expected"],
-        properties: { input: { type: "object" }, expected: { type: "object" } },
+        properties: {
+          input: { type: "object", description: "The values entered." },
+          expected: { type: "object", description: "The results they must give." },
+        },
       },
     },
   },
@@ -239,7 +242,11 @@ const landing: PagePattern<"landing"> = {
           maxItems: 4,
           description: "A hero's shortcuts: up to four pages, shown as round icons.",
         },
-        limit: { type: "integer", minimum: 1 },
+        limit: {
+          type: "integer",
+          minimum: 1,
+          description: "A records section: how many it shows.",
+        },
         form: {
           type: "string",
           description: "A contact section's form: the model visitors add a record of.",
@@ -341,7 +348,7 @@ const dashboard: PagePattern<"dashboard"> = {
           description: "Only records with these choice values or yes/no values.",
         },
         by: { type: "string", description: "A date field: one bar per month." },
-        limit: { type: "integer", minimum: 1 },
+        limit: { type: "integer", minimum: 1, description: "A list: how many records it shows." },
       },
     },
   },
@@ -427,9 +434,10 @@ const onboarding: PagePattern<"onboarding"> = {
     additionalProperties: false,
     description: "Fills the settings record in steps after the first sign-in.",
     properties: {
-      model: { type: "string" },
+      model: { type: "string", description: "The model of the settings record." },
       steps: {
         type: "object",
+        description: "The steps in order, each with the fields it asks for.",
         additionalProperties: { type: "array", items: { type: "string" } },
       },
     },
@@ -498,7 +506,7 @@ const calendar: PagePattern<"calendar"> = {
         required: ["model"],
         additionalProperties: false,
         properties: {
-          model: { type: "string" },
+          model: { type: "string", description: "The model whose records the calendar shows." },
           starts: {
             type: "string",
             description: "The date or date-time field that places a record.",
@@ -577,7 +585,7 @@ const articles: PagePattern<"articles"> = {
         required: ["model"],
         additionalProperties: false,
         properties: {
-          model: { type: "string" },
+          model: { type: "string", description: "The model whose records are the articles." },
           title: { type: "string", description: "The article's title." },
           body: { type: "string", description: "A markdown field: the article itself." },
           picture: { type: "string", description: "A picture field shown with the article." },
