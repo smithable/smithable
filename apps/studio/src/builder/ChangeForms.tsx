@@ -6,6 +6,7 @@ import {
   humanize,
   identifier,
   type JsonSchema,
+  kebab,
   type ModelIR,
   pageModel,
   pascal,
@@ -572,8 +573,22 @@ function AddModel({ run }: { run: Run }) {
   const [name, setName] = useState("");
   const [field, setField] = useState("name");
   return (
-    <Form onSubmit={() => run("addModel", { model: name, fields: { [field]: "string!" } })}>
-      <Label text="Name" hint="In PascalCase, singular, e.g. Product">
+    <Form
+      onSubmit={() =>
+        run("addModel", {
+          model: pascal(identifier(name)),
+          fields: { [identifier(field)]: "string!" },
+        })
+      }
+    >
+      <Label
+        text="Name"
+        hint={
+          name.trim()
+            ? `Saved as ${pascal(identifier(name))}`
+            : "For one record, e.g. Product or Invoice line"
+        }
+      >
         <Input aria-label="Model name" value={name} onChange={(e) => setName(e.target.value)} />
       </Label>
       <Label text="First field (required text)">
@@ -803,7 +818,7 @@ function AddCustomAction({ spec, run, initial }: FormProps) {
     <Form
       onSubmit={() =>
         run("addAction", {
-          action,
+          action: identifier(action),
           input: fieldLines(input),
           output: fieldLines(output),
           allow,
@@ -811,7 +826,10 @@ function AddCustomAction({ spec, run, initial }: FormProps) {
         })
       }
     >
-      <Label text="Name" hint="In camelCase, e.g. mergeCustomers">
+      <Label
+        text="Name"
+        hint={action.trim() ? `Saved as ${identifier(action)}` : "e.g. Merge customers"}
+      >
         <Input
           aria-label="Action name"
           value={action}
@@ -881,13 +899,19 @@ function AddPage({ spec, run, initial }: FormProps) {
     <Form
       onSubmit={() =>
         kind === "landing"
-          ? run("addLandingPage", { page })
+          ? run("addLandingPage", { page: kebab(identifier(page)) })
           : kind === "custom"
-            ? run("addCustomPage", { page, component: component || pascal(page) })
-            : run("addPage", { page, model })
+            ? run("addCustomPage", {
+                page: kebab(identifier(page)),
+                component: pascal(identifier(component || page)),
+              })
+            : run("addPage", { page: kebab(identifier(page)), model })
       }
     >
-      <Label text="Page name" hint="Lowercase, e.g. products">
+      <Label
+        text="Page name"
+        hint={page.trim() ? `Saved as ${kebab(identifier(page))}` : "e.g. Products or Open orders"}
+      >
         <Input aria-label="Page name" value={page} onChange={(e) => setPage(e.target.value)} />
       </Label>
       <Label text="Kind of page">
@@ -1133,7 +1157,7 @@ function AddTile({ spec, run }: FormProps) {
     <Form
       onSubmit={() =>
         run("addTile", {
-          page,
+          page: kebab(identifier(page)),
           tile,
           measure,
           of: shownOf,
