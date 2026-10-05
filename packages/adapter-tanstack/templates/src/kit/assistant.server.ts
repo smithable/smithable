@@ -48,6 +48,8 @@ export function hostModel(person: string): Model | undefined {
 
 /** Model calls for one question, at most: a lookup takes one. */
 const ROUNDS = 4;
+/** How long one model call may take. */
+const MODEL_WAIT = 30_000;
 /** What one tool result may send back to the model. */
 const RESULT_MAX = 8_000;
 
@@ -72,7 +74,8 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     const step: Step = { tool, args, ms: 0 };
     try {
       const found = offered(parts.offer, tool, args);
-      if (found.annotations?.readOnlyHint === false) step.proposed = true;
+      // Only a tool marked as reading runs here; anything else is proposed.
+      if (found.annotations?.readOnlyHint !== true) step.proposed = true;
       else step.result = (await parts.call(tool, args)) as Json;
     } catch (error) {
       step.error = error instanceof Error ? error.message : String(error);
@@ -120,11 +123,15 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
           "x-assistant-person": model.person,
         },
         body: JSON.stringify({ model: model.model, messages, tools }),
+        signal: AbortSignal.timeout(MODEL_WAIT),
       });
-    } catch {
+    } catch (error) {
+      const late = error instanceof Error && error.name === "TimeoutError";
       return done({
         source: steps.length ? "ai" : "none",
-        note: "The model could not be reached.",
+        note: late
+          ? `The model did not answer within ${MODEL_WAIT / 1000} seconds.`
+          : "The model could not be reached.",
         tokens,
       });
     }
