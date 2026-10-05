@@ -5,11 +5,23 @@
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { refused } from "./ports.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 const examples = readdirSync(join(repo, "examples"), { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => e.name);
+
+// Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts testing
+// at the same time can keep apart. An example whose ports (test-apps.mjs adds 0, 100, 200 and
+// 300) would include one Node's fetch refuses takes the next ten instead.
+const OFFSETS = [0, 100, 200, 300];
+let next = Number(process.env.TEST_APPS_PORT ?? 4400);
+const ports = examples.map(() => {
+  while (OFFSETS.some((offset) => refused(next + offset))) next += 10;
+  next += 10;
+  return next - 10;
+});
 
 const children = new Set();
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
@@ -24,12 +36,7 @@ const results = await Promise.all(
       new Promise((resolve) => {
         const child = spawn("node", [join(repo, "scripts/test-apps.mjs"), example], {
           cwd: repo,
-          // Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts
-          // testing at the same time can keep apart.
-          env: {
-            ...process.env,
-            TEST_APPS_PORT: String(Number(process.env.TEST_APPS_PORT ?? 4400) + i * 10),
-          },
+          env: { ...process.env, TEST_APPS_PORT: String(ports[i]) },
         });
         children.add(child);
         // Each line as it comes, so a stuck run shows which step it is in.
