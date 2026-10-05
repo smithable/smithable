@@ -3514,6 +3514,55 @@ for (const [index, example] of examples.entries()) {
           run("pnpm", ["typecheck"], dir);
         },
       );
+    // Ask proposing an action that asks for a value: a missing one is said when proposing, never
+    // at Confirm (the reopen action just added asks for the update's message).
+    if (example === "status")
+      step("Ask checks what an action asks for when it proposes it", () => {
+        const done = smithable(dir, "op", "setAssistant", "staff", "--may", "change");
+        if (done.code !== 0) throw new Error(done.out);
+        const check = join(dir, "src/ask-asks.test.ts");
+        writeFileSync(
+          check,
+          `import { expect, test, vi } from "vitest";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { traced } from "#/kit/trace.server";
+import { ask } from "./generated/ask.server";
+
+const staff = { id: "ask-staff", name: "S", email: "", role: "staff" };
+const inRequest = async <T,>(run: () => Promise<T>): Promise<T> => {
+  let result: T | undefined;
+  await traced(new Request("http://app.test/"), "127.0.0.1", async () => {
+    result = await run();
+    return new Response(null);
+  });
+  return result as T;
+};
+const reopen = (input: unknown) => ({ choices: [{ message: { tool_calls: [{ id: "1", type: "function", function: { name: "run", arguments: JSON.stringify({ action: "reopen", id: incident.id, input }) } }] } }] });
+const incident = db.insert(schema.incidents).values({ title: "Asks check", status: "resolved", detectedAt: new Date() }).returning().get();
+
+test("what an action asks for is checked when it is proposed", async () => {
+  process.env.ASSISTANT_URL = "http://model.test";
+  process.env.ASSISTANT_MODEL = "stand-in";
+  const replies: unknown[] = [reopen({}), { choices: [{ message: { content: "It needs a message." } }] }, reopen({ "IncidentUpdate.message": "Back again" })];
+  vi.stubGlobal("fetch", async () => new Response(JSON.stringify(replies.shift())));
+  const missing = await inRequest(() => ask(staff, "reopen Asks check"));
+  expect(missing.steps[0].error).toContain("needs");
+  expect(missing.steps[0].proposal).toBeUndefined();
+  const given = await inRequest(() => ask(staff, "reopen Asks check, the errors are back"));
+  expect(given.steps[0].proposal).toBeTruthy();
+  expect(given.steps[0].card?.title).toContain("Asks check");
+});
+`,
+        );
+        try {
+          run("pnpm", ["exec", "vitest", "run", "src/ask-asks.test.ts"], dir);
+        } finally {
+          rmSync(check);
+        }
+        const undone = smithable(dir, "undo");
+        if (undone.code !== 0) throw new Error(undone.out);
+      });
     // Models whose tables have the names of generated locals (rows, values): the generated code
     // reaches tables through the schema namespace, so nothing shadows them.
     if (example === "status")
@@ -3850,6 +3899,8 @@ test("a change Ask proposes is checked, carded, and made once confirmed", async 
   process.env.ASSISTANT_MODEL = "stand-in";
   const replies: unknown[] = [];
   vi.stubGlobal("fetch", async () => new Response(JSON.stringify(replies.shift() ?? { choices: [{ message: { content: "Done." } }] })));
+  // The person asking is a user of the app: what they add is theirs.
+  db.insert(schema.user).values({ id: member.id, name: member.name, email: "ask-member@example.com", role: "member" }).run();
   const project = db.insert(schema.projects).values({ name: "Ask change check" }).returning().get();
   const task = db.insert(schema.tasks).values({ title: "Kept for Ask", projectId: project.id, status: "todo" }).returning().get();
   const status = () => db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get()?.status;
@@ -3881,6 +3932,13 @@ test("a change Ask proposes is checked, carded, and made once confirmed", async 
   expect(refused.steps[0].error).toBeTruthy();
   expect(refused.steps[0].proposal).toBeUndefined();
   expect(status()).toBe("doing");
+
+  // A record the values refer to by its title: found when proposing, kept by id, shown by title.
+  replies.push({ choices: [{ message: { tool_calls: [toolCall("5", "add", { kind: "Task", values: { title: "Added by Ask", project: "Ask change check" } })] } }] });
+  const adding = await inRequest(() => ask(member, "add a task to Ask change check"));
+  expect(adding.steps[0].card?.changes).toContainEqual({ label: "Project", to: "Ask change check" });
+  await inRequest(() => confirm(member, adding.steps[0].proposal as string, new Headers()));
+  expect(db.select().from(schema.tasks).where(eq(schema.tasks.title, "Added by Ask")).get()?.projectId).toBe(project.id);
 
   // Only the person the proposal was made for, and only with Ask.
   replies.push({ choices: [{ message: { tool_calls: [toolCall("4", "change", { kind: "Task", id: task.id, values: { status: "done" } })] } }] });
