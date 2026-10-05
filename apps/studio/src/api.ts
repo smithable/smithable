@@ -123,6 +123,7 @@ export const api = {
     }),
   /** The preview did not answer: its last log lines, and whether a report is offered or sent. */
   previewStuck: () => call<{ log: string[]; report?: "sent" | "offer" }>("/api/preview/stuck", {}),
+  previewAnswers: () => call<{ ok: boolean }>("/api/preview/answers"),
   previewRestart: () => call<{ ok: boolean }>("/api/preview/restart", {}),
   ask: (request: string) => call<Proposal>("/api/ask", { request }),
   applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),

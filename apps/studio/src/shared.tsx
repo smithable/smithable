@@ -81,7 +81,7 @@ export function Preview({
     (async () => {
       const until = Date.now() + 180_000;
       for (let wait = 250; !stopped; wait = Math.min(wait * 2, 4000)) {
-        if (await answers(url)) return stopped || setAnswer({ key: frameKey, server: "up" });
+        if (await answers()) return stopped || setAnswer({ key: frameKey, server: "up" });
         if (Date.now() > until) return stopped || setAnswer({ key: frameKey, server: "down" });
         await new Promise((r) => setTimeout(r, wait));
       }
@@ -89,7 +89,7 @@ export function Preview({
     return () => {
       stopped = true;
     };
-  }, [url, frameKey]);
+  }, [frameKey]);
   // A page that loaded without the preview editor's "ready" (the server's error page, or one
   // that stopped while loading) is loaded again: a server that no longer answers is waited for.
   const ready = useRef(false);
@@ -110,7 +110,7 @@ export function Preview({
     ready.current = false;
     setTimeout(async () => {
       if (ready.current) return;
-      if (!(await answers(url)) || errors.current++ < 3) setAttempt((n) => n + 1);
+      if (!(await answers()) || errors.current++ < 3) setAttempt((n) => n + 1);
     }, 8000);
   };
   useEffect(() => {
@@ -346,16 +346,15 @@ export function Trace({
 }
 
 /**
- * Whether the app's server answers at all. A cross-origin request reads nothing, but it fails
- * only when nothing answers (a server that is starting or has stopped).
+ * Whether the preview's server answers, as Studio's own server finds:
+ * a browser cannot see the status of another origin, so a hosting service's "Starting…" page
+ * would pass for the app.
  */
-async function answers(url: string): Promise<boolean> {
-  try {
-    await fetch(`${url}/health`, { mode: "no-cors", cache: "no-store" });
-    return true;
-  } catch {
-    return false;
-  }
+async function answers(): Promise<boolean> {
+  return api.previewAnswers().then(
+    (r) => r.ok,
+    () => false,
+  );
 }
 
 /**

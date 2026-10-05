@@ -499,6 +499,10 @@ export async function studio(
         }
         return json({ log: tail.slice(-12), report: stuck.report });
       }
+      // Whether the preview's own server answers, asked from here (inside a hosted workspace too):
+      // the browser cannot read a status across origins, and a hosted service's "Starting…"
+      // page (503) would pass for the app.
+      if (url.pathname === "/api/preview/answers") return json({ ok: await previewAnswers() });
       // Retry: the preview's server starts again, rather than being asked once more.
       if (req.method === "POST" && url.pathname === "/api/preview/restart") {
         stopApp();
