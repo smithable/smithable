@@ -1,17 +1,50 @@
 // Describe a change in your own words: a model proposes operations, which apply at once when
 // they lose no data (Undo takes them back); one that deletes data is shown first and waits
 // for Apply (ARCHITECTURE §9.4).
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Proposal } from "../api";
 import { Button, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 
-/** `onEdit` opens a proposed operation in the Change tab, with its values filled in. */
-export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; words?: Words }) {
+/**
+ * `onEdit` opens a proposed operation in the Change tab, with its values filled in. While the
+ * app is being made (`making`), a request is kept for later instead (`waiting`, in Studio's
+ * server); once the app is in place each is taken in turn, as if typed then.
+ */
+export function Ask({
+  onEdit,
+  words,
+  making = false,
+  waiting = [],
+}: {
+  onEdit: (prefill: Prefill) => void;
+  words?: Words;
+  making?: boolean;
+  waiting?: string[];
+}) {
   const [request, setRequest] = useState("");
   const [proposal, setProposal] = useState<Proposal>();
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
+  // The next waiting request, once the app is in place and the box is free: out of the list
+  // first, so another page does not take it too.
+  const taking = useRef(false);
+  // Only a page someone is looking at takes it, so two open tabs do not both take the first.
+  const next =
+    !making && !busy && !proposal && document.visibilityState === "visible"
+      ? waiting[0]
+      : undefined;
+  useEffect(() => {
+    if (next === undefined || taking.current) return;
+    taking.current = true;
+    setRequest(next);
+    void api
+      .waiting({ remove: 0 })
+      .then(() => propose(next))
+      .finally(() => {
+        taking.current = false;
+      });
+  });
 
   const propose = async (text: string) => {
     setBusy(true);
@@ -51,7 +84,13 @@ export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; wor
         className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (request.trim()) void propose(request.trim());
+          if (!request.trim()) return;
+          if (making)
+            void api.waiting({ add: request.trim() }).then(
+              () => setRequest(""),
+              (error: Error) => setOutput(error.message),
+            );
+          else void propose(request.trim());
         }}
       >
         <Label
@@ -66,9 +105,34 @@ export function Ask({ onEdit, words }: { onEdit: (prefill: Prefill) => void; wor
           />
         </Label>
         <Button type="submit" disabled={busy || !request.trim()}>
-          {busy && !proposal ? "Working…" : "Make the change"}
+          {making
+            ? "Make it once the app is there"
+            : busy && !proposal
+              ? "Working…"
+              : "Make the change"}
         </Button>
       </form>
+      {waiting.length > 0 && (
+        <ul aria-label="Waiting" className="space-y-1">
+          {waiting.map((text, i) => (
+            <li
+              // The same request may wait twice: the text and how many alike came before.
+              key={`${text}#${waiting.slice(0, i).filter((t) => t === text).length}`}
+              className="flex items-center gap-2 text-sm text-neutral-600"
+            >
+              <span className="min-w-0 flex-1 truncate">Waiting: {text}</span>
+              <Button
+                variant="ghost"
+                className="h-6"
+                aria-label={`Take back: ${text}`}
+                onClick={() => void api.waiting({ remove: i }).catch(() => undefined)}
+              >
+                Take back
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
       {proposal && (
         <ProposalView
           proposal={proposal}

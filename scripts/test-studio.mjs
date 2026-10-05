@@ -1616,6 +1616,51 @@ try {
           throw new Error("the answer did not reach the draft");
         if ((await post("/api/making/answer", { answers: [] })).status !== 409)
           throw new Error("an answer was taken with nothing asked");
+
+        // The same through the page (stage two of docs/design/while-it-is-made.md): the question
+        // with its answers as buttons, the words box keeping what is typed, and once the app is
+        // in place, the request made as if typed then.
+        await again();
+        const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+        try {
+          await watcher.goto(other);
+          await watcher.locator("header").first().waitFor({ timeout: 60000 });
+          const again2 = await replace(port + 2, {
+            describe: "A status page for our services",
+            ask: true,
+            wait: false,
+          });
+          if (again2.status !== 202) throw new Error(JSON.stringify(again2));
+          const form = watcher.getByRole("form", { name: "Questions" });
+          await form.waitFor({ timeout: 15000 });
+          const box = watcher.getByLabel("Describe a change, or ask a question");
+          await box.fill("not this one");
+          await watcher.getByRole("button", { name: "Make it once the app is there" }).click();
+          // Kept, the box is empty again for the next one.
+          await watcher.getByText("Waiting: not this one").waitFor();
+          // The stand-in model drafts its pilates studio: a request that fits it, made by the
+          // wording rules without a model.
+          await box.fill("add a phone number to sessions");
+          await watcher.getByRole("button", { name: "Make it once the app is there" }).click();
+          await watcher.getByRole("button", { name: "Take back: not this one" }).click();
+          await watcher.getByText("Waiting: not this one").waitFor({ state: "detached" });
+          await form.getByRole("button").first().click();
+          await form.getByRole("button", { name: "Make it" }).click();
+          await form.waitFor({ state: "detached", timeout: 15000 });
+          // In place: the request that waited is made, and nothing waits any more.
+          await watcher
+            .getByLabel("Change trace")
+            .getByText("Sessions: added a phone")
+            .first()
+            .waitFor({ timeout: 90000 });
+          const after = await (await fetch(`${other}/api/project`)).json();
+          if (after.waiting?.length) throw new Error(`still waiting: ${after.waiting}`);
+        } catch (error) {
+          await watcher.screenshot({ path: join(root, "making.png") }).catch(() => {});
+          throw error;
+        } finally {
+          await watcher.close();
+        }
       },
     );
   } finally {
