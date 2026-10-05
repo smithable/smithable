@@ -7,7 +7,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!.mcp.json", "!packages/core/schema", "!**/*.gen.ts"]
+    "includes": [
+      "**",
+      "!.mcp.json",
+      "!packages/core/schema",
+      "!**/*.gen.ts",
+      "!docs/benchmarks",
+      "!docs/research"
+    ]
   },
   "formatter": {
     "enabled": true,
