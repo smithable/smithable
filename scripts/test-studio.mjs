@@ -1007,6 +1007,15 @@ try {
       throw new Error("addPage can be applied with a name that does not fit");
     await page.getByLabel("page", { exact: true }).fill("hello");
     await page.getByRole("button", { name: "Apply addPage", disabled: false }).waitFor();
+    // A list opens as the app has it (finding 13): the customers table's columns are ticked.
+    await page.getByLabel("Operation").selectOption("setColumns");
+    await page.getByLabel("page", { exact: true }).selectOption("customers");
+    const columns = page.getByRole("group", { name: "columns" });
+    if (
+      !(await columns.getByLabel("Email").isChecked()) ||
+      (await columns.getByLabel("Account manager", { exact: true }).isChecked())
+    )
+      throw new Error("setColumns does not open with the table's columns");
     await page.getByLabel("Operation").selectOption("setSearch");
     // Names in the spec are chosen, not typed: the page, then its model's fields.
     await page.getByLabel("page", { exact: true }).selectOption("orders");
