@@ -1,3 +1,4 @@
+import { defaultColumns } from "../columns.js";
 import { conditionArgs } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula, renameTextInFormula } from "../formula.js";
@@ -10,8 +11,10 @@ import {
   OperationError,
   refTo,
 } from "../operation.js";
+import { pageModel } from "../patterns.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
+import { put } from "./ux-operations.js";
 
 const name = { type: "string", minLength: 1 };
 
@@ -114,7 +117,13 @@ const addModel: Operation<{ model: string; fields: Record<string, FieldArg> }> =
   },
 };
 
-const addField: Operation<{ model: string; field: string; type: string; formula?: string }> = {
+const addField: Operation<{
+  model: string;
+  field: string;
+  type: string;
+  formula?: string;
+  list?: boolean;
+}> = {
   name: "addField",
   summary: "Add a field to a model.",
   schema: {
@@ -130,17 +139,32 @@ const addField: Operation<{ model: string; field: string; type: string; formula?
         description:
           'A computed field: worked out from the record\'s other fields, never entered, e.g. "quantity * unitPrice" (the type is then its kind only, e.g. "money").',
       },
+      list: {
+        type: "boolean",
+        description: "Also show it as a column of its list page's table, in the same change.",
+      },
     },
   },
   positional: ["model", "field", "...type"],
-  describe: ({ model, field, type, formula }) =>
-    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}) to ${model}`,
+  describe: ({ model, field, type, formula, list }) =>
+    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}) to ${model}${list ? ", shown in its list" : ""}`,
   destructive: () => false,
-  apply({ spec }, { model: m, field: f, type, formula }, ir) {
+  apply({ spec, ux }, { model: m, field: f, type, formula, list }, ir) {
     checkFieldArg(f, formula ? { type, formula } : type);
     if (model(ir, m).fields.some((x) => x.name === f))
       throw new OperationError(`${m} already has a field named "${f}".`);
     spec.add(fieldPath(m, f, ir).slice(0, -1), f, formula ? { type, formula } : type);
+    // Shown in its list, in the same change: added to the columns its page names, or, where the
+    // app picks them and already shows five, to those five (fewer: the app shows it anyway).
+    const page = list
+      ? ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === m)
+      : undefined;
+    if (page) {
+      const path = ["pages", page.id, "table", "columns"];
+      const named = ux.get(path);
+      const columns = Array.isArray(named) ? named.map(String) : defaultColumns(model(ir, m));
+      if (Array.isArray(named) || columns.length >= 5) put(ux, path, [...columns, f]);
+    }
     return [];
   },
 };
