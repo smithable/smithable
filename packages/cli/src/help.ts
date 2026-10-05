@@ -209,6 +209,12 @@ export const COMMANDS: Command[] = [
     options: ["dir"],
   },
   {
+    name: "redo",
+    usage: "redo",
+    text: ["Make again the last change undone, until another change is made"],
+    options: ["dir"],
+  },
+  {
     name: "report",
     usage: "report [--send] [--always | --never | --ask]",
     text: [
@@ -286,7 +292,7 @@ export const COMMANDS: Command[] = [
 const GLOBAL_OPTIONS = [
   "-h, --help       Show this help (after a command: that command's help)",
   "-v, --version    Show the Smithable version",
-  "--dir <path>     Project directory for op, undo, report, inspect and test (default: current)",
+  "--dir <path>     Project directory for op, undo, redo, report, inspect and test (default: current)",
 ];
 
 /** The global help: every command in the table. */

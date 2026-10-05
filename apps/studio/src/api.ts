@@ -28,6 +28,8 @@ export interface Project {
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
   trace: TraceEntry[];
+  /** Redo would make again the last change undone (none made since). */
+  canRedo?: boolean;
   preview: string;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
@@ -111,6 +113,7 @@ export const api = {
     changing(call<Result>("/api/op", { name, args, confirm })),
   customize: (page: string) => changing(call<Result>("/api/customize", { page })),
   undo: () => changing(call<Result>("/api/undo", {})),
+  redo: () => changing(call<Result>("/api/redo", {})),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
   sendReport: (send: boolean, choice?: "always" | "never" | "ask") =>
