@@ -41,6 +41,17 @@ test("clarify on a starter's own description, or a small edit of it, asks nothin
   expect(JSON.parse(edited.stdout)).toEqual({ starter: "crm", questions: [] });
 });
 
+test("starters lists every starter with the description that makes it, as JSON for programs", async () => {
+  const io = captureIo();
+  expect(await run(["starters", "--json"], io)).toBe(0);
+  const listed = JSON.parse(io.stdout) as { name: string; description: string }[];
+  expect(listed.map((s) => s.name)).toEqual(Object.keys(STARTER_TEXTS));
+  expect(listed.find((s) => s.name === "crm")?.description).toBe(STARTER_TEXTS.crm?.text);
+  const plain = captureIo();
+  expect(await run(["starters"], plain)).toBe(0);
+  expect(plain.stdout).toContain(`crm\n  ${STARTER_TEXTS.crm?.text}\n`);
+});
+
 test("new requires a directory and a known starter", async () => {
   const io = captureIo();
   expect(await run(["new"], io)).toBe(2);
