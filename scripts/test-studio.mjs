@@ -375,13 +375,17 @@ try {
       if (!watch.updating) throw new Error("the preview never said Updating…");
     },
   );
-  await step("undoing a theme puts back the packages it swapped (its font)", async () => {
-    const before = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
+  // Every app has every theme's font, so a theme never needs an install (a hosted workspace
+  // could not fetch one).
+  await step("a theme and its undo change no package: its font was installed already", async () => {
+    const before = readFileSync(join(dir, "package.json"), "utf8");
     await page.getByRole("button", { name: "Undo", exact: true }).click();
     await status.getByText(/Undid: Use the playful theme/).waitFor({ timeout: 60000 });
-    const after = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies;
-    if (JSON.stringify(before) === JSON.stringify(after))
-      throw new Error("the theme changed no package");
+    if (readFileSync(join(dir, "package.json"), "utf8") !== before)
+      throw new Error("the theme changed package.json");
+    const after = JSON.parse(before).dependencies;
+    if (Object.keys(after).filter((name) => name.startsWith("@fontsource-variable/")).length < 3)
+      throw new Error("package.json does not list every theme's font");
     for (const name of Object.keys(after))
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });

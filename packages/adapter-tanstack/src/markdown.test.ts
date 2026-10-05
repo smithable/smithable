@@ -34,8 +34,8 @@ test("a markdown field is edited with the kit's Markdown editor; the formatter i
   expect(JSON.parse(file("package.json") ?? "{}").dependencies["react-markdown"]).toBe("10.1.0");
 });
 
-test("without a markdown field there is no Markdown kit and no dependency", () => {
+test("without a markdown field there is no Markdown kit; the package list stays the same", () => {
   const file = app("title: string!, body: text");
   expect(file("src/kit/Markdown.tsx")).toBeUndefined();
-  expect(JSON.parse(file("package.json") ?? "{}").dependencies["react-markdown"]).toBeUndefined();
+  expect(file("package.json")).toBe(app("title: string!, body: markdown")("package.json"));
 });

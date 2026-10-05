@@ -478,6 +478,7 @@ function declaredPackages(dir: string): Record<string, string> | string {
     ...Object.keys(STACK_PROFILE.dependencies),
     ...Object.keys(STACK_PROFILE.devDependencies),
     ...Object.keys(STACK_PROFILE.fonts),
+    ...Object.keys(STACK_PROFILE.markdown),
   ]);
   for (const name of Object.keys(packages))
     if (managed.has(name))
