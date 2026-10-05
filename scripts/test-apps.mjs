@@ -3574,6 +3574,8 @@ test("what an action asks for is checked when it is proposed", async () => {
             ["addField", "Row", "twice", "money", "--formula", "amount * 2"],
             ["addField", "Row", "size", "small | large"],
             ["addModel", "Value", "name=string!", "amount=int"],
+            // A model with no text to search, offered to programs like the rest (a first build's).
+            ["addModel", "Tally", "count=int!"],
             // A reference added to an existing table, to one named like an SQL word (values):
             // its migration names the table quoted (quoteReferences).
             ["addField", "Row", "group", "Value"],
@@ -3958,6 +3960,59 @@ test("a change Ask proposes is checked, carded, and made once confirmed", async 
           op("setAssistant", "member", "--may", "change");
         },
       );
+    // Shapes first builds made that no example has: a hero shortcut to a page behind sign-in, a
+    // model owned by a required User field, and an API in an app without a users page.
+    if (example === "booking")
+      step(
+        "a hero shortcut to a page behind sign-in, and a model owned by a required User field, type-check; a key adding such a record names its owner or is told to",
+        () => {
+          const ops = [
+            ["setShortcuts", "home", "schedule", "blog", "instructors"],
+            ["addModel", "Posting", "title=string!", "poster=User!"],
+            ["setOwner", "Posting", "poster"],
+          ];
+          for (const args of ops) {
+            const done = smithable(dir, "op", ...args);
+            if (done.code !== 0) throw new Error(done.out);
+          }
+          run("pnpm", ["typecheck"], dir);
+          // A key owns nothing: it names the poster, or is told to.
+          const check = join(dir, "src/required-owner.test.ts");
+          writeFileSync(
+            check,
+            `import { expect, test } from "vitest";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+import { postingData } from "./generated/posting.server";
+
+test("a key adding a posting names its poster, or is told to", async () => {
+  const key = { id: "key:1", name: "A key", email: "", role: "admin" };
+  await expect(postingData.create(key, { title: "By a key" } as never)).rejects.toThrow("A key owns nothing: name the poster");
+  db.insert(user).values({ id: "poster-1", name: "Poster", email: "poster@example.com", role: "admin" }).run();
+  const made = await postingData.create(key, { title: "By a key, named", posterId: "poster-1" } as never);
+  expect(made.posterId).toBe("poster-1");
+});
+`,
+          );
+          try {
+            run("pnpm", ["exec", "vitest", "run", "src/required-owner.test.ts"], dir);
+          } finally {
+            rmSync(check);
+          }
+          for (const _ of ops) {
+            const undone = smithable(dir, "undo");
+            if (undone.code !== 0) throw new Error(undone.out);
+          }
+        },
+      );
+    if (example === "records")
+      step("an API in an app without a users page type-checks", () => {
+        const done = smithable(dir, "op", "setApi", "all");
+        if (done.code !== 0) throw new Error(done.out);
+        run("pnpm", ["typecheck"], dir);
+        const undone = smithable(dir, "undo");
+        if (undone.code !== 0) throw new Error(undone.out);
+      });
     // A stand-in for the host's model, for Ask's confirmation cards: it proposes starting a task.
     if (example === "api") {
       const stand = await standInModel();

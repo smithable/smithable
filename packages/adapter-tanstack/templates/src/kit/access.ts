@@ -29,8 +29,9 @@ export interface ModelAccess {
 }
 
 export class AccessDenied extends Error {
-  constructor(signedIn: boolean) {
-    super(signedIn ? "You are not allowed to do this." : "Please sign in first.");
+  /** `why`: the refusal in words the caller can act on, when there are better ones than "not allowed". */
+  constructor(signedIn: boolean, why?: string) {
+    super(why ?? (signedIn ? "You are not allowed to do this." : "Please sign in first."));
   }
 }
 
