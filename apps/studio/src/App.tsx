@@ -297,11 +297,29 @@ export function App() {
               Show preview
             </Button>
           )}
-          {project.home && (
+          {project.home ? (
             <a href={project.home} className="text-xs font-medium text-accent hover:underline">
               Publish and share
             </a>
+          ) : (
+            // On your own machine an app is published as an ordinary container.
+            <a
+              href="https://docs.smithable.ai/self-host.html"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium text-accent hover:underline"
+            >
+              Publish
+            </a>
           )}
+          <a
+            href="https://docs.smithable.ai/start.html"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-neutral-600 hover:underline"
+          >
+            Help
+          </a>
           <Button
             variant="ghost"
             onClick={undo}
