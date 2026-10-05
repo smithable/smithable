@@ -561,13 +561,14 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {
     const a = actionNames(action);
     const words = action.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
-    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))} },`;
+    const asks = askedFields(action).length ? `, asks: ${a.asks}` : "";
+    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
   });
   const runs = actions.map((action) => {
     const model = modelNamed(ir, action.on);
@@ -813,7 +814,7 @@ ${
   confirms
     ? `
 /** Each action Ask may propose: the kind it runs on, its rule, when it fits, its name in words. */
-const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never) => boolean; label: string }> = {
+const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never) => boolean; label: string; asks?: { parse: (input: unknown) => unknown } }> = {
 ${proposals.join("\n")}
 };
 
@@ -851,16 +852,39 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
     if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
     if (!run.fits(row as never)) throw new BadInput("This cannot be done now.");
+    // What the action asks for, checked now: a missing or wrong value is said here, not at Confirm.
+    if (run.asks) {
+      try {
+        run.asks.parse(args.input ?? {});
+      } catch (error) {
+        const issues = (error as { issues?: { path: unknown[]; message: string }[] }).issues ?? [];
+        throw new BadInput(\`\${run.label} needs: \${issues.map((i) => \`\${i.path.join(".")} (\${i.message})\`).join(", ") || "other values"}.\`);
+      }
+    }
     kept = { ...args, id: row.id };
     card = { title: \`\${run.label} \${kind.label} \${String(row[kind.title] ?? row.id)}\`, changes: [] };
   } else {
     const kind = kindOf(args);
-    const values = (args.values ?? {}) as Record<string, unknown>;
+    const values = { ...((args.values ?? {}) as Record<string, unknown>) };
     const label = (field: string) => labelOf(viewer, String(args.kind), field);
+    // A record referred to by id or title: found now among those the person may read, kept by
+    // its id, and shown by its title.
+    const titles: Record<string, string> = {};
+    for (const [field, target] of Object.entries(kind.targets)) {
+      const given = values[field];
+      if (given === undefined || given === null || given === "") continue;
+      const other = KINDS[target as keyof typeof KINDS];
+      const row = (await found(other, viewer, given)) as Record<string, any>;
+      values[field] = row.id;
+      titles[field] = String(row[other.title] ?? row.id);
+    }
+    const shownTo = (field: string, value: unknown) => (field in titles ? titles[field] : cardValue(value));
+    args = { ...args, values };
     if (tool === "add") {
       if (!allows(kind.access.create, viewer)) throw new AccessDenied(true);
       kind.fromApi(values);
-      card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: cardValue(v) })) };
+      kept = args;
+      card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: shownTo(k, v) })) };
     } else if (tool === "change") {
       const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
       if (!allows(kind.access.write, viewer, row[kind.owner])) throw new AccessDenied(true);
@@ -869,7 +893,7 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
       kept = { ...args, id: row.id };
       card = {
         title: \`Change \${kind.label} \${String(row[kind.title] ?? row.id)}\`,
-        changes: Object.entries(values).map(([k, v]) => ({ label: label(k), from: cardValue(shown(kind, row, now, k)), to: cardValue(v) })),
+        changes: Object.entries(values).map(([k, v]) => ({ label: label(k), from: cardValue(shown(kind, row, now, k)), to: shownTo(k, v) })),
       };
     } else throw new BadInput("Ask never deletes.");
   }
