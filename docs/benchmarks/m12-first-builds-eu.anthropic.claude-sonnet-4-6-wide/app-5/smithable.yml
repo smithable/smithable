@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: ShootBill
-  description: "Invoicing for photographers: manage clients, shoots and track what is still unpaid."
+  description: "Invoicing for photographers: manage clients, shoots and track unpaid invoices."
   currency: USD
 models:
   BusinessProfile:
@@ -25,7 +25,7 @@ models:
       shootDate: date!
       location: string
       notes: text
-      status: scheduled | completed | canceled
+      invoices: Invoice[]
   Invoice:
     fields:
       number: string! unique
@@ -54,7 +54,7 @@ actions:
       status: draft
     set:
       status: sent
-    intent: The invoice was sent to the client.
+    intent: The invoice went to the client.
   markPaid:
     on: Invoice
     when:
@@ -62,20 +62,6 @@ actions:
     set:
       status: paid
     intent: The client paid the invoice.
-  markCompleted:
-    on: Shoot
-    when:
-      status: scheduled
-    set:
-      status: completed
-    intent: The shoot has been completed.
-  cancelShoot:
-    on: Shoot
-    when:
-      status: scheduled
-    set:
-      status: canceled
-    intent: The shoot has been canceled.
 pages:
   home:
     route: /
@@ -85,20 +71,20 @@ pages:
       features:
   overview:
     dashboard:
-      latestInvoices:
+      latest:
         list: Invoice
         limit: 5
   invoices:
     crud: Invoice
     search: [number, status]
-    filters: [status, client, issuedOn, dueOn]
-  clients:
-    crud: Client
-    search: [name, email]
+    filters: [status, client, shoot, issuedOn, dueOn]
   shoots:
     crud: Shoot
     search: [name, location]
-    filters: [status, client, shootDate]
+    filters: [client, shootDate]
+  clients:
+    crud: Client
+    search: [name, email]
   invoice-lines:
     crud: InvoiceLine
   team:

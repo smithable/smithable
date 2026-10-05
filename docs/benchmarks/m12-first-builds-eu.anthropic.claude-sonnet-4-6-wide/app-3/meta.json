@@ -2,9 +2,5 @@
   "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
   "starter": "booking",
   "wordStarter": "booking",
-  "questions": [
-    "What can visitors see without signing in?",
-    "What details does a stylist's profile include?",
-    "Can customers leave reviews after their appointment?"
-  ]
+  "questions": ["What can visitors see without signing in?", "What details does a booking hold?"]
 }

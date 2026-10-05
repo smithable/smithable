@@ -3,12 +3,12 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home, teams, players, matches]
+  pages: [home, matches, teams, players]
   read: [Team, Player, Match]
 roles:
   admin:
-    description: Runs the club's site.
+    description: "Runs the club's site: teams, players and matches."
   member:
-    description: Follows the club.
+    description: A club member who follows the teams.
 defaultRole: member
 admins: [johan@smithable.ai]

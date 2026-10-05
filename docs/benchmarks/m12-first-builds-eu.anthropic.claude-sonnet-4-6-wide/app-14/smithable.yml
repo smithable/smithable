@@ -14,22 +14,23 @@ models:
       email: email
       phone: phone
       rsvp: pending | attending | declined
-      mealChoice: none | meat | fish | vegetarian | vegan
+      mealChoice: none | chicken | fish | vegetarian | vegan
       dietaryNotes: text
-      plusOne: bool
+      plusOne: bool = false
       plusOneName: string
-      plusOneMeal: none | meat | fish | vegetarian | vegan
+      plusOneMeal: none | chicken | fish | vegetarian | vegan
       table: Table
       seatNumber: int
       notes: text
 pages:
   guests:
     crud: Guest
-    search: [name, email]
+    search: [name, email, plusOneName]
     filters: [rsvp, mealChoice, table, plusOne]
     actions: [confirmAttendance, declineInvitation]
   tables:
     crud: Table
+    search: [name]
   overview:
     dashboard:
       totalGuests:
@@ -46,7 +47,7 @@ pages:
         count: Guest
         where:
           rsvp: declined
-      recentRSVPs:
+      recentRsvps:
         list: Guest
         limit: 5
   team:
@@ -58,13 +59,12 @@ actions:
       rsvp: pending
     set:
       rsvp: attending
-      mealChoice:
-    intent: Mark a guest as attending and record their meal choice.
+    intent: Mark the guest as attending.
   declineInvitation:
     on: Guest
     when:
       rsvp: [pending, attending]
     set:
       rsvp: declined
-    intent: Mark a guest as declined.
+    intent: Mark the guest as not attending.
 navigation: [overview, guests, tables, team]

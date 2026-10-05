@@ -3,7 +3,6 @@ pages:
   sightings:
     table:
       sort: -seenOn
-      columns: [species, place, seenOn, seenBy]
     icon: star
 theme:
   preset: woodland

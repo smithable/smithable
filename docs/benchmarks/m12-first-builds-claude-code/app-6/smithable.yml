@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Union Jobs
-  description: Job posts for union members, and the applications they send.
+  description: Job openings shared by the union, where members find work and apply.
   currency: USD
 models:
   Job:
@@ -10,10 +10,10 @@ models:
       employer: string!
       description: text!
       location: string
-      type: fullTime | partTime | temporary | contract
+      jobType: fullTime | partTime | temporary | apprenticeship
       pay: string
-      deadline: date
-      status: open | filled | closed
+      closesOn: date
+      status: open | closed
       applications: Application[]
     access:
       create: [staff, admin]
@@ -25,7 +25,7 @@ models:
       email: email!
       phone: phone
       message: text
-      status: submitted | reviewing | accepted | rejected
+      status: submitted | reviewing | accepted | declined
     access:
       read: [owner, staff, admin]
 pages:
@@ -33,17 +33,17 @@ pages:
     route: /
     crud: Job
     search: [title, employer, description, location]
-    filters: [type, status, deadline]
-    sortable: [deadline, createdAt]
+    filters: [jobType, status, closesOn]
+    sortable: [closesOn, createdAt]
     favorites: true
-    actions: [markFilled, close]
+    actions: [closeJob]
   myApplications:
     crud: Application
     mine: true
   applications:
     crud: Application
-    search: [name, email]
     filters: [job, status]
+    search: [name, email]
     access: [staff, admin]
   home:
     route: /welcome
@@ -56,8 +56,15 @@ pages:
           status: open
   team:
     users: manage
-navigation: [jobs, myApplications, applications, team]
 actions:
+  closeJob:
+    on: Job
+    when:
+      status: open
+    set:
+      status: closed
+    allow: [staff, admin]
+    intent: Close a job post so no more people apply.
   startReview:
     on: Application
     when:
@@ -74,27 +81,12 @@ actions:
       status: accepted
     allow: [staff, admin]
     intent: Accept an application.
-  reject:
+  decline:
     on: Application
     when:
       status: [submitted, reviewing]
     set:
-      status: rejected
+      status: declined
     allow: [staff, admin]
-    intent: Turn down an application.
-  markFilled:
-    on: Job
-    when:
-      status: open
-    set:
-      status: filled
-    allow: [staff, admin]
-    intent: Mark a job as filled.
-  close:
-    on: Job
-    when:
-      status: open
-    set:
-      status: closed
-    allow: [staff, admin]
-    intent: Close a job post without filling it.
+    intent: Decline an application.
+navigation: [jobs, myApplications, applications, team]

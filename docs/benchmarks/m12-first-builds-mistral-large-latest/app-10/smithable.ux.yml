@@ -1,0 +1,9 @@
+smithableUx: 0.1
+theme:
+  preset: modern
+  brand:
+    primary: "#22c55e"
+pages:
+  recipes:
+    table:
+      view: cards

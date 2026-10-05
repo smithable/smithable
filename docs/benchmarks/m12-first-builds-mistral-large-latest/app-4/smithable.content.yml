@@ -1,0 +1,56 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Borrow tools from your neighbors
+      subtitle: Find what you need for your next project, and lend your tools to help others.
+    latest:
+      title: Recently added tools
+  tools:
+    title: Tools
+    subtitle: Browse tools available for borrowing
+models:
+  Tool:
+    label: Tool
+    pluralLabel: Tools
+    fields:
+      name:
+        label: Name
+      photo:
+        label: Photo
+      description:
+        label: Description
+      category:
+        label: Category
+        values:
+          gardening: Gardening
+          woodworking: Woodworking
+          cleaning: Cleaning
+          power: Power tools
+          hand: Hand tools
+          other: Other
+      condition:
+        label: Condition
+        values:
+          new: New
+          good: Good
+          worn: Worn
+          broken: Broken
+      location:
+        label: Location
+      available:
+        label: Available
+  Borrowing:
+    label: Borrowing
+    pluralLabel: Borrowings
+    fields:
+      tool:
+        label: Tool
+      borrower:
+        label: Borrower
+      borrowedAt:
+        label: Borrowed at
+      dueAt:
+        label: Due at
+      returnedAt:
+        label: Returned at

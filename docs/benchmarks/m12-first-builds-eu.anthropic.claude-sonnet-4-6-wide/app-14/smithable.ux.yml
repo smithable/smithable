@@ -5,14 +5,14 @@ pages:
       columns: [name, rsvp, mealChoice, table, plusOne]
       below:
         name: email
-      sort: name
+        table: seatNumber
     form:
+      sections: [{ name: details, fields: [name, email, phone] }, { name: rsvp, fields: [rsvp, mealChoice, dietaryNotes] }, { name: plusOne, fields: [plusOne, plusOneName, plusOneMeal] }, { name: seating, fields: [table, seatNumber] }, { name: other, fields: [notes] }]
       columns: 2
     icon: users
   tables:
     table:
       columns: [name, seats, notes]
-      sort: name
     icon: layers
 tones:
   Guest.rsvp:
@@ -21,3 +21,4 @@ tones:
     pending: warning
 theme:
   preset: pastel
+  motion: subtle

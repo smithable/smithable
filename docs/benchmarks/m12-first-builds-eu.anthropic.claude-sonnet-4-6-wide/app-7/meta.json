@@ -2,8 +2,5 @@
   "description": "A town flea market site where anyone can post things to sell, with photos and a price.",
   "starter": "marketplace",
   "wordStarter": "marketplace",
-  "questions": [
-    "Can buyers contact sellers directly on the site?",
-    "Can anyone browse listings without signing in?"
-  ]
+  "questions": ["Can visitors browse listings without signing in?", "Who can contact a seller?"]
 }

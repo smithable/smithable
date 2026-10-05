@@ -9,6 +9,6 @@ roles:
   admin:
     description: Keeps the marketplace tidy.
   member:
-    description: Posts and saves items.
+    description: Sells and saves items.
 defaultRole: member
 admins: [johan@smithable.ai]

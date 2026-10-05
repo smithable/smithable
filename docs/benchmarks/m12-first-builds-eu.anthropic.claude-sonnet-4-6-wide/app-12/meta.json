@@ -2,5 +2,5 @@
   "description": "Service status for our municipality's online services, for residents to check outages.",
   "starter": "status",
   "wordStarter": "status",
-  "questions": ["Which online services should be listed as components?"]
+  "questions": []
 }

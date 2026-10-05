@@ -2,5 +2,8 @@
   "description": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
   "starter": "invoicing",
   "wordStarter": "booking",
-  "questions": ["Who should be able to create and send invoices?", "How are clients organised?"]
+  "questions": [
+    "Who should be able to create and send invoices?",
+    "What do the invoices mainly cover?"
+  ]
 }

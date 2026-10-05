@@ -4,11 +4,12 @@ signIn:
 defaultAccess: private
 public:
   pages: [home, schedule]
-  read: [Talk, Speaker]
+  read: [Speaker, Talk]
+  create: [Message]
 roles:
   admin:
-    description: Conference organizers. Manage the talks and speakers.
+    description: Conference organizers. Manage talks, speakers and attendees.
   attendee:
-    description: Someone attending the conference who registers for talks.
+    description: Registers for the conference and books seats at talks.
 defaultRole: attendee
 admins: [johan@smithable.ai]

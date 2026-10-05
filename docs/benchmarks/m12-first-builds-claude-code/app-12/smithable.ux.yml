@@ -7,9 +7,6 @@ tones:
   Incident.status:
     investigating: danger
     identified: warning
-    monitoring: warning
     resolved: success
 theme:
-  preset: minimal
-  brand:
-    primary: "#16a34a"
+  preset: modern

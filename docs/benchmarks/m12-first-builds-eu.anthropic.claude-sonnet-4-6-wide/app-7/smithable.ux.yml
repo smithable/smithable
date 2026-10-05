@@ -3,5 +3,17 @@ tones:
   Item.condition:
     likeNew: success
     worn: warning
+pages:
+  myItems:
+    table:
+      columns: [title, price, category, condition, available]
+    icon: star
+  saved:
+    icon: book
+  catalog:
+    table:
+      columns: [title, price, category, condition, place, available]
+    icon: tag
 theme:
-  preset: craft
+  preset: playful
+  motion: subtle

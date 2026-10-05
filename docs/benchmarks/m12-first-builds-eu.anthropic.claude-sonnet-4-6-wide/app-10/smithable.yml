@@ -8,17 +8,20 @@ pages:
     landing:
       hero:
       footer:
-      features:
-      highlights:
+      featured:
         records: MuseumObject
         where:
-          status: onDisplay
+          featured: true
+      callToAction:
+        button: objects
   team:
     users: manage
   objects:
     crud: MuseumObject
-    search: [name, summary, story, category, period, material, origin]
-    sortable: [name, acquisitionDate, period]
+    search: [name, category, period, material, origin]
+    filters: [status, featured, acquisitionDate]
+    sortable: [name, acquisitionDate, category, period]
+    actions: [putOnDisplay, moveToStorage, lendOut]
 models:
   MuseumObject:
     fields:
@@ -31,9 +34,35 @@ models:
       origin: string
       acquisitionDate: date
       image: url
-      status: onDisplay | inStorage | onLoan | archived
+      featured: bool = false
+      status: onDisplay | inStorage | onLoan
     access:
       create: [admin]
       write: [admin]
       delete: [admin]
+actions:
+  putOnDisplay:
+    on: MuseumObject
+    when:
+      status: [inStorage, onLoan]
+    set:
+      status: onDisplay
+    intent: Mark the object as currently on display in the museum.
+    allow: [admin]
+  moveToStorage:
+    on: MuseumObject
+    when:
+      status: [onDisplay, onLoan]
+    set:
+      status: inStorage
+    intent: Move the object to storage.
+    allow: [admin]
+  lendOut:
+    on: MuseumObject
+    when:
+      status: [onDisplay, inStorage]
+    set:
+      status: onLoan
+    intent: Mark the object as on loan to another institution.
+    allow: [admin]
 navigation: [objects, team]

@@ -1,9 +1,4 @@
 smithableUx: 0.1
-tones:
-  Match.status:
-    played: success
-    postponed: warning
-    canceled: danger
 pages:
   matches:
     table:
@@ -12,12 +7,18 @@ pages:
     icon: calendar
   players:
     table:
-      columns: [shirtNumber, name, position, team]
-      view: cards
+      sort: shirtNumber
+      columns: [shirtNumber, name, team, position]
     icon: user
   teams:
     icon: users
+tones:
+  Match.status:
+    played: success
+    postponed: warning
+    canceled: danger
 theme:
   preset: modern
   brand:
     primary: "#15803d"
+    font: Inter

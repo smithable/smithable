@@ -7,7 +7,11 @@ pages:
       image:
         src: images/hero.webp
         alt: A hair salon with mirrors, chairs and plants in daylight
-  schedule:
-    title: Schedule
-  my-bookings:
-    title: My Bookings
+    callToAction:
+      button: See the Schedule
+  my-appointments:
+    title: My Appointments
+  appointments:
+    title: All Appointments
+  service-types:
+    title: Services

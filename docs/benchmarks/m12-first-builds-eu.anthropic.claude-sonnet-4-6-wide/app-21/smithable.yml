@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: AutoHuolto
-  description: Pieni autokorjaamo hallitsee asiakkaita, autoja, huoltotöitä ja laskuja yhdessä paikassa.
+  description: "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa."
   currency: EUR
   timezone: Europe/Helsinki
 models:
@@ -13,6 +13,8 @@ models:
       address: string
       notes: text
       cars: Car[]
+    access:
+      delete: [admin]
   Car:
     fields:
       customer: Customer!
@@ -21,30 +23,37 @@ models:
       year: int
       licensePlate: string! unique
       vin: string unique
-      notes: text
+      mileage: int
       serviceJobs: ServiceJob[]
+    access:
+      delete: [admin]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      total:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
   ServiceJob:
     fields:
       car: Car!
-      description: string!
-      status: avoin | tyonAlla | valmis | laskutettu
-      scheduledAt: date
-      completedAt: date
-      notes: text
-      laborCost: money
-      partsCost: money
-      total:
-        type: money
-        formula: laborCost + partsCost
+      description: text!
+      status: avoin | tyonalla | valmis | laskutettu
+      scheduledDate: date
+      completedDate: date
+      mechanicNotes: text
   Invoice:
     fields:
       number: string! unique
       serviceJob: ServiceJob!
       status: luonnos | lahetetty | maksettu | peruutettu
-      issuedAt: date
-      dueAt: date
-      amount: money!
+      issuedDate: date
+      dueDate: date
       notes: text
+    access:
+      delete: [admin]
 pages:
   customers:
     crud: Customer
@@ -55,26 +64,35 @@ pages:
     filters: [customer]
   team:
     users: manage
+    access: [admin]
   service-jobs:
     crud: ServiceJob
-    search: [description]
-    filters: [status, scheduledAt]
-    sortable: [scheduledAt, completedAt]
-    actions: [startWork, markInvoiced, completeJob]
+    search: [status]
+    filters: [status, scheduledDate]
+    sortable: [scheduledDate, completedDate]
+    actions: [startWork, completeJob, markInvoiced]
   invoices:
     crud: Invoice
     search: [number]
-    filters: [status, issuedAt, dueAt]
-    sortable: [issuedAt, dueAt, amount]
-    actions: [markPaid, cancelInvoice, sendInvoice]
+    filters: [status, issuedDate, dueDate]
+    sortable: [number, issuedDate, dueDate]
+    actions: [sendInvoice, markPaid, cancelInvoice]
 actions:
   startWork:
     on: ServiceJob
     when:
       status: avoin
     set:
-      status: tyonAlla
-    intent: Merkitse huoltotyö työn alle.
+      status: tyonalla
+    intent: Merkitse huoltotyö aloitetuksi.
+  completeJob:
+    on: ServiceJob
+    when:
+      status: tyonalla
+    set:
+      status: valmis
+      completedDate: TODAY()
+    intent: Merkitse huoltotyö valmiiksi.
   markInvoiced:
     on: ServiceJob
     when:
@@ -82,6 +100,14 @@ actions:
     set:
       status: laskutettu
     intent: Merkitse huoltotyö laskutetuksi.
+  sendInvoice:
+    on: Invoice
+    when:
+      status: luonnos
+    set:
+      status: lahetetty
+      issuedDate: TODAY()
+    intent: Lähetä lasku asiakkaalle.
   markPaid:
     on: Invoice
     when:
@@ -96,20 +122,4 @@ actions:
     set:
       status: peruutettu
     intent: Peruuta lasku.
-  completeJob:
-    on: ServiceJob
-    when:
-      status: tyonAlla
-    set:
-      status: valmis
-      completedAt: TODAY()
-    intent: Merkitse huoltotyö valmiiksi.
-  sendInvoice:
-    on: Invoice
-    when:
-      status: luonnos
-    set:
-      status: lahetetty
-      issuedAt: TODAY()
-    intent: Lähetä lasku asiakkaalle.
 navigation: [customers, cars, service-jobs, invoices, team]

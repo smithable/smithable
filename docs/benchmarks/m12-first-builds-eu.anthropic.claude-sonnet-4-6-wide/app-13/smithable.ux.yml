@@ -6,25 +6,19 @@ pages:
     icon: clipboard
     table:
       sort: -date
-      columns: [date, car, odometer, liters, pricePerLiter, totalCost, fullTank]
-    form:
-      sections: [{ name: fill-up, fields: [car, date, odometer, fullTank] }, { name: fuel, fields: [liters, pricePerLiter] }, { name: extra, fields: [station, notes] }]
-      columns: 2
+      columns: [date, car, odometer, liters, pricePerLiter, totalCost, station]
   service:
     icon: settings
     table:
       sort: -date
       columns: [date, car, type, description, workshop, cost]
-    form:
-      sections: [{ name: visit, fields: [car, date, odometer, type, description, workshop, cost] }, { name: next-service, fields: [nextServiceDate, nextServiceOdometer] }, { name: extra, fields: [notes] }]
-      columns: 2
+  expenses:
+    icon: receipt
+    table:
+      sort: -date
+      columns: [date, car, category, description, cost]
   overview:
     icon: chart
 tones:
   ServiceVisit.type:
     repair: warning
-    routine: success
-theme:
-  preset: modern
-  brand:
-    primary: "#1d4ed8"

@@ -3,4 +3,10 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
+roles:
+  admin:
+    description: Korjaamon omistaja tai esimies. Täydet oikeudet.
+  mechanic:
+    description: Asentaja. Hallinnoi autoja ja huoltotöitä.
+defaultRole: mechanic
 admins: [johan@smithable.ai]

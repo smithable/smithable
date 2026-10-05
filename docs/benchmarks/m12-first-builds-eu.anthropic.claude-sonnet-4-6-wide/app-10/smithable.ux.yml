@@ -5,11 +5,16 @@ pages:
   objects:
     table:
       columns: [name, category, period, status]
+      below:
+        name: summary
+      view: cards
     form:
+      sections: [{ name: details, fields: [name, category, period, material, origin, acquisitionDate] }, { name: description, fields: [summary, story] }, { name: display, fields: [image, featured, status] }]
+      columns: 2
       control:
-        summary: textarea
         story: textarea
-      sections: [{ name: basics, fields: [name, category, period, material, origin, status] }, { name: description, fields: [summary, story] }, { name: details, fields: [acquisitionDate, image] }]
+        summary: textarea
+        featured: switch
     icon: layers
 tones:
   MuseumObject.status:

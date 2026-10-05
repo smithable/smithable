@@ -1,0 +1,71 @@
+smithable: 0.1
+app:
+  name: Conference Central
+  description: Register for talks, meet the speakers and see who's coming.
+models:
+  Speaker:
+    fields:
+      name: string!
+      bio: text
+      photo: url
+      website: url
+    access:
+      write: [admin]
+      delete: [admin]
+  Talk:
+    fields:
+      title: string!
+      description: text
+      speaker: Speaker!
+      startsAt: datetime!
+      endsAt: datetime!
+      room: string
+      capacity: int
+      status: draft | scheduled | canceled
+    access:
+      write: [admin]
+      delete: [admin]
+  Attendee:
+    fields:
+      name: string!
+      email: email! unique
+      company: string
+    access:
+      write: [owner]
+      delete: [owner]
+  Registration:
+    fields:
+      attendee: Attendee!
+      talk: Talk!
+  UserRegistration:
+    fields:
+      user: User!
+      talk: Talk!
+pages:
+  talks:
+    crud: Talk
+    actions: [register]
+  speakers:
+    crud: Speaker
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      talks:
+        records: Talk
+        where:
+          status: scheduled
+      speakers:
+        records: Speaker
+  team:
+    users: manage
+actions:
+  register:
+    on: Talk
+    when:
+      status: scheduled
+    add:
+      UserRegistration:
+        user: ME()
+    intent: Register the signed-in person for this talk.

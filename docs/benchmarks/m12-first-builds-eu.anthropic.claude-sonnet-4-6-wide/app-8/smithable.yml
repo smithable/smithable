@@ -22,9 +22,6 @@ pages:
   myItems:
     crud: Item
     mine: true
-  saved:
-    crud: Item
-    favorites: only
   home:
     route: /welcome
     landing:
@@ -36,6 +33,7 @@ pages:
           available: true
   team:
     users: manage
+    access: [admin]
 actions:
   markClaimed:
     on: Item
@@ -43,12 +41,12 @@ actions:
       available: true
     set:
       available: false
-    intent: Mark an item as claimed so colleagues know it is no longer available.
+    intent: Mark an item as claimed so it no longer appears available.
   putBack:
     on: Item
     when:
       available: false
     set:
       available: true
-    intent: Put an item back on the shelf if it was not actually taken.
-navigation: [catalog, myItems, saved, team]
+    intent: Put an item back on the shelf so it is available again.
+navigation: [catalog, myItems, team]
