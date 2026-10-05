@@ -3262,7 +3262,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
 
 /** The offer for a caller; a role the app does not know gets nothing. */
 export function offerFor(viewer: Viewer | null): Offer & { describe: Record<string, string> } {
-  return OFFERS[viewer?.role ?? "visitor"] ?? { summary: "", tools: [], describe: {} };
+  const caller = viewer?.role ?? "visitor";
+  return Object.hasOwn(OFFERS, caller) ? OFFERS[caller] : { summary: "", tools: [], describe: {} };
 }
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
@@ -5717,20 +5718,28 @@ const askAs = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const me = await currentViewer();
     if (me?.role !== "admin") throw new AccessDenied(me !== null);
-    if (!(data.role in KINDS)) throw new AccessDenied(true);
-    // As a key of that role would be: it owns nothing, so "mine" is nobody's.
+    if (!Object.hasOwn(KINDS, data.role)) throw new AccessDenied(true);
+    // As a key of that role would be (a key's id): it owns nothing, so "mine" is nobody's.
     const viewer: Viewer | null =
-      data.role === "visitor" ? null : { id: \`inspector:\${me.id}\`, name: me.name, email: "", role: data.role };
+      data.role === "visitor" ? null : { id: \`key:inspector:\${me.id}\`, name: me.name, email: "", role: data.role };
     return answer(data.question, {
       offer: offerFor(viewer),
-      kinds: KINDS[data.role] ?? [],
+      kinds: KINDS[data.role],
       call: (tool, args) => callTool(viewer, tool, args),
       model: hostModel(me.id),
     });
   });
 
+/** The page is the administrator's alone, whoever else may open the data page. */
+const adminOnly = createServerFn().handler(async () => {
+  const me = await currentViewer();
+  if (me?.role !== "admin") throw new AccessDenied(me !== null);
+  return null;
+});
+
 export const Route = createFileRoute("/admin/ask")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
+  loader: () => adminOnly(),
   component: AskPage,
 });
 
@@ -5774,6 +5783,7 @@ const getCounts = createServerFn().handler(async () => {
       "notes": noteData.count(viewer),
     },
     restore: process.env.HOST_PAGE_URL ? \`\${process.env.HOST_PAGE_URL}/data\` : undefined,
+    admin: viewer?.role === "admin",
   };
 });
 
@@ -5790,7 +5800,7 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminPage() {
-  const { counts, restore } = Route.useLoaderData();
+  const { counts, restore, admin } = Route.useLoaderData();
   return (
     <>
       <PageHeader
@@ -5799,7 +5809,7 @@ function AdminPage() {
         actions={
           <>
             <Link to="/admin/activity" className="text-sm font-medium text-primary">Activity</Link>
-            <Link to="/admin/ask" className="text-sm font-medium text-primary">Ask</Link>
+            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary">Ask</Link>}
             {restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
           </>
         }
@@ -7366,7 +7376,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
-  "src/generated/mcp.server.ts": "1b6dbc21 generated",
+  "src/generated/mcp.server.ts": "2c2d89d3 generated",
   "src/generated/note.server.ts": "344bee7c generated",
   "src/generated/note.ts": "4bbd09eb generated",
   "src/generated/pages.ts": "4b852c85 generated",
@@ -7392,7 +7402,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "48c55c80 kit",
   "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "34e14c63 kit",
+  "src/kit/assistant.server.ts": "7dba6756 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -7413,8 +7423,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "19a9d12f generated",
   "src/routes/admin/activity.tsx": "03b81dc8 generated",
-  "src/routes/admin/ask.tsx": "a76aecaa generated",
-  "src/routes/admin/index.tsx": "80160f23 generated",
+  "src/routes/admin/ask.tsx": "c6ca40bf generated",
+  "src/routes/admin/index.tsx": "403b25db generated",
   "src/routes/admin/notes/$id.tsx": "ec603ba6 generated",
   "src/routes/admin/notes/index.tsx": "124a24f8 generated",
   "src/routes/admin/notes/new.tsx": "b9bf769e generated",
@@ -32032,7 +32042,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
 
 /** The offer for a caller; a role the app does not know gets nothing. */
 export function offerFor(viewer: Viewer | null): Offer & { describe: Record<string, string> } {
-  return OFFERS[viewer?.role ?? "visitor"] ?? { summary: "", tools: [], describe: {} };
+  const caller = viewer?.role ?? "visitor";
+  return Object.hasOwn(OFFERS, caller) ? OFFERS[caller] : { summary: "", tools: [], describe: {} };
 }
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
@@ -35105,7 +35116,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.server.ts": "c3eb4653 generated",
   "src/generated/maintenance.ts": "d8f14068 generated",
-  "src/generated/mcp.server.ts": "1f2cee9d generated",
+  "src/generated/mcp.server.ts": "3126e097 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "15c188dd generated",

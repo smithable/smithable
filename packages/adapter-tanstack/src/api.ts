@@ -555,7 +555,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = ${J
 
 /** The offer for a caller; a role the app does not know gets nothing. */
 export function offerFor(viewer: Viewer | null): Offer & { describe: Record<string, string> } {
-  return OFFERS[viewer?.role ?? "visitor"] ?? { summary: "", tools: [], describe: {} };
+  const caller = viewer?.role ?? "visitor";
+  return Object.hasOwn(OFFERS, caller) ? OFFERS[caller] : { summary: "", tools: [], describe: {} };
 }
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */

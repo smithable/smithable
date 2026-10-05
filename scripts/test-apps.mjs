@@ -1144,8 +1144,15 @@ async function apiFlow(base) {
     const asVisitor = await page.locator("[data-answer]").first().textContent();
     if (asVisitor?.includes("From your records"))
       throw new Error(`a visitor was answered: ${asVisitor}`);
+    // The inspector is the administrator's alone.
+    await page.context().clearCookies();
+    await signInAs(page, base, "member");
+    await page.goto(`${base}/admin/ask`);
+    await page.waitForLoadState("networkidle");
+    if (await page.getByLabel("Question").count())
+      throw new Error("a member was given the inspector");
     console.log(
-      "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, and answers a visitor nothing",
+      "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, answers a visitor nothing, and is not a member's",
     );
   } catch (error) {
     console.log(
@@ -3410,10 +3417,12 @@ test("measure sums, averages and sums per value", async () => {
           writeFileSync(
             check,
             `import { expect, test } from "vitest";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
 import { callTool, offerFor } from "./generated/mcp.server";
 import { answer } from "./kit/assistant.server";
 
-const viewer = { id: "inspector:check", name: "Check", email: "", role: "assistant" };
+const viewer = { id: "key:inspector:check", name: "Check", email: "", role: "assistant" };
 const call = (name: string, args: Record<string, unknown>) => callTool(viewer, name, args);
 const tasks = async () => ((await call("measure", { kind: "Task" })) as { total: number }).total;
 const toolCall = (id: string, name: string, args: unknown) => ({ id, type: "function", function: { name, arguments: JSON.stringify(args) } });
@@ -3446,6 +3455,18 @@ test("the model's tool loop", async () => {
   const proposed = await ask("add a task called Never made");
   expect(proposed.steps[0]).toMatchObject({ tool: "add", proposed: true });
   expect(await tasks()).toBe(before);
+
+  // A change to a record is proposed too, and the record stays as it was.
+  const project = db.insert(schema.projects).values({ name: "Inspector check" }).returning().get();
+  const task = db.insert(schema.tasks).values({ title: "Kept as it is", projectId: project.id }).returning().get();
+  const [taskId, title] = [task.id, "Kept as it is"];
+  replies.push({ choices: [{ message: { tool_calls: [toolCall("4", "change", { kind: "Task", id: taskId, values: { title: "Changed by a model" } })] } }] });
+  const change = await ask("rename the first task");
+  expect(change.steps[0]).toMatchObject({ tool: "change", proposed: true });
+  expect(((await call("read", { kind: "Task", id: taskId })) as { title: string }).title).toBe(title);
+
+  // A role's name that is also an object's own word is no role.
+  expect(offerFor({ ...viewer, role: "constructor" }).tools).toEqual([]);
 
   // Only the kinds the role is offered.
   replies.push(
