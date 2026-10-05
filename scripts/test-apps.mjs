@@ -3695,11 +3695,70 @@ test("only the public part", async () => {
     // "Ask" for the app's people (docs/design/assistant.md §6), switched on for members by its
     // operation and kept for the browser flow.
     if (example === "api")
-      step("op setAssistant gives members Ask, and the app type-checks", () => {
-        const done = smithable(dir, "op", "setAssistant", "member");
-        if (done.code !== 0) throw new Error(done.out);
-        run("pnpm", ["typecheck"], dir);
-      });
+      step(
+        "op setAssistant gives members Ask and the app type-checks; ask() refuses whom the block does not name, and a visitor's question never reaches the model",
+        () => {
+          const op = (...args) => {
+            const done = smithable(dir, "op", ...args);
+            if (done.code !== 0) throw new Error(done.out);
+          };
+          const test = (name, source) => {
+            const check = join(dir, `src/${name}.test.ts`);
+            writeFileSync(check, source);
+            try {
+              run("pnpm", ["exec", "vitest", "run", `src/${name}.test.ts`], dir);
+            } finally {
+              rmSync(check);
+            }
+          };
+          const people = `const member = { id: "ask-member", name: "M", email: "", role: "member" };
+const admin = { id: "ask-admin", name: "A", email: "", role: "admin" };`;
+          op("setAssistant", "member");
+          run("pnpm", ["typecheck"], dir);
+          test(
+            "ask-named",
+            `import { expect, test } from "vitest";
+import { AccessDenied } from "#/kit/access";
+import { ask } from "./generated/ask.server";
+${people}
+
+test("ask() answers only whom the block names", async () => {
+  await expect(ask(admin, "how many tasks")).rejects.toThrow(AccessDenied);
+  await expect(ask(null, "how many tasks")).rejects.toThrow(AccessDenied);
+  expect((await ask(member, "how many tasks")).source).toBe("records");
+});
+`,
+          );
+          // Visitors too: answered by the rules, never by the model, which a person still reaches.
+          op("setAssistant", "anyone");
+          test(
+            "ask-visitor",
+            `import { expect, test, vi } from "vitest";
+import { ask } from "./generated/ask.server";
+${people}
+
+test("a visitor's question never reaches the model", async () => {
+  process.env.ASSISTANT_URL = "http://model.test";
+  process.env.ASSISTANT_MODEL = "stand-in";
+  const called: string[] = [];
+  vi.stubGlobal("fetch", async (url: string) => {
+    called.push(String(url));
+    return new Response(JSON.stringify({ choices: [{ message: { content: "From the model." } }] }));
+  });
+  const visitor = await ask(null, "write a poem about the tasks");
+  expect(visitor.source).toBe("none");
+  expect(visitor.note).not.toContain("ASSISTANT_URL");
+  expect(called).toEqual([]);
+  const person = await ask(member, "write a poem about the tasks");
+  expect(person.text).toBe("From the model.");
+  expect(called).toHaveLength(1);
+});
+`,
+          );
+          const undone = smithable(dir, "undo");
+          if (undone.code !== 0) throw new Error(undone.out);
+        },
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
