@@ -1,7 +1,20 @@
 import { spawnSync } from "node:child_process";
 
+/**
+ * Who a commit is by when Git has no name or address configured (a newly installed Git): a
+ * change must not fail for that, so those commits are Smithable's own. The address can never
+ * be a real one.
+ */
+const FALLBACK = { "user.name": "Smithable", "user.email": "studio@smithable.invalid" };
+function identity(dir: string): string[] {
+  return Object.entries(FALLBACK).flatMap(([key, value]) =>
+    spawnSync("git", ["config", key], { cwd: dir }).status === 0 ? [] : ["-c", `${key}=${value}`],
+  );
+}
+
 export function git(dir: string, args: string[]): { ok: boolean; out: string } {
-  const result = spawnSync("git", args, { cwd: dir, encoding: "utf8" });
+  const who = args[0] === "commit" || args[0] === "revert" ? identity(dir) : [];
+  const result = spawnSync("git", [...who, ...args], { cwd: dir, encoding: "utf8" });
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}`.trim() };
 }
 
