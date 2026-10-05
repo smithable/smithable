@@ -1009,6 +1009,44 @@ try {
       throw new Error("Save is enabled");
     await write(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+    // What can be written at the cursor is offered as it is typed: one of the app's own pages
+    // in the navigation, and at the start of a line the sections the spec does not have yet.
+    const good = await editor.evaluate((e) => e.value);
+    const cursor = (at) => editor.evaluate((e, to) => e.setSelectionRange(to), at);
+    const offered = page.locator(".cm-tooltip-autocomplete");
+    // The editor takes Enter for the list only a moment after it opens (75 ms), so that a line
+    // break typed just then is not swallowed.
+    const accept = async () => {
+      await new Promise((r) => setTimeout(r, 200));
+      await page.keyboard.press("Enter");
+    };
+    const nav = /^navigation: \[(.*), ([\w-]+)\]$/m.exec(good);
+    if (!nav) throw new Error("the navigation is not a list on one line");
+    const [line, before, last] = nav;
+    await write(good.replace(line, `navigation: [${before}]`));
+    await editor.focus();
+    await cursor(nav.index + line.length - `, ${last}]`.length);
+    await page.keyboard.type(`, ${last.slice(0, -1)}`);
+    await offered.getByText(last, { exact: true }).waitFor();
+    await accept();
+    if ((await editor.evaluate((e) => e.value)) !== good)
+      throw new Error("the page offered was not put in the text");
+    await page.keyboard.press("ControlOrMeta+End");
+    await page.keyboard.type("qu");
+    await offered.getByText("queries", { exact: true }).waitFor();
+    await offered.getByText(/Records chosen or ordered by code/).waitFor();
+    await accept();
+    if (!(await editor.evaluate((e) => e.value)).endsWith("queries: "))
+      throw new Error("the key offered was not put in the text with its colon");
+    await write(good);
+    // A key says what it is for when the pointer rests on it.
+    await cursor(good.indexOf("    crud: Customer"));
+    await page.locator(".cm-line", { hasText: "crud: Customer" }).getByText("crud").hover();
+    await page
+      .locator(".cm-tooltip-hover")
+      .getByText(/list, view, create, edit and delete/)
+      .waitFor();
+    await page.mouse.move(0, 0);
     // Typed text, and Ctrl+Z in the editor: the editor's own undo, not the app's last change.
     const changes = await trace.locator("li").count();
     await editor.focus();
