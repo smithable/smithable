@@ -21,6 +21,7 @@ import { clarify, create } from "./new.js";
 import { op } from "./op.js";
 import { backupContinuous, restoreAt } from "./pitr.js";
 import { loadPlugins } from "./plugins.js";
+import { redo } from "./redo.js";
 import { report } from "./report.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
@@ -100,6 +101,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       yes: values.yes === true,
     });
   if (command === "undo") return undo(values.dir ?? ".", io);
+  if (command === "redo") return redo(values.dir ?? ".", io);
   if (command === "report")
     return report(values.dir ?? ".", io, {
       send: values.send === true,
