@@ -4019,6 +4019,41 @@ test("a key adding a posting names its poster, or is told to", async () => {
       process.env.ASSISTANT_URL = stand.url;
       process.env.ASSISTANT_MODEL = "stand-in";
     }
+    // Over https the session cookie is one only the app's own address can set (__Host-), so a
+    // sibling app on the same domain cannot plant it.
+    if (example === "crm")
+      step(
+        "over https the session cookie is __Host- (Secure, Path=/, no Domain); over http as before",
+        () => {
+          const check = join(dir, "src/host-cookie.test.ts");
+          writeFileSync(
+            check,
+            `import { expect, test, vi } from "vitest";
+
+const sessionCookie = async (url: string) => {
+  vi.resetModules();
+  process.env.BETTER_AUTH_URL = url;
+  const { auth } = await import("#/lib/auth");
+  return (await auth.$context).authCookies.sessionToken;
+};
+
+test("the session cookie's name and attributes", async () => {
+  const https = await sessionCookie("https://crm.example");
+  expect(https.name).toBe("__Host-better-auth.session_token");
+  expect(https.attributes).toMatchObject({ secure: true, path: "/" });
+  expect(https.attributes.domain).toBeUndefined();
+  const http = await sessionCookie("http://localhost:3000");
+  expect(http.name.startsWith("__Host-")).toBe(false);
+});
+`,
+          );
+          try {
+            run("pnpm", ["exec", "vitest", "run", "src/host-cookie.test.ts"], dir);
+          } finally {
+            rmSync(check);
+          }
+        },
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;

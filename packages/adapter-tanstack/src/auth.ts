@@ -182,6 +182,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -191,7 +194,22 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
