@@ -192,7 +192,8 @@ try {
       await page.getByLabel("Name", { exact: true }).fill("website");
       await page.getByLabel("Holds").selectOption({ label: "Web address" });
       await page.getByRole("button", { name: "Add field" }).click();
-      await status
+      // The field, then its column in the list (Show it in the list): the trace has both.
+      await trace
         .getByText("Customers: added a website (a web address)")
         .waitFor({ timeout: 60000 });
       // The left side has the change as soon as it is done, before the app has restarted with
@@ -206,6 +207,12 @@ try {
       await page.getByText("a web address").first().waitFor();
       await openPreview("/customers/new");
       await preview.getByLabel("Website").waitFor({ timeout: 60000 });
+      // "Show it in the list" was on: the customers list has the column (its look names columns).
+      await openPreview("/customers");
+      await preview
+        .getByRole("columnheader", { name: "Website" })
+        .filter({ visible: true })
+        .waitFor({ timeout: 60000 });
       // Friendly names become spec names.
       await change("Rename a field");
       await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
@@ -618,12 +625,13 @@ try {
       await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
       // In my words: the wording only, for this session; no change is made.
       await page.getByRole("tab", { name: "What it does" }).click();
+      const changes = await trace.locator("li").count();
       const again = page.getByRole("region", { name: "Customers", exact: true });
       await again.getByRole("button", { name: "In my words" }).click();
       await page.getByLabel("Customers, in your words").fill("Our clients and how to reach them.");
       await again.getByRole("button", { name: "Keep my words" }).click();
       await again.getByText("Our clients and how to reach them.").waitFor();
-      if (!(await trace.locator("li").first().innerText()).includes("loyalty code"))
+      if ((await trace.locator("li").count()) !== changes)
         throw new Error("rewording made a change");
       await again.getByRole("button", { name: "Back to the generated text" }).click();
       await again.getByRole("button", { name: "a loyalty code (unique)" }).waitFor();
@@ -776,6 +784,7 @@ try {
       .getByText("Show phone under email in the customers table")
       .waitFor({ timeout: 60000 });
     const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
+    const before = await trace.locator("li").count();
     await columns
       .getByRole("button", { name: /^Hide / })
       .last()
@@ -785,9 +794,11 @@ try {
       .first()
       .waitFor({ timeout: 60000 });
     // The last change is done before the next (a change while one runs is not made).
-    await trace
-      .getByText("Show email, name, segment in the customers table")
-      .waitFor({ timeout: 60000 });
+    // (Which columns depends on the fields added before: one change more is enough.)
+    for (let i = 0; i < 60 && (await trace.locator("li").count()) === before; i++)
+      await new Promise((r) => setTimeout(r, 1000));
+    if ((await trace.locator("li").count()) === before)
+      throw new Error("hiding a column made no change");
     // A list page's view and order, and its form's columns and sections (look.md §1.1–1.3).
     const waitUx = async (re) => {
       for (let i = 0; i < 60 && !re.test(ux()); i++) await new Promise((r) => setTimeout(r, 1000));
