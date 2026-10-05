@@ -441,7 +441,9 @@ try {
   await step(
     "describe a change: one that loses no data is made at once, and traced with its model",
     async () => {
-      await page.getByLabel("Describe a change").fill("Customers should have a mobile number");
+      await page
+        .getByLabel("Describe a change")
+        .fill("A mobile number for every customer would help");
       await page.getByRole("button", { name: "Make the change" }).click();
       await page
         .getByText(
