@@ -1274,3 +1274,16 @@ test("nameRecords renames a kind of record where it shows, in one change", () =>
     message: "Give the name for one.",
   });
 });
+
+test("addField shows the new field in its list in the same change", () => {
+  const result = applyOperation(files, "addField", {
+    model: "Customer",
+    field: "website",
+    type: "url",
+    list: true,
+  });
+  if (!result.ok) throw new Error(result.message);
+  // The CRM's customers page names its columns: the new field is added to them.
+  expect(result.files.ux).toContain("website");
+  expect(result.description).toContain("shown in its list");
+});

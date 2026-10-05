@@ -6,7 +6,7 @@ import { parseTheme } from "../theme.js";
 import { CONTROLS, FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
-function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
+export function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
   if (value === undefined || (Array.isArray(value) && value.length === 0)) {
     if (ux.has(path)) ux.removeAndPrune(path, 0);
   } else if (ux.has(path)) {

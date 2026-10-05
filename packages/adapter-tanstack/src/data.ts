@@ -3,6 +3,7 @@ import {
   type AuthIR,
   apiOffers,
   type Condition,
+  defaultColumns,
   type FieldIR,
   humanize,
   isPicture,
@@ -49,15 +50,10 @@ import {
  * A table's default columns, at most five: the title, then pictures, then required fields, then
  * the rest, each in the spec's order; long texts never (a card shows the description instead).
  */
+/** The list's columns when its page names none (core's defaultColumns, as Studio shows them). */
 function columnsOf(model: ModelIR, shown: FieldIR[]): FieldIR[] {
-  const rank = (f: FieldIR) =>
-    f.name === titleField(model) ? 0 : storesPictures(f) ? 1 : f.required ? 2 : 3;
-  return shown
-    .filter((f) => !(f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name)))
-    .map((f, i) => ({ f, i }))
-    .sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i)
-    .slice(0, 5)
-    .map(({ f }) => f);
+  const names = defaultColumns(model);
+  return names.map((name) => shown.find((f) => f.name === name)).filter((f): f is FieldIR => !!f);
 }
 
 export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, ux: UxIR): string {
