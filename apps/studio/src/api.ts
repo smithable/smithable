@@ -17,6 +17,20 @@ export interface TraceEntry {
   operation?: { op: string; args: Record<string, unknown> };
 }
 
+/** A described app being made (docs/design/while-it-is-made.md). */
+export interface Making {
+  description: string;
+  stage: "drafting" | "building" | "arriving" | "failed";
+  /** When it started (ISO time). */
+  since: string;
+  /** How long a draft usually takes, in ms. */
+  usual?: number;
+  /** The drafted app, once the model has answered. */
+  files?: Project["files"];
+  /** What went wrong, when it failed. */
+  error?: string;
+}
+
 export interface Project {
   name: string;
   files: { spec?: string; auth?: string; content?: string; ux?: string };
@@ -35,6 +49,8 @@ export interface Project {
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
   notice?: string;
+  /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
+  making?: Making;
 }
 
 /** A model's proposal for a request; nothing is applied until it is confirmed. */
@@ -129,7 +145,11 @@ export const api = {
   ask: (request: string) => call<Proposal>("/api/ask", { request }),
   applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),
   /** Calls `onEvent` for every change and log line the daemon reports. */
-  events(onEvent: (event: "changed" | "log" | "open", data: unknown) => void): () => void {
+  /** Tries again to make the described app, as it was asked. */
+  retryMaking: () => call<{ ok: boolean }>("/api/making/retry", {}),
+  events(
+    onEvent: (event: "changed" | "log" | "open" | "making", data: unknown) => void,
+  ): () => void {
     const source = new EventSource("/api/events");
     // Also after a reconnect: whatever changed meanwhile is fetched again.
     source.addEventListener("open", () => onEvent("open", null));
@@ -137,6 +157,9 @@ export const api = {
       onEvent("changed", JSON.parse((e as MessageEvent).data)),
     );
     source.addEventListener("log", (e) => onEvent("log", JSON.parse((e as MessageEvent).data)));
+    source.addEventListener("making", (e) =>
+      onEvent("making", JSON.parse((e as MessageEvent).data)),
+    );
     return () => source.close();
   },
 };
