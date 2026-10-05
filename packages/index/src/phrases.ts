@@ -30,6 +30,15 @@ export interface PhraseMatch {
 }
 
 /**
+ * A request the rules read fully and cannot make as asked (the field is there already, no field
+ * has that name): why, said to the person instead of sent to a model that would meet the same.
+ */
+export interface PhraseRefusal {
+  refusal: string;
+  rule: string;
+}
+
+/**
  * The operations a request means when it is worded like one of the common changes, or
  * undefined when it is not, or when a name in it does not resolve to exactly one concept.
  * `roles` are the roles of smithable.auth.yml (needed for access requests).
@@ -40,11 +49,34 @@ export function matchRequest(
   roles: string[] = [],
   auth?: AuthIR,
 ): PhraseMatch | undefined {
+  const read = readRequest(ir, request, roles, auth);
+  return read && "operations" in read ? read : undefined;
+}
+
+/** Why a request the rules read cannot be made as asked, when that is so. */
+export function refusalOf(
+  ir: SpecIR,
+  request: string,
+  roles: string[] = [],
+  auth?: AuthIR,
+): PhraseRefusal | undefined {
+  const read = readRequest(ir, request, roles, auth);
+  return read && "refusal" in read ? read : undefined;
+}
+
+function readRequest(
+  ir: SpecIR,
+  request: string,
+  roles: string[],
+  auth?: AuthIR,
+): PhraseMatch | PhraseRefusal | undefined {
   const text = normalize(request);
   if (!text) return undefined;
   for (const rule of RULES) {
     const result = rule.match(text, { ir, roles, auth });
-    if (result) return { operations: result, rule: rule.name };
+    if (Array.isArray(result)) return { operations: result, rule: rule.name };
+    // Read, and it cannot be done as asked: the reason, in words the person can act on.
+    if (result) return { refusal: result.refusal, rule: rule.name };
     // The wording was this rule's, but a name in it did not resolve: a model should read it,
     // not a looser rule below.
     if (result === null) return undefined;
@@ -61,8 +93,11 @@ interface Scope {
 
 interface Rule {
   name: string;
-  /** Operations; undefined when the wording is not this rule's; null when it is, but a name in it does not resolve. */
-  match(text: string, scope: Scope): PhraseOperation[] | undefined | null;
+  /**
+   * Operations; undefined when the wording is not this rule's; null when it is, but a name in it
+   * does not resolve (a model reads it); a refusal when it was read and cannot be done as asked.
+   */
+  match(text: string, scope: Scope): PhraseOperation[] | { refusal: string } | undefined | null;
 }
 
 /** Lowercase, one space between words, no final punctuation, and the polite openers gone. */
@@ -81,7 +116,11 @@ export function normalize(request: string): string {
 }
 
 const OPENERS =
-  /^(?:please|can you|could you|would you|i want to|i want|i would like to|i'd like to|we want to|we need to|we want|we need|let's|lets|make it possible to|it should be possible to|make sure that|make sure) /;
+  /^(?:please|let me|let us|allow me to|help me|i need to|i need|we would like to|we'd like to|can you|could you|would you|i want to|i want|i would like to|i'd like to|we want to|we need to|we want|we need|let's|lets|make it possible to|it should be possible to|make sure that|make sure) /;
+
+/** A name as words ("placedAt" → "placed at"), and a text as a sentence starts. */
+const words = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+const sentence = (text: string) => (text[0]?.toUpperCase() ?? "") + text.slice(1);
 
 const ARTICLE = /^(?:a|an|the|each|every|all|our|its|their|any) /;
 export const dropArticles = (s: string) => {
@@ -220,7 +259,9 @@ function newField(phrase: string, scope: Scope, requiredByDefault = false): NewF
   flag(/\b(?:required|mandatory|which must be filled in|that must be filled in)\b/, true);
   flag(/\b(?:optional|not required)\b/, false);
   // "a VAT number field", "a status column": the word names what it is, not the field.
-  text = dropArticles(text).replace(/(\S)\s+(?:field|column)$/, "$1");
+  text = dropArticles(text)
+    .replace(/^(?:new )?(?:field|column) (?:called|named) /, "")
+    .replace(/(\S)\s+(?:field|column)$/, "$1");
   if (!text) return undefined;
   // "belongs to a customer", "linked to a customer", "for a customer": a reference.
   const reference = /^(?:belongs to|linked to|refers to|references|assigned to|for|of) (.+)$/.exec(
@@ -259,7 +300,11 @@ function inferKind(text: string): { type: string; name: string } | undefined {
     [
       /^(.*?)\s*\b(?:phone(?: number)?|telephone(?: number)?|mobile(?: number)?)$/,
       "phone",
-      (m) => (m[1] ? `${m[1]} phone` : "phone"),
+      // "A mobile number" beside a phone is its own field, named as it was asked for.
+      (m) => {
+        const what = /mobile/.test(m[0]) ? "mobile" : "phone";
+        return m[1] ? `${m[1]} ${what}` : what;
+      },
     ],
     [
       /^(.*?)\s*\b(?:website|web address|url|homepage|home page|link)$/,
@@ -402,13 +447,21 @@ const RULES: Rule[] = [
         "(required|mandatory|always filled in|optional|not required|unique|not unique)";
       const m =
         new RegExp(`^(?:make |set )(?:the )?(?<subject>.+?) (?:be )?${flagRe}$`).exec(text) ??
+        // "make email required for customers": the field, then whose.
+        new RegExp(
+          `^(?:make |set )(?:the )?(?<field>.+?) (?:be )?${flagRe} (?:for|on|in) (?<model>.+)$`,
+        ).exec(text) ??
         new RegExp(
           `^(?:the )?(?<subject>.+?) (?:should be|must be|has to be|needs to be|is|becomes|should become|should always be|must always be) ${flagRe}$`,
         ).exec(text);
       if (!m?.groups) return undefined;
-      const change = flags[m[2] ?? ""];
+      const flag = Object.keys(flags).find((f) => new RegExp(`\\b${f}\\b`).test(text));
+      const change = flags[m[2] ?? ""] ?? (flag ? flags[flag] : undefined);
       if (!change) return null;
-      const found = subjectField(m.groups.subject ?? "", scope);
+      const found = subjectField(
+        m.groups.subject ?? `${m.groups.field ?? ""} of ${m.groups.model ?? ""}`,
+        scope,
+      );
       if (!found) return null;
       const type = shorthand(found.field, change);
       if (!type) return null;
@@ -425,6 +478,38 @@ const RULES: Rule[] = [
         /^rename (?:the )?(?<subject>.+?) (?:to|as|into) (?<to>[a-z][a-z0-9 ]*)$/.exec(text) ??
         /^call (?:the )?(?<subject>.+?) (?<to>[a-z][a-z0-9 ]*) (?:instead|from now on)$/.exec(text);
       if (!m?.groups) return undefined;
+      // "Rename orders to jobs" names the kind of record, not a field: its name for one and for
+      // many, its list's title, and the fields of other records that refer to it, all as texts
+      // (the names in the spec stay, so nothing else moves).
+      const bare = dropArticles(m.groups.subject ?? "").replace(/ (?:page|list|records?)$/, "");
+      const kind = / (?:of|on|in|for|from) |'s? /.test(bare) ? undefined : modelFor(scope.ir, bare);
+      if (kind && kind.name !== USER_MODEL) {
+        const many = sentence(plural(singular(dropArticles(m.groups.to ?? ""))));
+        const one = sentence(singular(dropArticles(m.groups.to ?? "")));
+        const text = (path: string[], value: string): PhraseOperation => ({
+          op: "setText",
+          args: { path, text: value },
+        });
+        const list = scope.ir.pages.find(
+          (p) => p.pattern.kind === "crud" && p.pattern.model === kind.name && !p.mine,
+        );
+        return [
+          text(["models", kind.name, "label"], one),
+          text(["models", kind.name, "pluralLabel"], many),
+          ...(list ? [text(["pages", list.id, "title"], many)] : []),
+          ...scope.ir.models.flatMap((other) =>
+            other.fields
+              .filter((f) => f.type.kind === "relation" && f.type.model === kind.name)
+              .filter((f) => key(f.name) === key(kind.name))
+              .map((f) =>
+                text(
+                  ["models", other.name, "fields", f.name, "label"],
+                  f.type.kind === "relation" && f.type.many ? many : one,
+                ),
+              ),
+          ),
+        ];
+      }
       const found = subjectField(m.groups.subject ?? "", scope);
       if (!found) return null;
       const to = identifier(dropArticles(m.groups.to ?? ""));
@@ -870,8 +955,13 @@ const RULES: Rule[] = [
         /\b(?:must|required|mandatory)\b/.test(text) && !/\b(?:optional|not required)\b/.test(text);
       const field = newField(m.groups.field ?? "", scope, required);
       if (!field) return null;
-      if (model.fields.some((f) => f.name === field.name || key(f.name) === key(field.name)))
-        return null;
+      const there = model.fields.find(
+        (f) => f.name === field.name || key(f.name) === key(field.name),
+      );
+      if (there)
+        return {
+          refusal: `${sentence(plural(words(model.name)))} already have a field called "${words(there.name)}".`,
+        };
       return [{ op: "addField", args: { model: model.name, field: field.name, type: field.type } }];
     },
   },
@@ -907,7 +997,7 @@ function listKeyChange(
   key: "filters" | "sortable",
   pageText: string,
   fieldsText: string,
-): PhraseOperation[] | null {
+): PhraseOperation[] | { refusal: string } | null {
   const page = pageFor(scope.ir, pageText);
   if (!page || page.pattern.kind !== "crud") return null;
   const model = scope.ir.models.find(
@@ -918,7 +1008,14 @@ function listKeyChange(
   const fields: string[] = [];
   for (const phrase of list(fieldsText)) {
     const field = fieldFor(model, phrase);
-    if (!field || !fits(field)) return null;
+    if (!field)
+      return {
+        refusal: `${sentence(plural(words(model.name)))} have no field called "${phrase}". They have: ${model.fields
+          .filter(fits)
+          .map((f) => words(f.name))
+          .join(", ")}.`,
+      };
+    if (!fits(field)) return null;
     fields.push(field.name);
   }
   const current = page[key] ?? [];

@@ -1,6 +1,6 @@
 import { applyOperation, validateSpec } from "@smithable/core";
 import { describe, expect, test } from "vitest";
-import { matchRequest, type PhraseOperation } from "./phrases.js";
+import { matchRequest, type PhraseOperation, refusalOf } from "./phrases.js";
 
 // The M7 benchmark's starting point: the CRM without phone numbers and orders.
 const SPEC = `smithable: 0.1
@@ -343,4 +343,55 @@ pages:
   expect(matchRequest(spec, "let visitors filter items by delivery", ROLES)?.operations).toEqual([
     { op: "setFilters", args: { page: "catalog", fields: ["delivery"] } },
   ]);
+});
+
+describe("the words box, as a first-time owner types into it (studio-review-2026-10-05, finding 1)", () => {
+  const ops = (request: string) => matchRequest(ir(), request, ROLES)?.operations;
+
+  test("its own printed example and its everyday variants add the field asked for", () => {
+    const phone = [{ op: "addField", args: { model: "Customer", field: "mobile", type: "phone" } }];
+    expect(ops("customers should have a mobile number")).toEqual(phone);
+    expect(ops("Add a mobile number to customers.")).toEqual(phone);
+    expect(ops("let me add a mobile number to customers")).toEqual(phone);
+    // "A field called region" is a field named region.
+    expect(ops("add a field called region to customers")).toEqual([
+      { op: "addField", args: { model: "Customer", field: "region", type: "string" } },
+    ]);
+    expect(ops("make email required for customers")).toEqual([
+      { op: "changeField", args: { model: "Customer", field: "email", type: "email! unique" } },
+    ]);
+  });
+
+  test("a request that was read and cannot be made says why, in words to act on", () => {
+    // Not for a model: it would meet the same.
+    expect(ops("add a notes field to customers")).toBeUndefined();
+    expect(refusalOf(ir(), "add a notes field to customers", ROLES)).toEqual({
+      refusal: 'Customers already have a field called "notes".',
+      rule: "add field",
+    });
+    // A request the rules do not read at all has no reason to give: a model reads it.
+    expect(refusalOf(ir(), "send an email when a customer is created", ROLES)).toBeUndefined();
+    expect(ops("send an email when a customer is created")).toBeUndefined();
+  });
+
+  test("renaming a kind of record renames it everywhere a person sees it, as texts", () => {
+    const renamed = ops("rename products to articles");
+    expect(renamed).toEqual([
+      { op: "setText", args: { path: ["models", "Product", "label"], text: "Article" } },
+      { op: "setText", args: { path: ["models", "Product", "pluralLabel"], text: "Articles" } },
+      { op: "setText", args: { path: ["pages", "products", "title"], text: "Articles" } },
+    ]);
+    // Each is a change the app takes.
+    let files = { spec: SPEC, content: "smithableContent: 0.1\n" };
+    for (const step of renamed ?? []) {
+      const result = applyOperation(files, step.op, step.args);
+      if (!result.ok) throw new Error(`${step.op}: ${result.message}`);
+      files = { spec: result.files.spec, content: result.files.content ?? "" };
+    }
+    expect(files.content).toContain("pluralLabel: Articles");
+    // A field is still renamed as a field.
+    expect(ops("rename the customer's notes to remarks")).toEqual([
+      { op: "renameField", args: { model: "Customer", from: "notes", to: "remarks" } },
+    ]);
+  });
 });
