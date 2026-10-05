@@ -58,6 +58,17 @@ Decided 2026-10-02 (Johan): a site someone already has, or one like the site the
 - **Why it is right.** The tool is ordinary (every browser and crawler reads pages); what makes a use lawful is what one does with the content, and the shape above derives structure, copies nothing by default, and takes pictures only with a consent line and, hosted, only from one's own domain. It gives Johan's comparisons ("how close does Smithable get to this site") and a feature at once.
 - **Out of scope now:** pages behind sign-in, several pages of one site (the home page is enough for the shape), and importing the site's records (that is `importRecords` from a CSV).
 
+### 2.9 Before any model: a starter's own description, and small edits of it
+
+Johan, 2026-10-05, after the first numbers on reading descriptions without a model.  So a visitor's first app should usually cost nothing.
+
+- **Each starter has a description** that says what it is in plain words: the kind of app, what it keeps, who signs in, what anyone sees. The start page shows it in the box (a starter's button fills the box instead of building at once), so people see which words make which app.
+- **Built unchanged, it is the starter:** no model, at once.
+- **A small edit is read as a difference** between the two readings and made by operations: a known kind of record added (a model with a name and notes, and its page; the summary says to say what else it holds), a page taken out, closed to visitors, by invitation only.
+- **Everything else is a new description** and goes to the model as before, with the reason kept: another subject (the starter's texts, samples and pictures would not fit a pilates studio), a word the reader cannot place (SMS reminders), something opened to visitors (a choice), another language, another kind of app.
+
+Reading a whole free description without a model was measured first and is not good enough to build from: on 40 descriptions it had not seen, the reader settled 62 % of the decisions right, asked about 37 % and got 2 % wrong, and only a third of the descriptions needed no question (`scripts/bench-read.mjs`, `docs/benchmarks/read-blind.json`). Its use is here, on text that starts from our own words, and for saying what a description leaves open.
+
 ## 3. What is built
 
 Built: `clarify` (the questions, `--answers`, `--yes`, the hosted two-step form), the records starter, the draft as a batch of operations, the visible fallback and the demo allowance fix, and the docs (ARCHITECTURE §9, `docs/ai.md`, the README). Since 2026-10-03 the draft by operations starts from the chosen starter's access default and gets the starter's spec as its example of shape (the first M12 run with the status starter showed the model drafting from scratch, private by default, with no operation to make a team's app shared; `setDefaultAccess` now exists). Open: the benchmark run with scripted answers and a starter column, the evaluation in 2.7, and 2.8's hosted form (the CLI's `new --from <url> [--with-pictures]` is built, 2026-10-02: robots.txt, the named agent, three same-site redirects, 2 MB and 15 s, a JavaScript-only page refused; pictures kept as the site serves them, JPEG, PNG or WebP up to 1 MB, since scaling and WebP encoding in Node would need a native library).

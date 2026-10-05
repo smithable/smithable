@@ -36,3 +36,9 @@ export {
   parsePolicy,
   route,
 } from "./provider.js";
+export {
+  type Question as ReadQuestion,
+  type Reading,
+  readDescription,
+} from "./read-description.js";
+export { type Edit, readEdit, STARTER_TEXTS } from "./starter-descriptions.js";
