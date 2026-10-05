@@ -220,7 +220,7 @@ export async function studio(
   /** The preview's failure to answer, recorded once until it answers (and its report sent once). */
   let stuck: { report?: "sent" | "offer" } | undefined;
   const previewAnswers = () =>
-    fetch(`http://127.0.0.1:${previewPort}/health`, { signal: AbortSignal.timeout(2000) }).then(
+    fetch(`http://localhost:${previewPort}/health`, { signal: AbortSignal.timeout(2000) }).then(
       (answer) => answer.ok,
       () => false,
     );
