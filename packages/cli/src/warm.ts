@@ -1,3 +1,5 @@
+import { timed } from "./io.js";
+
 /**
  * Loads the preview's start page and its module graph once, as a browser would, including the
  * routes it loads lazily. The dev server then discovers and optimizes every dependency before
@@ -6,6 +8,8 @@
  * Returns how many modules were loaded.
  */
 export async function warmPreview(port: number, log: (text: string) => void): Promise<number> {
+  const started = Date.now();
+  const seconds = () => Math.round((Date.now() - started) / 100) / 10;
   const base = `http://127.0.0.1:${port}`;
   const get = async (path: string) => {
     try {
@@ -21,6 +25,9 @@ export async function warmPreview(port: number, log: (text: string) => void): Pr
   };
   for (let i = 0; i < 240 && (await get("/health")).status !== 200; i++)
     await new Promise((r) => setTimeout(r, 500));
+  // How long a person waits for the preview is the first thing to know when it seems stuck.
+  log(`The preview answers (${seconds()} s after it was started).`);
+  timed("preview answers", started);
   // The start page, following its redirects (e.g. to sign-in).
   let page = await get("/");
   for (let i = 0; i < 3 && page.location; i++)
@@ -34,7 +41,8 @@ export async function warmPreview(port: number, log: (text: string) => void): Pr
     const bodies = await Promise.all(batch.map(async (path) => (await get(path)).body));
     queue = [...queue.filter((p) => !seen.has(p)), ...bodies.flatMap(imports)];
   }
-  log(`The preview is warmed up (${seen.size} modules).`);
+  log(`The preview is warmed up (${seen.size} modules, ${seconds()} s after it was started).`);
+  timed("preview warmed up", started);
   return seen.size;
 }
 
