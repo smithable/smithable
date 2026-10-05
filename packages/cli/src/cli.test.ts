@@ -1,6 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { STARTER_TEXTS } from "@smithable/ai";
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
 import { administered } from "./new.js";
@@ -23,6 +24,21 @@ test("unknown commands and options fail with exit code 2", async () => {
   expect(await run(["frobnicate"], io)).toBe(2);
   expect(io.stderr).toContain("Unknown command: frobnicate");
   expect(await run(["--nope"], captureIo())).toBe(2);
+});
+
+test("clarify on a starter's own description, or a small edit of it, asks nothing and calls no model", async () => {
+  const own = STARTER_TEXTS.crm?.text ?? "";
+  const io = captureIo();
+  expect(await run(["clarify", "--json", own], io)).toBe(0);
+  expect(JSON.parse(io.stdout)).toEqual({ starter: "crm", questions: [] });
+  const edited = captureIo();
+  expect(
+    await run(
+      ["clarify", "--json", own.replace("and their orders", "their orders and suppliers")],
+      edited,
+    ),
+  ).toBe(0);
+  expect(JSON.parse(edited.stdout)).toEqual({ starter: "crm", questions: [] });
 });
 
 test("new requires a directory and a known starter", async () => {
