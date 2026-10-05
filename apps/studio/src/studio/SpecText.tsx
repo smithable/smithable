@@ -1,0 +1,142 @@
+// The spec's text in Code mode: CodeMirror 6 with YAML colours, line numbers, folding and
+// search, and the validator's problems shown in the text where they are. Its own module, loaded
+// when the spec tab opens: Builder never pays for it.
+import { yaml } from "@codemirror/lang-yaml";
+import { lintGutter, setDiagnostics } from "@codemirror/lint";
+import { EditorSelection, EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { basicSetup } from "codemirror";
+import { useEffect, useRef } from "react";
+import { type Problem, problemRange } from "./problems";
+
+export default function SpecText({
+  label,
+  value,
+  onChange,
+  problems,
+  select,
+  kept,
+}: {
+  /** What the text is, for assistive tools and tests: the file's name. */
+  label: string;
+  value: string;
+  onChange: (text: string) => void;
+  problems: Problem[];
+  /** A range to select and bring into view, each time `at` changes. */
+  select?: { from: number; to: number; at: number };
+  /** The session-storage key the cursor and scroll are kept under. */
+  kept: string;
+}) {
+  const host = useRef<HTMLDivElement>(null);
+  const view = useRef<EditorView | undefined>(undefined);
+  const changed = useRef(onChange);
+  changed.current = onChange;
+  // Made once. The text, the problems and the selection reach it through the effects below.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the editor is made once
+  useEffect(() => {
+    if (!host.current) return;
+    const keep = (editor: EditorView) => {
+      try {
+        sessionStorage.setItem(
+          kept,
+          JSON.stringify({
+            at: editor.state.selection.main.head,
+            scroll: editor.scrollDOM.scrollTop,
+          }),
+        );
+      } catch {}
+    };
+    const editor = new EditorView({
+      parent: host.current,
+      state: EditorState.create({
+        doc: value,
+        extensions: [
+          basicSetup,
+          yaml(),
+          lintGutter(),
+          EditorView.contentAttributes.of({ "aria-label": label, spellcheck: "false" }),
+          EditorView.theme({
+            "&": { height: "100%", fontSize: "13px" },
+            "&.cm-focused": { outline: "none" },
+            ".cm-scroller": {
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+              lineHeight: "20px",
+            },
+          }),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) changed.current(update.state.doc.toString());
+            if (update.docChanged || update.selectionSet) keep(update.view);
+          }),
+        ],
+      }),
+    });
+    editor.scrollDOM.addEventListener("scroll", () => keep(editor), { passive: true });
+    // The text and the selection answer as a text box's do (value, selectionStart,
+    // selectionEnd), for tools and tests that read or set a field's text: only the lines in
+    // view are in the page, so the element's own content is not the text.
+    Object.defineProperties(editor.contentDOM, {
+      value: {
+        configurable: true,
+        get: () => editor.state.doc.toString(),
+        set: (text: string) =>
+          editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: text } }),
+      },
+      selectionStart: { configurable: true, get: () => editor.state.selection.main.from },
+      selectionEnd: { configurable: true, get: () => editor.state.selection.main.to },
+    });
+    // Coming back to Code mode opens the editor where it was left (studio-v2.md §2).
+    if (!select) {
+      try {
+        const { at, scroll } = JSON.parse(sessionStorage.getItem(kept) ?? "") as {
+          at: number;
+          scroll: number;
+        };
+        editor.dispatch({ selection: { anchor: Math.min(at, editor.state.doc.length) } });
+        requestAnimationFrame(() => {
+          editor.scrollDOM.scrollTop = scroll;
+        });
+      } catch {}
+    }
+    view.current = editor;
+    return () => {
+      view.current = undefined;
+      editor.destroy();
+    };
+  }, []);
+  // A text from outside (a save, the file on disk): put in whole; typing arrives here unchanged.
+  useEffect(() => {
+    const editor = view.current;
+    if (!editor || editor.state.doc.toString() === value) return;
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } });
+  }, [value]);
+  useEffect(() => {
+    const editor = view.current;
+    if (!editor) return;
+    const text = editor.state.doc.toString();
+    editor.dispatch(
+      setDiagnostics(
+        editor.state,
+        problems.map((p) => ({
+          ...problemRange(text, p),
+          severity: p.severity === "error" ? "error" : "warning",
+          message: p.hint ? `${p.message}\n${p.hint}` : p.message,
+        })),
+      ),
+    );
+  }, [problems]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
+  useEffect(() => {
+    const editor = view.current;
+    if (!editor || !select) return;
+    const length = editor.state.doc.length;
+    const from = Math.min(select.from, length);
+    editor.dispatch({
+      selection: EditorSelection.range(from, Math.min(select.to, length)),
+      effects: EditorView.scrollIntoView(from, { y: "start", yMargin: 60 }),
+    });
+    editor.focus();
+  }, [select?.at]);
+  // No wider than its place: a long line scrolls inside the editor, and must not widen the panel
+  // (which pushed Save out of sight).
+  return <div ref={host} className="min-h-0 min-w-0 flex-1 overflow-hidden" />;
+}
