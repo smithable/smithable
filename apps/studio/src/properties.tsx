@@ -7,6 +7,7 @@ import {
   humanize,
   identifier,
   modelAccess,
+  plural,
 } from "@smithable/core";
 import { useState } from "react";
 import { FieldShapeForm, type Run } from "./builder/ChangeForms";
@@ -52,6 +53,65 @@ function TextSetting({
         disabled={text.trim() === (current ?? "")}
       >
         Save
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * What a kind of record is called, for one and for several, saved as one change that also
+ * retitles its list page where it had the old name.
+ */
+function RecordNames({
+  model,
+  one,
+  several,
+  run,
+}: {
+  model: string;
+  one: string;
+  several: string;
+  run: Run;
+}) {
+  const [single, setSingle] = useState(one);
+  const [many, setMany] = useState(several);
+  // The plural follows the name for one until it is typed.
+  const [own, setOwn] = useState(false);
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void run("nameRecords", { model, one: single.trim(), several: many.trim() });
+      }}
+    >
+      <Label text="Called, for one">
+        <Input
+          aria-label="Called, for one"
+          value={single}
+          onChange={(e) => {
+            setSingle(e.target.value);
+            if (!own) setMany(e.target.value.trim() ? plural(e.target.value.trim()) : "");
+          }}
+        />
+      </Label>
+      <Label text="For several">
+        <Input
+          aria-label="Called, for several"
+          value={many}
+          onChange={(e) => {
+            setMany(e.target.value);
+            setOwn(true);
+          }}
+        />
+      </Label>
+      <Button
+        type="submit"
+        variant="ghost"
+        className="border border-neutral-200"
+        disabled={!single.trim() || (single.trim() === one && many.trim() === several)}
+      >
+        Rename everywhere
       </Button>
     </form>
   );
@@ -208,18 +268,13 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
     return (
       <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
         {heading}
-        <TextSetting
-          label="Name for one"
-          path={["models", name, "label"]}
-          current={texts?.label}
-          fallback={humanize(name)}
-          run={run}
-        />
-        <TextSetting
-          label="Name for several"
-          path={["models", name, "pluralLabel"]}
-          current={texts?.pluralLabel}
-          fallback={`${humanize(name)}s`}
+        <RecordNames
+          key={`${texts?.label}/${texts?.pluralLabel}`}
+          model={name}
+          one={texts?.label ?? humanize(name)}
+          several={
+            texts?.pluralLabel ?? (texts?.label ? plural(texts.label) : humanize(plural(name)))
+          }
           run={run}
         />
         <WhoCan model={name} spec={spec} run={run} />

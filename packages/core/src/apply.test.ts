@@ -1254,3 +1254,17 @@ test("changeField refuses renames that cannot be done as written", () => {
     message: expect.stringContaining("stays one of"),
   });
 });
+
+test("nameRecords renames a kind of record where it shows, in one change", () => {
+  const result = applyOperation(files, "nameRecords", { model: "Order", one: "Job" });
+  if (!result.ok) throw new Error(result.message);
+  const content = result.files.content ?? "";
+  expect(content).toMatch(/ {4}label: Job\n {4}pluralLabel: Jobs\n/);
+  // The orders page was called Orders: now Jobs, and so is its menu entry.
+  expect(content).toContain("orders: { subtitle: Every order and where it stands., title: Jobs }");
+  expect(result.description).toBe('Call Order records "Job" and "Jobs"');
+  expect(applyOperation(files, "nameRecords", { model: "Order", one: " " })).toMatchObject({
+    ok: false,
+    message: "Give the name for one.",
+  });
+});
