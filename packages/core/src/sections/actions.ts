@@ -34,7 +34,7 @@ import type { JsonSchema, SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { actionOperations } from "./action-operations.js";
 import { parseDefault, parseFieldShorthand } from "./field-type.js";
-import { FIELD_NAME_PATTERN } from "./names.js";
+import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
@@ -235,11 +235,7 @@ export const actionsSection: SpecSection<"actions"> = {
     const actions: ActionIR[] = [];
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"actions"`) ?? []) {
       if (!FIELD_NAME_PATTERN.test(key)) {
-        ctx.error(
-          keyNode,
-          "invalid-name",
-          `Action name "${key}" must start with a lowercase letter and use only letters and digits, like "mergeCustomers".`,
-        );
+        ctx.error(keyNode, "invalid-name", nameRule("action", key));
         continue;
       }
       ctx.define("action", key);

@@ -22,7 +22,7 @@ import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { checkFilterFields, checkSortableFields } from "./list-keys.js";
-import { NAME_PATTERN } from "./names.js";
+import { NAME_PATTERN, nameRule } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
@@ -129,11 +129,7 @@ export const pagesSection: SpecSection<"pages"> = {
     const routes = new Map<string, string>();
     for (const { key: id, keyNode, value } of mapEntries(ctx, node, `"pages"`) ?? []) {
       if (!NAME_PATTERN.test(id)) {
-        ctx.error(
-          keyNode,
-          "invalid-name",
-          `Page name "${id}" must start with a lowercase letter and use only letters, digits and dashes.`,
-        );
+        ctx.error(keyNode, "invalid-name", nameRule("page", id));
         continue;
       }
       ctx.define("page", id);

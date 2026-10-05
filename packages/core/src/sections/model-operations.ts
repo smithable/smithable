@@ -11,7 +11,7 @@ import {
   refTo,
 } from "../operation.js";
 import { parseFieldShorthand } from "./field-type.js";
-import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
+import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
 
 const name = { type: "string", minLength: 1 };
 
@@ -41,9 +41,7 @@ function field(ir: SpecIR, modelName: string, name: string): FieldIR {
 
 function checkFieldName(name: string): void {
   if (!FIELD_NAME_PATTERN.test(name)) {
-    throw new OperationError(
-      `Field name "${name}" must start with a lowercase letter and use only letters and digits.`,
-    );
+    throw new OperationError(nameRule("field", name));
   }
 }
 
@@ -106,9 +104,7 @@ const addModel: Operation<{ model: string; fields: Record<string, FieldArg> }> =
   destructive: () => false,
   apply({ spec }, { model: name, fields }, ir) {
     if (!MODEL_NAME_PATTERN.test(name)) {
-      throw new OperationError(
-        `Model name "${name}" must start with a capital letter and use only letters and digits.`,
-      );
+      throw new OperationError(nameRule("model", name));
     }
     if (ir.models.some((m) => m.name === name))
       throw new OperationError(`Model "${name}" already exists.`);
