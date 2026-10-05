@@ -182,12 +182,29 @@ const changeField: Operation<{ model: string; field: string; type: string; renam
       parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
     // A choice value that goes: what the records holding it get instead.
     const renamed: Record<string, string> = {};
+    // A field that must have a value (required, or with a default) cannot be left empty.
+    const mustHave =
+      parsed.ok &&
+      (parsed.value.required ||
+        (parsed.value.defaultText !== undefined && parsed.value.defaultText !== "none"));
     for (const pair of renames) {
+      if (!pair.includes("="))
+        throw new OperationError(
+          `"${pair}" says no new value: write it as old=new, e.g. ${pair}=${choices[0] ?? "…"}, or ${pair}= to leave the records empty.`,
+        );
       const [from = "", to = ""] = pair.split("=").map((s) => s.trim());
       const old = before.type.kind === "choice" ? before.type.values : [];
+      if (choices.includes(from))
+        throw new OperationError(
+          `"${from}" stays one of ${m}.${f}'s values, so its records keep it; name only values that go.`,
+        );
       if (!old.includes(from))
         throw new OperationError(
           `${m}.${f} has no value "${from}" to replace. Values: ${old.join(", ")}.`,
+        );
+      if (!to && mustHave)
+        throw new OperationError(
+          `${m}.${f} must have a value, so records holding "${from}" cannot be left empty: name one of ${choices.join(", ")}.`,
         );
       if (to && !choices.includes(to))
         throw new OperationError(`"${to}" is not one of the new values: ${choices.join(", ")}.`);
