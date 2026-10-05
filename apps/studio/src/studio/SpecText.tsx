@@ -1,10 +1,12 @@
 // The spec's text in Code mode: CodeMirror 6 with YAML colours, line numbers, folding and
-// search, and the validator's problems shown in the text where they are. Its own module, loaded
-// when the spec tab opens: Builder never pays for it.
+// search, the validator's problems shown in the text where they are, and what can be written at
+// the cursor and what a word means, from the spec's schema and the app's own names (core's
+// complete.ts). Its own module, loaded when the spec tab opens: Builder never pays for it.
 import { yaml } from "@codemirror/lang-yaml";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorSelection, EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, hoverTooltip } from "@codemirror/view";
+import { completeSpec, hoverSpec } from "@smithable/core";
 import { basicSetup } from "codemirror";
 import { useEffect, useRef } from "react";
 import { type Problem, problemRange } from "./problems";
@@ -16,6 +18,7 @@ export default function SpecText({
   problems,
   select,
   kept,
+  roles,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
   label: string;
@@ -26,11 +29,15 @@ export default function SpecText({
   select?: { from: number; to: number; at: number };
   /** The session-storage key the cursor and scroll are kept under. */
   kept: string;
+  /** The roles of smithable.auth.yml, to suggest where the text names one. */
+  roles?: string[];
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
   const changed = useRef(onChange);
   changed.current = onChange;
+  const known = useRef(roles);
+  known.current = roles;
   // Made once. The text, the problems and the selection reach it through the effects below.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the editor is made once
   useEffect(() => {
@@ -46,6 +53,35 @@ export default function SpecText({
         );
       } catch {}
     };
+    // The editor's own completion (in basicSetup) asks the language's data for its sources, and
+    // knows a source by being the same function: made once here, or it would start over at
+    // every keystroke. Typing opens the list for a value or a word begun; an empty place where
+    // a key goes waits for Ctrl-Space.
+    const sources = [
+      {
+        autocomplete: (context: { state: EditorState; pos: number; explicit: boolean }) => {
+          const found = completeSpec(
+            context.state.doc.toString(),
+            context.pos,
+            known.current ? { roles: known.current } : {},
+          );
+          if (!found || (!context.explicit && found.from === found.to && !found.value)) return null;
+          return {
+            from: found.from,
+            to: found.to,
+            validFor: /^[\w-]*$/,
+            // In the order given (a kind of record's fields as it lists them), not by the alphabet.
+            options: found.suggestions.map((s, index) => ({
+              label: s.label,
+              boost: Math.max(-99, -index),
+              type: found.value ? "constant" : "property",
+              ...(s.insert ? { apply: s.insert } : {}),
+              ...(s.detail ? { info: s.detail } : {}),
+            })),
+          };
+        },
+      },
+    ];
     const editor = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -54,6 +90,22 @@ export default function SpecText({
           basicSetup,
           yaml(),
           lintGutter(),
+          EditorState.languageData.of(() => sources),
+          hoverTooltip((editor, pos) => {
+            const found = hoverSpec(editor.state.doc.toString(), pos);
+            if (!found) return null;
+            return {
+              pos: found.from,
+              end: found.to,
+              above: true,
+              create: () => {
+                const dom = document.createElement("div");
+                dom.className = "cm-spec-hint";
+                dom.textContent = found.text;
+                return { dom };
+              },
+            };
+          }),
           EditorView.contentAttributes.of({ "aria-label": label, spellcheck: "false" }),
           EditorView.theme({
             "&": { height: "100%", fontSize: "13px" },
@@ -62,6 +114,8 @@ export default function SpecText({
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
               lineHeight: "20px",
             },
+            ".cm-spec-hint": { padding: "4px 8px", maxWidth: "420px", fontSize: "12px" },
+            ".cm-tooltip.cm-completionInfo": { maxWidth: "320px", fontSize: "12px" },
           }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) changed.current(update.state.doc.toString());
@@ -72,7 +126,7 @@ export default function SpecText({
     });
     editor.scrollDOM.addEventListener("scroll", () => keep(editor), { passive: true });
     // The text and the selection answer as a text box's do (value, selectionStart,
-    // selectionEnd), for tools and tests that read or set a field's text: only the lines in
+    // selectionEnd, setSelectionRange), for tools and tests that read or set a field's text: only the lines in
     // view are in the page, so the element's own content is not the text.
     Object.defineProperties(editor.contentDOM, {
       value: {
@@ -83,6 +137,11 @@ export default function SpecText({
       },
       selectionStart: { configurable: true, get: () => editor.state.selection.main.from },
       selectionEnd: { configurable: true, get: () => editor.state.selection.main.to },
+      setSelectionRange: {
+        configurable: true,
+        value: (from: number, to = from) =>
+          editor.dispatch({ selection: EditorSelection.range(from, to), scrollIntoView: true }),
+      },
     });
     // Coming back to Code mode opens the editor where it was left (studio-v2.md §2).
     if (!select) {

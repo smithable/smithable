@@ -354,7 +354,7 @@ function SpecEditor({
     return range && jump ? { from: range[0], to: range[1], at: jump.at } : undefined;
   }, [jump]);
   // Checked in the tab, as you type: the same validator the CLI uses.
-  const { diagnostics } = useMemo(
+  const { diagnostics, auth } = useMemo(
     () => readSpec(project.files, text, plugins, project.ownThemes),
     [project.files, text, plugins, project.ownThemes],
   );
@@ -371,6 +371,7 @@ function SpecEditor({
           problems={diagnostics}
           select={select}
           kept="smithable:editor"
+          {...(auth ? { roles: auth.roles.map((r) => r.name) } : {})}
         />
       </Suspense>
       {edited && saved !== base && saved !== text && (

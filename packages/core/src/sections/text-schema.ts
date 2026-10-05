@@ -18,7 +18,10 @@ export const textSchema: Record<"description" | "intent" | "rules", JsonSchema> 
           type: "object",
           required: ["rule"],
           additionalProperties: false,
-          properties: { id: { type: "string" }, rule: { type: "string" } },
+          properties: {
+            id: { type: "string", description: "A short name to refer to the rule by." },
+            rule: { type: "string", description: "The rule, in plain language." },
+          },
         },
       ],
     },
