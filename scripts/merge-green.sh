@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# Merges a pull request only when every check has passed. It brings the pull request up to date
-# with main when it is behind, then arms GitHub's auto-merge, so the merge happens the moment the
-# checks pass and no other merge can slip in between (with several sessions merging, a pull
-# request that waited 18 minutes for its checks was otherwise often behind again). It refuses a
-# red check, conflicts, or no checks at all (disarming auto-merge), and goes round again when
-# another merge put the pull request behind while it waited. Branch protection requires the
+# Merges a pull request only when every check has passed. It arms GitHub's auto-merge, so the
+# merge happens the moment the checks pass. It refuses a red check, conflicts, or no checks at
+# all (disarming auto-merge). Where a repository's branch protection asks for a pull request to
+# be up to date with main (this one's no longer does: main's twice-daily full check is where two
+# changes that only clash together show), it brings one that is behind up to date first, and
+# goes round again when another merge put it behind while it waited. Branch protection requires the
 # `check` job, but an administrator's merge passes it by, so this script is the gate for Claude
 # sessions, which are allowed to run it and nothing else that merges.
+# A pull request of plain documents alone has no check: the CI workflow starts no run for the
+# paths it lists between its "plain docs" markers (design notes, benchmark reports, the Markdown
+# at the root), since no job reads them. The script takes that list from main, never from the
+# pull request, and when every changed file is on it, none that a page of the site links to is
+# removed, and the commits hold no secret (Gitleaks, as CI runs it; needs Docker), it merges the
+# pull request itself, as the administrator. Anything else waits for its check as before.
 # One pull request at a time across both repositories and every session on this machine: the
 # lock ~/repos/.merge-lock (or $MERGE_LOCK) names the pull request, repository, session and time;
 # others wait for it, and one older than 60 minutes is taken as stale. SESSION names the caller.
@@ -59,6 +65,48 @@ refuse() {
   echo "Not merging #$pr: $1"
   exit 1
 }
+# Plain documents alone (see the top): 0 when they are, with $base and $head for the scan; 1 when
+# the pull request waits for its check like any other. A removed document the site links to is
+# refused: the link has to change with it, in a pull request that then runs the site's check.
+plain_docs() {
+  [ ${#repo[@]} -eq 0 ] || return 1
+  head=$(head_sha)
+  git fetch -q origin main "$head" 2>/dev/null || return 1
+  base=$(git merge-base origin/main "$head") || return 1
+  local globs=() excludes=() glob gone
+  mapfile -t globs < <(git show origin/main:.github/workflows/ci.yml 2>/dev/null \
+    | sed -n '/# plain docs: begin/,/# plain docs: end/s/^ *- "\(.*\)"$/\1/p')
+  [ ${#globs[@]} -gt 0 ] || return 1
+  for glob in "${globs[@]}"; do excludes+=(":(glob,exclude)$glob"); done
+  [ -n "$(git diff --name-only "$base" "$head")" ] || return 1
+  [ -z "$(git diff --name-only "$base" "$head" -- . "${excludes[@]}")" ] || return 1
+  while read -r gone; do
+    [ -n "$gone" ] || continue
+    if git grep -qF "$(basename "$gone")" "$head" -- docs/site docs/spec docs/ai.md; then
+      refuse "it removes $gone, which a page of the site may link to: change the link in the same pull request."
+    fi
+  done < <(git diff --no-renames --diff-filter=D --name-only "$base" "$head")
+  return 0
+}
+if plain_docs; then
+  [ "$(gh pr view "$pr" --json mergeable -q .mergeable)" = CONFLICTING ] && refuse "it has conflicts: rebase it."
+  docker info >/dev/null 2>&1 || refuse "plain documents merge after a scan for secrets, which needs Docker running."
+  rules=$(mktemp)
+  git show origin/main:.gitleaks.toml > "$rules"
+  # The repository's objects are in the main checkout's .git, whichever worktree this runs in.
+  if ! docker run --rm -v "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)"):/repo:ro" \
+    -v "$rules:/cfg.toml:ro" zricethezav/gitleaks:v8.30.1 git /repo --no-banner --config /cfg.toml \
+    --log-opts="$base..$head"; then
+    rm -f "$rules"
+    refuse "the scan found a secret in its commits (above), or could not run."
+  fi
+  rm -f "$rules"
+  # The head that was read is the head that is merged.
+  gh pr merge "$pr" --admin --merge --delete-branch --match-head-commit "$head" >/dev/null
+  merged || refuse "GitHub did not merge it."
+  echo "Merged #$pr (plain documents: no check to wait for)."
+  exit 0
+fi
 for attempt in 1 2 3 4 5 6 7 8; do
   # GitHub says UNKNOWN for a few seconds after a push: wait for a real answer (up to a minute).
   merge_state=UNKNOWN
