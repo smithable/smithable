@@ -53,6 +53,8 @@ const model = "[A-Z][A-Za-z0-9]*";
 const shorthandPattern = `^\\s*(?:(?:${types})!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|${model}!?(?:\\s+unique)?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
 const typePattern = `^\\s*(?:(?:${types})!?|${model}!?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
 
+const ACCESS_VERBS = { read: "see", create: "add", write: "change", delete: "delete" };
+
 const fieldSchema: JsonSchema = {
   oneOf: [
     {
@@ -65,15 +67,26 @@ const fieldSchema: JsonSchema = {
       required: ["type"],
       additionalProperties: false,
       properties: {
-        type: { type: "string", pattern: typePattern },
-        required: { type: "boolean" },
-        unique: { type: "boolean" },
+        type: {
+          type: "string",
+          pattern: typePattern,
+          description:
+            'What the field holds: a type (string, money, date, …), another model (Customer, or Order[] for all that refer here), or choices ("draft | sent | paid").',
+        },
+        required: { type: "boolean", description: "A record cannot be saved without it." },
+        unique: { type: "boolean", description: "No two records may hold the same value." },
         default: {
           type: ["string", "number", "boolean"],
           description: `For choices, "none" means no default.`,
         },
-        min: { type: "number" },
-        max: { type: "number" },
+        min: {
+          type: "number",
+          description: "The smallest number allowed; for a text, its shortest length.",
+        },
+        max: {
+          type: "number",
+          description: "The largest number allowed; for a text, its longest length.",
+        },
         formula: {
           type: "string",
           description:
@@ -86,7 +99,10 @@ const fieldSchema: JsonSchema = {
             type: "object",
             required: ["input", "expected"],
             additionalProperties: false,
-            properties: { input: { type: "object" }, expected: {} },
+            properties: {
+              input: { type: "object", description: "The values of the fields the formula reads." },
+              expected: { description: "What the formula must give for them." },
+            },
           },
         },
         ...textSchema,
@@ -180,6 +196,7 @@ export const modelsSection: SpecSection<"models"> = {
       properties: {
         fields: {
           type: "object",
+          description: "What a record holds: each field's name and its type.",
           minProperties: 1,
           propertyNames: { pattern: FIELD_NAME_PATTERN.source, not: { enum: RESERVED_FIELDS } },
           additionalProperties: fieldSchema,
@@ -194,7 +211,14 @@ export const modelsSection: SpecSection<"models"> = {
             'Exceptions to the default access in smithable.auth.yml, e.g. { delete: [admin] }. "owner" is the record\'s owner.',
           additionalProperties: false,
           properties: Object.fromEntries(
-            ACCESS_OPERATIONS.map((op) => [op, { type: "array", items: { type: "string" } }]),
+            ACCESS_OPERATIONS.map((op) => [
+              op,
+              {
+                type: "array",
+                items: { type: "string" },
+                description: `The roles that may ${ACCESS_VERBS[op]} these records.`,
+              },
+            ]),
           ),
         },
         capacity: {
