@@ -12,6 +12,15 @@ export function columnOf(
   return { table: snake(plural(model)), column: reference ? `${snake(field)}_id` : snake(field) };
 }
 
+/**
+ * drizzle-kit's SQL with the table after each REFERENCES quoted: when it adds a reference to an
+ * existing table it leaves the name bare (drizzle-kit 0.31), and a table named like an SQL word
+ * (`values`, from a model Value) then breaks the migration.
+ */
+export function quoteReferences(sql: string): string {
+  return sql.replace(/REFERENCES ([A-Za-z_][A-Za-z0-9_]*)\(/g, "REFERENCES `$1`(");
+}
+
 /** SQL for a custom migration that renames a field's column, keeping its data. */
 export function renameColumnSql(
   model: string,

@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   generateApp,
+  quoteReferences,
   renameColumnSql,
   renameInSnapshot,
   STACK_PROFILE,
@@ -337,7 +338,7 @@ async function createMigration(
     const current = await api.generateSQLiteDrizzleJson(schema, prev.id, "snake_case");
     const statements = migration.renames.length
       ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
-      : await api.generateSQLiteMigration(prev, current);
+      : (await api.generateSQLiteMigration(prev, current)).map(quoteReferences);
     if (statements.length === 0) return true;
     const idx = last.idx + 1;
     const tag = `${numbered(idx)}_${migration.name}`;
@@ -444,7 +445,22 @@ function migrate(
     );
   }
   const name = migration ? ["--name", migration.name] : [];
-  return run(["exec", "drizzle-kit", "generate", ...name]);
+  // The new migration, if any, with its references quoted (quoteReferences).
+  const newest = () => {
+    try {
+      return latestMigration(dir);
+    } catch {
+      return undefined;
+    }
+  };
+  const before = newest();
+  if (!run(["exec", "drizzle-kit", "generate", ...name])) return false;
+  const tag = newest();
+  if (tag && tag !== before) {
+    const file = join(dir, "drizzle", `${tag}.sql`);
+    writeFileSync(file, quoteReferences(readFileSync(file, "utf8")));
+  }
+  return true;
 }
 
 /**
