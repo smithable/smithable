@@ -18,6 +18,7 @@ import {
 } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
+import { hasKeys } from "./keys.js";
 import {
   code,
   dataKey,
@@ -312,10 +313,14 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   // A model the API offers is listed a page at a time, counted and sliced in the query.
   // Finding, counting and adding up: for a model the API offers, and for every model when the
   // app has "Ask" (docs/design/assistant.md §6), which reads what its person may read.
-  const paged = apiOffers(auth, ir).models.includes(model.name) || Boolean(auth.assistant);
+  const paged =
+    (hasKeys(ir, auth) && apiOffers(auth, ir).models.includes(model.name)) ||
+    Boolean(auth.assistant);
   // Records with an owner the app keeps itself (not a field of the spec): who owns one is told only
   // to its owner and to roles that read every record, never to a visitor or another member.
   const ownedAuto = signedIn && !model.ownedBy;
+  // An ownedBy field that must be filled: whose record it is is always someone.
+  const ownerRequired = Boolean(model.fields.find((f) => f.name === model.ownedBy)?.required);
   // A record page's contact block mails the owner, whom only the server may know.
   const mailsOwner =
     ownedAuto &&
@@ -644,9 +649,18 @@ ${
  * Whose record it is: anyone's for a role that may change everyone's, otherwise the viewer's
  * own, whatever the form sent.
  */
-function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
+${
+  ownerRequired
+    ? `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string {
+  const owner = viewer && ${n.access}.write.roles.includes(viewer.role) ? (given ?? personOf(viewer)) : personOf(viewer);
+  // The record must have one: a visitor or a key, who is no person, cannot be it.
+  if (!owner) throw new AccessDenied(viewer !== null);
+  return owner;
+}`
+    : `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
   if (viewer && ${n.access}.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
   return personOf(viewer);
+}`
 }
 `
     : ""
@@ -878,7 +892,7 @@ ${
       ${self}.readable(viewer),
       whereOf(FILTERABLE, where, ${signedIn ? `viewer ? eq(${n.table}.${owner}, viewer.id) : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map((word) => ${searched.length ? `contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)` : "sql`false`"}),
+      ...wordsOf(search).map(${searched.length ? `(word) => contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)` : "() => sql`false`"}),
     );
   },
 `
