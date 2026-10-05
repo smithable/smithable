@@ -2388,7 +2388,7 @@ async function askFlow(dir) {
           dir,
           local,
           "ask",
-          "Customers should have a mobile number",
+          "A mobile number for every customer would help",
         );
         if (
           unconfirmed.code === 0 ||
@@ -2415,7 +2415,7 @@ async function askFlow(dir) {
           dir,
           local,
           "ask",
-          "Customers should have a mobile number",
+          "A mobile number for every customer would help",
           "--yes",
         );
         if (applied.code !== 0) throw new Error(applied.out);
@@ -2575,7 +2575,7 @@ async function askFlow(dir) {
           SMITHABLE_AI_POLICY: "eu-only",
         },
         "ask",
-        "Customers should have a mobile number",
+        "A mobile number for every customer would help",
       );
       if (refused.code === 0 || !refused.out.includes("No model is available under the AI policy"))
         throw new Error(refused.out);

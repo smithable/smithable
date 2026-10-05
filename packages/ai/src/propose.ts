@@ -18,6 +18,7 @@ import {
   type ContextSlice,
   looksLikeQuestion,
   matchRequest,
+  refusalOf,
 } from "@smithable/index";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
@@ -223,6 +224,10 @@ export async function proposeChange(options: {
       generator: answered.rule,
     };
   const phrased = phraseTier(files, options.request);
+  // The rules read it and it cannot be done as asked (the field is there already, no field has
+  // that name): the reason, not a model that would meet the same.
+  const why = phrased ? undefined : refusalTier(files, options.request);
+  if (why) return { kind: "none", reason: why.refusal, usage };
   if (phrased) {
     const checked = dryRun(files, phrased.operations);
     if (checked.ok && unchanged(files, checked.files))
@@ -294,6 +299,18 @@ export async function proposeChange(options: {
   }
   if (none !== undefined && !problem) return { kind: "none", reason: none, usage };
   return { kind: "failed", message: `No model found a change that applies. ${problem}`, usage };
+}
+
+/** Why the rules cannot make a request they read, when that is so (tier 0). */
+function refusalTier(files: ProjectFiles, request: string) {
+  const options = files.plugins ? { plugins: files.plugins } : {};
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
+  if (!ir) return undefined;
+  const auth =
+    files.auth === undefined
+      ? undefined
+      : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
+  return refusalOf(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
 }
 
 /** The operations a request's wording means without a model (ARCHITECTURE §9.2, tier 0). */
