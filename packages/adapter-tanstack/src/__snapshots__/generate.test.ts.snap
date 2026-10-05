@@ -5340,8 +5340,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -7472,7 +7474,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/where.ts": "93ea9844 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c78cd56a generated",
+  "src/lib/auth.ts": "bd3c41ee generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -10771,8 +10773,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -14631,7 +14635,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "989451cf generated",
+  "src/lib/auth.ts": "4cbe4a8b generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -16637,8 +16641,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -18041,7 +18047,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "3542223c generated",
+  "src/lib/auth.ts": "cbf9ed38 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -20722,8 +20728,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -22484,7 +22492,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "444902c7 generated",
+  "src/lib/auth.ts": "c37b1b43 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -23597,8 +23605,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -25255,7 +25265,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "884ed895 generated",
+  "src/lib/auth.ts": "5f4684a9 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -26277,8 +26287,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -27234,7 +27246,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "718ab3aa generated",
+  "src/lib/auth.ts": "e48245dc generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -32821,8 +32833,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
@@ -35388,7 +35402,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/where.ts": "93ea9844 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1ff8c156 generated",
+  "src/lib/auth.ts": "324722d2 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
