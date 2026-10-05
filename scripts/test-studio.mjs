@@ -527,8 +527,10 @@ try {
           .evaluate(() =>
             window.parent.postMessage({ source: "smithable-preview", type: "unstyled" }, "*"),
           );
-      // The undo before reloads the preview: a frame still loading is about:blank, whose
-      // messages carry Studio's own origin and are rightly not the preview's.
+      // The undo before reloads the preview (without a restart, a second later): until Studio
+      // has had its "changed" the undo is the change under way, and a frame still loading is
+      // about:blank, whose messages carry Studio's own origin and are rightly not the preview's.
+      await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 });
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 });
       await say();
       for (const deadline = Date.now() + 30000; (await unstyled()) === before; ) {

@@ -16,3 +16,13 @@ body,
 body {
   @apply bg-neutral-50 text-neutral-900 antialiased;
 }
+
+/* Shown only when what it says lasts: a preview reloaded within half a second shows nothing. */
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+.appear-late {
+  animation: appear 200ms ease-out 600ms both;
+}
