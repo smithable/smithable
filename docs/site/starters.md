@@ -4,6 +4,8 @@ A starter is a complete app to begin from: its spec, real sample records and pic
 
 ## CRM
 
+*Customers, deals and follow-ups for a sales team.*
+
 ![The customers list of the CRM starter](starters/crm-1.webp)
 ![A customer's page in the CRM starter](starters/crm-2.webp)
 
@@ -16,6 +18,8 @@ smithable new my-crm --starter crm
 See it live: coming soon.
 
 ## Booking
+
+*Classes or appointments people book, like a yoga studio's.*
 
 ![The landing page of the booking starter, Stillwater Yoga](starters/booking-1.webp)
 ![The class schedule a visitor sees](starters/booking-2.webp)
@@ -30,6 +34,8 @@ See it live: coming soon.
 
 ## Invoicing
 
+*Clients, invoices and payments for a freelancer.*
+
 ![The landing page of the invoicing starter, Invoicely](starters/invoicing-1.webp)
 ![An invoice in the invoicing starter](starters/invoicing-2.webp)
 
@@ -43,6 +49,8 @@ See it live: coming soon.
 
 ## Marketplace
 
+*Listings people buy and sell, second-hand or handmade.*
+
 ![The catalog of the marketplace starter, Torget](starters/marketplace-1.webp)
 ![An item for sale, as a visitor sees it](starters/marketplace-2.webp)
 
@@ -54,20 +62,9 @@ smithable new my-market --starter marketplace
 
 See it live: coming soon.
 
-## Records
-
-![The landing page of the records starter](starters/records-1.webp)
-![A record in the records starter](starters/records-2.webp)
-
-The smallest starter: one kind of record and a public page that lists them. A good beginning for a collection, an inventory or anything you simply want to keep and show, and the quickest one to read if you want to see how a spec works.
-
-```sh
-smithable new my-collection --starter records
-```
-
-See it live: coming soon.
-
 ## Status page
+
+*Services and incidents, public for your users to check.*
 
 ![The public status page of the status starter, Northwind Status](starters/status-1.webp)
 ![An incident as the team edits it](starters/status-2.webp)
@@ -80,7 +77,24 @@ smithable new my-status --starter status
 
 See it live: coming soon.
 
-## Tasks and notes for an assistant
+## A collection
+
+*A catalogue of things with pictures, public to browse: books, plants, wine.*
+
+![The landing page of the records starter](starters/records-1.webp)
+![A record in the records starter](starters/records-2.webp)
+
+The smallest starter: one kind of record and a public page that lists them. A good beginning for a collection, an inventory or anything you simply want to keep and show, and the quickest one to read if you want to see how a spec works.
+
+```sh
+smithable new my-collection --starter records
+```
+
+See it live: coming soon.
+
+## An API
+
+*Records behind an API, for programs and AI assistants. No public pages.*
 
 ![The tasks on the data page of the api starter, Team Tasks](starters/api-1.webp)
 ![Keys on the team page, with a call to copy](starters/api-2.webp)
@@ -92,4 +106,3 @@ smithable new my-tasks --starter api
 ```
 
 See it live: coming soon.
-
