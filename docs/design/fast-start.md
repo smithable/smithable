@@ -1,6 +1,6 @@
 # A fast start for every app: workspaces that are not tied to a starter
 
-Status: the engine side is built (2026-10-05: `--replaceable`, `POST /api/project/replace`, the check in `test-studio`); the service side is B's. Proposed 2026-10-05 by Fable, on Johan's idea and go-ahead of the same day ("Could some
+Status: built and live on the beta, 2026-10-05 (engine #353, cloud #116). On the host a starter without a workspace of its own now opens Studio in 2 to 3 s and its first page in 5 to 6 s; cold it was 18 s and 29 s. Proposed 2026-10-05 by Fable, on Johan's idea and go-ahead of the same day ("Could some
 studios be running and the spec and content etc replaced to a specific app? Then we could have a
 pool of these and only cold start the preview?" … "Yes, do it"). B agreed on the same day: finished projects in the image, the claim calls Studio's API with the
 proxy's token, and the flag only for a workspace nobody has claimed.
@@ -69,8 +69,14 @@ Measured locally (records to booking, 144 files written or removed of about 150 
 | kept running, only what differs written | 0.8 to 2.9 s |
 | every file rewritten under the running server | 13 s (it stumbles over the half-swapped state and restarts itself: not done) |
 
-What that is on the host, where a start is five times the local one, B measures with the first
-build; the part that is saved there is the 4.3 s start and the compile of everything shared.
+On the host (B, two runs of the smoke check after cloud #116; marketplace, which has no waiting
+workspace of its own, claiming a generic one that waited with the records starter):
+
+| | cold, the same release | with the swap |
+|---|---|---|
+| the replace request, to its answer | | 1.8 s and 1.6 s |
+| "Build it" to Studio answering | 18 s | 3 s and 2 s |
+| "Build it" to the new app's first page | 29 s | 6 s and 5 s |
 
 ## Design
 
@@ -134,13 +140,17 @@ build; the part that is saved there is the 4.3 s start and the compile of everyt
 8. **The smoke check** claims a starter that used to start cold (marketplace) and holds the
    preview to a tighter time than 90 s once the numbers are known.
 
-## What it should give
+## What it gives
 
-| Path | today (host) | with this |
+| Path | before (host) | now |
 |---|---|---|
-| A starter with a workspace of its own (three) | about 5 s | the same: kept beside the generic ones |
-| Any other starter | Studio 15 s, preview 27 s | Studio at once; the preview in what B measures, a few seconds if the host follows the local numbers, 15 s at worst (a start) |
-| A described app | the draft, then 27 s | Studio at once; the draft, then made in place, then the preview's start |
+| A starter with a workspace of its own | about 5 s | the same (the pool keeps one for the CRM) |
+| Any other starter | Studio 15 to 18 s, first page 27 to 29 s | Studio 2 to 3 s, first page 5 to 6 s |
+| A described app | the draft, then the cold path | a waiting workspace is claimed at once and the description is sent at the first build; not measured on the host yet |
+
+As set up on the service: the pool waits as `crm:1,any:2`; the finished projects are made where
+the prepared dependency set is made and are at `/opt/starters/<name>`; a replace that fails has
+the workspace made again from nothing.
 
 ## B's answers (2026-10-05)
 
