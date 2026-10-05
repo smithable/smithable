@@ -414,6 +414,7 @@ export async function studio(
       }
       if (req.method === "POST" && url.pathname === "/api/op") {
         const { name, args, confirm } = await body();
+        const asked = new Date().toISOString();
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
@@ -430,17 +431,16 @@ export async function studio(
           startApp();
           send("changed", {});
         }
-        // A failure is reported at once for someone who chose "always"; else Studio offers it.
+        // A failure of this change (not a refusal, and not an earlier failure) is reported at
+        // once for someone who chose "always"; else Studio offers it.
         let report: "sent" | "offer" | undefined;
-        if (!result.ok && !needsConfirm && buildReport(dir, logs)) {
+        const failure = result.ok ? undefined : buildReport(dir, logs);
+        if (failure && failure.at >= asked) {
           const choice = reportChoice();
-          if (choice === "always") {
-            const built = buildReport(dir, logs);
+          if (choice === "always")
             report =
-              built && "sent" in (await sendReport(built).catch(() => ({ url: "" })))
-                ? "sent"
-                : "offer";
-          } else if (choice !== "never") report = "offer";
+              "sent" in (await sendReport(failure).catch(() => ({ url: "" }))) ? "sent" : "offer";
+          else if (choice !== "never") report = "offer";
         }
         return json({ ...result, needsConfirm, report });
       }
