@@ -5321,6 +5321,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -5330,7 +5333,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -7454,7 +7474,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/where.ts": "93ea9844 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1e974e1e generated",
+  "src/lib/auth.ts": "bd3c41ee generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -10734,6 +10754,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -10743,7 +10766,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -14595,7 +14635,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "0cfc4733 generated",
+  "src/lib/auth.ts": "4cbe4a8b generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -16582,6 +16622,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -16591,7 +16634,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -17987,7 +18047,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "6dde9690 generated",
+  "src/lib/auth.ts": "cbf9ed38 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -20649,6 +20709,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -20658,7 +20721,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -22412,7 +22492,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "4cae539b generated",
+  "src/lib/auth.ts": "c37b1b43 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -23506,6 +23586,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -23515,7 +23598,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -25165,7 +25265,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "29190f59 generated",
+  "src/lib/auth.ts": "5f4684a9 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -26168,6 +26268,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -26177,7 +26280,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -27126,7 +27246,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1460da06 generated",
+  "src/lib/auth.ts": "e48245dc generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -32694,6 +32814,9 @@ const NO_TOKENS = {
 if (!import.meta.env.DEV && (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL))
   throw new Error("Set BETTER_AUTH_SECRET and BETTER_AUTH_URL: in production the app does not start without them.");
 
+/** The app is served over https: its cookies can take the __Host- prefix, which needs Secure. */
+const hostCookies = (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
+
 export const auth = betterAuth({
   // In development the app runs on port 3000 (pnpm dev); set BETTER_AUTH_URL in production.
   baseURL: process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : undefined),
@@ -32703,7 +32826,24 @@ export const auth = betterAuth({
   socialProviders,
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
-  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
+  // Path=/, no Domain), not a sibling app on the same domain.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] },
+    ...(hostCookies
+      ? {
+          useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
+          cookies: Object.fromEntries(
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+              name,
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+            ]),
+          ),
+        }
+      : {}),
+  },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
@@ -35262,7 +35402,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/where.ts": "93ea9844 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "cb61dd0a generated",
+  "src/lib/auth.ts": "324722d2 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
