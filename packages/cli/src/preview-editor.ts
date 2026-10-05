@@ -197,6 +197,16 @@ if (typeof window !== "undefined" && window.parent !== window) {
     [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Sign in as admin")?.click();
   }, 100);
   setTimeout(() => clearInterval(signIn), 30000);
+  // A page whose stylesheet did not come (the theme's variables are missing once it has loaded)
+  // says so: the dev server can keep failing it until it starts again (Studio review finding 3).
+  const styled = () => {
+    setTimeout(() => {
+      if (!getComputedStyle(document.documentElement).getPropertyValue("--font-body").trim())
+        post({ type: "unstyled" });
+    }, 1500);
+  };
+  if (document.readyState === "complete") styled();
+  else window.addEventListener("load", styled, { once: true });
   post({ type: "ready" });
 }
 `;

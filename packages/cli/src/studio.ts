@@ -505,6 +505,9 @@ export async function studio(
       if (url.pathname === "/api/preview/answers") return json({ ok: await previewAnswers() });
       // Retry: the preview's server starts again, rather than being asked once more.
       if (req.method === "POST" && url.pathname === "/api/preview/restart") {
+        const { why } = await body();
+        if (why === "unstyled")
+          log("The preview's page came without its stylesheet; starting the preview again.\n");
         stopApp();
         startApp();
         return json({ ok: true });

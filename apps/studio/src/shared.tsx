@@ -96,6 +96,19 @@ export function Preview({
   // Error pages in a row: a request that arrived while the server rebuilt after a change gets
   // a 500 page, which answers but has no editor; it is loaded again, a few times.
   const errors = useRef(0);
+  // A page without its stylesheet starts the preview again, once for each change: one still
+  // without it after that is the app's own (a broken src/custom/styles.css).
+  const restyled = useRef<number>(undefined);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e) || e.data.type !== "unstyled" || restyled.current === version)
+        return;
+      restyled.current = version;
+      void api.previewRestart("unstyled").then(() => setAttempt((n) => n + 1));
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [version]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (isPreviewMessage(e) && e.data.type === "ready") {
