@@ -39,6 +39,14 @@ const SPEC_FILES = [
   "smithable.ux.yml",
 ];
 
+/**
+ * Where the making of an app is, for whoever watches it (docs/design/while-it-is-made.md):
+ * the model is drafting it, it is being built from the draft (whose files are told then), it
+ * is coming in under the preview.
+ */
+export type MakingStage = "drafting" | "building" | "arriving";
+export type Progress = (stage: MakingStage, draft?: Record<string, string>) => void;
+
 /** What decides the install: the same in both means the packages installed here fit. */
 function installed(dir: string): string {
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
@@ -113,7 +121,12 @@ export function reopenDatabase(dir: string): void {
  * Replaces the project in `dir`. Returns 0 when the new app is in place; otherwise it says why
  * on `io.err`, and the project is as it was unless it says the starter was used instead.
  */
-export async function replaceProject(dir: string, io: Io, to: Replacement): Promise<number> {
+export async function replaceProject(
+  dir: string,
+  io: Io,
+  to: Replacement,
+  progress: Progress = () => {},
+): Promise<number> {
   if (to.from) {
     const from = resolve(to.from);
     if (!existsSync(join(from, "smithable.yml")) || !existsSync(join(from, "package.json"))) {
@@ -130,6 +143,7 @@ export async function replaceProject(dir: string, io: Io, to: Replacement): Prom
       );
       return 1;
     }
+    progress("arriving");
     // Only what differs is written, and nothing that is the same is touched: the preview's dev
     // server keeps running and keeps what it has compiled of the files every app shares (the
     // kit), as after any change. Measured locally, the new app answers in 1 to 3 s this way,
@@ -181,14 +195,17 @@ export async function replaceProject(dir: string, io: Io, to: Replacement): Prom
   };
   try {
     fresh();
+    progress("drafting");
     let made = await create(beside, kept, to.starter, {
       ...options,
       describe: to.describe,
       answers: to.answers,
+      onDraft: (files) => progress("building", files),
     });
     if (made !== 0) {
       io.err(said);
       fresh();
+      progress("building");
       const starter = to.starter ?? "crm";
       made = await create(beside, io, starter, options);
       if (made !== 0) return made;
@@ -204,6 +221,7 @@ export async function replaceProject(dir: string, io: Io, to: Replacement): Prom
         `The description could not be used this time: ${why}. This is the ${starter} starter; describe changes to it below.\n`,
       );
     }
+    progress("arriving");
     sync(beside, dir);
     rmSync(join(dir, ".git"), { recursive: true, force: true });
     reopenDatabase(dir);
