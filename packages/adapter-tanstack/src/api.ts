@@ -23,6 +23,7 @@ import {
   literal,
   modelNamed,
   names,
+  ownerKey,
   relatedTitle,
   type Texts,
   titleField,
@@ -518,6 +519,8 @@ function toolsModule(
   scope: "api" | "app",
 ): string {
   const app = scope === "app";
+  // Ask may change things (each confirmed by the person) only when the block says so.
+  const confirms = app && auth.assistant?.may === "change";
   const { models, actions } = app
     ? {
         models: ir.models.map((model) => ({ model, n: names(model, t) })),
@@ -558,7 +561,13 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, label: ${JSON.stringify(n.label.toLowerCase())}${named} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}` : ""} },`;
+  });
+  // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
+  const proposals = actions.map((action) => {
+    const a = actionNames(action);
+    const words = action.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))} },`;
   });
   const runs = actions.map((action) => {
     const model = modelNamed(ir, action.on);
@@ -601,9 +610,9 @@ function toolsModule(
 // tools whatever the app's size, and the app's summary as the server's instructions, both as core
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
-${actions.length || app ? 'import { AccessDenied, type Viewer } from "#/kit/access";' : 'import type { Viewer } from "#/kit/access";'}
-${app ? 'import type { AskKind } from "#/kit/ask";\nimport { type Answer, answer, hostModel } from "#/kit/assistant.server";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
-import type { Offer } from "#/kit/tools";
+${actions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
+${app ? `import type { AskKind } from "#/kit/ask";\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
   app
     ? ""
@@ -615,8 +624,17 @@ ${
         .sort()
         .join(", ")} } from "./api.server";`
 }
-${models.map(({ model, n }) => `import { ${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}
-${actions.map((a) => `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "./actions/${kebab(a.name)}";` : ""}`).join("\n")}
+${models.map(({ model, n }) => `import { ${confirms ? `${n.access}, ` : ""}${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}
+${actions
+  .map((a) => {
+    const fromModule = [
+      ...(confirms ? [actionNames(a).access] : []),
+      ...(askedFields(a).length ? [actionNames(a).asks] : []),
+      ...(confirms ? [actionNames(a).fits] : []),
+    ];
+    return `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${fromModule.length ? `\nimport { ${fromModule.join(", ")} } from "./actions/${kebab(a.name)}";` : ""}`;
+  })
+  .join("\n")}
 ${app ? conversionsCode(models) : ""}
 
 /**
@@ -788,10 +806,100 @@ export async function ask(viewer: Viewer | null, question: string): Promise<Answ
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     unread: viewer
       ? "The app could not read this question by itself, and no AI is set up to answer it here."
-      : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
+      : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',${confirms ? "\n    propose: viewer ? (tool, args) => propose(viewer, tool, args) : undefined," : ""}
   });
 }
+${
+  confirms
+    ? `
+/** Each action Ask may propose: the kind it runs on, its rule, when it fits, its name in words. */
+const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never) => boolean; label: string }> = {
+${proposals.join("\n")}
+};
+
+/**
+ * Proposed changes kept for the person to confirm: the call as it was checked, for ten minutes
+ * and once; a person keeps a handful at a time (the oldest go).
+ */
+const PENDING = new Map<string, { person: string; tool: string; args: Record<string, unknown>; at: number }>();
+const KEPT_MS = 10 * 60_000;
+const KEPT_EACH = 5;
+
+/** A field's label in the person's words, for a card. */
+function labelOf(viewer: Viewer, kind: string, field: string): string {
+  return WORDS[viewer.role]?.find((k) => k.model === kind)?.fields.find((f) => f.name === field)?.label ?? field;
+}
+
+/** A value as a card shows it: a referenced record by its title. */
+function cardValue(value: unknown): Json {
+  if (value && typeof value === "object" && "title" in value) return String((value as { title: unknown }).title);
+  return (value ?? null) as Json;
+}
+
+/**
+ * Checks a change the model proposed as the person would make it and keeps it for them to
+ * confirm: the record resolved by id or title, their right to make it, the values the schema
+ * takes; a refusal in the app's words otherwise. The card says what it would do.
+ */
+async function propose(viewer: Viewer, tool: string, args: Record<string, unknown>): Promise<{ id: string; card: Card }> {
+  let kept = args;
+  let card: Card;
+  if (tool === "run") {
+    const run = Object.hasOwn(RUNS, String(args.action)) ? RUNS[String(args.action)] : undefined;
+    if (!run) throw new NotFound(\`There is no action "\${String(args.action)}".\`);
+    const kind = KINDS[run.kind];
+    const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
+    if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
+    if (!run.fits(row as never)) throw new BadInput("This cannot be done now.");
+    kept = { ...args, id: row.id };
+    card = { title: \`\${run.label} \${kind.label} \${String(row[kind.title] ?? row.id)}\`, changes: [] };
+  } else {
+    const kind = kindOf(args);
+    const values = (args.values ?? {}) as Record<string, unknown>;
+    const label = (field: string) => labelOf(viewer, String(args.kind), field);
+    if (tool === "add") {
+      if (!allows(kind.access.create, viewer)) throw new AccessDenied(true);
+      kind.fromApi(values);
+      card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: cardValue(v) })) };
+    } else if (tool === "change") {
+      const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
+      if (!allows(kind.access.write, viewer, row[kind.owner])) throw new AccessDenied(true);
+      kind.fromApi(values, row);
+      const now = kind.toApi(row) as Record<string, unknown>;
+      kept = { ...args, id: row.id };
+      card = {
+        title: \`Change \${kind.label} \${String(row[kind.title] ?? row.id)}\`,
+        changes: Object.entries(values).map(([k, v]) => ({ label: label(k), from: cardValue(shown(kind, row, now, k)), to: cardValue(v) })),
+      };
+    } else throw new BadInput("Ask never deletes.");
+  }
+  const at = Date.now();
+  for (const [id, p] of PENDING) if (at - p.at > KEPT_MS) PENDING.delete(id);
+  const mine = [...PENDING].filter(([, p]) => p.person === viewer.id);
+  for (const [id] of mine.slice(0, Math.max(0, mine.length - KEPT_EACH + 1))) PENDING.delete(id);
+  const id = crypto.randomUUID();
+  PENDING.set(id, { person: viewer.id, tool, args: kept, at });
+  return { id, card };
+}
+
+/**
+ * A proposed change, made once the person confirms it: theirs alone, once, within ten minutes,
+ * as them through the same tool and its checks, counted like any change and logged as through Ask.
+ */
+export async function confirm(viewer: Viewer | null, id: string, headers: Headers): Promise<unknown> {
+  if (!viewer || !Object.hasOwn(ASKS, viewer.role)) throw new AccessDenied(viewer !== null);
+  const kept = PENDING.get(id);
+  if (!kept || kept.person !== viewer.id || Date.now() - kept.at > KEPT_MS)
+    throw new NotFound("That suggestion is no longer there; ask again.");
+  PENDING.delete(id);
+  writeAllowed(viewer, headers);
+  offered(offerFor(viewer), kept.tool, kept.args);
+  traceThrough("Ask");
+  return callTool(viewer, kept.tool, kept.args);
+}
 `
+    : ""
+}`
     : ""
 }`;
 }
