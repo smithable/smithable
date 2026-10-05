@@ -7391,7 +7391,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AppShell.tsx": "68598dba kit",
   "src/kit/Combobox.tsx": "ddcff071 kit",
   "src/kit/FieldInput.tsx": "59c94bb7 kit",
-  "src/kit/Inspector.tsx": "708c5a3d kit",
+  "src/kit/Inspector.tsx": "c92d67c7 kit",
   "src/kit/Keys.tsx": "52e46e0e kit",
   "src/kit/ModelForm.tsx": "00ce7939 kit",
   "src/kit/ModelTable.tsx": "38434a03 kit",
