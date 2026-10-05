@@ -1123,6 +1123,30 @@ async function apiFlow(base) {
     console.log(
       "  ✓ browser: an admin makes a key with the assistant role; with it a program lists, adds, changes and completes a task, is refused a delete, and an assistant reads the tools' list",
     );
+    // The inspector on the data page: a question asked as the assistant role, read by the rules
+    // and answered from the records; as a visitor, nothing here is open.
+    await open(page, `${base}/admin`);
+    await page.getByRole("link", { name: "Ask", exact: true }).click();
+    await page.waitForURL(`${base}/admin/ask`);
+    await page.getByLabel("Act as").selectOption("assistant");
+    await page.getByLabel("Question").fill("how many tasks");
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    const answered = page.locator("[data-answer]").first();
+    await answered.getByText("From your records").waitFor({ timeout: 10000 });
+    const number = await answered.locator(".text-2xl").textContent();
+    if (!/^\d+$/.test(number ?? "")) throw new Error(`the inspector answered ${number}`);
+    if (!(await page.getByText("Answers may come from an AI and can be wrong.").isVisible()))
+      throw new Error("the inspector does not say answers may come from an AI");
+    await page.getByLabel("Act as").selectOption("visitor");
+    await page.getByLabel("Question").fill("how many tasks");
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await page.locator("[data-answer]").nth(1).waitFor();
+    const asVisitor = await page.locator("[data-answer]").first().textContent();
+    if (asVisitor?.includes("From your records"))
+      throw new Error(`a visitor was answered: ${asVisitor}`);
+    console.log(
+      "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, and answers a visitor nothing",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -3371,6 +3395,80 @@ test("measure sums, averages and sums per value", async () => {
           for (const _ of ops) {
             const undone = smithable(dir, "undo");
             if (undone.code !== 0) throw new Error(undone.out);
+          }
+        },
+      );
+    // The inspector's answering loop (docs/design/assistant.md §4), with a stand-in for the host's
+    // model: the app runs the model's calls through the role's own tools and sends the results
+    // back, a change is only proposed, a kind the role is not offered is refused, and a used-up
+    // allowance (402) is said in the host's words.
+    if (example === "api")
+      step(
+        "the inspector's model loop: tools run as the role and their results go back, tokens add up, a change is only proposed, a kind not offered is refused, a 402 is said",
+        () => {
+          const check = join(dir, "src/inspector-check.test.ts");
+          writeFileSync(
+            check,
+            `import { expect, test } from "vitest";
+import { callTool, offerFor } from "./generated/mcp.server";
+import { answer } from "./kit/assistant.server";
+
+const viewer = { id: "inspector:check", name: "Check", email: "", role: "assistant" };
+const call = (name: string, args: Record<string, unknown>) => callTool(viewer, name, args);
+const tasks = async () => ((await call("measure", { kind: "Task" })) as { total: number }).total;
+const toolCall = (id: string, name: string, args: unknown) => ({ id, type: "function", function: { name, arguments: JSON.stringify(args) } });
+
+test("the model's tool loop", async () => {
+  const replies: unknown[] = [];
+  const sent: { body: Record<string, any>; person: string }[] = [];
+  const model = { url: "http://model.test", key: "k", model: "m", person: "admin-1" };
+  const fake = (async (_url: string, init: RequestInit) => {
+    const headers = init.headers as Record<string, string>;
+    sent.push({ body: JSON.parse(String(init.body)), person: headers["x-assistant-person"] });
+    return new Response(JSON.stringify(replies.shift()));
+  }) as unknown as typeof fetch;
+  const ask = (question: string) => answer(question, { offer: offerFor(viewer), kinds: [], call, model, fetch: fake });
+
+  replies.push(
+    { choices: [{ message: { content: null, tool_calls: [toolCall("1", "measure", { kind: "Task" })] } }], usage: { prompt_tokens: 100, completion_tokens: 10 } },
+    { choices: [{ message: { content: "That many tasks." } }], usage: { prompt_tokens: 120, completion_tokens: 5 } },
+  );
+  const counted = await ask("what is on my plate");
+  expect(counted).toMatchObject({ source: "ai", text: "That many tasks.", tokens: { in: 220, out: 15 } });
+  expect(counted.steps[0]).toMatchObject({ tool: "measure", result: { total: await tasks() } });
+  expect(sent[0].person).toBe("admin-1");
+  expect(sent[0].body.tools.map((t: any) => t.function.name)).toContain("find");
+  expect(sent[1].body.messages.at(-1)).toMatchObject({ role: "tool", tool_call_id: "1" });
+
+  // A change is shown, never made.
+  const before = await tasks();
+  replies.push({ choices: [{ message: { content: "I can add it.", tool_calls: [toolCall("2", "add", { kind: "Task", values: { title: "Never made" } })] } }] });
+  const proposed = await ask("add a task called Never made");
+  expect(proposed.steps[0]).toMatchObject({ tool: "add", proposed: true });
+  expect(await tasks()).toBe(before);
+
+  // Only the kinds the role is offered.
+  replies.push(
+    { choices: [{ message: { tool_calls: [toolCall("3", "find", { kind: "User" })] } }] },
+    { choices: [{ message: { content: "I cannot." } }] },
+  );
+  const refused = await ask("list the users");
+  expect(refused.steps[0].error).toContain('"kind" is one of');
+
+  // The host's allowance used up: said in its words, and the rules still answer.
+  const spent = await answer("anything", {
+    offer: offerFor(viewer), kinds: [], call, model,
+    fetch: (async () => new Response(JSON.stringify({ error: { message: "Used up for today." } }), { status: 402 })) as unknown as typeof fetch,
+  });
+  expect(spent).toMatchObject({ source: "none" });
+  expect(spent.note).toContain("Used up for today.");
+});
+`,
+          );
+          try {
+            run("pnpm", ["exec", "vitest", "run", "src/inspector-check.test.ts"], dir);
+          } finally {
+            rmSync(check);
           }
         },
       );
