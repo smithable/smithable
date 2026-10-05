@@ -25,9 +25,9 @@ export const STACK_PROFILE = {
     tailwindcss: "4.3.3",
     zod: "4.6.5",
   },
-  /** Only for apps with a Markdown field (MIT). */
+  /** For Markdown fields (MIT). In every app, like the fonts: see packageJson in generate.ts. */
   markdown: { "react-markdown": "10.1.0" },
-  /** Self-hosted fonts (OFL); an app gets the one its theme uses. */
+  /** Self-hosted fonts (OFL): every app has the three, and imports the one its theme uses. */
   fonts: {
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
