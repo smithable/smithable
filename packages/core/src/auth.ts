@@ -17,7 +17,7 @@ import { type Condition, conditionFits, type SpecIR, USER_MODEL } from "./ir.js"
 export type { Condition } from "./ir.js";
 
 import { patternInfo } from "./patterns.js";
-import { FIELD_NAME_PATTERN } from "./sections/names.js";
+import { FIELD_NAME_PATTERN, nameRule } from "./sections/names.js";
 import { didYouMean } from "./suggest.js";
 
 /**
@@ -248,7 +248,7 @@ export function validateAuth(
           "invalid-name",
           key === "owner"
             ? `"owner" is not a role: it means the owner of a record.`
-            : `Role name "${key}" must start with a lowercase letter and use only letters and digits.`,
+            : nameRule("role", key),
         );
         continue;
       }

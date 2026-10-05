@@ -1,7 +1,7 @@
 import { conceptsWithRules } from "../concepts.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 import { didYouMean } from "../suggest.js";
-import { NAME_PATTERN } from "./names.js";
+import { NAME_PATTERN, nameRule } from "./names.js";
 
 const setRuleId: Operation<{ concept: string; number: string; id: string }> = {
   name: "setRuleId",
@@ -44,9 +44,7 @@ const setRuleId: Operation<{ concept: string; number: string; id: string }> = {
     if (!rule)
       throw new OperationError(`${concept} has ${target.rules.length} rule(s), not ${number}.`);
     if (!NAME_PATTERN.test(id)) {
-      throw new OperationError(
-        `Rule id "${id}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+      throw new OperationError(nameRule("rule", id));
     }
     if (target.rules.some((r, i) => r.id === id && i !== index)) {
       throw new OperationError(`${concept} already has a rule with the id "${id}".`);
