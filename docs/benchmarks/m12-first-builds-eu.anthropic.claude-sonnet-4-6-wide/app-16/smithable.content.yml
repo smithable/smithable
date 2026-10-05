@@ -1,1 +1,11 @@
 smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Welcome to Our Allotment Society
+      subtitle: Find out about our plots, join the waiting list, and grow something wonderful.
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+    plots:
+      title: Our Plots

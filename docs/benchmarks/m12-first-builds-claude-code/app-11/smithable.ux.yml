@@ -17,6 +17,4 @@ pages:
     table:
       sort: startsAt
 theme:
-  preset: minimal
-  brand:
-    primary: "#2563eb"
+  preset: modern

@@ -1,0 +1,16 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  member:
+    description: A person who works with their tasks and notes.
+  assistant:
+    description: "The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes."
+defaultRole: member
+api:
+  models: all
+  actions: all
+  assistants: true
+admins: [johan@smithable.ai]

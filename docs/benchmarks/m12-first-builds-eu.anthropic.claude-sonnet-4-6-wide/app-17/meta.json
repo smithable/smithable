@@ -4,8 +4,8 @@
   "wordStarter": "records",
   "questions": [
     "Vilka tjänster ska kunderna kunna boka?",
-    "Har salongen flera anställda som kunderna kan välja mellan?",
-    "Vad ska synas för besökare utan inloggning?"
+    "Hur många frisörer arbetar i salongen?",
+    "Vad ska kunderna kunna se utan att logga in?"
   ],
   "lang": "sv"
 }

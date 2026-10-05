@@ -1,0 +1,10 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  itStaff:
+    description: Handles and resolves IT support tickets.
+defaultRole: itStaff
+admins: [johan@smithable.ai]

@@ -1,4 +1,29 @@
 smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Löydä tasapainosi maton päällä
+      subtitle: Varaa paikkasi joogastudiollamme – tunnit kaikille tasoille, joustavasti verkossa.
+      button: Katso aikataulu
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  schedule:
+    title: Aikataulu
+  my-bookings:
+    title: Omat varaukset
+  blog:
+    title: Blogi
+  sessions:
+    title: Tunnit
+  class-types:
+    title: Tuntityypit
+  instructors:
+    title: Ohjaajat
+  posts:
+    title: Artikkelit
+  messages:
+    title: Viestit
 models:
   ClassType:
     label: Tuntityyppi
@@ -11,9 +36,9 @@ models:
       level:
         label: Taso
         values:
-          aloittelija: Aloittelija
-          kaikkiTasot: Kaikki tasot
-          edistynyt: Edistynyt
+          beginner: Aloittelijoille
+          allLevels: Kaikille tasoille
+          advanced: Edistyneet
       durationMinutes:
         label: Kesto (min)
   Instructor:
@@ -37,7 +62,7 @@ models:
       startsAt:
         label: Alkaa
       capacity:
-        label: Kapasiteetti
+        label: Paikkamäärä
   Booking:
     label: Varaus
     pluralLabel: Varaukset
@@ -55,12 +80,12 @@ models:
       body:
         label: Sisältö
       publishedOn:
-        label: Julkaistu
+        label: Julkaisupäivä
       status:
         label: Tila
         values:
-          luonnos: Luonnos
-          julkaistu: Julkaistu
+          draft: Luonnos
+          published: Julkaistu
   Message:
     label: Viesti
     pluralLabel: Viestit
@@ -71,28 +96,3 @@ models:
         label: Sähköposti
       message:
         label: Viesti
-pages:
-  home:
-    title: Etusivu
-    hero:
-      image:
-        src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-  schedule:
-    title: Aikataulu
-  my-bookings:
-    title: Omat varaukset
-  blog:
-    title: Blogi
-  sessions:
-    title: Tunnit
-  class-types:
-    title: Tuntityypit
-  instructors:
-    title: Ohjaajat
-  posts:
-    title: Artikkelit
-  messages:
-    title: Viestit
-  team:
-    title: Tiimi

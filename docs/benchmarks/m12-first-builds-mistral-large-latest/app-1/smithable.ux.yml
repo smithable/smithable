@@ -1,0 +1,6 @@
+smithableUx: 0.1
+theme:
+  preset: coastal
+  brand:
+    primary: "#1e40af"
+    background: "#f0f9ff"

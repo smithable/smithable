@@ -1,24 +1,4 @@
 smithableContent: 0.1
-pages:
-  home:
-    title: Willkommen im Hofladen
-    subtitle: Frische Produkte direkt vom Hof – jetzt vorbestellen und zur Wunschzeit abholen.
-    hero:
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-  products:
-    title: Produkte
-  pickup-slots:
-    title: Abholzeiten
-  messages:
-    title: Nachrichten
-  abholzeiten:
-    title: Abholzeiten
-  orders:
-    title: Vorbestellungen
-  order-lines:
-    title: Bestellpositionen
 models:
   Product:
     label: Produkt
@@ -45,23 +25,11 @@ models:
       endTime:
         label: Bis
       capacity:
-        label: Max. Bestellungen
-  Message:
-    label: Nachricht
-    pluralLabel: Nachrichten
-    fields:
-      name:
-        label: Name
-      email:
-        label: E-Mail
-      message:
-        label: Nachricht
+        label: Plätze
   Order:
     label: Vorbestellung
     pluralLabel: Vorbestellungen
     fields:
-      pickupSlot:
-        label: Abholzeit
       name:
         label: Name
       email:
@@ -69,7 +37,7 @@ models:
       phone:
         label: Telefon
       notes:
-        label: Anmerkungen
+        label: Hinweise
       status:
         label: Status
         values:
@@ -77,15 +45,30 @@ models:
           bestaetigt: Bestätigt
           abgeholt: Abgeholt
           storniert: Storniert
+      pickupSlot:
+        label: Abholzeit
   OrderLine:
     label: Bestellposition
     pluralLabel: Bestellpositionen
     fields:
-      order:
-        label: Vorbestellung
       product:
         label: Produkt
       quantity:
         label: Menge
-      unitPrice:
-        label: Einzelpreis
+pages:
+  products:
+    title: Produkte
+  pickup-slots:
+    title: Abholzeiten
+  home:
+    hero:
+      title: Frisch vom Hof
+      subtitle: Bestellen Sie unsere Produkte bequem vor und holen Sie sie zur Wunschzeit ab.
+      button: Jetzt vorbestellen
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  orders:
+    title: Vorbestellungen
+  order-lines:
+    title: Bestellpositionen

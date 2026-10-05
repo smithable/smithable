@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Ledgerly
-  description: "Simple invoicing for freelancers: keep track of clients, invoices and the payments that settle them."
+  name: Billfold
+  description: "Invoicing for freelancers: keep track of clients, send invoices and record the payments that come in."
   currency: EUR
 models:
   Client:
@@ -25,7 +25,8 @@ models:
       paidOn: date! = TODAY()
       amount: money!
       method: bankTransfer | card | cash | other
-      note: string
+      reference: string
+      note: text
       invoice: Invoice!
   Invoice:
     fields:
@@ -39,12 +40,12 @@ models:
       total:
         type: money
         formula: SUM(lines.amount)
-      paid:
+      amountPaid:
         type: money
         formula: SUM(payments.amount)
       balance:
         type: money
-        formula: total - paid
+        formula: total - amountPaid
 pages:
   clients:
     crud: Client
@@ -84,9 +85,9 @@ pages:
         button: overview
   invoices:
     crud: Invoice
-    search: [number]
+    actions: [markSent, markPaid]
+    search: [number, status]
     filters: [status, client, issuedOn]
-    actions: [markSent, markOverdue, markPaid, duplicate]
 actions:
   markSent:
     on: Invoice
@@ -95,13 +96,6 @@ actions:
     set:
       status: sent
     intent: The invoice went to the client.
-  markOverdue:
-    on: Invoice
-    when:
-      status: sent
-    set:
-      status: overdue
-    intent: The due date passed without full payment.
   markPaid:
     on: Invoice
     when:
@@ -113,12 +107,4 @@ actions:
         paidOn: TODAY()
         amount:
         method:
-    intent: The client paid the invoice; the payment is recorded.
-  duplicate:
-    on: Invoice
-    copy:
-      number:
-      status: draft
-      issuedOn: TODAY()
-    with: [lines]
-    intent: Start a new invoice from an earlier one.
+    intent: The client paid the invoice; the payment is recorded with it.

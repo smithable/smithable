@@ -2,10 +2,6 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-roles:
-  member:
-    description: A freelancer invoicing their own clients.
-defaultRole: member
 public:
   pages: [home]
 admins: [johan@smithable.ai]

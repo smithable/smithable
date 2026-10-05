@@ -27,15 +27,6 @@ models:
       create: [admin]
       write: [admin]
       delete: [admin]
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
   Order:
     fields:
       pickupSlot: PickupSlot!
@@ -52,63 +43,54 @@ models:
       order: Order!
       product: Product!
       quantity: int! = 1
-      unitPrice: money!
 pages:
   products:
     crud: Product
     access: [admin]
+    search: [name]
+    filters: [available]
   pickup-slots:
     crud: PickupSlot
-    access: [admin]
-  messages:
-    crud: Message
     access: [admin]
   home:
     route: /
     landing:
       hero:
       footer:
-      features:
       produkte:
         records: Product
         where:
           available: true
       contact:
-        form: Message
-  abholzeiten:
-    calendar:
-      model: PickupSlot
-      starts: date
   team:
     users: manage
   orders:
     crud: Order
-    actions: [bestaetigen, abgeholt, stornieren]
+    actions: [confirm, markPickedUp, cancel]
     search: [name, email]
     filters: [status, pickupSlot]
   order-lines:
     crud: OrderLine
     access: [admin]
 actions:
-  bestaetigen:
+  confirm:
     on: Order
     when:
       status: offen
     set:
       status: bestaetigt
-    intent: Bestellung als bestätigt markieren.
-  abgeholt:
+    intent: Bestellung bestätigen.
+  markPickedUp:
     on: Order
     when:
       status: bestaetigt
     set:
       status: abgeholt
     intent: Bestellung als abgeholt markieren.
-  stornieren:
+  cancel:
     on: Order
     when:
       status: [offen, bestaetigt]
     set:
       status: storniert
     intent: Bestellung stornieren.
-navigation: [home, abholzeiten, orders, products, pickup-slots, order-lines, messages, team]

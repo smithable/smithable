@@ -1,12 +1,15 @@
 smithableUx: 0.1
+tones:
+  Item.condition:
+    likeNew: success
+    worn: warning
 theme:
   preset: modern
-  brand:
-    primary: "#2d7a4f"
+  motion: subtle
 pages:
   catalog:
-    icon: tag
+    table:
+      view: cards
   myItems:
-    icon: package
-  saved:
-    icon: star
+    table:
+      columns: [title, category, condition, available]

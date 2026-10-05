@@ -1,5 +1,10 @@
 smithableContent: 0.1
 models:
+  Repertoire:
+    fields:
+      status:
+        values:
+          performanceReady: Performance Ready
   LessonSlot:
     fields:
       dayOfWeek:

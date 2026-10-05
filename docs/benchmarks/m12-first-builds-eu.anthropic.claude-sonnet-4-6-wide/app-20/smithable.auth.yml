@@ -4,11 +4,11 @@ signIn:
 defaultAccess: private
 public:
   pages: [home, schedule, blog]
-  read: [ClassType, Instructor, Session, { Post: { where: { status: julkaistu } } }]
+  read: [ClassType, Instructor, Session, { Post: { where: { status: published } } }]
   create: [Message]
 roles:
   admin:
-    description: Studion henkilökunta. Hallinnoi aikatauluja, tunteja ja ohjaajia.
+    description: Studion henkilökunta. Hallinnoi aikataulua, tunteja ja ohjaajia.
   member:
     description: Oppilas, joka varaa tunteja.
 defaultRole: member
