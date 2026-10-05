@@ -1,6 +1,6 @@
 import { OPERATIONS, validateAuth, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
-import { argumentsOf, choicesFor } from "./arguments";
+import { argumentProblem, argumentsOf, choicesFor } from "./arguments";
 
 const read = (name: string) =>
   Object.entries(
@@ -70,4 +70,18 @@ test("an annotated argument renders as a choice of the spec's names, a list as c
   expect(render("removeField", "model")).toMatch(/<select[^>]*>.*<option value="Customer"/);
   expect(render("setSearch", "fields", { page: "customers" })).toMatch(/type="checkbox".*Email/);
   expect(render("setTone", "tone")).toMatch(/<option value="success"/);
+});
+
+test("a name typed in Code mode is checked against its rule while it is typed", () => {
+  const text = { type: "string" };
+  expect(argumentProblem("addPage", "page", text, "Hello")).toMatch(
+    /^Page name "Hello" must start with a lowercase letter/,
+  );
+  expect(argumentProblem("addPage", "page", text, "hello")).toBeUndefined();
+  expect(argumentProblem("renameField", "to", text, "Web page")).toMatch(/^Field name/);
+  // A reference is chosen, not typed; an empty value is not yet a name.
+  expect(
+    argumentProblem("addPage", "model", { ...text, "x-smithable": { ref: "model" } }, "x y"),
+  ).toBeUndefined();
+  expect(argumentProblem("addPage", "page", text, "")).toBeUndefined();
 });
