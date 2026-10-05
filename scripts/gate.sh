@@ -21,6 +21,10 @@
 # documents skips the example apps: their checks never load it. Everything else is the full
 # check. The exit status is the check's. The lock is released when the gate ends, however it ends.
 set -u
+# Everything below is one block, so bash has read the whole file before it runs any of it: a
+# copy that is replaced while gates run from it (it happened, and six gates died of a syntax
+# error) cannot change under them. Replace a copy with mv all the same, never by writing over it.
+{
 home=${GATE_HOME:-$HOME/repos}
 lock=$home/.gate-lock
 queue=$home/.gate-queue
@@ -97,3 +101,4 @@ fi
 status=$?
 rm -f "$lock.who"
 exit $status
+}
