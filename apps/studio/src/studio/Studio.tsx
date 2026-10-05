@@ -8,7 +8,7 @@ import {
   refHint,
 } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import type { Run } from "../builder/ChangeForms";
@@ -17,6 +17,9 @@ import type { Place } from "../preview";
 import { Properties } from "../properties";
 import { Trace } from "../shared";
 import { Button, cx, Label, Panel, Select, Tabs, useMedia } from "../ui";
+
+// The editor is its own piece of code, fetched when the spec tab is first shown.
+const SpecText = lazy(() => import("./SpecText"));
 
 type Tab = "spec" | "operation" | "diff" | "logs" | "preview";
 
@@ -343,42 +346,12 @@ function SpecEditor({
     addEventListener("beforeunload", ask);
     return () => removeEventListener("beforeunload", ask);
   }, [edited]);
-  const area = useRef<HTMLTextAreaElement>(null);
-  // The cursor and scroll, kept for the session: coming back to Code mode opens the editor where
-  // it was left (docs/design/studio-v2.md §2). Kept here, not in the app's state, since they
-  // change with every key and scroll.
-  useEffect(() => {
-    const editor = area.current;
-    if (!editor || jump) return;
-    try {
-      const { at, scroll } = JSON.parse(sessionStorage.getItem("smithable:editor") ?? "") as {
-        at: number;
-        scroll: number;
-      };
-      editor.setSelectionRange(at, at);
-      editor.scrollTop = scroll;
-    } catch {}
-  }, [jump]);
-  const keepCursor = () => {
-    const editor = area.current;
-    if (!editor) return;
-    try {
-      sessionStorage.setItem(
-        "smithable:editor",
-        JSON.stringify({ at: editor.selectionStart, scroll: editor.scrollTop }),
-      );
-    } catch {}
-  };
-  // Selects the lines a concept is declared on, and scrolls to them (when asked, not as the
-  // text changes; the editor's own value is the text).
-  useEffect(() => {
-    const editor = area.current;
-    const range = jump && editor && specRange(editor.value, jump.concept);
-    if (!range || !editor) return;
-    editor.focus();
-    editor.setSelectionRange(range[0], range[1]);
-    const line = editor.value.slice(0, range[0]).split("\n").length - 1;
-    editor.scrollTop = Math.max(0, (line - 3) * 20);
+  // Where a concept is declared, to select and bring into view when asked (not as the text
+  // changes).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
+  const select = useMemo(() => {
+    const range = jump && specRange(text, jump.concept);
+    return range && jump ? { from: range[0], to: range[1], at: jump.at } : undefined;
   }, [jump]);
   // Checked in the tab, as you type: the same validator the CLI uses.
   const { diagnostics } = useMemo(
@@ -387,17 +360,19 @@ function SpecEditor({
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
   return (
-    <div className="flex h-full flex-col">
-      <textarea
-        ref={area}
-        aria-label="smithable.yml"
-        spellCheck={false}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onSelect={keepCursor}
-        onScroll={keepCursor}
-        className="min-h-0 flex-1 resize-none p-3 font-mono text-[13px] leading-5 outline-none"
-      />
+    <div className="flex h-full min-w-0 flex-col">
+      <Suspense
+        fallback={<p className="flex-1 p-3 text-xs text-neutral-500">Opening the editor…</p>}
+      >
+        <SpecText
+          label="smithable.yml"
+          value={text}
+          onChange={setText}
+          problems={diagnostics}
+          select={select}
+          kept="smithable:editor"
+        />
+      </Suspense>
       {edited && saved !== base && saved !== text && (
         <p
           role="status"
