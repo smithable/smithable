@@ -3305,7 +3305,7 @@ for (const [index, example] of examples.entries()) {
     // reaches tables through the schema namespace, so nothing shadows them.
     if (example === "status")
       step(
-        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real; undo takes them back",
+        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real, and refuses to add up a computed field over more than 10,000 records; undo takes them back",
         () => {
           const ops = [
             // Made with the table that refers to it (drizzle-kit's ALTER TABLE leaves the
@@ -3329,6 +3329,8 @@ for (const [index, example] of examples.entries()) {
           writeFileSync(
             check,
             `import { expect, test } from "vitest";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
 import { callTool } from "./generated/mcp.server";
 
 test("measure sums, averages and sums per value", async () => {
@@ -3351,6 +3353,12 @@ test("measure sums, averages and sums per value", async () => {
   expect(await callTool(key, "measure", { kind: "Row", of: "sum amount", by: "group" })).toMatchObject({
     rows: [{ title: "North", number: 31 }, { title: "South", number: 30.5 }],
   });
+  // A computed field is added up over at most 10,000 records in one call; more are refused
+  // with how to narrow them, and a narrower call still works.
+  const bulk = Array.from({ length: 10_001 }, (_, i) => ({ label: \`bulk \${i}\`, amount: 100, size: "small" as const }));
+  for (let i = 0; i < bulk.length; i += 500) db.insert(schema.rows).values(bulk.slice(i, i + 500)).run();
+  await expect(callTool(key, "measure", { kind: "Row", of: "sum twice" })).rejects.toThrow("narrow them with where");
+  expect(await callTool(key, "measure", { kind: "Row", of: "sum twice", where: { size: "large" } })).toEqual({ sum: 101 });
 });
 `,
           );
