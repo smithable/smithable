@@ -1,7 +1,7 @@
 import { isMap, isScalar, isSeq, type ParsedNode } from "yaml";
 import { type Entry, mapEntries, type ParseContext, readString } from "../context.js";
 import type { Rule, SemanticText } from "../ir.js";
-import { NAME_PATTERN } from "./names.js";
+import { NAME_PATTERN, nameRule } from "./names.js";
 
 /** Keys for semantic free text, allowed on every concept. */
 export const TEXT_KEYS = ["description", "intent", "rules"] as const;
@@ -49,11 +49,7 @@ function readRuleWithId(ctx: ParseContext, node: ParsedNode, ids: Set<string>): 
     if (key === "id") {
       id = readString(ctx, value, "A rule id");
       if (id !== undefined && !NAME_PATTERN.test(id)) {
-        ctx.error(
-          value,
-          "invalid-name",
-          `Rule id "${id}" must start with a lowercase letter and use only letters, digits and dashes.`,
-        );
+        ctx.error(value, "invalid-name", nameRule("rule", id));
       } else if (id !== undefined && ids.has(id)) {
         ctx.error(value, "duplicate-rule-id", `Rule id "${id}" is used twice.`);
       }

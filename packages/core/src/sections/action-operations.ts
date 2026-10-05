@@ -1,7 +1,7 @@
 import { conditionArgs } from "../condition.js";
 import type { ModelIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { FIELD_NAME_PATTERN } from "./names.js";
+import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 
 const fields = (description: string) => ({
   type: "object",
@@ -135,10 +135,7 @@ const addAction: Operation<{
     },
     ir,
   ) {
-    if (!FIELD_NAME_PATTERN.test(action))
-      throw new OperationError(
-        `Action name "${action}" must start with a lowercase letter and use only letters and digits, like "mergeCustomers".`,
-      );
+    if (!FIELD_NAME_PATTERN.test(action)) throw new OperationError(nameRule("action", action));
     if (ir.actions.some((a) => a.name === action))
       throw new OperationError(`Action "${action}" already exists.`);
     const text = {

@@ -120,6 +120,7 @@ export {
   filterableFields,
   sortableBy,
 } from "./sections/list-keys.js";
+export { type NameKind, nameProblem } from "./sections/names.js";
 export { searchableFields } from "./sections/pages.js";
 export type { SensitiveKind } from "./sensitive.js";
 export { sensitiveKind } from "./sensitive.js";
