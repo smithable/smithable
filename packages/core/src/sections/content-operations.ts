@@ -94,6 +94,7 @@ const nameRecords: Operation<{ model: string; one: string; several?: string }> =
       return typeof text === "string" ? text : undefined;
     };
     const label = own(["models", model, "label"]);
+    const beforeOne = label ?? humanize(model);
     const before =
       own(["models", model, "pluralLabel"]) ?? (label ? plural(label) : humanize(plural(model)));
     put(content, ["models", model, "label"], single);
@@ -105,6 +106,20 @@ const nameRecords: Operation<{ model: string; one: string; several?: string }> =
         (own(["pages", page.id, "title"]) ?? humanize(page.id)) === before
       )
         put(content, ["pages", page.id, "title"], many);
+    // The fields that point at it, where they carried its old name: Order.customer "Customer",
+    // Customer.orders "Orders".
+    for (const m of ir.models)
+      for (const f of m.fields) {
+        if (f.type.kind !== "relation" || f.type.model !== model) continue;
+        const path = ["models", m.name, "fields", f.name, "label"];
+        if ((own(path) ?? humanize(f.name)) === (f.type.many ? before : beforeOne))
+          put(content, path, f.type.many ? many : single);
+      }
+    // A menu with a label of its own that was the old name.
+    const menus = content.get(["menus"]);
+    if (menus && typeof menus === "object" && !Array.isArray(menus))
+      for (const key of Object.keys(menus))
+        if (own(["menus", key, "label"]) === before) put(content, ["menus", key, "label"], many);
     return [];
   },
 };
