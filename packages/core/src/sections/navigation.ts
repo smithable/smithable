@@ -3,7 +3,7 @@ import { mapEntries, type ParseContext, readNameList } from "../context.js";
 import type { MenuIR } from "../ir.js";
 import { patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
-import { NAME_PATTERN } from "./names.js";
+import { NAME_PATTERN, nameRule } from "./names.js";
 import { navigationOperations } from "./page-operations.js";
 
 const pageList = { type: "array", items: { type: "string" }, uniqueItems: true };
@@ -37,11 +37,7 @@ export const navigationSection: SpecSection<"navigation"> = {
     const menus: MenuIR[] = [];
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"navigation"`) ?? []) {
       if (!NAME_PATTERN.test(key)) {
-        ctx.error(
-          keyNode,
-          "invalid-name",
-          `Menu name "${key}" must start with a lowercase letter and use only letters, digits and dashes.`,
-        );
+        ctx.error(keyNode, "invalid-name", nameRule("menu", key));
         continue;
       }
       menus.push(readMenu(ctx, key, value));
