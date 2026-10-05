@@ -117,6 +117,13 @@ export function App() {
 
   const spec = useSpec(project);
 
+  // After a change went through: the spec as it is now, before the app has restarted with it
+  // ("changed" later reloads the preview), so the left side never shows the old state.
+  const catchUp = async () => {
+    const next = await api.project().catch(() => undefined);
+    if (next) setProject(next);
+  };
+
   /** Applies an operation; a change that loses data first asks for confirmation. */
   const run = async (name: string, args: Record<string, unknown>, confirm = false) => {
     setBusy(true);
@@ -139,6 +146,7 @@ export function App() {
       return false;
     }
     setPending(undefined);
+    if (result.ok) await catchUp();
     // The last line says what happened; the rest is tool output.
     const lines = result.output.split("\n").filter((l) => l.trim());
     const summary = result.ok
@@ -170,6 +178,7 @@ export function App() {
         : undefined;
     setBusy(true);
     const result = await api.undo().catch((e: Error) => ({ ok: false, output: e.message }));
+    if (result.ok) await catchUp();
     setBusy(false);
     setMessage({
       ok: result.ok,

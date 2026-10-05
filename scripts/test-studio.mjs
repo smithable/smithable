@@ -167,7 +167,7 @@ try {
     },
   );
   await step(
-    "adding a field: the summary, the change trace and the preview follow, which flashes what changed",
+    "adding a field: the summary and the change trace follow at once, the form empties, and the preview follows and flashes what changed",
     async () => {
       await change("Add a field");
       await page.getByLabel("Name", { exact: true }).fill("website");
@@ -176,7 +176,13 @@ try {
       await status
         .getByText("Customers: added a website (a web address)")
         .waitFor({ timeout: 60000 });
-      await trace.getByText("Customers: added a website (a web address)").waitFor();
+      // The left side has the change as soon as it is done, before the app has restarted with
+      // it (finding 12), and the form starts again empty rather than inviting a second click.
+      await trace
+        .getByText("Customers: added a website (a web address)")
+        .waitFor({ timeout: 3000 });
+      if ((await page.getByLabel("Name", { exact: true }).inputValue()) !== "")
+        throw new Error("The add-field form kept its values after the change went through");
       await page.getByRole("tab", { name: "What it does" }).click();
       await page.getByText("a web address").first().waitFor();
       await openPreview("/customers/new");
