@@ -279,7 +279,9 @@ export function Preview({
                   aria-hidden
                   tabIndex={-1}
                   src={stale.src}
-                  className="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-60"
+                  // Dimmed only when the new page takes a while: a change the app takes in
+                  // without restarting (an undo) reloads in about a second, with nothing to see.
+                  className="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-60 transition-opacity delay-500 duration-200"
                 />
               )}
               {server === "up" && (
@@ -300,7 +302,7 @@ export function Preview({
               {stale && (
                 <p
                   role="status"
-                  className="absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-neutral-900/80 px-3 py-1 text-xs text-white"
+                  className="appear-late absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-neutral-900/80 px-3 py-1 text-xs text-white"
                 >
                   Updating the preview…
                 </p>
