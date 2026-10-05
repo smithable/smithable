@@ -175,7 +175,7 @@ async function applyAndCheckpoint(
   lap("apply and validate");
   const blocker =
     requiredButEmpty(dir, before, after, result.effects) ??
-    choicesInUse(dir, before, result.effects);
+    choicesInUse(dir, before, after, result.effects);
   lap("required but empty");
   if (blocker) {
     io.err(`${blocker}\n`);
@@ -330,7 +330,12 @@ export function actionNote(action: string): string {
  * Stops a choice field losing a value that records or samples still hold, unless the change
  * says what they get instead: it names the value, how many hold it, and how to say it.
  */
-function choicesInUse(dir: string, before: SpecIR, effects: Effect[]): string | undefined {
+function choicesInUse(
+  dir: string,
+  before: SpecIR,
+  after: SpecIR,
+  effects: Effect[],
+): string | undefined {
   for (const effect of effects) {
     if (effect.kind !== "change-field" || !effect.choices.length) continue;
     const old = before.models
@@ -354,7 +359,12 @@ function choicesInUse(dir: string, before: SpecIR, effects: Effect[]): string | 
       ]
         .filter(Boolean)
         .join(" and ");
-      return `${held} of ${effect.model} still hold "${value}" in ${effect.field}. Say what they get instead: --renames ${value}=${effect.choices[0]} (or ${value}= to leave them empty).`;
+      // Left empty only where the field may be empty.
+      const field = after.models
+        .find((m) => m.name === effect.model)
+        ?.fields.find((f) => f.name === effect.field);
+      const empty = field && !field.required ? ` (or ${value}= to leave them empty)` : "";
+      return `${held} of ${effect.model} still hold "${value}" in ${effect.field}. Say what they get instead: --renames ${value}=${effect.choices[0]}${empty}.`;
     }
   }
   return undefined;
