@@ -55,7 +55,9 @@ example, and it asks. To start the draft at 0 s the starter must be known withou
 - **The starter:** the reader that uses no model (`read-description.ts`) names the kind of app
   when it is sure. When it is, the draft starts at once on that starter. When it is not, the
   `clarify` call comes first, as today, and the draft starts 5 s later. No worse than today in
-  either case.
+  either case. Studio does both itself, from the description in the replace request (it has
+  the engine and the model's address): the service does not ask `clarify` first, which would
+  cost it a container of its own for 2 to 3 s even when no model is needed (B).
 - **The questions** come from two places: the reader's own, at once (it knows what it could
   not settle: who uses the app, what visitors see), and `clarify`'s, when that call has
   answered. At most three in all, as today; the reader's first.
@@ -102,8 +104,8 @@ turning free edits of it back into changes exists only for the starters' own des
   usual time, the questions, and from "drafted" on the draft's files, from which the page makes
   "What it does" as Builder does for any app. Each change of stage is also an event to the
   open pages.
-- `POST /api/making/answer` and `/api/making/request` take answers and typed changes; Studio
-  keeps them and makes them when the app is in place: settings as operations, the rest as the
+- `POST /api/making/answer` and `/api/making/request` take answers and typed changes (and
+  take one back); Studio's server keeps them and makes them when the app is in place: settings as operations, the rest as the
   one correction round (a new `adjust` beside the draft, given the applied operations and the
   answers), typed changes through the existing request path.
 - The reader's verdict and questions become part of what `clarify --json` answers, so the
@@ -113,13 +115,31 @@ turning free edits of it back into changes exists only for the starters' own des
 
 **Studio's page (A).** The making screen: description, stage, bar, questions with their
 suggested answers, the waiting requests, then "What it does"; the hand-over to Builder when
-the app is in place. A slot for the animation.
+the app is in place. A slot for the animation. From A's reading (2026-10-05):
+- The waiting answers and requests live in Studio's server, in `making`, not in the page: a
+  reload, a second tab or a phone shows the same "Waiting: …" list, and taking one back is a
+  request to the server too.
+- While the app is being made, Undo, Redo, Look, Change and Select have nothing to act on.
+  They are shown, switched off, with a short reason, so the layout does not move at the
+  hand-over.
+- `making.files` has the shape of the files in `GET /api/project`: the page already turns
+  those into the summary in the browser.
+- The bar ends when the stage is "in place", not when the preview answers; from there the
+  preview panel says "Starting…" as it does today. Otherwise the bar would stand full for the
+  preview's two seconds.
 
-**The service (B).** A described app's claim sends the replace and lets the person into
-Studio at once, without waiting for its answer; it passes the usual time of its recent drafts.
-The questions step before Studio goes when the reader is sure of the starter; otherwise the
-`clarify` call stays in front, and its questions are sent along instead of being asked on the
-service's page.
+**The service (B).** A described app's claim sends the replace with the description and lets
+the person into Studio at once; the questions step on the service's own page goes, since Studio
+reads the description and asks. From B's reading (2026-10-05):
+- "Accepted" is not "in place": the claim no longer learns whether the draft worked, so a
+  failed draft is Studio's to say and to offer again, and the service's own fallback for a
+  failed replace (the workspace made again from nothing) no longer runs for it.
+- The usual time: the service cannot time the replace any more. The gateway records when a
+  call was made, not how long it took; it gets the duration, and the service passes the median
+  of its last twenty or so drafts.
+- A demo guest may have two model calls running at once: the draft and `clarify` fit, a typed
+  request waits until the app is in place anyway, and the allowance holds a draft, `clarify`
+  and a correction.
 
 **Checks.** `test-studio`: a replaceable Studio given a description answers at once and shows
 `making`; an answer that is a setting and a typed change are both made when the stand-in
@@ -135,7 +155,10 @@ hours. The correction round is the least certain part.
   operation that is complete is applied to the draft and "What it does" grows: customers, then
   their bikes, then repair jobs with a status and a price. It needs streaming in the engine's
   model layer and through the service's gateway (neither does it today; providers differ), and
-  a reader of unfinished JSON. A few days. It is what makes the wait a review.
+  a reader of unfinished JSON. A few days on each side: the gateway reads answers whole today,
+  and would translate Bedrock's and Mistral's streams to one, count the cost from the usage
+  that arrives at the end, and release the reservation when a stream is dropped (B). It is what
+  makes the wait a review.
 - **The animation.** The making screen has a place for it: a looped picture to start with,
   later perhaps an interactive scene (a sledge on an anvil). It is Studio's page only, and must
   not slow the page on a small machine or a phone: loaded after the screen is up, stopped when
