@@ -59,6 +59,15 @@ export const COMMANDS: Command[] = [
     options: ["json"],
   },
   {
+    name: "starters",
+    usage: "starters",
+    text: [
+      "The starters, each with the description that makes it: `smithable new --describe` with",
+      "that text, or a small edit of it, builds with no model (--json for programs)",
+    ],
+    options: ["json"],
+  },
+  {
     name: "run",
     usage: "run [dir]",
     text: ["Generate if needed, start the app and open it in the browser (--no-open)"],
