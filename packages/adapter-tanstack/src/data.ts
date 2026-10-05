@@ -320,7 +320,11 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   // to its owner and to roles that read every record, never to a visitor or another member.
   const ownedAuto = signedIn && !model.ownedBy;
   // An ownedBy field that must be filled: whose record it is is always someone.
-  const ownerRequired = Boolean(model.fields.find((f) => f.name === model.ownedBy)?.required);
+  const ownerField = model.fields.find((f) => f.name === model.ownedBy);
+  const ownerRequired = Boolean(ownerField?.required);
+  const ownerLabel = ownerField
+    ? (t.field(model, ownerField).label ?? ownerField.name).toLowerCase()
+    : "";
   // A record page's contact block mails the owner, whom only the server may know.
   const mailsOwner =
     ownedAuto &&
@@ -654,7 +658,8 @@ ${
     ? `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string {
   const owner = viewer && ${n.access}.write.roles.includes(viewer.role) ? (given ?? personOf(viewer)) : personOf(viewer);
   // The record must have one: a visitor or a key, who is no person, cannot be it.
-  if (!owner) throw new AccessDenied(viewer !== null);
+  if (!owner)
+    throw new AccessDenied(viewer !== null, viewer ? "A key owns nothing: name the ${ownerLabel} (${model.ownedBy})." : undefined);
   return owner;
 }`
     : `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
