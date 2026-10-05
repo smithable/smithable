@@ -14,6 +14,8 @@ interface Trace {
   /** The client, for the audit log (docs/design/logging.md §3.3). */
   address?: string;
   browser?: string;
+  /** How a change was asked for, when not by a page: "Ask" (docs/design/assistant.md §7). */
+  through?: string;
 }
 
 const store = new AsyncLocalStorage<Trace>();
@@ -42,6 +44,12 @@ export function traceDetails(): Omit<Trace, "spanId"> | undefined {
 export function traceWho(who: string, role?: string): void {
   const trace = store.getStore();
   if (trace) Object.assign(trace, { who, role });
+}
+
+/** Says how the request's changes were asked for ("Ask"), for the audit log. */
+export function traceThrough(through: string): void {
+  const trace = store.getStore();
+  if (trace) trace.through = through;
 }
 
 /** The address and path as the access line keeps them: a query's names, never its values. */

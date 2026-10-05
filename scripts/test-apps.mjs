@@ -16,7 +16,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { request } from "node:http";
+import { createServer, request } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1779,11 +1779,46 @@ async function sessionFlow(base) {
 }
 
 /**
+ * A stand-in for the host's chat model (an OpenAI-style /chat/completions): asked to start a
+ * task, it proposes changing "Draft the newsletter" to doing; anything else, a short reply.
+ */
+async function standInModel() {
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (d) => (body += d));
+    req.on("end", () => {
+      const last = String(JSON.parse(body || "{}").messages?.at(-1)?.content ?? "");
+      const call = {
+        id: "1",
+        type: "function",
+        function: {
+          name: "change",
+          arguments: JSON.stringify({
+            kind: "Task",
+            id: "Draft the newsletter",
+            values: { status: "doing" },
+          }),
+        },
+      };
+      const reply = /start/i.test(last)
+        ? { choices: [{ message: { content: "Shall I start it?", tool_calls: [call] } }] }
+        : { choices: [{ message: { content: "I can only start tasks here." } }] };
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ...reply, usage: { prompt_tokens: 10, completion_tokens: 5 } }));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  // It serves while the app does, and never keeps the run from ending.
+  server.unref();
+  return { url: `http://127.0.0.1:${server.address().port}` };
+}
+
+/**
  * "Ask" for the people who use the app (docs/design/assistant.md §6), on the api starter with
  * setAssistant member: a member asks with the button and is answered from the records they may
  * read (the rules, no model here); a role the block does not name, and a visitor, get no button.
  */
-async function askPanelFlow(base) {
+async function askPanelFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
@@ -1798,6 +1833,23 @@ async function askPanelFlow(base) {
     if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
     if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
       throw new Error("Ask does not say answers may come from an AI");
+    // may: change: the model's proposal is a card in the app's words, made only once confirmed.
+    await sheet.getByLabel("Question").fill("start the newsletter draft");
+    await sheet.getByRole("button", { name: "Ask", exact: true }).click();
+    const card = sheet.locator("[data-proposal]").first();
+    await card.getByText("Draft the newsletter").waitFor({ timeout: 10000 });
+    await card.getByText("Status:").waitFor();
+    const before = query(dir, "select status from tasks where title = 'Draft the newsletter'")[0]
+      ?.status;
+    if (before !== "todo") throw new Error(`the task was ${before} before confirming`);
+    await card.getByRole("button", { name: "Confirm" }).click();
+    await card.getByText("Done.").waitFor({ timeout: 10000 });
+    const after = query(dir, "select status from tasks where title = 'Draft the newsletter'")[0]
+      ?.status;
+    if (after !== "doing") throw new Error(`after confirming the task is ${after}`);
+    const logged = query(dir, "select details from audit_log order by id desc limit 1")[0]?.details;
+    if (!String(logged).includes('"through":"Ask"'))
+      throw new Error(`the change was logged as ${logged}`);
     await page.context().clearCookies();
     await signInAs(page, base, "admin");
     if (await page.getByRole("button", { name: "Ask", exact: true }).count())
@@ -1807,7 +1859,7 @@ async function askPanelFlow(base) {
     if (await page.getByRole("button", { name: "Ask", exact: true }).count())
       throw new Error("a visitor has Ask");
     console.log(
-      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a role the assistant block does not name and a visitor have no Ask",
+      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a change the model proposes is a card made only once confirmed, logged as through Ask; a role the assistant block does not name and a visitor have no Ask",
     );
   } catch (error) {
     console.log(
@@ -3757,8 +3809,103 @@ test("a visitor's question never reaches the model", async () => {
           );
           const undone = smithable(dir, "undo");
           if (undone.code !== 0) throw new Error(undone.out);
+          // may: change: a change the model proposes is checked, carded, and made once confirmed;
+          // with the API's own assistants allowed to delete, Ask still never does.
+          op(
+            "setApi",
+            "all",
+            "--actions",
+            "all",
+            "--assistants",
+            "true",
+            "--assistants-delete",
+            "true",
+          );
+          op("setAssistant", "member", "--may", "change");
+          run("pnpm", ["typecheck"], dir);
+          test(
+            "ask-change",
+            `import { eq } from "drizzle-orm";
+import { expect, test, vi } from "vitest";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied } from "#/kit/access";
+import { traced } from "#/kit/trace.server";
+import { ask, confirm } from "./generated/ask.server";
+${people}
+
+/** Inside a request, as a page's call is: the trace and the audit log see it. */
+const inRequest = async <T,>(run: () => Promise<T>): Promise<T> => {
+  let result: T | undefined;
+  await traced(new Request("http://app.test/"), "127.0.0.1", async () => {
+    result = await run();
+    return new Response(null);
+  });
+  return result as T;
+};
+const toolCall = (id: string, name: string, args: unknown) => ({ id, type: "function", function: { name, arguments: JSON.stringify(args) } });
+
+test("a change Ask proposes is checked, carded, and made once confirmed", async () => {
+  process.env.ASSISTANT_URL = "http://model.test";
+  process.env.ASSISTANT_MODEL = "stand-in";
+  const replies: unknown[] = [];
+  vi.stubGlobal("fetch", async () => new Response(JSON.stringify(replies.shift() ?? { choices: [{ message: { content: "Done." } }] })));
+  const project = db.insert(schema.projects).values({ name: "Ask change check" }).returning().get();
+  const task = db.insert(schema.tasks).values({ title: "Kept for Ask", projectId: project.id, status: "todo" }).returning().get();
+  const status = () => db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get()?.status;
+
+  // Proposed by title: resolved to the record, checked, and carded in the app's words.
+  replies.push({ choices: [{ message: { content: "Shall I?", tool_calls: [toolCall("1", "change", { kind: "Task", id: "Kept for Ask", values: { status: "doing" } })] } }] });
+  const asked = await inRequest(() => ask(member, "start the task Kept for Ask"));
+  const step = asked.steps[0];
+  expect(step).toMatchObject({ tool: "change", proposed: true });
+  expect(step.card?.title).toContain("Kept for Ask");
+  expect(step.card?.changes).toEqual([{ label: "Status", from: "todo", to: "doing" }]);
+  expect(status()).toBe("todo");
+
+  // Confirmed: made as the person, once, and logged as through Ask.
+  await inRequest(() => confirm(member, step.proposal as string, new Headers()));
+  expect(status()).toBe("doing");
+  const line = db.select().from(schema.auditLog).all().at(-1);
+  expect(line).toMatchObject({ who: member.id, details: expect.objectContaining({ through: "Ask" }) });
+  await expect(inRequest(() => confirm(member, step.proposal as string, new Headers()))).rejects.toThrow("no longer there");
+
+  // Never a delete, even where the API's assistants may; never a value the schema refuses.
+  replies.push({ choices: [{ message: { tool_calls: [toolCall("2", "delete", { kind: "Task", id: task.id })] } }] });
+  const deleting = await inRequest(() => ask(member, "delete the task Kept for Ask"));
+  expect(deleting.steps[0]).toMatchObject({ tool: "delete" });
+  expect(deleting.steps[0].error).toBeTruthy();
+  expect(deleting.steps[0].proposal).toBeUndefined();
+  replies.push({ choices: [{ message: { tool_calls: [toolCall("3", "change", { kind: "Task", id: task.id, values: { status: "nonsense" } })] } }] });
+  const refused = await inRequest(() => ask(member, "make it nonsense"));
+  expect(refused.steps[0].error).toBeTruthy();
+  expect(refused.steps[0].proposal).toBeUndefined();
+  expect(status()).toBe("doing");
+
+  // Only the person the proposal was made for, and only with Ask.
+  replies.push({ choices: [{ message: { tool_calls: [toolCall("4", "change", { kind: "Task", id: task.id, values: { status: "done" } })] } }] });
+  const again = await inRequest(() => ask(member, "finish it"));
+  const id = again.steps[0].proposal as string;
+  await expect(confirm(admin, id, new Headers())).rejects.toThrow(AccessDenied);
+  await expect(confirm(null, id, new Headers())).rejects.toThrow(AccessDenied);
+  await expect(confirm({ ...member, id: "someone-else" }, id, new Headers())).rejects.toThrow("no longer there");
+  expect(status()).toBe("doing");
+});
+`,
+          );
+          for (const _ of [1, 2]) {
+            const back = smithable(dir, "undo");
+            if (back.code !== 0) throw new Error(back.out);
+          }
+          op("setAssistant", "member", "--may", "change");
         },
       );
+    // A stand-in for the host's model, for Ask's confirmation cards: it proposes starting a task.
+    if (example === "api") {
+      const stand = await standInModel();
+      process.env.ASSISTANT_URL = stand.url;
+      process.env.ASSISTANT_MODEL = "stand-in";
+    }
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -3794,7 +3941,7 @@ test("a visitor's question never reaches the model", async () => {
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (example === "api") await apiFlow(base);
-      if (example === "api") await askPanelFlow(base);
+      if (example === "api") await askPanelFlow(dir, base);
       if (example === "invoicing") {
         await copyFlow(base);
         await formulaFlow(base);
