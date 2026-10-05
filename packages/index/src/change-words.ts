@@ -6,7 +6,7 @@ import {
   parseFieldShorthand,
   type SpecIR,
 } from "@smithable/core";
-import { who, wordsFor } from "./summary.js";
+import { whoCan, wordsFor } from "./summary.js";
 
 const VERBS: Record<string, string> = {
   read: "see",
@@ -83,10 +83,10 @@ export function describeChange(
       const target = ir.models.find((m) => m.name === modelName);
       const roles = Array.isArray(args.roles) ? (args.roles as string[]) : [];
       if (kind !== "model" || !target || !VERBS[verb]) return undefined;
-      const what = `${VERBS[verb]} ${w.pluralLabel(target).toLowerCase()}`;
+      const things = w.pluralLabel(target).toLowerCase();
       return roles.length
-        ? `Only ${who(roles)} can ${what}`
-        : `Everyone with access can ${what} again`;
+        ? whoCan(roles, VERBS[verb], things)
+        : `Everyone with access can ${VERBS[verb]} ${things} again`;
     }
     case "setText":
       return str("text") ? `Changed a text to “${str("text")}”` : "Put back a text's default";
