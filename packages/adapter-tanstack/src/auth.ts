@@ -201,8 +201,10 @@ export const auth = betterAuth({
     ...(hostCookies
       ? {
           useSecureCookies: false,
+          // Every other cookie it makes stays Secure too (a sign-in's state).
+          defaultCookieAttributes: { secure: true },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
             ]),
