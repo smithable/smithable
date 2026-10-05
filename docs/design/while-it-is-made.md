@@ -1,13 +1,12 @@
 # While the app is being made: Studio at once, questions and changes during the wait
 
-Status: stage one is being built (Johan, 2026-10-05: "Ok, you can start this now"): Studio at
-once with the description, the bar and "What it does" (§2's 1, 2 and 5); the engine side is in
-(`making`, `wait: false`), the screen is A's and the claim B's. Stage two, the questions and
-the waiting requests on that screen, follows. Decided for §8 on Fable's advice: two stages;
-questions always on the making screen; no correction round at first; no `clarify` call when
-the reader is sure. Designed 2026-10-05 by Fable on Johan's ideas of the same day. Builds on
-`first-build.md` (the questions step) and `fast-start.md` (a waiting workspace gets its app
-under the running preview).
+Status: live on the beta, 2026-10-05, both stages (engine #367 and #369, Studio's page #368 and
+#372, the service's cloud #118 and #119). For a described app through a waiting workspace,
+"Build it" to Studio on screen is 0.5 to 3 s (about 30 s on a "Starting" page before); the app
+is in place at about 30 s and the preview answers 2 to 3 s later, as before, since the model's
+draft is the wait. Not built: answering while the draft already runs (§8) and §7. Without a
+waiting workspace (a cold start) the service's own questions page stays. Designed 2026-10-05 by
+Fable on Johan's ideas of the same day; he said to start it the same evening.
 
 ## 1. The wait today
 
