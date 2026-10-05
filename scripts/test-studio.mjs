@@ -675,6 +675,22 @@ try {
       .getByText("Undid: Customers: added a loyalty code (unique)")
       .waitFor({ timeout: 60000 });
   });
+  await step("Redo makes again the change undone, and then has nothing left to redo", async () => {
+    const redo = page.getByRole("button", { name: "Redo", exact: true });
+    await redo.click();
+    // The button is off while Studio works too: first the change made again, then nothing left.
+    let newest = "";
+    for (const deadline = Date.now() + 90000; ; ) {
+      newest = await trace.locator("li").first().innerText();
+      if (newest.includes("loyalty code") && !newest.startsWith("Undid")) break;
+      if (Date.now() > deadline) throw new Error(`after Redo the newest change is ${newest}`);
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    await page
+      .locator("header")
+      .getByRole("button", { name: "Redo", exact: true, disabled: true })
+      .waitFor({ timeout: 30000 });
+  });
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     await page.getByRole("button", { name: "Your app", exact: true }).first().click();
