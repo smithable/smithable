@@ -152,6 +152,14 @@ try {
       if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
         throw new Error(`${name} does not lead to ${href}`);
   });
+  await step("the change box folds to one line and opens again (finding 10)", async () => {
+    await page.getByRole("button", { name: "Fold", exact: true }).click();
+    await page.getByRole("button", { name: "Show the change box" }).waitFor();
+    if (await page.getByLabel("Change trace").isVisible())
+      throw new Error("the folded change box still shows the changes");
+    await page.getByRole("button", { name: "Show the change box" }).click();
+    await page.getByLabel("Describe a change").waitFor();
+  });
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
     await alert.waitFor();
