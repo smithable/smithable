@@ -1,0 +1,23 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Join us for the conference
+    subtitle: Discover inspiring talks, meet the speakers and register for the sessions you want to attend.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden
+  talks:
+    title: Talks
+  speakers:
+    title: Speakers
+models:
+  Talk:
+    label: Talk
+    pluralLabel: Talks
+  Speaker:
+    label: Speaker
+    pluralLabel: Speakers
+  Attendee:
+    label: Attendee
+    pluralLabel: Attendees

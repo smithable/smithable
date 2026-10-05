@@ -1,13 +1,14 @@
 smithable: 0.1
 app:
-  name: Conference Registration
-  description: Talks, speakers and registration for attendees of a conference.
+  name: Keynote
+  description: Registration, talk schedule and speaker line-up for a conference.
 models:
   Speaker:
     fields:
       name: string!
-      bio: markdown
-      portrait: picture
+      title: string
+      company: string
+      bio: text
     access:
       create: [admin]
   Talk:
@@ -16,43 +17,77 @@ models:
       summary: text
       speaker: Speaker!
       startsAt: datetime!
+      durationMinutes: int! = 45
       room: string
+      level: introductory | intermediate | advanced
       capacity: int! = 100
-      registrations: Registration[]
+      bookings: Booking[]
       placesLeft:
         type: int
-        formula: capacity - COUNT(registrations)
+        formula: capacity - COUNT(bookings)
     access:
       create: [admin]
-  Registration:
+  Booking:
     fields:
       talk: Talk! unique
     capacity:
       per: talk
       max: talk.capacity
+  Attendee:
+    fields:
+      name: string!
+      email: email!
+      company: string
+      jobTitle: string
+      ticket: general | student | vip
+      dietaryNeeds: string
+      checkedIn: bool
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
+    access:
+      read: [admin]
 pages:
-  my-registrations:
-    crud: Registration
+  registration:
+    crud: Attendee
+    actions: [checkIn]
+    search: [name, email, company]
+    filters: [ticket, checkedIn]
   schedule:
     calendar: Talk
+  my-bookings:
+    crud: Booking
   talks:
     crud: Talk
     access: [admin]
   speakers:
     crud: Speaker
     access: [admin]
+  messages:
+    crud: Message
+    access: [admin]
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule]
       footer:
-      talks:
-        records: Talk
-      speakers:
+      lineup:
         records: Speaker
       faq:
       callToAction:
-        button: schedule
+        button: registration
+      contact:
+        form: Message
   admin:
     data: all
+actions:
+  checkIn:
+    on: Attendee
+    when:
+      checkedIn: false
+    set:
+      checkedIn: true
+    allow: [admin]
+    intent: Mark an attendee as arrived at the conference.

@@ -18,6 +18,8 @@ models:
       resolvedAt: datetime
       summary: text
       updates: IncidentUpdate[]
+    access:
+      write: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -25,18 +27,6 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
 pages:
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
   incidents:
     crud: Incident
     actions: [identified, monitoring, resolve]
@@ -60,9 +50,20 @@ pages:
         records: Incident
         where:
           status: resolved
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
   team:
     users: manage
-navigation: [overview, incidents, updates, components, team]
 actions:
   identified:
     on: Incident
@@ -103,4 +104,5 @@ actions:
         status: resolved
         message: This incident is resolved.
     allow: [admin, staff]
-    intent: The incident is over, with an update saying so.
+    intent: The outage is over, with an update saying so.
+navigation: [overview, incidents, updates, components, team]

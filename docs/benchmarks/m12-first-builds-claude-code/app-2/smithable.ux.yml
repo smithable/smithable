@@ -2,19 +2,17 @@ smithableUx: 0.1
 pages:
   deals:
     table:
-      columns: [title, company, value, stage, expectedClose, salesperson]
+      columns: [title, company, stage, value, expectedClose, salesperson]
     icon: briefcase
-  contacts:
-    table:
-      below:
-        email: phone
-    icon: users
   follow-ups:
     table:
-      sort: dueDate
+      columns: [due, kind, deal, assignee, status]
+      sort: due
     icon: calendar
   companies:
     icon: building
+  contacts:
+    icon: users
 tones:
   Deal.stage:
     won: success
@@ -22,5 +20,3 @@ tones:
     negotiation: warning
   FollowUp.status:
     done: success
-theme:
-  preset: corporate

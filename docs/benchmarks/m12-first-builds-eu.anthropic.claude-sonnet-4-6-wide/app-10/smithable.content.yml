@@ -1,18 +1,24 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Explore Our Collection
-    subtitle: Discover the objects and stories that make up our museum's collection.
     hero:
       title: Explore Our Collection
+      subtitle: Discover the objects and stories that make up our museum's collection.
       button: Browse the Collection
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
+    featured:
+      title: Featured Objects
+    callToAction:
+      title: Curious About More?
+      button: View All Objects
   objects:
-    title: Collection
+    title: The Collection
 models:
   MuseumObject:
+    label: Object
+    pluralLabel: Objects
     fields:
       status:
         values:

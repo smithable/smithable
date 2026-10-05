@@ -2,9 +2,9 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Welcome to the club
-      subtitle: Follow our teams, meet the players and catch up on fixtures and results.
-      button: See matches
+      title: Riverside FC
+      subtitle: Fixtures, results and squads for every team in the club.
+      button: See all matches
       image:
         src: images/hero.webp
         alt: A team standing at a whiteboard by a window over the harbour
@@ -12,5 +12,7 @@ pages:
       title: Upcoming fixtures
     results:
       title: Latest results
-    teamsList:
+    squads:
       title: Our teams
+    footer:
+      text: Riverside FC · Come on you Rivers!

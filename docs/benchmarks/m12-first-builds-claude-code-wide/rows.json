@@ -526,5 +526,51 @@
         "Wie funktionieren die Abholzeiten?"
       ]
     }
+  },
+  {
+    "description": "A backend for my habit app: habits, daily check-ins and streaks.",
+    "starter": "records",
+    "created": true,
+    "typecheck": false,
+    "tokens": 26919,
+    "tokensIn": 25629,
+    "tokensOut": 1290,
+    "cost": 0.039,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 1,
+    "rerun": "2026-10-05",
+    "seconds": 24,
+    "summary": "Habit Tracker\n  A backend for a habit app: each person's habits, daily check-ins and streaks.\n\nPages\n  - Habits (lists habits; search by name or description; filter by status or frequency; sort by name, current streak, longest streak or started on; “Archive”; “Reactivate”)\n  - Check ins (lists check ins; filter by habit or date)\n\nHabits\n  Habits have:\n  - a name (required)\n  - a description\n  - a frequency (daily, weekdays or weekly, daily by default)\n  - status (active or archived, active by default)\n  - started on (a date, required, today by default)\n  - a current streak (a whole number, 0 by default)\n  - a longest streak (a whole number, 0 by default)\n  Each habit lists its check ins.\n\nCheck ins\n  Check ins have:\n  - a habit (a habit, required)\n  - a date (required, today by default)\n  - a note\n\nArchive\n  For a habit that is active; sets status to archived.\n  Stop tracking a habit while keeping its history.\n\nReactivate\n  For a habit that is archived; sets status to active.\n  Start tracking an archived habit again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\n  Other programs can read and change habits and check ins with a key, and run archive and reactivate.\nNo pictures: none of the library's files could be fetched.\nGenerated 91 files (91 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-C77g61/app-23/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ncheck_ins 7 columns 0 indexes 2 fks\nhabits 11 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_tearful_thing.sql 🚀\n\nCreated /tmp/smithable-bench-m12-C77g61/app-23. Start it with:\n\n  cd /tmp/smithable-bench-m12-C77g61/app-23\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "api",
+      "questions": [
+        "Who will use the habit app?",
+        "Can anyone see habits or streaks without signing in?",
+        "What does a daily check-in record?"
+      ]
+    }
+  },
+  {
+    "description": "Somewhere my AI assistant keeps my tasks and notes, by project.",
+    "starter": "api",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27304,
+    "tokensIn": 25933,
+    "tokensOut": 1371,
+    "cost": 0.0431,
+    "currency": "$",
+    "fromCache": 0,
+    "calls": 1,
+    "rerun": "2026-10-05",
+    "seconds": 21,
+    "summary": "My Projects\n  Tasks and notes, grouped by project, that my AI assistant keeps for me.\n\nPages\n  - Admin (every kind of record, to find, open, change and delete; only for member users and admins)\n  - Team (who has access: invite people, change roles, remove users)\n\nProjects\n  Projects have:\n  - a name (required)\n  - a description\n  Each project lists its tasks.\n  Each project lists its notes.\n  Only member users and admins can add projects.\n  Only member users and admins can change projects.\n  Only member users and admins can delete projects.\n\nTasks\n  Tasks have:\n  - a title (required)\n  - a project (a project, required)\n  - status (todo, doing or done, todo by default)\n  - a due date\n  - details\n  Only member users, assistant users and admins can change tasks.\n  Only member users and admins can delete tasks.\n\nNotes\n  Notes have:\n  - a title (required)\n  - a project (a project, required)\n  - a body\n  Only member users, assistant users and admins can change notes.\n  Only member users and admins can delete notes.\n\nComplete\n  For a task that is todo or doing; sets status to done.\n  Mark a task as done.\n\nReopen\n  For a task that is done; sets status to todo.\n  Open a finished task again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member (Works with the projects, tasks and notes)\n  - assistant (The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes)\n  New users get the member role.\n  Other programs can read and change every kind of record, also ones added later, with a key, and run complete and reopen. AI assistants can use it too.\nNo pictures: none of the library's files could be fetched.\nGenerated 117 files (117 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-C77g61/app-24/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\napi_key 10 columns 1 indexes 0 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\nnotes 7 columns 0 indexes 2 fks\nprojects 6 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\ntasks 9 columns 0 indexes 2 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_lazy_luckman.sql 🚀\n\nCreated /tmp/smithable-bench-m12-C77g61/app-24. Start it with:\n\n  cd /tmp/smithable-bench-m12-C77g61/app-24\n  smithable run",
+    "error": "",
+    "meta": {
+      "wordStarter": "api",
+      "questions": []
+    }
   }
 ]

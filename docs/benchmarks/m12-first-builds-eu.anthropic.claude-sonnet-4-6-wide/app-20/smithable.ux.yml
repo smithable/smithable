@@ -1,8 +1,23 @@
 smithableUx: 0.1
 tones:
   Post.status:
-    julkaistu: success
+    published: success
 theme:
   preset: minimal
+  motion: subtle
   brand:
     font: Nunito Sans
+pages:
+  schedule:
+    icon: calendar
+  my-bookings:
+    icon: star
+  instructors:
+    icon: user
+  blog:
+    icon: book
+  messages:
+    icon: mail
+  sessions:
+    table:
+      sort: startsAt

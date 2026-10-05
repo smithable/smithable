@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Town Flea Market
-  description: Buy and sell second-hand things at your local town flea market.
+  description: Browse and sell second-hand items at your local town flea market.
 models:
   Item:
     fields:
@@ -9,10 +9,12 @@ models:
       photos: pictures
       description: text!
       price: money
-      category: furniture | bikes | electronics | clothing | sports | kids | other
+      category: clothing | furniture | electronics | bikes | sports | kids | books | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
+    access:
+      delete: [admin, owner]
 pages:
   home:
     route: /
@@ -27,8 +29,9 @@ pages:
   saved:
     crud: Item
     favorites: only
+  team:
+    users: manage
   catalog:
-    route: /catalog
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
@@ -42,5 +45,5 @@ actions:
       available: true
     set:
       available: false
-    intent: Mark an item as sold and no longer available.
-navigation: [catalog, myItems, saved]
+    intent: Mark an item as sold.
+navigation: [catalog, myItems, saved, team]

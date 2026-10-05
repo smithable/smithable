@@ -1,0 +1,53 @@
+smithable: 0.1
+app:
+  name: Habit Tracker API
+  description: A backend for tracking habits, daily check-ins and streaks.
+models:
+  Habit:
+    fields:
+      name: string!
+      description: text
+      frequency: daily | weekly
+      isActive: bool! = true
+      checkIns: CheckIn[]
+    access:
+      delete: [admin, member]
+  CheckIn:
+    fields:
+      habit: Habit!
+      date: date!
+      note: text
+    access:
+      delete: [admin, member]
+      write: [admin, member, assistant]
+  Streak:
+    fields:
+      habit: Habit!
+      startDate: date!
+      endDate: date
+      length: int! = 1
+      isActive: bool! = true
+    access:
+      delete: [admin, member]
+      write: [admin, member, assistant]
+pages:
+  team:
+    users: manage
+  admin:
+    data: all
+    access: [admin, member]
+actions:
+  archive:
+    on: Habit
+    when:
+      isActive: true
+    set:
+      isActive: false
+    intent: Archive a habit so it no longer appears in active tracking.
+  reactivate:
+    on: Habit
+    when:
+      isActive: false
+    set:
+      isActive: true
+    intent: Reactivate an archived habit.

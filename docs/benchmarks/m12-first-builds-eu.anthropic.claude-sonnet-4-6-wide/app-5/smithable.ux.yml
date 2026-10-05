@@ -7,6 +7,7 @@ pages:
   shoots:
     table:
       sort: -shootDate
+      columns: [name, client, shootDate, location]
     icon: calendar
   clients:
     icon: users
@@ -14,14 +15,10 @@ pages:
     icon: chart
 tones:
   Invoice.status:
-    sent: warning
     paid: success
     overdue: danger
-  Shoot.status:
-    scheduled: warning
-    completed: success
-    canceled: danger
+    sent: warning
 theme:
   preset: minimal
   brand:
-    primary: "#1a1a2e"
+    font: Inter

@@ -4,11 +4,11 @@ signIn:
 defaultAccess: private
 public:
   pages: [home, schema]
-  read: [Service, Stylist, Appointment]
+  read: [Service, Stylist, Slot]
   create: [Message]
 roles:
   admin:
-    description: Salongens personal. Hanterar tider, tjänster och stylister.
+    description: Salongens personal. Hanterar schema, tjänster och stylister.
   customer:
     description: En kund som bokar tid.
 defaultRole: customer

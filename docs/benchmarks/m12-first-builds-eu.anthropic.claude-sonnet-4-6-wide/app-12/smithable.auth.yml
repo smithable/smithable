@@ -9,10 +9,11 @@ public:
 roles:
   admin:
     description: Runs the status page and the team.
-  staff:
+  writer:
     description: Writes incidents and their updates.
-defaultRole: staff
+defaultRole: writer
 api:
   models: [Component, Incident]
   actions: [resolve]
+  assistants: true
 admins: [johan@smithable.ai]

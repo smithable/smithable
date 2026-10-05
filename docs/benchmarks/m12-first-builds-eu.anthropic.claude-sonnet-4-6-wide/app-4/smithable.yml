@@ -9,37 +9,46 @@ models:
       email: email
       phone: phone
       notes: text
-  Piece:
-    fields:
-      pupil: Pupil!
-      title: string!
-      composer: string
-      status: learning | polishing | complete
-      notes: text
   LessonSlot:
     fields:
       pupil: Pupil!
       dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
       startTime: string!
       durationMinutes: int! = 30
-      active: bool! = true
+  Repertoire:
+    fields:
+      pupil: Pupil!
+      piece: string!
+      composer: string
+      status: learning | polishing | performanceReady
+      notes: text
 pages:
   pupils:
     crud: Pupil
     search: [name, email]
-  pieces:
-    crud: Piece
-    search: [title, composer]
-    filters: [pupil, status]
-    actions: [markComplete]
   lesson-slots:
     crud: LessonSlot
-    filters: [pupil, dayOfWeek, active]
+    search: [startTime]
+    filters: [dayOfWeek, pupil]
+    sortable: [dayOfWeek, startTime, durationMinutes]
+  repertoire:
+    crud: Repertoire
+    search: [piece, composer]
+    filters: [status, pupil]
+    sortable: [piece, composer, status]
+    actions: [markPerformanceReady, startPolishing]
 actions:
-  markComplete:
-    on: Piece
+  markPerformanceReady:
+    on: Repertoire
     when:
-      status: [learning, polishing]
+      status: polishing
     set:
-      status: complete
-    intent: Mark a piece as complete.
+      status: performanceReady
+    intent: Mark a piece as performance-ready.
+  startPolishing:
+    on: Repertoire
+    when:
+      status: learning
+    set:
+      status: polishing
+    intent: Move a piece from learning to polishing.

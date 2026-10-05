@@ -3,14 +3,7 @@ pages:
   home:
     title: Municipality Service Status
     hero:
-      title: Is your service working?
-      subtitle: Live status of all our municipality's online services. Check for outages, ongoing incidents and planned maintenance.
+      button: View incident history
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
-    services:
-      title: Services
-    open:
-      title: Active Incidents
-    planned:
-      title: Planned Maintenance

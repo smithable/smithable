@@ -2,7 +2,7 @@ smithableUx: 0.1
 pages:
   jobs:
     table:
-      columns: [title, employer, location, type, deadline, status]
+      columns: [title, employer, location, jobType, closesOn, status]
   applications:
     table:
       below:
@@ -10,12 +10,9 @@ pages:
 tones:
   Job.status:
     open: success
-    closed: danger
   Application.status:
     reviewing: warning
     accepted: success
-    rejected: danger
+    declined: danger
 theme:
   preset: corporate
-  brand:
-    primary: "#1d4ed8"

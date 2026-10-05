@@ -1,27 +1,25 @@
 smithableUx: 0.1
 pages:
-  customers:
-    table:
-      columns: [name, email, phone, accountManager]
-    icon: building
-  quotes:
-    table:
-      columns: [number, customer, status, total, validUntil]
-    icon: file
   invoices:
     table:
-      columns: [number, customer, status, total, dueDate]
+      sort: -issuedOn
     icon: receipt
+  quotes:
+    table:
+      sort: -issuedOn
+    icon: clipboard
+  overview:
+    icon: chart
+  customers:
+    icon: building
 tones:
   Quote.status:
-    accepterad: success
-    avvisad: danger
-    skickad: warning
+    sent: warning
+    accepted: success
+    rejected: danger
   Invoice.status:
-    betald: success
-    forfallen: danger
-    skickad: warning
+    sent: warning
+    paid: success
+    overdue: danger
 theme:
   preset: corporate
-  brand:
-    primary: "#f97316"

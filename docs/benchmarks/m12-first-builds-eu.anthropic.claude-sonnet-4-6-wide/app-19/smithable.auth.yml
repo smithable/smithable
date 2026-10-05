@@ -4,6 +4,7 @@ signIn:
 defaultAccess: private
 public:
   pages: [home]
+  read: [Item]
 roles:
   admin:
     description: Håller loppisen i ordning.

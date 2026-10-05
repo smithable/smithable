@@ -4,6 +4,7 @@
   "wordStarter": "crm",
   "questions": [
     "Who can browse your collection?",
-    "Besides albums and artists, what else do you want to track per record?"
+    "What do you want to track for each album?",
+    "Do you also want to track artists as separate records?"
   ]
 }

@@ -1,0 +1,13 @@
+smithableUx: 0.1
+pages:
+  habits:
+    table:
+      columns: [name, frequency, currentStreak, longestStreak, status]
+    icon: star
+  check-ins:
+    table:
+      sort: -date
+    icon: calendar
+tones:
+  Habit.status:
+    active: success
