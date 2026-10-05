@@ -5,19 +5,37 @@
 # the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
 # change someone judges risky). While the repository is private FULL_CI is off and the local
 # `pnpm check` is the gate for engine changes (CLAUDE.md); at the public flip it is switched on,
-# with no edit here. Main gets the full check twice a day (03:00 and 13:00 UTC), skipped when
-# main's head is the commit the last scheduled run checked: it passes again if that run passed and
-# fails again if it failed (a cancelled one is run again), so the latest scheduled run always tells main's state. Run workflow
-# (workflow_dispatch) runs the full check on any branch. A push to main whose tree its pull request
-# already checked runs nothing beyond the scope job; one that differs (an administrator's merge)
-# gets lint, build, units and the site. A newer push to a pull request cancels its older run;
-# adding any other label runs nothing and cancels nothing.
+# with no edit here.
+# A pull request of plain documents alone (the list under paths-ignore: design notes, benchmark
+# reports, the Markdown at the root) starts no run: nothing here reads those files. It has no
+# `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
+# main and scanning its commits for secrets.
+# A push to main starts no run: a merge is of a pull request that was checked, or of plain
+# documents. Main itself gets the full check twice a day (03:00 and 13:00 UTC), which is also
+# where two changes that only clash together show (a pull request is no longer run again when it
+# is merely behind main), and an administrator's merge past the check. It is skipped when main's
+# head is the commit the last scheduled run checked: it passes again if that run passed and fails
+# again if it failed (a cancelled one is run again), so the latest scheduled run always tells
+# main's state. Run workflow (workflow_dispatch) runs the full check on any branch. A newer push
+# to a pull request cancels its older run; adding any other label runs nothing and cancels nothing.
 name: CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-  push:
-    branches: [main]
+    # Files no job reads. scripts/merge-green.sh takes the list from between the two markers, so
+    # one quoted path a line. docs/ai.md is a page of the site and is not here.
+    paths-ignore:
+      # plain docs: begin
+      - "docs/design/**/*.md"
+      - "docs/benchmarks/**"
+      - "docs/research/**"
+      - "docs/ARCHITECTURE.md"
+      - "docs/ROADMAP.md"
+      - "docs/VISION.md"
+      - "docs/as-built.md"
+      - "docs/releasing.md"
+      - "*.md"
+      # plain docs: end
   schedule:
     - cron: "0 3,13 * * *"
   workflow_dispatch:
@@ -39,7 +57,7 @@ jobs:
       - name: Full check or short run
         id: scope
         env:
-          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
           FULL_CI: ${{ vars.FULL_CI }}
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
           GH_TOKEN: ${{ github.token }}
@@ -73,12 +91,7 @@ jobs:
           if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
             full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
           fi
-          # A merge to main of an up-to-date pull request has the tree its pull request run checked.
           basics=true
-          if [ "$GITHUB_EVENT_NAME" = push ] && git rev-parse -q --verify HEAD^2 >/dev/null \
-            && [ "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse 'HEAD^2^{tree}')" ]; then
-            full=false; basics=false; why="the pull request checked this tree"
-          fi
           # Every example gets its own job, so a new starter is tested without editing this file.
           examples=$(find examples -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -Rcs 'split("\n") | map(select(. != ""))')
           { echo "full=$full"; echo "basics=$basics"; echo "examples=$examples"; } >> "$GITHUB_OUTPUT"
