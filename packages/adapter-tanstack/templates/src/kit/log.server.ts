@@ -2,7 +2,7 @@
 // per message, with the time, the level, the request's trace id and who it was for: what happened,
 // with named values, never a record's contents. Custom code logs the same way:
 //   log.warn("Payment provider slow", { ms: 5200 })
-import { Conflict } from "./access";
+import { AccessDenied, Conflict } from "./access";
 import { traceId, traceWhoNow } from "./trace.server";
 
 type Values = Record<string, unknown>;
@@ -40,6 +40,8 @@ export const log = {
  * reference, which finds the log line.
  */
 export function refusal(error: unknown): Error {
+  // A refusal the app made itself (an owner that must be someone, a place that is full) as it is.
+  if (error instanceof AccessDenied || error instanceof Conflict) return error;
   const message = error instanceof Error ? error.message : "";
   // With several columns (unique per owner), the last one is the field.
   const column = /UNIQUE constraint failed: (?:\w+\.\w+, )*\w+\.(\w+)/.exec(message)?.[1];
