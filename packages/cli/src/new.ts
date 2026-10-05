@@ -11,6 +11,7 @@ import {
   draftProjectByOperations,
   type Edit,
   type Question,
+  readDescription,
   readEdit,
   STARTER_TEXTS,
 } from "@smithable/ai";
@@ -336,6 +337,36 @@ export async function clarify(io: Io, description: string, json: boolean): Promi
     );
   }
   return 0;
+}
+
+/**
+ * What a description leaves open before a draft, and the starter that is its example
+ * (docs/design/while-it-is-made.md). Read without a model where that can be done: a starter's
+ * own description asks nothing; when the reader is sure of the kind of app it asks only who
+ * signs in and what visitors see, where the description does not say. Otherwise the model
+ * picks the starter and asks, as `clarify` does.
+ */
+export async function openQuestions(description: string): Promise<{
+  starter?: string;
+  questions: { about?: string; question: string; options: string[] }[];
+  /** Whether a model was asked: its call takes a few seconds. */
+  asked: boolean;
+}> {
+  const known = knownStart(description);
+  if (known) return { starter: known.name, questions: [], asked: false };
+  const reading = readDescription(description);
+  if (reading.read && reading.kind && STARTERS[reading.kind])
+    return { starter: reading.kind, questions: reading.questions, asked: false };
+  const answer = await clarifyProject({
+    description,
+    starters: starterSummaries(),
+    providers: providersFor(),
+  }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
+  return {
+    ...(answer.starter ? { starter: answer.starter } : {}),
+    questions: answer.questions,
+    asked: true,
+  };
 }
 
 /** Each starter as the questions step sees it: what it is, and its records. */
