@@ -52,7 +52,8 @@ export function audit(
       recordId: line.record,
       title: line.title == null ? undefined : String(line.title),
       fields: line.fields?.length ? line.fields : undefined,
-      details: line.details,
+      // A change asked for through Ask says so (assistant.md §7).
+      details: trace?.through ? { ...line.details, through: trace.through } : line.details,
     })
     .run();
 }
