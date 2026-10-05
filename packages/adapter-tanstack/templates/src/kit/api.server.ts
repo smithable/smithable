@@ -7,14 +7,13 @@ import { ZodError } from "zod";
 import { keyViewer } from "#/generated/keys.server";
 import { AccessDenied, Conflict, type Viewer } from "./access";
 import { address, count, TooMany, writeAllowed } from "./limit";
+import { BadInput, NotFound } from "./refusal";
 import { traceWho } from "./trace.server";
+
+export { BadInput, NotFound };
 
 const MAX_BODY = 1_000_000;
 
-/** A value or a body the API cannot take: a 400 with what is wrong. */
-export class BadInput extends Error {}
-/** A record that is not there, or not one the key may read: a 404. */
-export class NotFound extends Error {}
 /** A body over the limit: a 413, refused by its declared size before it is read. */
 class TooLarge extends Error {}
 

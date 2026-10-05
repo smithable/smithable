@@ -4,38 +4,12 @@
 // access, same limiter as the API; a refusal comes back as the tool's error in the app's words,
 // so the assistant can read it.
 import type { Viewer } from "./access";
-import { BadInput, bodyOf, callerOf, problem, refusalOf } from "./api.server";
+import { bodyOf, callerOf, problem, refusalOf } from "./api.server";
 import { writeAllowed } from "./limit";
+import { type Offer, offered } from "./tools";
 
-export interface Tool {
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  /** Reading only, or changing what exists: assistants that ask their user go by these. */
-  annotations?: { readOnlyHint: boolean; destructiveHint: boolean };
-}
-
-/** What a caller is offered: the tools, and the app's summary as the server's instructions. */
-export interface Offer {
-  summary: string;
-  tools: Tool[];
-}
-
-/**
- * The tool, when the offer has it and the call names only the kinds and actions it offers this
- * caller (a narrow key is not told of the rest); otherwise a refusal that says what there is.
- */
-export function offered(offer: Offer, name: string, args: Record<string, unknown>): Tool {
-  const tool = offer.tools.find((t) => t.name === name);
-  if (!tool) throw new BadInput(`There is no tool "${name}".`);
-  const properties = tool.inputSchema.properties as Record<string, { enum?: unknown[] }>;
-  for (const key of ["kind", "action"]) {
-    const allowed = properties?.[key]?.enum;
-    if (allowed && !allowed.includes(args[key]))
-      throw new BadInput(`"${key}" is one of ${allowed.join(", ")}.`);
-  }
-  return tool;
-}
+export type { Offer, Tool } from "./tools";
+export { offered };
 
 interface Message {
   jsonrpc?: string;
