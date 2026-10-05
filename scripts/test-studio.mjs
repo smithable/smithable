@@ -1211,6 +1211,37 @@ try {
     });
     return { status: answer.status, ...(await answer.json()) };
   };
+  // The preview answers on the app that came in, in the process it was running in: a start
+  // would say so in Studio's log, which begins anew with the app.
+  const previewUp = async (at) => {
+    for (let i = 0; i < 480; i++) {
+      const up = await fetch(`http://localhost:${at}/health`).then(
+        (r) => r.ok,
+        () => false,
+      );
+      if (up) return new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    throw new Error("the waiting workspace's preview did not answer");
+  };
+  const notStartedAgain = async (studio) => {
+    const at = Number(new URL(studio).port) + 1;
+    for (let i = 0; i < 240; i++) {
+      if (
+        await fetch(`http://localhost:${at}/health`).then(
+          (r) => r.ok,
+          () => false,
+        )
+      )
+        break;
+      if (i === 239) throw new Error("the preview did not answer on the new app");
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+    const lines = await (await fetch(`${studio}/api/logs`)).json();
+    const started = lines.filter((l) => /The preview (answers|stopped|has not answered)/.test(l));
+    if (started.length) throw new Error(`the preview was started again: ${started[0]}`);
+  };
   const finished = join(root, "finished-booking");
   await step("a project that Studio was not started to replace refuses, untouched", async () => {
     const made = spawnSync("node", [cli, "new", finished, "--starter", "booking"], {
@@ -1299,7 +1330,7 @@ try {
       },
     );
     await step(
-      "from a description it is made in place; without a model the starter comes in, and Studio says why",
+      "from a description without a model the starter comes in under the running preview, and Studio says why",
       async () => {
         const pool = join(root, "pool");
         process.kill(-waiting.pid);
@@ -1310,16 +1341,9 @@ try {
           { detached: true, env: { ...process.env, SMITHABLE_LOCAL_MODEL: "" } },
         );
         const other = `http://localhost:${port + 2}`;
-        for (let i = 0; i < 240; i++) {
-          if (
-            await fetch(`${other}/api/project`).then(
-              (r) => r.ok,
-              () => false,
-            )
-          )
-            break;
-          await new Promise((r) => setTimeout(r, 250));
-        }
+        // The waiting workspace is ready when its own preview has answered (as the service
+        // waits before it offers one): what the log says after that is about the new app.
+        await previewUp(port + 3);
         const done = await replace(port + 2, {
           describe: "A site to show my dogs",
           starter: "records",
@@ -1337,15 +1361,40 @@ try {
           existsSync(join(pool, ".git"))
         )
           throw new Error("the app that was there is still there");
-        for (let i = 0; i < 240; i++) {
-          const up = await fetch(`http://localhost:${port + 3}/health`).then(
-            (r) => r.ok,
-            () => false,
-          );
-          if (up) return;
-          await new Promise((r) => setTimeout(r, 250));
-        }
-        throw new Error("the preview did not answer on the new app");
+        await notStartedAgain(other);
+      },
+    );
+    await step(
+      "an app from a description is made beside the project and comes in under the running preview",
+      async () => {
+        const pool = join(root, "pool");
+        process.kill(-waiting.pid);
+        await new Promise((r) => setTimeout(r, 1500));
+        waiting = spawn(
+          "node",
+          [cli, "studio", pool, "--port", String(port + 2), "--replaceable"],
+          {
+            detached: true,
+            env: {
+              ...process.env,
+              SMITHABLE_LOCAL_MODEL: "fake-model",
+              SMITHABLE_LOCAL_URL: model.url,
+            },
+          },
+        );
+        const other = `http://localhost:${port + 2}`;
+        await previewUp(port + 3);
+        const done = await replace(port + 2, {
+          describe: "A booking site for a pilates studio",
+          admin: "tester@example.org",
+        });
+        if (!done.ok) throw new Error(done.output);
+        const project = await (await fetch(`${other}/api/project`)).json();
+        if (project.name !== "Lotus Pilates") throw new Error(`Studio shows ${project.name}`);
+        if (project.notice) throw new Error(`a notice for a draft that worked: ${project.notice}`);
+        if (existsSync(`${pool}.incoming`))
+          throw new Error("what was made beside it is still there");
+        await notStartedAgain(other);
       },
     );
   } finally {
