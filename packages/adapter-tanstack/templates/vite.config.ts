@@ -22,9 +22,11 @@ export default defineConfig({
       ],
     },
   },
-  // The libraries every app uses, bundled for the browser as the dev server starts. Otherwise the
+  // The libraries an app can use, bundled for the browser as the dev server starts. Otherwise the
   // first visit to a page can find one: Vite optimizes it and reloads, and a page loading at that
   // moment fails ("Failed to fetch dynamically imported module"), which a busy machine makes likely.
+  // The same list in every app (react-markdown also where no field is Markdown yet), so what was
+  // bundled for one app serves another.
   optimizeDeps: {
     include: [
       "react",
@@ -38,6 +40,7 @@ export default defineConfig({
       "tailwind-merge",
       "class-variance-authority",
       "zod",
+      "react-markdown",
     ],
   },
 });
