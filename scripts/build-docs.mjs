@@ -4,7 +4,15 @@
 // (a file under docs/site) is copied into the site at the same path; a missing one fails too.
 // Links between pages start at the root, so the 404 page works at any address.
 // Usage: node scripts/build-docs.mjs [out dir]
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { Marked } from "marked";
 import { operationsPage } from "./operations-page.mjs";
@@ -20,6 +28,7 @@ const PAGES = [
   { src: "docs/site/change.md", out: "change.html", nav: "Changing an app" },
   { src: "docs/site/actions.md", out: "actions.html", nav: "Buttons on a record" },
   { src: "docs/site/api.md", out: "api.html", nav: "The API" },
+  { src: "docs/site/assistants.md", out: "assistants.html", nav: "Programs and assistants" },
   { src: "docs/site/self-host.md", out: "self-host.html", nav: "Self-hosting" },
   { src: "docs/site/google-sign-in.md", out: "google-sign-in.html", nav: "Sign in with Google" },
   // Generated from the operations at build time, not a file in the repository.
@@ -68,6 +77,11 @@ for (const page of PAGES) {
 }
 
 const problems = [];
+// Every page in docs/site is on the site. One left out of PAGES would only be linked as a file of
+// the repository, which a reader of the site cannot open (the assistants how-to, for a day).
+for (const file of readdirSync(join(root, "docs/site")))
+  if (file.endsWith(".md") && !PAGES.some((page) => page.src === `docs/site/${file}`))
+    problems.push(`docs/site/${file} is not in PAGES, so the site would not have it`);
 /** Where a link in `page` goes on the site: another page, a heading, the schema or the repository. */
 function target(page, href) {
   const [path, hash] = href.split("#");

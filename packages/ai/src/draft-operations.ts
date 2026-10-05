@@ -487,6 +487,33 @@ export function openLinked(files: ProjectFiles, done: Step[]): ProjectFiles {
   return result.files;
 }
 
+/**
+ * A hero's shortcut to a page visitors cannot open, which openLinked could not open for them
+ * (its records are not public, or it is for some roles), is taken off: a visitor who taps it only
+ * meets sign-in, and opening the page would be a choice about what is public. The hero's button
+ * may still lead into the app: "Get started" is meant to. Deterministic, so no round with the
+ * model is spent on it (two salon drafts kept such a shortcut after being told, bench of
+ * 2026-10-05).
+ */
+export function dropClosedShortcuts(files: ProjectFiles, done: Step[]): ProjectFiles {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir).auth;
+  if (!ir || !auth) return files;
+  let next = files;
+  for (const page of ir.pages) {
+    if (page.pattern.kind !== "landing" || !auth.public.pages.includes(page.id)) continue;
+    const all = page.pattern.sections.flatMap((s) => s.shortcuts ?? []);
+    const open = all.filter((p) => auth.public.pages.includes(p));
+    if (open.length === all.length) continue;
+    const step: Step = { op: "setShortcuts", args: { page: page.id, pages: open } };
+    const result = applyOperation(next, step.op, step.args);
+    if (!result.ok) continue;
+    next = result.files;
+    done.push(step);
+  }
+  return next;
+}
+
 /** Fields an app must not hold whatever the description says: card data, passwords and keys. */
 const MUST_NOT_HOLD = new Set(["card-data", "secret-field"]);
 
@@ -513,7 +540,7 @@ export function dropForbidden(files: ProjectFiles, done: Step[]): ProjectFiles {
 
 /** The mends every draft gets, in order, each adding the operations it applied to `done`. */
 const mended = (files: ProjectFiles, done: Step[]) =>
-  dropForbidden(openLinked(closeShared(files, done), done), done);
+  dropForbidden(dropClosedShortcuts(openLinked(closeShared(files, done), done), done), done);
 
 /** The validator's warnings that mean a visitor finds the app broken or too open. */
 const VISITOR_FLAWS = new Set([
