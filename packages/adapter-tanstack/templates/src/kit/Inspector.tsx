@@ -106,8 +106,11 @@ export function Inspector({
   );
 }
 
-/** The answer as the app shows it, then how it came about. */
-function Shown({ answer }: { answer: Answer }) {
+/**
+ * The answer as the app shows it, then (for the inspector) how it came about. Also "Ask"'s
+ * (kit Ask), without the calls.
+ */
+export function Shown({ answer, trace = true }: { answer: Answer; trace?: boolean }) {
   return (
     <>
       {answer.text && <p className="text-sm">{answer.text}</p>}
@@ -116,30 +119,32 @@ function Shown({ answer }: { answer: Answer }) {
       ))}
       {answer.note && <p className="text-sm text-muted-foreground">{answer.note}</p>}
       <ReadAloud text={spoken(answer)} />
-      <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer">
-          {answer.steps.length} tool {answer.steps.length === 1 ? "call" : "calls"}
-          {answer.tokens
-            ? `, ${answer.tokens.in} tokens in, ${answer.tokens.out} out`
-            : ", no model"}
-          , {answer.ms} ms
-        </summary>
-        <ol className="mt-2 space-y-2">
-          {answer.steps.map((step, i) => (
-            <li key={`${i}-${step.tool}`}>
-              <code>
-                {step.tool} {JSON.stringify(step.args)}
-              </code>{" "}
-              ({step.ms} ms)
-              <pre className="mt-1 max-h-48 overflow-auto rounded bg-muted p-2 whitespace-pre-wrap">
-                {step.proposed
-                  ? "Not run: a change the person would confirm first."
-                  : (step.error ?? JSON.stringify(step.result, null, 2))}
-              </pre>
-            </li>
-          ))}
-        </ol>
-      </details>
+      {trace && (
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">
+            {answer.steps.length} tool {answer.steps.length === 1 ? "call" : "calls"}
+            {answer.tokens
+              ? `, ${answer.tokens.in} tokens in, ${answer.tokens.out} out`
+              : ", no model"}
+            , {answer.ms} ms
+          </summary>
+          <ol className="mt-2 space-y-2">
+            {answer.steps.map((step, i) => (
+              <li key={`${i}-${step.tool}`}>
+                <code>
+                  {step.tool} {JSON.stringify(step.args)}
+                </code>{" "}
+                ({step.ms} ms)
+                <pre className="mt-1 max-h-48 overflow-auto rounded bg-muted p-2 whitespace-pre-wrap">
+                  {step.proposed
+                    ? "Not run: a change the person would confirm first."
+                    : (step.error ?? JSON.stringify(step.result, null, 2))}
+                </pre>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
     </>
   );
 }

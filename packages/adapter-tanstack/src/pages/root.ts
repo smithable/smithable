@@ -64,6 +64,9 @@ export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string 
     return `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`;
   });
   const signIn = hasSignIn(auth);
+  // "Ask" in the app (docs/design/assistant.md §6): the button and its answers, for the people
+  // the auth file's assistant block names.
+  const asking = Boolean(auth.assistant);
   // Landing and onboarding pages have their own frame instead of the app's navigation.
   const start = ir.pages.find((p) => p.route === "/");
   const home = start ? ` home={{ to: "/", access: pageAccess[${JSON.stringify(start.id)}] }}` : "";
@@ -105,7 +108,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? '\nimport { Ask } from "#/kit/Ask";\nimport { z } from "zod";\nimport { ask, asks } from "#/generated/ask.server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { pageHeaders } from "#/kit/security";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
@@ -124,11 +127,32 @@ function pageOf(path: string): string | undefined {
 
 // Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
 // time to look at (DATA_AS_OF), that time.
-const getViewer = createServerFn().handler(async () => ({
+${
+  asking
+    ? `const getViewer = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return {
+    viewer,
+    asOf: process.env.DATA_AS_OF,
+    demo: process.env.DEMO_SIGN_IN === "1",
+    asks: asks(viewer),
+  };
+});`
+    : `const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
   demo: process.env.DEMO_SIGN_IN === "1",
-}));
+}));`
+}${
+  asking
+    ? `
+
+/** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
+const askApp = createServerFn({ method: "POST" })
+  .validator(z.object({ question: z.string().trim().min(1).max(500) }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question));`
+    : ""
+}
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -155,7 +179,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo } = Route.useRouteContext();
+  const { viewer, asOf, demo${asking ? ", asks" : ""} } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -211,7 +235,7 @@ ${
           {children}
         </AppShell>`
         }
-        <Scripts />
+${asking ? "        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}\n" : ""}        <Scripts />
       </body>
     </html>
   );
