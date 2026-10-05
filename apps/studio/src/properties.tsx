@@ -10,7 +10,7 @@ import {
   plural,
 } from "@smithable/core";
 import { useState } from "react";
-import { FieldShapeForm, type Run } from "./builder/ChangeForms";
+import { FieldShapeForm, listOf, type Run } from "./builder/ChangeForms";
 import type { Spec } from "./engine";
 import { Button, cx, Input, Label, Select } from "./ui";
 
@@ -176,6 +176,7 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
             }
           />
         )}
+        <ListToggle spec={spec} run={run} model={name} field={fieldName} />
         <TextSetting
           label="Label"
           path={["models", name, "fields", fieldName, "label"]}
@@ -375,5 +376,37 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
         <p className="text-xs text-neutral-500">Visitors may see these too (smithable.auth.yml).</p>
       )}
     </fieldset>
+  );
+}
+
+/** Whether a field is a column of its list, and a switch to show or hide it there. */
+function ListToggle({
+  spec,
+  run,
+  model,
+  field,
+}: {
+  spec: Spec;
+  run: Run;
+  model: string;
+  field: string;
+}) {
+  const list = listOf(spec, model);
+  if (!list) return null;
+  const shown = list.columns.includes(field);
+  return (
+    <label className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={shown}
+        onChange={() =>
+          run("setColumns", {
+            page: list.page,
+            columns: shown ? list.columns.filter((c) => c !== field) : [...list.columns, field],
+          })
+        }
+      />
+      Show in the list
+    </label>
   );
 }
