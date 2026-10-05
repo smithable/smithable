@@ -4381,6 +4381,34 @@ if (examples.includes("booking")) {
           throw new Error("the app was not generated from the draft");
       },
     );
+    // The hosted form's call: the starter `clarify` picked, a name and --yes beside the text.
+    await asyncStep(
+      "a starter's own description makes the starter without asking the model, also with the starter named",
+      async () => {
+        const own = JSON.parse(run("node", [cli, "starters", "--json"], repo)).find(
+          (s) => s.name === "crm",
+        ).description;
+        const calls = model.requests.length;
+        for (const flags of [["--starter", "crm", "--name", "Demo app", "--yes"], []]) {
+          const made = join(mkdtempSync(join(tmpdir(), "smithable-own-")), "app");
+          dirs.push(made);
+          const result = await smithableAsync(
+            made,
+            { SMITHABLE_LOCAL_MODEL: "fake-model", SMITHABLE_LOCAL_URL: model.url },
+            "new",
+            made,
+            "--describe",
+            own,
+            ...flags,
+          );
+          if (result.code !== 0 || !result.out.includes("no model is needed"))
+            throw new Error(result.out);
+          if (model.requests.length !== calls) throw new Error("the model was asked");
+          if (!existsSync(join(made, "src/routes/customers/index.tsx")))
+            throw new Error("the CRM was not generated");
+        }
+      },
+    );
   } catch {
     // Already reported.
   } finally {
