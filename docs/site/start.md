@@ -21,10 +21,12 @@ alias smithable="node $PWD/packages/cli/dist/bin.js"
 ```sh
 smithable new my-crm      # a CRM from the starter, with sample data
 cd my-crm
-smithable studio          # Builder and Studio in the browser
+smithable studio          # the app and its editor in the browser
 ```
 
 `--starter <name>` picks another of the [seven starters](starters.md).
+
+`smithable studio` opens the editor beside a preview of the app. It has two modes, switched at the top: **No code**, where you change the app in plain words and forms, and **Code**, with the spec files, every operation as a form, the generated code's last change and the logs. Every change in either is an operation, so Undo (Ctrl+Z) takes it back.
 
 `smithable new` also takes `--describe "a site to show my dogs"`: it asks up to three questions, then drafts the app. Or `--from https://example.com`: a page's text, menu and forms describe the app instead, and `--with-pictures` takes its pictures as sample pictures, after asking whether you may use them. Both need a model; see [AI setup](../ai.md).
 

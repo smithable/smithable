@@ -25,7 +25,7 @@ node packages/cli/dist/bin.js new my-crm        # a CRM from the starter, with s
 node packages/cli/dist/bin.js new torget --starter marketplace   # or booking, invoicing, records, status
 node packages/cli/dist/bin.js new dogs --describe "a site to show my dogs"   # up to three questions, then a draft (needs a model, docs/ai.md)
 node packages/cli/dist/bin.js new cafe --from https://example.com            # a page as the description; --with-pictures takes its pictures
-cd my-crm && node ../packages/cli/dist/bin.js studio   # Builder and Studio in the browser
+cd my-crm && node ../packages/cli/dist/bin.js studio   # the editor (No code and Code modes) in the browser
 ```
 
 The packages are not on npm yet, so `smithable` below means `node <repo>/packages/cli/dist/bin.js` (an alias does it: `alias smithable="node $PWD/packages/cli/dist/bin.js"` from the repository root). From inside a project, the everyday commands:
@@ -50,7 +50,7 @@ The seven starters, with pictures: [docs.smithable.ai/starters](https://docs.smi
 | `packages/ai` | Model providers, the AI policy, requests to operations |
 | `packages/cli` | The `smithable` command, the Studio server, the MCP server, deploy and backup targets |
 | `packages/create-smithable` | `npm create smithable`, which starts an app with `smithable new` (published when the packages reach npm) |
-| `apps/studio` | Builder and Studio, one web app served by `smithable studio` |
+| `apps/studio` | The editor, No code and Code modes (Builder and Studio in the code), one web app served by `smithable studio` |
 | `examples/` | The starters: a CRM, a booking site, an invoicing app, a marketplace (Torget), records (things and what we know about them), and a status page |
 | `docs/` | The pages of [docs.smithable.ai](https://docs.smithable.ai) (`docs/site/`), [vision](docs/VISION.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), the [spec reference](docs/spec/v0.1.md), [AI setup](docs/ai.md), [how things were built and measured](docs/as-built.md), benchmarks and research |
 
