@@ -7,6 +7,7 @@ import {
   computedField,
   draftOperations,
   draftProjectByOperations,
+  dropClosedShortcuts,
   openLinked,
   repaired,
   repairFieldShorthand,
@@ -441,6 +442,30 @@ test("a public landing page's button to a list of public records opens that list
     { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
   ]);
   expect(openLinked(closed, [])).toBe(closed);
+
+  // A hero's shortcut to such a page is taken off (a shortcut that only meets sign-in looks
+  // broken), and the one to a page that was opened stays.
+  const mends: { op: string; args: Record<string, unknown> }[] = [];
+  const tidied = dropClosedShortcuts(
+    openLinked(
+      build([
+        ...library,
+        { op: "setShortcuts", args: { page: "home", pages: ["tools", "loans"] } },
+        { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
+      ]),
+      mends,
+    ),
+    mends,
+  );
+  expect(publicPages(tidied)).toBe("home, tools");
+  expect(mends).toEqual([
+    { op: "setPublic", args: { pages: ["home", "tools"] } },
+    { op: "setShortcuts", args: { page: "home", pages: ["tools"] } },
+  ]);
+  expect(tidied.spec).toMatch(/shortcuts: \[tools\]/);
+  expect(visitorFlaws(tidied)).toEqual([]);
+  // Nothing to take off: the files are the same.
+  expect(dropClosedShortcuts(tidied, [])).toBe(tidied);
 });
 
 test("a valid draft that a visitor would find broken goes back to the model once, with the validator's words", async () => {
