@@ -1,7 +1,8 @@
 // Smithable app kit: the administrator's inspector (docs/design/assistant.md §4): ask the app a
 // question as one of its roles, or as a visitor, and see what an assistant with that role's key
 // would get: the answer as the app shows it, marked as worked out from the records or by an AI,
-// and under it each tool called, with what, what came back, the tokens and the time.
+// and under it each tool called, with what, what came back, the tokens and the time. An answer
+// can be read aloud by the browser's own speech (§8).
 import { useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -114,6 +115,7 @@ function Shown({ answer }: { answer: Answer }) {
         <Result key={`${i}-${step.tool}`} step={step} />
       ))}
       {answer.note && <p className="text-sm text-muted-foreground">{answer.note}</p>}
+      <ReadAloud text={spoken(answer)} />
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer">
           {answer.steps.length} tool {answer.steps.length === 1 ? "call" : "calls"}
@@ -140,6 +142,59 @@ function Shown({ answer }: { answer: Answer }) {
       </details>
     </>
   );
+}
+
+/** Reads the answer aloud with the browser's speech, where the browser has it. */
+function ReadAloud({ text }: { text: string }) {
+  if (!text || typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={() => {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+      }}
+    >
+      Read aloud
+    </Button>
+  );
+}
+
+/** The answer as a sentence or two to hear: the words, the numbers, the first rows. */
+export function spoken(answer: Answer): string {
+  const parts: string[] = answer.text ? [answer.text] : [];
+  for (const step of answer.steps) {
+    if (step.proposed)
+      parts.push(
+        `It would ${step.tool} ${String(step.args.kind ?? step.args.action ?? "")}; nothing was changed.`,
+      );
+    else if (step.error) parts.push(step.error);
+    else {
+      const r = step.result as Record<string, unknown> | null;
+      if (!r || typeof r !== "object") continue;
+      const number = (["total", "sum", "average", "smallest", "largest"] as const).find(
+        (k) => k in r,
+      );
+      if (number) parts.push(`${number === "total" ? "" : `${number} `}${cell(r[number])}.`);
+      else if (Array.isArray(r.rows) && typeof r.by === "string")
+        parts.push(
+          (r.rows as { value: unknown; title?: string; number: unknown }[])
+            .slice(0, 5)
+            .map((row) => `${cell(row.title ?? row.value)}: ${cell(row.number)}`)
+            .join(". ") + ".",
+        );
+      else if (Array.isArray(r.rows)) {
+        const rows = r.rows as unknown[][];
+        const total = typeof r.total === "number" ? r.total : rows.length;
+        const first = rows.slice(0, 3).map((row) => cell(row[1] ?? row[0]));
+        parts.push(`${total} found${first.length ? `: ${first.join(", ")}` : ""}.`);
+      } else if (typeof r.description === "string") parts.push(r.description);
+    }
+  }
+  if (answer.note) parts.push(answer.note);
+  return parts.join(" ");
 }
 
 /** What one call gave: a number, a table, a record, a description, or a proposed change. */
