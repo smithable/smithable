@@ -134,8 +134,9 @@ export function assistantOffer(
         ? [...new Set([...offered.visitors.read, ...offered.visitors.create])]
         : offered.models;
   const deletes = scope === "api" && caller !== "visitor" && auth.api?.assistants?.delete === true;
-  // Inside the app "Ask" only reads, unless the auth file's assistant block says it may change.
-  const changes = scope === "api" || auth.assistant?.may === "change";
+  // Inside the app "Ask" only reads, unless the auth file's assistant block says it may change;
+  // a visitor's "Ask" only ever reads (a public contact form is theirs to send, not its to fill in).
+  const changes = scope === "api" || (auth.assistant?.may === "change" && caller !== "visitor");
 
   const actions = ir.actions.filter(
     (a) =>
