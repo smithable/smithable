@@ -163,7 +163,7 @@ export function Builder({
             title={
               <Tabs
                 tabs={[
-                  ["app", "Your app"],
+                  ["app", "What it does"],
                   ["look", "Look"],
                   ["change", "Change"],
                 ]}
