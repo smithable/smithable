@@ -159,19 +159,13 @@ try {
     await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
     if (await note.count()) throw new Error("the samples notice came back");
   });
-  await step("the preview runs the app, with the development sign-in", async () => {
-    for (let attempt = 1; ; attempt++) {
-      await page.waitForTimeout(2000);
-      await preview.getByRole("button", { name: "Sign in as admin" }).click({ timeout: 60000 });
-      try {
-        // Signed in: the customers page, which needs sign-in, opens.
-        await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 8000 });
-        break;
-      } catch (error) {
-        if (attempt === 5) throw error;
-      }
-    }
-  });
+  await step(
+    "the preview opens with the owner signed in as an administrator (finding 15)",
+    async () => {
+      // Signed in by Studio, without a click: the customers page, which needs sign-in, opens.
+      await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 120000 });
+    },
+  );
   await step(
     "adding a field: the summary, the change trace and the preview follow, which flashes what changed",
     async () => {
@@ -183,7 +177,7 @@ try {
         .getByText("Customers: added a website (a web address)")
         .waitFor({ timeout: 60000 });
       await trace.getByText("Customers: added a website (a web address)").waitFor();
-      await page.getByRole("tab", { name: "Your app" }).click();
+      await page.getByRole("tab", { name: "What it does" }).click();
       await page.getByText("a web address").first().waitFor();
       await openPreview("/customers/new");
       await preview.getByLabel("Website").waitFor({ timeout: 60000 });
@@ -314,7 +308,7 @@ try {
     await status
       .getByText("Only admins can add orders", { exact: true })
       .waitFor({ timeout: 60000 });
-    await page.getByRole("tab", { name: "Your app" }).click();
+    await page.getByRole("tab", { name: "What it does" }).click();
     await page.getByText("Only admins can add orders.").waitFor();
   });
 
@@ -532,7 +526,7 @@ try {
   await step(
     "Your app is a map to its parts: a field's line opens its properties, Add a field opens the form for that record, and In my words changes only the wording",
     async () => {
-      await page.getByRole("tab", { name: "Your app" }).click();
+      await page.getByRole("tab", { name: "What it does" }).click();
       const customers = page.getByRole("region", { name: "Customers", exact: true });
       await customers.getByRole("button", { name: "a phone", exact: true }).click();
       await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
@@ -557,7 +551,7 @@ try {
       await page.getByRole("button", { name: "Add field" }).click();
       await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
       // In my words: the wording only, for this session; no change is made.
-      await page.getByRole("tab", { name: "Your app" }).click();
+      await page.getByRole("tab", { name: "What it does" }).click();
       const again = page.getByRole("region", { name: "Customers", exact: true });
       await again.getByRole("button", { name: "In my words" }).click();
       await page.getByLabel("Customers, in your words").fill("Our clients and how to reach them.");
@@ -735,7 +729,7 @@ try {
     await pages.getByRole("button", { name: "Add a section" }).first().click();
     await pages.getByLabel("Section of Email").first().selectOption("contact");
     await waitUx(/name: contact/);
-    await page.getByRole("tab", { name: "Your app" }).click();
+    await page.getByRole("tab", { name: "What it does" }).click();
   });
 
   await step(
@@ -771,7 +765,7 @@ try {
         .waitFor({ timeout: 60000 });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
-      await page.getByRole("tab", { name: "Your app" }).click();
+      await page.getByRole("tab", { name: "What it does" }).click();
     },
   );
 
