@@ -374,21 +374,23 @@ describe("the words box, as a first-time owner types into it (studio-review-2026
     expect(ops("send an email when a customer is created")).toBeUndefined();
   });
 
-  test("renaming a kind of record renames it everywhere a person sees it, as texts", () => {
+  test("renaming a kind of record is the one change that renames it everywhere a person sees it", () => {
     const renamed = ops("rename products to articles");
     expect(renamed).toEqual([
-      { op: "setText", args: { path: ["models", "Product", "label"], text: "Article" } },
-      { op: "setText", args: { path: ["models", "Product", "pluralLabel"], text: "Articles" } },
-      { op: "setText", args: { path: ["pages", "products", "title"], text: "Articles" } },
+      { op: "nameRecords", args: { model: "Product", one: "Article", several: "Articles" } },
     ]);
-    // Each is a change the app takes.
-    let files = { spec: SPEC, content: "smithableContent: 0.1\n" };
-    for (const step of renamed ?? []) {
-      const result = applyOperation(files, step.op, step.args);
-      if (!result.ok) throw new Error(`${step.op}: ${result.message}`);
-      files = { spec: result.files.spec, content: result.files.content ?? "" };
-    }
-    expect(files.content).toContain("pluralLabel: Articles");
+    // The change the app takes: the names for one and several, and the list page's title.
+    const step = renamed?.[0];
+    const result = applyOperation(
+      { spec: SPEC, content: "smithableContent: 0.1\n" },
+      step?.op ?? "",
+      step?.args ?? {},
+    );
+    if (!result.ok) throw new Error(result.message);
+    expect(result.files.content).toContain("label: Article");
+    expect(result.files.content).toContain("pluralLabel: Articles");
+    expect(result.files.content).toMatch(/products: \{ title: Articles \}|title: Articles/);
+    expect(result.description).toBe('Call Product records "Article" and "Articles"');
     // A field is still renamed as a field.
     expect(ops("rename the customer's notes to remarks")).toEqual([
       { op: "renameField", args: { model: "Customer", from: "notes", to: "remarks" } },
