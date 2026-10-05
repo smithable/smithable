@@ -5,7 +5,7 @@ import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Trace } from "../shared";
-import { cx, Panel, Tabs, useMedia } from "../ui";
+import { Button, cx, Panel, Tabs, useMedia } from "../ui";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
@@ -70,6 +70,19 @@ export function Builder({
   const wide = useMedia("(min-width: 1680px)");
   const panels = framed ? PANELS.filter(([id]) => id !== "preview") : PANELS;
   const [twoUp, setTwoUp] = useState(() => localStorage.getItem("builder-two-up") !== "no");
+  // The change box folded to one line: as the person left it, else folded at phone width.
+  const [folded, setFolded] = useState(() => {
+    const kept = localStorage.getItem("builder-change-box");
+    return kept ? kept === "folded" : matchMedia("(max-width: 639px)").matches;
+  });
+  const fold = (on: boolean) => {
+    setFolded(on);
+    localStorage.setItem("builder-change-box", on ? "folded" : "open");
+  };
+  const last = project.trace[0];
+  const lastWords = last
+    ? ((last.operation && words(last.operation.op, last.operation.args)) ?? last.description)
+    : "";
   const paired = wide && twoUp;
   const show = (id: PanelId) =>
     strip.current
@@ -226,22 +239,39 @@ export function Builder({
         </div>
       </div>
       {/* The change box and the changes made, newest first, under every panel: type a request
-          while looking at the preview. The box stays; the list scrolls. */}
-      <div className="flex max-h-[45vh] shrink-0 flex-col border-t border-neutral-200 bg-white">
-        <div className="max-h-[30vh] shrink-0 overflow-auto">
-          <Ask
-            words={words}
-            onEdit={(p) => {
-              setPrefill(p);
-              setTab("change");
-              show("app");
-            }}
-          />
+          while looking at the preview. The box stays; the list scrolls. Folded to one line it
+          leaves the panels the room (at phone width it starts folded). */}
+      {folded ? (
+        <div className="flex shrink-0 items-center gap-3 border-t border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-600">
+          <span className="min-w-0 flex-1 truncate">
+            {project.trace[0] ? `Last change: ${lastWords}` : "No changes yet."}
+          </span>
+          <Button variant="ghost" className="h-6" onClick={() => fold(false)}>
+            Show the change box
+          </Button>
         </div>
-        <div className="flex min-h-24 flex-1 flex-col border-t border-neutral-200 *:min-h-0 *:flex-1">
-          <Trace entries={project.trace} words={words} />
+      ) : (
+        <div className="flex max-h-[35vh] shrink-0 flex-col border-t border-neutral-200 bg-white">
+          <div className="flex justify-end px-3 pt-1">
+            <Button variant="ghost" className="h-6 text-xs" onClick={() => fold(true)}>
+              Fold
+            </Button>
+          </div>
+          <div className="max-h-[22vh] shrink-0 overflow-auto">
+            <Ask
+              words={words}
+              onEdit={(p) => {
+                setPrefill(p);
+                setTab("change");
+                show("app");
+              }}
+            />
+          </div>
+          <div className="flex min-h-24 flex-1 flex-col border-t border-neutral-200 *:min-h-0 *:flex-1">
+            <Trace entries={project.trace} words={words} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
