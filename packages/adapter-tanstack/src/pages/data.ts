@@ -3,6 +3,8 @@
 // new and record routes are the crud page's generators, drawn inside the data page (Within), so
 // every read and write goes through the model's data functions and their access rules.
 import {
+  type AssistantCaller,
+  assistantOffer,
   kebab,
   type PageIR,
   type PatternOf,
@@ -11,7 +13,7 @@ import {
   searchableFields,
   titleField,
 } from "@smithable/core";
-import { hasSignIn } from "../auth.js";
+import { hasSignIn, roleLabels } from "../auth.js";
 import { hasKeys } from "../keys.js";
 import {
   attr,
@@ -31,13 +33,15 @@ import { detailRoute, newRoute } from "./record.js";
 
 export function dataRoutes(
   page: PageIR & { pattern: PatternOf<"data"> },
-  { ir, t, ux, auth }: GenContext,
+  { ir, t, ux, auth, options }: GenContext,
 ): Record<string, string> {
   const within: Within = { base: page.route, models: page.pattern.models };
   const activity = hasSignIn(auth);
+  const inspector = hasInspector({ ir, auth });
   const files: Record<string, string> = {
-    "index.tsx": overviewRoute(page, within, { ir, t }, activity),
+    "index.tsx": overviewRoute(page, within, { ir, t }, activity, inspector),
     ...(activity ? { "activity.tsx": activityRoute(page, { ir, t }, hasKeys(ir, auth)) } : {}),
+    ...(inspector ? { "ask.tsx": askRoute(page, { ir, auth, options }) } : {}),
   };
   for (const name of page.pattern.models) {
     const model = modelNamed(ir, name);
@@ -63,6 +67,7 @@ function overviewRoute(
   within: Within,
   { ir, t }: Pick<GenContext, "ir" | "t">,
   activity: boolean,
+  inspector: boolean,
 ): string {
   const component = `${pascal(page.id)}Page`;
   const models = within.models.map((name) => {
@@ -112,6 +117,11 @@ ${
     ? `            <Link to=${attr(`${page.route}/activity`.replace("//", "/"))} className="text-sm font-medium text-primary">Activity</Link>
 `
     : ""
+}${
+  inspector
+    ? `            <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary">Ask</Link>
+`
+    : ""
 }            {restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
           </>
         }
@@ -126,6 +136,100 @@ ${
           </li>
         ))}
       </ul>
+    </>
+  );
+}
+`;
+}
+
+/**
+ * Whether the data page has the administrator's inspector (docs/design/assistant.md §4): when the
+ * app offers tools to assistants, it shows what each role's key would get.
+ */
+export function hasInspector({ ir, auth }: Pick<GenContext, "ir" | "auth">): boolean {
+  return hasKeys(ir, auth) && Boolean(auth.api?.assistants);
+}
+
+/**
+ * The inspector: a question asked as one of the app's roles (what that role's key would get) or
+ * as a visitor, answered by the wording rules or the host's model through the app's own tools.
+ * Administrators only; the question's text is not kept.
+ */
+function askRoute(
+  page: PageIR,
+  { ir, auth, options }: Pick<GenContext, "ir" | "auth" | "options">,
+): string {
+  const route = `${page.route}/ask`.replace("//", "/");
+  const callers: AssistantCaller[] = [...auth.roles.map((r) => ({ role: r.name })), "visitor"];
+  const key = (c: AssistantCaller) => (c === "visitor" ? "visitor" : c.role);
+  const kinds = Object.fromEntries(
+    callers.map((c) => [
+      key(c),
+      // Only what the rules read.
+      assistantOffer(ir, auth, c, { scope: "api", content: options.content }).kinds.map((k) => ({
+        model: k.model,
+        label: k.label,
+        pluralLabel: k.pluralLabel,
+        fields: k.fields,
+        filters: k.filters,
+        numbers: k.numbers,
+        by: k.by,
+      })),
+    ]),
+  );
+  const labels = roleLabels(auth);
+  const roles = callers.map((c) => ({
+    value: key(c),
+    label: c === "visitor" ? "A visitor, without a key" : (labels[c.role] ?? c.role),
+  }));
+  return `${HEADER}import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { callTool, offerFor } from "#/generated/mcp.server";
+import { pageAccess } from "#/generated/pages";
+import { AccessDenied, guardPage, type Viewer } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import type { AskKind } from "#/kit/ask";
+import { answer, hostModel } from "#/kit/assistant.server";
+import { Inspector } from "#/kit/Inspector";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** Each caller's kinds of record in the words people use, for the wording rules. */
+const KINDS: Record<string, AskKind[]> = ${JSON.stringify(kinds)};
+
+const ROLES = ${literal(roles)};
+
+/** A question answered as the role chosen, as its key would be (administrators only). */
+const askAs = createServerFn({ method: "POST" })
+  .validator(z.object({ question: z.string().trim().min(1).max(500), role: z.string() }))
+  .handler(async ({ data }) => {
+    const me = await currentViewer();
+    if (me?.role !== "admin") throw new AccessDenied(me !== null);
+    if (!(data.role in KINDS)) throw new AccessDenied(true);
+    // As a key of that role would be: it owns nothing, so "mine" is nobody's.
+    const viewer: Viewer | null =
+      data.role === "visitor" ? null : { id: \`inspector:\${me.id}\`, name: me.name, email: "", role: data.role };
+    return answer(data.question, {
+      offer: offerFor(viewer),
+      kinds: KINDS[data.role] ?? [],
+      call: (tool, args) => callTool(viewer, tool, args),
+      model: hostModel(me.id),
+    });
+  });
+
+export const Route = createFileRoute(${JSON.stringify(route)})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  component: AskPage,
+});
+
+function AskPage() {
+  return (
+    <>
+      <PageHeader page=${attr(page.id)} title="Ask the app" />
+      <p className="mb-4 max-w-prose text-sm text-muted-foreground">
+        What an assistant gets with a key of each role: ask as that role, and see the answer and every
+        tool it took. Changes are only shown, never made here.
+      </p>
+      <Inspector roles={ROLES} ask={(question, role) => askAs({ data: { question, role } })} />
     </>
   );
 }

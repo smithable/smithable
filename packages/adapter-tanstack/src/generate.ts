@@ -36,6 +36,7 @@ import { hooksModule, hooksStub } from "./hooks.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
+import { hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute } from "./pages/root.js";
@@ -464,10 +465,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => hasKeys(ir, auth),
       },
       {
-        // Reading a question without a model (docs/design/assistant.md §5): part of the app
-        // once its panel is (step 5); until then no app gets the file.
-        files: ["src/kit/ask.ts"],
-        used: () => false,
+        // The administrator's inspector on the data page (docs/design/assistant.md §4): the
+        // wording rules (§5), the answering loop and the panel.
+        files: ["src/kit/ask.ts", "src/kit/assistant.server.ts", "src/kit/Inspector.tsx"],
+        used: ({ ir, auth }) =>
+          hasInspector({ ir, auth }) && ir.pages.some((p) => p.pattern.kind === "data"),
       },
       {
         // The API as tools for AI assistants (docs/design/integrations.md §5b).
