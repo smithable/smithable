@@ -20,6 +20,14 @@ interface Pending {
   impact: string;
 }
 
+/**
+ * A project fetched again, with the waiting requests as the page has them: those follow the
+ * "waiting" events, and a fetch answered just before a request was taken would put it back.
+ */
+function keepWaiting(shown: Project | undefined, next: Project): Project {
+  return shown ? { ...next, waiting: shown.waiting } : next;
+}
+
 export function App() {
   const [project, setProject] = useState<Project>();
   const [mode, setMode] = useState<Mode>(() => (localStorage.getItem("mode") as Mode) ?? "builder");
@@ -101,7 +109,7 @@ export function App() {
     const next = await api.project().catch(() => undefined);
     if (!next) return;
     if (next.notice) setMessage({ ok: false, text: next.notice });
-    setProject(next);
+    setProject((p) => keepWaiting(p, next));
     setVersion((v) => v + 1);
     setUpdating(false);
   }, []);
@@ -114,6 +122,8 @@ export function App() {
       // A described app being made: its stage, then null once it is in place ("changed" follows).
       else if (event === "making")
         setProject((p) => p && { ...p, making: (data as MakingState | null) ?? undefined });
+      else if (event === "waiting")
+        setProject((p) => p && { ...p, waiting: (data as string[] | null) ?? undefined });
       // After a reconnect: the project as it is now, without reloading the preview.
       else if (event === "open") api.project().then(setProject, () => {});
       else setLogs((current) => [...current.slice(-499), String(data)]);
@@ -126,7 +136,7 @@ export function App() {
   // ("changed" later reloads the preview), so the left side never shows the old state.
   const catchUp = async () => {
     const next = await api.project().catch(() => undefined);
-    if (next) setProject(next);
+    if (next) setProject((p) => keepWaiting(p, next));
   };
 
   /** Applies an operation; a change that loses data first asks for confirmation. */
