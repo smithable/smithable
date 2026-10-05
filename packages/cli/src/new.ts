@@ -80,6 +80,8 @@ export async function create(
     admin?: string;
     /** The packages are in place (a link to another project's): nothing is installed. */
     installed?: boolean;
+    /** Told the drafted app's files as soon as the model has answered, before anything is built. */
+    onDraft?: (files: Record<string, string>) => void;
   } = {},
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
@@ -205,6 +207,7 @@ export async function create(
       return 1;
     }
     files = draft.files;
+    options.onDraft?.(files);
     // An action the model could not get right is left out and said, rather than failing the draft.
     if (draft.dropped?.length)
       io.out(
