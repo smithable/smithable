@@ -1,0 +1,13 @@
+smithableUx: 0.1
+theme:
+  preset: navy
+  brand:
+    primary: "#006633"
+tones:
+  Match.result:
+    win: success
+    loss: danger
+pages:
+  matches:
+    table:
+      sort: date

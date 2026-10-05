@@ -1,39 +1,38 @@
 smithable: 0.1
 app:
-  name: Byggfirman
-  description: Håll koll på kunder, offerter och fakturor för ett litet byggföretag.
+  name: Byggoffert
+  description: Håll koll på offerter, kunder och fakturor för ett litet byggföretag.
   currency: SEK
   timezone: Europe/Stockholm
 models:
   Customer:
     fields:
       name: string!
-      email: email unique
+      email: email
       phone: phone
-      address: string
-      notes: text
-      accountManager: User
-    access:
-      delete: [admin]
+      address: text
+      orgNumber: string
+      quotes: Quote[]
+      invoices: Invoice[]
   Quote:
     fields:
       number: string! unique
       customer: Customer!
-      status: utkast | skickad | accepterad | avvisad
-      description: text
-      total: money!
+      issuedOn: date! = TODAY()
       validUntil: date
-      sentAt: datetime
+      status: draft | sent | accepted | rejected
+      description: text
       lines: QuoteLine[]
-    access:
-      delete: [admin]
+      total:
+        type: money
+        formula: SUM(lines.amount)
   QuoteLine:
     fields:
       quote: Quote!
       description: string!
       quantity: decimal! = 1
       unitPrice: money!
-      total:
+      amount:
         type: money
         formula: quantity * unitPrice
   Invoice:
@@ -41,74 +40,81 @@ models:
       number: string! unique
       customer: Customer!
       quote: Quote
-      status: utkast | skickad | betald | forfallen
-      description: text
-      total: money!
-      dueDate: date
-      sentAt: datetime
-      paidAt: datetime
-    access:
-      delete: [admin]
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
 pages:
   customers:
     crud: Customer
     search: [name, email, phone]
   quotes:
     crud: Quote
+    actions: [sendQuote, acceptQuote, rejectQuote]
     search: [number]
     filters: [status, customer]
-    actions: [skickaOffert, accepteraOffert, avvisaOffert]
-  team:
-    users: manage
+  quote-lines:
+    crud: QuoteLine
   invoices:
     crud: Invoice
+    actions: [markSent, markPaid]
     search: [number]
-    filters: [status, customer, dueDate]
-    actions: [skickaFaktura, registreraBetald, markForfallenFaktura]
+    filters: [status, customer]
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    dashboard:
+      latestInvoices:
+        list: Invoice
+        limit: 5
+  team:
+    users: manage
 actions:
-  skickaOffert:
+  sendQuote:
     on: Quote
     when:
-      status: utkast
+      status: draft
     set:
-      status: skickad
-      sentAt: NOW()
-    intent: Markera offerten som skickad till kunden.
-  accepteraOffert:
+      status: sent
+    intent: Offerten har skickats till kunden.
+  acceptQuote:
     on: Quote
     when:
-      status: skickad
+      status: sent
     set:
-      status: accepterad
-    intent: Markera offerten som accepterad av kunden.
-  avvisaOffert:
+      status: accepted
+    intent: Kunden har accepterat offerten.
+  rejectQuote:
     on: Quote
     when:
-      status: skickad
+      status: sent
     set:
-      status: avvisad
-    intent: Markera offerten som avvisad av kunden.
-  skickaFaktura:
+      status: rejected
+    intent: Kunden har avböjt offerten.
+  markSent:
     on: Invoice
     when:
-      status: utkast
+      status: draft
     set:
-      status: skickad
-      sentAt: NOW()
-    intent: Markera fakturan som skickad till kunden.
-  registreraBetald:
+      status: sent
+    intent: Fakturan har skickats till kunden.
+  markPaid:
     on: Invoice
     when:
-      status: [skickad, forfallen]
+      status: [sent, overdue]
     set:
-      status: betald
-      paidAt: NOW()
-    intent: Registrera att fakturan är betald.
-  markForfallenFaktura:
-    on: Invoice
-    when:
-      status: skickad
-    set:
-      status: forfallen
-    intent: Markera fakturan som förfallen.
-navigation: [customers, quotes, invoices, team]
+      status: paid
+    intent: Kunden har betalat fakturan.
+navigation: [overview, customers, quotes, invoices, team]

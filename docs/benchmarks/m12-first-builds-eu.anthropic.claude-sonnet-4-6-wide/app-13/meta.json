@@ -4,6 +4,6 @@
   "wordStarter": "status",
   "questions": [
     "What kinds of records do you want to track?",
-    "Is this just for you, or will others share the log?"
+    "What details do you want to capture for a fuel fill-up?"
   ]
 }

@@ -3,14 +3,22 @@ pages:
   home:
     title: Min Frisörsalong
     hero:
-      button: Se lediga tider
+      button: Boka nu
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
+        alt: Soft out-of-focus light through linen curtains in pale tones
   schema:
-    title: Lediga tider
+    title: Schema
   my-bookings:
     title: Mina bokningar
+  slots:
+    title: Tider
+  services:
+    title: Tjänster
+  stylists:
+    title: Stylister
+  messages:
+    title: Meddelanden
 models:
   Service:
     label: Tjänst
@@ -34,7 +42,7 @@ models:
         label: Om stylisten
       portrait:
         label: Porträtt
-  Appointment:
+  Slot:
     label: Tid
     pluralLabel: Tider
     fields:
@@ -50,7 +58,7 @@ models:
     label: Bokning
     pluralLabel: Bokningar
     fields:
-      appointment:
+      slot:
         label: Tid
   Message:
     label: Meddelande

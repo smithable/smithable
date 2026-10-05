@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Pipeline CRM
-  description: A simple CRM for a small sales team to track companies, contacts, deals and follow-ups.
+  description: A lightweight CRM for a small sales team to track companies, contacts, deals and follow-ups.
   currency: EUR
 models:
   Company:
@@ -10,50 +10,51 @@ models:
       website: url
       phone: phone
       industry: string
-      segment: smb | enterprise | government
       notes: text
       accountManager: User
       contacts: Contact[]
       deals: Deal[]
+    ownedBy: accountManager
     access:
       delete: [admin]
   Contact:
     fields:
       name: string!
+      company: Company
       jobTitle: string
       email: email unique
       phone: phone
-      company: Company
       notes: text
+    access:
+      delete: [admin]
   Deal:
     fields:
       title: string!
       company: Company!
       contact: Contact
-      value: money
       stage: lead | qualified | proposal | negotiation | won | lost
+      value: money
       expectedClose: date
-      closedAt: datetime
-      lostReason: text
+      closedOn: date
       salesperson: User
+      notes: text
       followUps: FollowUp[]
+    ownedBy: salesperson
     access:
       delete: [admin]
   FollowUp:
     fields:
-      subject: string!
-      dueDate: date!
-      deal: Deal
-      contact: Contact
-      assignee: User
+      deal: Deal!
+      due: date!
+      kind: call | email | meeting | task
+      note: text
       status: open | done
-      doneAt: datetime
-      notes: text
+      doneOn: date
+      assignee: User
+    ownedBy: assignee
+    access:
+      delete: [admin, owner]
 pages:
-  deals:
-    crud: Deal
-    search: [title]
-    actions: [markWon, markLost]
   companies:
     crud: Company
     search: [name, industry]
@@ -61,9 +62,12 @@ pages:
     crud: Contact
     search: [name, email, phone]
     filters: [company]
+  deals:
+    crud: Deal
+    actions: [markWon, markLost]
+    search: [title]
   follow-ups:
     crud: FollowUp
-    search: [subject]
     actions: [complete]
   team:
     users: manage
@@ -74,22 +78,21 @@ actions:
       stage: [lead, qualified, proposal, negotiation]
     set:
       stage: won
-      closedAt: NOW()
-    intent: Close the deal as won.
+      closedOn: TODAY()
+    intent: Mark a deal as won.
   markLost:
     on: Deal
     when:
       stage: [lead, qualified, proposal, negotiation]
     set:
       stage: lost
-      closedAt: NOW()
-      lostReason:
-    intent: Close the deal as lost and note why.
+      closedOn: TODAY()
+    intent: Mark a deal as lost.
   complete:
     on: FollowUp
     when:
       status: open
     set:
       status: done
-      doneAt: NOW()
-    intent: Mark the follow-up as done.
+      doneOn: TODAY()
+    intent: Mark a follow-up as done.

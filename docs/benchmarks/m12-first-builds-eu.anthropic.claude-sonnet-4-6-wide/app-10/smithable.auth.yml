@@ -3,11 +3,6 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home]
-roles:
-  admin:
-    description: Manages and curates the museum collection.
-  member:
-    description: Browses the collection.
-defaultRole: member
+  pages: [home, objects]
+  read: [MuseumObject]
 admins: [johan@smithable.ai]

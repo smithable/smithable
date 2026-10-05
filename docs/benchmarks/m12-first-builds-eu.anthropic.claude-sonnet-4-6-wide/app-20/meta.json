@@ -2,6 +2,6 @@
   "description": "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa.",
   "starter": "booking",
   "wordStarter": "records",
-  "questions": ["Kuka voi tehdä varauksia?", "Mitä vierailijat näkevät kirjautumatta?"],
+  "questions": ["Kuka voi tehdä varauksen?", "Mitä vierailijat näkevät kirjautumatta?"],
   "lang": "fi"
 }

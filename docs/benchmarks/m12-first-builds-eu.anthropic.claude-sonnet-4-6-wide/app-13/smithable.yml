@@ -35,6 +35,14 @@ models:
       nextServiceDate: date
       nextServiceOdometer: int
       notes: text
+  Expense:
+    fields:
+      car: Car!
+      date: date! = TODAY()
+      category: insurance | tax | parking | toll | wash | accessories | other
+      description: string!
+      cost: money!
+      notes: text
 pages:
   cars:
     crud: Car
@@ -48,15 +56,23 @@ pages:
     search: [description, workshop]
     filters: [car, type, date]
     sortable: [date, odometer, cost]
+  expenses:
+    crud: Expense
+    search: [description]
+    filters: [car, category, date]
+    sortable: [date, cost]
   overview:
     dashboard:
-      total-fuel-cost:
+      totalFuelCost:
         sum: FuelLog.totalCost
-      total-service-cost:
+      totalServiceCost:
         sum: ServiceVisit.cost
-      fuel-fill-ups:
-        count: FuelLog
-      recent-service:
+      totalOtherExpenses:
+        sum: Expense.cost
+      recentFuel:
+        list: FuelLog
+        limit: 5
+      recentService:
         list: ServiceVisit
         limit: 5
-navigation: [overview, cars, fuel, service]
+navigation: [overview, cars, fuel, service, expenses]

@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Lotus Path Yoga
+  name: Tidewater Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
 models:
   ClassType:
@@ -41,16 +41,17 @@ pages:
     route: /
     landing:
       hero:
+        shortcuts: [schedule]
       footer:
       classes:
         records: ClassType
       teachers:
         records: Instructor
       faq:
+      callToAction:
+        button: schedule
   schedule:
-    calendar:
-      model: Session
-      starts: startsAt
+    calendar: Session
   my-bookings:
     crud: Booking
   sessions:

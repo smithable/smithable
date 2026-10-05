@@ -2,5 +2,5 @@
   "description": "Invoices for my photography work: clients, shoots and what is still unpaid.",
   "starter": "invoicing",
   "wordStarter": "invoicing",
-  "questions": ["What kinds of records do you need beyond clients and invoices?"]
+  "questions": ["What details do you track per shoot?"]
 }

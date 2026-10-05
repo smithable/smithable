@@ -1,33 +1,32 @@
 smithableUx: 0.1
-pages:
-  plots:
-    icon: layers
-    table:
-      columns: [number, sizeM2, status]
-  members:
-    icon: users
-    table:
-      columns: [name, email, plot, joinedOn]
-      below:
-        email: phone
-  waiting-list:
-    icon: list
-    table:
-      sort: appliedOn
-      columns: [name, email, appliedOn, status]
-  fee-payments:
-    icon: receipt
-    table:
-      columns: [member, year, amount, paidOn, status]
 tones:
   Plot.status:
     available: success
-  WaitingListEntry.status:
-    offered: warning
-    accepted: success
-    withdrawn: danger
-  FeePayment.status:
-    pending: warning
+    maintenance: warning
+  Fee.status:
     paid: success
+    unpaid: warning
+  WaitingListEntry.status:
+    offered: success
+    withdrawn: danger
+pages:
+  waiting-list:
+    table:
+      sort: appliedOn
+      columns: [member, appliedOn, status, notes]
+    icon: list
+  plots:
+    table:
+      columns: [number, status, sizeM2, notes]
+    icon: layers
+  tenancies:
+    table:
+      columns: [plot, member, startDate, endDate, active]
+  fees:
+    table:
+      columns: [member, year, amount, dueDate, status, paidOn]
+    icon: receipt
+  members:
+    icon: users
 theme:
   preset: woodland

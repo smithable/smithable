@@ -3,23 +3,18 @@ pages:
   pickup-slots:
     table:
       sort: date
+      columns: [date, startTime, endTime, capacity]
     icon: calendar
   products:
-    table:
-      columns: [name, price, unit, available]
     icon: tag
-  abholzeiten:
-    icon: calendar
   orders:
     table:
-      columns: [name, pickupSlot, status]
-    icon: clipboard
+      columns: [name, pickupSlot, status, email]
+    icon: cart
 theme:
   preset: woodland
-  brand:
-    font: Nunito Sans
 tones:
   Order.status:
-    bestaetigt: success
+    bestaetigt: warning
     abgeholt: success
     storniert: danger

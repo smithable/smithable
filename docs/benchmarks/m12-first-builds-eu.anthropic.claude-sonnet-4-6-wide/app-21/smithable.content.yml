@@ -30,8 +30,20 @@ models:
         label: Rekisterinumero
       vin:
         label: Valmistenumero (VIN)
-      notes:
-        label: Muistiinpanot
+      mileage:
+        label: Kilometrit
+  InvoiceLine:
+    label: Laskurivi
+    pluralLabel: Laskurivit
+    fields:
+      description:
+        label: Kuvaus
+      quantity:
+        label: Määrä
+      unitPrice:
+        label: Yksikköhinta
+      total:
+        label: Yhteensä
   ServiceJob:
     label: Huoltotyö
     pluralLabel: Huoltotyöt
@@ -43,19 +55,16 @@ models:
       status:
         label: Tila
         values:
-          tyonAlla: Työn alla
-      scheduledAt:
-        label: Ajoitettu
-      completedAt:
-        label: Valmistui
-      laborCost:
-        label: Työkustannus
-      partsCost:
-        label: Varaosien hinta
-      total:
-        label: Yhteensä
-      notes:
-        label: Muistiinpanot
+          avoin: Avoin
+          tyonalla: Työn alla
+          valmis: Valmis
+          laskutettu: Laskutettu
+      scheduledDate:
+        label: Sovittu päivä
+      completedDate:
+        label: Valmistumispäivä
+      mechanicNotes:
+        label: Asentajan muistiinpanot
   Invoice:
     label: Lasku
     pluralLabel: Laskut
@@ -67,15 +76,16 @@ models:
       status:
         label: Tila
         values:
+          luonnos: Luonnos
           lahetetty: Lähetetty
-      issuedAt:
+          maksettu: Maksettu
+          peruutettu: Peruutettu
+      issuedDate:
         label: Laskupäivä
-      dueAt:
+      dueDate:
         label: Eräpäivä
-      amount:
-        label: Summa
       notes:
-        label: Muistiinpanot
+        label: Lisätiedot
 pages:
   customers:
     title: Asiakkaat

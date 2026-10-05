@@ -3,4 +3,8 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
+roles:
+  member:
+    description: A cleaner who creates and manages invoices.
+defaultRole: member
 admins: [johan@smithable.ai]

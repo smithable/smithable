@@ -3,7 +3,11 @@ pages:
   home:
     hero:
       title: Is the shop working?
-      subtitle: "The live state of our web shop: checkout, payments, delivery tracking and more, with every outage and its updates."
-      image:
-        src: images/hero.webp
-        alt: A florist arranging a bouquet in a small shop
+      subtitle: The live state of checkout, payments, search and everything else in our web shop, with every outage and its updates.
+      button: Incident history
+    services:
+      title: Services
+    open:
+      title: Current outages
+    recent:
+      title: Recently resolved

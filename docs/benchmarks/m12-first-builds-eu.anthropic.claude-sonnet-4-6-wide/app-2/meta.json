@@ -3,8 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Besides leads and deals, what are the main record types you need to track?",
-    "Who on the team can add or update leads and deals?",
-    "What key details does a deal hold beyond a name and owner?"
+    "What are the main kinds of records in the pipeline?",
+    "What should a deal or lead record track?",
+    "Who can access the pipeline?"
   ]
 }

@@ -5,19 +5,13 @@ pages:
       sort: -issuedOn
     icon: receipt
   clients:
-    table:
-      columns: [name, email, phone, address]
-    icon: building
+    icon: home
   overview:
     icon: chart
-  team:
-    icon: users
 tones:
   Invoice.status:
-    sent: warning
     paid: success
     overdue: danger
+    sent: warning
 theme:
   preset: corporate
-  brand:
-    primary: "#2563eb"
