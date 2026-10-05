@@ -145,9 +145,12 @@ jobs:
         env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
 
   # The required status: green when every job it needs passed, or was skipped on the short run.
+  # Not for a run that was cancelled (a newer push, or the full-ci label added while the first
+  # run was going: a pull request opened with the label starts two runs): its jobs are cancelled,
+  # and reporting that as a failed `check` stood in the way of the newer run's result.
   check:
     needs: [scope, lint-build-units, apps, studio]
-    if: always() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci')
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed
