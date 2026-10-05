@@ -6,6 +6,7 @@ import {
   humanize,
   identifier,
   type JsonSchema,
+  type ModelIR,
   pageModel,
   pascal,
   typeKey,
@@ -96,14 +97,22 @@ function parseShape(type: string, models: string[]): FieldShape {
   };
 }
 
+/**
+ * A shape's choice values as the spec writes them: a value the field has, or one already written
+ * as one word, as it is; anything else as fields' names are made ("in progress" → inProgress).
+ */
+function choiceValues(shape: FieldShape, field?: FieldIR): string[] {
+  const kept = field?.type.kind === "choice" ? field.type.values : [];
+  return shape.values
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .map((v) => (kept.includes(v) || /^[A-Za-z][A-Za-z0-9]*$/.test(v) ? v : identifier(v)));
+}
+
 /** The spec's shorthand for a shape, e.g. "email! unique" or "draft | sent". */
 function shorthand(shape: FieldShape, keepDefault?: FieldIR): string {
-  if (shape.kind === "choice")
-    return shape.values
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean)
-      .join(" | ");
+  if (shape.kind === "choice") return choiceValues(shape, keepDefault).join(" | ");
   const type = shape.kind === "relation" ? shape.target : shape.kind;
   const kept =
     keepDefault?.default !== undefined && shapeOf(keepDefault).kind === shape.kind
@@ -465,7 +474,14 @@ function ChangeField({ spec, run, initial }: FormProps) {
             models={models}
             type={field.name === initial?.field ? str(initial?.type) : undefined}
             describe={(type) => changeText(spec, "changeField", { model, field: field.name, type })}
-            run={(type) => run("changeField", { model, field: field.name, type })}
+            run={(type, renames) =>
+              run("changeField", {
+                model,
+                field: field.name,
+                type,
+                ...(renames.length ? { renames } : {}),
+              })
+            }
           />
         ))}
     </div>
@@ -485,15 +501,36 @@ export function FieldShapeForm({
   type?: string;
   /** The change in plain words (Builder); without it, the spec's shorthand (Studio). */
   describe?: (type: string) => string;
-  run: (type: string) => Promise<boolean>;
+  /** The new type, and for a choice field what records holding a value that goes get ("old=new"). */
+  run: (type: string, renames: string[]) => Promise<boolean>;
 }) {
   const [shape, setShape] = useState(() =>
     proposed ? parseShape(proposed, models) : shapeOf(field),
   );
   const type = shorthand(shape, field);
+  // A choice value that goes: the records and samples holding it get one of the new ones.
+  const values = shape.kind === "choice" ? choiceValues(shape, field) : [];
+  const gone =
+    shape.kind === "choice" && field.type.kind === "choice"
+      ? field.type.values.filter((v) => !values.includes(v))
+      : [];
+  const [becomes, setBecomes] = useState<Record<string, string>>({});
+  const renames = gone.map(
+    (v) => `${v}=${becomes[v] ?? (field.required ? (values[0] ?? "") : "")}`,
+  );
   return (
-    <Form onSubmit={() => run(type)}>
+    <Form onSubmit={() => run(type, renames)}>
       <FieldShapeControls shape={shape} onChange={setShape} models={models} />
+      {gone.map((v) => (
+        <Label key={v} text={`Records with “${v}” get`}>
+          <Select
+            aria-label={`Records with ${v} get`}
+            value={becomes[v] ?? (field.required ? (values[0] ?? "") : "")}
+            onChange={(e) => setBecomes({ ...becomes, [v]: e.target.value })}
+            options={[...(field.required ? [] : [["", "nothing"] as [string, string]]), ...values]}
+          />
+        </Label>
+      ))}
       {describe ? (
         <SpecNote label="Will read:" text={type === shorthandOf(field) ? "" : describe(type)} />
       ) : (
@@ -556,7 +593,204 @@ const fieldLines = (text: string): Record<string, string> =>
       .filter(([name, type]) => name && type),
   );
 
-function AddAction({ spec, run, initial }: FormProps) {
+/**
+ * An action, the standard kind first: a button on a record that sets one of its fields (Mark as
+ * done: status becomes done), only when another has a value; the custom kind, whose behavior a
+ * developer writes, after it.
+ */
+function AddAction(props: FormProps) {
+  const [kind, setKind] = useState<"standard" | "custom">("standard");
+  return (
+    <div className="space-y-3">
+      <Label text="Kind of action">
+        <Select
+          aria-label="Kind of action"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as "standard" | "custom")}
+          options={[
+            ["standard", "A button that changes a record"],
+            ["custom", "Something else: a developer writes it"],
+          ]}
+        />
+      </Label>
+      {kind === "standard" ? <AddStandardAction {...props} /> : <AddCustomAction {...props} />}
+    </div>
+  );
+}
+
+/** The fields a button can set or test: stored, one value each. */
+const settable = (model: ModelIR | undefined) =>
+  (model?.fields ?? []).filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many));
+
+/** A value control for a field: its choices, yes or no, or text ("" asks the person). */
+function ValueOf({
+  field,
+  value,
+  onChange,
+  label,
+  ask,
+}: {
+  field: FieldIR | undefined;
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  ask?: boolean;
+}) {
+  if (field?.type.kind === "choice")
+    return (
+      <Select
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        options={[
+          ...(ask ? [["", "ask the person"] as [string, string]] : []),
+          ...field.type.values.map((v) => [v, humanize(v)] as [string, string]),
+        ]}
+      />
+    );
+  if (field?.type.kind === "scalar" && field.type.name === "bool")
+    return (
+      <Select
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        options={[
+          ["true", "yes"],
+          ["false", "no"],
+        ]}
+      />
+    );
+  return (
+    <Input
+      aria-label={label}
+      value={value}
+      placeholder={ask ? "empty: ask the person" : ""}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+function AddStandardAction({ spec, run }: FormProps) {
+  const models = spec.ir?.models ?? [];
+  const roles = spec.auth?.roles.map((r) => r.name) ?? [];
+  const [label, setLabel] = useState("");
+  const [modelName, setModelName] = useState(models[0]?.name ?? "");
+  const model = models.find((m) => m.name === modelName);
+  const fields = settable(model);
+  const [setName, setSetName] = useState("");
+  const setField = fields.find((f) => f.name === setName) ?? fields[0];
+  const [setValue, setSetValue] = useState("");
+  const conditions = fields.filter(
+    (f) => f.type.kind === "choice" || (f.type.kind === "scalar" && f.type.name === "bool"),
+  );
+  const [whenName, setWhenName] = useState("");
+  const whenField = conditions.find((f) => f.name === whenName);
+  const [whenValue, setWhenValue] = useState("");
+  const [allow, setAllow] = useState<string[]>([]);
+  const action = identifier(label);
+  const value =
+    setField?.type.kind === "choice" ? setValue || (setField.type.values[0] ?? "") : setValue;
+  const when = whenField
+    ? whenValue || (whenField.type.kind === "choice" ? (whenField.type.values[0] ?? "") : "true")
+    : "";
+  return (
+    <Form
+      onSubmit={() =>
+        run("addAction", {
+          action,
+          on: modelName,
+          set: { [setField?.name ?? ""]: value },
+          ...(whenField ? { when: { [whenField.name]: when } } : {}),
+          ...(allow.length ? { allow } : {}),
+          intent: label,
+        })
+      }
+    >
+      <Label text="The button says" hint="e.g. Mark as done">
+        <Input
+          aria-label="The button says"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+      </Label>
+      <Label text="On each">
+        <Select
+          aria-label="On each"
+          value={modelName}
+          onChange={(e) => {
+            setModelName(e.target.value);
+            setSetName("");
+            setWhenName("");
+          }}
+          options={models.map((m) => m.name)}
+        />
+      </Label>
+      <Label text="It sets">
+        <Select
+          aria-label="It sets"
+          value={setField?.name ?? ""}
+          onChange={(e) => {
+            setSetName(e.target.value);
+            setSetValue("");
+          }}
+          options={fields.map((f) => [f.name, humanize(f.name)] as [string, string])}
+        />
+      </Label>
+      <Label text="To">
+        <ValueOf field={setField} value={value} onChange={setSetValue} label="To" ask />
+      </Label>
+      <Label text="Only when (optional)">
+        <Select
+          aria-label="Only when"
+          value={whenField?.name ?? ""}
+          onChange={(e) => {
+            setWhenName(e.target.value);
+            setWhenValue("");
+          }}
+          options={[
+            ["", "always"] as [string, string],
+            ...conditions.map((f) => [f.name, humanize(f.name)] as [string, string]),
+          ]}
+        />
+      </Label>
+      {whenField && (
+        <Label text="Is">
+          <ValueOf field={whenField} value={when} onChange={setWhenValue} label="Is" />
+        </Label>
+      )}
+      {roles.length > 0 && (
+        <fieldset className="space-y-1">
+          <legend className="text-xs font-medium text-neutral-600">
+            Who may press it (none: whoever may change the record)
+          </legend>
+          {roles.map((role) => (
+            <label key={role} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allow.includes(role)}
+                onChange={(e) =>
+                  setAllow(e.target.checked ? [...allow, role] : allow.filter((r) => r !== role))
+                }
+              />
+              {role}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <SpecNote
+        label="Will read:"
+        text={
+          action && setField
+            ? `A "${label}" button on each ${modelName.toLowerCase()} sets ${humanize(setField.name).toLowerCase()} to ${value ? humanize(value).toLowerCase() : "what the person enters"}${whenField ? `, when ${humanize(whenField.name).toLowerCase()} is ${humanize(when).toLowerCase()}` : ""}.`
+            : ""
+        }
+      />
+      <Submit label="Add button" disabled={!action || !setField} />
+    </Form>
+  );
+}
+
+function AddCustomAction({ spec, run, initial }: FormProps) {
   const roles = spec.auth?.roles.map((r) => r.name) ?? [];
   const [action, setAction] = useState(str(initial?.action) ?? "");
   const [input, setInput] = useState("");
