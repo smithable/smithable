@@ -50,3 +50,18 @@ Starter records are project files, `samples/<Model>.yml`, rather than spec gramm
 
 There are no separate example specs for the live sites. The five showcase sites are the starters, published with demo sign-in ([design/showcase.md](design/showcase.md)), so every improvement to a starter shows on its site at the next release, and the effort goes into the starters' texts and pictures.
 
+
+## The security review of 2026-10-04
+
+What a review of the stack and one local test of a generated app found, and what was built for each:
+
+- **The scanners were days behind.** Six advisories for the web framework, the sign-in library and the mail library were on their projects' own pages and in neither OSV nor GitHub's reviewed list four days later. `smithable security` now reads each named package's own advisory list too, and CI checks the stack's pins daily (ARCHITECTURE §12).
+- **Server functions answered other sites.** A start file of our own had switched the framework's cross-site check off; it is on, for server functions only.
+- **The dev server handed out the app's data folder**, the database and the sign-in codes with it, to whoever could reach it. It is denied.
+- **A public read told who owns a record.** The owner's id now reaches only the owner and roles that read every record, in a record's lists of related records too.
+- **Containers on the host could reach the internet directly**, past the outgoing proxy (the hosted service; closed there, with a release check).
+- The rest of the test, which a safety filter kept one session from running, became named checks in the gate (`security: …` in `test-apps`), and a ceiling on request bodies and on adding up computed fields.
+
+## CI minutes, 2026-10-05
+
+GitHub Actions stopped starting jobs: 718 runs in four days had used the month's allowance and its spending limit, with each job billed a whole minute at least. Since then a pull request of plain documents alone starts no run and is merged by `scripts/merge-green.sh` itself after a scan for secrets; a push to main starts no run; and a pull request is not run again for being behind main. Main's full check, twice a day, is where two changes that only clash together now show.
