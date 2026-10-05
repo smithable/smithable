@@ -735,6 +735,34 @@ try {
   });
 
   await step(
+    "Builder takes ordinary names, and says a refusal without the files' language (finding 7)",
+    async () => {
+      await change("Add a kind of record");
+      await page.getByLabel("Model name").fill("Order line");
+      await page.getByText("Saved as OrderLine").waitFor();
+      await page.getByLabel("First field").fill("product name");
+      await page.getByRole("button", { name: "Add", exact: true }).click();
+      await trace
+        .getByText("Added a new kind of record: order lines")
+        .first()
+        .waitFor({ timeout: 60000 });
+      if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("OrderLine:"))
+        throw new Error("Order line was not made OrderLine");
+      // The shipping cost's formula names the shipping method: refused, in plain words.
+      await change("Remove a field");
+      await page.getByLabel("Kind of record").selectOption("Order");
+      await page.getByLabel("Field", { exact: true }).selectOption("shippingMethod");
+      // The form's button (a selected field has one of its own).
+      await page.locator('button[type="submit"]', { hasText: "Remove field" }).click();
+      const alert = page.getByRole("alert").first();
+      await alert.waitFor({ timeout: 60000 });
+      const said = await alert.innerText();
+      if (/smithable\.yml|removeField|:\d+:\d+/.test(said))
+        throw new Error(`the refusal speaks the files' language: ${said}`);
+      await alert.getByRole("button", { name: "Dismiss" }).click();
+    },
+  );
+  await step(
     "a landing page and a contact section, made in Builder, show in the preview",
     async () => {
       await change("Add a page");

@@ -5,6 +5,7 @@ import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
 import { isPreviewMessage, type Place, shared, touched } from "./preview";
 import { ReportDialog } from "./Report";
+import { plainRefusal } from "./refusal";
 import { Preview } from "./shared";
 import { Studio } from "./studio/Studio";
 import { Button, cx } from "./ui";
@@ -143,7 +144,9 @@ export function App() {
     const lines = result.output.split("\n").filter((l) => l.trim());
     const summary = result.ok
       ? (lines.at(-1) ?? "Done.").replace(/ Undo with: smithable undo$/, "")
-      : result.output;
+      : mode === "builder"
+        ? plainRefusal(result.output)
+        : result.output;
     // Builder says it in the words of its summary.
     const plain =
       result.ok && mode === "builder" && spec.ir
