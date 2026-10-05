@@ -5211,6 +5211,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -5293,6 +5294,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -7196,6 +7202,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/api.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/format.ts",
@@ -7314,6 +7321,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "48c55c80 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -7329,7 +7337,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/where.ts": "e02cfb63 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "60beb680 generated",
+  "src/lib/auth.ts": "1e974e1e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -7345,7 +7353,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/$id.tsx": "40ab1945 generated",
   "src/routes/admin/tasks/index.tsx": "7cb25d01 generated",
   "src/routes/admin/tasks/new.tsx": "a87327ea generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.ts": "67cfabed generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
@@ -7360,7 +7368,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "65517e82 generated",
   "src/routes/team/index.tsx": "b5193198 generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "356c02cd generated",
@@ -10560,6 +10568,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -10614,6 +10623,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -14300,6 +14314,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
@@ -14448,6 +14463,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -14461,7 +14477,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "6ef04a47 generated",
+  "src/lib/auth.ts": "0cfc4733 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -14486,7 +14502,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/sessions/$id.tsx": "b78f5a2f generated",
   "src/routes/admin/sessions/index.tsx": "73356889 generated",
   "src/routes/admin/sessions/new.tsx": "47205d21 generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "df43b8eb generated",
   "src/routes/class-types/$id.tsx": "4ea4779b generated",
@@ -14515,7 +14531,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/index.tsx": "39a7d23d generated",
   "src/routes/sessions/new.tsx": "38255b79 generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "df7c90c9 generated",
@@ -16337,6 +16353,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -16422,6 +16439,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -17704,6 +17726,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
@@ -17801,6 +17824,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -17813,12 +17837,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "6566d2fe generated",
+  "src/lib/auth.ts": "6dde9690 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "72023e6f generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "4a955080 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
   "src/routes/customers/index.tsx": "36e6dc45 generated",
@@ -17831,7 +17855,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "3f96f545 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "47211f98 generated",
@@ -20427,6 +20451,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -20481,6 +20506,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -22108,6 +22138,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/aggregate.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/format.ts",
@@ -22217,6 +22248,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -22230,12 +22262,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d084e7ef generated",
+  "src/lib/auth.ts": "4cae539b generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "14c028a7 generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "5aa1148c generated",
   "src/routes/clients/index.tsx": "814c29dd generated",
   "src/routes/clients/new.tsx": "156ce1da generated",
@@ -22252,7 +22284,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/settings/index.tsx": "ccb1cb37 generated",
   "src/routes/sign-in.tsx": "cf78fb89 generated",
   "src/routes/welcome/index.tsx": "d181401c generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "96656d16 generated",
@@ -23276,6 +23308,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -23330,6 +23363,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -24862,6 +24900,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
@@ -24961,6 +25000,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
@@ -24975,13 +25015,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "9b671202 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "f19825b1 generated",
+  "src/lib/auth.ts": "29190f59 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "5286e050 generated",
   "src/routes/__root.tsx": "d5881835 generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "cc327122 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
@@ -24997,7 +25037,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "09d0880f generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
   "src/routes/welcome/index.tsx": "a4ea7b3f generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "83765356 generated",
@@ -25930,6 +25970,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -25984,6 +26025,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -26831,6 +26877,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
@@ -26916,6 +26963,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "51b0d295 kit",
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -26928,12 +26976,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "04f6bcae kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d2166766 generated",
+  "src/lib/auth.ts": "1460da06 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "ec290ed5 generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "9b03a82e generated",
   "src/routes/items/$id.tsx": "cfd8ed79 generated",
@@ -26941,7 +26989,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/new.tsx": "161171aa generated",
   "src/routes/robots[.]txt.ts": "e5b1c876 generated",
   "src/routes/sign-in.tsx": "dbc09cc5 generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "cd3af4c8 generated",
@@ -32386,6 +32434,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { account, invitation, session, user, verification } from "#/db/schema";
+import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
@@ -32468,6 +32517,11 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
+  // never from an X-Forwarded-For the visitor could make up.
+  advanced: { ipAddress: { ipAddressHeaders: [ADDRESS_HEADER] } },
+  // On in every production build, not only where NODE_ENV says so (Better Auth's default).
+  rateLimit: { enabled: !import.meta.env.DEV },
   // Email and password only serve the development sign-in; production builds leave it off.
   emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
   user: {
@@ -34869,6 +34923,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/SignIn.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
+  "kit: src/kit/address.server.ts",
   "kit: src/kit/aggregate.ts",
   "kit: src/kit/api.server.ts",
   "kit: src/kit/audit.server.ts",
@@ -35002,6 +35057,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SignIn.tsx": "cd16c464 kit",
   "src/kit/Users.tsx": "bf4ee05e kit",
   "src/kit/access.ts": "6121a7ed kit",
+  "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/api.server.ts": "48c55c80 kit",
   "src/kit/audit.server.ts": "05c0e59f kit",
@@ -35018,12 +35074,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/where.ts": "e02cfb63 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "59228314 generated",
+  "src/lib/auth.ts": "cb61dd0a generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "10b74ab0 generated",
-  "src/routes/api/auth/$.ts": "dd1fe1be kit",
+  "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "45b5815f generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
@@ -35051,7 +35107,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/$id.tsx": "54181324 generated",
   "src/routes/updates/index.tsx": "73707478 generated",
   "src/routes/updates/new.tsx": "c4bd32a9 generated",
-  "src/start.ts": "9fed3a72 kit",
+  "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
   "tests/smoke.spec.ts": "fd8fdf64 generated",
