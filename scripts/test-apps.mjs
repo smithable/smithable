@@ -16,6 +16,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { request } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -3131,12 +3132,21 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "a request may carry at most 1 MB, said by its length: more is refused (413), and one without a length too (411)",
         async () => {
-          const big = await fetch(`${base}/`, {
-            method: "POST",
-            headers: { "content-type": "application/octet-stream" },
-            body: new Uint8Array(1_000_001),
+          // Only the length is sent: the server answers from it before any body, and a body
+          // still being sent when it closes the connection would race its answer.
+          const big = await new Promise((resolve, reject) => {
+            const asked = request(`${base}/`, {
+              method: "POST",
+              headers: { "content-type": "application/octet-stream", "content-length": 1_000_001 },
+            });
+            asked.on("response", (answer) => {
+              resolve(answer.statusCode);
+              asked.destroy();
+            });
+            asked.on("error", reject);
+            asked.flushHeaders();
           });
-          if (big.status !== 413) throw new Error(`1 MB and a byte gave ${big.status}`);
+          if (big !== 413) throw new Error(`1 MB and a byte gave ${big}`);
           const chunked = await fetch(`${base}/`, {
             method: "POST",
             body: new ReadableStream({
