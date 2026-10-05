@@ -1,6 +1,12 @@
 // An operation's arguments as form controls, from its JSON Schema (C8): an argument that names
 // something in the spec (its `x-smithable` annotation) is chosen from the names there are.
-import { type ArgRef, type JsonSchema, namesFor } from "@smithable/core";
+import {
+  type ArgRef,
+  type JsonSchema,
+  type NameKind,
+  nameProblem,
+  namesFor,
+} from "@smithable/core";
 import type { Spec } from "./engine";
 import { Input, Label, Select } from "./ui";
 
@@ -35,6 +41,37 @@ export function argumentsOf(schema: JsonSchema, values: ArgValues, spec: Spec): 
   return out;
 }
 
+const NAME_KINDS: NameKind[] = [
+  "model",
+  "field",
+  "choice",
+  "action",
+  "tile",
+  "query",
+  "role",
+  "page",
+  "menu",
+  "rule",
+];
+
+/**
+ * Why a typed name does not fit, while it is typed: a text argument named after a kind of name
+ * (addPage's page, addField's field), or renameField's `to`. A name that exists already fits its
+ * rule too, so an argument that may name an existing one is checked the same way.
+ */
+export function argumentProblem(
+  op: string,
+  key: string,
+  schema: JsonSchema,
+  value: unknown,
+): string | undefined {
+  if (typeof value !== "string" || !value || schema["x-smithable"] || schema.type !== "string")
+    return undefined;
+  const renamed = key === "to" ? /^rename([A-Z]\w*)$/.exec(op)?.[1]?.toLowerCase() : undefined;
+  const kind = NAME_KINDS.find((k) => k === (renamed ?? key));
+  return kind && nameProblem(kind, value);
+}
+
 /** One argument's control: a choice, a set of checkboxes, or text. */
 export function ArgumentField({
   name,
@@ -46,6 +83,7 @@ export function ArgumentField({
   spec,
   label,
   hint,
+  problem,
 }: {
   name: string;
   schema: JsonSchema;
@@ -57,6 +95,7 @@ export function ArgumentField({
   spec: Spec;
   label: string;
   hint?: string;
+  problem?: string;
 }) {
   const ref = schema["x-smithable"] as ArgRef | undefined;
   const choices = ref ? choicesFor(ref, effective, spec) : [];
@@ -109,7 +148,7 @@ export function ArgumentField({
       </Label>
     );
   return (
-    <Label text={text} hint={hint}>
+    <Label text={text} hint={hint} problem={problem}>
       <Input
         aria-label={label}
         value={(values[name] as string | undefined) ?? ""}

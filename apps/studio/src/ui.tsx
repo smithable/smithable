@@ -33,10 +33,13 @@ export function Label({
   text,
   children,
   hint,
+  problem,
 }: {
   text: string;
-  children: ReactElement<{ id?: string }>;
+  children: ReactElement<{ id?: string; "aria-invalid"?: boolean }>;
   hint?: string;
+  /** What is wrong with the value as typed, said under it in place of the hint. */
+  problem?: string;
 }) {
   const id = useId();
   return (
@@ -44,8 +47,12 @@ export function Label({
       <label htmlFor={id} className="block text-xs font-medium text-neutral-600">
         {text}
       </label>
-      {cloneElement(children, { id })}
-      {hint && <p className="text-xs text-neutral-500">{hint}</p>}
+      {cloneElement(children, { id, ...(problem ? { "aria-invalid": true } : {}) })}
+      {problem ? (
+        <p className="text-xs text-red-700">{problem}</p>
+      ) : (
+        hint && <p className="text-xs text-neutral-500">{hint}</p>
+      )}
     </div>
   );
 }
