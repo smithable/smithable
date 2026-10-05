@@ -82,9 +82,21 @@ describe("proposeChange", () => {
     expect(model.systems[0]).toContain('{"kind":"answer","text":"…"}');
   });
 
+  test("a request the rules read and cannot make is answered with the reason, and no model is asked", async () => {
+    const model = scripted([addPhone]);
+    const proposal = await propose("Add a notes field to customers", [model]);
+    expect(proposal).toMatchObject({
+      kind: "none",
+      reason: 'Customers already have a field called "notes".',
+    });
+    expect(model.prompts).toEqual([]);
+  });
+
   test("a clear request becomes operations, described and dry-run, with what the model used", async () => {
     const model = scripted([addPhone]);
-    const proposal = await propose("Customers should have a mobile number", [model]);
+    const proposal = await propose("Sales people keep asking where to put a customer's mobile", [
+      model,
+    ]);
     expect(proposal).toMatchObject({
       kind: "change",
       operations: [
@@ -108,7 +120,9 @@ describe("proposeChange", () => {
       operations: [{ op: "addField", args: { model: "Client", field: "mobile", type: "phone" } }],
     };
     const model = scripted([wrong, addPhone]);
-    const proposal = await propose("Customers should have a mobile number", [model]);
+    const proposal = await propose("Sales people keep asking where to put a customer's mobile", [
+      model,
+    ]);
     expect(proposal.kind).toBe("change");
     expect(model.prompts[1]).toContain("It cannot be applied: addField:");
     expect(proposal.usage).toHaveLength(2);
@@ -122,7 +136,10 @@ describe("proposeChange", () => {
       location: "eu",
       price: { input: 0.2, output: 0.6 },
     });
-    const proposal = await propose("Customers should have a mobile number", [local, hosted]);
+    const proposal = await propose("Sales people keep asking where to put a customer's mobile", [
+      local,
+      hosted,
+    ]);
     expect(proposal.kind).toBe("change");
     expect(proposal.usage.map((u) => u.provider)).toEqual(["scripted", "smithable"]);
     expect(proposal.usage[1]?.cost).toBeCloseTo((1000 * 0.2 + 50 * 0.6) / 1e6);
@@ -135,11 +152,14 @@ describe("proposeChange", () => {
   test("a cheaper tier's \"none\" goes to the next tier; the last tier's stands", async () => {
     const local = scripted([{ kind: "none", reason: "Cannot." }]);
     const hosted = scripted([addPhone], { name: "smithable", tier: "smithable", location: "eu" });
-    expect((await propose("Customers should have a mobile number", [local, hosted])).kind).toBe(
-      "change",
-    );
+    expect(
+      (await propose("Sales people keep asking where to put a customer's mobile", [local, hosted]))
+        .kind,
+    ).toBe("change");
     const alone = scripted([{ kind: "none", reason: "Cannot." }]);
-    expect(await propose("Customers should have a mobile number", [alone])).toMatchObject({
+    expect(
+      await propose("Sales people keep asking where to put a customer's mobile", [alone]),
+    ).toMatchObject({
       kind: "none",
       reason: "Cannot.",
     });
@@ -147,7 +167,9 @@ describe("proposeChange", () => {
       scripted([{ kind: "none", reason: "A" }]),
       scripted([{ kind: "none", reason: "B" }], { name: "b", tier: "smithable", location: "eu" }),
     ];
-    expect(await propose("Customers should have a mobile number", both)).toMatchObject({
+    expect(
+      await propose("Sales people keep asking where to put a customer's mobile", both),
+    ).toMatchObject({
       kind: "none",
       reason: "B",
     });
@@ -183,9 +205,9 @@ describe("proposeChange", () => {
     };
     const model = scripted([required, addPhone]);
     const proposal = await proposeChange({
-      request: "Customers should have a mobile number",
+      request: "Sales people keep asking where to put a customer's mobile",
       files: { spec },
-      context: buildContext(index, "Customers should have a mobile number"),
+      context: buildContext(index, "Sales people keep asking where to put a customer's mobile"),
       providers: [model],
       check: (_before, after) =>
         after.spec.includes("mobile: phone!") ? "There are already 8 customers." : undefined,
@@ -202,7 +224,9 @@ describe("proposeChange", () => {
   });
 
   test("with no model allowed, nothing is sent anywhere", async () => {
-    expect(await propose("Customers should have a mobile number", [])).toMatchObject({
+    expect(
+      await propose("Sales people keep asking where to put a customer's mobile", []),
+    ).toMatchObject({
       kind: "failed",
     });
   });
