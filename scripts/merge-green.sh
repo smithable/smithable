@@ -140,7 +140,19 @@ for attempt in 1 2 3 4 5 6 7 8; do
   has_checks || refuse "its checks did not start within an hour."
   # GitHub merges by itself the moment the checks pass (at once when they already have).
   gh pr merge "$pr" "${repo[@]}" --auto --merge --delete-branch >/dev/null
-  if ! gh pr checks "$pr" "${repo[@]}" --watch --fail-fast >/dev/null; then
+  # The checks branch protection requires, as GitHub's own merge goes by (here `check`, which
+  # reports on every job of its run). Others are not asked: a run that a newer one cancelled
+  # (a pull request opened with the full-ci label starts two) leaves jobs that read as failed.
+  # A required check that reports on other jobs is listed only when those are done: until then
+  # gh lists none (in more than one wording), which is not a failure. A listed check is a line
+  # with tabs. An hour, as for the checks to start.
+  for i in $(seq 360); do
+    gh pr checks "$pr" "${repo[@]}" --required 2>/dev/null | grep -q "$(printf '\t')" && break
+    merged && { echo "Merged #$pr."; exit 0; }
+    [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
+    sleep 10
+  done
+  if ! gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null; then
     merged && { echo "Merged #$pr."; exit 0; }
     gh pr checks "$pr" "${repo[@]}" || true
     refuse "a check failed."
