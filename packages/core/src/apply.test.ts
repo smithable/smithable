@@ -1274,3 +1274,38 @@ test("nameRecords renames a kind of record where it shows, in one change", () =>
     message: "Give the name for one.",
   });
 });
+
+test("addField shows the new field in its list in the same change", () => {
+  const result = applyOperation(files, "addField", {
+    model: "Customer",
+    field: "website",
+    type: "url",
+    list: true,
+  });
+  if (!result.ok) throw new Error(result.message);
+  // The CRM's customers page names its columns: the new field is added to them.
+  expect(result.files.ux).toContain("website");
+  expect(result.description).toContain("shown in its list");
+});
+
+test("addField shows a field the default columns leave out, and refuses a model with no list", () => {
+  // Orders' page names no columns, and the app never picks a long text: they are written out.
+  const notes = applyOperation(files, "addField", {
+    model: "Order",
+    field: "remarks",
+    type: "text",
+    list: true,
+  });
+  if (!notes.ok) throw new Error(notes.message);
+  expect(notes.files.ux).toMatch(/orders:[\s\S]*columns: \[[^\]]*remarks\]/);
+  const added = applyOperation(files, "addModel", { model: "Tag", fields: { name: "string!" } });
+  if (!added.ok) throw new Error(added.message);
+  expect(
+    applyOperation({ ...files, spec: added.files.spec }, "addField", {
+      model: "Tag",
+      field: "color",
+      type: "string",
+      list: true,
+    }),
+  ).toMatchObject({ ok: false, message: "Tag has no list page to show it in." });
+});

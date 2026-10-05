@@ -28,6 +28,7 @@ export type {
 } from "./auth.js";
 export { AUTH_VERSION, apiOffers, PROVIDERS, reservedDomain, validateAuth } from "./auth.js";
 export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
+export { defaultColumns } from "./columns.js";
 export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
 export { conditionArgs, conditionText, readCondition } from "./condition.js";
