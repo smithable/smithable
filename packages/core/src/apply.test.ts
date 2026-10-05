@@ -1234,3 +1234,23 @@ test("changeField says what records holding a choice value that goes get instead
     message: expect.stringContaining('"gone" is not one of the new values'),
   });
 });
+
+test("changeField refuses renames that cannot be done as written", () => {
+  const change = (type: string, renames: string[]) =>
+    applyOperation(files, "changeField", { model: "Order", field: "status", type, renames });
+  // A field that must have a value: its records cannot be left empty.
+  expect(change("draft | placed | canceled", ["shipped="])).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("must have a value"),
+  });
+  // No "=": not read as leaving them empty.
+  expect(change("draft | placed | canceled", ["shipped"])).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("write it as old=new"),
+  });
+  // A value that stays keeps its records.
+  expect(change("draft | placed | shipped | canceled", ["draft=placed"])).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("stays one of"),
+  });
+});
