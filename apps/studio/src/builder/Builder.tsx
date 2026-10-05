@@ -260,6 +260,7 @@ export function Builder({
           <div className="max-h-[22vh] shrink-0 overflow-auto">
             <Ask
               words={words}
+              waiting={project.waiting}
               onEdit={(p) => {
                 setPrefill(p);
                 setTab("change");
