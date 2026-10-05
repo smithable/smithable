@@ -10,7 +10,7 @@ import {
 import { join } from "node:path";
 import { readme } from "@smithable/adapter-tanstack";
 import { readRecord } from "./generate.js";
-import { git, uncommittedRefusal } from "./git.js";
+import { ownRepository, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
 import { loadSpec } from "./validate.js";
 
@@ -31,7 +31,7 @@ export function detach(dir: string, io: Io): number {
     return 1;
   }
   const refused =
-    git(dir, ["rev-parse", "--is-inside-work-tree"]).ok &&
+    ownRepository(dir) &&
     uncommittedRefusal(dir, "so the detach can be reviewed and reverted on its own");
   if (refused) {
     io.err(refused);
