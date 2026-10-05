@@ -844,9 +844,14 @@ ${
     );
   },
 
-  /** The records that fit, with their computed fields worked out: for adding those up. */
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * ${COMPUTED_ROWS.toLocaleString("en")}, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.${n.tableKey}.findMany({ where: condition,${withClause(listWith, " ").replace(/\n/g, "")} });
+    const rows = await db.query.${n.tableKey}.findMany({ where: condition,${withClause(listWith, " ").replace(/\n/g, "")} limit: ${COMPUTED_ROWS + 1} });
+    if (rows.length > ${COMPUTED_ROWS})
+      throw new BadInput("More than ${COMPUTED_ROWS.toLocaleString("en")} records to add up a computed field over: narrow them with where.");
     return rows.map((row) => ${formulas ? `${withFormulasName(model)}(row as never)` : "row"} as Record<string, unknown>);
   },
 
@@ -1141,6 +1146,9 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
       : {}),
   };
 }
+
+/** Records a computed field is added up over in one call, at most (computedRows in a data module). */
+export const COMPUTED_ROWS = 10_000;
 
 /** Records visitors may add to a model before it takes no more (see create in a data module). */
 export const VISITOR_ROWS = 10_000;

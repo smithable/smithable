@@ -16,6 +16,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { request } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -3050,6 +3051,34 @@ for (const [index, example] of examples.entries()) {
         `  ${absent ? "✓" : "✗"} the production build has no development sign-in or setup notes`,
       );
       if (!absent) failures.push(`${example} development sign-in in production`);
+      if (devSignIn.status !== 404)
+        await asyncStep(
+          "sign-in's own limit counts per address, and a made-up X-Forwarded-For is no new address",
+          async () => {
+            // Better Auth allows three sign-in tries in ten seconds per address: each try here
+            // claims another one.
+            const statuses = [];
+            for (let i = 0; i < 6; i++) {
+              const answer = await fetch(`${base}/api/auth/sign-in/email`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Origin: base,
+                  "X-Forwarded-For": `10.9.${i}.1`,
+                },
+                body: JSON.stringify({ email: "guess@example.com", password: "guess" }),
+              });
+              // The server's own limit says so in plain text; this one is sign-in's.
+              statuses.push(
+                answer.status === 429 && !(await answer.text()).startsWith("Too many requests;")
+                  ? 429
+                  : answer.status,
+              );
+            }
+            if (!statuses.includes(429))
+              throw new Error(`six tries from "six addresses" gave ${statuses.join(", ")}`);
+          },
+        );
       await asyncStep(
         "a request's trace id is continued from traceparent, answered, and on its access line (who, path without query values)",
         async () => {
@@ -3131,12 +3160,21 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "a request may carry at most 1 MB, said by its length: more is refused (413), and one without a length too (411)",
         async () => {
-          const big = await fetch(`${base}/`, {
-            method: "POST",
-            headers: { "content-type": "application/octet-stream" },
-            body: new Uint8Array(1_000_001),
+          // Only the length is sent: the server answers from it before any body, and a body
+          // still being sent when it closes the connection would race its answer.
+          const big = await new Promise((resolve, reject) => {
+            const asked = request(`${base}/`, {
+              method: "POST",
+              headers: { "content-type": "application/octet-stream", "content-length": 1_000_001 },
+            });
+            asked.on("response", (answer) => {
+              resolve(answer.statusCode);
+              asked.destroy();
+            });
+            asked.on("error", reject);
+            asked.flushHeaders();
           });
-          if (big.status !== 413) throw new Error(`1 MB and a byte gave ${big.status}`);
+          if (big !== 413) throw new Error(`1 MB and a byte gave ${big}`);
           const chunked = await fetch(`${base}/`, {
             method: "POST",
             body: new ReadableStream({
@@ -3267,7 +3305,7 @@ for (const [index, example] of examples.entries()) {
     // reaches tables through the schema namespace, so nothing shadows them.
     if (example === "status")
       step(
-        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real; undo takes them back",
+        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real, and refuses to add up a computed field over more than 10,000 records; undo takes them back",
         () => {
           const ops = [
             // Made with the table that refers to it (drizzle-kit's ALTER TABLE leaves the
@@ -3291,6 +3329,8 @@ for (const [index, example] of examples.entries()) {
           writeFileSync(
             check,
             `import { expect, test } from "vitest";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
 import { callTool } from "./generated/mcp.server";
 
 test("measure sums, averages and sums per value", async () => {
@@ -3313,6 +3353,12 @@ test("measure sums, averages and sums per value", async () => {
   expect(await callTool(key, "measure", { kind: "Row", of: "sum amount", by: "group" })).toMatchObject({
     rows: [{ title: "North", number: 31 }, { title: "South", number: 30.5 }],
   });
+  // A computed field is added up over at most 10,000 records in one call; more are refused
+  // with how to narrow them, and a narrower call still works.
+  const bulk = Array.from({ length: 10_001 }, (_, i) => ({ label: \`bulk \${i}\`, amount: 100, size: "small" as const }));
+  for (let i = 0; i < bulk.length; i += 500) db.insert(schema.rows).values(bulk.slice(i, i + 500)).run();
+  await expect(callTool(key, "measure", { kind: "Row", of: "sum twice" })).rejects.toThrow("narrow them with where");
+  expect(await callTool(key, "measure", { kind: "Row", of: "sum twice", where: { size: "large" } })).toEqual({ sum: 101 });
 });
 `,
           );
