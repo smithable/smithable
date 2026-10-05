@@ -16,7 +16,7 @@ import { runOperation } from "./op.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
-import { type Replacement, replaceProject } from "./replace.js";
+import { type Replacement, reopenDatabase, replaceProject } from "./replace.js";
 import {
   buildReport,
   recordFailure,
@@ -299,6 +299,28 @@ export async function studio(
       if (await previewAnswers()) stuck = undefined;
     });
   };
+  /** What decides the install, to tell whether a change put other packages in place. */
+  const installed = () => {
+    const path = join(dir, "package.json");
+    return existsSync(path) ? readFileSync(path, "utf8") : "";
+  };
+  /**
+   * After the database was put back (an undo, a redo, a change that was rolled back): the
+   * preview opens it again, without being started again. Its dev server takes in the files that
+   * went back as it takes in any change, and a start costs 15 s in a hosted workspace. Only
+   * when the packages changed with it (an owner's own package came or went) is it started
+   * again, since what it had loaded may be gone.
+   */
+  const restored = (packagesBefore: string) => {
+    if (installed() !== packagesBefore) {
+      stopApp();
+      startApp();
+      send("changed", {});
+      return;
+    }
+    reopenDatabase(dir);
+    changed({});
+  };
   const stopApp = () => {
     const child = app;
     app = undefined;
@@ -468,6 +490,7 @@ export async function studio(
       if (req.method === "POST" && url.pathname === "/api/op") {
         const { name, args, confirm } = await body();
         const asked = new Date().toISOString();
+        const packages = installed();
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
@@ -479,11 +502,7 @@ export async function studio(
         if (result.ok) changed({ description: result.output });
         // A change that failed halfway was rolled back, its database included: the preview
         // reopens it, as after an undo.
-        else if (result.output.includes("Nothing was changed.")) {
-          stopApp();
-          startApp();
-          send("changed", {});
-        }
+        else if (result.output.includes("Nothing was changed.")) restored(packages);
         // A failure of this change (not a refusal, and not an earlier failure).
         const report = result.ok ? undefined : await offerReport(asked);
         return json({ ...result, needsConfirm, report });
@@ -574,26 +593,21 @@ export async function studio(
       }
       if (req.method === "POST" && url.pathname === "/api/redo") {
         // As an operation: the app regenerates and the preview follows.
+        const packages = installed();
         const result = await capture((io) => redo(dir, io));
-        if (result.ok) {
-          stopApp();
-          startApp();
-          send("changed", {});
-        }
+        if (result.ok) restored(packages);
         return json(result);
       }
       // A workspace that waited for whoever claims it gets their app: once, and only when
-      // Studio was started for that. A finished project comes in under the running preview,
-      // which takes it in as it takes in any change (only what differs is written); an app
-      // made from a description is made with the preview stopped. What Studio remembered of
-      // the old app (its log, a proposal, a notice) goes with it.
+      // Studio was started for that. The app comes in under the running preview, which takes
+      // it in as it takes in any change (only what differs is written): a finished project
+      // as it is, an app from a description once it has been made beside the project. What
+      // Studio remembered of the old app (its log, a proposal, a notice) goes with it.
       if (req.method === "POST" && url.pathname === "/api/project/replace") {
         if (!replaceable)
           return json({ ok: false, output: "This project is not one that can be replaced." }, 403);
         replaceable = false;
         const to = (await body()) as Replacement;
-        const made = typeof to.from !== "string";
-        if (made) stopApp();
         const result = await capture((io) => replaceProject(dir, io, to));
         // Refused (nothing was touched) or failed: it can be asked again.
         if (!result.ok) replaceable = true;
@@ -601,10 +615,7 @@ export async function studio(
         pending = undefined;
         notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
         rmSync(noticeFile, { force: true });
-        if (made) {
-          restarts = [];
-          startApp();
-        } else await settled();
+        await settled();
         // The log starts with the person's app: nothing of the app that was here, and nothing
         // of what the dev server said while the files under it were being exchanged.
         logs.length = 0;
@@ -612,13 +623,10 @@ export async function studio(
         return json(result, result.ok ? 200 : 422);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
+        const packages = installed();
         const result = await capture((io) => undo(dir, io));
-        if (result.ok) {
-          // The database went back to its snapshot: the preview reopens it.
-          stopApp();
-          startApp();
-          send("changed", {});
-        }
+        // The database went back to its snapshot: the preview reopens it.
+        if (result.ok) restored(packages);
         return json(result);
       }
       // The Studio app itself; unknown paths get index.html (a single-page app).

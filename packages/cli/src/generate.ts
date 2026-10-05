@@ -35,6 +35,12 @@ export interface GenerateFlags {
   /** Move the app to this Smithable's stack profile (`smithable upgrade`, which checks it). */
   upgrade?: boolean;
   /**
+   * The packages are in place already and are not this project's to install: its node_modules
+   * is a link to another project's with the same packages (an app made beside the one it will
+   * replace, replace.ts).
+   */
+  installed?: boolean;
+  /**
    * Run only the tools whose inputs changed (an operation): each one starts a process, which
    * costs 1 to 2 s in a sandboxed hosted workspace.
    */
@@ -153,6 +159,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     io,
     flags.migration,
     flags.onlyChanged ? [...changed, ...removed] : undefined,
+    flags.installed,
   );
 }
 
@@ -187,11 +194,13 @@ export async function runTools(
   io: Io,
   migration?: MigrationPlan,
   changed?: string[],
+  installed = false,
 ): Promise<number> {
   const needs = (test: (path: string) => boolean) => !changed || changed.some(test);
   const install =
-    needs((p) => p === "package.json" || p === "pnpm-workspace.yaml") ||
-    !existsSync(join(dir, "node_modules"));
+    !installed &&
+    (needs((p) => p === "package.json" || p === "pnpm-workspace.yaml") ||
+      !existsSync(join(dir, "node_modules")));
   const schema = needs((p) => p === "src/db/schema.ts") || (migration?.renames.length ?? 0) > 0;
 
   const run = (args: string[]) => {

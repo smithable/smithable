@@ -78,6 +78,8 @@ export async function create(
     name?: string;
     /** The administrator's address; without it, the Git user's (email-sign-in.md §3). */
     admin?: string;
+    /** The packages are in place (a link to another project's): nothing is installed. */
+    installed?: boolean;
   } = {},
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
@@ -285,7 +287,11 @@ export async function create(
     pictures.map((p) => (fromPage ? { ...p, file: `samples/${p.file}` } : p)),
   );
   if (options.describe) dropMissingPictures(dir, io);
-  const code = await generate(dir, io, { tools: true, force: false });
+  const code = await generate(dir, io, {
+    tools: true,
+    force: false,
+    ...(options.installed ? { installed: true } : {}),
+  });
   if (code !== 0) return code;
   if (sampleData && exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
