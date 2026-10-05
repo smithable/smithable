@@ -1,4 +1,11 @@
 smithableUx: 0.1
+tones:
+  Attendee.ticket:
+    vip: success
+pages:
+  talks:
+    table:
+      sort: startsAt
 theme:
   preset: modern
   brand:

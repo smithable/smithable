@@ -6,7 +6,9 @@ public:
   pages: [home, catalog]
   read: [Tool]
 roles:
+  admin:
+    description: Keeps the tool library tidy.
   member:
-    description: Lends and borrows tools.
+    description: Lends, borrows and saves tools.
 defaultRole: member
 admins: [johan@smithable.ai]

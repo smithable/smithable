@@ -1,16 +1,22 @@
 smithableUx: 0.1
+theme:
+  preset: minimal
+  brand:
+    primary: "#b5838d"
 pages:
   schema:
     icon: calendar
   my-bookings:
     icon: clipboard
+    table:
+      sort: slot
+      columns: [slot]
   services:
     icon: tag
   stylists:
-    icon: user
+    icon: users
   messages:
     icon: mail
-theme:
-  preset: minimal
-  brand:
-    font: Nunito Sans
+  slots:
+    table:
+      sort: startsAt

@@ -1,0 +1,18 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: private
+roles:
+  admin:
+    description: Runs the app, its keys and the data.
+  member:
+    description: A user of the habit app who tracks their own habits.
+  assistant:
+    description: "The AI assistant's key: reads everything, adds and changes records, never deletes."
+defaultRole: member
+api:
+  models: all
+  actions: all
+  assistants: true
+admins: [johan@smithable.ai]

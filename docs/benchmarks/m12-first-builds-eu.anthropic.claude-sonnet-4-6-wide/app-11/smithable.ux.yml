@@ -5,9 +5,22 @@ tones:
     degraded: warning
     down: danger
   Incident.status:
-    resolved: success
-    monitoring: warning
     investigating: danger
     identified: warning
+    monitoring: warning
+    resolved: success
+pages:
+  incidents:
+    table:
+      sort: -detectedAt
+    icon: clipboard
+  maintenance:
+    table:
+      sort: startsAt
+    icon: settings
+  components:
+    icon: layers
+  overview:
+    icon: chart
 theme:
   preset: corporate

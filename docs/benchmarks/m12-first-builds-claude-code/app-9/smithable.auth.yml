@@ -3,4 +3,8 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
+roles:
+  agent:
+    description: Works on the help desk's tickets.
+defaultRole: agent
 admins: [johan@smithable.ai]

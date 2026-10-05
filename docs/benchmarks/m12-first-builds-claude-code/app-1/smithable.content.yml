@@ -4,16 +4,13 @@ pages:
     title: Teachers
   home:
     hero:
-      title: Find your calm on the mat
-      subtitle: Classes for every level, taught by experienced teachers. See the schedule and book your place online.
-      image:
-        src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
+      title: Find your breath, find your flow
+      subtitle: Yoga classes for every level, led by experienced teachers. See the schedule and book your place online.
+      button: See the schedule
     classes:
       title: Our classes
     teachers:
       title: Meet our teachers
-models:
-  Instructor:
-    label: Teacher
-    pluralLabel: Teachers
+    callToAction:
+      title: Ready to roll out your mat?
+      button: Book a class

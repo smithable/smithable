@@ -2,30 +2,31 @@ smithableUx: 0.1
 pages:
   customers:
     table:
-      columns: [name, email, phone]
+      columns: [name, phone, email]
     icon: users
   cars:
     table:
       columns: [licensePlate, make, model, year, customer]
-    icon: tag
+    icon: truck
   service-jobs:
     table:
-      sort: -scheduledAt
-      columns: [description, car, status, scheduledAt, total]
+      sort: -scheduledDate
+      columns: [car, status, scheduledDate]
     icon: clipboard
   invoices:
     table:
-      sort: -issuedAt
-      columns: [number, serviceJob, status, issuedAt, dueAt, amount]
+      sort: -issuedDate
+      columns: [number, serviceJob, status, issuedDate, dueDate]
     icon: receipt
 theme:
   preset: corporate
+  brand:
+    primary: "#1d4ed8"
 tones:
   ServiceJob.status:
-    tyonAlla: warning
     valmis: success
-    laskutettu: success
+    tyonalla: warning
   Invoice.status:
-    lahetetty: warning
     maksettu: success
+    lahetetty: warning
     peruutettu: danger

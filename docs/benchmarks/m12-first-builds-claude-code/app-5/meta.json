@@ -1,10 +1,10 @@
 {
   "description": "An inventory app for a small bakery: ingredients, suppliers and stock levels.",
   "starter": "records",
-  "wordStarter": "booking",
+  "wordStarter": "api",
   "questions": [
     "Who will use the app?",
     "How should stock levels be tracked?",
-    "Should the app also keep orders placed with suppliers?"
+    "What should a supplier record hold?"
   ]
 }

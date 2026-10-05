@@ -1,0 +1,60 @@
+smithable: 0.1
+app:
+  name: NeighborTools
+  description: A tool library where neighbors lend each other tools.
+models:
+  Tool:
+    fields:
+      name: string!
+      photo: picture
+      description: text
+      category: gardening | woodworking | cleaning | power | hand | other
+      condition: new | good | worn | broken
+      location: string
+      available: bool = true
+    access:
+      delete: [owner]
+  Borrowing:
+    fields:
+      tool: Tool!
+      borrower: User!
+      borrowedAt: datetime = NOW()
+      dueAt: datetime
+      returnedAt: datetime
+    access:
+      create: [member]
+      delete: [owner]
+pages:
+  tools:
+    crud: Tool
+    search: [name, description, location]
+    filters: [category, condition, available]
+    sortable: [name, createdAt]
+    favorites: true
+    contact: owner
+    actions: [borrow]
+  my-borrowings:
+    crud: Borrowing
+    mine: true
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Tool
+        where:
+          available: true
+navigation: [tools, my-borrowings]
+actions:
+  borrow:
+    on: Tool
+    when:
+      available: true
+    set:
+      available: false
+    add:
+      Borrowing:
+        borrower: ME()
+        dueAt:
+    intent: Borrow a tool for a set period.

@@ -1,0 +1,53 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Family Recipes
+    subtitle: A collection of our favorite recipes and shopping lists.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+  recipes:
+    title: Recipes
+  shopping-lists:
+    title: Shopping Lists
+models:
+  Recipe:
+    label: Recipe
+    pluralLabel: Recipes
+    fields:
+      name:
+        label: Recipe Name
+      description:
+        label: Description
+      servings:
+        label: Servings
+      prepTime:
+        label: Preparation Time (minutes)
+      cookTime:
+        label: Cooking Time (minutes)
+      difficulty:
+        label: Difficulty
+        values:
+          easy: Easy
+          medium: Medium
+          hard: Hard
+      category:
+        label: Category
+        values:
+          breakfast: Breakfast
+          lunch: Lunch
+          dinner: Dinner
+          dessert: Dessert
+          snack: Snack
+          drink: Drink
+      ingredients:
+        label: Ingredients
+      instructions:
+        label: Instructions
+      notes:
+        label: Notes
+      isFavorite:
+        label: Favorite
+      image:
+        label: Image URL

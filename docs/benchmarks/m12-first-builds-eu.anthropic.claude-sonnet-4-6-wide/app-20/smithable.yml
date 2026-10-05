@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Joogastudio Varaukset
-  description: Tuntiaikataulu ja verkkovaraukset joogastudiolle.
+  name: Joogastudio
+  description: Tuntien aikataulu ja verkkovaraukset joogastudiolle.
   currency: EUR
   timezone: Europe/Helsinki
 models:
@@ -9,7 +9,7 @@ models:
     fields:
       name: string!
       summary: text
-      level: aloittelija | kaikkiTasot | edistynyt
+      level: beginner | allLevels | advanced
       durationMinutes: int! = 60
     access:
       create: [admin]
@@ -52,7 +52,7 @@ models:
       cover: picture
       body: markdown!
       publishedOn: date
-      status: luonnos | julkaistu
+      status: draft | published
     access:
       create: [admin]
       write: [admin]
@@ -80,11 +80,9 @@ pages:
       news:
         records: Post
         where:
-          status: julkaistu
+          status: published
       contact:
         form: Message
-      callToAction:
-        button: my-bookings
   schedule:
     calendar:
       model: Session
@@ -96,16 +94,23 @@ pages:
   sessions:
     crud: Session
     access: [admin]
+    search: [classType, instructor]
+    filters: [classType, instructor, startsAt]
   class-types:
     crud: ClassType
     access: [admin]
+    search: [name]
+    filters: [level]
   instructors:
     crud: Instructor
     access: [admin]
   posts:
     crud: Post
     access: [admin]
-    actions: [unpublish, publish]
+    actions: [publish, unpublish]
+    search: [title]
+    filters: [status, publishedOn]
+    sortable: [title, publishedOn, status]
   messages:
     crud: Message
     access: [admin]
@@ -113,20 +118,20 @@ pages:
     data: all
   team:
     users: manage
-navigation: [home, schedule, my-bookings, blog, sessions, class-types, instructors, posts, messages, team, admin]
 actions:
-  unpublish:
-    on: Post
-    when:
-      status: julkaistu
-    set:
-      status: luonnos
-    intent: Palauta artikkeli luonnokseksi.
   publish:
     on: Post
     when:
-      status: luonnos
+      status: draft
     set:
-      status: julkaistu
+      status: published
       publishedOn: TODAY()
     intent: Julkaise artikkeli.
+  unpublish:
+    on: Post
+    when:
+      status: published
+    set:
+      status: draft
+    intent: Palauta artikkeli luonnokseksi.
+navigation: [home, schedule, blog, my-bookings, sessions, class-types, instructors, posts, messages, admin, team]

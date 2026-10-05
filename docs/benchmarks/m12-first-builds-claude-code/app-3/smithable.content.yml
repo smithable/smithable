@@ -2,10 +2,11 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Invoice clients and get paid, without the paperwork
-      subtitle: Keep your clients, invoices and payments in one place, and always know what is still owed to you.
+      title: Get paid for your work, without the paperwork
+      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still due.
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
     callToAction:
       title: Send your next invoice in minutes
+      button: Sign in

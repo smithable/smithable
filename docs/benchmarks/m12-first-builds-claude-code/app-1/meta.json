@@ -3,8 +3,7 @@
   "starter": "booking",
   "wordStarter": "booking",
   "questions": [
-    "Do clients need an account to book a class?",
-    "What can visitors see without signing in?",
-    "Should bookings handle class passes or memberships?"
+    "Do students need an account to book a class?",
+    "Who manages the schedule and bookings?"
   ]
 }

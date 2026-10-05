@@ -18,6 +18,9 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
+      languageFrom: string!
+      languageTo: string!
+      notes: text
       lines: InvoiceLine[]
       total:
         type: money
@@ -38,7 +41,7 @@ pages:
   invoices:
     crud: Invoice
     actions: [markSent, markPaid]
-    search: [number, status]
+    search: [number, languageFrom, languageTo]
     filters: [status, client, issuedOn, dueOn]
   invoice-lines:
     crud: InvoiceLine
@@ -54,7 +57,7 @@ actions:
       status: draft
     set:
       status: sent
-    intent: The invoice was sent to the client.
+    intent: The invoice went to the client.
   markPaid:
     on: Invoice
     when:

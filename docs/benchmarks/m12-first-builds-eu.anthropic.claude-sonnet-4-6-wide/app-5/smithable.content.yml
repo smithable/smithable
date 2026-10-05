@@ -1,8 +1,11 @@
 smithableContent: 0.1
 pages:
   home:
-    title: ShootBill
     hero:
+      title: Beautiful invoices for photographers
+      subtitle: Track your shoots, bill your clients and keep an eye on every unpaid invoice — all in one place.
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+    features:
+      title: Everything a photographer needs to get paid

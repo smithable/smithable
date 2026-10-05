@@ -1,8 +1,3 @@
 smithableUx: 0.1
-tones:
-  Tool.condition:
-    worn: warning
 theme:
-  preset: modern
-  brand:
-    primary: "#d97706"
+  preset: woodland

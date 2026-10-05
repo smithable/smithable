@@ -4,7 +4,7 @@
   "wordStarter": "records",
   "questions": [
     "Can people outside the family see the recipes without signing in?",
-    "How should shopping lists work?",
-    "Besides ingredients, what should a recipe hold?"
+    "How do shopping lists work?",
+    "What should a recipe hold besides its ingredients?"
   ]
 }

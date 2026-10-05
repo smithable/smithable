@@ -1,15 +1,18 @@
 smithableContent: 0.1
 pages:
   home:
-    title: The Office Swap Shelf
-    subtitle: Give things a second life. Offer what you no longer need — claim what someone else left behind.
-    hero:
-      image:
-        src: images/hero.webp
-        alt: An accountant going through papers with a client at a desk by the window
+    title: Office Swap Shelf
   catalog:
-    title: Browse the Shelf
+    title: Swap Shelf
   myItems:
     title: My Offerings
-  saved:
-    title: Saved Items
+models:
+  Item:
+    fields:
+      condition:
+        values:
+          likeNew: Like new
+          good: Good
+          worn: Worn
+      available:
+        label: Available

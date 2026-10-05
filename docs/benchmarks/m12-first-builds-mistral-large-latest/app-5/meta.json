@@ -1,0 +1,10 @@
+{
+  "description": "An inventory app for a small bakery: ingredients, suppliers and stock levels.",
+  "starter": "records",
+  "wordStarter": "api",
+  "questions": [
+    "Who in the bakery will use the app?",
+    "What should visitors see without signing in?",
+    "What details should each ingredient record hold?"
+  ]
+}

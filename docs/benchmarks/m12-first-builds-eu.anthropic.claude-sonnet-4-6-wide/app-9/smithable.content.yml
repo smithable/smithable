@@ -1,34 +1,28 @@
 smithableContent: 0.1
 pages:
   home:
-    title: My Vinyl Collection
     hero:
       title: My Vinyl Collection
-      subtitle: Albums, artists, condition and what I paid — all in one place.
+      subtitle: A personal archive of albums, artists, condition and what I paid.
       image:
         src: images/hero.webp
-        alt: A red farmhouse and barn by a field of grain under a wide sky
-  artists:
-    title: Artists
-  overview:
-    title: Overview
-  albums:
-    title: Albums
+        alt: Soft out-of-focus light through linen curtains in pale tones
 models:
   Album:
     fields:
-      condition:
-        values:
-          mint: Mint
-          nearMint: Near Mint
-          veryGoodPlus: Very Good Plus
-          veryGood: Very Good
-          good: Good
-          fair: Fair
-          poor: Poor
       format:
         values:
           lp: LP
           ep: EP
           single: Single
           compilation: Compilation
+      condition:
+        values:
+          mint: Mint
+          nearMint: Near Mint
+          veryGoodPlus: Very Good Plus
+          veryGood: Very Good
+          goodPlus: Good Plus
+          good: Good
+          fair: Fair
+          poor: Poor

@@ -1,12 +1,14 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Välkommen till Loppisen
-    subtitle: Hitta fynd eller sälj saker du inte längre behöver.
+    title: Välkommen
     hero:
+      title: Hitta fynd på vår loppis
+      subtitle: Bläddra bland begagnade prylar från folk i närheten – eller lägg upp dina egna saker till salu.
+      button: Se alla annonser
       image:
         src: images/hero.webp
-        alt: An empty sports hall with a polished wooden floor and climbing bars on the wall
+        alt: Soft out-of-focus light through linen curtains in pale tones
   catalog:
     title: Annonser
   myItems:
@@ -29,19 +31,19 @@ models:
       category:
         label: Kategori
         values:
-          klder: Kläder
-          mbler: Möbler
-          bcker: Böcker
+          klader: Kläder
+          mobler: Möbler
           elektronik: Elektronik
           sport: Sport
           barn: Barn
-          vrigt: Övrigt
+          bocker: Böcker
+          ovrigt: Övrigt
       condition:
         label: Skick
         values:
           somNy: Som ny
           bra: Bra
-          anvnd: Använd
+          anvand: Använd
       place:
         label: Ort
       available:

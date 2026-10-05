@@ -1,10 +1,9 @@
 smithableContent: 0.1
 pages:
   home:
-    title: BirdWatch Club
+    title: Birdwatching Club
     hero:
-      title: Our Bird Sightings
-      subtitle: A log of every bird our club has spotted — species, place, date and who saw it.
+      button: Browse Sightings
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones

@@ -1,26 +1,20 @@
 smithable: 0.1
 app:
   name: Agency Pipeline
-  description: Sales pipeline for a six-person web agency to track leads, deals and follow-ups.
-  currency: USD
-  timezone: America/New_York
+  description: Sales pipeline for a web agency to track leads, deals and follow-ups.
+  currency: EUR
+  timezone: Europe/London
 models:
-  Deal:
+  FollowUp:
     fields:
-      title: string!
-      companyName: string!
-      contactName: string!
-      email: email
-      phone: phone
-      stage: proposal | negotiation | won | lost
-      value: money!
-      probability: int
-      expectedCloseDate: date
       assignedTo: User
+      dueDate: date!
+      type: call | email | meeting | proposal | other
       notes: text
-      followUpAt: date
-      lostReason: string
+      status: pending | done | skipped
       lead: Lead
+      deal: Deal
+    ownedBy: assignedTo
     access:
       delete: [admin]
   Lead:
@@ -29,99 +23,115 @@ models:
       contactName: string!
       email: email
       phone: phone
-      website: url
       source: referral | website | coldOutreach | event | other
-      status: new | contacted | qualified | disqualified
+      service: webDesign | webDevelopment | seo | maintenance | other
+      estimatedValue: money
       notes: text
       assignedTo: User
-      followUpAt: date
+    ownedBy: assignedTo
     access:
       delete: [admin]
-  Activity:
+  Deal:
     fields:
-      deal: Deal!
-      type: call | email | meeting | proposalSent | other
-      summary: string!
+      title: string!
+      lead: Lead
+      companyName: string!
+      contactName: string!
+      email: email
+      phone: phone
+      service: webDesign | webDevelopment | seo | maintenance | other
+      value: money!
+      stage: proposal | negotiation | contract | won | lost
+      closedAt: date
+      lostReason: text
       notes: text
-      occurredAt: datetime
+      assignedTo: User
+    ownedBy: assignedTo
     access:
       delete: [admin]
 pages:
-  deals:
-    crud: Deal
-    search: [title, companyName, contactName]
-    sortable: [title, value, expectedCloseDate, stage]
-    actions: [markWon, markLost]
-    filters: [stage, expectedCloseDate]
+  follow-ups:
+    crud: FollowUp
+    search: [notes]
+    sortable: [dueDate]
+    actions: [completeFollowUp, skipFollowUp]
+    filters: [status, type, dueDate]
   team:
     users: manage
   overview:
     dashboard:
+      pendingFollowUps:
+        count: FollowUp
+        where:
+          status: pending
+      openLeads:
+        count: Lead
       activeDeals:
         count: Deal
         where:
-          stage: [proposal, negotiation]
+          stage: [proposal, negotiation, contract]
       pipelineValue:
         sum: Deal.value
         where:
-          stage: [proposal, negotiation]
-      dealsWon:
+          stage: [proposal, negotiation, contract]
+      wonDeals:
         count: Deal
         where:
           stage: won
-      openLeads:
-        count: Lead
+      wonRevenue:
+        sum: Deal.value
         where:
-          status: [new, contacted, qualified]
-      recentActivities:
-        list: Activity
+          stage: won
+      recentDeals:
+        list: Deal
         limit: 5
   leads:
     crud: Lead
     search: [companyName, contactName, email]
-    filters: [status, source, followUpAt]
-    sortable: [companyName, followUpAt, status]
-    actions: [qualify, disqualify, markContacted]
-  activities:
-    crud: Activity
-    search: [summary]
-    filters: [type, deal]
+    filters: [source, service]
+    sortable: [companyName, estimatedValue]
+    actions: [qualifyLead]
+  deals:
+    crud: Deal
+    search: [title, companyName, contactName, email]
+    filters: [stage, service, closedAt]
+    sortable: [title, value, closedAt]
+    actions: [markWon, markLost]
 actions:
+  completeFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: done
+    intent: Mark a follow-up as done.
+  skipFollowUp:
+    on: FollowUp
+    when:
+      status: pending
+    set:
+      status: skipped
+    intent: Mark a follow-up as skipped.
+  qualifyLead:
+    on: Lead
+    set:
+      notes:
+    intent: Convert a qualified lead into a deal.
   markWon:
     on: Deal
     when:
-      stage: [proposal, negotiation]
+      stage: [proposal, negotiation, contract]
     set:
       stage: won
+      closedAt: TODAY()
     intent: Mark a deal as won.
   markLost:
     on: Deal
     when:
-      stage: [proposal, negotiation]
+      stage: [proposal, negotiation, contract]
     set:
       stage: lost
+      closedAt: TODAY()
       lostReason:
     intent: Mark a deal as lost and record the reason.
-  qualify:
-    on: Lead
-    when:
-      status: [new, contacted]
-    set:
-      status: qualified
-    intent: Mark a lead as qualified and ready to become a deal.
-  disqualify:
-    on: Lead
-    when:
-      status: [new, contacted, qualified]
-    set:
-      status: disqualified
-    intent: Mark a lead as disqualified.
-  markContacted:
-    on: Lead
-    when:
-      status: new
-    set:
-      status: contacted
-      followUpAt:
-    intent: Record that the lead has been contacted and set a follow-up date.
-navigation: [overview, leads, deals, activities, team]
+navigation: [overview, leads, deals, follow-ups, team]
