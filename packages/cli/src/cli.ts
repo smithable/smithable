@@ -262,6 +262,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values["preview-url"] ? { previewUrl: values["preview-url"] } : {}),
         ...(values.home ? { home: values.home } : {}),
         ...(values.insecure ? { insecure: true } : {}),
+        ...(values.replaceable ? { replaceable: true } : {}),
       });
     default:
       io.err(`Unknown command: ${command}\n\n${help()}`);
@@ -307,6 +308,7 @@ const CONFIG = {
     host: { type: "string" },
     "preview-url": { type: "string" },
     insecure: { type: "boolean" },
+    replaceable: { type: "boolean" },
     home: { type: "string" },
     send: { type: "boolean" },
     always: { type: "boolean" },

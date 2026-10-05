@@ -264,9 +264,11 @@ export const COMMANDS: Command[] = [
       "app's preview (--port, default 4321). Behind a proxy (the hosted service):",
       "--host 0.0.0.0, --preview-url (the preview's public address) and --home",
       "(a link back to the service's page for the project); with --host it needs",
-      "SMITHABLE_STUDIO_TOKEN, or --insecure to run open to the network",
+      "SMITHABLE_STUDIO_TOKEN, or --insecure to run open to the network.",
+      "--replaceable: the project may be replaced by another app, once (a hosted",
+      "workspace that waits for whoever claims it); never for your own project",
     ],
-    options: ["port", "host", "preview-url", "home", "insecure"],
+    options: ["port", "host", "preview-url", "home", "insecure", "replaceable"],
   },
   {
     name: "mcp",

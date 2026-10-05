@@ -4,6 +4,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
   appendFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -28,7 +29,7 @@ const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
 // Another checkout testing at the same time sets its own (TEST_APPS_PORT does the same for test-apps).
 const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
-checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1]);
+checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3]);
 const base = `http://localhost:${port}`;
 let failed = false;
 
@@ -1162,6 +1163,158 @@ try {
       if ((await answer("/assets", "GET", {})) !== 200) throw new Error("a folder path failed");
     },
   );
+  // docs/design/fast-start.md: a hosted workspace waits with Studio running and gets its app
+  // when someone claims it. Never a person's own project.
+  const replace = async (at, body) => {
+    const answer = await fetch(`http://localhost:${at}/api/project/replace`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-smithable": "1" },
+      body: JSON.stringify(body),
+    });
+    return { status: answer.status, ...(await answer.json()) };
+  };
+  const finished = join(root, "finished-booking");
+  await step("a project that Studio was not started to replace refuses, untouched", async () => {
+    const made = spawnSync("node", [cli, "new", finished, "--starter", "booking"], {
+      encoding: "utf8",
+    });
+    if (made.status !== 0) throw new Error(made.stdout + made.stderr);
+    rmSync(join(finished, "node_modules"), { recursive: true, force: true });
+    const refused = await replace(port, { from: finished });
+    if (refused.status !== 403 || refused.ok) throw new Error(JSON.stringify(refused));
+    if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("Customer:"))
+      throw new Error("the project was touched");
+  });
+  let waiting;
+  try {
+    await step(
+      "a Studio started as replaceable gets another app once, under its running preview",
+      async () => {
+        const pool = join(root, "pool");
+        const made = spawnSync("node", [cli, "new", pool, "--starter", "records"], {
+          encoding: "utf8",
+        });
+        if (made.status !== 0) throw new Error(made.stdout + made.stderr);
+        waiting = spawn(
+          "node",
+          [cli, "studio", pool, "--port", String(port + 2), "--replaceable"],
+          { detached: true, env: { ...process.env, SMITHABLE_LOCAL_MODEL: "" } },
+        );
+        const other = `http://localhost:${port + 2}`;
+        const preview = `http://localhost:${port + 3}`;
+        const answers = async (url, within) => {
+          for (let i = 0; i < within * 4; i++) {
+            const status = await fetch(url, { redirect: "manual" }).then(
+              (r) => r.status,
+              () => 0,
+            );
+            if (status === 200) return true;
+            await new Promise((r) => setTimeout(r, 250));
+          }
+          return false;
+        };
+        if (!(await answers(`${preview}/health`, 120))) throw new Error("the first preview");
+        // An app whose packages are not the ones installed is refused, and may be asked again.
+        const odd = join(root, "odd");
+        cpSync(finished, odd, { recursive: true });
+        const pkg = JSON.parse(readFileSync(join(odd, "package.json"), "utf8"));
+        pkg.dependencies.dayjs = "1.11.13";
+        writeFileSync(join(odd, "package.json"), JSON.stringify(pkg));
+        const unfit = await replace(port + 2, { from: odd });
+        if (unfit.ok || !unfit.output.includes("other packages")) throw new Error(unfit.output);
+        if (!readFileSync(join(pool, "smithable.yml"), "utf8").includes("Our Collection"))
+          throw new Error("a refused replacement touched the project");
+
+        const started = Date.now();
+        const done = await replace(port + 2, {
+          from: finished,
+          name: "Morning Yoga",
+          admin: "tester@example.org",
+        });
+        if (!done.ok) throw new Error(done.output);
+        // Studio shows the new app at once, under the person's name for it and with them as
+        // its administrator; its history starts anew.
+        const project = await (await fetch(`${other}/api/project`)).json();
+        if (project.name !== "Morning Yoga") throw new Error(`Studio shows ${project.name}`);
+        if (project.trace?.length) throw new Error("the new app has the old one's history");
+        if (!readFileSync(join(pool, "smithable.auth.yml"), "utf8").includes("tester@example.org"))
+          throw new Error("the administrator was not set");
+        if (existsSync(join(pool, ".git"))) throw new Error("the old history is still there");
+        // The preview answers on the new app: a page only the booking site has.
+        if (!(await answers(`${preview}/schedule`, 60)))
+          throw new Error("the preview does not show the new app's schedule");
+        console.log(
+          `    (the preview answered ${Math.round((Date.now() - started) / 100) / 10} s after the request)`,
+        );
+        // Nothing was bundled again for it (the blog shows Markdown, the collection did not):
+        // every app lists the same libraries.
+        if (!(await answers(`${preview}/blog`, 30))) throw new Error("the blog did not answer");
+        // Its log starts with it: nothing of the app that was there, nor of the exchange.
+        const said = await (await fetch(`${other}/api/logs`)).json();
+        const stale = said.filter((l) =>
+          /Our Collection|Failed to load url|optimized dependencies changed/.test(l),
+        );
+        if (stale.length) throw new Error(`the log has: ${stale[0].slice(0, 200)}`);
+        // Once: the app is a person's own now.
+        const again = await replace(port + 2, { from: finished });
+        if (again.status !== 403) throw new Error(`a second replacement answered ${again.status}`);
+      },
+    );
+    await step(
+      "from a description it is made in place; without a model the starter comes in, and Studio says why",
+      async () => {
+        const pool = join(root, "pool");
+        process.kill(-waiting.pid);
+        await new Promise((r) => setTimeout(r, 1500));
+        waiting = spawn(
+          "node",
+          [cli, "studio", pool, "--port", String(port + 2), "--replaceable"],
+          { detached: true, env: { ...process.env, SMITHABLE_LOCAL_MODEL: "" } },
+        );
+        const other = `http://localhost:${port + 2}`;
+        for (let i = 0; i < 240; i++) {
+          if (
+            await fetch(`${other}/api/project`).then(
+              (r) => r.ok,
+              () => false,
+            )
+          )
+            break;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        const done = await replace(port + 2, {
+          describe: "A site to show my dogs",
+          starter: "records",
+          name: "Dogs",
+          admin: "tester@example.org",
+        });
+        if (!done.ok || !done.output.includes("no AI model is available); starting from records"))
+          throw new Error(done.output);
+        const project = await (await fetch(`${other}/api/project`)).json();
+        if (project.name !== "Dogs") throw new Error(`Studio shows ${project.name}`);
+        if (!project.notice?.includes("could not be used this time"))
+          throw new Error(`no notice: ${project.notice}`);
+        if (
+          readFileSync(join(pool, "smithable.yml"), "utf8").includes("ClassType") ||
+          existsSync(join(pool, ".git"))
+        )
+          throw new Error("the app that was there is still there");
+        for (let i = 0; i < 240; i++) {
+          const up = await fetch(`http://localhost:${port + 3}/health`).then(
+            (r) => r.ok,
+            () => false,
+          );
+          if (up) return;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        throw new Error("the preview did not answer on the new app");
+      },
+    );
+  } finally {
+    try {
+      if (waiting) process.kill(-waiting.pid);
+    } catch {}
+  }
 } catch {
   // Reported above.
 } finally {

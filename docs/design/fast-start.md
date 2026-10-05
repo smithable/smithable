@@ -1,9 +1,9 @@
 # A fast start for every app: workspaces that are not tied to a starter
 
-Status: proposed 2026-10-05 by Fable, on Johan's idea and go-ahead of the same day ("Could some
+Status: the engine side is built (2026-10-05: `--replaceable`, `POST /api/project/replace`, the check in `test-studio`); the service side is B's. Proposed 2026-10-05 by Fable, on Johan's idea and go-ahead of the same day ("Could some
 studios be running and the spec and content etc replaced to a specific app? Then we could have a
-pool of these and only cold start the preview?" … "Yes, do it"). For review by B before either
-side builds. Not built.
+pool of these and only cold start the preview?" … "Yes, do it"). B agreed on the same day: finished projects in the image, the claim calls Studio's API with the
+proxy's token, and the flag only for a workspace nobody has claimed.
 
 ## Where the time goes today
 
@@ -42,9 +42,35 @@ starter's (everything but `node_modules` and Studio's own preview settings) in u
 second. Studio showed the new app at its next request with no restart; the preview's dev server
 was started again and answered on the new app.
 
-What a claim then costs is the preview's start alone: about 3 s locally, so an estimated 8 to
-10 s on the host, with Studio on the screen from the first second. That is for all seven
-starters from one pool, where today three have a workspace of their own and four start cold.
+What a claim then costs depends on what happens to the preview's dev server.
+
+### Started again, or kept running
+
+On the host the dev server takes 15 to 17 s to answer after it is started (B's log lines from
+release e311018; 3 s locally). A profile taken there (16.5 s, `~/repos/smithable-profiles`) has
+no one culprit: Vite is ready after 4.3 s, and the first answer comes 12 s later, when the whole
+app's server side has been compiled, file by file. Looking up and loading files from disk is
+about 4.7 s of it, waiting on background work 2.7 s, Vite's own work 2.4 s, Tailwind 2.3 s,
+TanStack's compile of the pages 1.9 s, memory clean-up 1.3 s, Prettier (the route tree) 0.6 s.
+Settings would shave a fifth, not five times.
+
+So the dev server is not started again. A finished project comes in under the running preview
+the way any change does: only the files that differ are written, each whole and under a new
+name that takes the old one's place, and what is the same is not touched (the kit, the
+settings). The dev server keeps what it has compiled of the shared files and takes in the rest.
+The database is another file now, so the module that opens it is marked as changed and the
+app's server side loads anew.
+
+Measured locally (records to booking, 144 files written or removed of about 150 that differ):
+
+| | the new app's page answers |
+|---|---|
+| preview's process started again | 3.3 to 3.9 s after the request |
+| kept running, only what differs written | 0.8 to 2.9 s |
+| every file rewritten under the running server | 13 s (it stumbles over the half-swapped state and restarts itself: not done) |
+
+What that is on the host, where a start is five times the local one, B measures with the first
+build; the part that is saved there is the 4.3 s start and the compile of everything shared.
 
 ## Design
 
@@ -65,13 +91,17 @@ starters from one pool, where today three have a workspace of their own and four
    - with either: `name` (the app's name as the person typed it) and `admin` (their address),
      applied before the answer.
 
-   What it does, in this order: stops the preview; removes the project's files except
-   `node_modules`; puts the new ones in; writes its own preview settings again; applies the name
-   and the administrator; starts the preview; tells the pages that are open; answers. The
-   project's history starts anew (no Git repository until its first change, as for a new app),
-   and Studio's memory of the old one goes: its log, a pending proposal, the last failure.
-   It refuses when the packages of what comes in are not the ones installed (another stack
-   profile, or packages the owner added): then the workspace is not the place for it.
+   A finished project (`from`): what is gone is removed, what differs is written, nothing else
+   is touched; the name and the administrator are applied and the files that follow from them
+   generated again (no tool runs: the tables are the same); the database is opened again; the
+   pages that are open are told when the dev server has settled. The preview's process is the
+   same before and after. An app from a description is made with the preview stopped, as
+   `smithable new` makes it, and the preview is started after; if the model cannot make it, the
+   starter comes in and Studio says why, once.
+   Either way the project's history starts anew (no Git repository until its first change, as
+   for a new app), and Studio's memory of the old one goes: its log, a pending proposal, a
+   notice. It refuses when the packages of what comes in are not the ones installed (another
+   stack profile, or packages the owner added), and may then be asked again.
 
 3. **The preview never recompiles its dependencies after a swap.** Today an app with a Markdown
    field brings `react-markdown` into Vite's dependency list and one without does not, so a
@@ -80,10 +110,11 @@ starters from one pool, where today three have a workspace of their own and four
    dependency that differs across the seven starters (twenty are compiled in all, each
    starter's list read from Vite's own record).
 
-4. **A check**, in `test-studio`: Studio started with `--replaceable` on the CRM; replaced by a
-   finished booking project; Studio shows the booking app, the preview answers on it and shows
-   a booking page, the history is empty, nothing recompiled, and a second replacement is
-   refused. Without the flag: refused, nothing touched.
+4. **A check**, in `test-studio`: Studio started with `--replaceable` on one starter; an app
+   with other packages is refused; a finished booking project comes in, Studio shows it under
+   the person's name, the preview answers on a page only it has, the history is empty, nothing
+   was bundled again, and a second replacement is refused. From a description without a model:
+   the starter comes in and Studio says why. Without the flag: refused, nothing touched.
 
 ### The service (B)
 
@@ -105,29 +136,24 @@ starters from one pool, where today three have a workspace of their own and four
 
 ## What it should give
 
-| Path | today | with this (estimated) |
+| Path | today (host) | with this |
 |---|---|---|
-| Any starter | 5 s for three, 25 s for four | Studio at once, preview in 8 to 10 s |
-| A described app | draft, then 25 s | Studio at once; draft, then generate and migrate, then the preview |
-| Memory | three running workspaces, one per starter | as many as the pool is set to, serving every path |
+| A starter with a workspace of its own (three) | about 5 s | the same: kept beside the generic ones |
+| Any other starter | Studio 15 s, preview 27 s | Studio at once; the preview in what B measures, a few seconds if the host follows the local numbers, 15 s at worst (a start) |
+| A described app | the draft, then 27 s | Studio at once; the draft, then made in place, then the preview's start |
 
-The three starters that have a workspace of their own today would go from about 5 s to about
-8 to 10 s for the preview. If that matters, the pool can keep one of the most used starter
-ready-made beside the generic ones; B's numbers after the first build decide.
+## B's answers (2026-10-05)
 
-## Open questions for B
+`from` is a directory in the image (`/opt/deps/starters/<name>`, made where the prepared set
+is made). The claim calls Studio's API itself with the proxy's token. Nothing of the workspace
+needs to survive on the service's side. `--replaceable` is passed only when a workspace nobody
+has claimed starts: a claimed one that is stopped as idle and started again must not get it.
 
-- Is `from` a directory in the image right for you, or would you rather send the files in the
-  request?
-- Does the claim reach Studio's API with the proxy's token today, or only through the workspace's
-  start script?
-- What must not survive a swap on your side (the workspace's id, AI token and addresses are the
-  entry's from the start, so nothing, I think)?
-- The preview timings of release e311018 from the host, cold and pooled: they replace the
-  estimates above.
+## Next
 
-## Not in this
+The same way of taking in a replaced database could spare the preview its restart after an undo
+or a rollback (today Studio stops and starts it, which is the long dead preview of the Studio
+review, 15 s on the host). To try next, with A.
 
-Keeping the dev server running across the swap (no restart at all). It would save most of the
-remaining seconds, but the server side holds the old database open and Studio already restarts
-the preview after every rollback for that reason. To look at only if 8 to 10 s is not enough.
+One known leftover: the connection to the old database stays open on the file that is gone until
+the preview's process ends. One connection, for a replacement.
