@@ -7,7 +7,11 @@ import { timed } from "./io.js";
  * module being loaded at that moment can fail (seen in the sandboxed hosted previews).
  * Returns how many modules were loaded.
  */
-export async function warmPreview(port: number, log: (text: string) => void): Promise<number> {
+export async function warmPreview(
+  port: number,
+  log: (text: string) => void,
+  attempts = 240,
+): Promise<number> {
   const started = Date.now();
   const seconds = () => Math.round((Date.now() - started) / 100) / 10;
   const base = `http://127.0.0.1:${port}`;
@@ -23,9 +27,18 @@ export async function warmPreview(port: number, log: (text: string) => void): Pr
       return { status: 0, location: null, body: "" };
     }
   };
-  for (let i = 0; i < 240 && (await get("/health")).status !== 200; i++)
-    await new Promise((r) => setTimeout(r, 500));
-  // How long a person waits for the preview is the first thing to know when it seems stuck.
+  let answers = false;
+  for (let i = 0; i < attempts && !answers; i++) {
+    answers = (await get("/health")).status === 200;
+    if (!answers) await new Promise((r) => setTimeout(r, 500));
+  }
+  // How long a person waits for the preview is the first thing to know when it seems stuck;
+  // and when it never answered, the log must not say it did.
+  if (!answers) {
+    log(`The preview has not answered ${seconds()} s after it was started.`);
+    timed("preview without an answer", started);
+    return 0;
+  }
   log(`The preview answers (${seconds()} s after it was started).`);
   timed("preview answers", started);
   // The start page, following its redirects (e.g. to sign-in).
