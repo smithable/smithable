@@ -3,6 +3,7 @@
 // preview starts again. Every app of a stack profile has the same packages, so what is installed
 // stays. Studio allows it once, and only when it was started as replaceable.
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -10,6 +11,7 @@ import {
   renameSync,
   rmSync,
   statSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -107,12 +109,6 @@ export function reopenDatabase(dir: string): void {
   if (existsSync(module)) utimesSync(module, new Date(), new Date());
 }
 
-/** Removes the project's files, keeping what is installed. */
-function clear(dir: string, keep: string[]): void {
-  for (const name of readdirSync(dir))
-    if (!keep.includes(name)) rmSync(join(dir, name), { recursive: true, force: true });
-}
-
 /**
  * Replaces the project in `dir`. Returns 0 when the new app is in place; otherwise it says why
  * on `io.err`, and the project is as it was unless it says the starter was used instead.
@@ -163,9 +159,19 @@ export async function replaceProject(dir: string, io: Io, to: Replacement): Prom
     io.err('Say what comes in: "from" (a finished project) or "describe".\n');
     return 2;
   }
-  // From a description: made in place, on the packages that are installed. A description the
-  // model could not make an app from leaves the starter instead, and the reason is said.
-  const options = { name: to.name, admin: to.admin, yes: true };
+  // From a description: made beside the project, on the packages that are installed there (a
+  // link to them), then brought in like a finished one, under the running preview. So the
+  // preview is not started again for it either, and a description the model could not make an
+  // app from never leaves the project empty: the starter is made instead, and the reason said.
+  const options = { name: to.name, admin: to.admin, yes: true, installed: true };
+  const beside = `${resolve(dir)}.incoming`;
+  const fresh = () => {
+    rmSync(beside, { recursive: true, force: true });
+    mkdirSync(beside, { recursive: true });
+    symlinkSync(join(resolve(dir), "node_modules"), join(beside, "node_modules"));
+    const lock = join(dir, "pnpm-lock.yaml");
+    if (existsSync(lock)) copyFileSync(lock, join(beside, "pnpm-lock.yaml"));
+  };
   let said = "";
   const kept: Io = {
     out: io.out,
@@ -173,28 +179,36 @@ export async function replaceProject(dir: string, io: Io, to: Replacement): Prom
       said += text;
     },
   };
-  clear(dir, ["node_modules", "pnpm-lock.yaml"]);
-  const made = await create(dir, kept, to.starter, {
-    ...options,
-    describe: to.describe,
-    answers: to.answers,
-  });
-  if (made === 0) return 0;
-  io.err(said);
-  clear(dir, ["node_modules", "pnpm-lock.yaml"]);
-  const starter = to.starter ?? "crm";
-  const fallback = await create(dir, io, starter, options);
-  if (fallback !== 0) return fallback;
-  const why = /allowance/i.test(said)
-    ? "the AI allowance is used up"
-    : said.includes("No model is available")
-      ? "no AI model is available"
-      : "the AI model did not produce a working app from it";
-  io.err(`Could not make the app from the description (${why}); starting from ${starter}.\n`);
-  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-  writeFileSync(
-    join(dir, "data", ".smithable", "notice.txt"),
-    `The description could not be used this time: ${why}. This is the ${starter} starter; describe changes to it below.\n`,
-  );
-  return 0;
+  try {
+    fresh();
+    let made = await create(beside, kept, to.starter, {
+      ...options,
+      describe: to.describe,
+      answers: to.answers,
+    });
+    if (made !== 0) {
+      io.err(said);
+      fresh();
+      const starter = to.starter ?? "crm";
+      made = await create(beside, io, starter, options);
+      if (made !== 0) return made;
+      const why = /allowance/i.test(said)
+        ? "the AI allowance is used up"
+        : said.includes("No model is available")
+          ? "no AI model is available"
+          : "the AI model did not produce a working app from it";
+      io.err(`Could not make the app from the description (${why}); starting from ${starter}.\n`);
+      mkdirSync(join(beside, "data", ".smithable"), { recursive: true });
+      writeFileSync(
+        join(beside, "data", ".smithable", "notice.txt"),
+        `The description could not be used this time: ${why}. This is the ${starter} starter; describe changes to it below.\n`,
+      );
+    }
+    sync(beside, dir);
+    rmSync(join(dir, ".git"), { recursive: true, force: true });
+    reopenDatabase(dir);
+    return 0;
+  } finally {
+    rmSync(beside, { recursive: true, force: true });
+  }
 }
