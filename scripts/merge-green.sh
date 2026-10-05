@@ -147,7 +147,11 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # gh lists none (in more than one wording), which is not a failure. A listed check is a line
   # with tabs. An hour, as for the checks to start.
   for i in $(seq 360); do
-    gh pr checks "$pr" "${repo[@]}" --required 2>/dev/null | grep -q "$(printf '\t')" && break
+    # gh's own exit status is not asked here: it is 1 for a failed check and 8 for a pending
+    # one, and with pipefail that made a failed required check look like one not yet listed,
+    # so the script waited its hour with the merge lock held instead of refusing.
+    listed=$(gh pr checks "$pr" "${repo[@]}" --required 2>/dev/null || true)
+    case "$listed" in *"$(printf '\t')"*) break ;; esac
     merged && { echo "Merged #$pr."; exit 0; }
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
     sleep 10
