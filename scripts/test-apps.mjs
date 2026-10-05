@@ -1137,6 +1137,14 @@ async function apiFlow(base) {
     if (!/^\d+$/.test(number ?? "")) throw new Error(`the inspector answered ${number}`);
     if (!(await page.getByText("Answers may come from an AI and can be wrong.").isVisible()))
       throw new Error("the inspector does not say answers may come from an AI");
+    // Read aloud by the browser's own speech: the number is what it says.
+    await page.evaluate(() => {
+      window.__spoken = [];
+      window.speechSynthesis.speak = (u) => window.__spoken.push(u.text);
+    });
+    await answered.getByRole("button", { name: "Read aloud" }).click();
+    const said = await page.evaluate(() => window.__spoken.join(" "));
+    if (!said.includes(number ?? "?")) throw new Error(`read aloud: "${said}"`);
     await page.getByLabel("Act as").selectOption("visitor");
     await page.getByLabel("Question").fill("how many tasks");
     await page.getByRole("button", { name: "Ask", exact: true }).click();
@@ -1152,7 +1160,7 @@ async function apiFlow(base) {
     if (await page.getByLabel("Question").count())
       throw new Error("a member was given the inspector");
     console.log(
-      "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, answers a visitor nothing, and is not a member's",
+      "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, reads the answer aloud, answers a visitor nothing, and is not a member's",
     );
   } catch (error) {
     console.log(
