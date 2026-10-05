@@ -2,7 +2,7 @@ import { checkKeys, mapEntries, readBoolean, readString } from "../context.js";
 import type { QueryIR } from "../ir.js";
 import { type Operation, OperationError, refTo } from "../operation.js";
 import type { SpecSection } from "../section.js";
-import { FIELD_NAME_PATTERN } from "./names.js";
+import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
@@ -74,11 +74,7 @@ export const queriesSection: SpecSection<"queries"> = {
     const queries: QueryIR[] = [];
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"queries"`) ?? []) {
       if (!FIELD_NAME_PATTERN.test(key)) {
-        ctx.error(
-          keyNode,
-          "invalid-name",
-          `Query name "${key}" must start with a lowercase letter and use only letters and digits, like "churnRisk".`,
-        );
+        ctx.error(keyNode, "invalid-name", nameRule("query", key));
         continue;
       }
       ctx.define("query", key);

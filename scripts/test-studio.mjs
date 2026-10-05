@@ -20,6 +20,7 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
+import { checkPorts } from "./ports.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -27,6 +28,7 @@ const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
 // Another checkout testing at the same time sets its own (TEST_APPS_PORT does the same for test-apps).
 const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
+checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1]);
 const base = `http://localhost:${port}`;
 let failed = false;
 

@@ -9,3 +9,39 @@ export const NAME_PATTERN = /^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$/;
 
 /** A custom page's or section's component: a name for a file in src/custom/, e.g. Planner. */
 export const COMPONENT_PATTERN = /^[A-Z][A-Za-z0-9]*$/;
+
+const LOWER = "must start with a lowercase letter and use only letters and digits";
+const DASHED = "must start with a lowercase letter and use only letters, digits and dashes";
+/** What each kind of name is called, the rule it follows in words, and an example. */
+const NAMES = {
+  model: [
+    MODEL_NAME_PATTERN,
+    "Model name",
+    "must start with a capital letter and use only letters and digits",
+    '"Customer"',
+  ],
+  field: [FIELD_NAME_PATTERN, "Field name", LOWER, '"email" or "createdBy"'],
+  choice: [FIELD_NAME_PATTERN, "Choice value", LOWER, '"inProgress"'],
+  action: [FIELD_NAME_PATTERN, "Action name", LOWER, '"mergeCustomers"'],
+  tile: [FIELD_NAME_PATTERN, "Tile name", LOWER, '"totalFuelCost"'],
+  query: [FIELD_NAME_PATTERN, "Query name", LOWER, '"churnRisk"'],
+  role: [FIELD_NAME_PATTERN, "Role name", LOWER, '"staff"'],
+  page: [NAME_PATTERN, "Page name", DASHED, '"orders" or "my-bookings"'],
+  menu: [NAME_PATTERN, "Menu name", DASHED, '"main"'],
+  rule: [NAME_PATTERN, "Rule id", DASHED, '"no-double-booking"'],
+} as const;
+export type NameKind = keyof typeof NAMES;
+
+/** The rule a name of this kind follows, as a sentence about `name`. */
+export function nameRule(kind: NameKind, name: string): string {
+  const [, what, rule, example] = NAMES[kind];
+  return `${what} "${name}" ${rule}, like ${example}.`;
+}
+
+/**
+ * Why a name does not fit its kind, or undefined when it does: the sentence an operation refuses
+ * it with and a file's check reports, so a form can say the same while the name is typed.
+ */
+export function nameProblem(kind: NameKind, name: string): string | undefined {
+  return NAMES[kind][0].test(name) ? undefined : nameRule(kind, name);
+}

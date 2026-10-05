@@ -37,7 +37,7 @@ import { sensitiveKind, sensitiveMessage } from "../sensitive.js";
 import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
 import { modelOperations, renameInFormulas, renameValuesInFormulas } from "./model-operations.js";
-import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN } from "./names.js";
+import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
@@ -236,11 +236,7 @@ export const modelsSection: SpecSection<"models"> = {
         continue;
       }
       if (!MODEL_NAME_PATTERN.test(key)) {
-        ctx.error(
-          keyNode,
-          "invalid-name",
-          `Model name "${key}" must start with a capital letter and use only letters and digits, like "Customer".`,
-        );
+        ctx.error(keyNode, "invalid-name", nameRule("model", key));
         continue;
       }
       ctx.define("model", key);
@@ -328,11 +324,7 @@ export function readField(
 ): FieldIR | undefined {
   const where = `field "${model}.${name}"`;
   if (!FIELD_NAME_PATTERN.test(name)) {
-    ctx.error(
-      keyNode,
-      "invalid-name",
-      `Field name "${name}" must start with a lowercase letter and use only letters and digits, like "email" or "createdBy".`,
-    );
+    ctx.error(keyNode, "invalid-name", nameRule("field", name));
     return undefined;
   }
   if (RESERVED_FIELDS.includes(name)) {

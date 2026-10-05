@@ -3,7 +3,7 @@ import type { YamlEditor } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
-import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN } from "./names.js";
+import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
 
 const addPage: Operation<{ page: string; model: string; route?: string }> = {
   name: "addPage",
@@ -24,9 +24,7 @@ const addPage: Operation<{ page: string; model: string; route?: string }> = {
   destructive: () => false,
   apply({ spec }, { page, model, route }, ir) {
     if (!NAME_PATTERN.test(page)) {
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+      throw new OperationError(nameRule("page", page));
     }
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
@@ -56,10 +54,7 @@ const addLandingPage: Operation<{ page: string; route?: string; public?: boolean
   describe: ({ page }) => `Add landing page ${page}`,
   destructive: () => false,
   apply({ spec, auth }, { page, route, public: open = true }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     const path = route ?? (ir.pages.some((p) => p.route === "/") ? `/${page}` : "/");
@@ -90,10 +85,7 @@ const addUsersPage: Operation<{ page?: string; route?: string }> = {
   describe: ({ page = "team" }) => `Add users page ${page}`,
   destructive: () => false,
   apply({ spec, auth }, { page = "team", route }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     const existing = ir.pages.find((p) => p.pattern.kind === "users");
@@ -128,10 +120,7 @@ const addDataPage: Operation<{ page?: string; route?: string; models?: string[] 
     `Add data page ${page} (${models?.length ? models.join(", ") : "every model"})`,
   destructive: () => false,
   apply({ spec, auth }, { page = "admin", route, models }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     if (auth?.get(["signIn"]) === "none")
@@ -169,10 +158,7 @@ const addCalendarPage: Operation<{ page: string; model: string; starts?: string 
   describe: ({ page, model }) => `Add calendar page ${page} for ${model}`,
   destructive: () => false,
   apply({ spec }, { page, model, starts }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     if (!ir.models.some((m) => m.name === model))
@@ -200,10 +186,7 @@ const addArticlesPage: Operation<{ page: string; model: string }> = {
   describe: ({ page, model }) => `Add articles page ${page} for ${model}`,
   destructive: () => false,
   apply({ spec }, { page, model }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     if (!ir.models.some((m) => m.name === model))
@@ -238,10 +221,7 @@ const addCalculatorPage: Operation<{ page: string; fields: Record<string, FieldA
     `Add calculator page ${page} with ${Object.keys(fields).join(", ")}`,
   destructive: () => false,
   apply({ spec }, { page, fields }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     if (!Object.keys(fields).length)
@@ -272,10 +252,7 @@ const addCustomPage: Operation<{ page: string; component: string }> = {
   describe: ({ page, component }) => `Add page ${page}, your own ${component}`,
   destructive: () => false,
   apply({ spec }, { page, component }, ir) {
-    if (!NAME_PATTERN.test(page))
-      throw new OperationError(
-        `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-      );
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
     if (ir.pages.some((p) => p.id === page))
       throw new OperationError(`Page "${page}" already exists.`);
     componentName(component);
@@ -349,16 +326,10 @@ const addTile: Operation<{
       ...(by ? { by } : {}),
       ...(limit ? { limit } : {}),
     };
-    if (!FIELD_NAME_PATTERN.test(tile))
-      throw new OperationError(
-        `Tile name "${tile}" must start with a lowercase letter and use only letters and digits, like "totalFuelCost".`,
-      );
+    if (!FIELD_NAME_PATTERN.test(tile)) throw new OperationError(nameRule("tile", tile));
     const existing = ir.pages.find((p) => p.id === page);
     if (!existing) {
-      if (!NAME_PATTERN.test(page))
-        throw new OperationError(
-          `Page name "${page}" must start with a lowercase letter and use only letters, digits and dashes.`,
-        );
+      if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
       spec.add(["pages"], page, { dashboard: { [tile]: value } });
       addToMainMenu(spec, page);
     } else if (existing.pattern.kind !== "dashboard") {
