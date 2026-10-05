@@ -210,12 +210,13 @@ export async function studio(
   const changed = (data: unknown) =>
     void new Promise((r) => setTimeout(r, 800))
       .then(() =>
-        fetch(`http://127.0.0.1:${previewPort}/__smithable/settled`, {
+        // localhost, not 127.0.0.1: the dev server may listen on IPv6 only (as on CI's runners).
+        fetch(`http://localhost:${previewPort}/__smithable/settled`, {
           signal: AbortSignal.timeout(5000),
-        }),
+        }).catch(() => undefined),
       )
       .then(() =>
-        fetch(`http://127.0.0.1:${previewPort}/src/styles.css?direct`, {
+        fetch(`http://localhost:${previewPort}/src/styles.css?direct`, {
           signal: AbortSignal.timeout(10_000),
         }),
       )
