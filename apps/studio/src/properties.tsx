@@ -250,6 +250,9 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-xs font-semibold text-neutral-500">Who can</legend>
+      <p className="text-xs text-neutral-500">
+        “Their own”: each person, for the records they own. Admins always may.
+      </p>
       {ACCESS_OPERATIONS.map((op) => {
         const listed = found.access?.[op];
         const now = [...allowed[op].roles, ...(allowed[op].owner ? ["owner"] : [])];
@@ -270,7 +273,7 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
                   key={role}
                   type="button"
                   aria-pressed={on}
-                  aria-label={`${ACCESS_WORDS[op]}: ${role === "owner" ? "the owner" : role}`}
+                  aria-label={`${ACCESS_WORDS[op]}: ${role === "owner" ? "their own" : role}`}
                   onClick={() =>
                     void set(
                       on
@@ -285,18 +288,30 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
                       : "border-neutral-200 text-neutral-600",
                   )}
                 >
-                  {role === "owner" ? "the owner" : role}
+                  {role === "owner" ? "their own" : role}
                 </button>
               );
             })}
             {listed && (
               <button
                 type="button"
+                aria-label={`${ACCESS_WORDS[op]}: default`}
                 className="text-xs text-neutral-500 hover:text-accent"
                 onClick={() => void reset()}
               >
                 Default
               </button>
+            )}
+            {now.includes("owner") && now.some((r) => r !== "owner" && r !== "admin") && (
+              // A role that may for all records leaves "their own" nothing to add for it.
+              <p className="basis-full pl-14 text-xs text-neutral-500">
+                {now
+                  .filter((r) => r !== "owner" && r !== "admin")
+                  .map((r) => `${r} users`)
+                  .join(", ")}{" "}
+                may {ACCESS_WORDS[op].toLowerCase()} all of them; turn that off for each to{" "}
+                {ACCESS_WORDS[op].toLowerCase()} only their own.
+              </p>
             )}
           </div>
         );

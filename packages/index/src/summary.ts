@@ -2,6 +2,7 @@ import {
   type AuthIR,
   apiOffers,
   type ContentIR,
+  capitalize,
   emptyContent,
   type FieldIR,
   humanize,
@@ -160,7 +161,7 @@ export function summarize(
     if (owner) sentences.push(`The ${fieldLabel(model, owner)} owns the ${one}.`);
     for (const [op, roles] of Object.entries(model.access ?? {})) {
       const verb = VERBS[op as keyof typeof VERBS];
-      sentences.push(`Only ${who(roles)} can ${verb} ${pluralLabel(model).toLowerCase()}.`);
+      sentences.push(`${whoCan(roles, verb, pluralLabel(model).toLowerCase())}.`);
     }
     if (model.capacity) {
       const per = model.fields.find((f) => f.name === model.capacity?.per);
@@ -429,8 +430,8 @@ function access(auth: AuthIR): string[] {
     );
     sentences.push(
       auth.defaultAccess === "shared"
-        ? "Everyone who signs in sees all records, and changes and deletes the ones they own."
-        : "Everyone sees and changes only their own records.",
+        ? "Unless a kind of record says otherwise, everyone who signs in sees all records, and changes and deletes the ones they own."
+        : "Unless a kind of record says otherwise, everyone sees and changes only their own records.",
     );
     sentences.push("Roles:");
     for (const r of auth.roles)
@@ -482,8 +483,21 @@ function lower(label: string): string {
 export function who(roles: string[]): string {
   const others = roles
     .filter((r) => r !== "admin")
-    .map((r) => (r === "owner" ? "the owner" : `${r} users`));
+    .map((r) => (r === "owner" ? "the record's owner" : `${r} users`));
   return list([...others, "admins"]);
+}
+
+/**
+ * Who may do something with a kind of record, as a sentence: "owner" is each person for the
+ * records they own, beside the roles that may for all of them ("Sales users and admins can see
+ * all customers; everyone else only the ones they own.").
+ */
+export function whoCan(roles: string[], verb: string, things: string): string {
+  if (!roles.includes("owner")) return `Only ${who(roles)} can ${verb} ${things}`;
+  const all = roles.filter((r) => r !== "owner" && r !== "admin").map((r) => `${r} users`);
+  return all.length
+    ? `${capitalize(list([...all, "admins"]))} can ${verb} all ${things}; everyone else only the ones they own`
+    : `Each person can ${verb} only the ${things} they own; admins can ${verb} all`;
 }
 
 function list(items: string[], last = "and"): string {

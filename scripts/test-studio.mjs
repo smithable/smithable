@@ -539,6 +539,21 @@ try {
         .getByText(/delete customers/i)
         .first()
         .waitFor({ timeout: 60000 });
+      // "Their own" beside a role that may see them all says so, in the chips and the change
+      // (finding 9); Default takes the row back.
+      await customers.getByRole("button", { name: "See: their own" }).click();
+      await trace
+        .getByText(
+          "Sales users and admins can see all customers; everyone else only the ones they own",
+        )
+        .first()
+        .waitFor({ timeout: 60000 });
+      await customers.getByText("sales users may see all of them").waitFor();
+      await customers.getByRole("button", { name: "See: default" }).click();
+      await trace
+        .getByText("Everyone with access can see customers again")
+        .first()
+        .waitFor({ timeout: 60000 });
       // Adding a field: the Change tab's form, with the record filled in.
       await page
         .getByRole("region", { name: "Customers", exact: true })
