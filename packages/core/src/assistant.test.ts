@@ -165,6 +165,20 @@ test("the assistant block: who gets Ask, whether it may change things, and what 
   const open = authOf("public: { read: [Order] }\nassistant: { for: anyone }\n");
   expect(asksWith(open, "visitor")).toBe("rules");
   expect(asksWith(open, { role: "viewer" })).toBe("model");
+  // And inside the app a visitor's tools only read, whatever the block says may change and
+  // whatever visitors may add (without a key, outside, adding stays theirs: the API's own rule).
+  const wide = authOf(
+    "public: { read: [Order], create: [Order] }\nassistant: { for: anyone, may: change }\n",
+  );
+  expect(names(assistantOffer(ir, wide, "visitor", { scope: "app" }).tools)).toEqual([
+    "find",
+    "measure",
+    "read",
+    "describe",
+  ]);
+  expect(names(assistantOffer(ir, wide, { role: "sales" }, { scope: "app" }).tools)).toContain(
+    "add",
+  );
 
   const codes = (rest: string) =>
     validateAuth(

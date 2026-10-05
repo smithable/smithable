@@ -138,7 +138,7 @@ assistant:
 ```
 
 - Without the block there is no "Ask" for the people who use the app. The administrator's inspector exists whenever the app offers tools to assistants or has this block.
-- **Visitors** (`for: anyone`) get answers by the wording rules only, over what is public, and never a model. That is the marketplace visitor asking how many items there are in a region: free for the owner, and nothing a stranger can run up. A model for visitors would be a cost anyone on the internet controls.
+- **Visitors** (`for: anyone`) get answers by the wording rules only, over what is public, and never a model. Their "Ask" only reads, whatever `may` says: a public contact form is the visitor's to send. That is the marketplace visitor asking how many items there are in a region: free for the owner, and nothing a stranger can run up. A model for visitors would be a cost anyone on the internet controls.
 - It covers what the person may read and do in the app. It is not limited to the `api` block, which is about programs from outside.
 - The operation is `setAssistant [roles…] [--may read|change]`; with nothing it is switched off. The summary says it in a sentence ("Staff can ask the app questions; it changes nothing").
 
