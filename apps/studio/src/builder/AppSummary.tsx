@@ -267,9 +267,9 @@ function Part({
                 <button
                   type="button"
                   className={cx(
-                    // Inline, not a button's inline-block: a wrapped entry keeps its bullet on its
-                    // first line.
-                    "inline text-left hover:text-accent",
+                    // A button stays inline-block whatever its display, and sits on its last
+                    // line: aligned to the top, a wrapped entry keeps its bullet on its first.
+                    "text-left align-top hover:text-accent",
                     open === concept && "font-medium text-accent",
                   )}
                   aria-expanded={open === concept}
