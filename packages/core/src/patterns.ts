@@ -3,7 +3,7 @@
 // its own operations, and how its pages follow a change made elsewhere (a field renamed or
 // removed). A new pattern is one entry here; menus, icons, texts, access and the index ask it.
 import { isMap, isScalar as isScalarNode, isSeq, type ParsedNode } from "yaml";
-import { lostValues, readCondition } from "./condition.js";
+import { followRenamed, lostValues, readCondition } from "./condition.js";
 import {
   type At,
   checkKeys,
@@ -303,7 +303,13 @@ const landing: PagePattern<"landing"> = {
           refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} fits; change its "where" first.`,
         };
       if (effect.kind === "change-field") {
-        const lost = lostValues(section.where[field] as Condition[string], effect.choices);
+        const wanted = followRenamed(
+          spec,
+          [...path, field],
+          section.where[field] as Condition[string],
+          effect.renamed,
+        );
+        const lost = lostValues(wanted, effect.choices);
         if (lost.length)
           return {
             refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} is ${lost.join(" or ")}; change its "where" first.`,
@@ -351,11 +357,20 @@ const dashboard: PagePattern<"dashboard"> = {
   queries: (p) => p.items.flatMap((i) => (i.query ? [i.query] : [])),
   operations: dashboardOperations,
   follow(spec, page, effect) {
-    // A tile follows a renamed field; a removal is refused while a tile counts on the field, and
-    // so is a retyped field that loses a value a tile's "where" names.
+    // A tile follows a renamed field, and a renamed value its "where" names; a removal is refused
+    // while a tile counts on the field, and so is a retyped field that loses such a value.
     if (effect.kind === "change-field") {
       for (const item of page.pattern.items) {
-        const wanted = item.model === effect.model ? item.where?.[effect.field] : undefined;
+        const named = item.model === effect.model ? item.where?.[effect.field] : undefined;
+        const wanted =
+          named === undefined
+            ? undefined
+            : followRenamed(
+                spec,
+                ["pages", page.id, "dashboard", item.name, "where", effect.field],
+                named,
+                effect.renamed,
+              );
         const lost = wanted === undefined ? [] : lostValues(wanted, effect.choices);
         if (lost.length)
           return {
