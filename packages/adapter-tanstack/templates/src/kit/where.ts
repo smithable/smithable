@@ -19,7 +19,7 @@ import {
   sql,
   type Table,
 } from "drizzle-orm";
-import { BadInput } from "./api.server";
+import { BadInput } from "./refusal";
 import { relatedContains } from "./search";
 
 /** A field as `where` may name it. */

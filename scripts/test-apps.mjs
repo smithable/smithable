@@ -1157,7 +1157,7 @@ async function apiFlow(base) {
     await signInAs(page, base, "member");
     await page.goto(`${base}/admin/ask`);
     await page.waitForLoadState("networkidle");
-    if (await page.getByLabel("Question").count())
+    if (await page.getByRole("heading", { name: "Ask the app" }).count())
       throw new Error("a member was given the inspector");
     console.log(
       "  ✓ browser: the inspector answers a question as the assistant role from the records (the rules, no model), says answers may come from an AI, reads the answer aloud, answers a visitor nothing, and is not a member's",
@@ -1773,6 +1773,47 @@ async function sessionFlow(base) {
         .waitFor({ state: "detached", timeout: 10000 });
       if (await who(cookie)) throw new Error("the removed person is still signed in");
     });
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * "Ask" for the people who use the app (docs/design/assistant.md §6), on the api starter with
+ * setAssistant member: a member asks with the button and is answered from the records they may
+ * read (the rules, no model here); a role the block does not name, and a visitor, get no button.
+ */
+async function askPanelFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "member");
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Ask" });
+    await sheet.getByLabel("Question").fill("how many tasks");
+    await sheet.getByRole("button", { name: "Ask", exact: true }).click();
+    const answered = sheet.locator("[data-answer]").first();
+    await answered.getByText("From your records").waitFor({ timeout: 10000 });
+    const number = await answered.locator(".text-2xl").textContent();
+    if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
+    if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
+      throw new Error("Ask does not say answers may come from an AI");
+    await page.context().clearCookies();
+    await signInAs(page, base, "admin");
+    if (await page.getByRole("button", { name: "Ask", exact: true }).count())
+      throw new Error("a role the assistant block does not name has Ask");
+    await page.context().clearCookies();
+    await open(page, `${base}/sign-in`);
+    if (await page.getByRole("button", { name: "Ask", exact: true }).count())
+      throw new Error("a visitor has Ask");
+    console.log(
+      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a role the assistant block does not name and a visitor have no Ask",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("ask flow");
   } finally {
     await browser.close();
   }
@@ -3651,6 +3692,73 @@ test("only the public part", async () => {
           }
         },
       );
+    // "Ask" for the app's people (docs/design/assistant.md §6), switched on for members by its
+    // operation and kept for the browser flow.
+    if (example === "api")
+      step(
+        "op setAssistant gives members Ask and the app type-checks; ask() refuses whom the block does not name, and a visitor's question never reaches the model",
+        () => {
+          const op = (...args) => {
+            const done = smithable(dir, "op", ...args);
+            if (done.code !== 0) throw new Error(done.out);
+          };
+          const test = (name, source) => {
+            const check = join(dir, `src/${name}.test.ts`);
+            writeFileSync(check, source);
+            try {
+              run("pnpm", ["exec", "vitest", "run", `src/${name}.test.ts`], dir);
+            } finally {
+              rmSync(check);
+            }
+          };
+          const people = `const member = { id: "ask-member", name: "M", email: "", role: "member" };
+const admin = { id: "ask-admin", name: "A", email: "", role: "admin" };`;
+          op("setAssistant", "member");
+          run("pnpm", ["typecheck"], dir);
+          test(
+            "ask-named",
+            `import { expect, test } from "vitest";
+import { AccessDenied } from "#/kit/access";
+import { ask } from "./generated/ask.server";
+${people}
+
+test("ask() answers only whom the block names", async () => {
+  await expect(ask(admin, "how many tasks")).rejects.toThrow(AccessDenied);
+  await expect(ask(null, "how many tasks")).rejects.toThrow(AccessDenied);
+  expect((await ask(member, "how many tasks")).source).toBe("records");
+});
+`,
+          );
+          // Visitors too: answered by the rules, never by the model, which a person still reaches.
+          op("setAssistant", "anyone");
+          test(
+            "ask-visitor",
+            `import { expect, test, vi } from "vitest";
+import { ask } from "./generated/ask.server";
+${people}
+
+test("a visitor's question never reaches the model", async () => {
+  process.env.ASSISTANT_URL = "http://model.test";
+  process.env.ASSISTANT_MODEL = "stand-in";
+  const called: string[] = [];
+  vi.stubGlobal("fetch", async (url: string) => {
+    called.push(String(url));
+    return new Response(JSON.stringify({ choices: [{ message: { content: "From the model." } }] }));
+  });
+  const visitor = await ask(null, "write a poem about the tasks");
+  expect(visitor.source).toBe("none");
+  expect(visitor.note).not.toContain("ASSISTANT_URL");
+  expect(called).toEqual([]);
+  const person = await ask(member, "write a poem about the tasks");
+  expect(person.text).toBe("From the model.");
+  expect(called).toHaveLength(1);
+});
+`,
+          );
+          const undone = smithable(dir, "undo");
+          if (undone.code !== 0) throw new Error(undone.out);
+        },
+      );
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -3686,6 +3794,7 @@ test("only the public part", async () => {
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (example === "api") await apiFlow(base);
+      if (example === "api") await askPanelFlow(base);
       if (example === "invoicing") {
         await copyFlow(base);
         await formulaFlow(base);

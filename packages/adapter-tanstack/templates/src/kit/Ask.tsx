@@ -1,0 +1,95 @@
+// Smithable app kit: "Ask" for the people who use the app (docs/design/assistant.md §4 and §6): a
+// button that opens a sheet with a question field; the answer is worked out by the app with what
+// the person may read, marked as from the records or by an AI, and can be read aloud.
+import { useRef, useState } from "react";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import { Input } from "#/components/ui/input";
+import type { Answer } from "./assistant.server";
+import { Shown } from "./Inspector";
+
+export function Ask({ ask }: { ask: (question: string) => Promise<Answer> }) {
+  const sheet = useRef<HTMLDialogElement>(null);
+  const [question, setQuestion] = useState("");
+  const [asked, setAsked] = useState<{ question: string; answer?: Answer; failed?: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const q = question.trim();
+    if (!q || busy) return;
+    setBusy(true);
+    try {
+      const answer = await ask(q);
+      setAsked((list) => [{ question: q, answer }, ...list]);
+      setQuestion("");
+    } catch (error) {
+      const failed = error instanceof Error ? error.message : String(error);
+      setAsked((list) => [{ question: q, failed }, ...list]);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <Button
+        type="button"
+        className="fixed right-4 bottom-4 z-20 shadow-lg"
+        onClick={() => sheet.current?.showModal()}
+      >
+        Ask
+      </Button>
+      <dialog
+        ref={sheet}
+        aria-labelledby="ask-title"
+        className="m-0 mt-auto w-full max-w-none rounded-t-xl border bg-background p-0 text-foreground backdrop:bg-black/40 sm:m-auto sm:max-w-xl sm:rounded-xl"
+      >
+        <div className="flex max-h-[85vh] flex-col gap-4 overflow-y-auto p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="ask-title" className="text-lg font-semibold">
+              Ask
+            </h2>
+            <Button type="button" variant="ghost" size="sm" onClick={() => sheet.current?.close()}>
+              Close
+            </Button>
+          </div>
+          <form onSubmit={submit} className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                aria-label="Question"
+                placeholder="How many … ? Show the … that …"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={busy || !question.trim()}>
+                {busy ? "Asking…" : "Ask"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Answers may come from an AI and can be wrong. Check what matters.
+            </p>
+          </form>
+          <ol className="space-y-3">
+            {asked.map((a, i) => (
+              <li
+                key={`${asked.length - i}`}
+                data-answer
+                className="space-y-2 rounded-lg border p-3"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-medium">{a.question}</p>
+                  {a.answer?.source === "records" && (
+                    <Badge variant="success">From your records</Badge>
+                  )}
+                  {a.answer?.source === "ai" && <Badge>AI</Badge>}
+                </div>
+                {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
+                {a.answer && <Shown answer={a.answer} trace={false} />}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </dialog>
+    </>
+  );
+}

@@ -3,7 +3,7 @@
 // calls the same tools an outside assistant gets. The app runs every call itself and shows what
 // came back; a call that would change something is only proposed, never run here.
 import { type AskKind, readQuestion } from "./ask";
-import { type Offer, offered } from "./mcp.server";
+import { type Offer, offered } from "./tools";
 
 /** A value as JSON carries it: what tools take and give. */
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -59,6 +59,8 @@ interface Parts {
   call: (tool: string, args: Record<string, unknown>) => Promise<unknown>;
   model?: Model;
   fetch?: typeof fetch;
+  /** What is said when the rules do not read a question and there is no model to ask. */
+  unread?: string;
 }
 
 export async function answer(question: string, parts: Parts): Promise<Answer> {
@@ -96,7 +98,9 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
   if (!model)
     return done({
       source: "none",
-      note: "The rules did not read this question, and the app has no model to ask (ASSISTANT_URL).",
+      note:
+        parts.unread ??
+        "The rules did not read this question, and the app has no model to ask (ASSISTANT_URL).",
     });
 
   const fetchModel = parts.fetch ?? fetch;
