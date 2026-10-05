@@ -12,6 +12,48 @@ import {
   uncommittedRefusal,
 } from "./git.js";
 
+// As on a machine where Git was just installed: no name or address, and none to be guessed.
+for (const name of [
+  "GIT_AUTHOR_NAME",
+  "GIT_AUTHOR_EMAIL",
+  "GIT_COMMITTER_NAME",
+  "GIT_COMMITTER_EMAIL",
+  "EMAIL",
+])
+  delete process.env[name];
+Object.assign(process.env, {
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_NOSYSTEM: "1",
+  GIT_CONFIG_COUNT: "1",
+  GIT_CONFIG_KEY_0: "user.useConfigOnly",
+  GIT_CONFIG_VALUE_0: "true",
+});
+
+test("without a Git name and address a commit is Smithable's own, and a configured one is kept", () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-git-"));
+  try {
+    writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n");
+    ensureRepository(dir);
+    expect(uncommitted(dir)).toEqual([]);
+    expect(git(dir, ["log", "--format=%an <%ae>"]).out).toBe(
+      "Smithable <studio@smithable.invalid>",
+    );
+    git(dir, ["config", "user.name", "Ada"]);
+    git(dir, ["config", "user.email", "ada@example.com"]);
+    writeFileSync(join(dir, "notes.txt"), "x");
+    git(dir, ["add", "-A"]);
+    expect(git(dir, ["commit", "-q", "-m", "smithable: a change"]).ok).toBe(true);
+    expect(git(dir, ["log", "-1", "--format=%an <%ae>"]).out).toBe("Ada <ada@example.com>");
+    // Undo makes a commit too.
+    git(dir, ["config", "--unset", "user.name"]);
+    git(dir, ["config", "--unset", "user.email"]);
+    expect(git(dir, ["revert", "--no-edit", "HEAD"]).ok).toBe(true);
+    expect(git(dir, ["log", "-1", "--format=%an"]).out).toBe("Smithable");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("a change is refused over uncommitted edits, which it lists", () => {
   const dir = mkdtempSync(join(tmpdir(), "smithable-git-"));
   git(dir, ["init", "-q"]);
@@ -50,8 +92,6 @@ test("an app made inside another repository gets its own, and leaves that one al
     expect(ownRepository(outer)).toBe(true);
     expect(ownRepository(app)).toBe(false);
 
-    process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = "T";
-    process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = "t@example.com";
     ensureRepository(app);
     expect(ownRepository(app)).toBe(true);
     expect(uncommitted(app)).toEqual([]);
