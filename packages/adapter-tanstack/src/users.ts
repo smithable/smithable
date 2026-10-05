@@ -252,7 +252,8 @@ import { auditLog, invitation, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 ${other ? 'import { forgetInLog } from "#/kit/audit.server";\n' : ""}import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
-import { invite, listUsers, removeUser, setRole, withdrawInvitation } from "./users.server";
+import { pageAccess } from "#/generated/pages";
+import { invite, listUsers, removeUser, resendInvitation, ROLES, setRole, withdrawInvitation } from "./users.server";
 
 const ORIGIN = "https://team.example";
 /** The audit log's lines of one kind, oldest first. */
@@ -302,6 +303,35 @@ test("with sign-up open, an address nobody invited gets the default role", async
 });
 `
 }
+test("a role the ${usersPage(ir)} page does not give, and a key whatever its role, is refused every change to who has access", async () => {
+  const rule = pageAccess[${JSON.stringify(usersPage(ir))}];
+  const pending = await invite(admin, "users-test-target@${domain}", ${JSON.stringify(other ?? "admin")}, ORIGIN);
+  const outsiders = [
+    ...ROLES.filter((role) => role !== "admin" && !rule.roles.includes(role)).map((role) => ({
+      id: \`users-test-\${role}\`,
+      name: role,
+      email: \`users-test-\${role}@${domain}\`,
+      role,
+    })),
+    // An API key with the administrator's role is still no person.
+    { id: "key:users-test", name: "A key", email: "", role: "admin" },
+  ];
+  for (const outsider of outsiders) {
+    await expect(listUsers(outsider, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(invite(outsider, "users-test-sneak@${domain}", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(outsider, admin.id, ${JSON.stringify(other ?? "admin")})).rejects.toThrow(AccessDenied);
+    await expect(removeUser(outsider, admin.id)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(outsider, pending.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(outsider, pending.id)).rejects.toThrow(AccessDenied);
+  }
+  // Nothing changed: the administrator, the invitation, and no new one.
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  const open = (await listUsers(admin, ORIGIN)).invitations.map((i) => i.email);
+  expect(open).toContain("users-test-target@${domain}");
+  expect(open).not.toContain("users-test-sneak@${domain}");
+  await withdrawInvitation(admin, pending.id);
+});
+
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {
   const outsider = await signUp("users-test-outsider@${domain}").catch(() => undefined);
   if (outsider && outsider.role !== "admin")
@@ -332,7 +362,13 @@ ${
 }
   const pending = await invite(admin, "users-test-pending@${domain}", "admin", ORIGIN);
   await withdrawInvitation(admin, pending.id);
-  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.id)).not.toContain(pending.id);
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.id)).not.toContain(pending.id);${
+    closed
+      ? `
+  // A withdrawn invitation lets nobody in.
+  await expect(signUp("users-test-pending@${domain}")).rejects.toThrow(/invited/);`
+      : ""
+  }
 });
 `;
 }
