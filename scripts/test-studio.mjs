@@ -253,8 +253,17 @@ try {
       await openPreview("/orders");
       // The button is on the placed orders only, and does what it says.
       const row = preview.locator("tr", { hasText: "ORD-1007" }).filter({ visible: true });
-      await row.getByRole("button", { name: "Cancel order" }).click({ timeout: 60000 });
-      await row.getByText("Canceled").waitFor({ timeout: 30000 });
+      // The page answers clicks once React has taken it over; a press made earlier is lost.
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 60000 });
+      for (let attempt = 1; ; attempt++) {
+        await row.getByRole("button", { name: "Cancel order" }).click({ timeout: 60000 });
+        try {
+          await row.getByText("Canceled").waitFor({ timeout: 10000 });
+          break;
+        } catch (error) {
+          if (attempt === 3) throw error;
+        }
+      }
       if (
         await preview
           .locator("tr", { hasText: "Draft" })
