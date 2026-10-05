@@ -53,7 +53,7 @@ test("a question is told from a change by its wording", () => {
 
 test("who can do what, from the access rules", () => {
   expect(ask("who can delete customers?")).toBe("Admins can delete customers.");
-  expect(ask("Who may change orders?")).toBe("The owner and admins can change orders.");
+  expect(ask("Who may change orders?")).toBe("The record's owner and admins can change orders.");
   expect(ask("who can see customers")).toBe("Sales users and admins can see customers.");
   expect(ask("who can open the customers page?")).toBe(
     "Sales users and admins can open the customers page.",
