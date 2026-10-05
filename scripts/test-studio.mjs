@@ -1440,6 +1440,71 @@ try {
         await notStartedAgain(other);
       },
     );
+    // docs/design/while-it-is-made.md: the person is let into Studio at once, and Studio says
+    // where the making of their app is.
+    await step(
+      "a described app can be taken on at once: Studio says where its making is, and lets nothing else change the project meanwhile",
+      async () => {
+        const pool = join(root, "pool");
+        process.kill(-waiting.pid);
+        await new Promise((r) => setTimeout(r, 1500));
+        waiting = spawn(
+          "node",
+          [cli, "studio", pool, "--port", String(port + 2), "--replaceable"],
+          {
+            detached: true,
+            env: {
+              ...process.env,
+              SMITHABLE_LOCAL_MODEL: "fake-model",
+              SMITHABLE_LOCAL_URL: model.url,
+            },
+          },
+        );
+        const other = `http://localhost:${port + 2}`;
+        await previewUp(port + 3);
+        const taken = await replace(port + 2, {
+          describe: "A booking site for a pilates studio",
+          admin: "tester@example.org",
+          wait: false,
+          usual: 20000,
+        });
+        if (taken.status !== 202 || !taken.accepted) throw new Error(JSON.stringify(taken));
+        const stages = new Set();
+        let drafted = false;
+        let refused = false;
+        for (let i = 0; ; i++) {
+          const project = await (await fetch(`${other}/api/project`)).json();
+          const making = project.making;
+          if (!making) {
+            if (project.name !== "Lotus Pilates") throw new Error(`Studio shows ${project.name}`);
+            break;
+          }
+          if (i > 600) throw new Error(`still ${making.stage} after a minute`);
+          if (making.stage === "failed") throw new Error(`the making failed: ${making.error}`);
+          if (
+            making.description !== "A booking site for a pilates studio" ||
+            making.usual !== 20000
+          )
+            throw new Error(`making says ${JSON.stringify(making).slice(0, 200)}`);
+          stages.add(making.stage);
+          // Once the model has answered, the draft's files are there for "What it does".
+          if (making.files?.spec?.includes("Lotus Pilates")) drafted = true;
+          if (!refused) {
+            const change = await fetch(`${other}/api/op`, {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-smithable": "1" },
+              body: JSON.stringify({ name: "setApp", args: { name: "Mine" } }),
+            });
+            if (change.status === 409) refused = true;
+          }
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        if (!stages.size) throw new Error("Studio never said the app was being made");
+        if (!drafted) throw new Error("the draft's files were never shown while it was built");
+        if (!refused) throw new Error("a change was let through while the app was being made");
+        await notStartedAgain(other);
+      },
+    );
   } finally {
     try {
       if (waiting) process.kill(-waiting.pid);
