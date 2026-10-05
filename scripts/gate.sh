@@ -50,8 +50,17 @@ waiting() {
     sort -s -n -k1,1 | cut -f2-
 }
 
+# Whether a gate holds the lock now. The note of who runs is not proof: a gate that was stopped
+# from outside leaves it behind, and it then counted as one ahead for everyone.
+running() {
+  if (exec 8>>"$lock"; flock -n 8); then
+    rm -f "$lock.who"
+    return 1
+  fi
+}
+
 if [ "${1:-}" = --queue ]; then
-  echo "running: $(cat "$lock.who" 2>/dev/null || echo nothing)"
+  echo "running: $(running && cat "$lock.who" 2>/dev/null || echo nothing)"
   waiting | awk -F'\t' '{ print "waiting " NR ": " $2 " in " $3 }'
   exit 0
 fi
@@ -62,7 +71,7 @@ trap 'rm -f "$ticket"' EXIT
 
 # How many gates are ahead of this one: those whose turn comes first, and the one running.
 ahead=$(waiting | awk -F'\t' -v me="${ticket##*/}" '$1 == me { exit } { n++ } END { print n + 0 }')
-[ -e "$lock.who" ] && ahead=$((ahead + 1))
+running && ahead=$((ahead + 1))
 if [ "$ahead" -gt "${GATE_AHEAD_MAX:-1}" ]; then
   cat >&2 <<MSG
 gate.sh: $ahead gates are ahead (about $((ahead * 9)) minutes), so this one does not wait.
