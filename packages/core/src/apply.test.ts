@@ -1263,6 +1263,12 @@ test("nameRecords renames a kind of record where it shows, in one change", () =>
   // The orders page was called Orders: now Jobs, and so is its menu entry.
   expect(content).toContain("orders: { subtitle: Every order and where it stands., title: Jobs }");
   expect(result.description).toBe('Call Order records "Job" and "Jobs"');
+  // The fields that point at it and carried its name follow: Customer.orders "Orders" (a list),
+  // Order.customer "Customer" (one).
+  expect(content).toMatch(/ {6}orders:\n {8}label: Jobs\n/);
+  const clients = applyOperation(files, "nameRecords", { model: "Customer", one: "Client" });
+  if (!clients.ok) throw new Error(clients.message);
+  expect(clients.files.content).toMatch(/ {6}customer:\n {8}label: Client\n/);
   expect(applyOperation(files, "nameRecords", { model: "Order", one: " " })).toMatchObject({
     ok: false,
     message: "Give the name for one.",
