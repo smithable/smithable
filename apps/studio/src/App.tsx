@@ -1,8 +1,9 @@
 import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, EXPECT_RELOAD, type Project } from "./api";
+import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
+import { Making } from "./Making";
 import { isPreviewMessage, type Place, shared, touched } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
@@ -110,6 +111,9 @@ export function App() {
     api.logs().then(setLogs, () => {});
     return api.events((event, data) => {
       if (event === "changed") refresh();
+      // A described app being made: its stage, then null once it is in place ("changed" follows).
+      else if (event === "making")
+        setProject((p) => p && { ...p, making: (data as MakingState | null) ?? undefined });
       // After a reconnect: the project as it is now, without reloading the preview.
       else if (event === "open") api.project().then(setProject, () => {});
       else setLogs((current) => [...current.slice(-499), String(data)]);
@@ -267,7 +271,10 @@ export function App() {
         ) : (
           <span className="text-sm font-semibold tracking-tight">Smithable</span>
         )}
-        <span className="min-w-0 truncate text-sm text-neutral-500">{project.name}</span>
+        {/* While an app is being made, the project is a placeholder: its name says nothing. */}
+        <span className="min-w-0 truncate text-sm text-neutral-500">
+          {project.making ? "" : project.name}
+        </span>
         <fieldset className="flex rounded-md bg-neutral-100 p-0.5 sm:ml-4">
           <legend className="sr-only">Mode</legend>
           {(["builder", "studio"] as const).map((m) => (
@@ -283,6 +290,7 @@ export function App() {
                 name="mode"
                 className="sr-only"
                 checked={mode === m}
+                disabled={Boolean(project.making)}
                 onChange={() => switchMode(m)}
               />
               {m === "builder" ? "No code" : "Code"}
@@ -326,11 +334,17 @@ export function App() {
           <Button
             variant="ghost"
             onClick={undo}
-            disabled={busy || !project.trace.some((t) => !t.undone && !t.isUndo)}
+            disabled={
+              busy || Boolean(project.making) || !project.trace.some((t) => !t.undone && !t.isUndo)
+            }
           >
             Undo
           </Button>
-          <Button variant="ghost" onClick={redo} disabled={busy || !project.canRedo}>
+          <Button
+            variant="ghost"
+            onClick={redo}
+            disabled={busy || Boolean(project.making) || !project.canRedo}
+          >
             Redo
           </Button>
         </div>
@@ -388,50 +402,57 @@ export function App() {
       {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
           never moves in the page, so switching modes keeps its page. Wide windows show it on
           the right; narrow ones place it over the mode's preview slot. */}
-      <main className="flex min-h-0 flex-1">
-        <div className="min-h-0 min-w-0 flex-1">
-          {mode === "builder" ? (
-            <Builder
-              project={project}
-              spec={spec}
-              run={run}
-              previewSlot={setSlot}
-              place={place.builder}
-              onPlace={builderPlace}
-            />
-          ) : (
-            <Studio
-              project={project}
-              spec={spec}
-              run={run}
+      {project.making ? (
+        // Until the described app is in place: what is being made, not the placeholder.
+        <main className="min-h-0 flex-1 overflow-auto">
+          <Making making={project.making} project={project} />
+        </main>
+      ) : (
+        <main className="flex min-h-0 flex-1">
+          <div className="min-h-0 min-w-0 flex-1">
+            {mode === "builder" ? (
+              <Builder
+                project={project}
+                spec={spec}
+                run={run}
+                previewSlot={setSlot}
+                place={place.builder}
+                onPlace={builderPlace}
+              />
+            ) : (
+              <Studio
+                project={project}
+                spec={spec}
+                run={run}
+                version={version}
+                logs={logs}
+                onCustomize={customize}
+                previewSlot={setSlot}
+                place={place.studio}
+                onPlace={studioPlace}
+                previewHidden={Boolean(place.previewHidden)}
+              />
+            )}
+          </div>
+          <div
+            style={box}
+            className={cx(
+              "flex min-h-0 flex-col border-l border-neutral-200 bg-white",
+              box ? "fixed z-10" : place.previewHidden ? "hidden" : "max-lg:hidden lg:w-[55%]",
+            )}
+          >
+            <Preview
+              url={project.preview}
               version={version}
-              logs={logs}
-              onCustomize={customize}
-              previewSlot={setSlot}
-              place={place.studio}
-              onPlace={studioPlace}
-              previewHidden={Boolean(place.previewHidden)}
+              updating={updating || busy}
+              selecting={selecting}
+              onSelecting={setSelecting}
+              onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
+              highlight={highlight}
             />
-          )}
-        </div>
-        <div
-          style={box}
-          className={cx(
-            "flex min-h-0 flex-col border-l border-neutral-200 bg-white",
-            box ? "fixed z-10" : place.previewHidden ? "hidden" : "max-lg:hidden lg:w-[55%]",
-          )}
-        >
-          <Preview
-            url={project.preview}
-            version={version}
-            updating={updating || busy}
-            selecting={selecting}
-            onSelecting={setSelecting}
-            onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
-            highlight={highlight}
-          />
-        </div>
-      </main>
+          </div>
+        </main>
+      )}
     </div>
   );
 }
