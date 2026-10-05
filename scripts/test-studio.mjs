@@ -1462,6 +1462,32 @@ try {
         );
         const other = `http://localhost:${port + 2}`;
         await previewUp(port + 3);
+        // The page, open before the description is sent: the making screen comes at once, with
+        // the description and the bar, then What it does once the model has answered, then
+        // Builder with the app (docs/design/while-it-is-made.md stage one).
+        const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+        await watcher.goto(other);
+        await watcher.locator("header").first().waitFor({ timeout: 60000 });
+        const seen = (async () => {
+          const screen = watcher.getByRole("region", { name: "Your app is being made" });
+          await screen.getByText("A booking site for a pilates studio").waitFor({ timeout: 15000 });
+          await screen.getByRole("progressbar").waitFor();
+          if (!(await watcher.getByRole("button", { name: "Undo", exact: true }).isDisabled()))
+            throw new Error("Undo is on while the app is being made");
+          await screen
+            .getByRole("region", { name: "What it does" })
+            .getByText("Sessions")
+            .first()
+            .waitFor({ timeout: 15000 });
+          await screen.waitFor({ state: "detached", timeout: 60000 });
+          await watcher
+            .locator("header")
+            .first()
+            .getByText("Lotus Pilates")
+            .waitFor({ timeout: 30000 });
+        })();
+        // Awaited after the making: a failure meanwhile is held for then, not thrown unhandled.
+        seen.catch(() => {});
         const taken = await replace(port + 2, {
           describe: "A booking site for a pilates studio",
           admin: "tester@example.org",
@@ -1502,6 +1528,7 @@ try {
         if (!stages.size) throw new Error("Studio never said the app was being made");
         if (!drafted) throw new Error("the draft's files were never shown while it was built");
         if (!refused) throw new Error("a change was let through while the app was being made");
+        await seen.finally(() => watcher.close());
         await notStartedAgain(other);
       },
     );
