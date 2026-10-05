@@ -596,17 +596,15 @@ export async function studio(
         return json(result);
       }
       // A workspace that waited for whoever claims it gets their app: once, and only when
-      // Studio was started for that. A finished project comes in under the running preview,
-      // which takes it in as it takes in any change (only what differs is written); an app
-      // made from a description is made with the preview stopped. What Studio remembered of
-      // the old app (its log, a proposal, a notice) goes with it.
+      // Studio was started for that. The app comes in under the running preview, which takes
+      // it in as it takes in any change (only what differs is written): a finished project
+      // as it is, an app from a description once it has been made beside the project. What
+      // Studio remembered of the old app (its log, a proposal, a notice) goes with it.
       if (req.method === "POST" && url.pathname === "/api/project/replace") {
         if (!replaceable)
           return json({ ok: false, output: "This project is not one that can be replaced." }, 403);
         replaceable = false;
         const to = (await body()) as Replacement;
-        const made = typeof to.from !== "string";
-        if (made) stopApp();
         const result = await capture((io) => replaceProject(dir, io, to));
         // Refused (nothing was touched) or failed: it can be asked again.
         if (!result.ok) replaceable = true;
@@ -614,10 +612,7 @@ export async function studio(
         pending = undefined;
         notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
         rmSync(noticeFile, { force: true });
-        if (made) {
-          restarts = [];
-          startApp();
-        } else await settled();
+        await settled();
         // The log starts with the person's app: nothing of the app that was here, and nothing
         // of what the dev server said while the files under it were being exchanged.
         logs.length = 0;

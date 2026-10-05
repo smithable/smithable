@@ -95,9 +95,11 @@ build; the part that is saved there is the 4.3 s start and the compile of everyt
    is touched; the name and the administrator are applied and the files that follow from them
    generated again (no tool runs: the tables are the same); the database is opened again; the
    pages that are open are told when the dev server has settled. The preview's process is the
-   same before and after. An app from a description is made with the preview stopped, as
-   `smithable new` makes it, and the preview is started after; if the model cannot make it, the
-   starter comes in and Studio says why, once.
+   same before and after. An app from a description is made beside the project as
+   `smithable new` makes it, on the packages installed there (a link, and no install), and then
+   comes in the same way, so the preview is not started for it either and a description that
+   fails never leaves the project empty; if the model cannot make it, the starter is made
+   instead and Studio says why, once.
    Either way the project's history starts anew (no Git repository until its first change, as
    for a new app), and Studio's memory of the old one goes: its log, a pending proposal, a
    notice. It refuses when the packages of what comes in are not the ones installed (another
