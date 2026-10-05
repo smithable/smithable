@@ -786,6 +786,9 @@ export async function ask(viewer: Viewer | null, question: string): Promise<Answ
     kinds: WORDS[caller],
     call: (tool, args) => callTool(viewer, tool, args),
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
+    unread: viewer
+      ? "The app could not read this question by itself, and no AI is set up to answer it here."
+      : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
   });
 }
 `
