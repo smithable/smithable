@@ -5,8 +5,6 @@ import {
   kebab,
   type SpecIR,
   storesPictures,
-  type ThemeIR,
-  type UxIR,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
@@ -58,7 +56,7 @@ import {
 import { smokeTests } from "./smoke.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
-import { FONT_PACKAGES, themeCss, themeFont, themeFonts } from "./themes.js";
+import { themeCss } from "./themes.js";
 import { usersReadme, usersServerModule, usersTestSource } from "./users.js";
 
 const SCAFFOLD = new Set([
@@ -128,15 +126,7 @@ ${entries.join("\n")}
 `;
 }
 
-function packageJson(
-  ir: SpecIR,
-  auth: AuthIR,
-  ux: UxIR,
-  packages: Record<string, string> = {},
-  themes: ThemeIR[] = [],
-): string {
-  const fontPackage = FONT_PACKAGES[themeFont(ux, themes)] as string;
-  const { "better-auth": _, ...withoutAuth } = STACK_PROFILE.dependencies;
+function packageJson(ir: SpecIR, packages: Record<string, string> = {}): string {
   const pkg = {
     name: kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app",
     private: true,
@@ -155,20 +145,18 @@ function packageJson(
       "db:seed": "tsx src/db/seed.ts",
       "db:studio": "drizzle-kit studio",
     },
-    dependencies: {
-      ...(hasSignIn(auth) ? STACK_PROFILE.dependencies : withoutAuth),
-      // The app's font, and its landing pages' own.
-      ...Object.fromEntries(
-        themeFonts(ux, themes).map((font) => {
-          const name = FONT_PACKAGES[font] as string;
-          return [name, STACK_PROFILE.fonts[name as keyof typeof STACK_PROFILE.fonts]];
-        }),
-      ),
-      ...(hasMarkdown(ir) ? STACK_PROFILE.markdown : {}),
-      ...Object.fromEntries(
-        Object.entries(packages).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
-      ),
-    },
+    // The same for every app of a stack profile, whatever the app uses (sign-in, a Markdown
+    // field, its theme's font): a change to the app then never changes what must be installed,
+    // so nothing has to be fetched for it (a hosted workspace has no way to). What an app does
+    // not import is not in its build. Only the owner's own packages (setPackage) differ.
+    dependencies: Object.fromEntries(
+      Object.entries({
+        ...STACK_PROFILE.dependencies,
+        ...STACK_PROFILE.fonts,
+        ...STACK_PROFILE.markdown,
+        ...packages,
+      }).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    ),
     devDependencies: STACK_PROFILE.devDependencies,
   };
   return `${JSON.stringify(pkg, null, 2)}\n`;
@@ -355,7 +343,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // The app as a whole: its package, theme, lock, README, root route, pages and smoke tests.
     key: "app",
     files: ({ ir, t, auth, ux, options }) => [
-      generated("package.json", packageJson(ir, auth, ux, options.packages, options.themes)),
+      generated("package.json", packageJson(ir, options.packages)),
       generated("src/theme.css", themeCss(ux, options.themes)),
       // The app's own styles, on the kit's data-* hooks (see the README); created once.
       custom("src/custom/styles.css", CUSTOM_STYLES),
