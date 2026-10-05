@@ -177,10 +177,27 @@ export function App() {
     });
   };
 
-  // Ctrl+Z (Cmd+Z) undoes the last change, outside text fields, here and in the preview.
+  const redo = async () => {
+    setBusy(true);
+    const result = await api.redo().catch((e: Error) => ({ ok: false, output: e.message }));
+    setBusy(false);
+    setMessage({
+      ok: result.ok,
+      text: result.ok
+        ? `Redid: ${(result.output.split("\n")[0] ?? "").replace(/ Undo with: smithable undo$/, "")}`
+        : (result.output.split("\n")[0] ?? ""),
+    });
+  };
+
+  // Ctrl+Z (Cmd+Z) undoes the last change, outside text fields, here and in the preview;
+  // Ctrl+Shift+Z or Ctrl+Y makes it again.
   const undoKey = useRef(() => {});
   undoKey.current = () => {
     if (!busy) void undo();
+  };
+  const redoKey = useRef(() => {});
+  redoKey.current = () => {
+    if (!busy && project?.canRedo) void redo();
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -191,6 +208,12 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !typing) {
         e.preventDefault();
         undoKey.current();
+      }
+      const redoing =
+        (e.shiftKey && e.key.toLowerCase() === "z") || (!e.shiftKey && e.key.toLowerCase() === "y");
+      if ((e.ctrlKey || e.metaKey) && redoing && !typing) {
+        e.preventDefault();
+        redoKey.current();
       }
     };
     const onMessage = (e: MessageEvent) => {
@@ -276,6 +299,9 @@ export function App() {
             disabled={busy || !project.trace.some((t) => !t.undone && !t.isUndo)}
           >
             Undo
+          </Button>
+          <Button variant="ghost" onClick={redo} disabled={busy || !project.canRedo}>
+            Redo
           </Button>
         </div>
       </header>

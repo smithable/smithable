@@ -15,6 +15,7 @@ import { mcpServer } from "./mcp.js";
 import { runOperation } from "./op.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
+import { redo, redoTarget } from "./redo.js";
 import { buildReport, reportChoice, reportText, sendReport, setReportChoice } from "./report.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
@@ -321,6 +322,8 @@ export async function studio(
         .map((name) => ({ name, version: statSync(pluginPath(dir, name)).mtimeMs })),
       concepts: ir && auth ? projectIndex(dir, ir, auth).concepts : [],
       trace: trace(dir),
+      // Whether Redo has a change it would make again.
+      canRedo: Boolean(redoTarget(dir)),
       preview,
       ...(options.home ? { home: options.home } : {}),
       ...(notice ? { notice } : {}),
@@ -502,6 +505,16 @@ export async function studio(
         const { page } = await body();
         const result = await capture((io) => customize(dir, io, `page:${String(page)}`));
         if (result.ok) changed({});
+        return json(result);
+      }
+      if (req.method === "POST" && url.pathname === "/api/redo") {
+        // As an operation: the app regenerates and the preview follows.
+        const result = await capture((io) => redo(dir, io));
+        if (result.ok) {
+          stopApp();
+          startApp();
+          send("changed", {});
+        }
         return json(result);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
