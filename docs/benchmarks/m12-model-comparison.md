@@ -1,4 +1,4 @@
-# M12 first builds: five models side by side (2026-10-04)
+# M12 first builds: the models side by side (2026-10-04, Mistral Large 2026-10-05)
 
 The same 34 descriptions (the twelve of the first set and the 22 of the second, [bench-m12](../../scripts/bench-m12.mjs)) drafted by five models, for choosing the beta's default model. Each run is in its own report with every description's row, scorecard and summary:
 
@@ -36,6 +36,23 @@ The Claude and OpenAI runs are from main after #226 and #228; the Bedrock runs f
 Costs marked *list* are Mistral's and OpenAI's published prices per million tokens (mistral.ai/pricing/api, developers.openai.com/api/docs/pricing, today), times the tokens the API reported. Bedrock's are the AWS Price List's for eu-north-1 on the EU profiles (today), per kind of token: new input, a cache write (a quarter more), a cache read (a tenth), output. Claude Code's figure is what it reports for a call, not money paid: the run was on Johan's subscription.
 
 "Drafts made only of the starter's models" counts drafts whose every model is one of its starter's, by name. That is right when the description fits the starter (a yoga studio from the booking starter, a status page from the status starter) and a miss when it does not: OpenAI kept the yoga starter's `ClassType`, `Instructor` and `Session` for both hair salons, and the marketplace's `Item` for the tool library, the vinyl collection and the bird sightings.
+
+## Mistral Large 3, the EU-owned alternative (first set, 2026-10-05)
+
+Johan's choice of Sonnet 4.6 on Bedrock leaves Mistral as the EU-owned alternative, checked weekly with Large ([report](m12-first-builds-mistral-large-latest.md), `--model mistral-large-latest`, $0.50 / $1.50 per million tokens). Beside Claude's daily run the same night and Sonnet's first set (2026-10-04, before #259 and #266 changed drafting):
+
+| The first set (12) | Mistral Large 3 | Claude Opus 5.5 (Claude Code) | Sonnet 4.6 (Bedrock, EU) |
+|---|---|---|---|
+| Created | 11 / 12 | 12 / 12 | 12 / 12 |
+| Type-check | 10 / 12 (one a generator bug, with A) | 12 / 12 | 11 / 12 (a generator bug, since fixed) |
+| Actions in all drafts | 16 | 26 | 26 |
+| Fields; pages per draft | 18.2; 4.5 | 18.6; 5.1 | 18.3; 5.8 |
+| Words of its own per draft | 38 | 28 | 24 |
+| Drafts that still leave personal data public | 2 | 0 | 0 (Sonnet's second set after #266: 0 of 24) |
+| Cost per build | **$0.016**, list price paid | $0.089 reported (subscription) | $0.072 paid |
+| Time per build | 34 s | 34 s | 43 s |
+
+Large's one failure is its own: a formula written with single quotes, refused twice. It costs a fifth of the others per build and writes more of its own words, but adds fewer actions. It leaves personal data public on two drafts: a job board's contact email and phone, a football club's dates of birth. Whether a contact detail is meant to be public is for the description to say, so the drafting step does not remove it: the warning reaches the model once (#266), stays on the draft, and the hosted publish page shows it. With Sonnet none is left; with Large it is the price of the smaller model, and the person sees it before publishing.
 
 ## Prompt caching on Bedrock
 
