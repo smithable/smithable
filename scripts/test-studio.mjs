@@ -511,6 +511,38 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
   await step(
+    "a page that comes without its stylesheet starts the preview again, once for each change (finding 3)",
+    async () => {
+      const unstyled = async () =>
+        (await (await fetch(`${base}/api/logs`)).json()).filter((l) =>
+          l.startsWith("The preview's page came without its stylesheet"),
+        ).length;
+      const before = await unstyled();
+      // A page that had its stylesheet never said otherwise before this step.
+      if (before) throw new Error(`the preview was started again ${before} times for no reason`);
+      // As the preview editor says it when the theme's variables are missing once the page loaded.
+      const say = () =>
+        preview
+          .locator("body")
+          .evaluate(() =>
+            window.parent.postMessage({ source: "smithable-preview", type: "unstyled" }, "*"),
+          );
+      // The undo before reloads the preview: a frame still loading is about:blank, whose
+      // messages carry Studio's own origin and are rightly not the preview's.
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 });
+      await say();
+      for (const deadline = Date.now() + 30000; (await unstyled()) === before; ) {
+        if (Date.now() > deadline) throw new Error("the preview was not started again");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      // It comes back; said again without a change in between, it is not started again.
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 });
+      await say();
+      await new Promise((r) => setTimeout(r, 2000));
+      if ((await unstyled()) !== before + 1) throw new Error("the preview was started again twice");
+    },
+  );
+  await step(
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
       const look = page.getByRole("region", { name: "Theme" });
