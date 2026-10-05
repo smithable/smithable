@@ -478,37 +478,15 @@ const RULES: Rule[] = [
         /^rename (?:the )?(?<subject>.+?) (?:to|as|into) (?<to>[a-z][a-z0-9 ]*)$/.exec(text) ??
         /^call (?:the )?(?<subject>.+?) (?<to>[a-z][a-z0-9 ]*) (?:instead|from now on)$/.exec(text);
       if (!m?.groups) return undefined;
-      // "Rename orders to jobs" names the kind of record, not a field: its name for one and for
-      // many, its list's title, and the fields of other records that refer to it, all as texts
-      // (the names in the spec stay, so nothing else moves).
+      // "Rename orders to jobs" names the kind of record, not a field: the operation that
+      // calls its records by other names, which follows them into its pages' titles and the
+      // fields that refer to it, all as texts (the names in the spec stay, so nothing else moves).
       const bare = dropArticles(m.groups.subject ?? "").replace(/ (?:page|list|records?)$/, "");
       const kind = / (?:of|on|in|for|from) |'s? /.test(bare) ? undefined : modelFor(scope.ir, bare);
       if (kind && kind.name !== USER_MODEL) {
         const many = sentence(plural(singular(dropArticles(m.groups.to ?? ""))));
         const one = sentence(singular(dropArticles(m.groups.to ?? "")));
-        const text = (path: string[], value: string): PhraseOperation => ({
-          op: "setText",
-          args: { path, text: value },
-        });
-        const list = scope.ir.pages.find(
-          (p) => p.pattern.kind === "crud" && p.pattern.model === kind.name && !p.mine,
-        );
-        return [
-          text(["models", kind.name, "label"], one),
-          text(["models", kind.name, "pluralLabel"], many),
-          ...(list ? [text(["pages", list.id, "title"], many)] : []),
-          ...scope.ir.models.flatMap((other) =>
-            other.fields
-              .filter((f) => f.type.kind === "relation" && f.type.model === kind.name)
-              .filter((f) => key(f.name) === key(kind.name))
-              .map((f) =>
-                text(
-                  ["models", other.name, "fields", f.name, "label"],
-                  f.type.kind === "relation" && f.type.many ? many : one,
-                ),
-              ),
-          ),
-        ];
+        return [{ op: "nameRecords", args: { model: kind.name, one, several: many } }];
       }
       const found = subjectField(m.groups.subject ?? "", scope);
       if (!found) return null;
