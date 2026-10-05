@@ -99,7 +99,7 @@ export function Panel({
   return (
     <section
       aria-busy={busy || undefined}
-      className={cx("flex min-h-0 flex-col border-neutral-200 bg-white", className)}
+      className={cx("flex min-h-0 min-w-0 flex-col border-neutral-200 bg-white", className)}
     >
       {title !== undefined && (
         <header className="flex h-10 shrink-0 items-center justify-between border-b border-neutral-200 px-3">
