@@ -25,6 +25,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { chromium } from "playwright";
 import { validateSpec } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
+import { checkPorts } from "./ports.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -3136,6 +3137,7 @@ for (const [index, example] of examples.entries()) {
   dirs.push(dir);
   // Parallel runs (scripts/test-apps-parallel.mjs) give each process its own ports.
   const port = Number(process.env.TEST_APPS_PORT ?? 4400) + index;
+  checkPorts(`${example} (TEST_APPS_PORT)`, [port, port + 100, port + 200, port + 300]);
   const reported = failures.length;
   try {
     // Its own administrator: the default is the Git user's address, which on a developer's

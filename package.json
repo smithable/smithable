@@ -19,6 +19,7 @@
     "test:apps": "node scripts/test-apps-parallel.mjs",
     "test:studio": "node scripts/test-studio.mjs",
     "test:container": "node scripts/test-container.mjs",
+    "test:fresh": "scripts/test-fresh.sh",
     "test:deploy": "node scripts/test-deploy.mjs",
     "test:apps:one": "node scripts/test-apps.mjs",
     "site": "tsc -b packages/core && node scripts/build-docs.mjs"

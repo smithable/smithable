@@ -35,7 +35,7 @@ import {
   prepareImport,
   refusalText,
 } from "./import.js";
-import { type Io, lap } from "./io.js";
+import { type Io, lap, lapFrom } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
@@ -138,6 +138,7 @@ async function applyAndCheckpoint(
   flags: OpFlags,
 ): Promise<number> {
   const started = Date.now();
+  lapFrom();
   const plugins = loadPlugins(dir);
   const operation = findOperation(name, plugins);
   if (!operation) {

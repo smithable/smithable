@@ -1,6 +1,6 @@
 import { type FieldType, type FieldValue, SCALAR_TYPES, type ScalarType } from "../ir.js";
 import { didYouMean } from "../suggest.js";
-import { FIELD_NAME_PATTERN } from "./names.js";
+import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 
 export type Result<T> =
   | { ok: true; value: T }
@@ -90,9 +90,7 @@ function parseChoice(source: string): Result<FieldShorthand> {
     if (!FIELD_NAME_PATTERN.test(value)) {
       return fail(
         "invalid-choice",
-        value === ""
-          ? `A choice between "|" signs is empty.`
-          : `Choice value "${value}" must start with a lowercase letter and use only letters and digits.`,
+        value === "" ? `A choice between "|" signs is empty.` : nameRule("choice", value),
         value.includes("!")
           ? `Choice fields always have a value (the first one by default), so "!" is not needed.`
           : undefined,
