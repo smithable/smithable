@@ -16,6 +16,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { request } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -3050,6 +3051,34 @@ for (const [index, example] of examples.entries()) {
         `  ${absent ? "✓" : "✗"} the production build has no development sign-in or setup notes`,
       );
       if (!absent) failures.push(`${example} development sign-in in production`);
+      if (devSignIn.status !== 404)
+        await asyncStep(
+          "sign-in's own limit counts per address, and a made-up X-Forwarded-For is no new address",
+          async () => {
+            // Better Auth allows three sign-in tries in ten seconds per address: each try here
+            // claims another one.
+            const statuses = [];
+            for (let i = 0; i < 6; i++) {
+              const answer = await fetch(`${base}/api/auth/sign-in/email`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Origin: base,
+                  "X-Forwarded-For": `10.9.${i}.1`,
+                },
+                body: JSON.stringify({ email: "guess@example.com", password: "guess" }),
+              });
+              // The server's own limit says so in plain text; this one is sign-in's.
+              statuses.push(
+                answer.status === 429 && !(await answer.text()).startsWith("Too many requests;")
+                  ? 429
+                  : answer.status,
+              );
+            }
+            if (!statuses.includes(429))
+              throw new Error(`six tries from "six addresses" gave ${statuses.join(", ")}`);
+          },
+        );
       await asyncStep(
         "a request's trace id is continued from traceparent, answered, and on its access line (who, path without query values)",
         async () => {
@@ -3131,12 +3160,21 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "a request may carry at most 1 MB, said by its length: more is refused (413), and one without a length too (411)",
         async () => {
-          const big = await fetch(`${base}/`, {
-            method: "POST",
-            headers: { "content-type": "application/octet-stream" },
-            body: new Uint8Array(1_000_001),
+          // Only the length is sent: the server answers from it before any body, and a body
+          // still being sent when it closes the connection would race its answer.
+          const big = await new Promise((resolve, reject) => {
+            const asked = request(`${base}/`, {
+              method: "POST",
+              headers: { "content-type": "application/octet-stream", "content-length": 1_000_001 },
+            });
+            asked.on("response", (answer) => {
+              resolve(answer.statusCode);
+              asked.destroy();
+            });
+            asked.on("error", reject);
+            asked.flushHeaders();
           });
-          if (big.status !== 413) throw new Error(`1 MB and a byte gave ${big.status}`);
+          if (big !== 413) throw new Error(`1 MB and a byte gave ${big}`);
           const chunked = await fetch(`${base}/`, {
             method: "POST",
             body: new ReadableStream({
