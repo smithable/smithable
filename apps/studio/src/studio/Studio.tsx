@@ -3,7 +3,7 @@ import { type ArgRef, type JsonSchema, operationsFor, refHint } from "@smithable
 import type { ConceptInfo } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
-import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
+import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import type { Run } from "../builder/ChangeForms";
 import { readSpec, type Spec } from "../engine";
 import type { Place } from "../preview";
@@ -445,6 +445,13 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
   const properties = (op?.schema.properties ?? {}) as Record<string, JsonSchema>;
   const required = (op?.schema.required as string[] | undefined) ?? [];
   const effective = op ? argumentsOf(op.schema, values, spec) : {};
+  // Each name as typed, against its rule: said under it, and the operation waits.
+  const problems = Object.fromEntries(
+    Object.entries(properties).map(([key, schema]) => [
+      key,
+      argumentProblem(name, key, schema, values[key]),
+    ]),
+  );
   // Typed text for a list or name=value pairs becomes what the operation takes.
   const args = () =>
     Object.fromEntries(
@@ -506,6 +513,7 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
           setValue={(v) => setValues({ ...values, [key]: v })}
           spec={spec}
           label={key}
+          problem={problems[key]}
           hint={[
             (schema.description as string | undefined) ??
               (schema["x-smithable"] ? refHint(schema["x-smithable"] as ArgRef) : undefined),
@@ -518,7 +526,9 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
             .join(" ")}
         />
       ))}
-      <Button type="submit">Apply {name}</Button>
+      <Button type="submit" disabled={Object.values(problems).some(Boolean)}>
+        Apply {name}
+      </Button>
     </form>
   );
 }
