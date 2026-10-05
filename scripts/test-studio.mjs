@@ -846,6 +846,15 @@ try {
   });
   await step("any operation can be applied from a form built from its schema", async () => {
     await page.getByRole("tab", { name: "Operation" }).click();
+    // A name is checked as it is typed, in the words the operation would refuse it with, and
+    // the operation waits (Johan's feedback).
+    await page.getByLabel("Operation").selectOption("addPage");
+    await page.getByLabel("page", { exact: true }).fill("Hello");
+    await page.getByText('Page name "Hello" must start with a lowercase letter').waitFor();
+    if (!(await page.getByRole("button", { name: "Apply addPage" }).isDisabled()))
+      throw new Error("addPage can be applied with a name that does not fit");
+    await page.getByLabel("page", { exact: true }).fill("hello");
+    await page.getByRole("button", { name: "Apply addPage", disabled: false }).waitFor();
     await page.getByLabel("Operation").selectOption("setSearch");
     // Names in the spec are chosen, not typed: the page, then its model's fields.
     await page.getByLabel("page", { exact: true }).selectOption("orders");
