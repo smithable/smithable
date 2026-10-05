@@ -16,7 +16,7 @@ import { runOperation } from "./op.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
-import { type Replacement, reopenDatabase, replaceProject } from "./replace.js";
+import { type MakingStage, type Replacement, reopenDatabase, replaceProject } from "./replace.js";
 import {
   buildReport,
   recordFailure,
@@ -338,6 +338,23 @@ export async function studio(
   let pending: { id: string; request: string; proposal: Proposal } | undefined;
   /** Whether the project may still be replaced by another app (once; see the option). */
   let replaceable = options.replaceable === true;
+  /**
+   * A described app that is being made for this workspace while its person already looks at
+   * Studio (docs/design/while-it-is-made.md): what they asked for, where the making is, when it
+   * began and how long it usually takes, and the draft's files once the model has answered
+   * (the page makes "What it does" from them). Until it is in place the project on disk is
+   * still the one that waited here, which is nobody's app.
+   */
+  let making:
+    | {
+        description: string;
+        stage: MakingStage | "failed";
+        since: string;
+        usual?: number;
+        files?: { spec?: string; auth?: string; content?: string; ux?: string };
+        error?: string;
+      }
+    | undefined;
 
   /**
    * The last failure, recorded `since` then, is reported at once for someone who chose
@@ -399,7 +416,68 @@ export async function studio(
       preview,
       ...(options.home ? { home: options.home } : {}),
       ...(notice ? { notice } : {}),
+      ...(making ? { making } : {}),
     };
+  };
+
+  /** What a replacement was asked with; a making that fails is tried again with it. */
+  type Asked = Replacement & { wait?: boolean; usual?: number };
+  let asked: Asked | undefined;
+  const replaceWith = async (to: Asked) => {
+    const result = await capture((io) =>
+      replaceProject(dir, io, to, (stage, draft) => {
+        if (!making) return;
+        making = {
+          ...making,
+          stage,
+          ...(draft
+            ? {
+                files: {
+                  spec: draft["smithable.yml"],
+                  auth: draft["smithable.auth.yml"],
+                  content: draft["smithable.content.yml"],
+                  ux: draft["smithable.ux.yml"],
+                },
+              }
+            : {}),
+        };
+        send("making", making);
+      }),
+    );
+    // Refused (nothing was touched) or failed: it can be asked again.
+    if (!result.ok) replaceable = true;
+    writePreviewConfig();
+    pending = undefined;
+    notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+    rmSync(noticeFile, { force: true });
+    await settled();
+    // The log starts with the person's app: nothing of the app that was here, and nothing
+    // of what the dev server said while the files under it were being exchanged.
+    logs.length = 0;
+    if (making)
+      making = result.ok
+        ? undefined
+        : { ...making, stage: "failed", error: result.output.trim().split("\n").at(-1) };
+    send("making", making ?? null);
+    send("changed", {});
+    return result;
+  };
+  /** Takes a described app on and answers for it later, through `making`. */
+  const startMaking = (to: Asked) => {
+    asked = to;
+    replaceable = false;
+    making = {
+      description: (to.describe ?? "").trim(),
+      stage: "drafting",
+      since: new Date().toISOString(),
+      ...(typeof to.usual === "number" && to.usual > 0 ? { usual: to.usual } : {}),
+    };
+    send("making", making);
+    void replaceWith(to).catch((error) => {
+      replaceable = true;
+      if (making) making = { ...making, stage: "failed", error: String(error) };
+      send("making", making ?? null);
+    });
   };
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -487,6 +565,19 @@ export async function studio(
         req.on("close", () => clients.delete(res));
         return;
       }
+      // While a described app is being made, the project here is not the person's yet:
+      // nothing else changes it (what they type waits on the page until it is in place).
+      if (
+        making &&
+        making.stage !== "failed" &&
+        !["GET", "HEAD"].includes(req.method ?? "GET") &&
+        !["/api/project/replace", "/api/making/retry", "/mcp"].includes(url.pathname) &&
+        !url.pathname.startsWith("/api/preview/")
+      )
+        return json(
+          { ok: false, output: "Your app is being made. This can be done once it is in place." },
+          409,
+        );
       if (req.method === "POST" && url.pathname === "/api/op") {
         const { name, args, confirm } = await body();
         const asked = new Date().toISOString();
@@ -607,20 +698,22 @@ export async function studio(
         if (!replaceable)
           return json({ ok: false, output: "This project is not one that can be replaced." }, 403);
         replaceable = false;
-        const to = (await body()) as Replacement;
-        const result = await capture((io) => replaceProject(dir, io, to));
-        // Refused (nothing was touched) or failed: it can be asked again.
-        if (!result.ok) replaceable = true;
-        writePreviewConfig();
-        pending = undefined;
-        notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
-        rmSync(noticeFile, { force: true });
-        await settled();
-        // The log starts with the person's app: nothing of the app that was here, and nothing
-        // of what the dev server said while the files under it were being exchanged.
-        logs.length = 0;
-        send("changed", {});
+        const to = (await body()) as Asked;
+        // A described app whose person is let in at once: the answer says only that it was
+        // taken on; where it is, and that it is in place or failed, Studio's pages are told.
+        if (to.wait === false && typeof to.describe === "string" && to.describe.trim()) {
+          startMaking(to);
+          return json({ ok: true, accepted: true }, 202);
+        }
+        const result = await replaceWith(to);
         return json(result, result.ok ? 200 : 422);
+      }
+      // A making that failed is tried again as it was asked.
+      if (req.method === "POST" && url.pathname === "/api/making/retry") {
+        if (making?.stage !== "failed" || !asked)
+          return json({ ok: false, output: "Nothing is waiting to be tried again." }, 409);
+        startMaking(asked);
+        return json({ ok: true, accepted: true }, 202);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
         const packages = installed();

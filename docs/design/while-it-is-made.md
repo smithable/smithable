@@ -1,7 +1,11 @@
 # While the app is being made: Studio at once, questions and changes during the wait
 
-Status: design only, 2026-10-05, by Fable on Johan's ideas of the same day. **Not to be built
-yet**: Johan tests Studio first and more feedback comes before this. Builds on
+Status: stage one is being built (Johan, 2026-10-05: "Ok, you can start this now"): Studio at
+once with the description, the bar and "What it does" (§2's 1, 2 and 5); the engine side is in
+(`making`, `wait: false`), the screen is A's and the claim B's. Stage two, the questions and
+the waiting requests on that screen, follows. Decided for §8 on Fable's advice: two stages;
+questions always on the making screen; no correction round at first; no `clarify` call when
+the reader is sure. Designed 2026-10-05 by Fable on Johan's ideas of the same day. Builds on
 `first-build.md` (the questions step) and `fast-start.md` (a waiting workspace gets its app
 under the running preview).
 
