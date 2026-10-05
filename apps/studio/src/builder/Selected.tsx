@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
 import { Button, Input, Panel } from "../ui";
-import { type Run, shorthandOf } from "./ChangeForms";
+import { listOf, type Run, shorthandOf } from "./ChangeForms";
 
 export function Selected({
   selection,
@@ -24,6 +24,7 @@ export function Selected({
   const field = model?.fields.find((f) => f.name === fieldName);
   if (!model || !field) return null;
   const canBeRequired = !field.formula && field.type.kind !== "choice";
+  const list = listOf(spec, model.name);
   return (
     <Panel
       title="Selected"
@@ -58,6 +59,23 @@ export function Selected({
               }
             />
             Required
+          </label>
+        )}
+        {list && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={list.columns.includes(field.name)}
+              onChange={() =>
+                run("setColumns", {
+                  page: list.page,
+                  columns: list.columns.includes(field.name)
+                    ? list.columns.filter((c) => c !== field.name)
+                    : [...list.columns, field.name],
+                })
+              }
+            />
+            Show in the list
           </label>
         )}
         {selection.part === "column" && selection.page && selection.columns && (

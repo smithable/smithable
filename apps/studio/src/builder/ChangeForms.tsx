@@ -1,6 +1,7 @@
 // The Builder's forms for the most common changes. Each one becomes an operation.
 import {
   type ArgRef,
+  defaultColumns,
   type FieldIR,
   findOperation,
   humanize,
@@ -423,6 +424,21 @@ function Form({
   );
 }
 
+/**
+ * A kind of record's list page and the columns it shows now: those its look names, or the ones
+ * the app picks (core's defaultColumns).
+ */
+export function listOf(
+  spec: Spec,
+  modelName: string,
+): { page: string; columns: string[]; chosen: boolean } | undefined {
+  const page = spec.ir?.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === modelName);
+  const model = spec.ir?.models.find((m) => m.name === modelName);
+  if (!page || !model) return undefined;
+  const chosen = spec.ux?.pages[page.id]?.columns;
+  return { page: page.id, columns: chosen ?? defaultColumns(model), chosen: Boolean(chosen) };
+}
+
 function AddField({ spec, run, initial }: FormProps) {
   const models = spec.ir?.models ?? [];
   const [model, setModel] = useState(str(initial?.model) ?? models[0]?.name ?? "");
@@ -435,8 +451,14 @@ function AddField({ spec, run, initial }: FormProps) {
   );
   const name = identifier(label);
   const type = shorthand(shape);
+  const list = listOf(spec, model);
+  const [inList, setInList] = useState(true);
   return (
-    <Form onSubmit={() => run("addField", { model, field: name, type })}>
+    <Form
+      onSubmit={() =>
+        run("addField", { model, field: name, type, ...(list && inList ? { list: true } : {}) })
+      }
+    >
       <Label text="Kind of record">
         <Select
           aria-label="Kind of record"
@@ -454,6 +476,12 @@ function AddField({ spec, run, initial }: FormProps) {
         />
       </Label>
       <FieldShapeControls shape={shape} onChange={setShape} models={models.map((m) => m.name)} />
+      {list && (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={inList} onChange={(e) => setInList(e.target.checked)} />
+          Show it in the list
+        </label>
+      )}
       <SpecNote
         label="Will read:"
         text={name && type ? changeText(spec, "addField", { model, field: name, type }) : ""}
