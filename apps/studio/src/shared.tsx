@@ -1,7 +1,8 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
 import { useEffect, useRef, useState } from "react";
-import type { TraceEntry } from "./api";
+import { api, type TraceEntry } from "./api";
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
+import { ReportDialog } from "./Report";
 import { Button, cx, Input, Panel } from "./ui";
 
 export function Preview({
@@ -80,7 +81,7 @@ export function Preview({
     (async () => {
       const until = Date.now() + 180_000;
       for (let wait = 250; !stopped; wait = Math.min(wait * 2, 4000)) {
-        if (await answers(url)) return stopped || setAnswer({ key: frameKey, server: "up" });
+        if (await answers()) return stopped || setAnswer({ key: frameKey, server: "up" });
         if (Date.now() > until) return stopped || setAnswer({ key: frameKey, server: "down" });
         await new Promise((r) => setTimeout(r, wait));
       }
@@ -88,7 +89,7 @@ export function Preview({
     return () => {
       stopped = true;
     };
-  }, [url, frameKey]);
+  }, [frameKey]);
   // A page that loaded without the preview editor's "ready" (the server's error page, or one
   // that stopped while loading) is loaded again: a server that no longer answers is waited for.
   const ready = useRef(false);
@@ -109,7 +110,7 @@ export function Preview({
     ready.current = false;
     setTimeout(async () => {
       if (ready.current) return;
-      if (!(await answers(url)) || errors.current++ < 3) setAttempt((n) => n + 1);
+      if (!(await answers()) || errors.current++ < 3) setAttempt((n) => n + 1);
     }, 8000);
   };
   useEffect(() => {
@@ -244,7 +245,7 @@ export function Preview({
         <div className="min-h-0 flex-1">
           {/* Remounted after every change, so server code and data are fresh; until the new one
               is up, the last one stays, dimmed and inert. */}
-          {server !== "up" && !stale ? (
+          {server === "down" || (server !== "up" && !stale) ? (
             <div
               role="status"
               className="grid h-full place-items-center p-6 text-sm text-neutral-500"
@@ -252,10 +253,7 @@ export function Preview({
               {server === "starting" ? (
                 <p>Starting…</p>
               ) : (
-                <div className="space-y-3 text-center">
-                  <p>The preview is not answering.</p>
-                  <Button onClick={() => setAttempt((n) => n + 1)}>Retry</Button>
-                </div>
+                <Stuck key={frameKey} retry={() => setAttempt((n) => n + 1)} />
               )}
             </div>
           ) : (
@@ -348,14 +346,58 @@ export function Trace({
 }
 
 /**
- * Whether the app's server answers at all. A cross-origin request reads nothing, but it fails
- * only when nothing answers (a server that is starting or has stopped).
+ * Whether the preview's server answers, as Studio's own server finds:
+ * a browser cannot see the status of another origin, so a hosting service's "Starting…" page
+ * would pass for the app.
  */
-async function answers(url: string): Promise<boolean> {
-  try {
-    await fetch(`${url}/health`, { mode: "no-cors", cache: "no-store" });
-    return true;
-  } catch {
-    return false;
-  }
+async function answers(): Promise<boolean> {
+  return api.previewAnswers().then(
+    (r) => r.ok,
+    () => false,
+  );
+}
+
+/**
+ * The preview did not answer within the wait: what Studio knows (its last log lines), starting
+ * it again, and a report of it, offered as for a change that failed.
+ */
+function Stuck({ retry }: { retry: () => void }) {
+  const [stuck, setStuck] = useState<{ log: string[]; report?: "sent" | "offer" }>();
+  const [reporting, setReporting] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  useEffect(() => {
+    api.previewStuck().then(setStuck, () => setStuck({ log: [] }));
+  }, []);
+  return (
+    <div className="w-full max-w-xl space-y-3 text-center">
+      <p>The preview is not answering.</p>
+      {stuck && stuck.log.length > 0 && (
+        <pre
+          title="The preview's last lines"
+          className="max-h-48 overflow-auto rounded-md bg-neutral-100 p-2 text-left font-mono text-xs text-neutral-700"
+        >
+          {stuck.log.join("\n")}
+        </pre>
+      )}
+      <div className="flex justify-center gap-2">
+        <Button
+          disabled={restarting}
+          onClick={async () => {
+            setRestarting(true);
+            await api.previewRestart().catch(() => undefined);
+            retry();
+          }}
+        >
+          Start it again
+        </Button>
+        {stuck?.report === "offer" && (
+          <Button variant="ghost" onClick={() => setReporting(true)}>
+            Report this
+          </Button>
+        )}
+      </div>
+      {stuck?.report === "sent" && <p className="text-xs">A report of this was sent.</p>}
+      {reporting && <ReportDialog onClose={() => setReporting(false)} />}
+    </div>
+  );
 }
