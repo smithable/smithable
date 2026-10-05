@@ -21,7 +21,7 @@
     "test:container": "node scripts/test-container.mjs",
     "test:deploy": "node scripts/test-deploy.mjs",
     "test:apps:one": "node scripts/test-apps.mjs",
-    "site": "node scripts/build-docs.mjs"
+    "site": "tsc -b packages/core && node scripts/build-docs.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
