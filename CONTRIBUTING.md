@@ -19,6 +19,18 @@ pnpm check      # lint, build, unit tests, every example app generated and teste
 
 `pnpm check` is the gate before every commit. Tests live next to the code (`src/**/*.test.ts`); templates in `packages/adapter-tanstack/templates/` are real files that `pnpm build` embeds, and `*.gen.ts` files are never edited by hand. A change to a section's schema needs `pnpm schema`; a change to the spec grammar updates `docs/spec/v0.1.md` in the same pull request, and an architecture change updates `docs/ARCHITECTURE.md`.
 
+### Changing Studio and Builder
+
+Studio and Builder are one React app in `apps/studio`. To see an edit the moment it is saved, run Studio on an app and the development server beside it:
+
+```sh
+node packages/cli/dist/bin.js new my-crm                    # an app to work on; it gets a Git repository of its own
+cd my-crm && node ../packages/cli/dist/bin.js studio        # Studio's server, on http://localhost:4321
+cd apps/studio && pnpm dev                                  # in a second terminal: http://localhost:5173 reloads on every edit
+```
+
+Open http://localhost:5173. It is the same Studio on the same app: changes you make there go through `smithable studio` as always. What `smithable studio` itself serves on 4321 is the last `pnpm build`.
+
 ## Sign-off
 
 Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/). Add `Signed-off-by: Your Name <you@example.com>` to each commit (`git commit -s`) to say that you wrote the change or have the right to submit it under the repository's licences: Apache-2.0 for Smithable, 0BSD for the app kit and templates ([NOTICE](NOTICE)).

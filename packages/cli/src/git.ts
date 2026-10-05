@@ -5,9 +5,19 @@ export function git(dir: string, args: string[]): { ok: boolean; out: string } {
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}`.trim() };
 }
 
-/** Makes `dir` a Git repository with a first commit, if it is not one yet. */
+/**
+ * Whether `dir` is a Git repository of its own. A repository that starts in a folder above it
+ * (an app made inside a clone of something else) is not the app's: its changes and undo would
+ * be that repository's commits, and that repository's other edits would stand in their way.
+ */
+export function ownRepository(dir: string): boolean {
+  const prefix = git(dir, ["rev-parse", "--show-prefix"]);
+  return prefix.ok && prefix.out === "";
+}
+
+/** Makes `dir` a Git repository of its own with a first commit, if it is not one yet. */
 export function ensureRepository(dir: string): void {
-  if (git(dir, ["rev-parse", "--is-inside-work-tree"]).ok) return;
+  if (ownRepository(dir)) return;
   git(dir, ["init", "-q"]);
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "-m", "smithable: start of history"]);

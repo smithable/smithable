@@ -1,5 +1,5 @@
 import { restoreDatabase } from "./database.js";
-import { git, trailer, uncommittedRefusal } from "./git.js";
+import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 
 /**
@@ -8,7 +8,7 @@ import { exec, type Io } from "./io.js";
  * its snapshot from before the operation.
  */
 export function undo(dir: string, io: Io): number {
-  if (!git(dir, ["rev-parse", "--is-inside-work-tree"]).ok) {
+  if (!ownRepository(dir)) {
     io.err("There is nothing to undo: this project has no history yet.\n");
     return 1;
   }
