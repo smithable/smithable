@@ -92,7 +92,7 @@ const getCounts = createServerFn().handler(async () => {
     counts: {
 ${models.map(({ key, n }) => `      ${JSON.stringify(key)}: ${n.data}.count(viewer),`).join("\n")}
     },
-    restore: process.env.HOST_PAGE_URL ? \`\${process.env.HOST_PAGE_URL}/data\` : undefined,
+    restore: process.env.HOST_PAGE_URL ? \`\${process.env.HOST_PAGE_URL}/data\` : undefined,${inspector ? '\n    admin: viewer?.role === "admin",' : ""}
   };
 });
 
@@ -104,7 +104,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => getCounts(),
 });
 
 function ${component}() {
-  const { counts, restore } = Route.useLoaderData();
+  const { counts, restore${inspector ? ", admin" : ""} } = Route.useLoaderData();
   return (
     <>
       <PageHeader
@@ -119,7 +119,7 @@ ${
     : ""
 }${
   inspector
-    ? `            <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary">Ask</Link>
+    ? `            {admin && <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary">Ask</Link>}
 `
     : ""
 }            {restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
@@ -205,20 +205,28 @@ const askAs = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const me = await currentViewer();
     if (me?.role !== "admin") throw new AccessDenied(me !== null);
-    if (!(data.role in KINDS)) throw new AccessDenied(true);
-    // As a key of that role would be: it owns nothing, so "mine" is nobody's.
+    if (!Object.hasOwn(KINDS, data.role)) throw new AccessDenied(true);
+    // As a key of that role would be (a key's id): it owns nothing, so "mine" is nobody's.
     const viewer: Viewer | null =
-      data.role === "visitor" ? null : { id: \`inspector:\${me.id}\`, name: me.name, email: "", role: data.role };
+      data.role === "visitor" ? null : { id: \`key:inspector:\${me.id}\`, name: me.name, email: "", role: data.role };
     return answer(data.question, {
       offer: offerFor(viewer),
-      kinds: KINDS[data.role] ?? [],
+      kinds: KINDS[data.role],
       call: (tool, args) => callTool(viewer, tool, args),
       model: hostModel(me.id),
     });
   });
 
+/** The page is the administrator's alone, whoever else may open the data page. */
+const adminOnly = createServerFn().handler(async () => {
+  const me = await currentViewer();
+  if (me?.role !== "admin") throw new AccessDenied(me !== null);
+  return null;
+});
+
 export const Route = createFileRoute(${JSON.stringify(route)})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  component: AskPage,
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => adminOnly(),
+  component: AskPage,
 });
 
 function AskPage() {
