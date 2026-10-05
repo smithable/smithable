@@ -93,6 +93,14 @@ export function op(
 }
 
 /**
+ * What applyAndCheckpoint returns when Smithable failed at a change it took on: the result was
+ * not a valid file, the app did not regenerate, or it stopped halfway. That is worth a report.
+ * A refusal in the operation's own words (a name that does not fit, records in the way,
+ * uncommitted edits) is the person's to act on, and is not.
+ */
+const FAILED = -1;
+
+/**
  * Applies an operation given its arguments, for the CLI and the MCP server alike: checks,
  * edits the spec, regenerates, migrates, and commits a checkpoint that `undo` reverts.
  */
@@ -116,12 +124,10 @@ export async function runOperation(
     },
   };
   const code = await applyAndCheckpoint(dir, kept, name, args, flags);
-  if (code !== 0) {
-    recordFailure(dir, name, args, said.join(""));
-    if (!flags.reportLater && !said.join("").includes("Run again with"))
-      await afterFailure(dir, io);
-  }
-  return code;
+  if (code !== FAILED) return code;
+  recordFailure(dir, name, args, said.join(""));
+  if (!flags.reportLater) await afterFailure(dir, io);
+  return 1;
 }
 
 async function applyAndCheckpoint(
@@ -165,7 +171,7 @@ async function applyAndCheckpoint(
   if (!result.ok) {
     io.err(`${result.message}\n`);
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
-    return 1;
+    return result.diagnostics.length ? FAILED : 1;
   }
   const before = validateSpec({ path: SPEC, text: files.spec }, { plugins: files.plugins })
     .ir as SpecIR;
@@ -226,7 +232,7 @@ async function applyAndCheckpoint(
     if (snapshot) restoreDatabase(dir, id);
     if (prepared) dropImport(dir, id);
     io.err(`${message} Nothing was changed.\n`);
-    return 1;
+    return FAILED;
   };
 
   // From the first write to the commit: whatever throws, the files and the database go back.

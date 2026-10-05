@@ -2742,6 +2742,8 @@ function operationsFlow(dir) {
   });
   step("a new required field on a table with rows is refused with a way forward", () => {
     const refused = smithable(dir, "op", "addField", "Customer", "vatId", "string!");
+    if (refused.out.includes("smithable report"))
+      throw new Error(`a refusal offered a report: ${refused.out}`);
     if (refused.code !== 1 || !refused.out.includes("Add vatId as optional first"))
       throw new Error(refused.out);
   });
