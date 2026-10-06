@@ -47,6 +47,7 @@ menus:
     },
     pages: { customers: { title: "Our clients" } },
     menus: { admin: { label: "Administration" } },
+    outgoing: {},
   });
 });
 
@@ -288,4 +289,23 @@ test("the language is one the kit has words in; in another one, models say their
     ).diagnostics,
   ).toEqual([]);
   expect(read("smithableContent: 0.1\n").diagnostics).toEqual([]);
+});
+
+test("an outgoing mail's subject and text come from the content file, for entries the spec has", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp:\n  name: X\nmodels:\n  Booking:\n    fields:\n      title: string!\noutgoing:\n  made:\n    when: Booking created\n    to: mail\n    recipient: owner\n",
+  }).ir;
+  if (!spec) throw new Error("spec");
+  const read = (text: string) => validateContent({ path: "smithable.content.yml", text }, spec);
+  const ok = read(
+    "smithableContent: 0.1\noutgoing:\n  made: { subject: Your booking, text: See you soon. }\n",
+  );
+  expect(ok.diagnostics).toEqual([]);
+  expect(ok.content?.outgoing).toEqual({
+    made: { subject: "Your booking", text: "See you soon." },
+  });
+  expect(
+    read("smithableContent: 0.1\noutgoing:\n  gone: { subject: X }\n").diagnostics,
+  ).toMatchObject([{ code: "unknown-outgoing" }]);
 });
