@@ -6,6 +6,7 @@ import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Trace } from "../shared";
 import { Button, cx, Panel, Tabs, useMedia } from "../ui";
+import { AppDetails } from "./AppDetails";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
@@ -161,6 +162,7 @@ export function Builder({
       </nav>
       <div
         ref={strip}
+        data-strip
         onScroll={onScroll}
         className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
       >
@@ -232,9 +234,15 @@ export function Builder({
               onClose={() => setSelection(undefined)}
             />
           ) : (
-            <p className="p-4 text-sm text-neutral-500">
-              Choose Select above the preview, then click a part of the app to change it here.
-            </p>
+            <AppDetails
+              key={`${spec.ir?.app.name}|${spec.ir?.app.description}`}
+              spec={spec}
+              run={run}
+              onLook={() => {
+                setTab("look");
+                show("app");
+              }}
+            />
           )}
         </div>
       </div>
