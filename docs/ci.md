@@ -31,6 +31,9 @@ WorkingDirectory=%h/repos/.actions-runner/engine
 ExecStart=%h/repos/.actions-runner/engine/run.sh
 Restart=always
 RestartSec=10
+# A user service's soft open-files limit is 1024 by default; seven dev servers and a browser need
+# far more, and ran into it as pages that never opened. A shell has 1048576.
+LimitNOFILE=1048576
 KillMode=process
 KillSignal=SIGTERM
 TimeoutStopSec=5min
@@ -41,7 +44,7 @@ systemctl --user daemon-reload && systemctl --user enable --now actions-runner-e
 systemctl --user status actions-runner-engine --no-pager | head -5
 ```
 
-The job runs three examples at a time (`TEST_APPS_CONCURRENCY=3`; a session's gate runs all seven), since the runner shares the machine with the sessions' builds and tests: the first two runs each lost one browser step to a hydration wait under that load. The job finds Node through fnm's default alias (`~/.local/share/fnm/aliases/default/bin`, put on the job's PATH by the workflow), installs the dependencies into the runner's own checkout (`_work/smithable/smithable`, with the machine's pnpm store), and runs the gate on ports 8600 and 8610, which no session uses. The generated apps' commits are made as `CI <ci@smithable.invalid>` through the job's environment; the machine's global Git identity is left alone.
+The first three runs each lost a browser step to a page that never opened: the service's soft limit on open files was 1024 (a shell's is 1048576), which seven dev servers and Chromium exhaust; `LimitNOFILE` in the unit fixes it. The job runs three examples at a time (`TEST_APPS_CONCURRENCY=3`; a session's gate runs all seven), since the runner shares the machine with the sessions' builds and tests: the first two runs each lost one browser step to a hydration wait under that load. The job finds Node through fnm's default alias (`~/.local/share/fnm/aliases/default/bin`, put on the job's PATH by the workflow), installs the dependencies into the runner's own checkout (`_work/smithable/smithable`, with the machine's pnpm store), and runs the gate on ports 8600 and 8610, which no session uses. The generated apps' commits are made as `CI <ci@smithable.invalid>` through the job's environment; the machine's global Git identity is left alone.
 
 ## When the machine is off
 
