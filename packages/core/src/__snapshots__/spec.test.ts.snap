@@ -1080,6 +1080,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       ],
       "name": "Customer",
       "ownedBy": "accountManager",
+      "trash": true,
     },
     {
       "access": {
@@ -1262,6 +1263,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         },
       ],
       "name": "Order",
+      "trash": true,
     },
   ],
   "navigation": [

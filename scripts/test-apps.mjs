@@ -427,9 +427,16 @@ async function bookingFlow(dir, base) {
     await panel.getByRole("button", { name: "Cancel my booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
+    // Bookings have a trash here: the cancelled one holds no place, and the same session can be
+    // booked again (a unique value holds among live records only).
+    await panel.getByRole("button", { name: "Book a mat" }).click();
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 });
+    await panel.getByRole("button", { name: "Cancel my booking" }).click();
+    await panel.getByRole("button", { name: "Yes, cancel it" }).click();
+    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();
     console.log(
-      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again",
+      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place)",
     );
   } catch (error) {
     console.log(
@@ -507,8 +514,8 @@ async function outgoingFlow(dir, base) {
     // The studio deletes it: the member is told about the booking as it was.
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
-    await page.getByRole("button", { name: "Delete" }).first().click();
-    await page.getByRole("button", { name: "Delete booking" }).click();
+    // Bookings have a trash in this run: a delete moves it there, and the mail goes then.
+    await page.getByRole("button", { name: "Move to trash" }).click();
     await page.waitForURL(/\/my-bookings$/);
     const gone = await next(count, "the deletion");
     if (
@@ -694,6 +701,86 @@ async function callFlow(dir, base, receiver) {
     await browser.close();
     // Removed by an operation, not undone: an undo puts back the database file under the server.
     if (added) ok(smithable(dir, "op", "removeOutgoing", "incidentResolved"));
+  }
+}
+
+/**
+ * The trash through the API (docs/design/trash.md §4), with tasks in a trash: a delete moves a
+ * task there; reading it answers 410 with the restore address; ?trashed=true lists it for a key
+ * whose role may delete and not for the assistant's; restore brings it back; ?permanent=true
+ * removes it for good.
+ */
+async function apiTrashFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/team`);
+    const keys = page.locator('[data-kit="keys"]');
+    const make = async (purpose, role) => {
+      await keys.getByLabel("What it is for").fill(purpose);
+      await keys.getByLabel("Role").selectOption(role);
+      await keys.getByRole("button", { name: "Make a key" }).click();
+      const shown = keys.locator('[data-part="key"]');
+      await shown.waitFor({ timeout: 10000 });
+      const key = await shown.textContent();
+      await open(page, `${base}/team`);
+      return key;
+    };
+    const admin = await make("Trash admin", "admin");
+    const assistant = await make("Trash assistant", "assistant");
+    const call = (key, path, init = {}) =>
+      fetch(`${base}/api/v1${path}`, {
+        ...init,
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      });
+    const [project] = (await (await call(admin, "/projects")).json()).items;
+    const task = await (
+      await call(admin, "/tasks", {
+        method: "POST",
+        body: JSON.stringify({ title: "Into the trash", project: project.id }),
+      })
+    ).json();
+    if ((await call(admin, `/tasks/${task.id}`, { method: "DELETE" })).status !== 204)
+      throw new Error("the delete did not answer 204");
+    const gone = await call(admin, `/tasks/${task.id}`);
+    const said = await gone.json();
+    if (
+      gone.status !== 410 ||
+      said.restore !== `/api/v1/tasks/${task.id}/restore` ||
+      !said.deletedAt
+    )
+      throw new Error(`reading a trashed task: ${gone.status} ${JSON.stringify(said)}`);
+    const listed = await (await call(admin, "/tasks?trashed=true")).json();
+    if (!listed.items.some((t) => t.id === task.id && t.deletedAt))
+      throw new Error(`the admin's trash: ${JSON.stringify(listed).slice(0, 200)}`);
+    const theirs = await (await call(assistant, "/tasks?trashed=true")).json();
+    if (theirs.items.some((t) => t.id === task.id))
+      throw new Error("a role that may not delete sees the trash");
+    if ((await call(assistant, `/tasks/${task.id}/restore`, { method: "POST" })).status !== 404)
+      throw new Error("a role that may not delete restored a task");
+    const back = await call(admin, `/tasks/${task.id}/restore`, { method: "POST" });
+    if (back.status !== 200 || (await back.json()).title !== "Into the trash")
+      throw new Error(`restore answered ${back.status}`);
+    if ((await call(admin, `/tasks/${task.id}`)).status !== 200)
+      throw new Error("the restored task does not read");
+    await call(admin, `/tasks/${task.id}`, { method: "DELETE" });
+    if (
+      (await call(admin, `/tasks/${task.id}?permanent=true`, { method: "DELETE" })).status !== 204
+    )
+      throw new Error("the permanent delete did not answer 204");
+    if ((await call(admin, `/tasks/${task.id}`)).status !== 404)
+      throw new Error("a task removed for good still answers");
+    console.log(
+      "  ✓ api: a delete moves a task to the trash; reading it answers 410 with the restore address; ?trashed=true lists it for an admin's key and not the assistant's; restore brings it back; ?permanent=true removes it for good",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ api trash: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("api trash flow");
+  } finally {
+    await browser.close();
   }
 }
 
@@ -3565,7 +3652,7 @@ function operationsFlow(dir) {
 }
 
 /** Creates, edits and deletes a customer through the UI, checking messages on the way. */
-async function browserFlow(base) {
+async function browserFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const expectText = async (name, text) => {
@@ -3659,23 +3746,80 @@ async function browserFlow(base) {
     await page.waitForURL(`${base}/customers`);
     await expectText("edit: the change is saved", "€2,750.50");
 
-    await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
-    // The confirmation names the record and starts on Cancel, so Enter does not delete.
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    const confirm = page.getByRole("dialog", { name: "Delete “Mariehamn Marine AB”?" });
-    await confirm.waitFor();
-    if (
-      !(await confirm
-        .getByRole("button", { name: "Cancel" })
-        .evaluate((b) => b === document.activeElement))
-    )
-      throw new Error("the delete confirmation does not start on Cancel");
-    await confirm.getByRole("button", { name: "Delete customer" }).click();
+    // The trash (docs/design/trash.md): Move to trash, Undo, the unique value it keeps, the Trash
+    // page, the record's own page read-only with Restore, then removal for good.
+    const trashIt = async () => {
+      await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
+      await page.getByRole("button", { name: "Move to trash" }).click();
+      await page.waitForURL(`${base}/customers`);
+    };
+    await trashIt();
+    const notice = page.locator('[data-part="trash-notice"]');
+    await notice.getByText("“Mariehamn Marine AB” is in the trash.").waitFor();
+    if (await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).count())
+      throw new Error("a trashed customer is still listed");
+    await notice.getByRole("button", { name: "Undo" }).click();
+    await page
+      .getByRole("cell", { name: "Mariehamn Marine AB", exact: true })
+      .waitFor({ timeout: 10000 });
+    await trashIt();
+    // A unique value holds among live records only: the email is free again, and restoring the
+    // trashed customer is refused while another has it.
+    await open(page, `${base}/customers/new`);
+    await page.getByRole("textbox", { name: "Name *" }).fill("Mariehamn Marine Again");
+    await page.getByRole("textbox", { name: "Email" }).fill("hello@mariehamn-marine.example.com");
+    await page.getByRole("button", { name: "Create customer" }).click();
     await page.waitForURL(`${base}/customers`);
-    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
-    if (await page.getByText("Mariehamn Marine AB").count())
-      throw new Error("The customer was not deleted");
-    console.log("  ✓ browser: delete asks first, naming the customer, then removes it");
+    await open(page, `${base}/customers/trash`);
+    await page
+      .locator("tr", { hasText: "Mariehamn Marine AB" })
+      .getByRole("button", { name: "Restore" })
+      .click();
+    await expectText(
+      "a restore is refused while a live customer has the email",
+      "Another customer already has this email.",
+    );
+    await open(page, `${base}/customers`);
+    await page.getByRole("cell", { name: "Mariehamn Marine Again", exact: true }).click();
+    await page.getByRole("button", { name: "Move to trash" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await open(page, `${base}/customers/trash`);
+    await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
+    await page.waitForURL(/\/customers\/\d+$/);
+    const banner = page.locator('[data-part="trashed"]');
+    await banner
+      .getByText(/^In the trash since .*, deleted by Dev admin\. It is removed for good on /)
+      .waitFor();
+    if (await page.getByRole("button", { name: "Save changes" }).count())
+      throw new Error("a trashed customer can be changed");
+    await banner.getByRole("button", { name: "Restore" }).click();
+    await banner.waitFor({ state: "detached" });
+    await open(page, `${base}/customers`);
+    await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).waitFor();
+    await trashIt();
+    await open(page, `${base}/customers/trash`);
+    await page.locator("tr", { hasText: "Mariehamn Marine AB" }).getByRole("checkbox").check();
+    await page
+      .locator('[data-kit="selection-bar"]')
+      .getByRole("button", { name: /^Delete/ })
+      .click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+    await page
+      .getByRole("cell", { name: "Mariehamn Marine AB", exact: true })
+      .waitFor({ state: "detached", timeout: 10000 });
+    const kept = query(
+      dir,
+      "select count(*) as n from customers where name = 'Mariehamn Marine AB'",
+    );
+    const lines = query(
+      dir,
+      "select action from audit_log where model = 'Customer' and action in ('trashed', 'restored', 'removed')",
+    ).map((l) => l.action);
+    if (kept[0]?.n !== 0 || !["trashed", "restored", "removed"].every((a) => lines.includes(a)))
+      throw new Error(`for good: ${JSON.stringify(kept)} ${lines.join()}`);
+    console.log(
+      "  ✓ browser: Move to trash hides the customer, Undo brings it back; its email is free for a new customer, and restoring it is refused until that one goes; its page is read-only with Restore; the Trash page removes it for good; the log has trashed, restored and removed",
+    );
 
     await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
@@ -3691,10 +3835,9 @@ async function browserFlow(base) {
     await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
 
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Delete customer" }).click();
+    await page.getByRole("button", { name: "Move to trash" }).click();
     await expectText(
-      "a customer with orders cannot be deleted, and it says why",
+      "a customer with orders cannot be moved to the trash, and it says why",
       "This customer is still used by other records.",
     );
     await open(page, `${base}/orders`);
@@ -3741,7 +3884,7 @@ async function browserFlow(base) {
       throw new Error("sales can merge customers");
     await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
     await page.getByRole("button", { name: "Save changes" }).waitFor();
-    if (await page.getByRole("button", { name: "Delete" }).count())
+    if (await page.getByRole("button", { name: /^(Delete|Move to trash)$/ }).count())
       throw new Error("sales can delete customers");
     console.log("  ✓ browser: sales edit customers but cannot delete or merge them; admins can");
   } catch (error) {
@@ -4113,6 +4256,23 @@ for (const [index, example] of examples.entries()) {
         if (added.code !== 0) throw new Error(added.out);
         run("pnpm", ["typecheck"], dir);
       });
+    // The trash (docs/design/trash.md) on a model with places and on one the API offers: the
+    // dev server's flows run with it (a cancelled booking frees its place; the API's 410).
+    if (example === "booking" || example === "api")
+      step(
+        `op setTrash ${example === "booking" ? "Booking" : "Task"} true, and the app type-checks`,
+        () => {
+          const done = smithable(
+            dir,
+            "op",
+            "setTrash",
+            example === "booking" ? "Booking" : "Task",
+            "true",
+          );
+          if (done.code !== 0) throw new Error(done.out);
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     // A copy (actions.md §8): duplicate an invoice with its lines, asking for its own number.
     if (example === "invoicing")
       step(
@@ -4729,7 +4889,7 @@ test("the session cookie's name and attributes", async () => {
       await sitemapCheck(dir, base);
       await legalCheck(dir, base);
       if (example === "crm") {
-        await browserFlow(base);
+        await browserFlow(dir, base);
         await filtersFlow(base);
         await pagingFlow(dir, base);
         await favoritesFlow(base);
@@ -4753,6 +4913,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);
       if (example === "api") await apiFlow(base);
+      if (example === "api") await apiTrashFlow(base);
       if (example === "api") await askPanelFlow(dir, base);
       if (example === "invoicing") {
         await copyFlow(base);

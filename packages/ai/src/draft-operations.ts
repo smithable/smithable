@@ -50,8 +50,6 @@ export function blankFor(starter?: SpecFiles): SpecFiles {
 /** Operations a first draft never needs: they change or undo what a draft has not made yet. */
 const NOT_FOR_DRAFTS = new Set([
   "editSpec",
-  // The trash waits for the generated app to keep it (docs/design/trash.md).
-  "setTrash",
   "removeField",
   "renameField",
   "changeField",
