@@ -3,6 +3,7 @@ import { Button } from "#/components/ui/button";
 import { Checkbox, Input, NativeSelect, Textarea } from "#/components/ui/input";
 import { Combobox } from "./Combobox";
 import type { FieldUi, Options } from "./model";
+import { w } from "./words";
 
 interface FieldInputProps {
   field: FieldUi;
@@ -50,8 +51,8 @@ export function FieldInput({
         {...common}
         value={value === true ? "yes" : value === false ? "no" : ""}
         choices={[
-          { value: "yes", label: "Yes" },
-          { value: "no", label: "No" },
+          { value: "yes", label: w.yes },
+          { value: "no", label: w.no },
         ]}
         onChange={(v) => onChange(v === "yes")}
       />
@@ -110,7 +111,7 @@ export function FieldInput({
           type="button"
           variant="outline"
           size="icon"
-          aria-label="Less"
+          aria-label={w.less}
           onClick={() => step(-1)}
         >
           −
@@ -129,7 +130,7 @@ export function FieldInput({
           type="button"
           variant="outline"
           size="icon"
-          aria-label="More"
+          aria-label={w.more}
           onClick={() => step(1)}
         >
           +
