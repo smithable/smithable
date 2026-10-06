@@ -1,12 +1,13 @@
 smithable: 0.1
 app:
-  name: Keynote
-  description: Registration, talk schedule and speaker line-up for a conference.
+  name: Conference Hub
+  description: "Programme and registration for a conference: browse the talks and speakers, and register for the talks you want to attend."
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
       name: string!
-      title: string
       company: string
       bio: text
     access:
@@ -19,75 +20,46 @@ models:
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      level: introductory | intermediate | advanced
+      level: beginner | intermediate | advanced
       capacity: int! = 100
-      bookings: Booking[]
+      registrations: Registration[]
       placesLeft:
         type: int
-        formula: capacity - COUNT(bookings)
+        formula: capacity - COUNT(registrations)
     access:
       create: [admin]
-  Booking:
+  Registration:
     fields:
       talk: Talk! unique
     capacity:
       per: talk
       max: talk.capacity
-  Attendee:
-    fields:
-      name: string!
-      email: email!
-      company: string
-      jobTitle: string
-      ticket: general | student | vip
-      dietaryNeeds: string
-      checkedIn: bool
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
 pages:
-  registration:
-    crud: Attendee
-    actions: [checkIn]
-    search: [name, email, company]
-    filters: [ticket, checkedIn]
   schedule:
-    calendar: Talk
-  my-bookings:
-    crud: Booking
+    calendar:
+      model: Talk
+      starts: startsAt
   talks:
     crud: Talk
     access: [admin]
+    search: [title, room]
+    filters: [speaker, level]
   speakers:
     crud: Speaker
-    access: [admin]
-  messages:
-    crud: Message
-    access: [admin]
+  my-registrations:
+    crud: Registration
   home:
     route: /
     landing:
       hero:
+        shortcuts: [schedule, speakers]
       footer:
+      programme:
+        records: Talk
       lineup:
         records: Speaker
       faq:
       callToAction:
-        button: registration
-      contact:
-        form: Message
+        button: schedule
   admin:
     data: all
-actions:
-  checkIn:
-    on: Attendee
-    when:
-      checkedIn: false
-    set:
-      checkedIn: true
-    allow: [admin]
-    intent: Mark an attendee as arrived at the conference.

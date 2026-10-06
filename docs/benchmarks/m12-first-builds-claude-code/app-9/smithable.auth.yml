@@ -5,6 +5,6 @@ signIn:
 defaultAccess: shared
 roles:
   agent:
-    description: Works on the help desk's tickets.
+    description: Works on the IT team and handles tickets.
 defaultRole: agent
 admins: [johan@smithable.ai]

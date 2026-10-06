@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: Riverside FC
-  description: The football club's site with its teams, players, fixtures and results.
-  timezone: Europe/London
+  name: Club Football
+  description: "The football club's site: our teams, players, fixtures and results."
+  timezone: Europe/Mariehamn
 models:
   Team:
     fields:
       name: string!
-      ageGroup: string
+      category: senior | youth | women | veterans
       coach: string
       description: text
       players: Player[]
@@ -34,7 +34,7 @@ models:
       kickoff: datetime!
       venue: home | away
       location: string
-      competition: league | cup | friendly
+      competition: string
       status: scheduled | played | postponed | canceled
       goalsFor: int
       goalsAgainst: int
@@ -46,23 +46,21 @@ models:
 pages:
   matches:
     crud: Match
-    search: [opponent, location]
-    filters: [team, status, venue, competition]
-    actions: [recordResult, postpone]
+    filters: [team, status, venue]
+    search: [opponent, competition]
+    actions: [recordResult, postpone, cancel]
   teams:
     crud: Team
-    search: [name, coach]
   players:
     crud: Player
-    search: [name]
     filters: [team, position]
+    search: [name]
   home:
     route: /
     landing:
       hero:
-        shortcuts: [matches, teams, players]
       footer:
-      fixtures:
+      upcoming:
         records: Match
         where:
           status: scheduled
@@ -70,7 +68,7 @@ pages:
         records: Match
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
 actions:
   recordResult:
@@ -82,13 +80,20 @@ actions:
       goalsFor:
       goalsAgainst:
     allow: [admin]
-    intent: Record the final score of a match that has been played.
+    intent: Enter the final score of a match and mark it played.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
-      kickoff:
     allow: [admin]
-    intent: Postpone a match to a new kick-off time.
+    intent: Mark a scheduled match as postponed.
+  cancel:
+    on: Match
+    when:
+      status: [scheduled, postponed]
+    set:
+      status: canceled
+    allow: [admin]
+    intent: Mark a match as canceled.
