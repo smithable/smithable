@@ -166,7 +166,12 @@ export function applyOperation(
     throw error;
   }
 
-  const after = validateSpec({ path: "smithable.yml", text: editors.spec.text }, options);
+  // The roles the spec may name are the auth file's as it is now: an operation may have changed them.
+  const rolesAfter = editors.auth ? auth(editors.auth.text).auth?.roles.map((r) => r.name) : roles;
+  const after = validateSpec(
+    { path: "smithable.yml", text: editors.spec.text },
+    { ...options, ...(rolesAfter ? { roles: rolesAfter } : {}) },
+  );
   if (!after.ir) return fail(`${name} would make smithable.yml invalid.`, after.diagnostics);
   // A companion file is written (and so checked) if the project has one or the operation
   // changed it. A theme added by the operation counts for the check, so the ux file may use it.

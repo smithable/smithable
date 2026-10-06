@@ -1,4 +1,5 @@
 import { parseDocument } from "yaml";
+import { COMPANIONS } from "../companion.js";
 import { type SpecIR, storageOf } from "../ir.js";
 import { type AnyOperation, type Effect, type Operation, OperationError } from "../operation.js";
 import { validateSpec } from "../spec.js";
@@ -29,29 +30,58 @@ function removedFields(before: SpecIR, text: string, validated?: SpecIR): Effect
   );
 }
 
+/** The files an edited text may replace, by the editor that holds each. */
+export const EDITABLE_FILES = {
+  "smithable.yml": "spec",
+  "smithable.auth.yml": "auth",
+  "smithable.ux.yml": "ux",
+  "smithable.content.yml": "content",
+  "smithable.context.yml": "context",
+} as const;
+export type EditableFile = keyof typeof EDITABLE_FILES;
+
+/** A companion file as it begins when the project has none yet; none for the auth file. */
+export const emptyFile = (file: EditableFile): string | undefined =>
+  COMPANIONS.find((c) => c.file === file)?.empty;
+
 /**
- * Studio's spec editor: the edited smithable.yml replaces the current one, through the same
- * checks, migrations, checkpoint and undo as every operation. The specific operations stay
- * better for agents: a renamed field shows here as a removed and an added one.
+ * Studio's editor: the edited smithable.yml, or one of its companion files, replaces the current
+ * one, through the same checks, migrations, checkpoint and undo as every operation. The specific
+ * operations stay better for agents: a renamed field shows here as a removed and an added one.
  */
-const editSpec: Operation<{ text: string }> = {
+const editSpec: Operation<{ text: string; file?: EditableFile }> = {
   name: "editSpec",
-  summary: "Replace smithable.yml with an edited version, as a whole.",
+  summary:
+    "Replace smithable.yml, or one of its companion files, with an edited version, as a whole.",
   schema: {
     type: "object",
     required: ["text"],
     additionalProperties: false,
-    properties: { text: { type: "string", description: "The complete new smithable.yml." } },
+    properties: {
+      text: { type: "string", description: "The complete new file." },
+      file: {
+        enum: Object.keys(EDITABLE_FILES),
+        description: "Which file; smithable.yml when not said.",
+      },
+    },
   },
   positional: ["text"],
-  describe: () => "Edit smithable.yml",
-  destructive: ({ text }, ir, after) => removedFields(ir, text, after).length > 0,
-  apply({ spec }, { text }, ir) {
+  describe: ({ file }) => `Edit ${file ?? "smithable.yml"}`,
+  destructive: ({ text, file }, ir, after) =>
+    (file ?? "smithable.yml") === "smithable.yml" && removedFields(ir, text, after).length > 0,
+  apply(editors, { text, file = "smithable.yml" }, ir) {
     const doc = parseDocument(text);
     if (doc.errors.length)
       throw new OperationError(`The YAML is not valid: ${doc.errors[0]?.message.split("\n")[0]}`);
-    spec.replaceAll(text);
-    return removedFields(ir, text);
+    if (file === "smithable.yml") {
+      editors.spec.replaceAll(text);
+      return removedFields(ir, text);
+    }
+    const editor = editors[EDITABLE_FILES[file]];
+    if (!editor)
+      throw new OperationError(`The project has no ${file}; set up sign-in first (setSignUp).`);
+    editor.replaceAll(text);
+    return [];
   },
 };
 
