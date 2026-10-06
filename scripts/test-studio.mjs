@@ -1063,9 +1063,69 @@ try {
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await status.getByText("Edit smithable.yml").waitFor({ timeout: 60000 });
   });
+  await step("the companion files are edited the same way, each with its own checks", async () => {
+    // The auth file: a role the spec names cannot go; a role added is saved as one change.
+    await page.getByLabel("File", { exact: true }).selectOption("smithable.auth.yml");
+    const auth = page.getByLabel("smithable.auth.yml");
+    const text = await auth.evaluate((e) => e.value);
+    if (!text.includes("roles:")) throw new Error(`not the auth file: ${text.slice(0, 80)}`);
+    const write = (to) =>
+      auth.evaluate((e, value) => {
+        e.value = value;
+      }, to);
+    await write(text.replace(/^ {2}sales:.*\n/m, ""));
+    await page
+      .getByRole("list", { name: "Problems" })
+      .getByText(/smithable.yml line \d+: .*sales/)
+      .first()
+      .waitFor();
+    if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
+      throw new Error("Save is enabled with a role the spec needs gone");
+    await write(
+      text
+        .replace("  sales:", "  support: { description: Answers questions. }\n  sales:")
+        .replace("admins:", "defaultRole: sales\nadmins:"),
+    );
+    await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await status.getByText("Edit smithable.auth.yml").waitFor({ timeout: 60000 });
+    // The spec's editor offers the roles as they are now, the new one among them.
+    await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
+    const spec = page.getByLabel("smithable.yml");
+    const specText = await spec.evaluate((e) => e.value);
+    const at = specText.indexOf("      write: [sales]");
+    if (at < 0) throw new Error("no access line to complete on");
+    await spec.focus();
+    await spec.evaluate((e, to) => e.setSelectionRange(to), at + "      write: [".length);
+    await page.keyboard.type("sup");
+    await page.locator(".cm-tooltip-autocomplete").getByText("support", { exact: true }).waitFor();
+    await page.keyboard.press("Escape");
+    await spec.evaluate((e, value) => {
+      e.value = value;
+    }, specText);
+    // The context file is offered too (the test project has one; a project without starts it
+    // from its first line), with its own checks.
+    await page.getByLabel("File", { exact: true }).selectOption("smithable.context.yml");
+    const context = page.getByLabel("smithable.context.yml");
+    await context.evaluate((e) => {
+      e.value = "smithableContext: 0.1\nplugins: [greeting]\nnonsense: true\n";
+    });
+    await page
+      .getByRole("list", { name: "Problems" })
+      .getByText(/nonsense/)
+      .waitFor();
+    await context.evaluate((e) => {
+      e.value = "smithableContext: 0.1\nplugins: [greeting]\n";
+    });
+    await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+    await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
+  });
   await step("the last change is shown as a diff", async () => {
     await page.getByRole("tab", { name: "Last change" }).click();
-    await page.getByLabel("Last change").getByText("+      fax: phone").waitFor();
+    await page
+      .getByLabel("Last change")
+      .getByText("+  support: { description: Answers questions. }")
+      .waitFor();
   });
   await step("any operation can be applied from a form built from its schema", async () => {
     await page.getByRole("tab", { name: "Operation" }).click();
@@ -1208,7 +1268,8 @@ try {
   );
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
     // An unsaved edit in the spec editor is kept when the file changes under it.
-    await page.getByRole("tab", { name: "smithable.yml" }).click();
+    await page.getByRole("tab", { name: "Files" }).click();
+    await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
     const editor = page.getByLabel("smithable.yml");
     const typed = `${await editor.evaluate((e) => e.value)}# unsaved\n`;
     await editor.evaluate((e, value) => {

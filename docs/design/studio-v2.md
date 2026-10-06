@@ -31,7 +31,7 @@ Looks are hard to change today: one form, "Look and feel", with the theme preset
 
 Every control shows the value in the file and applies its operation at once, undoable like any change; there is no Apply button and no form state to lose. The tab reads the ux file through the spec, so what someone edits in Studio shows here on the next change.
 
-In Studio, the editor gets the companion files as tabs next to `smithable.yml`: `smithable.ux.yml`, `smithable.content.yml`, `smithable.auth.yml`, `smithable.context.yml`, each saved through `editSpec`'s sibling for that file (an `editFile` operation with the file as an argument, refused when the result is invalid, as `editSpec` is).
+In Studio, the editor gets the companion files beside `smithable.yml`: `smithable.ux.yml`, `smithable.content.yml`, `smithable.auth.yml`, `smithable.context.yml`, each saved through `editSpec` with the file as an argument, refused when the result is invalid, as the spec is. Built 2026-10-06 (Fable): a file switcher in the Files tab, each file checked as you type by its own validator and against the spec (a role the spec names cannot go), and the spec checked with the roles as edited.
 
 ## 4. Questions about the app
 
