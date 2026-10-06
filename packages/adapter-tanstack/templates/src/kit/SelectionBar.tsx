@@ -58,7 +58,7 @@ export function SelectionBar({
       {count > 0 && (
         <Card className="flex flex-wrap items-center gap-2 p-2 pl-4">
           <span className="mr-auto text-sm font-medium" role="status">
-            {count} selected
+            {w.selectedN(count)}
           </span>
           {actions
             .filter((a) => a.applies > 0)
@@ -71,7 +71,7 @@ export function SelectionBar({
                   setFailure(undefined);
                   try {
                     const r = await a.run(values);
-                    setMessage(`${a.label}: ${counted(r.changed, r.skipped, "changed")}`);
+                    setMessage(`${a.label}: ${counted(r.changed, r.skipped, w.changedVerb)}`);
                     await onDone();
                   } catch (error) {
                     setFailure(words(error));
@@ -86,7 +86,7 @@ export function SelectionBar({
               disabled={busy}
               onClick={() => confirm.current?.showModal()}
             >
-              Delete ({deletable})
+              {w.deleteN(deletable)}
             </Button>
           )}
         </Card>
@@ -103,12 +103,12 @@ export function SelectionBar({
       )}
       <dialog
         ref={confirm}
-        aria-label="Delete"
+        aria-label={w.delete}
         className="m-auto w-full max-w-md bg-transparent p-0 backdrop:bg-black/50"
       >
         <Card className="space-y-4 p-card">
           <p className="font-medium">
-            Delete {deletable} {deletable === 1 ? noun[0] : noun[1]}? This cannot be undone.
+            {w.deleteHowMany(deletable, deletable === 1 ? noun[0] : noun[1])}
           </p>
           <div className="flex gap-2">
             <Button
@@ -120,7 +120,7 @@ export function SelectionBar({
                 setFailure(undefined);
                 try {
                   const r = await onDelete?.();
-                  if (r) setMessage(counted(r.deleted, r.skipped, "deleted"));
+                  if (r) setMessage(counted(r.deleted, r.skipped, w.deletedVerb));
                   await onDone();
                 } catch (error) {
                   setFailure(words(error));

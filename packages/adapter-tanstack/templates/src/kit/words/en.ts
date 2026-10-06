@@ -284,6 +284,41 @@ export const w = {
     `Something went wrong. Please try again.${reference ? ` Reference: ${reference}` : ""}`,
   /** The inspector: a step the assistant proposed. */
   wouldDo: (tool: string, what: string) => `It would ${tool} ${what}; nothing was changed.`,
+  calculated: "(calculated)",
+  changedVerb: "changed",
+  clear: "Clear",
+  createFirst: "Create the first one to get started.",
+  deletedVerb: "deleted",
+  endsOptional: "Ends (optional)",
+  filters: "Filters",
+  mainMenu: "Main",
+  markdownHint: "Markdown: **bold**, *italic*, ## a heading, - a list, [a link](https://…)",
+  noModel: ", no model",
+  options: "Options",
+  pictureDescription: "Description (for those who cannot see it)",
+  question: "Question",
+  asRole: (role: string) => `as ${role}`,
+  contactThe: (who: string) => `Contact the ${who}`,
+  continueWith: (provider: string) => `Continue with ${provider}`,
+  deleteHowMany: (n: number, noun: string) => `Delete ${n} ${noun}? This cannot be undone.`,
+  deleteIt: (label: string) => `Delete ${label}`,
+  deleteN: (n: number) => `Delete (${n})`,
+  endsOn: (day: string) => `ends ${day}`,
+  lastUsed: (day: string) => `last used ${day}`,
+  pictureDescriptionN: (n: number) => `Description of picture ${n}`,
+  /** A range filter's two boxes, for screen readers: "Price from". */
+  rangeFrom: (label: string) => `${label} from`,
+  rangeTo: (label: string) => `${label} to`,
+  revokedOn: (day: string) => `Revoked ${day}`,
+  selectedN: (n: number) => `${n} selected`,
+  signInUnavailable: (app: string) =>
+    `Signing in is not available right now. Please contact whoever runs ${app}.`,
+  stepOf: (n: number, count: number) => `Step ${n} of ${count}`,
+  tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} tokens in, ${tokensOut} out`,
+  toolCalls: (n: number) => `${n} tool ${n === 1 ? "call" : "calls"}`,
+  /** The inspector: a change the role may only propose. */
+  wouldPropose: (tool: string, what: string) =>
+    `Would ${tool} ${what}: an assistant with this role may propose it, and nothing was changed.`,
 };
 
 export type Words = typeof w;

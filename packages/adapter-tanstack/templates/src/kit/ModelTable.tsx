@@ -165,7 +165,7 @@ export function ModelTable<R extends Row>({
         ) : (
           <>
             <p className="font-medium">{w.noneYet(ui.pluralLabel.toLowerCase())}</p>
-            <p className="text-sm text-muted-foreground">Create the first one to get started.</p>
+            <p className="text-sm text-muted-foreground">{w.createFirst}</p>
             {emptyAction}
           </>
         )}
@@ -387,12 +387,12 @@ export function ModelTable<R extends Row>({
                 ))}
                 {saved && (
                   <TableHead className="w-12">
-                    <span className="sr-only">Saved</span>
+                    <span className="sr-only">{w.saved}</span>
                   </TableHead>
                 )}
                 {rowActions && (
                   <TableHead>
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{w.actions}</span>
                   </TableHead>
                 )}
               </TableRow>

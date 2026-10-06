@@ -1,6 +1,7 @@
 // Smithable app kit: the frame of a first-time setup in steps, with its progress.
 // To change it, copy this file into src/custom/components/ and edit the copy.
 import { cn } from "#/lib/utils";
+import { w } from "./words";
 
 export function OnboardingLayout({
   title,
@@ -28,7 +29,7 @@ export function OnboardingLayout({
       <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
       {subtitle && <p className="mt-2 text-muted-foreground">{subtitle}</p>}
       <p className="mt-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Step {step + 1} of {count}
+        {w.stepOf(step + 1, count)}
       </p>
       <div aria-hidden className="mt-2 flex gap-2">
         {Array.from({ length: count }, (_, i) => i).map((n) => (
