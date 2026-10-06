@@ -164,6 +164,8 @@ export function validateContent(
     later: ["actions"],
   });
 
+  // Where each model's entry is, for a warning about the model.
+  const modelKeys = new Map<string, ParsedNode>();
   for (const { key, value } of known) {
     if (key === "language") {
       const language = readString(ctx, value, '"language"');
@@ -177,7 +179,7 @@ export function validateContent(
           `The app kit has no words in "${language}". Languages: ${LANGUAGES.join(", ")}.`,
         );
     }
-    if (key === "models") readModels(ctx, value, ir, content);
+    if (key === "models") readModels(ctx, value, ir, content, modelKeys);
     if (key === "pages") {
       for (const page of named(
         ctx,
@@ -202,11 +204,12 @@ export function validateContent(
     }
   }
   // In another language a plural made by an English rule reads wrong: each model says its own.
+  // The warning sits on the model's entry when it has one, else on the language key.
   if (content.language !== "en")
     for (const model of ir.models)
       if (!content.models[model.name]?.pluralLabel)
         ctx.warning(
-          byKey.get("models")?.value ?? root,
+          modelKeys.get(model.name) ?? byKey.get("language")?.keyNode ?? root,
           "plural-in-english",
           `${model.name}: the plural would be made by an English rule ("${plural(content.models[model.name]?.label ?? humanize(model.name))}"); give it a pluralLabel.`,
         );
@@ -218,6 +221,7 @@ function readModels(
   node: ParsedNode | null,
   ir: SpecIR,
   content: ContentIR,
+  modelKeys: Map<string, ParsedNode>,
 ): void {
   for (const model of named(
     ctx,
@@ -226,6 +230,7 @@ function readModels(
     ir.models.map((m) => m.name),
     "model",
   )) {
+    modelKeys.set(model.key, model.keyNode);
     const spec = ir.models.find((m) => m.name === model.key);
     const where = `model "${model.key}"`;
     const entries = mapEntries(ctx, model.value, where) ?? [];

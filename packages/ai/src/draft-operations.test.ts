@@ -634,3 +634,25 @@ test("a valid draft that a visitor would find broken goes back to the model once
   expect(fine.kind).toBe("draft");
   expect(prompts).toHaveLength(1);
 });
+
+test("a Swedish description sets the app's language before the model answers, and a repeat is skipped", async () => {
+  const draft = await draftProjectByOperations({
+    description:
+      "En uppgiftslista för vårt lag: varje uppgift har en titel och en ansvarig, och vi ser vad som är kvar att göra.",
+    providers: [
+      answering({
+        operations: [
+          { op: "setLanguage", args: { language: "sv" } },
+          { op: "setApp", args: { name: "Uppgifter" } },
+          { op: "addModel", args: { model: "Task", fields: { title: "string!" } } },
+          { op: "setText", args: { path: ["models", "Task", "pluralLabel"], text: "Uppgifter" } },
+          { op: "addPage", args: { page: "uppgifter", model: "Task" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error("no draft");
+  expect(draft.operations?.[0]).toEqual({ op: "setLanguage", args: { language: "sv" } });
+  expect(draft.operations?.filter((o) => o.op === "setLanguage")).toHaveLength(1);
+  expect(draft.files["smithable.content.yml"]).toContain("language: sv");
+});
