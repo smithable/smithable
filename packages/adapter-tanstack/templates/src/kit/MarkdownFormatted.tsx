@@ -2,6 +2,7 @@
 // anywhere to inject into. Headings start at h2, under the page's own h1; links to other sites
 // get rel="noopener nofollow"; pictures belong in picture fields, not in the text.
 import Markdown, { type Components } from "react-markdown";
+import { AppLink } from "./AppLink";
 
 const components: Components = {
   h1: ({ node: _, ...props }) => <h2 className="mt-6 mb-3 text-2xl font-bold" {...props} />,
@@ -17,8 +18,9 @@ const components: Components = {
   code: ({ node: _, ...props }) => (
     <code className="rounded bg-muted px-1 font-mono text-sm" {...props} />
   ),
+  // A link to a page of the app opens through the router (AppLink); others are ordinary links.
   a: ({ node: _, href, ...props }) => (
-    <a
+    <AppLink
       href={href}
       className="text-primary underline underline-offset-4"
       {...(href && /^https?:\/\//.test(href) ? { rel: "noopener nofollow" } : {})}
