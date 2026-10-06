@@ -1,19 +1,28 @@
-// Smithable app kit: a browser sends a record's picture here before saving the record (see
-// src/kit/PictureInput.tsx). Whoever may add or change the model's records may send one; the
-// file is checked and stored by src/kit/uploads.ts and the record keeps what this returns.
+// Smithable app kit: a browser sends a record's picture or document here before saving the
+// record (see src/kit/PictureInput.tsx and src/kit/FileInput.tsx). Whoever may add or change the
+// model's records may send one; the file is checked and stored by src/kit/uploads.ts and the
+// record keeps what this returns. A document's name comes in the X-File-Name header.
 import { createFileRoute } from "@tanstack/react-router";
-import { PICTURES } from "#/generated/pictures";
+import { UPLOADS } from "#/generated/uploads";
 import { allows } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
-import { BadPicture, PICTURE_MAX_BYTES, savePicture } from "#/kit/uploads";
+import {
+  BadFile,
+  BadPicture,
+  FILE_MAX_BYTES,
+  PICTURE_MAX_BYTES,
+  saveFile,
+  savePicture,
+} from "#/kit/uploads";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const Route = createFileRoute("/files/$model/$field")({
   server: {
     handlers: {
       POST: async ({ request, params }) => {
-        const entry = PICTURES[params.model]?.[params.field];
+        const entry = UPLOADS[params.model]?.[params.field];
         if (!entry) return new Response("Not found", { status: 404 });
         const viewer = await currentViewer();
         const { create, write } = entry.access;
@@ -27,14 +36,20 @@ export const Route = createFileRoute("/files/$model/$field")({
         try {
           writeAllowed(viewer, request.headers);
           const length = Number(request.headers.get("content-length") ?? 0);
-          if (length > PICTURE_MAX_BYTES)
-            throw new BadPicture("The picture is too large (at most 1 MB).");
+          if (entry.kind === "file") {
+            if (length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
+            const bytes = new Uint8Array(await request.arrayBuffer());
+            const name = decodeURIComponent(request.headers.get("x-file-name") ?? "");
+            return Response.json(saveFile(params.model, bytes, name));
+          }
+          if (length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
           const bytes = new Uint8Array(await request.arrayBuffer());
           const { file, width, height } = savePicture(params.model, bytes, "");
           return Response.json({ file, width, height });
         } catch (error) {
           const known =
             error instanceof BadPicture ||
+            error instanceof BadFile ||
             (error instanceof Error && error.message.startsWith("Too many "));
           if (!known) log.error("A picture could not be stored", { error });
           return new Response(

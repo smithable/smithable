@@ -320,6 +320,8 @@ function unsettable(field: FieldIR): string | undefined {
     (field.type.name === "picture" || field.type.name === "pictures")
   )
     return "it is a picture";
+  if (field.type.kind === "scalar" && (field.type.name === "file" || field.type.name === "files"))
+    return "it is a document";
   return undefined;
 }
 
@@ -513,6 +515,8 @@ function copyGap(model: ModelIR, values: ActionValueIR[] | undefined): string | 
     if (!f.required || f.formula) continue;
     if (f.type.kind === "scalar" && (f.type.name === "picture" || f.type.name === "pictures"))
       return `${model.name}.${f.name} is a required picture, which a copy starts without: ${model.name} cannot be copied by an action yet.`;
+    if (f.type.kind === "scalar" && (f.type.name === "file" || f.type.name === "files"))
+      return `${model.name}.${f.name} is a required document, which a copy starts without: ${model.name} cannot be copied by an action yet.`;
     const given = values?.find((v) => v.field === f.name);
     if (f.unique && !(given && ("formula" in given || "asked" in given)))
       return values

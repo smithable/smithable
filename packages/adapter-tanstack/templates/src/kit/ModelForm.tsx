@@ -8,7 +8,7 @@ import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
 import { FieldInput } from "./FieldInput";
-import { formatValue, fromInput, toInput } from "./format";
+import { fileSize, formatValue, fromInput, toInput } from "./format";
 import {
   type AppUi,
   editorMarker,
@@ -111,6 +111,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       field.kind === "markdown" ||
       field.kind === "picture" ||
       field.kind === "pictures" ||
+      field.kind === "files" ||
       field.control === "textarea");
   const renderField = (field: FieldUi) => {
     const id = `${formId}field-${field.name}`;
@@ -463,6 +464,32 @@ function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app
               loading="lazy"
               className="h-56 w-auto rounded-md object-cover"
             />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      "—"
+    );
+  }
+  // A document is a link to it, with its size; several, a list of them.
+  if (field.kind === "file" || field.kind === "files") {
+    const list = (
+      field.kind === "file" ? (value ? [value] : []) : Array.isArray(value) ? value : []
+    ) as {
+      name?: string;
+      size?: number;
+    }[];
+    return list.length ? (
+      <ul data-part="files" className="space-y-1">
+        {list.map((f, i) => (
+          <li key={`${base}/${i}`}>
+            <a
+              href={field.kind === "file" ? base : `${base}/${i}`}
+              className="underline underline-offset-4"
+            >
+              {f.name}
+            </a>{" "}
+            <span className="text-muted-foreground">{fileSize(Number(f.size ?? 0))}</span>
           </li>
         ))}
       </ul>
