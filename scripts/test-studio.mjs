@@ -40,15 +40,24 @@ async function step(name, fn) {
   } catch (error) {
     const shot = join(root, "failure.png");
     await page.screenshot({ path: shot }).catch(() => {});
+    // What Code mode's Problems list said, for a failure the picture alone cannot explain (CI).
+    const problems = await page
+      .getByRole("list", { name: "Problems" })
+      .innerText({ timeout: 1000 })
+      .catch(() => "");
     console.log(
-      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}`,
+      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}${problems ? `\n    Problems: ${problems.replace(/\n+/g, " | ")}` : ""}`,
     );
     failed = true;
     throw error;
   }
 }
 
-const created = spawnSync("node", [cli, "new", dir], { encoding: "utf8" });
+// The administrator is given, not taken from the machine's Git user: CI's is ci@example.com, and
+// an administrator nobody can mail is a problem the auth file's check reports (as it should).
+const created = spawnSync("node", [cli, "new", dir, "--admin", "studio-test@smithable.ai"], {
+  encoding: "utf8",
+});
 if (created.status !== 0) throw new Error(created.stdout + created.stderr);
 // A project plugin with a section of its own: the engine in the tab must load it, or it
 // reports the section as unknown and the app cannot be described.
