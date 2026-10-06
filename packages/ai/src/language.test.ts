@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { languageNote, writtenInEnglish } from "./language.js";
+import { languageNote, writtenIn, writtenInEnglish } from "./language.js";
 
 test("an English description is English, also when it names a place; others are left to the model", () => {
   expect(
@@ -21,4 +21,18 @@ test("an English description is English, also when it names a place; others are 
   ).toBe(false);
   expect(writtenInEnglish("Un mercado de segunda mano para nuestro pueblo.")).toBe(false);
   expect(languageNote("Mariehamn second hand")).toBe("");
+});
+
+test("a Swedish description is Swedish, and the note says so; a mixed or short line is neither", () => {
+  expect(
+    writtenIn(
+      "En bokningssida för min lilla yogastudio i Åbo: ett schema med klasser, en lärare, en tid och antal platser; folk bokar en plats och kan avboka, och jag ser vem som kommer.",
+    ),
+  ).toBe("sv");
+  expect(writtenIn("A football club's site: teams, players, matches and results.")).toBe("en");
+  expect(writtenIn("Un mercado de segunda mano para nuestro pueblo.")).toBeUndefined();
+  expect(writtenIn("Yoga Åbo")).toBeUndefined();
+  expect(
+    languageNote("Ett schema med klasser som folk kan boka och avboka när de vill."),
+  ).toContain("written in Swedish");
 });
