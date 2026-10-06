@@ -2,13 +2,13 @@ smithable: 0.1
 app:
   name: IT Help Desk
   description: A help desk where the IT team tracks tickets, their priorities and who handles them.
+  timezone: Europe/Stockholm
 models:
   Ticket:
     fields:
       title: string!
       description: text
-      requester: string
-      category: other | hardware | software | network | account
+      category: other | hardware | software | network | access
       priority: normal | low | high | urgent
       status: open | inProgress | resolved | closed
       assignee: User
@@ -16,7 +16,7 @@ models:
 pages:
   tickets:
     crud: Ticket
-    search: [title, description, requester]
+    search: [title, description]
     sortable: [priority, status, createdAt]
     actions: [take, resolve, close, reopen]
   team:
@@ -37,7 +37,7 @@ actions:
     set:
       status: resolved
       resolvedAt: NOW()
-    intent: Mark the ticket as resolved.
+    intent: Mark a ticket as resolved.
   close:
     on: Ticket
     when:
@@ -52,4 +52,4 @@ actions:
     set:
       status: open
       resolvedAt:
-    intent: Reopen a ticket whose problem came back.
+    intent: Reopen a ticket that needs more work.

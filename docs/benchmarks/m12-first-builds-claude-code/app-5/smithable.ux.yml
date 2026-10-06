@@ -8,7 +8,6 @@ pages:
   suppliers:
     table:
       columns: [name, contactName, email, phone]
-      sort: name
     icon: truck
 theme:
   preset: craft
