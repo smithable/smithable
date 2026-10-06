@@ -5,3 +5,13 @@
 export class BadInput extends Error {}
 /** A record that is not there, or not one the caller may read: never which of the two. */
 export class NotFound extends Error {}
+
+/** A record in the trash (docs/design/trash.md): since when, by whom, and where it is restored. */
+export class Gone extends Error {
+  constructor(
+    message: string,
+    readonly more: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}

@@ -6575,7 +6575,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 import { createFileRoute } from "@tanstack/react-router";
 import { noteFromApi, noteToApi } from "#/generated/api.server";
 import { noteData } from "#/generated/note.server";
-import { apiCall, NotFound } from "#/kit/api.server";
+import { NotFound, apiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof noteData.get>[0], id: string) => {
   const row = await noteData.get(viewer, Number(id));
@@ -6718,7 +6718,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 import { createFileRoute } from "@tanstack/react-router";
 import { projectFromApi, projectToApi } from "#/generated/api.server";
 import { projectData } from "#/generated/project.server";
-import { apiCall, NotFound } from "#/kit/api.server";
+import { NotFound, apiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof projectData.get>[0], id: string) => {
   const row = await projectData.get(viewer, Number(id));
@@ -6864,7 +6864,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 import { createFileRoute } from "@tanstack/react-router";
 import { taskFromApi, taskToApi } from "#/generated/api.server";
 import { taskData } from "#/generated/task.server";
-import { apiCall, NotFound } from "#/kit/api.server";
+import { NotFound, apiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof taskData.get>[0], id: string) => {
   const row = await taskData.get(viewer, Number(id));
@@ -7701,7 +7701,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -7711,7 +7711,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Users.tsx": "7951cdd5 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/api.server.ts": "532ede94 kit",
+  "src/kit/api.server.ts": "de99ef82 kit",
   "src/kit/ask.ts": "4ecf379d kit",
   "src/kit/assistant.server.ts": "a530b6d0 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -7725,14 +7725,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/mcp.server.ts": "2da8d18a kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
-  "src/kit/refusal.ts": "9d8d5da6 kit",
+  "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3ba8a00 generated",
@@ -7754,15 +7754,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/new.tsx": "7c6c1500 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.$field.ts": "5bd4f5d8 generated",
-  "src/routes/api/v1/notes/$id.ts": "67cfabed generated",
+  "src/routes/api/v1/notes/$id.ts": "7fc56a1f generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/api/v1/projects/$id.ts": "305e3323 generated",
+  "src/routes/api/v1/projects/$id.ts": "68867dd9 generated",
   "src/routes/api/v1/projects/index.ts": "789eeb5b generated",
   "src/routes/api/v1/projects[.]csv.ts": "d0b1382e generated",
   "src/routes/api/v1/tasks/$id.actions.$action.ts": "3afab909 generated",
-  "src/routes/api/v1/tasks/$id.ts": "f7d87c97 generated",
+  "src/routes/api/v1/tasks/$id.ts": "96b999f9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
@@ -15444,7 +15444,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -15471,7 +15471,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3a82cc45 generated",
@@ -15706,8 +15706,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sm
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/db/schema.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text().primaryKey(),
@@ -15810,38 +15810,52 @@ export const auditLog = sqliteTable(
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
 );
 
-export const customers = sqliteTable("customers", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  email: text().unique(),
-  phone: text(),
-  segment: text({ enum: ["smb", "enterprise", "government"] }).notNull().default("smb"),
-  creditLimit: integer(),
-  notes: text(),
-  accountManagerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const customers = sqliteTable(
+  "customers",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    email: text(),
+    phone: text(),
+    segment: text({ enum: ["smb", "enterprise", "government"] }).notNull().default("smb"),
+    creditLimit: integer(),
+    notes: text(),
+    accountManagerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+    /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
+    deletedAt: integer({ mode: "timestamp_ms" }),
+    deletedBy: text(),
+  },
+  (t) => [uniqueIndex("customers_email_unique").on(t.email).where(sql\`\${t.deletedAt} is null\`), index("customers_live").on(t.accountManagerId).where(sql\`\${t.deletedAt} is null\`)],
+);
 
-export const orders = sqliteTable("orders", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  number: text().notNull().unique(),
-  customerId: integer().notNull().references(() => customers.id, { onDelete: "restrict" }),
-  status: text({ enum: ["draft", "placed", "shipped", "canceled"] }).notNull().default("draft"),
-  total: integer().notNull(),
-  shippingMethod: text({ enum: ["standard", "express"] }).notNull().default("standard"),
-  shippingCost: integer(),
-  placedAt: integer({ mode: "timestamp_ms" }),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const orders = sqliteTable(
+  "orders",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    number: text().notNull(),
+    customerId: integer().notNull().references(() => customers.id, { onDelete: "restrict" }),
+    status: text({ enum: ["draft", "placed", "shipped", "canceled"] }).notNull().default("draft"),
+    total: integer().notNull(),
+    shippingMethod: text({ enum: ["standard", "express"] }).notNull().default("standard"),
+    shippingCost: integer(),
+    placedAt: integer({ mode: "timestamp_ms" }),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+    /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
+    deletedAt: integer({ mode: "timestamp_ms" }),
+    deletedBy: text(),
+  },
+  (t) => [uniqueIndex("orders_number_unique").on(t.number).where(sql\`\${t.deletedAt} is null\`), index("orders_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`)],
+);
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
   accountManager: one(user, { fields: [customers.accountManagerId], references: [user.id] }),
@@ -16127,7 +16141,7 @@ describe("the audit log", () => {
     expect(lines.map((l) => [l.action, l.who, l.role])).toEqual([
       ["created", viewer.id, viewer.role],
       ["changed", viewer.id, viewer.role],
-      ["deleted", viewer.id, viewer.role],
+      ["trashed", viewer.id, viewer.role],
     ]);
     // Only the line that deleted it keeps the record's name (its title by then); no field's
     // value is stored.
@@ -16257,12 +16271,12 @@ export interface CustomSectionProps {
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/customer.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
-import { refusal } from "#/kit/log.server";
+import { log, refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
@@ -16287,9 +16301,18 @@ function ownerFor(viewer: Viewer | null, given: string | null | undefined): stri
   return personOf(viewer);
 }
 
+/** How long a record stays in the trash, and the most a trash view shows. */
+const TRASH_DAYS = 30;
+const DAY = 24 * 60 * 60 * 1000;
 export const customerData = {
   /** A condition for the customers the viewer may read. */
   readable(viewer: Viewer | null) {
+    // What is in the trash is gone to every reader (docs/design/trash.md).
+    return and(isNull(schema.customers.deletedAt), customerData.scoped(viewer));
+  },
+
+  /** The records the viewer may read by the read rule, the trashed ones too. */
+  scoped(viewer: Viewer | null) {
     const scope = readScope(customerAccess.read, viewer);
     if (scope === "all") return undefined;
     return scope === "own" && viewer ? eq(schema.customers.accountManagerId, viewer.id) : sql\`false\`;
@@ -16394,9 +16417,10 @@ export const customerData = {
     check(customerAccess.delete, viewer, row.accountManagerId);
     try {
       db.transaction((tx) => {
-        const gone = tx.delete(schema.customers).where(eq(schema.customers.id, id)).returning().get();
+        if (tx.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.customerId, id)).limit(1).get()) throw new Conflict("in-use");
+        const gone = tx.update(schema.customers).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, id), isNull(schema.customers.deletedAt))).returning().get();
         if (gone) {
-          audit(tx, viewer, { action: "deleted", model: "Customer", record: id, title: gone.name });
+          audit(tx, viewer, { action: "trashed", model: "Customer", record: id, title: gone.name });
         }
       });
     } catch (error) {
@@ -16419,9 +16443,10 @@ export const customerData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
-          const gone = tx.delete(schema.customers).where(eq(schema.customers.id, row.id)).returning().get();
+          if (tx.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.customerId, row.id)).limit(1).get()) throw new Conflict("in-use");
+          const gone = tx.update(schema.customers).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, row.id), isNull(schema.customers.deletedAt))).returning().get();
           if (gone) {
-            audit(tx, viewer, { action: "deleted", model: "Customer", record: row.id, title: gone.name });
+            audit(tx, viewer, { action: "trashed", model: "Customer", record: row.id, title: gone.name });
           }
         } catch (error) {
           const refused = refusal(error);
@@ -16432,6 +16457,110 @@ export const customerData = {
       await afterDelete("Customer", row.id, viewer);
     }
     return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /**
+   * The viewer's trash (docs/design/trash.md): the customers in it they may delete, the
+   * latest first, with when and by whom, kept for thirty days.
+   */
+  async trash(viewer: Viewer | null) {
+    const rows = (
+      await db.query.customers.findMany({
+        where: and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer)),
+        with: { accountManager: { columns: { id: true, name: true } } },
+        orderBy: (t) => [desc(t.deletedAt)],
+        limit: 1000,
+      })
+    ).filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );
+    return rows.map((row) => ({ ...row, deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null }));
+  },
+
+  /** A customer in the trash, as its page shows it read-only, with when and by whom; else nothing. */
+  async trashed(viewer: Viewer | null, id: number) {
+    const row = await db.query.customers.findFirst({
+      where: and(eq(schema.customers.id, id), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))),
+      with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) } },
+    });
+    if (!row || !allows(customerAccess.delete, viewer, row.accountManagerId)) return null;
+    const rows = [row];
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );
+    return {
+      row: row,
+      deletedAt: row.deletedAt as Date,
+      by: (row.deletedBy && people.get(row.deletedBy)) ?? null,
+      until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
+    };
+  },
+
+  /** Takes the chosen customers out of the trash, those the viewer may delete. */
+  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
+    const rows = db
+      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
+      .from(schema.customers)
+      .where(and(inArray(schema.customers.id, ids), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))))
+      .all().filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
+    // A unique value a live record has taken since refuses it, as it refuses a new record.
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const back = tx.update(schema.customers).set({ deletedAt: null, deletedBy: null }).where(eq(schema.customers.id, row.id)).returning().get();
+          audit(tx, viewer, { action: "restored", model: "Customer", record: row.id, title: back.name });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+    return { restored: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Removes the chosen customers in the trash for good, with their pictures and documents. */
+  removeForGood(viewer: Viewer | null, ids: number[]): { deleted: number; skipped: number } {
+    const rows = db
+      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
+      .from(schema.customers)
+      .where(and(inArray(schema.customers.id, ids), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))))
+      .all().filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
+    customerData.erase(viewer, rows.map((row) => row.id));
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
+  erase(viewer: Viewer | null, ids: number[]): void {
+    if (ids.length === 0) return;
+    const rows = db
+      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
+      .from(schema.customers)
+      .where(and(inArray(schema.customers.id, ids), isNotNull(schema.customers.deletedAt)))
+      .all();
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const gone = tx.delete(schema.customers).where(eq(schema.customers.id, row.id)).returning().get();
+          if (gone) audit(tx, viewer, { action: "removed", model: "Customer", record: row.id, title: gone.name });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /** What has been in the trash for thirty days goes for good (once a day). */
+  purge(now = Date.now()): number {
+    const old = db
+      .select({ id: schema.customers.id })
+      .from(schema.customers)
+      .where(lt(schema.customers.deletedAt, new Date(now - TRASH_DAYS * DAY)))
+      .all()
+      .map((row) => row.id);
+    customerData.erase(null, old);
+    return old.length;
   },
 
   /**
@@ -16458,6 +16587,19 @@ export const customerData = {
       .all();
   },
 };
+
+// Once a day, a minute after the server starts and then every day, in production.
+if (import.meta.env.SSR && import.meta.env.PROD) {
+  const purge = () => {
+    try {
+      customerData.purge();
+    } catch (error) {
+      log.error("The trash could not be emptied", { model: "Customer", error });
+    }
+  };
+  setTimeout(purge, 60_000).unref();
+  setInterval(purge, DAY).unref();
+}
 "
 `;
 
@@ -16577,9 +16719,15 @@ export const getCustomer = createServerFn()
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
     const row = await customerData.get(viewer, id);
+    // In the trash: its page shows it read-only, with when, by whom and Restore.
+    if (!row) {
+      const gone = await customerData.trashed(viewer, id);
+      return gone && { row: gone.row, canWrite: false, canDelete: false, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+    }
     if (!row) return null;
     return {
       row,
+      trashed: null,
       canWrite: allows(customerAccess.write, viewer, row.accountManagerId),
       canDelete: allows(customerAccess.delete, viewer, row.accountManagerId),
     };
@@ -16606,6 +16754,22 @@ export const deleteCustomer = createServerFn({ method: "POST" })
 export const deleteCustomers = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
   .handler(async ({ data: ids }) => customerData.removeMany(await writer(), ids));
+
+/** The viewer's trash of customers (docs/design/trash.md). */
+export const trashedCustomers = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return { rows: await customerData.trash(viewer) };
+});
+
+/** Takes the chosen customers out of the trash. */
+export const restoreCustomers = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => customerData.restore(await writer(), ids));
+
+/** Removes the chosen customers in the trash for good. */
+export const eraseCustomers = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => customerData.removeForGood(await writer(), ids));
 "
 `;
 
@@ -16737,12 +16901,12 @@ export function withOrderFormulas<T extends Row>(row: T): T & { shippingCost: nu
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/order.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, count, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, lt, sql, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
-import { refusal } from "#/kit/log.server";
+import { log, refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
 import type { OrderValues } from "./order";
@@ -16770,10 +16934,19 @@ function checkReferences(viewer: Viewer | null, values: OrderValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** How long a record stays in the trash, and the most a trash view shows. */
+const TRASH_DAYS = 30;
+const DAY = 24 * 60 * 60 * 1000;
 export const orderData = {
   shownTo,
   /** A condition for the orders the viewer may read. */
   readable(viewer: Viewer | null) {
+    // What is in the trash is gone to every reader (docs/design/trash.md).
+    return and(isNull(schema.orders.deletedAt), orderData.scoped(viewer));
+  },
+
+  /** The records the viewer may read by the read rule, the trashed ones too. */
+  scoped(viewer: Viewer | null) {
     const scope = readScope(orderAccess.read, viewer);
     if (scope === "all") return undefined;
     return scope === "own" && viewer ? eq(schema.orders.ownerId, viewer.id) : sql\`false\`;
@@ -16882,9 +17055,9 @@ export const orderData = {
     check(orderAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
-        const gone = tx.delete(schema.orders).where(eq(schema.orders.id, id)).returning().get();
+        const gone = tx.update(schema.orders).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, id), isNull(schema.orders.deletedAt))).returning().get();
         if (gone) {
-          audit(tx, viewer, { action: "deleted", model: "Order", record: id, title: gone.number });
+          audit(tx, viewer, { action: "trashed", model: "Order", record: id, title: gone.number });
         }
       });
     } catch (error) {
@@ -16907,9 +17080,9 @@ export const orderData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
-          const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
+          const gone = tx.update(schema.orders).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, row.id), isNull(schema.orders.deletedAt))).returning().get();
           if (gone) {
-            audit(tx, viewer, { action: "deleted", model: "Order", record: row.id, title: gone.number });
+            audit(tx, viewer, { action: "trashed", model: "Order", record: row.id, title: gone.number });
           }
         } catch (error) {
           const refused = refusal(error);
@@ -16921,7 +17094,124 @@ export const orderData = {
     }
     return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
   },
+
+  /**
+   * The viewer's trash (docs/design/trash.md): the orders in it they may delete, the
+   * latest first, with when and by whom, kept for thirty days.
+   */
+  async trash(viewer: Viewer | null) {
+    const rows = (
+      await db.query.orders.findMany({
+        where: and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer)),
+        with: { customer: { columns: { id: true, name: true } } },
+        orderBy: (t) => [desc(t.deletedAt)],
+        limit: 1000,
+      })
+    ).filter((row) => allows(orderAccess.delete, viewer, row.ownerId));
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );
+    return rows.map((row) => ({ ...shownTo(viewer, row), deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null })).map(withOrderFormulas);
+  },
+
+  /** A order in the trash, as its page shows it read-only, with when and by whom; else nothing. */
+  async trashed(viewer: Viewer | null, id: number) {
+    const row = await db.query.orders.findFirst({
+      where: and(eq(schema.orders.id, id), and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer))),
+      with: { customer: { columns: { id: true, name: true } } },
+    });
+    if (!row || !allows(orderAccess.delete, viewer, row.ownerId)) return null;
+    const rows = [row];
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );
+    return {
+      row: withOrderFormulas(shownTo(viewer, row)),
+      deletedAt: row.deletedAt as Date,
+      by: (row.deletedBy && people.get(row.deletedBy)) ?? null,
+      until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
+    };
+  },
+
+  /** Takes the chosen orders out of the trash, those the viewer may delete. */
+  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
+    const rows = db
+      .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
+      .from(schema.orders)
+      .where(and(inArray(schema.orders.id, ids), and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer))))
+      .all().filter((row) => allows(orderAccess.delete, viewer, row.ownerId));
+    // A unique value a live record has taken since refuses it, as it refuses a new record.
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const back = tx.update(schema.orders).set({ deletedAt: null, deletedBy: null }).where(eq(schema.orders.id, row.id)).returning().get();
+          audit(tx, viewer, { action: "restored", model: "Order", record: row.id, title: back.number });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+    return { restored: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Removes the chosen orders in the trash for good, with their pictures and documents. */
+  removeForGood(viewer: Viewer | null, ids: number[]): { deleted: number; skipped: number } {
+    const rows = db
+      .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
+      .from(schema.orders)
+      .where(and(inArray(schema.orders.id, ids), and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer))))
+      .all().filter((row) => allows(orderAccess.delete, viewer, row.ownerId));
+    orderData.erase(viewer, rows.map((row) => row.id));
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
+  erase(viewer: Viewer | null, ids: number[]): void {
+    if (ids.length === 0) return;
+    const rows = db
+      .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
+      .from(schema.orders)
+      .where(and(inArray(schema.orders.id, ids), isNotNull(schema.orders.deletedAt)))
+      .all();
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
+          if (gone) audit(tx, viewer, { action: "removed", model: "Order", record: row.id, title: gone.number });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /** What has been in the trash for thirty days goes for good (once a day). */
+  purge(now = Date.now()): number {
+    const old = db
+      .select({ id: schema.orders.id })
+      .from(schema.orders)
+      .where(lt(schema.orders.deletedAt, new Date(now - TRASH_DAYS * DAY)))
+      .all()
+      .map((row) => row.id);
+    orderData.erase(null, old);
+    return old.length;
+  },
 };
+
+// Once a day, a minute after the server starts and then every day, in production.
+if (import.meta.env.SSR && import.meta.env.PROD) {
+  const purge = () => {
+    try {
+      orderData.purge();
+    } catch (error) {
+      log.error("The trash could not be emptied", { model: "Order", error });
+    }
+  };
+  setTimeout(purge, 60_000).unref();
+  setInterval(purge, DAY).unref();
+}
 "
 `;
 
@@ -17047,9 +17337,15 @@ export const getOrder = createServerFn()
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
     const row = await orderData.get(viewer, id);
+    // In the trash: its page shows it read-only, with when, by whom and Restore.
+    if (!row) {
+      const gone = await orderData.trashed(viewer, id);
+      return gone && { row: gone.row, canWrite: false, canDelete: false, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+    }
     if (!row) return null;
     return {
       row,
+      trashed: null,
       canWrite: allows(orderAccess.write, viewer, row.ownerId),
       canDelete: allows(orderAccess.delete, viewer, row.ownerId),
     };
@@ -17071,6 +17367,22 @@ export const deleteOrder = createServerFn({ method: "POST" })
 export const deleteOrders = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
   .handler(async ({ data: ids }) => orderData.removeMany(await writer(), ids));
+
+/** The viewer's trash of orders (docs/design/trash.md). */
+export const trashedOrders = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return { rows: await orderData.trash(viewer) };
+});
+
+/** Takes the chosen orders out of the trash. */
+export const restoreOrders = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => orderData.restore(await writer(), ids));
+
+/** Removes the chosen orders in the trash for good. */
+export const eraseOrders = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => orderData.removeForGood(await writer(), ids));
 "
 `;
 
@@ -17773,14 +18085,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/customers/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { customerSchema, customerUi, deleteCustomer, getCustomer, updateCustomer } from "#/generated/customer";
+import { customerSchema, customerUi, deleteCustomer, getCustomer, restoreCustomers, updateCustomer } from "#/generated/customer";
+import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
 import { orderUi } from "#/generated/order";
 import { userOptions } from "#/generated/users";
 import { guardPage } from "#/kit/access";
@@ -17827,14 +18140,27 @@ export const Route = createFileRoute("/customers/$id")({
 });
 
 function CustomerPage() {
-  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, trashed, options, history } = Route.useLoaderData();
   const navigate = useNavigate();
+  const router = useRouter();
   const back = () => navigate({ to: "/customers" });
   return (
     <>
       <PageHeader title={row.name || \`Customer #\${row.id}\`} />
+      {trashed && (
+        <TrashedBanner
+          {...trashed}
+          app={app}
+          ui={customerUi}
+          onRestore={async () => {
+            await restoreCustomers({ data: [row.id] });
+            await router.invalidate();
+          }}
+        />
+      )}
       <ModelForm
         key={String(row.updatedAt)}
+        trash
         ui={customerUi}
         app={app}
         schema={customerSchema}
@@ -17851,6 +18177,7 @@ function CustomerPage() {
           canDelete
             ? async () => {
                 await deleteCustomer({ data: row.id });
+                rememberTrashed("Customer", row.id, String(row.name || \`Customer #\${row.id}\`));
                 await back();
               }
             : undefined
@@ -17932,10 +18259,11 @@ import { contains } from "#/kit/search";
 import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { mergeCustomersAccess } from "#/generated/actions/merge-customers";
+import { TrashNotice } from "#/kit/Trash";
+import { restoreCustomers, deleteCustomers, customerDeleteRule, customerUi } from "#/generated/customer";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { csvName, csvOf, download } from "#/kit/csv";
-import { deleteCustomers, customerDeleteRule, customerUi } from "#/generated/customer";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
@@ -18012,6 +18340,13 @@ function CustomersPage() {
           onExport={() => download(csvName(customerUi), csvOf(customerUi, chosen))}
         />
       )}
+      <TrashNotice
+        model="Customer"
+        onUndo={async (id) => {
+          await restoreCustomers({ data: [id] });
+          await router.invalidate();
+        }}
+      />
       <ModelTable
         ui={customerUi}
         page="customers"
@@ -18024,6 +18359,13 @@ function CustomersPage() {
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/customers/$id", params: { id: String(row.id) } })}
       />
+      {viewer && (
+        <p className="pt-2 text-right text-sm">
+          <Link to="/customers/trash" className="text-muted-foreground hover:underline">
+            {w.trashView}
+          </Link>
+        </p>
+      )}
     </>
   );
 }
@@ -18074,6 +18416,45 @@ function NewCustomerPage() {
 "
 `;
 
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/customers/trash.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+import { customerUi, eraseCustomers, restoreCustomers, trashedCustomers } from "#/generated/customer";
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { TrashTable } from "#/kit/Trash";
+import { w } from "#/kit/words";
+
+export const Route = createFileRoute("/customers/trash")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["customers"], context.viewer, location.href),
+  loader: () => trashedCustomers(),
+  component: CustomerTrashPage,
+});
+
+function CustomerTrashPage() {
+  const { rows } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  return (
+    <>
+      <PageHeader title={w.trashOf("Customers")} subtitle={w.trashLead} />
+      <TrashTable
+        ui={customerUi}
+        app={app}
+        rows={rows}
+        restore={(ids) => restoreCustomers({ data: ids })}
+        erase={(ids) => eraseCustomers({ data: ids })}
+        onDone={() => router.invalidate()}
+        onOpen={(row) => navigate({ to: "/customers/$id", params: { id: String(row.id) } })}
+      />
+    </>
+  );
+}
+"
+`;
+
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/index.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -18088,14 +18469,15 @@ export const Route = createFileRoute("/")({
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/orders/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { deleteOrder, getOrder, orderSchema, orderUi, updateOrder } from "#/generated/order";
+import { deleteOrder, getOrder, orderSchema, orderUi, restoreOrders, updateOrder } from "#/generated/order";
+import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
 import { customerOptions } from "#/generated/customer";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -18140,14 +18522,27 @@ export const Route = createFileRoute("/orders/$id")({
 });
 
 function OrderPage() {
-  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, trashed, options, history } = Route.useLoaderData();
   const navigate = useNavigate();
+  const router = useRouter();
   const back = () => navigate({ to: "/orders" });
   return (
     <>
       <PageHeader title={row.number || \`Order #\${row.id}\`} />
+      {trashed && (
+        <TrashedBanner
+          {...trashed}
+          app={app}
+          ui={orderUi}
+          onRestore={async () => {
+            await restoreOrders({ data: [row.id] });
+            await router.invalidate();
+          }}
+        />
+      )}
       <ModelForm
         key={String(row.updatedAt)}
+        trash
         ui={orderUi}
         app={app}
         schema={orderSchema}
@@ -18164,6 +18559,7 @@ function OrderPage() {
           canDelete
             ? async () => {
                 await deleteOrder({ data: row.id });
+                rememberTrashed("Order", row.id, String(row.number || \`Order #\${row.id}\`));
                 await back();
               }
             : undefined
@@ -18196,10 +18592,11 @@ import { contains } from "#/kit/search";
 import { customerData } from "#/generated/customer.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
+import { TrashNotice } from "#/kit/Trash";
+import { restoreOrders, deleteOrders, orderDeleteRule, orderUi } from "#/generated/order";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { csvName, csvOf, download } from "#/kit/csv";
-import { deleteOrders, orderDeleteRule, orderUi } from "#/generated/order";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
@@ -18271,6 +18668,13 @@ function OrdersPage() {
           onExport={() => download(csvName(orderUi), csvOf(orderUi, chosen))}
         />
       )}
+      <TrashNotice
+        model="Order"
+        onUndo={async (id) => {
+          await restoreOrders({ data: [id] });
+          await router.invalidate();
+        }}
+      />
       <ModelTable
         ui={orderUi}
         page="orders"
@@ -18283,6 +18687,13 @@ function OrdersPage() {
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/orders/$id", params: { id: String(row.id) } })}
       />
+      {viewer && (
+        <p className="pt-2 text-right text-sm">
+          <Link to="/orders/trash" className="text-muted-foreground hover:underline">
+            {w.trashView}
+          </Link>
+        </p>
+      )}
     </>
   );
 }
@@ -18326,6 +18737,45 @@ function NewOrderPage() {
           await back();
         }}
         onCancel={back}
+      />
+    </>
+  );
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/orders/trash.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+import { eraseOrders, orderUi, restoreOrders, trashedOrders } from "#/generated/order";
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { TrashTable } from "#/kit/Trash";
+import { w } from "#/kit/words";
+
+export const Route = createFileRoute("/orders/trash")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
+  loader: () => trashedOrders(),
+  component: OrderTrashPage,
+});
+
+function OrderTrashPage() {
+  const { rows } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  return (
+    <>
+      <PageHeader title={w.trashOf("Orders")} subtitle={w.trashLead} />
+      <TrashTable
+        ui={orderUi}
+        app={app}
+        rows={rows}
+        restore={(ids) => restoreOrders({ data: ids })}
+        erase={(ids) => eraseOrders({ data: ids })}
+        onDone={() => router.invalidate()}
+        onOpen={(row) => navigate({ to: "/orders/$id", params: { id: String(row.id) } })}
       />
     </>
   );
@@ -18852,6 +19302,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Trash.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
@@ -18881,11 +19332,13 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "generated: src/routes/customers/actions/merge-customers.tsx",
   "generated: src/routes/customers/index.tsx",
   "generated: src/routes/customers/new.tsx",
+  "generated: src/routes/customers/trash.tsx",
   "kit: src/routes/health.ts",
   "generated: src/routes/index.tsx",
   "generated: src/routes/orders/$id.tsx",
   "generated: src/routes/orders/index.tsx",
   "generated: src/routes/orders/new.tsx",
+  "generated: src/routes/orders/trash.tsx",
   "generated: src/routes/robots[.]txt.ts",
   "generated: src/routes/sign-in.tsx",
   "generated: src/routes/team/index.tsx",
@@ -18927,19 +19380,19 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "97ca0658 generated",
+  "src/db/schema.ts": "bf487efc generated",
   "src/db/seed.ts": "cfae0905 generated",
-  "src/generated/access.test.ts": "2079bc6e generated",
+  "src/generated/access.test.ts": "7b543aec generated",
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "b40824fd generated",
-  "src/generated/customer.ts": "af6ba4ad generated",
+  "src/generated/customer.server.ts": "346d61bf generated",
+  "src/generated/customer.ts": "7b16a0f8 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "d2a531d6 generated",
-  "src/generated/order.ts": "bcb1a191 generated",
+  "src/generated/order.server.ts": "8c881705 generated",
+  "src/generated/order.ts": "bb85d834 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "32ba704b generated",
   "src/generated/users.test.ts": "f49c4632 generated",
@@ -18950,13 +19403,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "fb40b940 kit",
   "src/kit/SignIn.tsx": "04ce8503 kit",
+  "src/kit/Trash.tsx": "a4260a36 kit",
   "src/kit/Users.tsx": "7951cdd5 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -18973,7 +19427,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7ccb0e1a generated",
@@ -18982,15 +19436,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "061174c0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "cebed5cb generated",
+  "src/routes/customers/$id.tsx": "46a7aac3 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
-  "src/routes/customers/index.tsx": "1dca965b generated",
+  "src/routes/customers/index.tsx": "47323df1 generated",
   "src/routes/customers/new.tsx": "fa890209 generated",
+  "src/routes/customers/trash.tsx": "79ca3586 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
-  "src/routes/orders/$id.tsx": "97cf702b generated",
-  "src/routes/orders/index.tsx": "624998b7 generated",
+  "src/routes/orders/$id.tsx": "4b07e869 generated",
+  "src/routes/orders/index.tsx": "87f25c0b generated",
   "src/routes/orders/new.tsx": "2b905695 generated",
+  "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "7cea9e53 generated",
   "src/routes/team/index.tsx": "84f68638 generated",
@@ -23810,7 +24266,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Landing.tsx": "17f180a7 kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
@@ -23838,7 +24294,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "29808e97 generated",
@@ -26711,7 +27167,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "a055249c kit",
   "src/kit/Landing.tsx": "17f180a7 kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -26736,7 +27192,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c5155025 generated",
@@ -28794,7 +29250,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/Landing.tsx": "17f180a7 kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -28816,7 +29272,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "63d519fe generated",
@@ -34794,7 +35250,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { componentFromApi, componentToApi } from "#/generated/api.server";
 import { componentData } from "#/generated/component.server";
-import { apiCall, NotFound, openApiCall } from "#/kit/api.server";
+import { NotFound, apiCall, openApiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof componentData.get>[0], id: string) => {
   const row = await componentData.get(viewer, Number(id));
@@ -34937,7 +35393,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { incidentFromApi, incidentToApi } from "#/generated/api.server";
 import { incidentData } from "#/generated/incident.server";
-import { apiCall, NotFound, openApiCall } from "#/kit/api.server";
+import { NotFound, apiCall, openApiCall } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof incidentData.get>[0], id: string) => {
   const row = await incidentData.get(viewer, Number(id));
@@ -37273,7 +37729,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "17f180a7 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
-  "src/kit/ModelForm.tsx": "28b21f8f kit",
+  "src/kit/ModelForm.tsx": "b7183de7 kit",
   "src/kit/ModelTable.tsx": "3887c880 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -37284,7 +37740,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/api.server.ts": "532ede94 kit",
+  "src/kit/api.server.ts": "de99ef82 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -37296,13 +37752,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/mcp.server.ts": "2da8d18a kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
-  "src/kit/refusal.ts": "9d8d5da6 kit",
+  "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "4dfc44f6 kit",
+  "src/kit/words.ts": "6c90dda0 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d35a3346 generated",
@@ -37311,11 +37767,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "99b86b60 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/components/$id.ts": "45b5815f generated",
+  "src/routes/api/v1/components/$id.ts": "bfde5659 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
   "src/routes/api/v1/components[.]csv.ts": "e4b9a050 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
-  "src/routes/api/v1/incidents/$id.ts": "c9e3ef8f generated",
+  "src/routes/api/v1/incidents/$id.ts": "63917a45 generated",
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",

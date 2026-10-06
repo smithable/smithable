@@ -369,7 +369,7 @@ ${tests.join("\n\n")}
     expect(lines.map((l) => [l.action, l.who, l.role])).toEqual([
       ["created", viewer.id, viewer.role],
       ["changed", viewer.id, viewer.role],
-      ["deleted", viewer.id, viewer.role],
+      [${JSON.stringify(model.trash ? "trashed" : "deleted")}, viewer.id, viewer.role],
     ]);
     // Only the line that deleted it keeps the record's name (its title by then); no field's
     // value is stored.
