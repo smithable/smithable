@@ -2371,10 +2371,17 @@ async function articlesFlow(dir, base) {
     await open(page, `${base}/blog`);
     await page.getByRole("link", { name: "Morning practice" }).waitFor({ timeout: 10000 });
     if (await page.getByText("Secret plans").count()) throw new Error("a draft is listed");
+    // The article opens through the router: the same document, no white page between (a mark
+    // on the window survives only that).
+    await page.evaluate(() => {
+      window.__sameDocument = true;
+    });
     await page.getByRole("link", { name: "Morning practice" }).click();
     await page
       .getByRole("heading", { level: 1, name: "Morning practice" })
       .waitFor({ timeout: 10000 });
+    if (!(await page.evaluate(() => window.__sameDocument === true)))
+      throw new Error("opening an article loaded a new document");
     if (
       (await page.locator('meta[property="og:title"]').getAttribute("content")) !==
       "Morning practice"
