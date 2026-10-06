@@ -2,13 +2,13 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home, matches, teams, players]
-  read: [Team, Player, Match]
 roles:
   admin:
-    description: "Runs the club's site: teams, players, matches and results."
+    description: "Runs the club site: teams, players, matches and results."
   member:
-    description: A club member who signs in to follow the club.
+    description: A club member who follows the teams.
 defaultRole: member
+public:
+  pages: [home, matches, teams, players, privacy]
+  read: [Team, Player, Match]
 admins: [johan@smithable.ai]

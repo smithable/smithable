@@ -7,18 +7,17 @@ pages:
     icon: calendar
   players:
     table:
-      columns: [shirtNumber, name, position, team]
       sort: shirtNumber
     icon: user
   teams:
     table:
-      sort: name
+      view: cards
     icon: users
 tones:
   Match.status:
     played: success
     postponed: warning
-    canceled: danger
+    cancelled: danger
 theme:
   preset: modern
   brand:
