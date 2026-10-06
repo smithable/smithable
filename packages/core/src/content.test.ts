@@ -272,13 +272,16 @@ test("the language is one the kit has words in; in another one, models say their
     "smithableContent: 0.1\nlanguage: sv\nmodels:\n  Customer: { label: Kund }\n",
   );
   expect(swedish.content?.language).toBe("sv");
-  expect(swedish.diagnostics.map((d) => [d.severity, d.code, d.message])).toEqual([
+  expect(swedish.diagnostics.map((d) => [d.severity, d.code, d.message, d.line])).toEqual([
     [
       "warning",
       "plural-in-english",
       'Customer: the plural would be made by an English rule ("Kunds"); give it a pluralLabel.',
+      4,
     ],
   ]);
+  // A model without an entry: the warning sits on the language key.
+  expect(read("smithableContent: 0.1\nlanguage: sv\n").diagnostics.map((d) => d.line)).toEqual([2]);
   expect(
     read(
       "smithableContent: 0.1\nlanguage: sv\nmodels:\n  Customer: { label: Kund, pluralLabel: Kunder }\n",
