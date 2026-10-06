@@ -458,6 +458,54 @@ test("editSpec replaces the spec; removing a stored field is destructive; broken
   });
 });
 
+test("editSpec takes a companion file too, checked as a whole and against the spec", () => {
+  // A role added in the auth file.
+  const auth = files.auth
+    .replace("  sales:", "  support: { description: Answers questions. }\n  sales:")
+    .replace("admins:", "defaultRole: sales\nadmins:");
+  const added = applyOperation(files, "editSpec", { file: "smithable.auth.yml", text: auth });
+  expect(added).toMatchObject({
+    ok: true,
+    destructive: false,
+    description: "Edit smithable.auth.yml",
+  });
+  expect(added.ok && added.files.auth).toContain("support:");
+  expect(added.ok && added.files.spec).toBe(files.spec);
+  // A role the spec names cannot go: the spec is checked with the roles as edited.
+  const gone = applyOperation(files, "editSpec", {
+    file: "smithable.auth.yml",
+    text: files.auth.replace(/^ {2}sales:.*\n/m, ""),
+  });
+  expect(gone).toMatchObject({ ok: false, message: "editSpec would make smithable.yml invalid." });
+  // The file's own checks, and its YAML.
+  expect(
+    applyOperation(files, "editSpec", {
+      file: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nroles: [",
+    }),
+  ).toMatchObject({ ok: false });
+  expect(
+    applyOperation(files, "editSpec", {
+      file: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\ndefaultAccess: everyone\n",
+    }),
+  ).toMatchObject({ ok: false, message: "editSpec would make smithable.auth.yml invalid." });
+  // A content file written for the first time.
+  const content = applyOperation(files, "editSpec", {
+    file: "smithable.content.yml",
+    text: "smithableContent: 0.1\nmodels:\n  Customer:\n    fields:\n      notes: { label: Remarks }\n",
+  });
+  expect(content).toMatchObject({ ok: true, description: "Edit smithable.content.yml" });
+  expect(content.ok && content.files.content).toContain("Remarks");
+  // Without an auth file there is nothing to edit.
+  expect(
+    applyOperation({ spec: files.spec }, "editSpec", {
+      file: "smithable.auth.yml",
+      text: files.auth,
+    }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining("has no smithable.auth.yml") });
+});
+
 test("addQuery and addTile put a custom query on a new dashboard", () => {
   const query = ok("addQuery", ["churnRisk", "Customer"]);
   expect(query.files.spec).toContain(
