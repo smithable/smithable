@@ -202,8 +202,6 @@ export const w = {
   thisUser: "this user",
   to: "To",
   today: "Today",
-  trashedHas: (label: string, field: string) =>
-    `A deleted ${label.toLowerCase()} with this ${field.toLowerCase()} is in the trash: restore it or empty the trash.`,
   trashEmpty: "Nothing is in the trash.",
   trashLead: "Deleted records stay here for thirty days, then they are removed for good.",
   trashOf: (plural: string) => `${plural} in the trash`,
