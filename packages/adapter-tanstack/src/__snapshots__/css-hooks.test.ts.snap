@@ -81,6 +81,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="pictures"",
   ],
   "src/kit/ModelTable.tsx": [
+    "data-part="pager"",
     "data-part="save"",
     "data-part="placeholder"",
     "data-kit="model-table"",
@@ -93,6 +94,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="select-all"",
     "data-part="cell"",
     "data-field={field.name}",
+  ],
+  "src/kit/MoreOnScroll.tsx": [
+    "data-part="more"",
   ],
   "src/kit/Onboarding.tsx": [
     "data-kit="onboarding"",

@@ -1,8 +1,9 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customize a table, copy this file into src/custom/components/ and edit the copy.
-import { ChevronRight, Heart, ImageIcon, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, ImageIcon, type LucideIcon } from "lucide-react";
 import { useRef } from "react";
 import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import {
   Table,
@@ -14,7 +15,9 @@ import {
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
 import { displayValue, formatValue } from "./format";
+import { MoreOnScroll } from "./MoreOnScroll";
 import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
+import { w } from "./words";
 
 interface ModelTableProps<R extends Row> {
   ui: RecordUi<R>;
@@ -44,6 +47,42 @@ interface ModelTableProps<R extends Row> {
   rowActions?: (row: R) => React.ReactNode;
   /** Checkboxes to choose records (a page offering actions or delete): the chosen ids, and a change. */
   selection?: { ids: ReadonlySet<number>; onChange: (ids: Set<number>) => void };
+  /** One page of a longer list (a table): which page, its size, how many in all, and going to another. */
+  paging?: { page: number; size: number; total: number; to: (page: number) => void };
+  /** More of a longer list as the reader scrolls (cards): how many in all, and loading the next. */
+  more?: { total: number; load: () => Promise<void> };
+}
+
+/** "1–50 of 1,234" and Previous / Next, under a table that is one page of a longer list. */
+export function Pager({ page, size, total, to }: NonNullable<ModelTableProps<Row>["paging"]>) {
+  if (total <= size) return null;
+  const last = Math.max(1, Math.ceil(total / size));
+  const number = (n: number) => new Intl.NumberFormat().format(n);
+  return (
+    <nav
+      aria-label={w.pages}
+      data-part="pager"
+      className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm text-muted-foreground"
+    >
+      <span>
+        {w.range(
+          number((page - 1) * size + 1),
+          number(Math.min(page * size, total)),
+          number(total),
+        )}
+      </span>
+      <span className="flex gap-2">
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => to(page - 1)}>
+          <ChevronLeft aria-hidden />
+          {w.previous}
+        </Button>
+        <Button variant="outline" size="sm" disabled={page >= last} onClick={() => to(page + 1)}>
+          {w.next}
+          <ChevronRight aria-hidden />
+        </Button>
+      </span>
+    </nav>
+  );
 }
 
 /** Saves a record for the viewer, or unsaves it: a toggle above the row's own link. */
@@ -61,7 +100,7 @@ export function SaveButton({
       type="button"
       data-part="save"
       aria-pressed={saved}
-      aria-label={`Save ${label}`}
+      aria-label={w.saveIt(label)}
       onClick={onToggle}
       className="relative z-10 -m-2.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
     >
@@ -105,6 +144,8 @@ export function ModelTable<R extends Row>({
   saved,
   rowActions,
   selection,
+  paging,
+  more,
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
   const anchor = useRef<number | null>(null);
@@ -123,7 +164,7 @@ export function ModelTable<R extends Row>({
           <p className="font-medium">{emptyMessage}</p>
         ) : (
           <>
-            <p className="font-medium">No {ui.pluralLabel.toLowerCase()} yet</p>
+            <p className="font-medium">{w.noneYet(ui.pluralLabel.toLowerCase())}</p>
             <p className="text-sm text-muted-foreground">Create the first one to get started.</p>
             {emptyAction}
           </>
@@ -198,7 +239,9 @@ export function ModelTable<R extends Row>({
       <input
         type="checkbox"
         data-part="select"
-        aria-label={`Select ${title ? formatValue(title, displayValue(title, row), app) : `#${row.id}`}`}
+        aria-label={w.selectIt(
+          title ? formatValue(title, displayValue(title, row), app) : `#${row.id}`,
+        )}
         checked={selection.ids.has(row.id)}
         onChange={(e) => {
           const next = new Set(selection.ids);
@@ -319,7 +362,7 @@ export function ModelTable<R extends Row>({
                     <input
                       type="checkbox"
                       data-part="select-all"
-                      aria-label="Select all"
+                      aria-label={w.selectAll}
                       checked={all}
                       ref={(el) => {
                         if (el) el.indeterminate = some && !all;
@@ -390,6 +433,8 @@ export function ModelTable<R extends Row>({
           </Table>
         </Card>
       )}
+      {paging && <Pager {...paging} />}
+      {more && <MoreOnScroll shown={rows.length} total={more.total} onMore={more.load} />}
     </div>
   );
 }

@@ -431,6 +431,66 @@ async function bookingFlow(dir, base) {
 }
 
 /**
+ * Paging (docs/design/paging.md): with 1,200 more customers the list shows fifty a page with
+ * the count, Next goes to ?page=2, a page past the end shows the remainder, and a filter
+ * composes with the page.
+ */
+async function pagingFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const now = Date.now();
+  write(
+    dir,
+    `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 1200)
+     INSERT INTO customers (name, email, segment, created_at, updated_at)
+     SELECT printf('Paged %04d', i), 'paged' || i || '@example.org',
+       CASE WHEN i % 3 = 0 THEN 'government' ELSE 'smb' END, ${now}, ${now} FROM n`,
+  );
+  const rows = () => page.locator('tr[data-part="row"]').count();
+  const counted = async () =>
+    (await page.getByRole("navigation", { name: "Pages" }).innerText()).match(
+      /([\d,]+)–([\d,]+) of ([\d,]+)/,
+    );
+  const number = (text) => Number(text.replaceAll(",", ""));
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers`);
+    const first = await counted();
+    if (!first || first[1] !== "1" || first[2] !== "50" || number(first[3]) < 1200)
+      throw new Error(`the first page says ${first?.[0]}`);
+    if ((await rows()) !== 50) throw new Error(`the first page shows ${await rows()} rows`);
+    const total = number(first[3]);
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.waitForURL(/page=2/);
+    await page.getByText(`51–100 of ${first[3]}`).waitFor({ timeout: 10000 });
+    // Past the end: the last page, with what is left.
+    await open(page, `${base}/customers?page=999`);
+    const last = await counted();
+    const left = total - Math.floor((total - 1) / 50) * 50;
+    if (!last || number(last[3]) !== total || (await rows()) !== left)
+      throw new Error(`?page=999 says ${last?.[0]} with ${await rows()} rows (${left} expected)`);
+    if (!(await page.getByRole("button", { name: "Next" }).isDisabled()))
+      throw new Error("Next is offered on the last page");
+    // A filter and the page compose: the second fifty of the government customers.
+    await open(page, `${base}/customers?segment=government&page=2`);
+    const filtered = await counted();
+    if (!filtered || filtered[1] !== "51" || number(filtered[3]) < 400)
+      throw new Error(`government page 2 says ${filtered?.[0]}`);
+    console.log(
+      "  ✓ browser: a list of 1,200 more shows fifty a page with the count, Next goes to ?page=2, a page past the end shows the remainder, and a filter composes with the page",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("paging flow");
+  } finally {
+    write(dir, "DELETE FROM customers WHERE email LIKE 'paged%@example.org'");
+    await browser.close();
+  }
+}
+
+/**
  * A list's filters and sort (the CRM's customers, by operations): a segment chip, a credit range
  * and a sort, all in the address and applied by the query; "Mine" for those signed in only.
  */
@@ -4079,6 +4139,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "crm") {
         await browserFlow(base);
         await filtersFlow(base);
+        await pagingFlow(dir, base);
         await favoritesFlow(base);
         await contactFlow(dir, base);
       }
