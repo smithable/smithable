@@ -20,6 +20,14 @@ outgoing:
     text: Your booking was cancelled. Here it is as it was.
 
 pages:
+  privacy:
+    title: Privacy
+    operator:
+      name: Calm Yoga Studio Ab
+      address: Torggatan 1, 22100 Mariehamn
+      email: hello@calmyoga.example
+      country: Åland, Finland
+      hosting: in the EU
   home:
     description: Small yoga classes in Mariehamn for every level. See the schedule and book a mat.
     estimate:

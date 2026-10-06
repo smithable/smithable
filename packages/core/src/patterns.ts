@@ -48,6 +48,7 @@ import {
   dashboardOperations,
   dataOperations,
   landingOperations,
+  legalOperations,
   usersOperations,
 } from "./sections/page-operations.js";
 import { didYouMean } from "./suggest.js";
@@ -780,6 +781,37 @@ const custom: PagePattern<"custom"> = {
   operations: customOperations,
 };
 
+const legal: PagePattern<"legal"> = {
+  kind: "legal",
+  schema: {
+    type: "string",
+    enum: ["privacy"],
+    description:
+      "A privacy page written from the app itself: who runs it, what it stores and why, cookies, mail, logs, your rights. The operator's details are texts in smithable.content.yml (operator: name, address, email, country, hosting).",
+  },
+  example: "legal: privacy",
+  parse(ctx, value, where) {
+    const kind = readString(ctx, value, `"legal" in ${where}`);
+    if (kind === undefined) return undefined;
+    if (kind !== "privacy") {
+      ctx.error(
+        value,
+        "invalid-value",
+        `"legal" in ${where} is "privacy" (the only legal page so far).`,
+      );
+      return undefined;
+    }
+    return { kind: "legal", legal: "privacy" };
+  },
+  models: () => [],
+  icon: "shield",
+  // Linked from the site's footer and the consent bar, not a menu entry.
+  inMenu: false,
+  // The operator's details, and a part of the maker's own words under the generated text.
+  parts: () => ({ operator: "operator", more: "custom" }),
+  operations: legalOperations,
+};
+
 const data: PagePattern<"data"> = {
   kind: "data",
   schema: {
@@ -834,6 +866,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   calculator,
   articles,
   custom,
+  legal,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
