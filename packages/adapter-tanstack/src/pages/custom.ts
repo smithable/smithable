@@ -66,6 +66,8 @@ export function customPageFromEdit(
     .replace(p.serverFn, "")
     .replace(editedRoute, `const route = getRouteApi(${JSON.stringify(p.path)});\n`)
     .replace(/\bRoute\.use/g, "route.use")
+    // "Export CSV" calls the route's own server function, which a page of one's own cannot.
+    .replace(/\n {8}exportRows=\{[^\n]*\}/, "")
     .replace(new RegExp(`^function ${p.component}\\(`, "m"), `export function ${p.component}(`);
   // Drop what only the route needs (the component never does), and add getRouteApi.
   const view = p.view.names();

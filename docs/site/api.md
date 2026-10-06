@@ -96,6 +96,16 @@ curl -s "https://status.example.com/api/v1/incidents?detectedAt=2026-10-01..2026
 - `sum=total` adds a number field up over every record that fits, not only the page given (`"sums": { "total": 1250 }`). `total` in the answer always counts every record that fits.
 - An unknown field or value is refused with the ones that exist.
 
+### As a spreadsheet
+
+The same list as CSV: add `.csv` to its address, with the same filters, `search` and `sort`. Every record that fits comes at once (at most 10,000), no paging:
+
+```sh
+curl -s "https://status.example.com/api/v1/incidents.csv?status=resolved&sort=-detectedAt" -H "Authorization: Bearer $KEY" -o incidents.csv
+```
+
+The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates and times ISO, a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's saves the chosen records; neither needs the API.
+
 ## 4. When the app says no
 
 A refusal is a JSON problem (`application/problem+json`) in the app's own words, with the HTTP status that fits:

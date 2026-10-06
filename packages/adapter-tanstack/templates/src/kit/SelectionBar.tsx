@@ -6,6 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ActionButton } from "./ActionButton";
 import type { AppUi, ModelUi } from "./model";
+import { Overflow } from "./Overflow";
 import { w } from "./words";
 
 export interface SelectionAction {
@@ -26,6 +27,7 @@ export function SelectionBar({
   titleOf,
   app,
   onDone,
+  onExport,
 }: {
   count: number;
   /** The records' name, one and several, e.g. ["incident", "incidents"]. */
@@ -39,6 +41,8 @@ export function SelectionBar({
   app: AppUi;
   /** After a run: the selection is cleared and the list loads again. */
   onDone: () => Promise<unknown>;
+  /** Saves the chosen records as a CSV file. */
+  onExport?: () => void;
 }) {
   const [message, setMessage] = useState<string>();
   const [failure, setFailure] = useState<string>();
@@ -60,35 +64,42 @@ export function SelectionBar({
           <span className="mr-auto text-sm font-medium" role="status">
             {w.selectedN(count)}
           </span>
-          {actions
-            .filter((a) => a.applies > 0)
-            .map((a) => (
-              <ActionButton
-                key={a.label}
-                label={`${a.label} (${a.applies})`}
-                ask={a.ask && { ...a.ask, initial: {}, app }}
-                onRun={async (values) => {
-                  setFailure(undefined);
-                  try {
-                    const r = await a.run(values);
-                    setMessage(`${a.label}: ${counted(r.changed, r.skipped, w.changedVerb)}`);
-                    await onDone();
-                  } catch (error) {
-                    setFailure(words(error));
-                  }
-                }}
-              />
-            ))}
-          {onDelete && deletable > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => confirm.current?.showModal()}
-            >
-              {w.deleteN(deletable)}
-            </Button>
-          )}
+          <Overflow>
+            {actions
+              .filter((a) => a.applies > 0)
+              .map((a) => (
+                <ActionButton
+                  key={a.label}
+                  label={`${a.label} (${a.applies})`}
+                  ask={a.ask && { ...a.ask, initial: {}, app }}
+                  onRun={async (values) => {
+                    setFailure(undefined);
+                    try {
+                      const r = await a.run(values);
+                      setMessage(`${a.label}: ${counted(r.changed, r.skipped, w.changedVerb)}`);
+                      await onDone();
+                    } catch (error) {
+                      setFailure(words(error));
+                    }
+                  }}
+                />
+              ))}
+            {onDelete && deletable > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => confirm.current?.showModal()}
+              >
+                {w.deleteN(deletable)}
+              </Button>
+            )}
+            {onExport && (
+              <Button type="button" variant="outline" onClick={onExport}>
+                {w.exportCsv}
+              </Button>
+            )}
+          </Overflow>
         </Card>
       )}
       {(message || failure) && (

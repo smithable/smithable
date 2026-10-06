@@ -1,7 +1,14 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customize a table, copy this file into src/custom/components/ and edit the copy.
-import { ChevronLeft, ChevronRight, Heart, ImageIcon, type LucideIcon } from "lucide-react";
-import { useRef } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Heart,
+  ImageIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -14,6 +21,7 @@ import {
   TableRow,
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
+import { csvName, csvOf, download } from "./csv";
 import { displayValue, formatValue } from "./format";
 import { MoreOnScroll } from "./MoreOnScroll";
 import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
@@ -51,6 +59,8 @@ interface ModelTableProps<R extends Row> {
   paging?: { page: number; size: number; total: number; to: (page: number) => void };
   /** More of a longer list as the reader scrolls (cards): how many in all, and loading the next. */
   more?: { total: number; load: () => Promise<void> };
+  /** The whole list as it is filtered, for "Export CSV" (the selection bar exports chosen rows). */
+  exportRows?: () => Promise<R[]>;
 }
 
 /** "1–50 of 1,234" and Previous / Next, under a table that is one page of a longer list. */
@@ -146,6 +156,7 @@ export function ModelTable<R extends Row>({
   selection,
   paging,
   more,
+  exportRows,
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
   const anchor = useRef<number | null>(null);
@@ -435,6 +446,28 @@ export function ModelTable<R extends Row>({
       )}
       {paging && <Pager {...paging} />}
       {more && <MoreOnScroll shown={rows.length} total={more.total} onMore={more.load} />}
+      {exportRows && <ExportCsv ui={ui} all={exportRows} />}
+    </div>
+  );
+}
+
+/** "Export CSV" under a list: every record it shows as filtered, not only this page. */
+function ExportCsv<R extends Row>({ ui, all }: { ui: RecordUi<R>; all: () => Promise<R[]> }) {
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try {
+      download(csvName(ui), csvOf(ui, await all()));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div data-part="export" className="flex justify-end py-1">
+      <Button variant="ghost" size="sm" disabled={busy} onClick={() => void save()}>
+        <Download aria-hidden />
+        {w.exportCsv}
+      </Button>
     </div>
   );
 }

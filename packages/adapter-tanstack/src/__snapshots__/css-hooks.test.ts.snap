@@ -98,12 +98,16 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="select-all"",
     "data-part="cell"",
     "data-field={field.name}",
+    "data-part="export"",
   ],
   "src/kit/MoreOnScroll.tsx": [
     "data-part="more"",
   ],
   "src/kit/Onboarding.tsx": [
     "data-kit="onboarding"",
+  ],
+  "src/kit/Overflow.tsx": [
+    "data-part="more-actions"",
   ],
   "src/kit/PictureInput.tsx": [
     "data-part="picture"",

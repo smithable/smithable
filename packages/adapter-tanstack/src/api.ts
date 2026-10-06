@@ -435,6 +435,39 @@ export const Route = createFileRoute("/api/v1/${path}/")({
   },
 });
 `;
+    // The same list as CSV, for a spreadsheet: every record that fits, at most 10,000.
+    files[`src/routes/api/v1/${path}[.]csv.ts`] =
+      `${HEADER}// ${n.pluralLabel} as CSV for programs with a key: the same filters, search and sort as the JSON list.
+import { createFileRoute } from "@tanstack/react-router";
+import { ${n.ui} } from "${n.module}";
+import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { ${reads} } from "#/kit/api.server";
+import { csvOf } from "#/kit/csv";
+import { whereFromQuery } from "#/kit/where";
+
+export const Route = createFileRoute("/api/v1/${path}.csv")({
+  server: {
+    handlers: {
+      GET: ({ request }) =>
+        ${reads}(request, async (viewer) => {
+          const query = new URL(request.url).searchParams;
+          const { items } = await ${n.data}.find(viewer, {
+            where: whereFromQuery(query, ["search", "sort"]),
+            search: query.get("search") ?? undefined,
+            sort: query.get("sort") ?? undefined,
+            limit: 10_000,
+          });
+          return new Response(csvOf(${n.ui}, items as never), {
+            headers: {
+              "Content-Type": "text/csv; charset=utf-8",
+              "Content-Disposition": 'attachment; filename="${path}.csv"',
+            },
+          });
+        }),
+    },
+  },
+});
+`;
     files[`src/routes/api/v1/${path}/$id.ts`] =
       `${HEADER}// One ${n.label.toLowerCase()} for programs with a key: read, change (the fields given) or delete it.
 import { createFileRoute } from "@tanstack/react-router";
