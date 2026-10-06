@@ -3,8 +3,4 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
-roles:
-  agent:
-    description: Works on the IT team and handles tickets.
-defaultRole: agent
 admins: [johan@smithable.ai]

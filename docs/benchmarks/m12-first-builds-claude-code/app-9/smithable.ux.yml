@@ -1,10 +1,4 @@
 smithableUx: 0.1
-pages:
-  tickets:
-    table:
-      below:
-        title: requester
-    icon: clipboard
 tones:
   Ticket.priority:
     high: warning
@@ -12,5 +6,3 @@ tones:
   Ticket.status:
     inProgress: warning
     resolved: success
-theme:
-  preset: corporate

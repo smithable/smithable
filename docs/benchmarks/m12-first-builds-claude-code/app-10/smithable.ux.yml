@@ -2,14 +2,12 @@ smithableUx: 0.1
 pages:
   recipes:
     table:
-      columns: [name, category, servings, prepMinutes, favorite]
       view: cards
       sort: name
-    icon: book
   shopping-lists:
-    icon: cart
     table:
-      columns: [name, forDate, status]
+      columns: [name, shopOn, status]
+      sort: -shopOn
 tones:
   ShoppingList.status:
     done: success

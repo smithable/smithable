@@ -2,16 +2,10 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Invoicing that keeps up with your freelance work
-      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still outstanding.
+      title: Invoicing that gets out of your way
+      subtitle: Keep your clients, send clear invoices and see at a glance what has been paid and what is still owed.
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
     callToAction:
-      title: Send your next invoice in minutes
-models:
-  Payment:
-    fields:
-      method:
-        values:
-          bankTransfer: Bank transfer
+      title: Send your first invoice today
