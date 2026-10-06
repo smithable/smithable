@@ -198,9 +198,10 @@ export const COMMANDS: Command[] = [
       '(run "smithable op" for the list, "smithable op <name> --help" for its arguments;',
       "a list is written with commas, --pages home,items, or the option given again;",
       "a word @path gives a file's text, e.g. op addTheme forest --text @forest.yml;",
-      "--yes confirms changes that lose data)",
+      "--yes confirms changes that lose data; --setup marks a change made for the owner",
+      "when a project is set up, which the history does not show and undo passes over)",
     ],
-    options: ["yes", "dir"],
+    options: ["yes", "setup", "dir"],
   },
   {
     name: "undo",

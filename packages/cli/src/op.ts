@@ -54,6 +54,12 @@ export interface OpFlags {
   mcp?: boolean;
   /** An extra commit trailer, e.g. what the model that proposed the change used. */
   trailer?: string;
+  /**
+   * A change that sets the project up for its owner (the hosted service making the person who
+   * claimed a workspace its administrator), not one of the owner's own: the history does not
+   * show it and undo passes over it.
+   */
+  setup?: boolean;
   /** Who imported records belong to (a user id or email); else the first admin who signed in. */
   owner?: string;
   /** The caller offers a report of a failure itself (Studio, with its log). */
@@ -293,7 +299,7 @@ async function applyAndCheckpoint(
     git(dir, ["add", "-A"]);
     // A whole edited spec is in the diff; the trailer stays short.
     const recorded = recordedArgs;
-    const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.trailer ? `${flags.trailer}\n` : ""}`;
+    const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
     const commit = git(dir, ["commit", "-q", "-m", message]);
     if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
     lap("commit");
