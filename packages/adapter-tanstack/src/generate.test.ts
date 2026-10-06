@@ -111,7 +111,7 @@ pages:
   expect(customer(withContent)).toContain('pluralLabel: "Clients"');
   const list = withContent.find((f) => f.path === "src/routes/customers/index.tsx")?.content ?? "";
   expect(list).toContain('title="Our clients"');
-  expect(list).toContain("New client");
+  expect(list).toContain('w.newOne("client")');
   // A text with quotes goes in braces: a JSX attribute string cannot escape them.
   const quoted = generateApp(spec, {
     ...options,
