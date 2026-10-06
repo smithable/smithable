@@ -333,6 +333,53 @@ export const w = {
   stepOf: (n: number, count: number) => `Step ${n} of ${count}`,
   tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} tokens in, ${tokensOut} out`,
   toolCalls: (n: number) => `${n} tool ${n === 1 ? "call" : "calls"}`,
+  /** The privacy page (kit LegalPage), written from the app's own definition. */
+  legalIntro: (app: string) =>
+    `This page says what ${app} stores about you and why. It is written from the app's own definition and changes with it.`,
+  legalOperatorTitle: "Who runs it",
+  legalOperator: (name: string, app: string) => `${app} is run by ${name}.`,
+  legalOperatorUnknown: "The operator's name and contact details are not filled in yet.",
+  legalPurpose: (app: string, purpose: string) => `${app}: ${purpose}`,
+  legalAccountTitle: "Your account",
+  legalByEmailCode: "a code sent to your email address",
+  legalByGoogle: "your Google account",
+  legalAccount: (providers: string[]) =>
+    `When you sign in, the app keeps your name, your email address and your role, and sets a cookie that keeps you signed in.${providers.length ? ` You sign in with ${providers.join(" or ")}.` : ""}`,
+  legalInvitedOnly: "Only people who are invited can sign in.",
+  legalRecordsTitle: "Information in records",
+  legalRecordsIntro:
+    "Besides accounts, the app keeps these kinds of records with personal details:",
+  legalReadBy: (readers: "visitors" | "members" | string[]) =>
+    readers === "visitors"
+      ? "Anyone on the internet can read them."
+      : readers === "members"
+        ? "People who sign in can read them."
+        : `Read by: ${readers.join(", ")}.`,
+  legalNoRecords: "Besides accounts, no record in the app holds personal details.",
+  legalUploads:
+    "Pictures and documents people upload are stored with their records and shown to those who may read the record.",
+  legalCookiesTitle: "Cookies",
+  legalCookies:
+    "The app sets one cookie, which keeps you signed in. It is needed for the app to work. There is no tracking cookie.",
+  legalNoCookies: "The app sets no cookie of its own.",
+  legalAnalytics: (provider: string) =>
+    `Visits are counted with ${provider}, which sets no cookie and keeps no personal data.`,
+  legalAnalyticsConsent: (provider: string) =>
+    `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
+  legalMailTitle: "Mail",
+  legalMailSignIn: "The app sends mail for signing in and for invitations.",
+  legalMailEvents: (labels: string[]) =>
+    `It also sends mail when something happens to ${labels.join(", ")}, to the person concerned or to the people who work in the app.`,
+  legalLogsTitle: "Logs and backups",
+  legalLogs:
+    "Requests are logged with your address and browser for 90 days. Changes to records are kept in an activity log for 12 months; names and addresses in it are removed after 90 days.",
+  legalBackups: "Backups are kept so the app can be restored after a mistake.",
+  legalBackupsAt: (hosting: string) =>
+    `The app and its backups are hosted ${hosting}. Backups are kept so the app can be restored after a mistake.`,
+  legalRightsTitle: "Your rights",
+  legalRights: (email?: string) =>
+    `You may ask what the app holds about you, have it corrected or removed, and object to its use.${email ? ` Write to ${email}.` : " Contact whoever runs the app."} You may also complain to the data protection authority in your country.`,
+  legalMoreTitle: "More",
   /** The inspector: a change the role may only propose. */
   wouldPropose: (tool: string, what: string) =>
     `Would ${tool} ${what}: an assistant with this role may propose it, and nothing was changed.`,

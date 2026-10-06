@@ -532,6 +532,8 @@ function article(word: string): string {
 /** What each page pattern is, in the summary's words (a crud page says what it lists instead). */
 const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
   custom: (p) => `a page of your own (${p.component}), written in code`,
+  legal: () =>
+    "a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights",
   crud: () => "",
   landing: (p) => `a landing page: ${list(p.sections.map((s) => humanize(s.name).toLowerCase()))}`,
   dashboard: (p) => `a dashboard: ${list(p.items.map((i) => humanize(i.name).toLowerCase()))}`,

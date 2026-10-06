@@ -276,6 +276,18 @@
               "type": "string",
               "description": "What a visitor reads once the form is sent."
             },
+            "name": {
+              "type": "string",
+              "description": "A privacy page's operator: who runs the app (pages.<page>.operator)."
+            },
+            "country": {
+              "type": "string",
+              "description": "The operator's country."
+            },
+            "hosting": {
+              "type": "string",
+              "description": "Where the app is hosted, as a phrase: \"in the EU\", \"in Stockholm\"."
+            },
             "results": {
               "type": "string",
               "description": "A calculator section's results heading."
