@@ -177,7 +177,7 @@ export function Builder({
               <Tabs
                 tabs={[
                   ["app", "What it does"],
-                  ["look", "Look"],
+                  ["look", "Look", "look"],
                   ["change", "Change"],
                 ]}
                 value={tab}

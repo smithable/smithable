@@ -95,7 +95,7 @@ export function AppSummary({
     );
   };
   return (
-    <div className="space-y-5 p-4">
+    <div data-guide="summary" className="space-y-5 p-4">
       {sections.map((s, i) => (
         <section key={s.concept} aria-label={s.title}>
           {kind(sections[i - 1]?.concept ?? "") !== kind(s.concept) && heading(kind(s.concept))}
