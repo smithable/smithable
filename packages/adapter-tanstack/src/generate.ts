@@ -88,6 +88,13 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  // The trash (docs/design/trash.md) is in the spec before the app has it: refused here rather
+  // than promised and not kept.
+  const trashed = ir.models.find((m) => m.trash);
+  if (trashed)
+    throw new Error(
+      `The app cannot keep a trash for ${trashed.name} yet: the trash is not built in the generated app (docs/design/trash.md).`,
+    );
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent(), ir.app.name),
