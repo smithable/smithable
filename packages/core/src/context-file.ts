@@ -8,6 +8,29 @@ import type { JsonSchema } from "./section.js";
 
 const strings: JsonSchema = { type: "array", items: { type: "string" } };
 
+/**
+ * The analytics an app may name (docs/design/analytics.md), with what its id looks like. The
+ * cookie-free counters need no consent; Google does, and turns on the consent bar.
+ */
+export const ANALYTICS = {
+  plausible: { id: "^[a-z0-9.-]+\\.[a-z]{2,}$", consent: false, example: "shop.example.com" },
+  umami: {
+    id: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    consent: false,
+    example: "4f2a1c3e-…",
+  },
+  fathom: { id: "^[A-Z0-9]{8}$", consent: false, example: "ABCDEFGH" },
+  google: { id: "^G-[A-Z0-9]{4,12}$", consent: true, example: "G-XXXXXXXXXX" },
+} as const;
+
+export type AnalyticsProvider = keyof typeof ANALYTICS;
+
+/** The analytics smithable.context.yml names, if any. */
+export interface AnalyticsSetting {
+  provider: AnalyticsProvider;
+  id: string;
+}
+
 export const CONTEXT_SCHEMA: JsonSchema = {
   type: "object",
   required: ["smithableContext"],
@@ -20,6 +43,13 @@ export const CONTEXT_SCHEMA: JsonSchema = {
     guidance: { type: "string" },
     plugins: strings,
     packages: { type: "object", additionalProperties: { type: ["string", "number"] } },
+    analytics: {
+      type: "object",
+      additionalProperties: false,
+      properties: Object.fromEntries(
+        Object.entries(ANALYTICS).map(([name, a]) => [name, { type: "string", pattern: a.id }]),
+      ),
+    },
     ai: {
       type: "object",
       additionalProperties: false,
@@ -55,5 +85,27 @@ export function validateContext(file: { path: string; text: string }): Diagnosti
       `smithable.context.yml: ${problem}`,
     );
   }
+  // One counter at a time: two would count every visit twice.
+  const analytics = doc.toJSON()?.analytics;
+  if (analytics && typeof analytics === "object" && Object.keys(analytics).length !== 1) {
+    const node = keys.find((p) => (p.key as { value?: unknown }).value === "analytics")?.key as
+      | { range?: [number, number] }
+      | undefined;
+    ctx.errorAtOffset(
+      node?.range?.[0] ?? 0,
+      "invalid-context",
+      `smithable.context.yml: "analytics" names one of ${Object.keys(ANALYTICS).join(", ")}, with its id.`,
+    );
+  }
   return ctx.diagnostics;
+}
+
+/** The analytics a valid smithable.context.yml names, if any. */
+export function analyticsOf(text: string | undefined): AnalyticsSetting | undefined {
+  if (!text) return undefined;
+  const analytics = parseDocument(text).toJSON()?.analytics as Record<string, unknown> | undefined;
+  const [provider, id] = Object.entries(analytics ?? {})[0] ?? [];
+  return provider && provider in ANALYTICS && typeof id === "string"
+    ? { provider: provider as AnalyticsProvider, id }
+    : undefined;
 }

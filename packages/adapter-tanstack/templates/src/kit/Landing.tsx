@@ -20,6 +20,7 @@ import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
+import { ConsentSettings } from "./Consent";
 import { PicturePlaceholder } from "./ModelTable";
 import { textMarker } from "./model";
 import { w } from "./words";
@@ -199,14 +200,18 @@ export function LandingLayout({
                 </div>
               )}
             </div>
-            <p className="mt-10 border-t pt-6 text-muted-foreground">
-              © {new Date().getFullYear()} {appName}
-            </p>
+            <div className="mt-10 flex flex-wrap justify-between gap-4 border-t pt-6 text-muted-foreground">
+              <p>
+                © {new Date().getFullYear()} {appName}
+              </p>
+              <ConsentSettings className="hover:underline" />
+            </div>
           </div>
         ) : (
           <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
             {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
+            <ConsentSettings className="text-left hover:underline" />
           </div>
         )}
       </footer>

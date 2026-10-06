@@ -51,6 +51,33 @@
       },
       "description": "Libraries for custom code: name to exact version."
     },
+    "analytics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plausible": {
+          "type": "string",
+          "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$",
+          "description": "Plausible: the app's domain as Plausible knows it, e.g. shop.example.com."
+        },
+        "umami": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "description": "Umami (its hosted service): the website id."
+        },
+        "fathom": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]{8}$",
+          "description": "Fathom: the site id, eight capital letters or digits."
+        },
+        "google": {
+          "type": "string",
+          "pattern": "^G-[A-Z0-9]{4,12}$",
+          "description": "Google Analytics: the measurement id, e.g. G-XXXXXXXXXX. Asks for consent first."
+        }
+      },
+      "description": "Counting visits with one provider and the app's id with it, in production builds only. Google needs the visitor's consent, so it turns on the consent bar; the others keep no cookies."
+    },
     "ai": {
       "type": "object",
       "additionalProperties": false,
