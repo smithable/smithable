@@ -884,6 +884,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/blog",
     },
     {
+      "id": "privacy",
+      "pattern": {
+        "kind": "legal",
+        "legal": "privacy",
+      },
+      "route": "/privacy",
+    },
+    {
       "access": [
         "admin",
       ],

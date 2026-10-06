@@ -432,6 +432,8 @@ function related(ir: SpecIR, concept: string): string[] {
 /** Each page pattern in the index's words. */
 const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
   custom: (p) => `custom page: the project's own component ${p.component} in src/custom/pages/`,
+  legal: () =>
+    "privacy page written from the app: operator, stored personal data, cookies, mail, logs, rights",
   crud: (p) => `list, view, create, edit and delete ${p.model}`,
   landing: (p) => `landing page with ${p.sections.map((s) => s.name).join(", ")}`,
   dashboard: (p) => `dashboard with ${p.items.map((i) => i.name).join(", ")}`,
