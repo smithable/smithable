@@ -114,14 +114,68 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   expect(files.some((f) => f.path === "src/kit/outgoing.server.ts")).toBe(true);
 });
 
-test("a target other than mail is refused until the signed call is built", () => {
+test("an entry to a target queues a call with the record as the API gives it", () => {
   const withTarget = {
     ...ir,
     outgoing: [
-      { name: "feed", when: { model: "Order", event: "created" as const }, to: "statusFeed" },
+      ...ir.outgoing,
+      { name: "orderFeed", when: { model: "Order", event: "created" as const }, to: "orderFeed" },
     ],
   };
-  expect(() =>
-    generateApp(withTarget, { smithableVersion: "0.0.0", auth, content: emptyContent() }),
-  ).toThrow(/cannot tell "statusFeed" yet/);
+  const files = generateApp(withTarget, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+  });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  expect(module).toContain('target: "orderFeed",');
+  expect(module).toContain("queueCall(tx, {");
+  // The record by its API names: the reference by id, no document.
+  expect(module).toContain("customer: row.customerId ?? null,");
+  expect(module).not.toContain("receipt: row");
+  const schema = files.find((f) => f.path === "src/db/schema.ts")?.content ?? "";
+  expect(schema).toContain('export const outgoingCall = sqliteTable(\n  "outgoing_call"');
+});
+
+test("a target's settings, and the addresses the guard refuses", () => {
+  const { targetSettings, privateAddress } = kit as unknown as {
+    targetSettings(t: string): { url: string; secret: string };
+    privateAddress(ip: string): boolean;
+  };
+  expect(targetSettings("statusFeed")).toEqual({
+    url: "OUTGOING_STATUSFEED_URL",
+    secret: "OUTGOING_STATUSFEED_SECRET",
+  });
+  for (const ip of [
+    "127.0.0.1",
+    "10.1.2.3",
+    "172.20.0.1",
+    "192.168.1.1",
+    "169.254.169.254",
+    "100.64.0.1",
+    "0.0.0.0",
+    "::1",
+    "fd00::1",
+    "fe80::1",
+    "::ffff:127.0.0.1",
+    // IPv4 carried in IPv6, as URL and dns.lookup write it (C, #404): loopback, the metadata
+    // service, a home network; and NAT64, the old form, more reserved ranges.
+    "::ffff:7f00:1",
+    "::ffff:a9fe:a9fe",
+    "::ffff:c0a8:101",
+    "64:ff9b::7f00:1",
+    "::7f00:1",
+    "198.18.0.1",
+    "203.0.113.5",
+    "2001:db8::1",
+  ])
+    expect(privateAddress(ip), ip).toBe(true);
+  for (const ip of [
+    "93.184.216.34",
+    "172.32.0.1",
+    "2606:4700::1111",
+    "8.8.8.8",
+    "::ffff:5db8:d822",
+  ])
+    expect(privateAddress(ip), ip).toBe(false);
 });

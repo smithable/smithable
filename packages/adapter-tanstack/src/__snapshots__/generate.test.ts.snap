@@ -7571,7 +7571,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "d819e564 generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -7931,6 +7931,28 @@ export const outgoingMail = sqliteTable(
     error: text(),
   },
   (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);
+
+export const outgoingCall = sqliteTable(
+  "outgoing_call",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
+    target: text().notNull(),
+    body: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    /** The answer's status, or why there was none. */
+    status: integer(),
+    error: text(),
+  },
+  (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
 
 export const classTypes = sqliteTable("class_types", {
@@ -10276,7 +10298,7 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
   }),
 };
 
-/** The entries of smithable.yml's outgoing section that mail, with their texts. */
+/** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
   name: string;
   model: string;
@@ -10284,7 +10306,7 @@ const ENTRIES: {
   fits?: (r: Row) => boolean;
   subject?: string;
   text?: string;
-  to: (tx: Tx, r: Row) => Recipient[];
+  to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
     name: "bookingMade",
@@ -10307,14 +10329,14 @@ const ENTRIES: {
 ];
 
 /**
- * Queues the mails a change asks for, in its transaction: \`what\` is created, changed, deleted or
- * the action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
+ * Queues what a change asks for, in its transaction: \`what\` is created, changed, deleted or the
+ * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown) continue;
+    if (!shown || !entry.to) continue;
     queueMail(
       tx,
       viewer,
@@ -11623,8 +11645,13 @@ const getActivity = createServerFn()
             : removed && !named.has(removed)
               ? { user: removed }
               : undefined,
-        // A mail given up after a day of tries can be sent again.
-        resend: r.action === "mail not sent" && typeof r.details?.mail === "number" ? r.details.mail : undefined,
+        // A mail or call given up after a day of tries can be sent again.
+        resend:
+          r.action === "mail not sent" && typeof r.details?.mail === "number"
+            ? { mail: r.details.mail }
+            : r.action === "call not made" && typeof r.details?.call === "number"
+              ? { call: r.details.call }
+              : undefined,
       };
     });
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
@@ -11636,7 +11663,7 @@ const forget = createServerFn({ method: "POST" })
   .handler(async ({ data }) => forgetInLog(await currentViewer(), data));
 
 const resend = createServerFn({ method: "POST" })
-  .validator(z.number().int())
+  .validator(z.union([z.object({ mail: z.number().int() }), z.object({ call: z.number().int() })]))
   .handler(async ({ data }) => sendAgain(await currentViewer(), data));
 
 export const Route = createFileRoute("/admin/activity")({
@@ -11667,8 +11694,8 @@ function ActivityPage() {
           await forget({ data: target });
           await router.invalidate();
         }}
-        onResend={async (mail) => {
-          await resend({ data: mail });
+        onResend={async (again) => {
+          await resend({ data: again });
           await router.invalidate();
         }}
       />
@@ -15108,7 +15135,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "45d37521 generated",
+  "src/db/schema.ts": "20f0416a generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "1518628e generated",
   "src/generated/app.ts": "7320a04b generated",
@@ -15125,7 +15152,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.ts": "b9c29a10 generated",
   "src/generated/message.server.ts": "46f98559 generated",
   "src/generated/message.ts": "6c2a658e generated",
-  "src/generated/outgoing.server.ts": "c807ef9e generated",
+  "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/post.server.ts": "8c466dfa generated",
   "src/generated/post.ts": "7254c32e generated",
@@ -15135,7 +15162,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/site.ts": "9b0ce48a generated",
   "src/generated/uploads.ts": "f3d3a0ce generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Calculator.tsx": "f15e5001 kit",
@@ -15165,8 +15192,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
-  "src/kit/outgoing.server.ts": "569cff26 kit",
-  "src/kit/outgoing.ts": "ff33a7b0 kit",
+  "src/kit/outgoing.server.ts": "f80054c6 kit",
+  "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
@@ -15179,7 +15206,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "4aab984a generated",
-  "src/routes/admin/activity.tsx": "b3c5c975 generated",
+  "src/routes/admin/activity.tsx": "d0b9907e generated",
   "src/routes/admin/bookings/$id.tsx": "bc2060d2 generated",
   "src/routes/admin/bookings/index.tsx": "f46892a4 generated",
   "src/routes/admin/bookings/new.tsx": "4a386f7c generated",
@@ -18627,7 +18654,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -18958,6 +18985,28 @@ export const outgoingMail = sqliteTable(
     error: text(),
   },
   (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);
+
+export const outgoingCall = sqliteTable(
+  "outgoing_call",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
+    target: text().notNull(),
+    body: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    /** The answer's status, or why there was none. */
+    status: integer(),
+    error: text(),
+  },
+  (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
 
 export const businessProfiles = sqliteTable("business_profiles", {
@@ -21416,7 +21465,7 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
   }),
 };
 
-/** The entries of smithable.yml's outgoing section that mail, with their texts. */
+/** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
   name: string;
   model: string;
@@ -21424,7 +21473,7 @@ const ENTRIES: {
   fits?: (r: Row) => boolean;
   subject?: string;
   text?: string;
-  to: (tx: Tx, r: Row) => Recipient[];
+  to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
     name: "invoiceSent",
@@ -21435,14 +21484,14 @@ const ENTRIES: {
 ];
 
 /**
- * Queues the mails a change asks for, in its transaction: \`what\` is created, changed, deleted or
- * the action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
+ * Queues what a change asks for, in its transaction: \`what\` is created, changed, deleted or the
+ * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown) continue;
+    if (!shown || !entry.to) continue;
     queueMail(
       tx,
       viewer,
@@ -23368,7 +23417,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "d8859a49 generated",
+  "src/db/schema.ts": "3a51e1e4 generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "99771849 generated",
   "src/generated/actions/mark-paid.server.ts": "c3ac26a3 generated",
@@ -23389,12 +23438,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.server.ts": "b44de611 generated",
   "src/generated/invoice.ts": "c26b710f generated",
-  "src/generated/outgoing.server.ts": "071c4462 generated",
+  "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
   "src/generated/uploads.ts": "29095437 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -23421,8 +23470,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
-  "src/kit/outgoing.server.ts": "569cff26 kit",
-  "src/kit/outgoing.ts": "ff33a7b0 kit",
+  "src/kit/outgoing.server.ts": "f80054c6 kit",
+  "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
@@ -26228,7 +26277,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/site.ts": "b9832c55 generated",
   "src/generated/uploads.ts": "2ea504cf generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -28260,7 +28309,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -36587,7 +36636,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/users.server.ts": "2b5c39fa generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "cc467927 kit",
+  "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",

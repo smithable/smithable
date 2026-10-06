@@ -15,7 +15,7 @@ import {
 } from "@smithable/core";
 import { hasSignIn, roleLabels } from "../auth.js";
 import { hasKeys } from "../keys.js";
-import { mailsOut } from "../outgoing.js";
+import { outgoingOf } from "../outgoing.js";
 import {
   attr,
   dataRoute,
@@ -263,7 +263,7 @@ function activityRoute(
     n: names(model, t),
     title: titleField(model),
   }));
-  const mails = mailsOut(ir).length > 0;
+  const mails = outgoingOf(ir).length > 0;
   return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
@@ -376,8 +376,13 @@ ${
               : undefined,${
                 mails
                   ? `
-        // A mail given up after a day of tries can be sent again.
-        resend: r.action === "mail not sent" && typeof r.details?.mail === "number" ? r.details.mail : undefined,`
+        // A mail or call given up after a day of tries can be sent again.
+        resend:
+          r.action === "mail not sent" && typeof r.details?.mail === "number"
+            ? { mail: r.details.mail }
+            : r.action === "call not made" && typeof r.details?.call === "number"
+              ? { call: r.details.call }
+              : undefined,`
                   : ""
               }
       };
@@ -393,7 +398,7 @@ ${
   mails
     ? `
 const resend = createServerFn({ method: "POST" })
-  .validator(z.number().int())
+  .validator(z.union([z.object({ mail: z.number().int() }), z.object({ call: z.number().int() })]))
   .handler(async ({ data }) => sendAgain(await currentViewer(), data));
 `
     : ""
@@ -427,8 +432,8 @@ function ActivityPage() {
         }}${
           mails
             ? `
-        onResend={async (mail) => {
-          await resend({ data: mail });
+        onResend={async (again) => {
+          await resend({ data: again });
           await router.invalidate();
         }}`
             : ""
