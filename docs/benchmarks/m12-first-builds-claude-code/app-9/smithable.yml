@@ -2,74 +2,54 @@ smithable: 0.1
 app:
   name: IT Help Desk
   description: A help desk where the IT team tracks tickets, their priorities and who handles them.
-  timezone: Europe/Stockholm
 models:
   Ticket:
     fields:
       title: string!
       description: text
-      requester: string!
-      requesterEmail: email
-      category: other | hardware | software | network | access
+      requester: string
+      category: other | hardware | software | network | account
       priority: normal | low | high | urgent
-      status: open | inProgress | waiting | resolved
+      status: open | inProgress | resolved | closed
       assignee: User
-      dueOn: date
-      resolution: text
       resolvedAt: datetime
-    access:
-      delete: [admin]
 pages:
   tickets:
     crud: Ticket
-    search: [title, description, requester, requesterEmail]
-    sortable: [priority, status, dueOn, createdAt]
-    actions: [take, resolve, reopen]
-  overview:
-    dashboard:
-      openTickets:
-        count: Ticket
-        where:
-          status: [open, inProgress, waiting]
-      urgentTickets:
-        count: Ticket
-        where:
-          priority: urgent
-          status: [open, inProgress, waiting]
-      unassigned:
-        list: Ticket
-        where:
-          status: open
-        limit: 10
-      resolvedByMonth:
-        count: Ticket
-        where:
-          status: resolved
-        by: resolvedAt
+    search: [title, description, requester]
+    sortable: [priority, status, createdAt]
+    actions: [take, resolve, close, reopen]
   team:
     users: manage
 actions:
   take:
     on: Ticket
     when:
-      status: [open, waiting]
+      status: open
     set:
       assignee: ME()
       status: inProgress
-    intent: Take the ticket and start working on it.
+    intent: Take an open ticket and start working on it.
   resolve:
     on: Ticket
     when:
-      status: [open, inProgress, waiting]
+      status: [open, inProgress]
     set:
       status: resolved
-      resolution:
       resolvedAt: NOW()
-    intent: Mark the ticket resolved with a note on how it was fixed.
-  reopen:
+    intent: Mark the ticket as resolved.
+  close:
     on: Ticket
     when:
       status: resolved
     set:
+      status: closed
+    intent: Close a resolved ticket.
+  reopen:
+    on: Ticket
+    when:
+      status: [resolved, closed]
+    set:
       status: open
+      resolvedAt:
     intent: Reopen a ticket whose problem came back.
