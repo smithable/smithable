@@ -426,6 +426,42 @@ const importRecords: Operation<{
   },
 };
 
+/**
+ * Deleted records of a model go to a trash for thirty days (docs/design/trash.md). Turning the
+ * trash off removes what is in it for good, so that asks first.
+ */
+const setTrash: Operation<{ model: string; trash: boolean }> = {
+  name: "setTrash",
+  summary:
+    "Keep a model's deleted records in a trash for thirty days, where whoever may delete them can restore them (true), or delete for good at once (false, the default).",
+  schema: {
+    type: "object",
+    required: ["model", "trash"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      trash: { type: "boolean", description: "true: a trash with restore; false: none." },
+    },
+  },
+  positional: ["model", "trash"],
+  describe: ({ model, trash }) =>
+    trash
+      ? `Keep deleted ${model} records in a trash for thirty days`
+      : `Delete ${model} records for good at once`,
+  destructive: ({ model, trash }, ir) =>
+    !trash && ir.models.find((m) => m.name === model)?.trash === true,
+  apply({ spec }, { model, trash }, ir) {
+    const found = ir.models.find((m) => m.name === model);
+    if (!found) throw new OperationError(`There is no model named "${model}".`);
+    if (Boolean(found.trash) === trash)
+      throw new OperationError(trash ? `${model} has a trash already.` : `${model} has no trash.`);
+    const path = ["models", model, "trash"];
+    if (trash) spec.add(["models", model], "trash", true);
+    else spec.remove(path);
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
   addModel,
   addField,
@@ -433,6 +469,7 @@ export const modelOperations: AnyOperation[] = [
   renameField,
   removeField,
   setCapacity,
+  setTrash,
   importRecords,
 ];
 

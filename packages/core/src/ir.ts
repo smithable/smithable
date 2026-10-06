@@ -48,6 +48,11 @@ export interface ModelIR extends SemanticText {
   access?: ModelAccessIR;
   /** At most `max` records per record `per` refers to (a booking's places in a session). */
   capacity?: CapacityIR;
+  /**
+   * Deleted records go to a trash for thirty days, where whoever may delete them can restore
+   * them; the app's readers skip them (docs/design/trash.md).
+   */
+  trash?: boolean;
 }
 
 export interface CapacityIR {
