@@ -615,7 +615,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar, calculator, articles or custom.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar, calculator, articles, custom or legal.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -675,6 +675,11 @@
           {
             "required": [
               "custom"
+            ]
+          },
+          {
+            "required": [
+              "legal"
             ]
           }
         ],
@@ -1005,6 +1010,13 @@
           "custom": {
             "type": "string",
             "description": "A page of your own: the component in src/custom/pages/<Name>.tsx, created once as a stub; the route, access and menu entry stay Smithable's."
+          },
+          "legal": {
+            "type": "string",
+            "enum": [
+              "privacy"
+            ],
+            "description": "A privacy page written from the app itself: who runs it, what it stores and why, cookies, mail, logs, your rights. The operator's details are texts in smithable.content.yml (operator: name, address, email, country, hosting)."
           },
           "actions": {
             "type": "array",

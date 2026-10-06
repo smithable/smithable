@@ -59,7 +59,9 @@ export function rootRoute(
   consent?: ContentIR["consent"],
 ): string {
   // The consent bar's link to the privacy page, when the app has one (docs/design/analytics.md).
-  const privacy = ir.pages.find((p) => p.id === "privacy")?.route;
+  const privacy = (
+    ir.pages.find((p) => p.pattern.kind === "legal") ?? ir.pages.find((p) => p.id === "privacy")
+  )?.route;
   const consentProps = `${consent ? ` texts={${JSON.stringify(consent)}}` : ""}${privacy ? ` privacy=${JSON.stringify(privacy)}` : ""}`;
   const pageRoute = new Map(ir.pages.map((p) => [p.id, p.route]));
   const iconOf = (id: string) => {

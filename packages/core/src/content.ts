@@ -52,6 +52,10 @@ export interface SectionContent {
   email?: string;
   hours?: string;
   thanks?: string;
+  /** A privacy page's operator: who runs the app, their country, where it is hosted. */
+  name?: string;
+  country?: string;
+  hosting?: string;
   /** Features, plans, testimonials or questions, depending on the section. */
   items?: Record<string, string | string[] | ContentImage>[];
   /** A calculator section's results heading, and its fields' labels and help. */
@@ -98,6 +102,8 @@ const SECTION_TEXTS: Record<
   footer: { texts: ["text"], items: ["label", "link"] },
   tile: { texts: ["label"] },
   step: { texts: ["title", "text"] },
+  // A privacy page's operator: who runs the app and how to reach them, and where it is hosted.
+  operator: { texts: ["name", "address", "email", "country", "hosting"] },
 };
 
 export interface ModelContent {
@@ -235,6 +241,14 @@ export function validateContent(
           "plural-in-english",
           `${model.name}: the plural would be made by an English rule ("${plural(content.models[model.name]?.label ?? humanize(model.name))}"); give it a pluralLabel.`,
         );
+  // A privacy page says who runs the app: without the operator's name it says so to visitors.
+  for (const page of ir.pages)
+    if (page.pattern.kind === "legal" && !content.pages[page.id]?.sections?.operator?.name)
+      ctx.warning(
+        byKey.get("pages")?.value ?? byKey.get("language")?.keyNode ?? root,
+        "operator-unknown",
+        `The privacy page "${page.id}" does not say who runs the app: give the operator's name under pages.${page.id}.operator (name, address, email, country, hosting).`,
+      );
   return done();
 }
 

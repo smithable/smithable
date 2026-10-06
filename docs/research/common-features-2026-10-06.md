@@ -53,7 +53,7 @@ Research note, 2026-10-06 (Fable), asked by Johan: "the most common features of 
 3. **Attachments**: the `file` field type beside `picture`; the pictures code is the mould.
 4. **Analytics as a setting**, with the consent bar for Google: a day, and the question every business asks in its first week.
 5. **sitemap.xml and a page description**: half a day, and what every site checker asks about first.
-6. **A legal page from the spec**: the operator's name from the context file, the stored personal data from the validator's own list; the hosted service already knows the operator.
+6. **A legal page from the spec** (done 2026-10-06: `legal: privacy`, docs/design/legal-page.md; the operator's details in the content file, the hosted service's account as the source later): the operator's name from the context file, the stored personal data from the validator's own list; the hosted service already knows the operator.
 7. **Reviews** as a starter construct, after the website starter.
 8. **Trash with restore**, **comments on a record**, **a send-out to subscribers**, **recurring sessions**: each a design note first, none before the launch.
 
