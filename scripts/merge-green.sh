@@ -153,6 +153,13 @@ for attempt in 1 2 3 4 5 6 7 8; do
     listed=$(gh pr checks "$pr" "${repo[@]}" --required 2>/dev/null || true)
     case "$listed" in *"$(printf '\t')"*) break ;; esac
     merged && { echo "Merged #$pr."; exit 0; }
+    # A run GitHub itself cancelled (its runners were not to be had, 2026-10-05) leaves the
+    # required check cancelled and nothing pending: it is never reported, and waiting on it held
+    # the merge lock for an hour. A check cancelled by a newer run still has that run's pending.
+    if [ "$(gh pr view "$pr" "${repo[@]}" --json statusCheckRollup --jq '[.statusCheckRollup[]|select(.name=="check")] | (length > 0 and all(.conclusion=="CANCELLED"))' 2>/dev/null)" = true ]; then
+      gh pr checks "$pr" "${repo[@]}" || true
+      refuse "its run was cancelled by GitHub. Run it again (gh run rerun <run id>, from gh run list --branch <branch>) and merge again."
+    fi
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
     sleep 10
   done
