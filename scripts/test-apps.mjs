@@ -431,6 +431,156 @@ async function bookingFlow(dir, base) {
 }
 
 /**
+ * Outgoing mail (docs/design/integrations.md §4.1b) on the booking starter: a member books and
+ * gets the confirmation; the studio changes the booking and the member is told, the admin not;
+ * the studio deletes it and the member is told about it as it was. Mails are sent after the
+ * change, so each is waited for in the outbox.
+ */
+async function outgoingFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const panel = page.getByRole("dialog");
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  /** The next mail after `count`, with its To, Subject and body. */
+  const next = async (count, what) => {
+    for (let i = 0; i < 100 && mails().length <= count; i++) await page.waitForTimeout(100);
+    const all = mails();
+    if (all.length !== count + 1) throw new Error(`${what}: ${all.length - count} mails, not one`);
+    return readFileSync(join(outbox, all.at(-1)), "utf8").replace(/=\r?\n/g, "");
+  };
+  try {
+    await signInAs(page, base, "member");
+    await open(page, `${base}/schedule`);
+    let count = mails().length;
+    await page.locator("section ol button").first().click();
+    await panel.getByRole("button", { name: "Book a mat" }).click();
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 });
+    const made = await next(count, "the booking");
+    for (const part of [
+      /^To: dev-member@/m,
+      /^Subject: Your booking$/m,
+      /Thank you for booking/,
+      /Session: #\d+/,
+      /\/my-bookings\/\d+/,
+    ])
+      if (!part.test(made))
+        throw new Error(`the confirmation lacks ${part}: ${made.slice(0, 600)}`);
+    const [{ id, session }] = query(
+      dir,
+      "select id, session_id as session from bookings order by id desc limit 1",
+    );
+    const [{ other }] = query(
+      dir,
+      `select id as other from sessions where id != ${session} order by id limit 1`,
+    );
+
+    // The studio moves it to another session: the member is told, the admin (who changed it) not.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/my-bookings/${id}`);
+    count = mails().length;
+    const field = page.getByLabel(/^Session/);
+    if ((await field.evaluate((e) => e.tagName)) === "SELECT")
+      await field.selectOption({ label: `#${other}` });
+    else await chooseRecord(page, /^Session/, `#${other}`);
+    await page.getByRole("button", { name: "Save changes" }).click();
+    const changed = await next(count, "the change");
+    if (
+      !/^To: dev-member@/m.test(changed) ||
+      !/^Subject: Your booking was changed$/m.test(changed) ||
+      !changed.includes(`Session: #${other}`)
+    )
+      throw new Error(`the change's mail: ${changed.slice(0, 600)}`);
+
+    // The studio deletes it: the member is told about the booking as it was.
+    await open(page, `${base}/my-bookings/${id}`);
+    count = mails().length;
+    await page.getByRole("button", { name: "Delete" }).first().click();
+    await page.getByRole("button", { name: "Delete booking" }).click();
+    await page.waitForURL(/\/my-bookings$/);
+    const gone = await next(count, "the deletion");
+    if (
+      !/^To: dev-member@/m.test(gone) ||
+      !/^Subject: Your booking was cancelled$/m.test(gone) ||
+      !gone.includes(`Session: #${other}`)
+    )
+      throw new Error(`the deletion's mail: ${gone.slice(0, 600)}`);
+
+    // Activity says what was sent, to whom.
+    const lines = query(
+      dir,
+      "select details from audit_log where action = 'mailed' order by id desc limit 3",
+    );
+    if (lines.length !== 3 || !lines.every((l) => l.details.includes("dev-member@")))
+      throw new Error(`Activity: ${JSON.stringify(lines)}`);
+    console.log(
+      "  ✓ outgoing mail: a booking mails the member a confirmation; the studio's change and deletion mail the member (the deleted booking as it was), never the admin who made them; each is in Activity",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ outgoing mail: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("outgoing mail");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * A visitor's change mails only the app's users (C's review of #401): with entries that mail the
+ * admins and the address typed into a contact message, a visitor's message reaches the admin and
+ * never the typed address, so the form cannot send anyone's text anywhere.
+ */
+async function visitorMailFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  let added = 0;
+  try {
+    ok(smithable(dir, "op", "addOutgoing", "messageIn", "Message created", "--recipient", "admin"));
+    added++;
+    ok(
+      smithable(dir, "op", "addOutgoing", "messageEcho", "Message created", "--recipient", "email"),
+    );
+    added++;
+    const before = mails().length;
+    await open(page, base);
+    await page.getByRole("textbox", { name: "Name *" }).fill("Mallory");
+    await page.getByRole("textbox", { name: "Email *" }).fill("victim@example.com");
+    await page.getByRole("textbox", { name: "Message *" }).fill("Click this link");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await page.getByText("Thank you!").first().waitFor({ timeout: 15000 });
+    for (let i = 0; i < 100 && mails().length === before; i++) await page.waitForTimeout(100);
+    await page.waitForTimeout(500);
+    const sent = mails()
+      .slice(before)
+      .map((f) => readFileSync(join(outbox, f), "utf8"));
+    if (!sent.some((m) => /^To: dev-admin@/m.test(m)))
+      throw new Error(`the admin was not mailed: ${sent.length} mails`);
+    if (sent.some((m) => /victim@example\.com/.test(m.split("\n\n")[0])))
+      throw new Error("a visitor's message mailed the address typed into it");
+    console.log(
+      "  ✓ outgoing mail: a visitor's contact message mails the admin, never the address typed into it",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ outgoing mail from a visitor: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("outgoing mail from a visitor");
+  } finally {
+    await browser.close();
+    // Removed by operations, not undone: an undo puts back the database file under the
+    // running server.
+    for (const name of ["messageIn", "messageEcho"].slice(0, added))
+      ok(smithable(dir, "op", "removeOutgoing", name));
+  }
+}
+
+/**
  * Paging (docs/design/paging.md): with 1,200 more customers the list shows fifty a page with
  * the count, Next goes to ?page=2, a page past the end shows the remainder, and a filter
  * composes with the page.
@@ -4301,6 +4451,8 @@ test("the session cookie's name and attributes", async () => {
         await landingFlow(base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
+        await outgoingFlow(dir, base);
+        await visitorMailFlow(dir, base);
         await markdownFlow(base);
         await inputSecurityFlow(dir, base);
         await articlesFlow(dir, base);

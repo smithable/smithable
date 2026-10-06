@@ -624,7 +624,41 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       ],
     },
   ],
-  "outgoing": [],
+  "outgoing": [
+    {
+      "name": "bookingMade",
+      "recipient": {
+        "kind": "owner",
+      },
+      "to": "mail",
+      "when": {
+        "event": "created",
+        "model": "Booking",
+      },
+    },
+    {
+      "name": "bookingChanged",
+      "recipient": {
+        "kind": "owner",
+      },
+      "to": "mail",
+      "when": {
+        "event": "changed",
+        "model": "Booking",
+      },
+    },
+    {
+      "name": "bookingCancelled",
+      "recipient": {
+        "kind": "owner",
+      },
+      "to": "mail",
+      "when": {
+        "event": "deleted",
+        "model": "Booking",
+      },
+    },
+  ],
   "pages": [
     {
       "id": "home",
@@ -1641,7 +1675,24 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       ],
     },
   ],
-  "outgoing": [],
+  "outgoing": [
+    {
+      "name": "invoiceSent",
+      "recipient": {
+        "kind": "field",
+        "path": [
+          "client",
+          "email",
+        ],
+        "via": "email",
+      },
+      "to": "mail",
+      "when": {
+        "action": "markSent",
+        "model": "Invoice",
+      },
+    },
+  ],
   "pages": [
     {
       "id": "home",

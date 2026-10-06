@@ -40,6 +40,11 @@ export function traceDetails(): Omit<Trace, "spanId"> | undefined {
   return details;
 }
 
+/** Runs the app's own work started from a request outside it, e.g. sending what it queued. */
+export function outsideTrace<T>(run: () => T): T {
+  return store.exit(run);
+}
+
 /** Says who the request is for (the viewer, a key), for the access line. */
 export function traceWho(who: string, role?: string): void {
   const trace = store.getStore();
