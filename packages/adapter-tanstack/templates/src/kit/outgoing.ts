@@ -26,3 +26,39 @@ export function counts(
 export function pauseAfter(tries: number): number {
   return Math.min(MINUTE * 2 ** Math.max(tries - 1, 0), 3 * 60 * MINUTE);
 }
+
+/** A target's settings, e.g. statusFeed → OUTGOING_STATUSFEED_URL and OUTGOING_STATUSFEED_SECRET. */
+export function targetSettings(target: string): { url: string; secret: string } {
+  const name = `OUTGOING_${target.toUpperCase()}`;
+  return { url: `${name}_URL`, secret: `${name}_SECRET` };
+}
+
+/**
+ * Whether an address (IPv4 or IPv6) is the machine itself or a private, shared or link-local
+ * network: a target there could reach what only the app's own machine should (§4.1's guard).
+ */
+export function privateAddress(ip: string): boolean {
+  const v4 = /^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.(\d+)$/i.exec(ip);
+  if (v4) {
+    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a >= 224
+    );
+  }
+  const v6 = ip.toLowerCase();
+  return (
+    v6 === "::" ||
+    v6 === "::1" ||
+    v6.startsWith("fc") ||
+    v6.startsWith("fd") ||
+    /^fe[89ab]/.test(v6) ||
+    v6.startsWith("ff")
+  );
+}

@@ -15,6 +15,7 @@ import {
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
+import { apiFields, readCode } from "./api.js";
 import { fieldUi } from "./data.js";
 import {
   HEADER,
@@ -27,14 +28,14 @@ import {
   type Texts,
 } from "./shared.js";
 
-/** The entries that mail, the only kind the app sends yet. */
-export function mailsOut(ir: SpecIR): OutgoingIR[] {
-  return ir.outgoing.filter((o) => o.to === "mail");
+/** The entries of the outgoing section: mail, and calls to named targets. */
+export function outgoingOf(ir: SpecIR): OutgoingIR[] {
+  return ir.outgoing;
 }
 
-/** Whether a change to the model's records may mail someone: its writes call `outgoing`. */
-export function mailsAbout(ir: SpecIR, model: string): boolean {
-  return mailsOut(ir).some((o) => o.when.model === model);
+/** Whether a change to the model's records may tell someone: its writes call `outgoing`. */
+export function toldAbout(ir: SpecIR, model: string): boolean {
+  return outgoingOf(ir).some((o) => o.when.model === model);
 }
 
 /** The import line for the data functions and actions of a model that mails. */
@@ -46,7 +47,7 @@ export function outgoingModule(
   ux: UxIR,
   content: ContentIR | undefined,
 ): string {
-  const entries = mailsOut(ir);
+  const entries = outgoingOf(ir);
   const tables = new Set<string>();
   let users = false;
   const value = (target: ModelIR, column: string, id: string) => {
@@ -104,8 +105,11 @@ export function outgoingModule(
       ? `r.${f.name}Id == null ? "—" : \`#\${r.${f.name}Id}\``
       : `String(${value(target, title, `r.${f.name}Id`)} ?? "—")`;
   };
-  const models = [...new Set(entries.map((o) => o.when.model))].map((m) => modelNamed(ir, m));
-  const showers = models.map((model) => {
+  const mails = entries.filter((o) => o.to === "mail");
+  const calls = entries.filter((o) => o.to !== "mail");
+  const modelsOf = (list: OutgoingIR[]) =>
+    [...new Set(list.map((o) => o.when.model))].map((m) => modelNamed(ir, m));
+  const showers = modelsOf(mails).map((model) => {
     const n = names(model, t);
     const lines = shown(model);
     const title = titleField(model);
@@ -117,6 +121,19 @@ ${lines.join("\n")}
     ],${page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
   }),`;
   });
+  // A record as a call sends it: as the API gives it (integrations.md §4.1), without what is
+  // worked out on reading or what looks sensitive.
+  const senders = modelsOf(calls).map(
+    (model) => `  ${JSON.stringify(model.name)}: (row) => ({
+    id: row.id,
+${apiFields(model)
+  .filter((f) => !f.formula && !sensitiveKind(f))
+  .map((f) => `    ${f.name}: ${readCode(f)},`)
+  .join("\n")}
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+  }),`,
+  );
   const conditions = (o: OutgoingIR) =>
     o.where
       ? `(r) => ${Object.entries(o.where)
@@ -136,15 +153,15 @@ ${lines.join("\n")}
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
     when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
-    to: (tx, r) => ${recipients(model, o.recipient)},
+    ${o.to === "mail" ? `to: (tx, r) => ${recipients(model, o.recipient)},` : `target: ${JSON.stringify(o.to)},`}
   },`;
   });
-  const body = [...showers, ...list].join("\n");
+  const body = [...showers, ...senders, ...list].join("\n");
   const ones = body.includes("one(tx,");
   return `${HEADER}${ones || users ? `import { eq${users ? ", type SQL" : ""} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
 ${body.includes("formatValue(") ? 'import { formatValue } from "#/kit/format";\n' : ""}import { counts } from "#/kit/outgoing";
-import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
+import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : [])].join(", ")} } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -167,41 +184,73 @@ function people(tx: Tx, where: SQL): Recipient[] {
 }
 `
     : ""
-}
+}${
+  mails.length
+    ? `
 /** Each model's record as a mail shows it: the subject, its fields, its page. */
 const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
 ${showers.join("\n")}
 };
-
-/** The entries of smithable.yml's outgoing section that mail, with their texts. */
+`
+    : ""
+}${
+  calls.length
+    ? `
+/** Each model's record as a call sends it: as the API gives it. */
+const SENT: Record<string, (row: Row) => Row> = {
+${senders.join("\n")}
+};
+`
+    : ""
+}
+/** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
   name: string;
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
   subject?: string;
-  text?: string;
-  to: (tx: Tx, r: Row) => Recipient[];
+  text?: string;${mails.length ? "\n  to?: (tx: Tx, r: Row) => Recipient[];" : ""}${calls.length ? "\n  /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */\n  target?: string;" : ""}
 }[] = [
 ${list.join("\n")}
 ];
 
 /**
- * Queues the mails a change asks for, in its transaction: \`what\` is created, changed, deleted or
- * the action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
+ * Queues what a change asks for, in its transaction: \`what\` is created, changed, deleted or the
+ * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
-export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
+export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;${
+      calls.length
+        ? `
+    if (entry.target) {
+      const sent = SENT[model]?.(record);
+      if (sent)
+        queueCall(tx, {
+          entry: entry.name,
+          model,
+          record: record.id as number,
+          target: entry.target,
+          body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: sent }),
+        });
+      continue;
+    }`
+        : ""
+    }${
+      mails.length
+        ? `
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown) continue;
+    if (!shown || !entry.to) continue;
     queueMail(
       tx,
       viewer,
       { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
-    );
+    );`
+        : ""
+    }
   }
 }
 `;

@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { mailWarning } from "./deploy.js";
+import { mailWarning, targetWarnings } from "./deploy.js";
 
 test("deploying an app with email sign-in and no mail settings warns that no code reaches anyone", () => {
   const dir = mkdtempSync(join(tmpdir(), "deploy-"));
@@ -17,4 +17,33 @@ test("deploying an app with email sign-in and no mail settings warns that no cod
     "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
   );
   expect(mailWarning(dir, {})).toBeUndefined();
+});
+
+test("deploying an app whose outgoing target is not set names its missing settings", () => {
+  const dir = mkdtempSync(join(tmpdir(), "deploy-"));
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    `smithable: 0.1
+app: { name: Status }
+models:
+  Incident:
+    fields:
+      title: string!
+outgoing:
+  incidentOpened:
+    when: Incident created
+    to: statusFeed
+pages:
+  incidents: { crud: Incident }
+`,
+  );
+  expect(targetWarnings(dir, {})).toEqual([
+    "Warning: the outgoing target statusFeed is not set (OUTGOING_STATUSFEED_URL, OUTGOING_STATUSFEED_SECRET): its calls wait in the outbox until it is.",
+  ]);
+  expect(
+    targetWarnings(dir, {
+      OUTGOING_STATUSFEED_URL: "https://feed.example/hook",
+      OUTGOING_STATUSFEED_SECRET: "s",
+    }),
+  ).toEqual([]);
 });
