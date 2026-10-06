@@ -87,7 +87,7 @@ export function readRecords(
   // records or people who sign in.
   const importable = (f: FieldIR) =>
     !f.formula &&
-    !(f.type.kind === "scalar" && (f.type.name === "picture" || f.type.name === "pictures")) &&
+    !(f.type.kind === "scalar" && ["picture", "pictures", "file", "files"].includes(f.type.name)) &&
     !(f.type.kind === "relation" && (f.type.many || f.type.model === "User"));
   const label = (f: FieldIR) => content?.models?.[model.name]?.fields?.[f.name]?.label;
   const columns: { column: string; field: string; at: number }[] = [];

@@ -39,8 +39,8 @@ test("a picture field: a JSON column, the form's own control, and the files rout
   expect(file("src/generated/instructor.ts")).toContain(
     "portrait: z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() }).nullish()",
   );
-  expect(file("src/generated/pictures.ts")).toContain(
-    '"instructor": {\n    "portrait": { data: instructorData, access: instructorAccess, key: "portrait" },',
+  expect(file("src/generated/uploads.ts")).toContain(
+    '"instructor": {\n    "portrait": { kind: "picture", data: instructorData, access: instructorAccess, key: "portrait" },',
   );
   for (const path of [
     "src/kit/uploads.ts",
@@ -107,7 +107,7 @@ pages:
   expect(at("src/db/schema.ts")).toContain('photos: text({ mode: "json" }).$type<Picture[]>()');
   expect(at("src/generated/item.ts")).toContain('input: bindPictures("item", "photos", 10)');
   expect(at("src/generated/item.ts")).toContain(".max(10).nullish()");
-  expect(at("src/generated/pictures.ts")).toContain('"photos": { data: itemData');
+  expect(at("src/generated/uploads.ts")).toContain('"photos": { kind: "picture", data: itemData');
   expect(gen.some((f) => f.path === "src/routes/files/$model.$id.$field.$n.ts")).toBe(true);
   // A removed picture's file goes unless a record still shows it.
   expect(at("src/generated/item.server.ts")).toContain("for (const p of row.photos ?? [])");
@@ -355,4 +355,26 @@ pages:
       (f) => f.path === "src/db/seed.ts",
     )?.content ?? "";
   expect(seed).not.toContain('import { db } from "./index"');
+});
+
+test("a document field: a JSON column, the document input, the uploads map, the file removed with it", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Office }\nmodels:\n  Invoice:\n    fields: { number: string!, contract: file, receipts: files }\npages:\n  invoices: { crud: Invoice }\n",
+  }).ir as SpecIR;
+  const gen = generateApp(spec, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
+  expect(at("src/db/schema.ts")).toContain('contract: text({ mode: "json" }).$type<StoredFile>()');
+  expect(at("src/db/schema.ts")).toContain('import type { StoredFile } from "#/kit/uploads";');
+  expect(at("src/generated/invoice.ts")).toContain('input: bindFile("invoice", "contract")');
+  expect(at("src/generated/invoice.ts")).toContain('input: bindFiles("invoice", "receipts", 10)');
+  expect(at("src/generated/uploads.ts")).toContain('"contract": { kind: "file", data: invoiceData');
+  expect(at("src/generated/invoice.server.ts")).toContain("deleteFile(row.contract,");
+  expect(gen.some((f) => f.path === "src/kit/FileInput.tsx")).toBe(true);
+  // Not unique, no default: a document is sent, never compared.
+  const bad = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Office }\nmodels:\n  Invoice:\n    fields: { number: string!, contract: file unique }\npages:\n  invoices: { crud: Invoice }\n",
+  });
+  expect(bad.diagnostics.map((d) => d.code)).toContain("invalid-field");
 });

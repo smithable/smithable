@@ -95,3 +95,136 @@ export function samplePicture(model: string, n: number | string, alt: string): P
   if (!existsSync(path)) copyFileSync(source, path);
   return picture;
 }
+
+/** What a document field stores: the file under uploads/, the name it was sent with, its kind and size. */
+export interface StoredFile {
+  file: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
+export const FILE_MAX_BYTES = 10_000_000;
+
+/** Refused documents say why in words the form shows. */
+export class BadFile extends Error {}
+
+const OOXML = "application/vnd.openxmlformats-officedocument.";
+const ODF = "application/vnd.oasis.opendocument.";
+/** The kinds a document may be, by extension: what the file must start with, and its type. */
+const KINDS: Record<string, { type: string; is: (bytes: Uint8Array, text: string) => boolean }> = {
+  pdf: { type: "application/pdf", is: (_, t) => t.startsWith("%PDF-") },
+  docx: { type: `${OOXML}wordprocessingml.document`, is: (_, t) => zip(t, "[Content_Types].xml") },
+  xlsx: { type: `${OOXML}spreadsheetml.sheet`, is: (_, t) => zip(t, "[Content_Types].xml") },
+  pptx: {
+    type: `${OOXML}presentationml.presentation`,
+    is: (_, t) => zip(t, "[Content_Types].xml"),
+  },
+  odt: { type: `${ODF}text`, is: (_, t) => zip(t, `${ODF}text`) },
+  ods: { type: `${ODF}spreadsheet`, is: (_, t) => zip(t, `${ODF}spreadsheet`) },
+  odp: { type: `${ODF}presentation`, is: (_, t) => zip(t, `${ODF}presentation`) },
+  txt: { type: "text/plain; charset=utf-8", is: (b) => plainText(b) },
+  csv: { type: "text/csv; charset=utf-8", is: (b) => plainText(b) },
+  png: { type: "image/png", is: (_, t) => t.startsWith("\x89PNG\r\n\x1a\n") },
+  jpg: { type: "image/jpeg", is: (_, t) => t.startsWith("\xff\xd8\xff") },
+  gif: { type: "image/gif", is: (_, t) => t.startsWith("GIF8") },
+  webp: { type: "image/webp", is: (b) => webpSize(b) !== undefined },
+};
+
+/** A ZIP archive (an Office or OpenDocument file) that names `entry` inside it. */
+const zip = (text: string, entry: string) => text.startsWith("PK\x03\x04") && text.includes(entry);
+
+/** Text a person can read: UTF-8 without the NUL bytes of a binary file. */
+function plainText(bytes: Uint8Array): boolean {
+  if (bytes.includes(0)) return false;
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A document's kind: its name's extension, if its own first bytes are that kind. */
+export function fileKind(
+  bytes: Uint8Array,
+  name: string,
+): { ext: string; type: string } | undefined {
+  const raw = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
+  const ext = raw === "jpeg" ? "jpg" : raw;
+  const kind = ext ? KINDS[ext] : undefined;
+  const text = Buffer.from(bytes).toString("latin1");
+  return ext && kind?.is(bytes, text) ? { ext, type: kind.type } : undefined;
+}
+
+/** Stores a document sent by a browser under `model/`, and returns what the record keeps of it. */
+export function saveFile(model: string, bytes: Uint8Array, name: string): StoredFile {
+  if (bytes.length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
+  const kind = fileKind(bytes, name);
+  if (!kind || bytes.length === 0) throw new BadFile(w.fileKinds);
+  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 24);
+  const file = `${model}/${hash}.${kind.ext}`;
+  mkdirSync(join(uploadsDir(), model), { recursive: true });
+  const path = join(uploadsDir(), file);
+  if (!existsSync(path)) writeFileSync(path, bytes);
+  // The name as the person knew it, without a path, at most 200 characters.
+  const shown = (name.split(/[\\/]/).at(-1) ?? "").slice(-200) || `document.${kind.ext}`;
+  return { file, name: shown, type: kind.type, size: bytes.length };
+}
+
+/** The bytes of a stored document, or undefined when it is gone. */
+export function readFile(stored: StoredFile): Buffer | undefined {
+  if (!/^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/.test(stored.file)) return undefined;
+  const path = join(uploadsDir(), stored.file);
+  return existsSync(path) ? readFileSync(path) : undefined;
+}
+
+/** Removes a document's file, unless `stillUsed` says another record keeps it. */
+export function deleteFile(stored: StoredFile | null | undefined, stillUsed: boolean): void {
+  if (!stored || stillUsed || !readFile(stored)) return;
+  unlinkSync(join(uploadsDir(), stored.file));
+}
+
+/** The ETag of a stored document: its file name carries the content's hash. */
+export const fileTag = (stored: StoredFile) => `"${stored.file.split("/")[1]?.split(".")[0]}"`;
+
+/**
+ * The headers a document is sent with: its own type, never sniffed, and as a download, except a
+ * PDF or a picture, which the browser shows itself; sandboxed, so nothing in it can run here.
+ */
+export function fileHeaders(stored: StoredFile): Record<string, string> {
+  const shown = stored.type === "application/pdf" || stored.type.startsWith("image/");
+  return {
+    "Content-Type": stored.type,
+    "Content-Disposition": `${shown ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(stored.name)}`,
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "sandbox",
+  };
+}
+
+/**
+ * A record's stored picture or document as the file routes send it, or "Not found": cached by
+ * browsers for a day when anyone may read the model (the address changes with the content),
+ * privately otherwise.
+ */
+export function uploadResponse(
+  request: Request,
+  kind: "picture" | "file",
+  stored: unknown,
+  everyone: boolean,
+): Response {
+  const found = stored as (Picture & StoredFile) | null | undefined;
+  const bytes = found && (kind === "picture" ? readPicture(found) : readFile(found));
+  if (!found || !bytes) return new Response("Not found", { status: 404 });
+  const tag = kind === "picture" ? pictureTag(found) : fileTag(found);
+  const headers = {
+    ...(kind === "picture"
+      ? { "Content-Type": "image/webp", "X-Content-Type-Options": "nosniff" }
+      : fileHeaders(found)),
+    "Cache-Control": everyone ? "public, max-age=86400" : "private, max-age=3600",
+    ETag: tag,
+  };
+  if (request.headers.get("if-none-match") === tag)
+    return new Response(null, { status: 304, headers });
+  return new Response(new Uint8Array(bytes), { headers });
+}
