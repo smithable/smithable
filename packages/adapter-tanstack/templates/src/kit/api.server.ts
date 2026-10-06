@@ -7,10 +7,10 @@ import { ZodError } from "zod";
 import { keyViewer } from "#/generated/keys.server";
 import { AccessDenied, Conflict, type Viewer } from "./access";
 import { address, count, TooMany, writeAllowed } from "./limit";
-import { BadInput, NotFound } from "./refusal";
+import { BadInput, Gone, NotFound } from "./refusal";
 import { traceWho } from "./trace.server";
 
-export { BadInput, NotFound };
+export { BadInput, Gone, NotFound };
 
 const MAX_BODY = 1_000_000;
 
@@ -32,6 +32,9 @@ export function problem(
 function conflict(code: string): string {
   const taken = /^taken:(\w+)$/.exec(code)?.[1];
   if (taken) return `That ${taken} is already taken.`;
+  const held = /^trashed:(\w+)$/.exec(code)?.[1];
+  if (held)
+    return `A deleted record with that ${held} is in the trash: restore it (POST …/restore) or delete it for good.`;
   if (code.startsWith("in-use"))
     return "It is still used by other records, so it cannot be deleted.";
   if (code === "full") return "No places left.";
@@ -75,6 +78,7 @@ export function refusalOf(
   if (error instanceof TooLarge) return { status: 413, title: "The body is larger than 1 MB." };
   if (error instanceof AccessDenied) return { status: 403, title: error.message };
   if (error instanceof NotFound) return { status: 404, title: error.message };
+  if (error instanceof Gone) return { status: 410, title: error.message, more: error.more };
   if (error instanceof BadInput) return { status: 400, title: error.message };
   if (error instanceof Conflict) return { status: 409, title: conflict(error.message) };
   if (error instanceof ZodError)

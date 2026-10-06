@@ -16,7 +16,10 @@ import {
   type ModelIR,
   modelAccess,
   PICTURES_MAX,
+  pascal,
+  plural,
   type SpecIR,
+  snake,
   storesFiles,
   storesPictures,
   USER_MODEL,
@@ -61,6 +64,15 @@ function columnsOf(model: ModelIR, shown: FieldIR[]): FieldIR[] {
   const names = defaultColumns(model);
   return names.map((name) => shown.find((f) => f.name === name)).filter((f): f is FieldIR => !!f);
 }
+
+/** The trash's server functions of a model: its list, restore and removal for good. */
+export function trashNames(model: ModelIR) {
+  const many = pascal(plural(model.name));
+  return { list: `trashed${many}`, restore: `restore${many}`, erase: `erase${many}` };
+}
+
+/** The most records a trash view shows; the oldest are removed after thirty days anyway. */
+const TRASH_SHOWN = 1000;
 
 export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, ux: UxIR): string {
   const n = names(model, t);
@@ -215,10 +227,19 @@ export const ${n.get} = createServerFn()
   .validator(z.number().int())
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
-    const row = await ${n.data}.get(viewer, id);
+    const row = await ${n.data}.get(viewer, id);${
+      model.trash
+        ? `
+    // In the trash: its page shows it read-only, with when, by whom and Restore.
+    if (!row) {
+      const gone = await ${n.data}.trashed(viewer, id);
+      return gone && { row: gone.row, ${hasFavorites(model, ir, auth) ? "saved: false, " : ""}canWrite: false, canDelete: false, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+    }`
+        : ""
+    }
     if (!row) return null;
     return {
-      row,${
+      row,${model.trash ? "\n      trashed: null," : ""}${
         hasFavorites(model, ir, auth)
           ? `
       saved: ${n.data}.saved(viewer).includes(id),`
@@ -244,7 +265,27 @@ export const ${n.remove} = createServerFn({ method: "POST" })
 /** Deletes the chosen ${n.pluralLabel.toLowerCase()}, all or none (at most 1,000 at once). */
 export const ${n.removeMany} = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => ${n.data}.removeMany(await writer(), ids));
+  .handler(async ({ data: ids }) => ${n.data}.removeMany(await writer(), ids));${
+    model.trash
+      ? `
+
+/** The viewer's trash of ${n.pluralLabel.toLowerCase()} (docs/design/trash.md). */
+export const ${trashNames(model).list} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return { rows: await ${n.data}.trash(viewer) };
+});
+
+/** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash. */
+export const ${trashNames(model).restore} = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => ${n.data}.restore(await writer(), ids));
+
+/** Removes the chosen ${n.pluralLabel.toLowerCase()} in the trash for good. */
+export const ${trashNames(model).erase} = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => ${n.data}.removeForGood(await writer(), ids));`
+      : ""
+  }
 ${
   hasFavorites(model, ir, auth)
     ? `
@@ -506,6 +547,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ...(capacity ? ["ne"] : []),
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
     ...(paged ? ["avg", "desc", "isNotNull", "max", "min", "sum"] : []),
+    ...(model.trash ? ["desc", "isNotNull", "isNull", "lt"] : []),
   ];
   // Visitors (and anyone reading only because it is public) read the records the public
   // condition fits; an owner reads their own too.
@@ -575,6 +617,147 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
         audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${tell('"created"', "made")}
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
+  // The trash (docs/design/trash.md): a delete moves the record there; what still refers to it
+  // with a required reference keeps it out, as it keeps a delete out today.
+  const trashing = Boolean(model.trash);
+  const holders = trashing
+    ? ir.models.flatMap((m) =>
+        m.fields
+          .filter(
+            (f) =>
+              f.type.kind === "relation" &&
+              !f.type.many &&
+              f.type.model === model.name &&
+              f.required,
+          )
+          .map((f) => ({ table: tableRef(m), column: `${f.name}Id` })),
+      )
+    : [];
+  const inUse = (id: string, indent: string) =>
+    holders
+      .map(
+        (h) =>
+          `${indent}if (tx.select({ id: ${h.table}.id }).from(${h.table}).where(eq(${h.table}.${h.column}, ${id})).limit(1).get()) throw new Conflict("in-use");\n`,
+      )
+      .join("");
+  const goneBy = (id: string) =>
+    trashing
+      ? `tx.update(${n.table}).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(${n.table}.id, ${id}), isNull(${n.table}.deletedAt))).returning().get()`
+      : `tx.delete(${n.table}).where(eq(${n.table}.id, ${id})).returning().get()`;
+  const goneAction = trashing ? "trashed" : "deleted";
+  // A unique value a trashed record holds: refused with how to free it.
+  const uniquesInTrash = trashing
+    ? model.fields.filter((f) => f.unique && f.type.kind !== "relation")
+    : [];
+  const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${self}.scoped(viewer))`;
+  const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
+  const named = signedIn
+    ? `
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );`
+    : "";
+  const byName = signedIn ? "(row.deletedBy && people.get(row.deletedBy)) ?? null" : "null";
+  const trashFunctions = () => `
+
+  /**
+   * The viewer's trash (docs/design/trash.md): the ${n.pluralLabel.toLowerCase()} in it they may delete, the
+   * latest first, with when and by whom, kept for thirty days.
+   */
+  async trash(viewer: Viewer | null) {
+    const rows = (
+      await db.query.${n.tableKey}.findMany({
+        where: ${trashedRows},${withClause(listWith, "        ")}
+        orderBy: (t) => [desc(t.deletedAt)],
+        limit: ${TRASH_SHOWN},
+      })
+    )${allowed};${named}
+    ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName} }))`, "return ")}
+  },
+
+  /** A ${n.label.toLowerCase()} in the trash, as its page shows it read-only, with when and by whom; else nothing. */
+  async trashed(viewer: Viewer | null, id: number) {
+    const row = await db.query.${n.tableKey}.findFirst({
+      where: and(eq(${n.table}.id, id), ${trashedRows}),${withClause(getWith, "      ")}
+    });
+    if (!row || !allows(${n.access}.delete, viewer, ${ownerOf})) return null;
+    const rows = [row];${named.replace(/\n {4}/g, "\n    ")}
+    return {
+      row: ${compute(ownedAuto ? "shownTo(viewer, row)" : "row")},
+      deletedAt: row.deletedAt as Date,
+      by: ${byName},
+      until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
+    };
+  },
+
+  /** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash, those the viewer may delete. */
+  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
+    const rows = db
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
+      .from(${n.table})
+      .where(and(inArray(${n.table}.id, ids), ${trashedRows}))
+      .all()${allowed};
+    db.transaction((tx) => {
+      for (const row of rows) {
+        const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null }).where(eq(${n.table}.id, row.id)).returning().get();
+        audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });
+      }
+    });
+    return { restored: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Removes the chosen ${n.pluralLabel.toLowerCase()} in the trash for good, with their pictures and documents. */
+  removeForGood(viewer: Viewer | null, ids: number[]): { deleted: number; skipped: number } {
+    const rows = db
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
+      .from(${n.table})
+      .where(and(inArray(${n.table}.id, ids), ${trashedRows}))
+      .all()${allowed};
+    ${self}.erase(viewer, rows.map((row) => row.id));
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
+  erase(viewer: Viewer | null, ids: number[]): void {
+    if (ids.length === 0) return;
+    const rows = db
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
+      .from(${n.table})
+      .where(and(inArray(${n.table}.id, ids), isNotNull(${n.table}.deletedAt)))
+      .all();
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
+          if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: gone.${titleKey} });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+${
+  pictures.length
+    ? `    for (const row of rows) {
+${dropPictures(
+  () => "undefined",
+  () => "([] as string[])",
+).replace(/^ {4}/gm, "      ")}    }
+`
+    : ""
+}  },
+
+  /** What has been in the trash for thirty days goes for good (once a day). */
+  purge(now = Date.now()): number {
+    const old = db
+      .select({ id: ${n.table}.id })
+      .from(${n.table})
+      .where(lt(${n.table}.deletedAt, new Date(now - TRASH_DAYS * DAY)))
+      .all()
+      .map((row) => row.id);
+    ${self}.erase(null, old);
+    return old.length;
+  },`;
   const referenceChecks = refs.map(
     (ref) =>
       `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
@@ -612,12 +795,12 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
           `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deleteFile(p, ${stillShown(k, "p.file")});\n`,
       ),
     ].join("");
-  return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
+  return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${[...new Set(drizzle)].sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
-import { refusal } from "#/kit/log.server";
+import { ${trashing ? "log, " : ""}refusal } from "#/kit/log.server";
 ${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
@@ -706,9 +889,43 @@ ${referenceChecks.join("\n")}
 `
     : ""
 }
-export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}
+${
+  trashing
+    ? `/** How long a record stays in the trash, and the most a trash view shows. */
+const TRASH_DAYS = 30;
+const DAY = 24 * 60 * 60 * 1000;
+${
+  uniquesInTrash.length
+    ? `
+/** A unique value held by a record in the trash is refused with how to free it. */
+function heldInTrash(refused: Error, values: Record<string, unknown>): Error {
+  const column = /^taken:(\\w+)$/.exec(refused.message)?.[1];
+${uniquesInTrash
+  .map(
+    (f) =>
+      `  if (column === ${JSON.stringify(snake(f.name))} && db.select({ id: ${n.table}.id }).from(${n.table}).where(and(isNotNull(${n.table}.deletedAt), eq(${n.table}.${f.name}, values.${f.name} as never))).get())
+    return new Conflict("trashed:${snake(f.name)}");`,
+  )
+  .join("\n")}
+  return refused;
+}
+`
+    : ""
+}`
+    : ""
+}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
-  readable(viewer: Viewer | null) {
+  readable(viewer: Viewer | null) {${
+    model.trash
+      ? `
+    // What is in the trash is gone to every reader (docs/design/trash.md).
+    return and(isNull(${n.table}.deletedAt), ${self}.scoped(viewer));
+  },
+
+  /** The records the viewer may read by the read rule, the trashed ones too. */
+  scoped(viewer: Viewer | null) {`
+      : ""
+  }
     const scope = readScope(${n.access}.read, viewer);
     if (scope === "all") return undefined;
 ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    return ${ownOrPublic};
@@ -1039,7 +1256,7 @@ ${
       });`
       }
     } catch (error) {
-      throw ${capacity ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
+      throw ${capacity ? "error instanceof Conflict ? error : " : ""}${uniquesInTrash.length ? "heldInTrash(refusal(error), values)" : "refusal(error)"};
     }
     await afterChange("afterCreate", "${model.name}", row, viewer);
     return row;
@@ -1064,7 +1281,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
         return after;
       });
     } catch (error) {
-      throw ${capacity || holds.length ? "error instanceof Conflict ? error : refusal(error)" : "refusal(error)"};
+      throw ${capacity || holds.length ? "error instanceof Conflict ? error : " : ""}${uniquesInTrash.length ? "heldInTrash(refusal(error), values)" : "refusal(error)"};
     }
 ${dropPictures(
   (k) => `changed.${k}?.file`,
@@ -1083,18 +1300,22 @@ ${dropPictures(
     check(${n.access}.delete, viewer, ${ownerOf});
     try {
       db.transaction((tx) => {
-        const gone = tx.delete(${n.table}).where(eq(${n.table}.id, id)).returning().get();
+${inUse("id", "        ")}        const gone = ${goneBy("id")};
         if (gone) {
-          audit(tx, viewer, { action: "deleted", model: "${model.name}", record: id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}
+          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}
         }
       });
     } catch (error) {
       throw refusal(error);
     }
-${dropPictures(
-  () => "undefined",
-  () => "([] as string[])",
-)}    await afterDelete("${model.name}", id, viewer);
+${
+  trashing
+    ? ""
+    : dropPictures(
+        () => "undefined",
+        () => "([] as string[])",
+      )
+}    await afterDelete("${model.name}", id, viewer);
   },
 
   /**
@@ -1111,9 +1332,9 @@ ${dropPictures(
     db.transaction((tx) => {
       for (const row of rows)
         try {
-          const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
+${inUse("row.id", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
-            audit(tx, viewer, { action: "deleted", model: "${model.name}", record: row.id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}
+            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}
           }
         } catch (error) {
           const refused = refusal(error);
@@ -1121,13 +1342,17 @@ ${dropPictures(
         }
     });
     for (const row of rows) {
-${dropPictures(
-  () => "undefined",
-  () => "([] as string[])",
-).replace(/^ {4}/gm, "      ")}      await afterDelete("${model.name}", row.id, viewer);
+${
+  trashing
+    ? ""
+    : dropPictures(
+        () => "undefined",
+        () => "([] as string[])",
+      ).replace(/^ {4}/gm, "      ")
+}      await afterDelete("${model.name}", row.id, viewer);
     }
     return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
-  },
+  },${trashing ? trashFunctions() : ""}
 ${
   referenced
     ? `${
@@ -1168,7 +1393,24 @@ ${
 `
     : ""
 }};
-`;
+${
+  trashing
+    ? `
+// Once a day, a minute after the server starts and then every day, in production.
+if (import.meta.env.SSR && import.meta.env.PROD) {
+  const purge = () => {
+    try {
+      ${self}.purge();
+    } catch (error) {
+      log.error("The trash could not be emptied", { model: "${model.name}", error });
+    }
+  };
+  setTimeout(purge, 60_000).unref();
+  setInterval(purge, DAY).unref();
+}
+`
+    : ""
+}`;
 }
 
 /** A field written as Markdown. */

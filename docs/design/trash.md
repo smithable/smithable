@@ -38,7 +38,7 @@ models:
 
 1. Core (done 2026-10-06): `trash` on a model, `setTrash` (destructive when turned off), the summary line, the schema, the spec reference; the generator refuses a trashed model until step 2, and drafts do not propose it.
 2. Adapter (A): the columns and partial indexes in the schema and migration; the readers' filter in the data module (one place: `list`, `get`, counts) and the API, tools, sitemap and articles that go through it; the Trash view, the notice's Undo, the banner; the routes; the daily job and the uploads; the three audit lines; words in en and sv; the CRM starter's Customer and Order with `trash: true`; test-apps: delete, trash view, restore, the 410, permanent removal, the unique refusal; the API page. Then remove the generator's refusal and `setTrash` from NOT_FOR_DRAFTS.
-3. Later, when asked: a trash across models on the data page; a longer retention as a setting.
+3. Later, when asked: a trash across models on the data page; a longer retention as a setting. And, noted on building step 2 (2026-10-06): outgoing mail whose recipient is one reference away (`customer.email`) still reads the address of a record in the trash; a nullable reference to a trashed record still shows its title.
 
 ## 6. The five questions (ARCHITECTURE §2.4)
 

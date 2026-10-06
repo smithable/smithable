@@ -106,6 +106,23 @@ curl -s "https://status.example.com/api/v1/incidents.csv?status=resolved&sort=-d
 
 The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates and times ISO, a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's saves the chosen records; neither needs the API.
 
+### The trash
+
+A model with `trash: true` keeps a deleted record for thirty days ([design/trash.md](../design/trash.md)). `DELETE /api/v1/<models>/{id}` moves it to the trash (204, as for any delete). Reading it then answers `410 Gone`, with when it was deleted, by whom, when it goes for good and where to restore it:
+
+```sh
+curl -s -X DELETE "https://crm.example.com/api/v1/customers/12" -H "Authorization: Bearer $KEY"
+curl -s "https://crm.example.com/api/v1/customers/12" -H "Authorization: Bearer $KEY"
+# {"status":410,"title":"This customer is in the trash.","deletedAt":"…","deletedBy":"…","removedOn":"…","restore":"/api/v1/customers/12/restore"}
+curl -s -X POST "https://crm.example.com/api/v1/customers/12/restore" -H "Authorization: Bearer $KEY"
+```
+
+- `GET /api/v1/<models>?trashed=true` lists what is in the trash that the key's role may delete, each with `deletedAt`.
+- `POST /api/v1/<models>/{id}/restore` takes one out and answers the record.
+- `DELETE /api/v1/<models>/{id}?permanent=true` removes one in the trash for good, with its pictures and documents.
+- A new record whose unique value a trashed one holds is refused (409) with how to free it. A record that others still refer to cannot be moved to the trash, as it cannot be deleted.
+- For assistants, `find` takes `"trashed": true` and `run` has `restore<Kind>` (e.g. `restoreCustomer`) for each kind with a trash.
+
 ## 4. When the app says no
 
 A refusal is a JSON problem (`application/problem+json`) in the app's own words, with the HTTP status that fits:

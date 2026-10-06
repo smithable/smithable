@@ -17,7 +17,7 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields } from "../actions.js";
 import { hasSignIn } from "../auth.js";
-import { savedToggle } from "../data.js";
+import { savedToggle, trashNames } from "../data.js";
 import {
   attr,
   code,
@@ -460,6 +460,13 @@ export function listParts(
   if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
+  // The trash (docs/design/trash.md): Undo after Move to trash, and the way to the Trash page.
+  const trash = Boolean(model.trash && !within);
+  if (trash)
+    view
+      .add("@tanstack/react-router", "useRouter")
+      .add("#/kit/Trash", "TrashNotice")
+      .add(n.module, trashNames(model).restore);
   const selecting = !within && (many.length > 0 || Boolean(auth && hasSignIn(auth)));
   if (selecting) {
     view
@@ -515,7 +522,7 @@ export function listParts(
     const scrolling = cards && !within && !owned;
     return `function ${component}() {
   const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || offered.length || selecting || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || selecting ? "\n  const router = useRouter();" : ""}${
+${actions.length || offered.length || selecting || filtering?.mine || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
       scrolling
         ? `
   // The cards loaded after the first page, as the reader scrolls; a new search starts again.
@@ -627,7 +634,18 @@ ${
       )}
 `
     : ""
-}${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
+}${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}${
+  trash
+    ? `      <TrashNotice
+        model=${attr(model.name)}
+        onUndo={async (id) => {
+          await ${trashNames(model).restore}({ data: [id] });
+          await router.invalidate();
+        }}
+      />
+`
+    : ""
+}      <ModelTable
         ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}${
           within || capped || owned
@@ -676,7 +694,18 @@ ${
         }
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
-      />
+      />${
+        trash
+          ? `
+      {viewer && (
+        <p className="pt-2 text-right text-sm">
+          <Link to=${attr(join(page.route, "trash"))} className="text-muted-foreground hover:underline">
+            {w.trashView}
+          </Link>
+        </p>
+      )}`
+          : ""
+      }
     </>
   );
 }
