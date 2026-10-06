@@ -25,7 +25,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
-import { mailsAbout, OUTGOING_IMPORT } from "./outgoing.js";
+import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   code,
   dataKey,
@@ -566,7 +566,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   // Worked out, never entered: not a change of their own in the audit log.
   const computedKeys = model.fields.filter((f) => f.formula).map((f) => f.name);
   // Who is told of a change (outgoing mail, integrations.md §4.1b), in its transaction.
-  const mails = mailsAbout(ir, model.name);
+  const mails = toldAbout(ir, model.name);
   const tell = (what: string, record: string, before = "") =>
     mails
       ? `\n        outgoing(tx, viewer, "${model.name}", ${what}, ${record}${before && `, ${before}`});`

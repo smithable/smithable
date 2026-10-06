@@ -1,27 +1,30 @@
-// Smithable app kit: outgoing mail (docs/design/integrations.md §4.1b). A change that someone is
-// to hear about writes its mail into the outbox table in the change's own transaction, so there
-// is no mail for a change that did not happen and no change without its mail; it is sent after,
-// and a mail that cannot be sent is tried again with growing pauses for a day, then given up and
-// shown in Activity, where an administrator can send it again.
+// Smithable app kit: outgoing mail and calls (docs/design/integrations.md §4.1, §4.1b). A change
+// that someone is to hear about writes its mail, or its call to a named target, into an outbox
+// table in the change's own transaction, so there is nothing sent for a change that did not
+// happen and no change without what it sends; it is sent after, and what cannot be sent is tried
+// again with growing pauses for a day, then given up and shown in Activity, where an
+// administrator can send it again. A call is signed with its target's secret.
+import { createHmac } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { and, eq, isNull, lte } from "drizzle-orm";
 import { db } from "#/db";
-import { outgoingMail } from "#/db/schema";
+import { outgoingCall, outgoingMail } from "#/db/schema";
 import { AccessDenied, type Viewer } from "./access";
 import { audit } from "./audit.server";
 import { log } from "./log.server";
 import { sendMail } from "./mail";
-import { pauseAfter } from "./outgoing";
+import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
 import { outsideTrace } from "./trace.server";
 import { w } from "./words";
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
-/** The database, or a transaction in it: what a mail is queued with. */
+/** The database, or a transaction in it: what a mail or a call is queued with. */
 type Writer = {
-  insert(table: typeof outgoingMail): {
-    values(row: typeof outgoingMail.$inferInsert): { run(): unknown };
-  };
+  insert<T extends typeof outgoingMail | typeof outgoingCall>(
+    table: T,
+  ): { values(row: T["$inferInsert"]): { run(): unknown } };
 };
 
 /** Someone to mail: a user (by id, so their own change can be told apart) or an address. */
@@ -97,14 +100,64 @@ export function queueMail(
   if (sent.size) sendSoon();
 }
 
+/** A call to a named target: the record as the API gives it, with what happened and when. */
+export interface Call {
+  entry: string;
+  model: string;
+  record: number;
+  target: string;
+  /** The JSON sent, and signed. */
+  body: string;
+}
+
+/** Queues the call in the change's transaction. */
+export function queueCall(tx: Writer, call: Call): void {
+  tx.insert(outgoingCall)
+    .values({
+      entry: call.entry,
+      model: call.model,
+      recordId: call.record,
+      target: call.target,
+      body: call.body,
+    })
+    .run();
+  sendSoon();
+}
+
+/**
+ * Why the app will not call this address, or nothing: only http(s), never the app itself, and in
+ * a release never a private or local network, so a wrong setting cannot make the app call the
+ * machine it runs on or its neighbours. Development may call the machine itself (a test's
+ * receiver).
+ */
+export async function refusedAddress(url: string): Promise<string | undefined> {
+  let address: URL;
+  try {
+    address = new URL(url);
+  } catch {
+    return "it is not an address";
+  }
+  if (address.protocol !== "https:" && address.protocol !== "http:")
+    return "it is not http or https";
+  const own = process.env.BETTER_AUTH_URL;
+  if (own && URL.canParse(own) && new URL(own).host === address.host) return "it is the app itself";
+  if (import.meta.env.DEV) return undefined;
+  const host = address.hostname.replace(/^\[|\]$/g, "");
+  const found = await lookup(host, { all: true }).catch(() => []);
+  if (found.length === 0) return "it does not resolve";
+  if (found.some((a) => privateAddress(a.address))) return "it is a private or local network";
+  return undefined;
+}
+
 let sending = false;
 
-/** Sends the mails that are due; one round at a time. */
+/** Sends the mails and calls that are due; one round at a time. */
 export async function sendDue(now = Date.now()): Promise<number> {
   if (sending) return 0;
   sending = true;
   let done = 0;
   try {
+    done += await sendCalls(now);
     const due = db
       .select()
       .from(outgoingMail)
@@ -170,15 +223,113 @@ function sendSoon() {
   }, 0).unref?.();
 }
 
-/** "Send again" on a mail that was given up (administrators): tried again from now, for a day. */
-export function sendAgain(viewer: Viewer | null, id: number): void {
+/** Sends the calls that are due, signed; a target without its settings waits for them. */
+async function sendCalls(now: number): Promise<number> {
+  let done = 0;
+  const due = db
+    .select()
+    .from(outgoingCall)
+    .where(
+      and(
+        isNull(outgoingCall.sentAt),
+        isNull(outgoingCall.failedAt),
+        lte(outgoingCall.nextAt, new Date(now)),
+      ),
+    )
+    .all();
+  for (const call of due) {
+    const settings = targetSettings(call.target);
+    const url = process.env[settings.url];
+    const secret = process.env[settings.secret];
+    if (!url || !secret) continue;
+    const about = { model: call.model, record: call.recordId };
+    let status: number | undefined;
+    try {
+      const refused = await refusedAddress(url);
+      if (refused) throw new Error(`The address of ${call.target} is refused: ${refused}.`);
+      const answer = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Event": call.entry,
+          "X-Signature-256": `sha256=${createHmac("sha256", secret).update(call.body).digest("hex")}`,
+        },
+        body: call.body,
+        // A redirect is an answer, not a new address to call past the guard.
+        redirect: "manual",
+        signal: AbortSignal.timeout(10_000),
+      });
+      status = answer.status;
+      if (!answer.ok) throw new Error(`${call.target} answered ${answer.status}.`);
+      db.transaction((tx) => {
+        tx.update(outgoingCall)
+          .set({ sentAt: new Date(), tries: call.tries + 1, status })
+          .where(eq(outgoingCall.id, call.id))
+          .run();
+        audit(tx, null, {
+          action: "called",
+          ...about,
+          details: { outgoing: call.entry, target: call.target, status },
+        });
+      });
+      done++;
+    } catch (error) {
+      const tries = call.tries + 1;
+      const why = error instanceof Error ? error.message : String(error);
+      const late = now - call.createdAt.getTime() >= DAY;
+      db.transaction((tx) => {
+        tx.update(outgoingCall)
+          .set(
+            late
+              ? { tries, status, error: why, failedAt: new Date() }
+              : { tries, status, error: why, nextAt: new Date(now + pauseAfter(tries)) },
+          )
+          .where(eq(outgoingCall.id, call.id))
+          .run();
+        if (late)
+          audit(tx, null, {
+            action: "call not made",
+            ...about,
+            details: { outgoing: call.entry, target: call.target, call: call.id, error: why },
+          });
+      });
+      log.warn("A call could not be made", {
+        call: call.id,
+        target: call.target,
+        tries,
+        error: why,
+      });
+    }
+  }
+  return done;
+}
+
+/**
+ * "Send again" on a mail or call that was given up (administrators): tried again from now, for
+ * a day.
+ */
+export function sendAgain(viewer: Viewer | null, again: { mail: number } | { call: number }): void {
   if (viewer?.role !== "admin") throw new AccessDenied(viewer !== null);
-  const again = db
-    .update(outgoingMail)
-    .set({ failedAt: null, error: null, tries: 0, createdAt: new Date(), nextAt: new Date() })
-    .where(and(eq(outgoingMail.id, id), isNull(outgoingMail.sentAt)))
-    .run();
-  if (again.changes) sendSoon();
+  const fresh = {
+    failedAt: null,
+    error: null,
+    tries: 0,
+    createdAt: new Date(),
+    nextAt: new Date(),
+  };
+  const changed =
+    "mail" in again
+      ? db
+          .update(outgoingMail)
+          .set(fresh)
+          .where(and(eq(outgoingMail.id, again.mail), isNull(outgoingMail.sentAt)))
+          .run()
+      : db
+          .update(outgoingCall)
+          .set(fresh)
+          .where(and(eq(outgoingCall.id, again.call), isNull(outgoingCall.sentAt)))
+          .run();
+  if (changed.changes) sendSoon();
 }
 
 // What was queued before a restart goes out after it; then every minute, for the retries.
