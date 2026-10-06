@@ -57,7 +57,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
       </header>
       <dialog
         ref={drawer}
-        aria-label="Menu"
+        aria-label={w.menu}
         data-kit="drawer"
         className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
@@ -114,7 +114,7 @@ function Navigation({
   return (
     <>
       <nav
-        aria-label="Main"
+        aria-label={w.mainMenu}
         data-kit="nav"
         className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 pb-4"
       >
@@ -176,7 +176,7 @@ export function Loading() {
   return (
     <div
       aria-busy="true"
-      aria-label="Loading"
+      aria-label={w.loading}
       className="max-w-3xl animate-pulse space-y-6"
       role="status"
     >

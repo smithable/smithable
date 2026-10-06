@@ -63,7 +63,7 @@ export function Ask({
           <form onSubmit={submit} className="space-y-2">
             <div className="flex gap-2">
               <Input
-                aria-label="Question"
+                aria-label={w.question}
                 placeholder={w.askPlaceholder}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}

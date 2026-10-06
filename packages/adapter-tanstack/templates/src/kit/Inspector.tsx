@@ -67,7 +67,7 @@ export function Inspector({
             </select>
           </label>
           <Input
-            aria-label="Question"
+            aria-label={w.question}
             placeholder={w.inspectorPlaceholder}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -89,7 +89,7 @@ export function Inspector({
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="font-medium">{a.question}</p>
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                as {roles.find((r) => r.value === a.role)?.label ?? a.role}
+                {w.asRole(roles.find((r) => r.value === a.role)?.label ?? a.role)}
                 {a.answer?.source === "records" && (
                   <Badge variant="success">{w.fromYourRecords}</Badge>
                 )}
@@ -134,11 +134,9 @@ export function Shown({
       {trace && (
         <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer">
-            {answer.steps.length} tool {answer.steps.length === 1 ? "call" : "calls"}
-            {answer.tokens
-              ? `, ${answer.tokens.in} tokens in, ${answer.tokens.out} out`
-              : ", no model"}
-            , {answer.ms} ms
+            {w.toolCalls(answer.steps.length)}
+            {answer.tokens ? w.tokensInOut(answer.tokens.in, answer.tokens.out) : w.noModel},{" "}
+            {answer.ms} ms
           </summary>
           <ol className="mt-2 space-y-2">
             {answer.steps.map((step, i) => (
@@ -273,9 +271,10 @@ function Result({ step }: { step: Step }) {
   if (step.proposed)
     return (
       <div className="rounded-md border border-dashed border-border p-3 text-sm">
-        Would {step.tool} {String(step.args.kind ?? step.args.action ?? "")}
-        {step.args.id !== undefined ? ` ${String(step.args.id)}` : ""}: an assistant with this role
-        may propose it, and nothing was changed.
+        {w.wouldPropose(
+          step.tool,
+          `${String(step.args.kind ?? step.args.action ?? "")}${step.args.id !== undefined ? ` ${String(step.args.id)}` : ""}`,
+        )}
       </div>
     );
   if (step.error) return <p className="text-sm text-destructive">{step.error}</p>;

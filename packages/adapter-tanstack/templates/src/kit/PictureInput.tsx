@@ -105,7 +105,7 @@ export function PictureInput({
             </div>
           )}
           <div className="grow space-y-2">
-            <Label htmlFor={altId}>Description (for those who cannot see it)</Label>
+            <Label htmlFor={altId}>{w.pictureDescription}</Label>
             <Input
               id={altId}
               value={picture.alt}
@@ -278,7 +278,7 @@ export function PicturesInput({
                   </span>
                 )}
               </div>
-              <Label htmlFor={`${id}-alt-${i}`}>Description of picture {i + 1}</Label>
+              <Label htmlFor={`${id}-alt-${i}`}>{w.pictureDescriptionN(i + 1)}</Label>
               <Input
                 id={`${id}-alt-${i}`}
                 value={p.alt}

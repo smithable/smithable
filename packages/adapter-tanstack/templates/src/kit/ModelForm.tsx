@@ -141,7 +141,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           >
             <Calculator aria-hidden className="size-5 text-muted-foreground" />
             {formatValue(field, computed[field.name], app)}
-            <span className="sr-only">(calculated)</span>
+            <span className="sr-only">{w.calculated}</span>
           </p>
         ) : (
           <FieldInput
@@ -313,7 +313,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                     run(onDelete);
                   }}
                 >
-                  Delete {ui.label.toLowerCase()}
+                  {w.deleteIt(ui.label.toLowerCase())}
                 </Button>
               </div>
             </dialog>
