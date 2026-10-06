@@ -229,6 +229,31 @@ try {
     },
   );
   await step(
+    "a click in the preview opens the page in the same document, never a new load (the white flash)",
+    async () => {
+      const frame = await (
+        await page.locator('iframe[title="App preview"]').elementHandle()
+      )?.contentFrame();
+      if (!frame) throw new Error("no preview frame");
+      await frame.evaluate(() => {
+        window.__sameDocument = true;
+      });
+      await preview.locator("main tbody tr").first().click();
+      await frame.waitForURL(/\/customers\/\d+$/, { timeout: 30000 });
+      // Studio's address follows the page; the frame must not be loaded again for it.
+      await page.waitForFunction(() =>
+        document
+          .querySelector('input[aria-label="Preview address"]')
+          ?.value.includes("/customers/"),
+      );
+      await page.waitForTimeout(500);
+      if (!(await frame.evaluate(() => window.__sameDocument === true)))
+        throw new Error("the preview loaded a new document");
+      await frame.evaluate(() => history.back());
+      await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 30000 });
+    },
+  );
+  await step(
     "adding a field: the summary and the change trace follow at once, the form empties, and the preview follows and flashes what changed",
     async () => {
       await change("Add a field");

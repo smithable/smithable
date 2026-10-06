@@ -20,6 +20,7 @@ import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
+import { AppLink } from "./AppLink";
 import { ConsentSettings } from "./Consent";
 import { PicturePlaceholder } from "./ModelTable";
 import { textMarker } from "./model";
@@ -83,13 +84,13 @@ export function LandingLayout({
     <ul className="flex flex-wrap gap-x-6 gap-y-2">
       {footer.links.map((l, i) => (
         <li key={l.link ?? i}>
-          <a
+          <AppLink
             href={l.link}
             className="underline-offset-4 hover:text-foreground hover:underline"
             {...mark(footer.texts, `items.${i}.label`)}
           >
             {l.label}
-          </a>
+          </AppLink>
         </li>
       ))}
     </ul>
@@ -575,12 +576,12 @@ export function RecordCards({
   // The whole card or row opens it; the link is the title.
   const heading = (card: CardItem) =>
     card.href ? (
-      <a
+      <AppLink
         href={card.href}
         className="outline-none after:absolute after:inset-0 focus-visible:underline"
       >
         {card.title}
-      </a>
+      </AppLink>
     ) : (
       card.title
     );
@@ -633,13 +634,13 @@ export function RecordCards({
           {door.chips?.map((chip) => (
             <nav key={chip.name} aria-label={chip.label} className="flex flex-wrap gap-2">
               {chip.options.map((option) => (
-                <a
+                <AppLink
                   key={option.value}
                   href={`${door.to}?${new URLSearchParams({ [chip.name]: option.value })}`}
                   className="inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {option.label}
-                </a>
+                </AppLink>
               ))}
             </nav>
           ))}
