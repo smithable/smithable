@@ -97,7 +97,7 @@ public: { pages: [home, incidents], read: [{ Incident: { where: { status: [inves
   const at = (path: string) => files.find((f) => f.path === path)?.content ?? "";
   const data = at("src/generated/incident.server.ts");
   expect(data).toContain('inArray(schema.incidents.status, ["investigating","resolved"])');
-  expect(data).toMatch(/import \{ and, eq, inArray, sql/);
+  expect(data).toMatch(/import \{ and, count, eq, inArray, sql/);
   const test = at("src/generated/access.test.ts");
   expect(test).toContain('where status is investigating or resolved"');
   expect(test).toContain('insertIncident(null, {"status":"investigating"});');

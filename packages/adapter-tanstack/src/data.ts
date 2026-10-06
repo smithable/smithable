@@ -389,6 +389,10 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     (f) =>
       f.formula && f.type.kind === "scalar" && ["int", "decimal", "money"].includes(f.type.name),
   );
+  // A model with a list page: it is read a page at a time (docs/design/paging.md).
+  const hasListPage = ir.pages.some(
+    (p) => p.pattern.kind === "crud" && p.pattern.model === model.name,
+  );
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -488,7 +492,9 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     "inArray",
     "sql",
     ...((referenced && titleColumn !== "id") || paged ? ["asc"] : []),
-    ...(access.create.public || capped || paged || capacity || holds.length ? ["count"] : []),
+    ...(access.create.public || capped || paged || hasListPage || capacity || holds.length
+      ? ["count"]
+      : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
@@ -726,6 +732,28 @@ ${
     ${asListed("rows", "return ")}
   },
 ${
+  hasListPage
+    ? `
+  /**
+   * A page of the ${n.pluralLabel.toLowerCase()} the viewer may read that fit \`where\`, newest first (or in
+   * \`order\`), and how many fit in all: for a list page. A page past the end is the last one.
+   */
+  async page(viewer: Viewer | null, where?: SQL, order?: SQL, page = 1, size = 50) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const condition = and(${self}.readable(viewer), where);
+    const total = db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;
+    const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
+    const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
+      where: condition,${withClause(listWith, "      ")}
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
+      limit: size,
+      offset: (at - 1) * size,
+    });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return { rows: ", ", total, page: at, size }")}
+  },
+`
+    : ""
+}${
   paged
     ? `
   /**

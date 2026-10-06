@@ -102,6 +102,7 @@ export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOp
     options.ux ?? emptyUx(),
     undefined,
     options.auth,
+    true,
   );
   p.view.add("@tanstack/react-router", "getRouteApi");
   return `// Your version of the "${page.id}" page. Smithable created it from the generated page and never
