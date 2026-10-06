@@ -9,6 +9,8 @@ export interface SpecIR {
   app: AppIR;
   models: ModelIR[];
   actions: ActionIR[];
+  /** Mails and calls the app makes when something happens to a record (integrations.md §4). */
+  outgoing: OutgoingIR[];
   queries: QueryIR[];
   pages: PageIR[];
   navigation: MenuIR[];
@@ -343,6 +345,38 @@ export interface ActionAddIR {
   reference: string;
   values: ActionValueIR[];
 }
+
+/**
+ * Something happens to a record and the app tells someone: a mail, or (later) a signed call to a
+ * named target whose address is a setting. docs/design/integrations.md §4.
+ */
+export interface OutgoingIR {
+  name: string;
+  /** A record of `model` created, changed or deleted; or the standard action `action` (on `model`) ran. */
+  when:
+    | { model: string; event: "created" | "changed" | "deleted" }
+    | { model: string; action: string };
+  /**
+   * Only for records that fit: a creation or deletion when the record fits, a change when the
+   * record fits after it and did not before.
+   */
+  where?: Condition;
+  /** "mail", or the name of a target (camelCase) whose address and secret are settings. */
+  to: string;
+  /** For mail: who gets it. */
+  recipient?: RecipientIR;
+}
+
+export type RecipientIR =
+  /** The record's owner. */
+  | { kind: "owner" }
+  /** Every user with the role. */
+  | { kind: "role"; role: string }
+  /**
+   * An address on the record: an `email` field or a field that refers to User, on the record
+   * itself (one name) or one reference away (two: `customer.email`).
+   */
+  | { kind: "field"; path: string[]; via: "email" | "user" };
 
 export interface MenuIR {
   name: string;

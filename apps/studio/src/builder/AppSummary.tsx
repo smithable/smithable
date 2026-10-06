@@ -14,6 +14,7 @@ const GROUPS: Record<string, { title: string; add?: [string, Prefill] }> = {
   model: { title: "Records", add: ["Add a record", { op: "addModel", args: {} }] },
   pages: { title: "Pages", add: ["Add a page", { op: "addPage", args: {} }] },
   action: { title: "Actions", add: ["Add an action", { op: "addAction", args: {} }] },
+  outgoing: { title: "Who is told" },
   query: { title: "Queries" },
   auth: { title: "Sign-in and access" },
 };
