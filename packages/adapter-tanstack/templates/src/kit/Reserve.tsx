@@ -5,6 +5,7 @@
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "#/components/ui/button";
+import { w } from "./words";
 
 export interface Places {
   left: number;
@@ -20,10 +21,10 @@ export function Reserve({
   load,
   book,
   cancel,
-  bookLabel = "Book a place",
-  cancelLabel = "Cancel booking",
-  fullLabel = "Full",
-  bookedLabel = "You're booked",
+  bookLabel = w.bookAPlace,
+  cancelLabel = w.cancelBooking,
+  fullLabel = w.full,
+  bookedLabel = w.youAreBooked,
 }: {
   /** The record whose places these are (the session). */
   id: number;
@@ -44,7 +45,7 @@ export function Reserve({
     load({ data: id }).then(setPlaces, () => setPlaces(null));
   }, [id, load]);
   if (places === undefined)
-    return <p className="text-sm text-muted-foreground">Checking places…</p>;
+    return <p className="text-sm text-muted-foreground">{w.checkingPlaces}</p>;
   if (places === null) return null;
 
   const run = async (action: () => Promise<unknown>) => {
@@ -56,10 +57,10 @@ export function Reserve({
       const message = error instanceof Error ? error.message : "";
       setFailure(
         message === "full"
-          ? "Sorry, the last place was just taken."
-          : message.startsWith("Too many ")
+          ? w.lastPlaceTaken
+          : message.startsWith(w.tooMany("\0").split("\0")[0] ?? "")
             ? message
-            : "Something went wrong. Please try again.",
+            : w.tryAgain,
       );
     } finally {
       setAsking(false);
@@ -75,9 +76,7 @@ export function Reserve({
   return (
     <div data-kit="reserve" className="space-y-3">
       <p className="font-semibold tabular-nums">
-        {full
-          ? fullLabel
-          : `${places.left} of ${places.max} ${places.max === 1 ? "place" : "places"} left`}
+        {full ? fullLabel : w.placesLeft(places.left, places.max)}
       </p>
       {places.mine !== undefined ? (
         <div className="space-y-3">
@@ -87,14 +86,14 @@ export function Reserve({
           </p>
           {asking ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span>Cancel your booking?</span>
+              <span>{w.cancelYourBooking}</span>
               <Button
                 type="button"
                 variant="destructive"
                 disabled={busy}
                 onClick={() => run(() => cancel({ data: places.mine as number }))}
               >
-                Yes, cancel it
+                {w.yesCancelIt}
               </Button>
               <Button
                 type="button"
@@ -102,7 +101,7 @@ export function Reserve({
                 disabled={busy}
                 onClick={() => setAsking(false)}
               >
-                Keep it
+                {w.keepIt}
               </Button>
             </div>
           ) : (
@@ -116,11 +115,11 @@ export function Reserve({
           href={`/sign-in?redirect=${encodeURIComponent(here)}`}
           className={buttonVariants({ variant: "default" })}
         >
-          Sign in to book
+          {w.signInToBook}
         </a>
       ) : places.canBook && !full ? (
         <Button type="button" disabled={busy} onClick={() => run(() => book({ data: id }))}>
-          {busy ? "Booking…" : bookLabel}
+          {busy ? w.booking : bookLabel}
         </Button>
       ) : null}
       {failure && (

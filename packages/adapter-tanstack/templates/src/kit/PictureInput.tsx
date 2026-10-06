@@ -7,6 +7,7 @@ import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import type { FieldControlProps } from "./model";
+import { w } from "./words";
 
 export interface PictureValue {
   file: string;
@@ -28,7 +29,7 @@ async function toWebp(file: File): Promise<Blob> {
   bitmap.close();
   return new Promise((resolve, reject) =>
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("The picture could not be read."))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(w.pictureNotRead))),
       "image/webp",
       0.82,
     ),
@@ -71,13 +72,13 @@ export function PictureInput({
         headers: { "Content-Type": "image/webp" },
         body: webp,
       });
-      if (!response.ok) throw new Error((await response.text()) || "The picture was refused.");
+      if (!response.ok) throw new Error((await response.text()) || w.pictureRefused);
       const stored = (await response.json()) as Omit<PictureValue, "alt">;
       if (preview) URL.revokeObjectURL(preview);
       setPreview(URL.createObjectURL(webp));
       onChange(JSON.stringify({ ...stored, alt: parse(latest.current)?.alt ?? "" }));
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "The picture could not be added.");
+      setFailure(error instanceof Error ? error.message : w.pictureNotAdded);
     } finally {
       setBusy(false);
     }
@@ -118,10 +119,10 @@ export function PictureInput({
                 disabled={busy}
                 onClick={() => fileInput.current?.click()}
               >
-                Replace
+                {w.replace}
               </Button>
               <Button type="button" variant="ghost" disabled={busy} onClick={() => onChange("")}>
-                <X aria-hidden className="size-4" /> Remove
+                <X aria-hidden className="size-4" /> {w.remove}
               </Button>
             </div>
           </div>
@@ -133,7 +134,7 @@ export function PictureInput({
           disabled={busy}
           onClick={() => fileInput.current?.click()}
         >
-          <ImagePlus aria-hidden className="size-4" /> {busy ? "Adding…" : "Choose a picture"}
+          <ImagePlus aria-hidden className="size-4" /> {busy ? w.adding : w.choosePicture}
         </Button>
       )}
       <input
@@ -217,16 +218,15 @@ export function PicturesInput({
           headers: { "Content-Type": "image/webp" },
           body: webp,
         });
-        if (!response.ok) throw new Error((await response.text()) || "The picture was refused.");
+        if (!response.ok) throw new Error((await response.text()) || w.pictureRefused);
         const saved = (await response.json()) as Omit<PictureValue, "alt">;
         previews.set(saved.file, URL.createObjectURL(webp));
         latest.current = [...latest.current, { ...saved, alt: "" }];
         set(latest.current);
       }
-      if (files.length > max - pictures.length)
-        setFailure(`At most ${max} pictures; the rest were left out.`);
+      if (files.length > max - pictures.length) setFailure(w.atMostPictures(max));
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "The picture could not be added.");
+      setFailure(error instanceof Error ? error.message : w.pictureNotAdded);
     } finally {
       setBusy(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -274,7 +274,7 @@ export function PicturesInput({
                 )}
                 {i === 0 && (
                   <span className="absolute top-2 left-2 rounded-md bg-background px-2 py-0.5 text-xs font-semibold">
-                    Cover
+                    {w.cover}
                   </span>
                 )}
               </div>
@@ -292,7 +292,7 @@ export function PicturesInput({
                   type="button"
                   variant="outline"
                   disabled={busy || i === 0}
-                  aria-label={`Move picture ${i + 1} earlier`}
+                  aria-label={w.movePictureEarlier(i + 1)}
                   onClick={() => move(i, i - 1)}
                 >
                   <ChevronLeft aria-hidden className="size-4" />
@@ -301,7 +301,7 @@ export function PicturesInput({
                   type="button"
                   variant="outline"
                   disabled={busy || i === pictures.length - 1}
-                  aria-label={`Move picture ${i + 1} later`}
+                  aria-label={w.movePictureLater(i + 1)}
                   onClick={() => move(i, i + 1)}
                 >
                   <ChevronRight aria-hidden className="size-4" />
@@ -310,10 +310,10 @@ export function PicturesInput({
                   type="button"
                   variant="ghost"
                   disabled={busy}
-                  aria-label={`Remove picture ${i + 1}`}
+                  aria-label={w.removePicture(i + 1)}
                   onClick={() => set(pictures.filter((_, j) => j !== i))}
                 >
-                  <X aria-hidden className="size-4" /> Remove
+                  <X aria-hidden className="size-4" /> {w.remove}
                 </Button>
               </div>
             </li>
@@ -328,7 +328,7 @@ export function PicturesInput({
           onClick={() => fileInput.current?.click()}
         >
           <ImagePlus aria-hidden className="size-4" />{" "}
-          {busy ? "Adding…" : pictures.length ? "Add pictures" : "Choose pictures"}
+          {busy ? w.adding : pictures.length ? w.addPictures : w.choosePictures}
         </Button>
       )}
       <input

@@ -7,6 +7,7 @@ import { useEffect, useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
+import { w } from "./words";
 
 export interface FilterUi {
   /** The field's name: its key in the address. */
@@ -72,7 +73,7 @@ export function Filters({
         {sorts.length > 0 && (
           <div className="order-2 ml-auto flex items-center gap-2 md:order-3">
             <Label htmlFor={`${id}-sort`} className="text-sm">
-              Sort by
+              {w.sortBy}
             </Label>
             <select
               id={`${id}-sort`}
@@ -80,7 +81,7 @@ export function Filters({
               onChange={(e) => onChange({ ...values, sort: e.target.value || undefined })}
               className="h-control rounded-md border border-input bg-card px-3 text-sm"
             >
-              <option value="">Newest first</option>
+              <option value="">{w.newestFirst}</option>
               {sorts.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
@@ -109,7 +110,7 @@ export function Filters({
         )}
       </div>
       {active.length > 0 && (
-        <ul aria-label="Active filters" className="flex flex-wrap gap-2">
+        <ul aria-label={w.activeFilters} className="flex flex-wrap gap-2">
           {active.map((f) => (
             <li key={f.name}>
               <button
@@ -118,7 +119,7 @@ export function Filters({
                 className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm text-accent-foreground"
               >
                 {f.label}: {describe(f, values[f.name] as string)}
-                <X aria-label={`Remove the ${f.label.toLowerCase()} filter`} className="size-4" />
+                <X aria-label={w.removeFilter(f.label)} className="size-4" />
               </button>
             </li>
           ))}
@@ -161,9 +162,9 @@ function Filter({
           onChange={(e) => onChange(e.target.value || undefined)}
           className="h-control rounded-md border border-input bg-card px-3 text-sm"
         >
-          <option value="">Any</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
+          <option value="">{w.any}</option>
+          <option value="true">{w.yes}</option>
+          <option value="false">{w.no}</option>
         </select>
       </div>
     );
@@ -180,7 +181,7 @@ function Filter({
           onChange={(e) => onChange(e.target.value || undefined)}
           className="h-control max-w-60 rounded-md border border-input bg-card px-3 text-sm"
         >
-          <option value="">Any</option>
+          <option value="">{w.any}</option>
           {options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
@@ -277,10 +278,10 @@ function Range({
 /** An active filter in words, for its removable chip. */
 function describe(filter: FilterUi, value: string): string {
   if (filter.kind === "mine") return "yes";
-  if (filter.kind === "toggle") return value === "true" ? "Yes" : "No";
+  if (filter.kind === "toggle") return value === "true" ? w.yes : w.no;
   if (filter.kind === "range") {
     const [from, to] = value.split("..");
-    return from && to ? `${from}–${to}` : from ? `from ${from}` : `up to ${to}`;
+    return from && to ? `${from}–${to}` : from ? w.fromValue(from) : w.upToValue(to);
   }
   const labels = new Map((filter.options ?? []).map((o) => [o.value, o.label]));
   return value
@@ -314,8 +315,8 @@ export function SavedTabs({
   );
   return (
     <div data-part="saved-tabs" className="mb-4 inline-flex gap-1 rounded-lg bg-muted p-1">
-      {tab(!saved, "All", false)}
-      {tab(saved, "Saved", true)}
+      {tab(!saved, w.all, false)}
+      {tab(saved, w.saved, true)}
     </div>
   );
 }
