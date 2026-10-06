@@ -88,13 +88,6 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  // The trash (docs/design/trash.md) is in the spec before the app has it: refused here rather
-  // than promised and not kept.
-  const trashed = ir.models.find((m) => m.trash);
-  if (trashed)
-    throw new Error(
-      `The app cannot keep a trash for ${trashed.name} yet: the trash is not built in the generated app (docs/design/trash.md).`,
-    );
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent(), ir.app.name),
@@ -503,12 +496,19 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       {
         files: ["src/kit/ActionButton.tsx"],
         used: ({ ir, auth }) =>
-          ir.pages.some((p) => standardActions(p, ir).length) || selects(ir, auth),
+          ir.pages.some((p) => standardActions(p, ir).length) ||
+          selects(ir, auth) ||
+          ir.models.some((m) => m.trash),
       },
       {
         // Chosen rows on a crud list (actions.md §9).
         files: ["src/kit/SelectionBar.tsx"],
-        used: ({ ir, auth }) => selects(ir, auth),
+        used: ({ ir, auth }) => selects(ir, auth) || ir.models.some((m) => m.trash),
+      },
+      {
+        // The trash (docs/design/trash.md): its page, the notice's Undo, a trashed record's banner.
+        files: ["src/kit/Trash.tsx"],
+        used: ({ ir }) => ir.models.some((m) => m.trash),
       },
       {
         // Keys for the API, on the users page (docs/design/integrations.md §2).

@@ -39,6 +39,7 @@ test("the CRM in plain language, with labels from the content file", () => {
     "The account manager owns the customer.",
     "Only sales users and admins can change customers.",
     "Only admins can delete customers.",
+    "Deleted customers stay in the trash for thirty days, where they can be restored.",
   ]);
   expect(sections[1]?.sentences).toEqual([
     "- Customers (lists customers; search by name or email; “Merge customers”)",
