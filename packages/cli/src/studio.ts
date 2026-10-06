@@ -99,6 +99,8 @@ function trace(dir: string): TraceEntry[] {
     const isUndo = subject.startsWith('Revert "smithable: ');
     if (!(subject.startsWith("smithable: ") || isUndo) || subject === "smithable: start of history")
       return [];
+    // A change that set the project up for its owner (op --setup) is not one of the owner's.
+    if (trailer(body, "Smithable-Setup")) return [];
     const ms = /^(\d+) ms$/.exec(trailer(body, "Smithable-Duration") ?? "")?.[1];
     const operation = operations.get(
       isUndo ? (/This reverts commit ([0-9a-f]{40})/.exec(body)?.[1] ?? "") : sha,

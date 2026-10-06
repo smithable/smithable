@@ -2592,6 +2592,38 @@ async function askFlow(dir) {
           throw new Error("undo left mobile in the spec");
       },
     );
+    step(
+      "op --setup: a change made for the owner is not in the history and undo passes over it",
+      () => {
+        const before = /^admins:\s*\[([^\]]*)\]/m.exec(
+          readFileSync(join(dir, "smithable.auth.yml"), "utf8"),
+        )?.[1];
+        if (!before) throw new Error("no admins in smithable.auth.yml");
+        const setup = smithable(
+          dir,
+          "op",
+          "--setup",
+          "setAdmins",
+          "--admins",
+          `${before},setup@acme.example`,
+        );
+        if (setup.code !== 0) throw new Error(setup.out);
+        const body = run("git", ["log", "-1", "--format=%B"], dir);
+        if (!/^Smithable-Setup: yes$/m.test(body)) throw new Error(body);
+        // Undo goes past the setup to the change before it (or finds none); the admin stays.
+        const undone = smithable(dir, "undo");
+        if (
+          readFileSync(join(dir, "smithable.auth.yml"), "utf8").includes("setup@acme.example") ===
+          false
+        )
+          throw new Error(`undo took back the setup:\n${undone.out}`);
+        const ok = (result) => {
+          if (result.code !== 0) throw new Error(result.out);
+        };
+        if (undone.code === 0) ok(smithable(dir, "redo"));
+        ok(smithable(dir, "op", "setAdmins", "--admins", before));
+      },
+    );
     await asyncStep(
       "ask: an unclear request gets a question; custom code is said to be custom code",
       async () => {
