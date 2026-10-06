@@ -6,6 +6,7 @@
 import type { Words } from "./en";
 
 export const w = {
+  accept: "Godkänn",
   addFiles: "Lägg till filer",
   aFirstCall: "Ett första anrop:",
   actAs: "Agera som",
@@ -46,7 +47,11 @@ export const w = {
   code: "Kod",
   codeOnItsWay: "får logga in är en kod på väg. Den gäller i tio minuter.",
   confirm: "Bekräfta",
+  consentText:
+    "Appen vill använda kakor eller liknande för att räkna besök eller visa innehåll från andra tjänster. Inget används innan du godkänner.",
+  consentTitle: "Kakor",
   contactUs: "Kontakta oss",
+  cookieSettings: "Inställningar för kakor",
   copy: "Kopiera",
   copyKeyNow: "Kopiera nyckeln nu: den visas inte igen.",
   copyLink: "Kopiera länk",
@@ -141,6 +146,7 @@ export const w = {
   preview: "Förhandsgranska",
   previous: "Föregående",
   previousPicture: "Föregående bild",
+  privacy: "Integritet",
   proposedNote: "Visas för personen att bekräfta; inget är ändrat ännu.",
   readAloud: "Läs upp",
   records: "Poster",

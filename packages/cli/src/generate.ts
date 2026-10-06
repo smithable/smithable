@@ -11,7 +11,7 @@ import {
   renameInSnapshot,
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
-import { YamlEditor } from "@smithable/core";
+import { analyticsOf, YamlEditor } from "@smithable/core";
 import { exec, type Io, lap, tool } from "./io.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -87,8 +87,13 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     io.err(`${packages}\n`);
     return 1;
   }
+  const contextPath = join(dir, "smithable.context.yml");
+  const analytics = existsSync(contextPath)
+    ? analyticsOf(readFileSync(contextPath, "utf8"))
+    : undefined;
   const files = generateApp(ir, {
     smithableVersion: VERSION,
+    ...(analytics ? { analytics } : {}),
     ...(Object.keys(packages).length ? { packages } : {}),
     auth,
     ...(plugins?.length ? { plugins } : {}),

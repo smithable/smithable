@@ -3,6 +3,7 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
 import { useRef } from "react";
 import { allows, type Rule, type Viewer } from "./access";
+import { ConsentSettings } from "./Consent";
 import { textMarker } from "./model";
 import { w } from "./words";
 
@@ -147,6 +148,7 @@ function Navigation({
           );
         })}
       </nav>
+      <ConsentSettings className="mx-3 px-3 pb-2 text-left text-xs underline-offset-4 hover:underline" />
       {onSignOut && (
         <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm">
           {viewer ? (

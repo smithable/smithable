@@ -1,3 +1,4 @@
+import { ANALYTICS, type AnalyticsProvider } from "../context-file.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 
 /** An npm package name, e.g. chart.js or @turf/turf. */
@@ -42,4 +43,45 @@ const setPackage: Operation<{ name: string; version: string }> = {
   },
 };
 
-export const contextOperations: AnyOperation[] = [setPackage];
+/**
+ * Counts the app's visits with one provider (docs/design/analytics.md): the provider and the
+ * app's id with it; "none" stops counting. Google asks for consent first.
+ */
+const setAnalytics: Operation<{ provider: string; id?: string }> = {
+  name: "setAnalytics",
+  summary: `Count visits with ${Object.keys(ANALYTICS).join(", ")} and the app's id there ("none" stops it); google asks visitors for consent first.`,
+  schema: {
+    type: "object",
+    required: ["provider"],
+    additionalProperties: false,
+    properties: {
+      provider: { enum: [...Object.keys(ANALYTICS), "none"] },
+      id: {
+        type: "string",
+        description: "The app's id with the provider, e.g. shop.example.com for Plausible.",
+      },
+    },
+  },
+  positional: ["provider", "id"],
+  describe: ({ provider, id }) =>
+    provider === "none" ? "Stop counting visits" : `Count visits with ${provider} (${id})`,
+  destructive: () => false,
+  apply(editors, { provider, id }) {
+    const context = editors.context;
+    if (provider === "none") {
+      if (!context.has(["analytics"]))
+        throw new OperationError("smithable.context.yml counts no visits.");
+      context.remove(["analytics"]);
+      return [];
+    }
+    const known = ANALYTICS[provider as AnalyticsProvider];
+    if (!known) throw new OperationError(`There is no analytics provider "${provider}".`);
+    if (!id || !new RegExp(known.id).test(id))
+      throw new OperationError(`Give ${provider}'s id for the app, like ${known.example}.`);
+    if (context.has(["analytics"])) context.remove(["analytics"]);
+    context.add([], "analytics", { [provider]: id });
+    return [];
+  },
+};
+
+export const contextOperations: AnyOperation[] = [setPackage, setAnalytics];
