@@ -1357,3 +1357,13 @@ test("addField shows a field the default columns leave out, and refuses a model 
     }),
   ).toMatchObject({ ok: false, message: "Tag has no list page to show it in." });
 });
+
+test("setLanguage sets the content file's language; the kit's languages only", () => {
+  expect(applyOperation(files, "setLanguage", { language: "fi" })).toMatchObject({ ok: false });
+  const swedish = applyOperation(files, "setLanguage", { language: "sv" });
+  expect(swedish).toMatchObject({ ok: true, description: "Set the app's language to sv" });
+  expect(swedish.ok && swedish.files.content).toContain("language: sv");
+  const same = applyOperation(files, "setLanguage", { language: "en" });
+  expect(same).toMatchObject({ ok: true, description: "Set the app's language to en" });
+  expect(same.ok && same.files.content).not.toContain("language:");
+});

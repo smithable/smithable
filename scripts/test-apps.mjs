@@ -3217,6 +3217,28 @@ for (const [index, example] of examples.entries()) {
         throw new Error("package.json mentions Smithable");
     });
     step("type-checks", () => run("pnpm", ["typecheck"], dir));
+    if (example === "booking")
+      step(
+        "in Swedish the app carries the Swedish words, and type-checks (docs/design/language.md)",
+        () => {
+          // setLanguage through the operation layer, then the app as generated, then back.
+          const ok = (result) => {
+            if (result.code !== 0) throw new Error(result.out);
+          };
+          ok(smithable(dir, "op", "setLanguage", "sv"));
+          try {
+            const words = readFileSync(join(dir, "src/kit/words.ts"), "utf8");
+            if (!words.includes('signIn: "Logga in"')) throw new Error("the words are not Swedish");
+            if (existsSync(join(dir, "src/kit/words")))
+              throw new Error("the words directory is in the app");
+            run("pnpm", ["typecheck"], dir);
+          } finally {
+            ok(smithable(dir, "undo"));
+          }
+          if (!readFileSync(join(dir, "src/kit/words.ts"), "utf8").includes('signIn: "Sign in"'))
+            throw new Error("the undo did not bring the English words back");
+        },
+      );
     step("builds, and the production build contains no preview-editor markers", () => {
       run("pnpm", ["build"], dir);
       const found = spawnSync("grep", ["-rl", "data-sm-\\|smithable-editor", "dist"], {

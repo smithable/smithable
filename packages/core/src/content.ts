@@ -2,7 +2,7 @@ import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "ya
 import { checkKeys, type Entry, mapEntries, ParseContext, readString } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
-import { capitalize } from "./naming.js";
+import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
 
@@ -10,7 +10,13 @@ import { didYouMean } from "./suggest.js";
  * Visible text from smithable.content.yml (ARCHITECTURE §3.3). Everything is optional:
  * texts not listed here are derived from names.
  */
+/** The languages the app kit has words for (docs/design/language.md §3); the first is the default. */
+export const LANGUAGES = ["en", "sv"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
 export interface ContentIR {
+  /** The language of everything a person reads in the app: the kit's words follow it. */
+  language: Language;
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
@@ -108,7 +114,7 @@ export interface FieldContent {
 export const CONTENT_VERSION = "0.1";
 
 export function emptyContent(): ContentIR {
-  return { models: {}, pages: {}, menus: {} };
+  return { language: LANGUAGES[0], models: {}, pages: {}, menus: {} };
 }
 
 /** Parses smithable.content.yml and checks every reference against the spec. */
@@ -154,11 +160,23 @@ export function validateContent(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.content.yml", {
-    allowed: ["smithableContent", "models", "pages", "menus"],
+    allowed: ["smithableContent", "language", "models", "pages", "menus"],
     later: ["actions"],
   });
 
   for (const { key, value } of known) {
+    if (key === "language") {
+      const language = readString(ctx, value, '"language"');
+      if (language === undefined) continue;
+      if ((LANGUAGES as readonly string[]).includes(language))
+        content.language = language as Language;
+      else
+        ctx.error(
+          value,
+          "unknown-language",
+          `The app kit has no words in "${language}". Languages: ${LANGUAGES.join(", ")}.`,
+        );
+    }
     if (key === "models") readModels(ctx, value, ir, content);
     if (key === "pages") {
       for (const page of named(
@@ -183,6 +201,15 @@ export function validateContent(
       }
     }
   }
+  // In another language a plural made by an English rule reads wrong: each model says its own.
+  if (content.language !== "en")
+    for (const model of ir.models)
+      if (!content.models[model.name]?.pluralLabel)
+        ctx.warning(
+          byKey.get("models")?.value ?? root,
+          "plural-in-english",
+          `${model.name}: the plural would be made by an English rule ("${plural(content.models[model.name]?.label ?? humanize(model.name))}"); give it a pluralLabel.`,
+        );
   return done();
 }
 

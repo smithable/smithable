@@ -1,6 +1,6 @@
 # Paging: tables by pages, cards as you scroll
 
-Design, 2026-10-06 (Fable). Johan: "Galleries should perhaps have forever lazyloading type but other lists paging." Status: to build (A).
+Design, 2026-10-06 (Fable). Johan: "Galleries should perhaps have forever lazyloading type but other lists paging." Status: built by A the same day (#384), with one deviation: cards load fifty at a time, the table's page size, from the one server function, not twenty-four.
 
 ## 1. Today
 
