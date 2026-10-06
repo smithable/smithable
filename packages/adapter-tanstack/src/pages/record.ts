@@ -100,7 +100,7 @@ const ${fn} = createServerFn().handler(async () => {
     imports.add("#/kit/AppShell", "PageHeader");
     return `${HEADER}${imports.render()}${optionImports}${server}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${fn}(),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => ${fn}(),
   component: ${component},
 });
 
@@ -159,7 +159,7 @@ ${steps.join("\n")}
 ];
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async () => {
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async () => {
     const found = await ${fn}();
     // Set up already: on to the app.
     if (found.row) throw redirect({ to: ${JSON.stringify(start)} });
@@ -238,7 +238,7 @@ import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 ${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${start ? 'import { z } from "zod";\n' : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${start ? `  validateSearch: z.object({ ${start.name}: z.string().max(40).optional().catch(undefined) }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${start ? `  validateSearch: z.object({ ${start.name}: z.string().max(40).optional().catch(undefined) }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
@@ -424,7 +424,7 @@ const getHistory = createServerFn()
 `
     : ""
 }export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
     if (!found) throw notFound();
     return { ...found${options ? `, options: ${options.expr}` : ""}${history ? ", history: await getHistory({ data: Number(params.id) })" : ""} };

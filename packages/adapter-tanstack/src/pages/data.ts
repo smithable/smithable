@@ -101,7 +101,7 @@ ${models.map(({ key, n }) => `      ${JSON.stringify(key)}: ${n.data}.count(view
 const MODELS = ${literal(models.map(({ key, n, to }) => ({ key, label: n.pluralLabel, to })))} as const;
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => getCounts(),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => getCounts(),
   component: ${component},
 });
 

@@ -153,7 +153,7 @@ ${values.map((v) => `    ${v},`).join("\n")}
 });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${fn}(),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => ${fn}(),
   component: ${component},
 });
 

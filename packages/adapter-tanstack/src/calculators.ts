@@ -131,7 +131,7 @@ export function calculatorRoute(
   return `${HEADER}${imports.render()}
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  component: ${component},
 });
 
 function ${component}() {
