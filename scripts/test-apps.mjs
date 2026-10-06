@@ -514,8 +514,8 @@ async function outgoingFlow(dir, base) {
     // The studio deletes it: the member is told about the booking as it was.
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
-    await page.getByRole("button", { name: "Delete" }).first().click();
-    await page.getByRole("button", { name: "Delete booking" }).click();
+    // Bookings have a trash in this run: a delete moves it there, and the mail goes then.
+    await page.getByRole("button", { name: "Move to trash" }).click();
     await page.waitForURL(/\/my-bookings$/);
     const gone = await next(count, "the deletion");
     if (
