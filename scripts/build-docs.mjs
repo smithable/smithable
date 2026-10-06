@@ -43,11 +43,17 @@ const PAGES = [
   { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
   { src: "docs/ai.md", out: "ai.html", nav: "AI setup" },
 ];
-const schema = JSON.parse(
-  readFileSync(join(root, "packages/core/schema/smithable.schema.json"), "utf8"),
-);
-const schemaPath = schema.$id.startsWith(SITE) ? schema.$id.slice(SITE.length) : undefined;
-if (!schemaPath) throw new Error(`The schema's $id (${schema.$id}) is not on ${SITE}.`);
+const schemaDir = join(root, "packages/core/schema");
+const schemas = readdirSync(schemaDir)
+  .filter((f) => f.endsWith(".schema.json"))
+  .map((f) => JSON.parse(readFileSync(join(schemaDir, f), "utf8")));
+const schemaPaths = schemas.map((schema) => {
+  if (!schema.$id.startsWith(SITE))
+    throw new Error(`The schema's $id (${schema.$id}) is not on ${SITE}.`);
+  return schema.$id.slice(SITE.length);
+});
+const schema = schemas.find((s) => s.title === "smithable.yml");
+const schemaPath = schemaPaths[schemas.indexOf(schema)];
 
 /** GitHub's heading anchors, so links written for the repository work here too. */
 const slug = (text) =>
@@ -95,7 +101,7 @@ function target(page, href) {
   }
   if (href.startsWith(SITE)) {
     if (
-      path.slice(SITE.length) !== schemaPath &&
+      !schemaPaths.includes(path.slice(SITE.length)) &&
       !PAGES.some((p) => p.out === path.slice(SITE.length))
     )
       problems.push(`${page.src}: ${href} is not on the site`);
@@ -199,7 +205,8 @@ for (const page of PAGES) {
   });
   writeFileSync(join(out, page.out), html(page, marked.parse(page.markdown)));
 }
-writeFileSync(join(out, schemaPath), `${JSON.stringify(schema, null, 2)}\n`);
+for (const [i, each] of schemas.entries())
+  writeFileSync(join(out, schemaPaths[i]), `${JSON.stringify(each, null, 2)}\n`);
 writeFileSync(
   join(out, "404.html"),
   html(

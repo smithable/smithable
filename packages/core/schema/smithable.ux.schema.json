@@ -1,0 +1,332 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://docs.smithable.ai/schema/smithable-ux-0.1.json",
+  "title": "smithable.ux.yml",
+  "description": "How the app looks: the theme, icons, columns, forms and the sections' looks.",
+  "type": "object",
+  "required": [
+    "smithableUx"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "smithableUx": {
+      "description": "The file format version.",
+      "enum": [
+        0.1,
+        "0.1"
+      ]
+    },
+    "theme": {
+      "type": "object",
+      "description": "The app's theme: a preset, the owner's colours and font, the density and the motion.",
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "type": "string",
+          "description": "A built-in theme (modern, minimal, playful, corporate, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft) or one of the project's own (themes/<name>.yml)."
+        },
+        "brand": {
+          "type": "object",
+          "description": "The owner's own colours and font, over the preset.",
+          "additionalProperties": false,
+          "properties": {
+            "primary": {
+              "type": "string",
+              "description": "The main colour, as #rrggbb."
+            },
+            "background": {
+              "type": "string",
+              "description": "A background colour, as #rrggbb: a wash of its hue in both modes."
+            },
+            "font": {
+              "enum": [
+                "Inter",
+                "Nunito Sans",
+                "Source Sans 3"
+              ],
+              "description": "The font: Inter, Nunito Sans, Source Sans 3."
+            }
+          }
+        },
+        "density": {
+          "enum": [
+            "comfortable",
+            "compact"
+          ],
+          "description": "How much space the lists and forms take."
+        },
+        "motion": {
+          "enum": [
+            "none",
+            "subtle",
+            "lively"
+          ],
+          "description": "How much moves: none, subtle (the default) or lively."
+        }
+      }
+    },
+    "pages": {
+      "type": "object",
+      "description": "Each page's look, by the page's name.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "enum": [
+              "users",
+              "user",
+              "file",
+              "receipt",
+              "cart",
+              "package",
+              "calendar",
+              "layers",
+              "book",
+              "briefcase",
+              "building",
+              "chart",
+              "clipboard",
+              "home",
+              "mail",
+              "settings",
+              "star",
+              "tag",
+              "truck",
+              "list"
+            ],
+            "description": "The page's icon in the navigation."
+          },
+          "table": {
+            "type": "object",
+            "description": "A list page's table: its columns, their order, the default sort and the view.",
+            "additionalProperties": false,
+            "properties": {
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The fields shown as columns, in order."
+              },
+              "below": {
+                "type": "object",
+                "description": "A field shown under another in its column, e.g. { email: phone }: the phone number under the email.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "sort": {
+                "type": "string",
+                "description": "The field the list is sorted by, with \"-\" in front for the highest first, e.g. -createdAt."
+              },
+              "view": {
+                "enum": [
+                  "table",
+                  "cards"
+                ],
+                "description": "On a wide screen: a table, or cards (a phone shows cards anyway)."
+              }
+            }
+          },
+          "form": {
+            "type": "object",
+            "description": "The page's form: the fields' order, sections, columns and controls.",
+            "additionalProperties": false,
+            "properties": {
+              "fieldOrder": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The fields in the order the form shows them."
+              },
+              "sections": {
+                "type": "object",
+                "description": "Headings over groups of fields: { contact: [email, phone] }; the heading's text is in smithable.content.yml.",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The fields under the heading."
+                }
+              },
+              "columns": {
+                "enum": [
+                  1,
+                  2
+                ],
+                "description": "2 puts short fields two abreast; long texts and pictures stay full width."
+              },
+              "control": {
+                "type": "object",
+                "description": "How a field is entered: input, slider, stepper, radio, select, combobox, textarea, switch; input is the default for its kind.",
+                "additionalProperties": {
+                  "enum": [
+                    "input",
+                    "slider",
+                    "stepper",
+                    "radio",
+                    "select",
+                    "combobox",
+                    "textarea",
+                    "switch"
+                  ]
+                }
+              },
+              "results": {
+                "enum": [
+                  "beside",
+                  "below"
+                ],
+                "description": "A calculator page: the results beside the inputs (the default) or below them."
+              }
+            }
+          },
+          "sections": {
+            "type": "object",
+            "description": "A landing page's sections' looks, by section name: a hero's layout, a feature list's columns.",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "layout": {
+                      "enum": [
+                        "split",
+                        "centered",
+                        "plain",
+                        "cover"
+                      ],
+                      "description": "One of split, centered, plain, cover; the first is the default."
+                    },
+                    "image": {
+                      "enum": [
+                        "right",
+                        "left"
+                      ],
+                      "description": "One of right, left; the first is the default."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "columns": {
+                      "enum": [
+                        3,
+                        2,
+                        4
+                      ],
+                      "description": "One of 3, 2, 4; the first is the default."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "layout": {
+                      "enum": [
+                        "cards",
+                        "list",
+                        "grid"
+                      ],
+                      "description": "One of cards, list, grid; the first is the default."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "layout": {
+                      "enum": [
+                        "cards",
+                        "carousel",
+                        "one"
+                      ],
+                      "description": "One of cards, carousel, one; the first is the default."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "highlight": {
+                      "type": "string",
+                      "description": "The name of the item to set apart."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "layout": {
+                      "enum": [
+                        "accordion",
+                        "list"
+                      ],
+                      "description": "One of accordion, list; the first is the default."
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "theme": {
+            "type": "object",
+            "description": "A landing page's own theme, over the app's: { preset: playful }, with brand, density and motion as the app's theme takes them.",
+            "additionalProperties": false,
+            "properties": {
+              "preset": {
+                "type": "string",
+                "description": "A built-in theme or one of the project's."
+              },
+              "brand": {
+                "type": "object",
+                "description": "The colours and font, as the app's brand."
+              },
+              "density": {
+                "enum": [
+                  "comfortable",
+                  "compact"
+                ],
+                "description": "The page's density."
+              },
+              "motion": {
+                "enum": [
+                  "none",
+                  "subtle",
+                  "lively"
+                ],
+                "description": "The page's motion."
+              }
+            }
+          }
+        }
+      }
+    },
+    "tones": {
+      "type": "object",
+      "description": "The meaning of a choice field's values, shown as the badge's colour: { \"Order.status\": { paid: success, overdue: danger } }.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "enum": [
+            "neutral",
+            "success",
+            "warning",
+            "danger"
+          ],
+          "description": "neutral, success, warning, danger; values not listed are neutral."
+        }
+      }
+    }
+  }
+}

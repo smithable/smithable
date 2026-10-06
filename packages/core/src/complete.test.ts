@@ -156,3 +156,50 @@ test("every key the schema declares says what it is for", () => {
   walk(buildJsonSchema() as Record<string, unknown>, "");
   expect(silent).toEqual([]);
 });
+
+test("a companion file is helped from its own schema, with the spec's names", () => {
+  const spec = crm;
+  const auth = (marked: string) => {
+    const offset = marked.indexOf("‸");
+    const found = completeSpec(
+      marked.replace("‸", ""),
+      offset,
+      { roles: ["admin", "sales"], spec },
+      "smithable.auth.yml",
+    );
+    return found?.suggestions.map((s) => s.label) ?? [];
+  };
+  expect(auth("smithableAuth: 0.1\n‸")).toEqual(
+    expect.arrayContaining(["signIn", "defaultAccess", "roles", "public", "api", "assistant"]),
+  );
+  expect(auth("smithableAuth: 0.1\npublic:\n  pages: [‸")).toEqual(["customers", "orders", "team"]);
+  expect(auth("smithableAuth: 0.1\npublic:\n  read: [‸")).toEqual(["Customer", "Order"]);
+  expect(auth("smithableAuth: 0.1\ndefaultAccess: ‸")).toEqual(["shared", "private"]);
+  expect(auth("smithableAuth: 0.1\nassistant:\n  for: [‸")).toEqual(["admin", "sales"]);
+  // The ux file: a page's table takes its model's fields.
+  const ux = (marked: string) => {
+    const offset = marked.indexOf("‸");
+    const found = completeSpec(marked.replace("‸", ""), offset, { spec }, "smithable.ux.yml");
+    return found?.suggestions.map((s) => s.label) ?? [];
+  };
+  expect(ux("smithableUx: 0.1\npages:\n  ‸")).toEqual(["customers", "orders", "team"]);
+  expect(ux("smithableUx: 0.1\npages:\n  orders:\n    table:\n      columns: [‸")).toEqual(
+    expect.arrayContaining(["number", "customer", "status", "total"]),
+  );
+  expect(ux("smithableUx: 0.1\ntheme:\n  density: ‸")).toEqual(["comfortable", "compact"]);
+  // The content file: models and their fields as keys.
+  const content = (marked: string) => {
+    const offset = marked.indexOf("‸");
+    const found = completeSpec(marked.replace("‸", ""), offset, { spec }, "smithable.content.yml");
+    return found?.suggestions.map((s) => s.label) ?? [];
+  };
+  expect(content("smithableContent: 0.1\nmodels:\n  Customer:\n    fields:\n      ‸")).toEqual(
+    expect.arrayContaining(["name", "email", "segment"]),
+  );
+  expect(content("smithableContent: 0.1\nlanguage: ‸")).toEqual(["en", "sv"]);
+  // Hover explains a companion's key from its schema.
+  const text = "smithableAuth: 0.1\ndefaultAccess: shared\n";
+  expect(hoverSpec(text, text.indexOf("defaultAccess") + 2, "smithable.auth.yml")?.text).toContain(
+    "default access",
+  );
+});
