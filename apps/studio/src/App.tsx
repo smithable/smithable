@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
+import { Guide } from "./GuideTour";
+import { doneKey, guideOff } from "./guide";
 import { Making } from "./Making";
 import { isPreviewMessage, type Place, shared, touched } from "./preview";
 import { ReportDialog } from "./Report";
@@ -268,6 +270,14 @@ export function App() {
     localStorage.setItem("mode", next);
   };
 
+  // The guide, once per project in this browser (docs/design/studio-guide.md): in Builder, after
+  // the making screen, never with ?guide=off; Guide in the header shows it again.
+  const [guiding, setGuiding] = useState(false);
+  const firstVisit =
+    project && !project.making && mode === "builder" && !guideOff() && !seenGuide(project.name);
+  useEffect(() => {
+    if (firstVisit) setGuiding(true);
+  }, [firstVisit]);
   if (!project) return <p className="p-6 text-sm text-neutral-500">Opening the project…</p>;
   return (
     <div className="flex h-full flex-col">
@@ -319,19 +329,33 @@ export function App() {
             </Button>
           )}
           {project.making ? null : project.home ? (
-            <a href={project.home} className="text-xs font-medium text-accent hover:underline">
+            <a
+              href={project.home}
+              data-guide="publish"
+              className="text-xs font-medium text-accent hover:underline"
+            >
               Publish and share
             </a>
           ) : (
             // On your own machine an app is published as an ordinary container.
             <a
               href="https://docs.smithable.ai/self-host.html"
+              data-guide="publish"
               target="_blank"
               rel="noreferrer"
               className="text-xs font-medium text-accent hover:underline"
             >
               Publish
             </a>
+          )}
+          {mode === "builder" && !project.making && !guideOff() && (
+            <button
+              type="button"
+              onClick={() => setGuiding(true)}
+              className="text-xs font-medium text-neutral-600 hover:underline"
+            >
+              Guide
+            </button>
           )}
           <a
             href="https://docs.smithable.ai/start.html"
@@ -409,6 +433,9 @@ export function App() {
         </div>
       )}
       {reporting && <ReportDialog onClose={() => setReporting(false)} />}
+      {guiding && mode === "builder" && !project.making && (
+        <Guide app={project.name} onEnd={() => setGuiding(false)} />
+      )}
       {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
           never moves in the page, so switching modes keeps its page. Wide windows show it on
           the right; narrow ones place it over the mode's preview slot. */}
@@ -492,4 +519,13 @@ function useSlotBox(slot: HTMLElement | null) {
     return () => cancelAnimationFrame(frame);
   }, [slot]);
   return box;
+}
+
+/** Whether this browser has seen the guide for this app. */
+function seenGuide(app: string): boolean {
+  try {
+    return localStorage.getItem(doneKey(app)) === "1";
+  } catch {
+    return false;
+  }
 }

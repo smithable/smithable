@@ -149,7 +149,7 @@ try {
 
   console.log("Builder mode");
   await step("the app is described in plain language", async () => {
-    await page.goto(base);
+    await page.goto(`${base}/?guide=off`);
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
   });
@@ -188,6 +188,39 @@ try {
     await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
     if (await note.count()) throw new Error("the samples notice came back");
   });
+  await step(
+    "the guide walks the five places once, Guide shows it again, a reload does not",
+    async () => {
+      // On a page of its own: every other step runs with ?guide=off.
+      const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      try {
+        await fresh.goto(base);
+        const card = fresh.locator("[data-guide-card]");
+        const seen = [];
+        for (let i = 0; i < 5; i++) {
+          await card.waitFor({ timeout: 20000 });
+          const at = await card.getAttribute("data-guide-card");
+          seen.push(at);
+          // Beside a place that is on the screen.
+          if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
+            throw new Error(`the card for ${at} is beside nothing`);
+          await card.getByRole("button", { name: i === 4 ? "Done" : "Next" }).click();
+        }
+        if (seen.join() !== "preview,summary,change,look,publish") throw new Error(seen.join());
+        await card.waitFor({ state: "detached" });
+        await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
+        await card.waitFor();
+        await card.getByRole("button", { name: "Skip" }).click();
+        await card.waitFor({ state: "detached" });
+        await fresh.reload();
+        await fresh.getByRole("region", { name: "Customers", exact: true }).waitFor();
+        await fresh.waitForTimeout(1000);
+        if (await card.count()) throw new Error("the guide came back after a reload");
+      } finally {
+        await fresh.close();
+      }
+    },
+  );
   await step(
     "the preview opens with the owner signed in as an administrator (finding 15)",
     async () => {
@@ -1629,7 +1662,7 @@ try {
         // the description and the bar, then What it does once the model has answered, then
         // Builder with the app (docs/design/while-it-is-made.md stage one).
         const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-        await watcher.goto(other);
+        await watcher.goto(`${other}/?guide=off`);
         await watcher.locator("header").first().waitFor({ timeout: 60000 });
         const seen = (async () => {
           const screen = watcher.getByRole("region", { name: "Your app is being made" });
@@ -1786,7 +1819,7 @@ try {
         await again();
         const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         try {
-          await watcher.goto(other);
+          await watcher.goto(`${other}/?guide=off`);
           await watcher.locator("header").first().waitFor({ timeout: 60000 });
           const again2 = await replace(port + 2, {
             describe: "A status page for our services",
