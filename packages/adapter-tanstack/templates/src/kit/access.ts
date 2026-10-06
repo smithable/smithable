@@ -1,6 +1,7 @@
 // Smithable app kit: who may read, create, change and delete records, and open pages.
 // Every generated data function checks access here, so the rules live in one place.
 import { redirect } from "@tanstack/react-router";
+import { w } from "./words";
 
 /** The signed-in user, or null for a visitor who has not signed in. */
 export interface Viewer {
@@ -31,7 +32,7 @@ export interface ModelAccess {
 export class AccessDenied extends Error {
   /** `why`: the refusal in words the caller can act on, when there are better ones than "not allowed". */
   constructor(signedIn: boolean, why?: string) {
-    super(why ?? (signedIn ? "You are not allowed to do this." : "Please sign in first."));
+    super(why ?? (signedIn ? w.notAllowed : w.signInFirst));
   }
 }
 

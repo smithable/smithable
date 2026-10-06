@@ -8,6 +8,7 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import type { Answer, Step } from "./assistant.server";
+import { w } from "./words";
 
 interface Asked {
   question: string;
@@ -51,9 +52,9 @@ export function Inspector({
       <form onSubmit={submit} className="space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">As</span>
+            <span className="text-muted-foreground">{w.as}</span>
             <select
-              aria-label="Act as"
+              aria-label={w.actAs}
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="h-9 rounded-md border border-input bg-background px-2 text-sm"
@@ -67,18 +68,16 @@ export function Inspector({
           </label>
           <Input
             aria-label="Question"
-            placeholder="How many … are there? Show the … that …"
+            placeholder={w.inspectorPlaceholder}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             className="flex-1"
           />
           <Button type="submit" disabled={busy || !question.trim()}>
-            {busy ? "Asking…" : "Ask"}
+            {busy ? w.asking : w.ask}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Answers may come from an AI and can be wrong. Check what matters.
-        </p>
+        <p className="text-xs text-muted-foreground">{w.aiMayBeWrong}</p>
       </form>
       <ol className="space-y-4">
         {asked.map((a, i) => (
@@ -92,9 +91,9 @@ export function Inspector({
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 as {roles.find((r) => r.value === a.role)?.label ?? a.role}
                 {a.answer?.source === "records" && (
-                  <Badge variant="success">From your records</Badge>
+                  <Badge variant="success">{w.fromYourRecords}</Badge>
                 )}
-                {a.answer?.source === "ai" && <Badge>AI</Badge>}
+                {a.answer?.source === "ai" && <Badge>{w.ai}</Badge>}
               </span>
             </div>
             {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
@@ -149,9 +148,7 @@ export function Shown({
                 </code>{" "}
                 ({step.ms} ms)
                 <pre className="mt-1 max-h-48 overflow-auto rounded bg-muted p-2 whitespace-pre-wrap">
-                  {step.proposed
-                    ? "Not run: a change the person would confirm first."
-                    : (step.error ?? JSON.stringify(step.result, null, 2))}
+                  {step.proposed ? w.notRun : (step.error ?? JSON.stringify(step.result, null, 2))}
                 </pre>
               </li>
             ))}
@@ -175,7 +172,7 @@ function ReadAloud({ text }: { text: string }) {
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
       }}
     >
-      Read aloud
+      {w.readAloud}
     </Button>
   );
 }
@@ -185,9 +182,7 @@ export function spoken(answer: Answer): string {
   const parts: string[] = answer.text ? [answer.text] : [];
   for (const step of answer.steps) {
     if (step.proposed)
-      parts.push(
-        `It would ${step.tool} ${String(step.args.kind ?? step.args.action ?? "")}; nothing was changed.`,
-      );
+      parts.push(w.wouldDo(step.tool, String(step.args.kind ?? step.args.action ?? "")));
     else if (step.error) parts.push(step.error);
     else {
       const r = step.result as Record<string, unknown> | null;
@@ -207,7 +202,7 @@ export function spoken(answer: Answer): string {
         const rows = r.rows as unknown[][];
         const total = typeof r.total === "number" ? r.total : rows.length;
         const first = rows.slice(0, 3).map((row) => cell(row[1] ?? row[0]));
-        parts.push(`${total} found${first.length ? `: ${first.join(", ")}` : ""}.`);
+        parts.push(w.found(total, first));
       } else if (typeof r.description === "string") parts.push(r.description);
     }
   }
@@ -241,8 +236,8 @@ function Proposal({
           ))}
         </ul>
       )}
-      {state === "done" && <p className="text-success">Done.</p>}
-      {state === "declined" && <p className="text-muted-foreground">Not done.</p>}
+      {state === "done" && <p className="text-success">{w.done}</p>}
+      {state === "declined" && <p className="text-muted-foreground">{w.notDone}</p>}
       {failed && <p className="text-destructive">{failed}</p>}
       {(state === "open" || state === "busy") && (
         <div className="flex gap-2">
@@ -262,10 +257,10 @@ function Proposal({
               }
             }}
           >
-            Confirm
+            {w.confirm}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setState("declined")}>
-            Decline
+            {w.decline}
           </Button>
         </div>
       )}
@@ -291,7 +286,7 @@ function Result({ step }: { step: Step }) {
       <Table
         head={r.columns as string[]}
         rows={(r.rows as unknown[][]).map((row) => row.map(cell))}
-        note={typeof r.total === "number" ? `${r.total} in all` : undefined}
+        note={typeof r.total === "number" ? w.inAll(r.total) : undefined}
       />
     );
   if (typeof r.by === "string" && Array.isArray(r.rows))

@@ -67,6 +67,12 @@ const SCAFFOLD = new Set([
   ".mcp.json",
 ]);
 
+/** The kit's words, one file per language (docs/design/language.md). */
+const WORDS_DIR = "src/kit/words/";
+const WORDS_FILE = "src/kit/words.ts";
+/** The app's language: English until the content file's `language` is read (language.md §2). */
+const LANGUAGE = "en";
+
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
   const ctx: GenContext = {
@@ -77,14 +83,19 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     options,
   };
   const kits = SECTION_GENERATORS.flatMap((g) => g.kit ?? []);
-  // The kit: every file, but a part's own only when the app uses that part.
+  // The kit: every file, but a part's own only when the app uses that part, and of the words
+  // (src/kit/words/<language>.ts) only the app's language, as src/kit/words.ts.
   const files: GeneratedFile[] = Object.entries(TEMPLATES)
+    .filter(([path]) => !path.startsWith(WORDS_DIR) && path !== WORDS_FILE)
     .filter(([path]) => kits.every((k) => !k.files.includes(path) || k.used(ctx)))
     .map(([path, content]) => ({
       path,
       content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
+  const words = TEMPLATES[`${WORDS_DIR}${LANGUAGE}.ts`];
+  if (!words) throw new Error(`The kit has no words for the language "${LANGUAGE}".`);
+  files.push({ path: WORDS_FILE, content: words, zone: "kit" });
   for (const generator of SECTION_GENERATORS) files.push(...generator.files(ctx));
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }

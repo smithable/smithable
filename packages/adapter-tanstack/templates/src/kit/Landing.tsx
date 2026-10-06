@@ -22,6 +22,7 @@ import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
 import { PicturePlaceholder } from "./ModelTable";
 import { textMarker } from "./model";
+import { w } from "./words";
 
 export interface LandingLink {
   to: LinkProps["to"];
@@ -96,7 +97,7 @@ export function LandingLayout({
         <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4 px-5">
           {name}
           {menu.length > 0 && (
-            <nav aria-label="Site" className="hidden md:block">
+            <nav aria-label={w.site} className="hidden md:block">
               <ul className="flex items-center gap-6 text-sm font-medium">
                 {menu.map((m) => (
                   <li key={String(m.to)}>
@@ -123,7 +124,7 @@ export function LandingLayout({
                 type="button"
                 aria-expanded={open}
                 aria-controls="site-menu"
-                aria-label="Menu"
+                aria-label={w.menu}
                 onClick={() => setOpen(!open)}
                 className={cn(buttonVariants({ variant: "ghost" }), "md:hidden")}
               >
@@ -137,7 +138,7 @@ export function LandingLayout({
           </div>
         </div>
         {open && menu.length > 0 && (
-          <nav id="site-menu" aria-label="Site" className="border-t md:hidden">
+          <nav id="site-menu" aria-label={w.site} className="border-t md:hidden">
             <ul className="mx-auto max-w-6xl px-5 py-2">
               {menu.map((m) => (
                 <li key={String(m.to)}>
@@ -175,8 +176,8 @@ export function LandingLayout({
                 {contact?.hours && <p className="text-muted-foreground">{contact.hours}</p>}
               </div>
               {menu.length > 0 && (
-                <nav aria-label="Pages" className="space-y-2">
-                  <p className="text-base font-semibold">Pages</p>
+                <nav aria-label={w.pages} className="space-y-2">
+                  <p className="text-base font-semibold">{w.pages}</p>
                   <ul className="space-y-2">
                     {menu.map((m) => (
                       <li key={String(m.to)}>
@@ -194,7 +195,7 @@ export function LandingLayout({
               {(footer?.text || footerLinks) && (
                 <div className="space-y-3 text-muted-foreground">
                   {footer?.text && <p {...mark(footer.texts, "text")}>{footer.text}</p>}
-                  {footerLinks && <nav aria-label="Footer">{footerLinks}</nav>}
+                  {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
                 </div>
               )}
             </div>
@@ -205,7 +206,7 @@ export function LandingLayout({
         ) : (
           <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
-            {footerLinks && <nav aria-label="Footer">{footerLinks}</nav>}
+            {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
           </div>
         )}
       </footer>
@@ -300,7 +301,7 @@ export function Hero({
   const cue = more && (
     <a
       href={`#${after}`}
-      aria-label="More below"
+      aria-label={w.moreBelow}
       className="mx-auto flex size-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground lg:col-span-2"
     >
       <ChevronDown aria-hidden className="size-6 motion-safe:animate-bounce" />
@@ -308,7 +309,7 @@ export function Hero({
   );
   const end = more && <span id={after} tabIndex={-1} />;
   const shortcutList = shortcuts.length > 0 && (
-    <nav aria-label="Shortcuts" className="relative z-10 mx-auto -mt-12 max-w-4xl px-5">
+    <nav aria-label={w.shortcuts} className="relative z-10 mx-auto -mt-12 max-w-4xl px-5">
       <ul className="grid grid-cols-2 gap-4 sm:flex sm:justify-center sm:gap-8">
         {shortcuts.map((s) => (
           <li key={String(s.to)} data-part="shortcut">
@@ -601,7 +602,7 @@ export function RecordCards({
                   className="h-control min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 <button type="submit" className={buttonVariants()}>
-                  Search
+                  {w.searchAction}
                 </button>
               </form>
             </search>
@@ -804,7 +805,7 @@ export function Testimonials({
               : "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
           }
           // A row that scrolls sideways: reachable with the keyboard's arrow keys.
-          {...(layout === "carousel" ? { tabIndex: 0, "aria-label": title ?? "Testimonials" } : {})}
+          {...(layout === "carousel" ? { tabIndex: 0, "aria-label": title ?? w.testimonials } : {})}
         >
           {items.map((item, i) => (
             <li
@@ -952,7 +953,7 @@ export function Contact({
         <div className="flex gap-3">
           <dt>
             <MapPin aria-hidden className="mt-0.5 size-5 text-primary" />
-            <span className="sr-only">Address</span>
+            <span className="sr-only">{w.address}</span>
           </dt>
           <dd>
             <p className="whitespace-pre-line" {...mark(texts, "address")}>
@@ -965,7 +966,7 @@ export function Contact({
               rel="noopener noreferrer"
               target="_blank"
             >
-              Show on map
+              {w.showOnMap}
             </a>
           </dd>
         </div>
@@ -974,7 +975,7 @@ export function Contact({
         <div className="flex gap-3">
           <dt>
             <Phone aria-hidden className="mt-0.5 size-5 text-primary" />
-            <span className="sr-only">Phone</span>
+            <span className="sr-only">{w.phone}</span>
           </dt>
           <dd>
             <a href={`tel:${phone.replace(/[^+\d]/g, "")}`} {...mark(texts, "phone")}>
@@ -987,7 +988,7 @@ export function Contact({
         <div className="flex gap-3">
           <dt>
             <Mail aria-hidden className="mt-0.5 size-5 text-primary" />
-            <span className="sr-only">Email</span>
+            <span className="sr-only">{w.email}</span>
           </dt>
           <dd>
             <a href={`mailto:${email}`} {...mark(texts, "email")}>
@@ -1000,7 +1001,7 @@ export function Contact({
         <div className="flex gap-3">
           <dt>
             <Clock aria-hidden className="mt-0.5 size-5 text-primary" />
-            <span className="sr-only">Opening hours</span>
+            <span className="sr-only">{w.openingHours}</span>
           </dt>
           <dd className="whitespace-pre-line" {...mark(texts, "hours")}>
             {hours}
@@ -1014,7 +1015,7 @@ export function Contact({
     <Section
       id="contact"
       texts={texts}
-      title={title ?? (form ? "Contact us" : undefined)}
+      title={title ?? (form ? w.contactUs : undefined)}
       text={text}
     >
       {/* Details beside the form; a form alone is centred rather than left beside an empty column. */}
@@ -1026,7 +1027,7 @@ export function Contact({
           (sent ? (
             <Card className="p-card">
               <p role="status" className="text-lg" {...mark(texts, "thanks")}>
-                {thanks ?? "Thank you! We will get back to you soon."}
+                {thanks ?? w.thankYou}
               </p>
             </Card>
           ) : (
@@ -1034,7 +1035,7 @@ export function Contact({
               {/* Off screen and out of the tab order: only a bot fills it in. */}
               <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
                 <label>
-                  Leave this empty
+                  {w.leaveThisEmpty}
                   <input ref={trap} tabIndex={-1} autoComplete="off" name="company-website" />
                 </label>
               </div>
@@ -1078,7 +1079,7 @@ export function Gallery({
               <button
                 type="button"
                 className="block w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                aria-label={`Open ${item.image.alt}`}
+                aria-label={w.openPicture(item.image.alt)}
                 onClick={() => {
                   show(i);
                   dialog.current?.showModal();
@@ -1130,7 +1131,7 @@ export function Gallery({
               {pictures.length > 1 && (
                 <button
                   type="button"
-                  aria-label="Previous picture"
+                  aria-label={w.previousPicture}
                   className={buttonVariants({ variant: "secondary", size: "icon" })}
                   onClick={() => show(open - 1)}
                 >
@@ -1139,7 +1140,7 @@ export function Gallery({
               )}
               <button
                 type="button"
-                aria-label="Close"
+                aria-label={w.close}
                 className={buttonVariants({ variant: "secondary", size: "icon" })}
                 onClick={() => dialog.current?.close()}
               >
@@ -1148,7 +1149,7 @@ export function Gallery({
               {pictures.length > 1 && (
                 <button
                   type="button"
-                  aria-label="Next picture"
+                  aria-label={w.nextPicture}
                   className={buttonVariants({ variant: "secondary", size: "icon" })}
                   onClick={() => show(open + 1)}
                 >

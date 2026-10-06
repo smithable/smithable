@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
+import { w } from "./words";
 
 const PROVIDER_LABELS: Record<string, string> = { google: "Google", facebook: "Facebook" };
 
@@ -50,27 +51,23 @@ export function SignIn({
     try {
       await action();
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "Could not sign in. Please try again.");
+      setFailure(error instanceof Error ? error.message : w.couldNotSignIn);
       setBusy(false);
     }
   }
   return (
     <Card data-kit="sign-in" className="mx-auto mt-10 max-w-sm space-y-5 p-card">
-      <h1 className="text-2xl font-bold">Sign in to {appName}</h1>
+      <h1 className="text-2xl font-bold">{w.signInTo(appName)}</h1>
       {invitation && (
         <p className="rounded-md bg-accent p-3 text-sm">
-          You were invited to {appName} as {invitation.role}. Sign in with{" "}
-          <strong>{invitation.email}</strong>.
+          {w.invitedAs(appName, invitation.role)} <strong>{invitation.email}</strong>.
         </p>
       )}
       {providers.includes("email") &&
         onSendCode &&
         onCode &&
         (codes === false ? (
-          <p className="text-muted-foreground">
-            Signing in by email is not available yet: {appName} cannot send mail. Please contact
-            whoever runs it.
-          </p>
+          <p className="text-muted-foreground">{w.noMailYet(appName)}</p>
         ) : sentTo ? (
           <form
             data-part="code"
@@ -81,11 +78,10 @@ export function SignIn({
             }}
           >
             <p className="text-sm" role="status">
-              If <strong>{sentTo}</strong> may sign in, a code is on its way. It works for ten
-              minutes.
+              {w.if} <strong>{sentTo}</strong> {w.codeOnItsWay}
             </p>
             <div className="space-y-1">
-              <Label htmlFor="sign-in-code">Code</Label>
+              <Label htmlFor="sign-in-code">{w.code}</Label>
               <Input
                 id="sign-in-code"
                 inputMode="numeric"
@@ -96,7 +92,7 @@ export function SignIn({
               />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
-              Sign in
+              {w.signIn}
             </Button>
             <Button
               type="button"
@@ -108,7 +104,7 @@ export function SignIn({
                 setFailure(undefined);
               }}
             >
-              Use another address
+              {w.useAnotherAddress}
             </Button>
           </form>
         ) : (
@@ -123,13 +119,13 @@ export function SignIn({
                 await onSendCode(address.trim());
                 setSentTo(address.trim());
               } catch (error) {
-                setFailure(error instanceof Error ? error.message : "Could not send a code.");
+                setFailure(error instanceof Error ? error.message : w.couldNotSendCode);
               }
               setBusy(false);
             }}
           >
             <div className="space-y-1">
-              <Label htmlFor="sign-in-email">Email address</Label>
+              <Label htmlFor="sign-in-email">{w.emailAddress}</Label>
               <Input
                 id="sign-in-email"
                 type="email"
@@ -140,7 +136,7 @@ export function SignIn({
               />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
-              Send me a code
+              {w.sendMeACode}
             </Button>
           </form>
         ))}
@@ -174,7 +170,7 @@ export function SignIn({
       {devRoles && onDevRole && (
         <div className="space-y-2 border-t pt-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {demo ? "Try it as" : "Development only"}
+            {demo ? w.tryItAs : w.developmentOnly}
           </p>
           {devRoles.map((role) => (
             <Button
@@ -184,7 +180,7 @@ export function SignIn({
               disabled={busy}
               onClick={() => run(() => onDevRole(role))}
             >
-              Sign in as {role}
+              {w.signInAs(role)}
             </Button>
           ))}
         </div>

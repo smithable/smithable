@@ -5,6 +5,7 @@ import { Button } from "#/components/ui/button";
 import type { Forgotten } from "./audit.server";
 import { formatValue } from "./format";
 import type { AppUi } from "./model";
+import { w } from "./words";
 
 export interface ActivityLine {
   id: number;
@@ -60,13 +61,13 @@ export function ActivityLog({
       {filters && (
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1 text-sm">
-            Person
+            {w.person}
             <select
               className={select}
               value={filters.who ?? ""}
               onChange={(e) => set("who", e.target.value)}
             >
-              <option value="">Everyone</option>
+              <option value="">{w.everyone}</option>
               {people?.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -75,13 +76,13 @@ export function ActivityLog({
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            Records
+            {w.records}
             <select
               className={select}
               value={filters.model ?? ""}
               onChange={(e) => set("model", e.target.value)}
             >
-              <option value="">All</option>
+              <option value="">{w.all}</option>
               {models?.map((m) => (
                 <option key={m.name} value={m.name}>
                   {m.label}
@@ -90,13 +91,13 @@ export function ActivityLog({
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            What
+            {w.what}
             <select
               className={select}
               value={filters.action ?? ""}
               onChange={(e) => set("action", e.target.value)}
             >
-              <option value="">Anything</option>
+              <option value="">{w.anything}</option>
               {actions?.map((a) => (
                 <option key={a} value={a}>
                   {words(a)}
@@ -105,7 +106,7 @@ export function ActivityLog({
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            From
+            {w.from}
             <input
               type="date"
               className={select}
@@ -114,7 +115,7 @@ export function ActivityLog({
             />
           </label>
           <label className="grid gap-1 text-sm">
-            To
+            {w.to}
             <input
               type="date"
               className={select}
@@ -125,7 +126,7 @@ export function ActivityLog({
         </div>
       )}
       {lines.length === 0 ? (
-        <p className="text-muted-foreground">Nothing has happened that matches.</p>
+        <p className="text-muted-foreground">{w.nothingMatches}</p>
       ) : (
         <ol className="divide-y divide-border rounded-lg border border-border bg-card">
           {lines.map((line) => (
@@ -161,7 +162,7 @@ export function ActivityLog({
                   className="ml-auto h-7"
                   onClick={() => line.forget && onForget(line.forget)}
                 >
-                  Forget in the log
+                  {w.forgetInLog}
                 </Button>
               )}
             </li>

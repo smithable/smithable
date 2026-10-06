@@ -2,6 +2,7 @@
 // To change one, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
 import type { AppUi } from "./model";
+import { w } from "./words";
 
 type Kind = "money" | "int" | "decimal";
 
@@ -53,7 +54,7 @@ export function BarChart({
     <Card data-kit="tile" className="p-card">
       <h2 className="font-semibold">{label}</h2>
       {bars.length === 0 ? (
-        <p className="mt-4 text-muted-foreground">No activity in this period.</p>
+        <p className="mt-4 text-muted-foreground">{w.noActivityInPeriod}</p>
       ) : (
         <ol className="mt-6 flex h-56 items-end gap-2 sm:gap-4">
           {bars.map((bar) => (
