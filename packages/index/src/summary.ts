@@ -180,6 +180,10 @@ export function summarize(
         `At most ${limit} ${pluralLabel(model).toLowerCase()} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
       );
     }
+    if (model.trash)
+      sentences.push(
+        `Deleted ${pluralLabel(model).toLowerCase()} stay in the trash for thirty days, where they can be restored.`,
+      );
     for (const rule of model.rules ?? []) sentences.push(`Rule: ${rule.text}`);
     sections.push({
       concept: `model:${model.name}`,

@@ -253,6 +253,10 @@
               }
             }
           },
+          "trash": {
+            "type": "boolean",
+            "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
+          },
           "capacity": {
             "type": "object",
             "description": "At most max records per record that per refers to, e.g. { per: session, max: session.capacity }: a booking's places.",

@@ -196,3 +196,25 @@ describe("removeAction", () => {
     });
   });
 });
+
+test("trash: true on a model is read, setTrash turns it on and off, and off asks first", () => {
+  const files = {
+    spec: "smithable: 0.1\napp:\n  name: X\nmodels:\n  Customer:\n    fields:\n      name: string!\n",
+    auth: "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\n",
+  };
+  const on = applyOperation(files, "setTrash", { model: "Customer", trash: true });
+  if (!on.ok) throw new Error(on.message);
+  expect(on.files.spec).toContain(
+    "  Customer:\n    fields:\n      name: string!\n    trash: true\n",
+  );
+  expect(on.destructive).toBe(false);
+  expect(validateSpec({ path: "smithable.yml", text: on.files.spec }).ir?.models[0]?.trash).toBe(
+    true,
+  );
+  const again = applyOperation(on.files, "setTrash", { model: "Customer", trash: true });
+  expect(again.ok ? "" : again.message).toContain("has a trash already");
+  const off = applyOperation(on.files, "setTrash", { model: "Customer", trash: false });
+  if (!off.ok) throw new Error(off.message);
+  expect(off.destructive).toBe(true);
+  expect(off.files.spec).not.toContain("trash");
+});
