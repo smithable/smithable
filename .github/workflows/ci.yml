@@ -1,6 +1,7 @@
 # The gate. The required status is the `check` job, which only reports on the jobs it needs.
-# Every pull request runs lint, build, units and the site. The example apps (one job each, through
-# scripts/test-apps.mjs <example>) and Studio in a real browser run too when the change touches the
+# Every pull request runs lint, build, units and the site on GitHub's runners. The full check (the
+# example apps and Studio in a real browser, as `pnpm check`) runs on the self-hosted runner, one
+# job through scripts/gate.sh, when the change touches the
 # engine, the examples, the scripts `pnpm check` runs, the dependencies or this workflow, and either
 # the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
 # change someone judges risky). While the repository is private FULL_CI is off and the local
@@ -50,7 +51,6 @@ jobs:
     outputs:
       full: ${{ steps.scope.outputs.full }}
       basics: ${{ steps.scope.outputs.basics }}
-      examples: ${{ steps.scope.outputs.examples }}
     steps:
       - uses: actions/checkout@v5
         with: { fetch-depth: 0 }
@@ -71,7 +71,7 @@ jobs:
               case "${last#* }" in
                 success)
                   echo "main is still $GITHUB_SHA, which the last scheduled run checked: skipped" | tee -a "$GITHUB_STEP_SUMMARY"
-                  { echo "full=false"; echo "basics=false"; echo "examples=[]"; } >> "$GITHUB_OUTPUT"
+                  { echo "full=false"; echo "basics=false"; } >> "$GITHUB_OUTPUT"
                   exit 0 ;;
                 failure)
                   echo "main is still $GITHUB_SHA, whose last scheduled run failed" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -92,9 +92,7 @@ jobs:
             full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
           fi
           basics=true
-          # Every example gets its own job, so a new starter is tested without editing this file.
-          examples=$(find examples -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -Rcs 'split("\n") | map(select(. != ""))')
-          { echo "full=$full"; echo "basics=$basics"; echo "examples=$examples"; } >> "$GITHUB_OUTPUT"
+          { echo "full=$full"; echo "basics=$basics"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
 
   lint-build-units:
@@ -112,38 +110,30 @@ jobs:
       - run: pnpm test
       - run: pnpm site
 
-  apps:
+  # The full check runs on the self-hosted runner (Johan's dev machine, docs/ci.md): no billed
+  # minutes, and the machine already runs this check for every engine change through the gate
+  # lock, which this job takes its turn in (SESSION=ci). One job, as `pnpm check` is one command:
+  # lint, build, units, the site, every example in parallel, Studio in a real browser. Never for a
+  # pull request from a fork: that would run a stranger's code on the machine.
+  full:
     needs: scope
-    if: needs.scope.outputs.full == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        example: ${{ fromJSON(needs.scope.outputs.examples) }}
+    if: needs.scope.outputs.full == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, smithable]
+    timeout-minutes: 90
+    env:
+      # The generated apps' commits need an identity; the machine's own global config is left alone.
+      GIT_AUTHOR_NAME: CI
+      GIT_AUTHOR_EMAIL: ci@smithable.invalid
+      GIT_COMMITTER_NAME: CI
+      GIT_COMMITTER_EMAIL: ci@smithable.invalid
     steps:
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup
-        with: { browser: "true" }
-      - run: pnpm build
-      # The generated apps install what an operation adds, so not with CI's frozen lockfile.
-      - run: node scripts/test-apps.mjs ${{ matrix.example }}
+      # The machine's Node through fnm (the runner's service has no shell profile).
+      - run: echo "$HOME/.local/share/fnm/aliases/default/bin" >> "$GITHUB_PATH"
+      - run: pnpm install --frozen-lockfile
+      - run: SESSION=ci GATE_AHEAD_MAX=99 TEST_APPS_PORT=8600 TEST_STUDIO_PORT=8610 scripts/gate.sh
         env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
-
-  # One job: its 37 steps share one Studio session, each building on the one before.
-  studio:
-    needs: scope
-    if: needs.scope.outputs.full == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup
-        with: { browser: "true" }
-      - run: pnpm build
-      - run: pnpm test:studio
-        env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
-      # The picture the test takes of a failed step, to read what a runner saw.
+      # The picture Studio's test takes of a failed step.
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -156,7 +146,7 @@ jobs:
   # run was going: a pull request opened with the label starts two runs): its jobs are cancelled,
   # and reporting that as a failed `check` stood in the way of the newer run's result.
   check:
-    needs: [scope, lint-build-units, apps, studio]
+    needs: [scope, lint-build-units, full]
     if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
     runs-on: ubuntu-latest
     steps:
