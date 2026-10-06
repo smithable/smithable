@@ -41,7 +41,7 @@ systemctl --user daemon-reload && systemctl --user enable --now actions-runner-e
 systemctl --user status actions-runner-engine --no-pager | head -5
 ```
 
-The job finds Node through fnm's default alias (`~/.local/share/fnm/aliases/default/bin`, put on the job's PATH by the workflow), installs the dependencies into the runner's own checkout (`_work/smithable/smithable`, with the machine's pnpm store), and runs the gate on ports 8600 and 8610, which no session uses. The generated apps' commits are made as `CI <ci@smithable.invalid>` through the job's environment; the machine's global Git identity is left alone.
+The job runs three examples at a time (`TEST_APPS_CONCURRENCY=3`; a session's gate runs all seven), since the runner shares the machine with the sessions' builds and tests: the first two runs each lost one browser step to a hydration wait under that load. The job finds Node through fnm's default alias (`~/.local/share/fnm/aliases/default/bin`, put on the job's PATH by the workflow), installs the dependencies into the runner's own checkout (`_work/smithable/smithable`, with the machine's pnpm store), and runs the gate on ports 8600 and 8610, which no session uses. The generated apps' commits are made as `CI <ci@smithable.invalid>` through the job's environment; the machine's global Git identity is left alone.
 
 ## When the machine is off
 
