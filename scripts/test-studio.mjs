@@ -189,7 +189,7 @@ try {
     if (await note.count()) throw new Error("the samples notice came back");
   });
   await step(
-    "the guide walks the five places once, Guide shows it again, a reload does not",
+    "the guide asks No code or Code, walks the places once, Guide shows it again, its Code switches modes, a reload shows nothing",
     async () => {
       // On a page of its own: every other step runs with ?guide=off.
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -197,21 +197,27 @@ try {
         await fresh.goto(base);
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
           await card.waitFor({ timeout: 20000 });
           const at = await card.getAttribute("data-guide-card");
           seen.push(at);
           // Beside a place that is on the screen.
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
             throw new Error(`the card for ${at} is beside nothing`);
-          await card.getByRole("button", { name: i === 4 ? "Done" : "Next" }).click();
+          const button = i === 0 ? "No code" : i === 6 ? "Done" : "Next";
+          await card.getByRole("button", { name: button, exact: true }).click();
         }
-        if (seen.join() !== "preview,summary,change,look,publish") throw new Error(seen.join());
+        if (seen.join() !== "mode,preview,summary,details,change,look,publish")
+          throw new Error(seen.join());
         await card.waitFor({ state: "detached" });
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await card.waitFor();
-        await card.getByRole("button", { name: "Skip" }).click();
+        // The first stop's Code ends the tour in Code mode, which is remembered.
+        await card.getByRole("button", { name: "Code", exact: true }).click();
         await card.waitFor({ state: "detached" });
+        if (!(await fresh.getByRole("radio", { name: "Code", exact: true }).isChecked()))
+          throw new Error("Code in the guide did not switch to Code mode");
+        await fresh.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
         await fresh.reload();
         await fresh.getByRole("region", { name: "Customers", exact: true }).waitFor();
         await fresh.waitForTimeout(1000);

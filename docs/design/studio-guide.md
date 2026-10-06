@@ -8,8 +8,10 @@ Five stops, each a small card beside the thing it is about, with one or two sent
 
 | Stop | Beside | Says |
 |---|---|---|
+| 0 | The mode switch (No code, Code) | How do you want to work? No code changes the app in plain words and forms; Code edits its definition as text. **No code** goes on with the tour; **Code** ends it in Code mode, remembered. (Johan, 2026-10-06) |
 | 1 | The preview and its samples notice | This is your app, running. The records in it are samples for trying it; your published app starts empty. |
 | 2 | "What it does" | Your app in plain words, kept true as it changes. Click a sentence to change that part; the buttons add a record, a page, an action. |
+| 2b | The Details panel | Choose Select above the preview and click a part, or click a sentence in What it does: its details and forms open here; with nothing chosen, the app's own details. (Johan, 2026-10-06) |
 | 3 | The change box | Describe a change in your own words, or ask a question about the app. A change is checked and shown before it is kept, and every change can be undone. |
 | 4 | The Look tab | Colors, type, the app's language and how lists and forms are laid out: the look is separate from what the app does. |
 | 5 | Publish and share | When it does what you want, publish it: an address people can open, with sign-in and backups. Until then, nothing leaves this page. |
@@ -35,7 +37,7 @@ Studio's words are inline English in the beta (language.md §4: Studio stays Eng
 
 ## 5. How it stays true when Studio changes
 
-- Each thing a stop is about carries `data-guide="<name>"` (`preview`, `summary`, `change`, `look`, `publish`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
+- Each thing a stop is about carries `data-guide="<name>"` (`mode`, `preview`, `summary`, `details`, `change`, `look`, `publish`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
 - A unit test holds the two lists together: every stop's anchor appears in the components, and every `data-guide` in the components has a stop. A new place in Studio either gets a stop in the same change or has no attribute.
 - The Studio test walks the tour once on a fresh project: five cards in order, each beside a visible anchor, Done ends it and the project is as it was; **Guide** starts it again; a reload shows nothing.
 
