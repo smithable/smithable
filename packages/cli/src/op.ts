@@ -253,7 +253,7 @@ async function applyAndCheckpoint(
       prepared && operation.name === "importRecords"
         ? { ...args, text: undefined, from: keepImport(dir, id, prepared.text) }
         : operation.name === "editSpec"
-          ? {}
+          ? { ...(args.file ? { file: args.file } : {}) }
           : args;
     mkdirSync(join(dir, ".smithable"), { recursive: true });
     appendFileSync(

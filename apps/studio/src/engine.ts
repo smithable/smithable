@@ -4,6 +4,8 @@ import {
   type AuthIR,
   type ContentIR,
   type Diagnostic,
+  EDITABLE_FILES,
+  type EditableFile,
   resolvePlugin,
   type SpecIR,
   type SpecPlugin,
@@ -11,11 +13,42 @@ import {
   type UxIR,
   validateAuth,
   validateContent,
+  validateContext,
   validateSpec,
   validateUx,
 } from "@smithable/core";
 import { useEffect, useMemo, useState } from "react";
 import type { Project } from "./api";
+
+/**
+ * The problems of one of the spec files as edited in the tab: its own, and what the edit does to
+ * smithable.yml (a role it names gone). Each says which file it is in.
+ */
+export function checkFile(
+  files: Project["files"],
+  file: EditableFile,
+  text: string,
+  plugins: SpecPlugin[] = [],
+  themes: ThemeIR[] = [],
+): { diagnostics: Diagnostic[]; roles?: string[] } {
+  if (file === "smithable.yml") {
+    const { diagnostics, auth } = readSpec(files, text, plugins, themes);
+    return { diagnostics, ...(auth ? { roles: auth.roles.map((r) => r.name) } : {}) };
+  }
+  const key = EDITABLE_FILES[file];
+  const spec = readSpec({ ...files, [key]: text }, undefined, plugins, themes);
+  const own =
+    file === "smithable.auth.yml"
+      ? validateAuth({ path: file, text }, spec.ir).diagnostics
+      : file === "smithable.context.yml"
+        ? validateContext({ path: file, text })
+        : !spec.ir
+          ? []
+          : file === "smithable.ux.yml"
+            ? validateUx({ path: file, text }, spec.ir, themes).diagnostics
+            : validateContent({ path: file, text }, spec.ir).diagnostics;
+  return { diagnostics: [...own, ...spec.diagnostics.filter((d) => d.severity === "error")] };
+}
 
 export interface Spec {
   ir?: SpecIR;

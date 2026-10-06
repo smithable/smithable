@@ -19,6 +19,7 @@ export default function SpecText({
   select,
   kept,
   roles,
+  assist = false,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
   label: string;
@@ -31,6 +32,8 @@ export default function SpecText({
   kept: string;
   /** The roles of smithable.auth.yml, to suggest where the text names one. */
   roles?: string[];
+  /** Offer what can be written and explain keys: for smithable.yml, whose schema we have. */
+  assist?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
@@ -82,6 +85,21 @@ export default function SpecText({
         },
       },
     ];
+    const hover = hoverTooltip((editor, pos) => {
+      const found = hoverSpec(editor.state.doc.toString(), pos);
+      if (!found) return null;
+      return {
+        pos: found.from,
+        end: found.to,
+        above: true,
+        create: () => {
+          const dom = document.createElement("div");
+          dom.className = "cm-spec-hint";
+          dom.textContent = found.text;
+          return { dom };
+        },
+      };
+    });
     const editor = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -90,22 +108,7 @@ export default function SpecText({
           basicSetup,
           yaml(),
           lintGutter(),
-          EditorState.languageData.of(() => sources),
-          hoverTooltip((editor, pos) => {
-            const found = hoverSpec(editor.state.doc.toString(), pos);
-            if (!found) return null;
-            return {
-              pos: found.from,
-              end: found.to,
-              above: true,
-              create: () => {
-                const dom = document.createElement("div");
-                dom.className = "cm-spec-hint";
-                dom.textContent = found.text;
-                return { dom };
-              },
-            };
-          }),
+          ...(assist ? [EditorState.languageData.of(() => sources), hover] : []),
           EditorView.contentAttributes.of({ "aria-label": label, spellcheck: "false" }),
           EditorView.theme({
             "&": { height: "100%", fontSize: "13px" },

@@ -360,7 +360,7 @@ export async function studio(
         questions?: { about?: string; question: string; options: string[] }[];
         since: string;
         usual?: number;
-        files?: { spec?: string; auth?: string; content?: string; ux?: string };
+        files?: { spec?: string; auth?: string; content?: string; ux?: string; context?: string };
         error?: string;
       }
     | undefined;
@@ -412,6 +412,7 @@ export async function studio(
         auth: read("smithable.auth.yml"),
         content: read("smithable.content.yml"),
         ux: read("smithable.ux.yml"),
+        context: read("smithable.context.yml"),
       },
       // For the engine in the tab, which imports them from /api/plugins/; the version is for
       // its module cache.
@@ -456,6 +457,7 @@ export async function studio(
                   auth: draft["smithable.auth.yml"],
                   content: draft["smithable.content.yml"],
                   ux: draft["smithable.ux.yml"],
+                  context: draft["smithable.context.yml"],
                 },
               }
             : {}),
