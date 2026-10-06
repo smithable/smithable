@@ -70,8 +70,6 @@ const SCAFFOLD = new Set([
 /** The kit's words, one file per language (docs/design/language.md). */
 const WORDS_DIR = "src/kit/words/";
 const WORDS_FILE = "src/kit/words.ts";
-/** The app's language: English until the content file's `language` is read (language.md §2). */
-const LANGUAGE = "en";
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
@@ -93,9 +91,15 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
       content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
-  const words = TEMPLATES[`${WORDS_DIR}${LANGUAGE}.ts`];
-  if (!words) throw new Error(`The kit has no words for the language "${LANGUAGE}".`);
-  files.push({ path: WORDS_FILE, content: words, zone: "kit" });
+  const language = ctx.options.content?.language ?? "en";
+  const words = TEMPLATES[`${WORDS_DIR}${language}.ts`];
+  if (!words) throw new Error(`The kit has no words for the language "${language}".`);
+  // Another language's file is checked against English in the kit (`satisfies Words`); the app
+  // has no English beside it, so it stands on its own there.
+  const own = words
+    .replace(/^import type \{ Words \} from "\.\/en";\n\n?/m, "")
+    .replace(/\} satisfies Words;\n$/, "};\n\nexport type Words = typeof w;\n");
+  files.push({ path: WORDS_FILE, content: own, zone: "kit" });
   for (const generator of SECTION_GENERATORS) files.push(...generator.files(ctx));
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }

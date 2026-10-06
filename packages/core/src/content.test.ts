@@ -35,6 +35,7 @@ menus:
 `);
   expect(diagnostics).toEqual([]);
   expect(content).toEqual({
+    language: "en",
     models: {
       Customer: {
         label: "Client",
@@ -257,4 +258,31 @@ models:
     'Model "Session" has no capacity, so nothing is reserved on it.',
     expect.stringContaining('"join"'),
   ]);
+});
+
+test("the language is one the kit has words in; in another one, models say their own plural", () => {
+  const read = (text: string) => validateContent({ path: "smithable.content.yml", text }, ir);
+  expect(read("smithableContent: 0.1\nlanguage: en\n").content?.language).toBe("en");
+  const unknown = read("smithableContent: 0.1\nlanguage: fi\n");
+  expect(unknown.content).toBeUndefined();
+  expect(unknown.diagnostics).toMatchObject([
+    { code: "unknown-language", message: 'The app kit has no words in "fi". Languages: en, sv.' },
+  ]);
+  const swedish = read(
+    "smithableContent: 0.1\nlanguage: sv\nmodels:\n  Customer: { label: Kund }\n",
+  );
+  expect(swedish.content?.language).toBe("sv");
+  expect(swedish.diagnostics.map((d) => [d.severity, d.code, d.message])).toEqual([
+    [
+      "warning",
+      "plural-in-english",
+      'Customer: the plural would be made by an English rule ("Kunds"); give it a pluralLabel.',
+    ],
+  ]);
+  expect(
+    read(
+      "smithableContent: 0.1\nlanguage: sv\nmodels:\n  Customer: { label: Kund, pluralLabel: Kunder }\n",
+    ).diagnostics,
+  ).toEqual([]);
+  expect(read("smithableContent: 0.1\n").diagnostics).toEqual([]);
 });
