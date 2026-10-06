@@ -2,11 +2,6 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Good work, found through your union
-      subtitle: Browse the openings shared by the union and apply in a few minutes once you sign in.
-      button: See open jobs
       image:
         src: images/hero.webp
-        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
-    latest:
-      title: Open jobs
+        alt: A shared workspace with people working at long tables, seen from a distance

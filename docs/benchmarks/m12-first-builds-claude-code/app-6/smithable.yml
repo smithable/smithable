@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Union Jobs
-  description: Job openings shared by the union, where members find work and apply.
+  name: Union Job Board
+  description: Job posts for union members to browse and apply to, managed by the local union.
   currency: USD
 models:
   Job:
@@ -10,8 +10,9 @@ models:
       employer: string!
       description: text!
       location: string
-      jobType: fullTime | partTime | temporary | apprenticeship
       pay: string
+      jobType: fullTime | partTime | temporary | apprenticeship
+      trade: construction | electrical | plumbing | transport | healthcare | education | other
       closesOn: date
       status: open | closed
       applications: Application[]
@@ -20,12 +21,14 @@ models:
       delete: [staff, admin]
   Application:
     fields:
-      job: Job!
+      job: Job! unique
       name: string!
       email: email!
       phone: phone
+      memberNumber: string
       message: text
-      status: submitted | reviewing | accepted | declined
+      resume: url
+      status: submitted | shortlisted | accepted | declined
     access:
       read: [owner, staff, admin]
 pages:
@@ -33,24 +36,21 @@ pages:
     route: /
     crud: Job
     search: [title, employer, description, location]
-    filters: [jobType, status, closesOn]
+    filters: [trade, jobType, status, closesOn]
     sortable: [closesOn, createdAt]
     favorites: true
-    actions: [closeJob]
-  myApplications:
-    crud: Application
-    mine: true
+    actions: [closeJob, reopenJob]
   applications:
     crud: Application
     filters: [job, status]
-    search: [name, email]
-    access: [staff, admin]
+    search: [name, email, memberNumber]
+    actions: [shortlist, accept, decline]
   home:
     route: /welcome
     landing:
       hero:
       footer:
-      latest:
+      latestJobs:
         records: Job
         where:
           status: open
@@ -64,19 +64,27 @@ actions:
     set:
       status: closed
     allow: [staff, admin]
-    intent: Close a job post so no more people apply.
-  startReview:
+    intent: Stop taking applications for a job.
+  reopenJob:
+    on: Job
+    when:
+      status: closed
+    set:
+      status: open
+    allow: [staff, admin]
+    intent: Take applications for a job again.
+  shortlist:
     on: Application
     when:
       status: submitted
     set:
-      status: reviewing
+      status: shortlisted
     allow: [staff, admin]
-    intent: Mark an application as being reviewed.
+    intent: Put an application on the shortlist.
   accept:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
       status: accepted
     allow: [staff, admin]
@@ -84,9 +92,9 @@ actions:
   decline:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
       status: declined
     allow: [staff, admin]
     intent: Decline an application.
-navigation: [jobs, myApplications, applications, team]
+navigation: [jobs, applications, team]

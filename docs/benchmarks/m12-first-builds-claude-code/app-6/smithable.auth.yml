@@ -1,14 +1,11 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
 defaultAccess: private
 public:
   pages: [home, jobs]
   read: [{ Job: { where: { status: open } } }]
 roles:
-  admin:
-    description: Runs the job board and manages members.
   staff:
     description: Union staff who post jobs and review applications.
   member:
