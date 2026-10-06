@@ -498,7 +498,7 @@ export function listParts(
     : searchable
       ? "{ q, all: true }"
       : "{ all: true }";
-  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${
+  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${
     search
       ? search.options
       : capped

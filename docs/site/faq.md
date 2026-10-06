@@ -34,6 +34,10 @@ On your machine, when you run Smithable yourself. On the hosted service, in Swed
 
 Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management; and marketplaces, with several pictures per record, filters and sorting on lists, favorites, "my" pages that show only your own records, and contacting a record's owner. Five starters show the range: a CRM, a booking site, an invoicing app, a marketplace (Torget) and a plain records app. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
 
+## Will search engines find my public pages?
+
+Yes, and nothing else. Every app answers `/robots.txt` from the auth file's `public` block: the public pages and their pictures are allowed, everything behind sign-in is refused, and with nothing public all of it is. With public pages the app also serves `/sitemap.xml`, listing them and a public blog's published posts with their dates, and robots.txt names it. Each page's tab says its name and the app's; a `description` under the page in `smithable.content.yml` is what a search engine shows under the link. Article pages carry Open Graph tags for links shared elsewhere.
+
 ## What happens when the spec cannot say what I need?
 
 You write ordinary code in `src/custom/`, which Smithable never overwrites: a custom action's implementation, a page with its own component, a section, a stylesheet. The generated data functions apply the access rules for you. `smithable teach` lets a project add a construct of its own, and a construct that many projects need becomes part of the spec through a design note and the five questions in [ARCHITECTURE §2.4](../ARCHITECTURE.md#24-growing-the-dsl).

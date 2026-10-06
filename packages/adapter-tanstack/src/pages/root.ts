@@ -11,7 +11,7 @@ import {
 } from "@smithable/core";
 import { analyticsConstants } from "../analytics.js";
 import { hasSignIn } from "../auth.js";
-import { HEADER, literal, type Texts } from "../shared.js";
+import { HEADER, literal, modelNamed, names, type Texts } from "../shared.js";
 import { publicArticles } from "./articles.js";
 
 // ── Routes ───────────────────────────────────────────────────────────────────
@@ -309,14 +309,74 @@ export function robotsRoute(ir: SpecIR, auth: AuthIR): string {
   // record pictures (/files checks who may read each one).
   const parts = allowed.length ? ["Allow: /assets/", "Allow: /images/", "Allow: /files/"] : [];
   const text = ["User-agent: *", ...allowed, ...parts, "Disallow: /", ""].join("\n");
-  return `${HEADER}import { createFileRoute } from "@tanstack/react-router";
+  // With public pages, the sitemap's address too, at the site's own origin.
+  const sitemap = allowed.length
+    ? `\`\${ROBOTS}Sitemap: \${originOf(request)}/sitemap.xml\n\``
+    : "ROBOTS";
+  return `${HEADER}import { createFileRoute } from "@tanstack/react-router";${allowed.length ? '\nimport { originOf } from "#/kit/origin";' : ""}
 
 const ROBOTS = ${JSON.stringify(text)};
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
     handlers: {
-      GET: () => new Response(ROBOTS, { headers: { "Content-Type": "text/plain; charset=utf-8" } }),
+      GET: (${allowed.length ? "{ request }" : ""}) => new Response(${sitemap}, { headers: { "Content-Type": "text/plain; charset=utf-8" } }),
+    },
+  },
+});
+`;
+}
+
+/**
+ * /sitemap.xml: the public pages, and every article of a public blog by its address (read as a
+ * visitor, so only what visitors may read). Only made when something is public.
+ */
+export function sitemapRoute(ir: SpecIR, auth: AuthIR, t: Texts): string {
+  const pages = ir.pages.filter((p) => auth.public.pages.includes(p.id));
+  const blogs = pages.filter((p) => p.pattern.kind === "articles");
+  const imports = blogs.map((p) => {
+    const n = names(modelNamed(ir, (p.pattern as { model: string }).model), t);
+    return `import { ${n.data} } from "${n.module}.server";`;
+  });
+  const articles = blogs
+    .map((p) => {
+      const pattern = p.pattern as { model: string; address?: string };
+      const n = names(modelNamed(ir, pattern.model), t);
+      const address = pattern.address
+        ? `String(row.${pattern.address} || row.id)`
+        : "String(row.id)";
+      return `    ...(await ${n.data}.list(null)).map((row) => ({ loc: \`${p.route === "/" ? "" : p.route}/\${encodeURIComponent(${address})}\`, lastmod: row.updatedAt })),`;
+    })
+    .join("\n");
+  return `${HEADER}import { createFileRoute } from "@tanstack/react-router";
+import { originOf } from "#/kit/origin";
+${imports.join("\n")}${imports.length ? "\n" : ""}
+const PAGES = ${JSON.stringify(pages.map((p) => p.route))};
+
+const escape = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+export const Route = createFileRoute("/sitemap.xml")({
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        const origin = originOf(request);
+        const entries: { loc: string; lastmod?: string | Date | null }[] = [
+          ...PAGES.map((route) => ({ loc: route })),
+${articles}
+        ];
+        const body = \`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+\${entries
+  .map(
+    (e) =>
+      \`  <url><loc>\${escape(origin + e.loc)}</loc>\${e.lastmod ? \`<lastmod>\${new Date(e.lastmod).toISOString().slice(0, 10)}</lastmod>\` : ""}</url>\`,
+  )
+  .join("\\n")}
+</urlset>
+\`;
+        return new Response(body, { headers: { "Content-Type": "application/xml; charset=utf-8" } });
+      },
     },
   },
 });

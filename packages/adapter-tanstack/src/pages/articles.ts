@@ -128,10 +128,9 @@ const getArticles = createServerFn()
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  validateSearch: z.object({ page: z.number().int().min(1).optional().catch(undefined) }),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: z.object({ page: z.number().int().min(1).optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
   loader: ({ deps }) => getArticles({ data: deps.page }),
-  head: () => ({ meta: [{ title: ${JSON.stringify(ctx.t.pageTitle(page.id))} }] }),
   component: ArticlesPage,
 });
 
