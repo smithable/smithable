@@ -478,6 +478,7 @@ export function App() {
               box ? "fixed z-10" : place.previewHidden ? "hidden" : "max-lg:hidden lg:w-[55%]",
             )}
           >
+            {box && <SwipeGrips />}
             <Preview
               url={project.preview}
               version={version}
@@ -528,4 +529,49 @@ function seenGuide(app: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * On a phone the preview lies over its panel in the snapping row, and the page inside it takes
+ * every touch: a strip at each edge takes a sideways swipe instead and moves the row, so the
+ * preview snaps like the other panels.
+ */
+function SwipeGrips() {
+  const drag = useRef<{ x: number; left: number; strip: HTMLElement }>(undefined);
+  const down = (e: React.PointerEvent<HTMLDivElement>) => {
+    const strip = document.querySelector<HTMLElement>("[data-strip]");
+    if (!strip) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    strip.style.scrollSnapType = "none";
+    drag.current = { x: e.clientX, left: strip.scrollLeft, strip };
+  };
+  const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (d) d.strip.scrollLeft = d.left - (e.clientX - d.x);
+  };
+  const up = () => {
+    const d = drag.current;
+    if (!d) return;
+    drag.current = undefined;
+    const width = d.strip.clientWidth;
+    d.strip.style.scrollSnapType = "";
+    d.strip.scrollTo({ left: Math.round(d.strip.scrollLeft / width) * width, behavior: "smooth" });
+  };
+  const grip = "absolute inset-y-0 z-20 w-6 touch-none";
+  return (
+    <>
+      {(["left-0", "right-0"] as const).map((side) => (
+        <div
+          key={side}
+          aria-hidden
+          data-part="swipe-grip"
+          className={`${grip} ${side}`}
+          onPointerDown={down}
+          onPointerMove={move}
+          onPointerUp={up}
+          onPointerCancel={up}
+        />
+      ))}
+    </>
+  );
 }

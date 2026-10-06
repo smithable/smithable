@@ -78,9 +78,13 @@ export function Studio({
   return (
     // The details sit beside the concept tree from lg when the preview is hidden, else only on
     // very wide screens (the preview takes the right of the window from lg); under it otherwise.
+    // On a phone (under lg) the panels are one horizontal row that snaps, as in Builder: the
+    // concepts, the details and the trace, then the editor, each the screen's width.
     <div
+      data-strip
       className={cx(
-        "grid h-full min-h-0 grid-cols-[260px_1fr] divide-x divide-neutral-200",
+        "flex h-full min-h-0 snap-x snap-mandatory divide-x divide-neutral-200 overflow-x-auto overscroll-x-contain",
+        "lg:grid lg:snap-none lg:grid-cols-[260px_1fr] lg:overflow-visible",
         previewHidden
           ? "lg:grid-cols-[240px_320px_1fr]"
           : "min-[1800px]:grid-cols-[240px_320px_1fr]",
@@ -88,16 +92,18 @@ export function Studio({
     >
       <div
         className={cx(
-          "grid min-h-0 grid-rows-[1fr_2fr]",
+          "grid min-h-0 grid-rows-[1fr_2fr] max-lg:contents",
           previewHidden ? "lg:contents" : "min-[1800px]:contents",
         )}
       >
-        <Panel title="Concepts">
+        <Panel title="Concepts" className={PHONE_PANEL}>
           <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
         </Panel>
         <div
           className={cx(
             "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200",
+            PHONE_PANEL,
+            "max-lg:border-t-0",
             previewHidden
               ? "lg:border-t-0 lg:border-l"
               : "min-[1800px]:border-t-0 min-[1800px]:border-l",
@@ -124,6 +130,7 @@ export function Studio({
         </div>
       </div>
       <Panel
+        className={PHONE_PANEL}
         title={
           <Tabs
             tabs={[
@@ -662,3 +669,6 @@ export function specRange(text: string, concept: string): [number, number] | und
   );
   return line < 0 ? undefined : [offset(line), offset(line) + (lines[line]?.length ?? 0)];
 }
+
+/** A panel of the phone's snapping row: the screen's width, snapping to its start. */
+const PHONE_PANEL = "max-lg:w-full max-lg:shrink-0 max-lg:snap-start";

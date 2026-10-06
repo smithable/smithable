@@ -776,8 +776,41 @@ try {
         null,
         { timeout: 5000 },
       );
+      // A sideways swipe on the preview's edge moves the row on, as on the other panels.
+      const grip = page.locator('[data-part="swipe-grip"]').last();
+      const at = await grip.boundingBox();
+      if (!at) throw new Error("no grip on the preview's edge");
+      await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(at.x - 500, at.y + at.height / 2, { steps: 8 });
+      await page.mouse.up();
+      await current("Details");
+      // With nothing selected, Details shows the app's own details and how to see a part's.
+      // An earlier step's selection may still be open: closed, the app's own details show.
+      const selected = page
+        .locator('[data-panel="details"]')
+        .getByRole("button", { name: "Close" });
+      if (await selected.count()) await selected.click();
+      const app = page.getByRole("region", { name: "The app" });
+      await app.getByText("Choose Select above the preview").waitFor();
+      if (!(await app.getByLabel("App name").inputValue()))
+        throw new Error("no app name in Details");
       await panels.getByRole("button", { name: "Your app" }).click();
       await current("Your app");
+      // Code mode on a narrow window: the same snapping row, the editor the window's width.
+      await page.getByRole("radio", { name: "Code", exact: true }).check({ force: true });
+      await page.waitForFunction(
+        () => {
+          const files = [...document.querySelectorAll('[role="tab"]')].find(
+            (t) => t.textContent === "Files",
+          );
+          const panel = files?.closest("section");
+          return panel && panel.getBoundingClientRect().width > 760;
+        },
+        null,
+        { timeout: 10000 },
+      );
+      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
       await page.setViewportSize({ width: 1440, height: 900 });
     },
   );
