@@ -25,6 +25,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
+import { mailsAbout, OUTGOING_IMPORT } from "./outgoing.js";
 import {
   code,
   dataKey,
@@ -564,8 +565,14 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const titleKey = titleField(model);
   // Worked out, never entered: not a change of their own in the audit log.
   const computedKeys = model.fields.filter((f) => f.formula).map((f) => f.name);
+  // Who is told of a change (outgoing mail, integrations.md §4.1b), in its transaction.
+  const mails = mailsAbout(ir, model.name);
+  const tell = (what: string, record: string, before = "") =>
+    mails
+      ? `\n        outgoing(tx, viewer, "${model.name}", ${what}, ${record}${before && `, ${before}`});`
+      : "";
   const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();
-        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });
+        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${tell('"created"', "made")}
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
   const referenceChecks = refs.map(
@@ -611,7 +618,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}import { afterChange, afterDelete } from "./hooks";
+${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1053,7 +1060,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
         const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();
         const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });
+        audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${tell("what", "after", "before")}
         return after;
       });
     } catch (error) {
@@ -1077,7 +1084,9 @@ ${dropPictures(
     try {
       db.transaction((tx) => {
         const gone = tx.delete(${n.table}).where(eq(${n.table}.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "${model.name}", record: id, title: gone.${titleKey} });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "${model.name}", record: id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -1103,7 +1112,9 @@ ${dropPictures(
       for (const row of rows)
         try {
           const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "${model.name}", record: row.id, title: gone.${titleKey} });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "${model.name}", record: row.id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;

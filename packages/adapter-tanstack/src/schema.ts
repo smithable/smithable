@@ -16,6 +16,7 @@ import {
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
+import { mailsOut } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -139,7 +140,7 @@ export const ${n.table}Favorites = sqliteTable(
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(mailsOut(ir).length ? [OUTGOING_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -167,6 +168,32 @@ const AUDIT_TABLE = `export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);`;
+
+/**
+ * Outgoing mail (docs/design/integrations.md §4.1b): written by the change's own transaction,
+ * sent after it by src/kit/outgoing.server.ts.
+ */
+const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
+  "outgoing_mail",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    /** The outgoing entry's name in smithable.yml. */
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    to: text().notNull(),
+    subject: text().notNull(),
+    text: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    /** Given up after a day of tries; "Send again" in Activity clears it. */
+    failedAt: integer({ mode: "timestamp_ms" }),
+    error: text(),
+  },
+  (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );`;
 
 export function column(field: FieldIR): { expr: string; uses: string } {

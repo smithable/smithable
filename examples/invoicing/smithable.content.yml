@@ -11,6 +11,11 @@ models:
     fields:
       vatNumber: { label: VAT number }
 
+outgoing:
+  invoiceSent:
+    subject: Your invoice
+    text: Here is your invoice. Thank you for your business.
+
 pages:
   home:
     hero:
