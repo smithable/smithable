@@ -8,7 +8,7 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
 - `pnpm install`, then:
   - `pnpm build`: `tsc -b` over the project references in `tsconfig.json`.
   - `pnpm test`: Vitest, tests live next to the code as `src/**/*.test.ts`.
-  - `pnpm lint`: Biome lint and format check. `pnpm fix` applies fixes.
+  - `pnpm lint`: Biome lint and format check, and `scripts/kit-words.mjs` (the app kit writes no visible English of its own: its words are in `words/<language>.ts`). `pnpm fix` applies Biome's fixes.
   - `pnpm test:apps`: generates every example in `examples/` into a temporary directory, then type-checks, builds, serves and regenerates it, one process per example in parallel. `pnpm test:apps:one <example>` runs one.
   - `pnpm test:studio`: runs `smithable studio` on a new CRM and makes the M3–M5 changes in both modes in a real browser.
   - `pnpm test:container` (needs Docker): builds the CRM image and checks that data survives replacing the container. Not part of `check`.
