@@ -1,0 +1,50 @@
+# The Studio guide: a short tour of the places
+
+Design, 2026-10-06 (Fable). Johan's idea (2026-10-03): a walkthrough that shows the places of Studio and says what each means, starting with the notice that the preview's records are samples. Status: a proposal; A builds it on Johan's word.
+
+## 1. What it is
+
+Five stops, each a small card beside the thing it is about, with one or two sentences, **Next** and **Skip**; the last says **Done**. The rest of the screen dims a little and takes no clicks while a card is open, with a cut-out around the thing, so a visitor sees where they are and nothing else moves. The tour takes under a minute; nothing in it has to be done, only read.
+
+| Stop | Beside | Says |
+|---|---|---|
+| 1 | The preview and its samples notice | This is your app, running. The records in it are samples for trying it; your published app starts empty. |
+| 2 | "What it does" | Your app in plain words, kept true as it changes. Click a sentence to change that part; the buttons add a record, a page, an action. |
+| 3 | The change box | Describe a change in your own words, or ask a question about the app. A change is checked and shown before it is kept, and every change can be undone. |
+| 4 | The Look tab | Colors, type, the app's language and how lists and forms are laid out: the look is separate from what the app does. |
+| 5 | Publish and share | When it does what you want, publish it: an address people can open, with sign-in and backups. Until then, nothing leaves this page. |
+
+Code mode has no tour of its own: its editor is for people who read a spec, and the Problems list and the completions are the guide there. The header gets a **Guide** link that starts the tour again at any time, in Builder.
+
+## 2. When it shows
+
+- The first time a browser opens a project's Studio in Builder, once the project is loaded and, for a described app, after the making screen has handed over (docs/design/while-it-is-made.md): never over the stage. The hosted beta's claim lands here too.
+- Not again for that project in that browser after Done or Skip (`localStorage`, `guideDone:<app>`); a new project starts it once more, since the first visit to any app is what the tour is for. Through **Guide** whenever wanted.
+- Never in Code mode, never in the Studio tests except the one that walks it, and never when `?guide=off` is in the address (the screenshot scripts).
+
+## 3. How it behaves
+
+- A card is a `dialog` with its stop's title; focus moves into it and back to where it was at the end; **Esc** skips; **Enter** is Next. The thing it is about is named for screen readers (`aria-describedby` from the card), and the dimmed rest is `aria-hidden` while the tour runs.
+- On a phone the panels are a horizontal row that snaps (studio-v2.md §1): a stop scrolls its panel into view first, then opens its card; the card sits below the thing or above it, whichever has room, and never off the screen.
+- The tab a stop needs is opened for it (the Look tab for stop 4) and left as the visitor had it when the tour ends.
+- A stop whose thing is not on the screen (the publish button hidden by a setting, a panel the visitor closed) is left out, never shown as a card beside nothing.
+
+## 4. Where its texts live
+
+Studio's words are inline English in the beta (language.md §4: Studio stays English for now). The tour's stops are one table in `apps/studio/src/guide.ts`: the anchor's name, the title and the sentences. When Studio gets a language, that table is what is translated.
+
+## 5. How it stays true when Studio changes
+
+- Each thing a stop is about carries `data-guide="<name>"` (`preview`, `summary`, `change`, `look`, `publish`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
+- A unit test holds the two lists together: every stop's anchor appears in the components, and every `data-guide` in the components has a stop. A new place in Studio either gets a stop in the same change or has no attribute.
+- The Studio test walks the tour once on a fresh project: five cards in order, each beside a visible anchor, Done ends it and the project is as it was; **Guide** starts it again; a reload shows nothing.
+
+## 6. What it is not
+
+No video, no pointer animations, no checklist of things to try, no counting what the visitor read; no tour inside a form; nothing sent to the service. One tour, five sentences, found again from the header.
+
+## 7. Steps (A)
+
+1. `guide.ts` with the stops; `data-guide` on the five anchors; the overlay and the cards (one component, `Guide.tsx`), the first-visit rule and **Guide** in the header; `?guide=off`.
+2. The unit test of the two lists and the Studio test's walk; `scripts/theme-sheet.mjs` and `scripts/starter-shots.mjs` open Studio with `?guide=off` where they do.
+3. docs/site/start.md: one line, "a short tour shows you around the first time; Guide in the header shows it again".
