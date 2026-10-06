@@ -34,13 +34,27 @@ export function targetSettings(target: string): { url: string; secret: string } 
 }
 
 /**
- * Whether an address (IPv4 or IPv6) is the machine itself or a private, shared or link-local
- * network: a target there could reach what only the app's own machine should (§4.1's guard).
+ * The IPv4 address inside an IPv6 one that only carries it (::ffff:a.b.c.d, ::ffff:7f00:1, the
+ * NAT64 prefix 64:ff9b::, the old ::a.b.c.d), as a.b.c.d; or nothing.
+ */
+function carriedV4(ip: string): string | undefined {
+  const m =
+    /^(?:::ffff:|64:ff9b::|::)(?:(\d+\.\d+\.\d+\.\d+)|([0-9a-f]{1,4}):([0-9a-f]{1,4}))$/i.exec(ip);
+  if (!m) return undefined;
+  if (m[1]) return m[1];
+  const [hi, lo] = [Number.parseInt(m[2] ?? "", 16), Number.parseInt(m[3] ?? "", 16)];
+  return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+}
+
+/**
+ * Whether an address (IPv4 or IPv6) is the machine itself or a private, shared, link-local or
+ * reserved network: a target there could reach what only the app's own machine should (§4.1's
+ * guard). An IPv6 address that carries an IPv4 one is judged by that.
  */
 export function privateAddress(ip: string): boolean {
-  const v4 = /^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.(\d+)$/i.exec(ip);
+  const v4 = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(carriedV4(ip) ?? ip);
   if (v4) {
-    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    const [a, b, c] = [Number(v4[1]), Number(v4[2]), Number(v4[3])];
     return (
       a === 0 ||
       a === 10 ||
@@ -49,6 +63,10 @@ export function privateAddress(ip: string): boolean {
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
+      (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      (a === 198 && b === 51 && c === 100) ||
+      (a === 203 && b === 0 && c === 113) ||
       a >= 224
     );
   }
@@ -59,6 +77,10 @@ export function privateAddress(ip: string): boolean {
     v6.startsWith("fc") ||
     v6.startsWith("fd") ||
     /^fe[89ab]/.test(v6) ||
-    v6.startsWith("ff")
+    v6.startsWith("ff") ||
+    // Documentation addresses, and any other IPv4 carrier not read above.
+    v6.startsWith("2001:db8:") ||
+    v6.startsWith("::ffff:") ||
+    v6.startsWith("64:ff9b:")
   );
 }

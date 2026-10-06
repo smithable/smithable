@@ -158,8 +158,24 @@ test("a target's settings, and the addresses the guard refuses", () => {
     "fd00::1",
     "fe80::1",
     "::ffff:127.0.0.1",
+    // IPv4 carried in IPv6, as URL and dns.lookup write it (C, #404): loopback, the metadata
+    // service, a home network; and NAT64, the old form, more reserved ranges.
+    "::ffff:7f00:1",
+    "::ffff:a9fe:a9fe",
+    "::ffff:c0a8:101",
+    "64:ff9b::7f00:1",
+    "::7f00:1",
+    "198.18.0.1",
+    "203.0.113.5",
+    "2001:db8::1",
   ])
     expect(privateAddress(ip), ip).toBe(true);
-  for (const ip of ["93.184.216.34", "172.32.0.1", "2606:4700::1111", "8.8.8.8"])
+  for (const ip of [
+    "93.184.216.34",
+    "172.32.0.1",
+    "2606:4700::1111",
+    "8.8.8.8",
+    "::ffff:5db8:d822",
+  ])
     expect(privateAddress(ip), ip).toBe(false);
 });
