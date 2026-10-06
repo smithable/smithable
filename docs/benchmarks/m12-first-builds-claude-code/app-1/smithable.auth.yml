@@ -3,8 +3,9 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home, schedule]
+  pages: [home, schedule, privacy]
   read: [ClassType, Instructor, Session]
+  create: [Message]
 roles:
   admin:
     description: Studio staff. Manage the schedule, classes and teachers.

@@ -1,12 +1,3 @@
 smithableUx: 0.1
-pages:
-  talks:
-    table:
-      sort: startsAt
-  speakers:
-    table:
-      view: cards
 theme:
   preset: modern
-  brand:
-    primary: "#4f46e5"
