@@ -644,6 +644,7 @@ export function specRange(text: string, concept: string): [number, number] | und
     field: "models",
     page: "pages",
     action: "actions",
+    outgoing: "outgoing",
     query: "queries",
   }[kind];
   if (!section) return;

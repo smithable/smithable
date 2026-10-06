@@ -8,6 +8,7 @@ import {
   humanize,
   type LandingSection,
   type ModelIR,
+  outgoingText,
   type PageIR,
   type PatternKind,
   type PatternOf,
@@ -290,6 +291,22 @@ export function summarize(
           : standard(action)),
         ...(action.allow ? [`Only ${who(action.allow)} can use it.`] : []),
         ...(action.rules ?? []).map((r) => `Rule: ${r.text}`),
+      ],
+    });
+  }
+
+  // Who is told when something happens to a record: one line each, in the content file's words.
+  for (const o of ir.outgoing) {
+    const subject = content.outgoing[o.name]?.subject;
+    sections.push({
+      concept: `outgoing:${o.name}`,
+      title: humanize(o.name),
+      sentences: [
+        outgoingText(o, (name) => {
+          const model = modelNamed(name);
+          return model ? label(model).toLowerCase() : humanize(name).toLowerCase();
+        }),
+        ...(subject ? [`The mail's subject is “${subject}”.`] : []),
       ],
     });
   }

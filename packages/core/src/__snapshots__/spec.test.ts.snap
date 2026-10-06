@@ -243,6 +243,7 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "team",
@@ -623,6 +624,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "home",
@@ -1230,6 +1232,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "actions": [
@@ -1638,6 +1641,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "home",
@@ -1901,6 +1905,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "home",
@@ -2072,6 +2077,7 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "home",
@@ -2519,6 +2525,7 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "home",
@@ -2756,6 +2763,7 @@ exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "access": [
@@ -2879,6 +2887,7 @@ exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "actions": [
@@ -3090,6 +3099,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
       "pages": [],
     },
   ],
+  "outgoing": [],
   "pages": [],
   "queries": [],
   "specVersion": "0.1",
@@ -3373,6 +3383,7 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
       "pages": [],
     },
   ],
+  "outgoing": [],
   "pages": [],
   "queries": [],
   "specVersion": "0.1",
@@ -3529,6 +3540,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "contact": {
@@ -3664,6 +3676,7 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "customers",
@@ -3709,6 +3722,7 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
       "pages": [],
     },
   ],
+  "outgoing": [],
   "pages": [],
   "queries": [],
   "specVersion": "0.1",
@@ -3780,6 +3794,7 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "home",
@@ -4026,6 +4041,7 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "id": "customers",
@@ -4398,6 +4414,7 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
       ],
     },
   ],
+  "outgoing": [],
   "pages": [
     {
       "actions": [

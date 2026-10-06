@@ -150,6 +150,7 @@ export {
   sortableBy,
 } from "./sections/list-keys.js";
 export { type NameKind, nameProblem } from "./sections/names.js";
+export { outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";
 export { EDITABLE_FILES, type EditableFile, emptyFile } from "./sections/spec-operations.js";
 export type { SensitiveKind } from "./sensitive.js";

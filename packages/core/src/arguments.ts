@@ -60,6 +60,8 @@ export function namesFor(
       const field = modelOf(ref)?.fields.find((f) => f.name === one(ref.field));
       return field?.type.kind === "choice" ? field.type.values.map((v) => [v, humanize(v)]) : [];
     }
+    case "outgoing":
+      return ir.outgoing.map((o) => [o.name, humanize(o.name)]);
     case "section": {
       const page = ir.pages.find((p) => p.id === one(ref.page));
       return page?.pattern.kind === "landing"

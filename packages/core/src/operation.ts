@@ -77,7 +77,7 @@ export interface Note {
  * a choice value of a field, a landing section of a page. `label` is how Builder asks for it.
  */
 export type ArgRef = { label?: string } & (
-  | { ref: "model" | "page" | "menu" | "accessTarget" }
+  | { ref: "model" | "page" | "menu" | "accessTarget" | "outgoing" }
   /** Roles; with `target`, also "owner" where that argument's rule has an owner to check. */
   | { ref: "role"; target?: string }
   | { ref: "field"; model: string }
@@ -97,6 +97,7 @@ const REF_HINTS: Record<ArgRef["ref"], string> = {
   field: "A field of that kind of record, e.g. email.",
   choiceValue: "One of the choice field's values.",
   section: "A section of that landing page.",
+  outgoing: "An entry under outgoing, e.g. bookingMade.",
 };
 
 /** What a form says under an argument that names something, when its schema says nothing. */

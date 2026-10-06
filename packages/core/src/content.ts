@@ -20,6 +20,8 @@ export interface ContentIR {
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
+  /** An outgoing mail's subject and the text above the record (integrations.md §4.1b). */
+  outgoing: Record<string, { subject?: string; text?: string }>;
   /** The consent bar's own words (docs/design/analytics.md §3), where the kit's are not wanted. */
   consent?: { text?: string; accept?: string; decline?: string };
 }
@@ -116,7 +118,7 @@ export interface FieldContent {
 export const CONTENT_VERSION = "0.1";
 
 export function emptyContent(): ContentIR {
-  return { language: LANGUAGES[0], models: {}, pages: {}, menus: {} };
+  return { language: LANGUAGES[0], models: {}, pages: {}, menus: {}, outgoing: {} };
 }
 
 /** Parses smithable.content.yml and checks every reference against the spec. */
@@ -162,7 +164,7 @@ export function validateContent(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.content.yml", {
-    allowed: ["smithableContent", "language", "models", "pages", "menus", "consent"],
+    allowed: ["smithableContent", "language", "models", "pages", "menus", "consent", "outgoing"],
     later: ["actions"],
   });
 
@@ -204,6 +206,20 @@ export function validateContent(
         "menu",
       )) {
         content.menus[menu.key] = readTexts(ctx, menu.value, `menu "${menu.key}"`, ["label"]);
+      }
+    }
+    if (key === "outgoing") {
+      for (const o of named(
+        ctx,
+        value,
+        `"outgoing"`,
+        ir.outgoing.map((x) => x.name),
+        "outgoing",
+      )) {
+        content.outgoing[o.key] = readTexts(ctx, o.value, `outgoing "${o.key}"`, [
+          "subject",
+          "text",
+        ]);
       }
     }
   }
