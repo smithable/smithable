@@ -33,7 +33,16 @@ function cardAt(box: DOMRect): { top: number; left: number } {
   };
 }
 
-export function Guide({ app, onEnd }: { app: string; onEnd: () => void }) {
+export function Guide({
+  app,
+  onEnd,
+  onCode,
+}: {
+  app: string;
+  onEnd: () => void;
+  /** The first stop's Code: the tour ends and Studio switches to Code mode (remembered). */
+  onCode: () => void;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [stops] = useState(present);
   const [at, setAt] = useState(0);
@@ -124,20 +133,42 @@ export function Guide({ app, onEnd }: { app: string; onEnd: () => void }) {
           <p id="guide-text" className="text-sm text-neutral-700">
             {current.stop.text}
           </p>
-          <div className="flex justify-end gap-2">
-            {!last && (
-              <Button variant="ghost" onClick={end}>
-                Skip
+          {current.stop.choice ? (
+            // How the person wants to work: No code goes on with the tour, Code switches to it.
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  end();
+                  onCode();
+                }}
+              >
+                Code
               </Button>
-            )}
-            <Button
-              // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
-              autoFocus
-              onClick={() => (last ? end() : setAt(at + 1))}
-            >
-              {last ? "Done" : "Next"}
-            </Button>
-          </div>
+              <Button
+                // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
+                autoFocus
+                onClick={() => setAt(at + 1)}
+              >
+                No code
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-end gap-2">
+              {!last && (
+                <Button variant="ghost" onClick={end}>
+                  Skip
+                </Button>
+              )}
+              <Button
+                // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
+                autoFocus
+                onClick={() => (last ? end() : setAt(at + 1))}
+              >
+                {last ? "Done" : "Next"}
+              </Button>
+            </div>
+          )}
         </section>
       )}
     </dialog>

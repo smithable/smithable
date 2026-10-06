@@ -7,9 +7,17 @@ export interface Stop {
   anchor: string;
   title: string;
   text: string;
+  /** The first stop asks how the person wants to work: No code goes on, Code switches to it. */
+  choice?: boolean;
 }
 
 export const STOPS: Stop[] = [
+  {
+    anchor: "mode",
+    title: "How do you want to work?",
+    text: "No code: change your app in plain words and forms. Code: edit its definition as text, with every change also as a form. You can switch here at any time.",
+    choice: true,
+  },
   {
     anchor: "preview",
     title: "Your app, running",
@@ -19,6 +27,11 @@ export const STOPS: Stop[] = [
     anchor: "summary",
     title: "What it does",
     text: "Your app in plain words, kept true as it changes. Click a sentence to change that part; the buttons add a record, a page, an action.",
+  },
+  {
+    anchor: "details",
+    title: "Details",
+    text: "Choose Select above the preview and click a part of the app, or click a sentence in What it does: its details and forms open here. With nothing chosen, here are the app's own details.",
   },
   {
     anchor: "change",
