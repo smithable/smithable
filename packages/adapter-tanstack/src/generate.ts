@@ -87,6 +87,12 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  // The spec can say who is told when something happens (integrations.md §4.1b); the app does
+  // not send it yet. Refused here rather than promised and never sent.
+  if (ir.outgoing.length)
+    throw new Error(
+      `The app cannot send "${ir.outgoing[0]?.name}" yet: outgoing mail is not built in the generated app (docs/design/integrations.md §4.1b).`,
+    );
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),
