@@ -7,6 +7,7 @@ import {
   type FieldIR,
   FONTS,
   humanize,
+  LANGUAGES,
   type PageUx,
   pageModel,
   SECTION_LOOKS,
@@ -17,6 +18,12 @@ import type { Spec } from "../engine";
 import { ICON_CHOICES } from "../properties";
 import { cx, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+
+/** Each language the kit has words in, by its own name. */
+const LANGUAGE_NAMES: Record<(typeof LANGUAGES)[number], string> = {
+  en: "English",
+  sv: "Svenska",
+};
 
 const TONE_CHOICES: [string, string][] = [
   ["neutral", "Gray (neutral)"],
@@ -129,6 +136,19 @@ export function Look({
           ]}
           onChange={(motion) => run("setTheme", { motion })}
         />
+      </Group>
+      <Group title="Language">
+        <Select
+          aria-label="The app's language"
+          value={spec.content?.language ?? LANGUAGES[0]}
+          onChange={(e) => void run("setLanguage", { language: e.target.value })}
+          options={LANGUAGES.map((l) => [l, LANGUAGE_NAMES[l]])}
+        />
+        <p className="text-xs text-neutral-500">
+          What the app says by itself (buttons, messages, mails) follows it; your own texts stay as
+          you wrote them. In another language than English, give each kind of record its name for
+          several, or the app makes it by an English rule.
+        </p>
       </Group>
       <Group title="Pages">
         {ir.pages.map((page) => {
