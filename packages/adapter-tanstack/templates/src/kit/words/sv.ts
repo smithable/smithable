@@ -6,6 +6,7 @@
 import type { Words } from "./en";
 
 export const w = {
+  addFiles: "Lägg till filer",
   aFirstCall: "Ett första anrop:",
   actAs: "Agera som",
   actions: "Åtgärder",
@@ -37,6 +38,7 @@ export const w = {
   cannotBeUndone: "Det här går inte att ångra.",
   changes: "ändringar",
   checkingPlaces: "Kontrollerar platser…",
+  chooseFile: "Välj en fil",
   choosePicture: "Välj en bild",
   choosePictures: "Välj bilder",
   close: "Stäng",
@@ -71,6 +73,9 @@ export const w = {
   errorTitle: "Något gick fel",
   everyone: "Alla",
   fieldsMarked: "Fält märkta med",
+  fileKinds: "Välj en PDF, ett dokument, ett kalkylark, en text eller en bild.",
+  fileNotAdded: "Filen kunde inte läggas till.",
+  fileTooLarge: "Filen är för stor (högst 10 MB).",
   footer: "Sidfot",
   forgetInLog: "Glöm i loggen",
   from: "Från",
@@ -212,8 +217,11 @@ export const w = {
   ) =>
     `${by} har bjudit in dig till ${app} som ${role}.\n\nLogga in med ${email} här:\n${link}\n\nInbjudan gäller till ${until}.`,
   keyNamed: (name: string) => `nyckeln ”${name}”`,
+  moveEarlier: (name: string) => `Flytta ${name} tidigare`,
+  moveLater: (name: string) => `Flytta ${name} senare`,
   newOne: (label: string) => `Lägg till ${label}`,
   openApp: (app: string) => `Öppna ${app}`,
+  removeIt: (name: string) => `Ta bort ${name}`,
   welcomeTo: (app: string) => `Välkommen till ${app}`,
   you: "(du)",
   youAreBooked: "Du är bokad",

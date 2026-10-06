@@ -120,6 +120,10 @@ function sampleValue(
     case "pictures":
       // The seed copies a sample picture in, when the app has any (see seedModule).
       return null;
+    case "file":
+    case "files":
+      // Sample data has no documents: someone sends them.
+      return null;
   }
 }
 

@@ -35,6 +35,8 @@ export const KINDS: Record<string, string> = {
   markdown: "formatted text",
   picture: "picture",
   pictures: "pictures",
+  file: "a document",
+  files: "documents",
   int: "a whole number",
   decimal: "a number",
   money: "an amount",

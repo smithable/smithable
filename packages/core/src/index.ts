@@ -68,12 +68,17 @@ export { formatFormula, parseFormula } from "./formula.js";
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
+  FILES_MAX,
+  isFile,
+  isFiles,
   isPicture,
   isPictures,
+  isUpload,
   PICTURES_MAX,
   SCALAR_TYPES,
   SECTION_KINDS,
   storageOf,
+  storesFiles,
   storesPictures,
   typeKey,
   USER_MODEL,

@@ -221,6 +221,15 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "attachment",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "file",
+          },
+          "unique": false,
+        },
       ],
       "name": "Note",
     },
@@ -1488,6 +1497,15 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
               "paid",
               "overdue",
             ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "contract",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "file",
           },
           "unique": false,
         },

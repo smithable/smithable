@@ -9,16 +9,22 @@ import {
   asksWith,
   assistantOffer,
   type ContentIR,
+  FILES_MAX,
   type FieldIR,
+  isFiles,
+  isPictures,
+  isUpload,
   kebab,
   type ModelIR,
+  PICTURES_MAX,
   plural,
   type SpecIR,
   type StandardActionIR,
-  storesPictures,
+  storesFiles,
 } from "@smithable/core";
 import { actionNames, askedFields } from "./actions.js";
 import {
+  dataKey,
   HEADER,
   literal,
   modelNamed,
@@ -30,11 +36,12 @@ import {
 } from "./shared.js";
 
 /**
- * The fields a program reads and writes: everything but pictures (not in the API yet) and the
- * lists of related records, which are reached from the other side (their own model's route).
+ * The fields a program reads and writes as JSON: everything but pictures and documents (sent and
+ * fetched at their own address, /api/v1/<models>/<id>/<field>) and the lists of related records,
+ * which are reached from the other side (their own model's route).
  */
 const apiFields = (model: ModelIR) =>
-  model.fields.filter((f) => !storesPictures(f) && !(f.type.kind === "relation" && f.type.many));
+  model.fields.filter((f) => !isUpload(f) && !(f.type.kind === "relation" && f.type.many));
 const entered = (model: ModelIR) =>
   apiFields(model).filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many));
 const kind = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
@@ -454,6 +461,68 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
         apiCall(request, async (viewer) => {
           const row = await found(viewer, params.id);
           await ${n.data}.remove(viewer, row.id);
+        }),
+    },
+  },
+});
+`;
+    // Its pictures and documents: fetched, and sent as the body (docs/design/attachments.md §2).
+    const uploads = model.fields.filter(isUpload);
+    if (uploads.length)
+      files[`src/routes/api/v1/${path}/$id.$field.ts`] =
+        `${HEADER}// A ${n.label.toLowerCase()}'s pictures and documents, for programs with a key: GET one (?n= for the n-th of
+// several), PUT one as the body (a document's name in X-File-Name, a picture's description in
+// X-Alt); a field of several gets it added.
+import { createFileRoute } from "@tanstack/react-router";
+import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
+import {
+  BadFile,
+  BadPicture,
+  FILE_MAX_BYTES,
+  PICTURE_MAX_BYTES,
+  saveFile,
+  savePicture,
+  uploadResponse,
+} from "#/kit/uploads";
+
+const FIELDS: Record<string, { kind: "picture" | "file"; key: string; many: boolean; max: number }> = {
+${uploads.map((f) => `  ${JSON.stringify(f.name)}: { kind: "${storesFiles(f) ? "file" : "picture"}", key: ${JSON.stringify(dataKey(f))}, many: ${isFiles(f) || isPictures(f)}, max: ${isFiles(f) ? FILES_MAX : (f.max ?? PICTURES_MAX)} },`).join("\n")}
+};
+
+async function target(viewer: Parameters<typeof ${n.data}.get>[0], id: string, name: string) {
+  const field = FIELDS[name];
+  if (!field) throw new NotFound("This ${n.label.toLowerCase()} has no picture or document by that name.");
+  const row = await ${n.data}.get(viewer, Number(id));
+  if (!row) throw new NotFound("No such ${n.label.toLowerCase()}, or not one this key may read.");
+  return { field, row, value: (row as Record<string, unknown>)[field.key] };
+}
+
+export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
+  server: {
+    handlers: {
+      GET: ({ request, params }) =>
+        fileCall(request, async (viewer) => {
+          const { field, value } = await target(viewer, params.id, params.field);
+          const n = Number(new URL(request.url).searchParams.get("n") ?? 0);
+          return uploadResponse(request, field.kind, field.many ? (Array.isArray(value) ? value[n] : undefined) : value, false);
+        }${reads === "openApiCall" ? ", true" : ""}),
+      PUT: ({ request, params }) =>
+        fileCall(request, async (viewer) => {
+          const { field, row, value } = await target(viewer, params.id, params.field);
+          const list = Array.isArray(value) ? value : [];
+          if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
+          const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
+          let stored: unknown;
+          try {
+            stored = field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name")) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"));
+          } catch (error) {
+            if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
+            throw error;
+          }
+          await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, stored] : stored } as never);
+          return stored;
         }),
     },
   },
