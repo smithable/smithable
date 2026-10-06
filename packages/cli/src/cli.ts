@@ -99,6 +99,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "op")
     return op(values.dir ?? ".", io, args[0], operationWords(argv).slice(1), {
       yes: values.yes === true,
+      ...(values.setup ? { setup: true } : {}),
     });
   if (command === "undo") return undo(values.dir ?? ".", io);
   if (command === "redo") return redo(values.dir ?? ".", io);
@@ -301,6 +302,7 @@ const CONFIG = {
     container: { type: "string" },
     url: { type: "string" },
     yes: { type: "boolean" },
+    setup: { type: "boolean" },
     dir: { type: "string" },
     json: { type: "boolean" },
     implementation: { type: "boolean" },
@@ -326,13 +328,13 @@ function parse(argv: string[]) {
   ) as ReturnType<typeof parseArgs<typeof CONFIG>>;
 }
 
-/** The words after `op`, without the options every command has (--yes, --dir, --help). */
+/** The words after `op`, without the options every command has (--yes, --setup, --dir, --help). */
 function operationWords(argv: string[]): string[] {
   const words: string[] = [];
   for (let i = argv.indexOf("op") + 1; i < argv.length; i++) {
     const word = argv[i] as string;
     if (word === "--dir") i++;
-    else if (!/^(--yes|--help|-h|--dir=.*)$/.test(word)) words.push(word);
+    else if (!/^(--yes|--setup|--help|-h|--dir=.*)$/.test(word)) words.push(word);
   }
   return words;
 }
