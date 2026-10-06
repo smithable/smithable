@@ -2,6 +2,9 @@
 // ports, and prints each example's lines as they come, prefixed with its name, so a run that
 // stops shows where. Same checks as scripts/test-apps.mjs, which this runs; about as long as
 // the slowest example. Stopping this stops them, and they stop their servers.
+// TEST_APPS_CONCURRENCY limits how many run at once (default: all): the self-hosted CI runner
+// shares the machine with the sessions' own work, and a browser step waiting for a page to
+// hydrate times out when every example builds and serves at the same time beside them.
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -30,9 +33,24 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
     process.exit(130);
   });
 const width = Math.max(...examples.map((e) => e.length));
-const results = await Promise.all(
+const atOnce = Math.max(1, Number(process.env.TEST_APPS_CONCURRENCY) || examples.length);
+/** Runs `tasks` with at most `atOnce` in flight, keeping their order in the results. */
+async function limited(tasks) {
+  const results = new Array(tasks.length);
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(atOnce, tasks.length) }, async () => {
+      while (i < tasks.length) {
+        const at = i++;
+        results[at] = await tasks[at]();
+      }
+    }),
+  );
+  return results;
+}
+const results = await limited(
   examples.map(
-    (example, i) =>
+    (example, i) => () =>
       new Promise((resolve) => {
         const child = spawn("node", [join(repo, "scripts/test-apps.mjs"), example], {
           cwd: repo,
