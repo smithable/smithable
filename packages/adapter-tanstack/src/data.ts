@@ -175,6 +175,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 ${SCHEMA_IMPORT}
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
@@ -1215,7 +1216,7 @@ export function textBounds(field: FieldIR, visitors = false): string {
         ? long(TEXT_MAX.markdown)
         : TEXT_MAX.string);
   const min = field.min ?? (field.required ? 1 : 0);
-  return `${field.required ? ".trim()" : ""}${min > 0 ? `.min(${min}, ${JSON.stringify(min === 1 ? "Required" : `At least ${min} characters`)})` : ""}.max(${max}, "At most ${max.toLocaleString("en")} characters")`;
+  return `${field.required ? ".trim()" : ""}${min > 0 ? `.min(${min}, ${min === 1 ? "w.required" : `w.atLeastCharacters(${min})`})` : ""}.max(${max}, w.atMostCharacters(${max}))`;
 }
 
 /** Zod refinements that go beyond the column types: formats, required text, bounds. */
@@ -1226,13 +1227,13 @@ export function refinement(field: FieldIR, visitors = false): string | undefined
     `${field.min !== undefined ? `.min(${field.min * scale})` : ""}${field.max !== undefined ? `.max(${field.max * scale})` : ""}`;
   switch (field.type.name) {
     case "email":
-      return `z.email("Enter a valid email address")${optional}`;
+      return `z.email(w.enterValidEmail)${optional}`;
     case "url":
-      return `z.url("Enter a valid web address")${optional}`;
+      return `z.url(w.enterValidUrl)${optional}`;
     case "phone":
-      return `(s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, "Enter a valid phone number")`;
+      return `(s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone)`;
     case "date":
-      return `(s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")`;
+      return `(s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate)`;
     case "string":
     case "text":
     case "markdown":

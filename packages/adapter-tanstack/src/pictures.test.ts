@@ -298,7 +298,7 @@ pages:
   expect(list).toContain('eq(schema.items.ownerId, viewer?.id ?? "")');
   expect(list).not.toContain('kind: "mine"');
   expect(list).not.toContain("<Filters");
-  expect(list).toContain("New item");
+  expect(list).toContain('w.newOne("item")');
 });
 
 test("a sample row without a field that has a default (added since) seeds the default, not null", () => {
