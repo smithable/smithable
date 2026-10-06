@@ -813,6 +813,18 @@ try {
     await page.getByRole("button", { name: "Your app", exact: true }).first().click();
     await page.getByRole("tab", { name: "Look" }).click();
     const look = (name) => page.getByRole("region", { name });
+    // The app's language: the content file says it, and English is saying nothing.
+    const content = () => readFileSync(join(dir, "smithable.content.yml"), "utf8");
+    await look("Language").getByLabel("The app's language").selectOption("sv");
+    for (let i = 0; !/^language: sv$/m.test(content()); i++) {
+      if (i === 60) throw new Error("the language was not set");
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    await look("Language").getByLabel("The app's language").selectOption("en");
+    for (let i = 0; /^language:/m.test(content()); i++) {
+      if (i === 60) throw new Error("English did not take the language line away");
+      await new Promise((r) => setTimeout(r, 1000));
+    }
     await look("Font, density and motion").getByRole("button", { name: "Comfortable" }).click();
     await look("Font, density and motion")
       .getByRole("button", { name: "Comfortable", pressed: true })
