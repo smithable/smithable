@@ -40,7 +40,7 @@ import {
  * fetched at their own address, /api/v1/<models>/<id>/<field>) and the lists of related records,
  * which are reached from the other side (their own model's route).
  */
-const apiFields = (model: ModelIR) =>
+export const apiFields = (model: ModelIR) =>
   model.fields.filter((f) => !isUpload(f) && !(f.type.kind === "relation" && f.type.many));
 const entered = (model: ModelIR) =>
   apiFields(model).filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many));
@@ -63,7 +63,7 @@ export function apiParts(ir: SpecIR, auth: AuthIR, t: Texts) {
 }
 
 /** A value as the API gives it, from a record's (code on `row`). */
-function readCode(f: FieldIR): string {
+export function readCode(f: FieldIR): string {
   if (f.type.kind === "relation") return `row.${f.name}Id ?? null`;
   switch (kind(f)) {
     case "money":
