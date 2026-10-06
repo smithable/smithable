@@ -40,8 +40,13 @@ async function step(name, fn) {
   } catch (error) {
     const shot = join(root, "failure.png");
     await page.screenshot({ path: shot }).catch(() => {});
+    // What Code mode's Problems list said, for a failure the picture alone cannot explain (CI).
+    const problems = await page
+      .getByRole("list", { name: "Problems" })
+      .innerText({ timeout: 1000 })
+      .catch(() => "");
     console.log(
-      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}`,
+      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}${problems ? `\n    Problems: ${problems.replace(/\n+/g, " | ")}` : ""}`,
     );
     failed = true;
     throw error;
