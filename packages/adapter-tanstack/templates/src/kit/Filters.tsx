@@ -66,7 +66,7 @@ export function Filters({
             onClick={() => setOpen(!open)}
             className="order-1 md:hidden"
           >
-            <SlidersHorizontal aria-hidden className="size-4" /> Filters
+            <SlidersHorizontal aria-hidden className="size-4" /> {w.filters}
             {active.length > 0 && ` (${active.length})`}
           </Button>
         )}
@@ -248,24 +248,24 @@ function Range({
       <legend className="text-sm font-semibold">{filter.label}</legend>
       <div className="flex items-center gap-2">
         <Label htmlFor={`${id}-from`} className="sr-only">
-          {filter.label} from
+          {w.rangeFrom(filter.label)}
         </Label>
         <Input
           id={`${id}-from`}
           type={type}
-          placeholder="From"
+          placeholder={w.from}
           value={text.from}
           onChange={(e) => setText({ ...text, from: e.target.value })}
           className="w-32"
         />
         <span aria-hidden>–</span>
         <Label htmlFor={`${id}-to`} className="sr-only">
-          {filter.label} to
+          {w.rangeTo(filter.label)}
         </Label>
         <Input
           id={`${id}-to`}
           type={type}
-          placeholder="To"
+          placeholder={w.to}
           value={text.to}
           onChange={(e) => setText({ ...text, to: e.target.value })}
           className="w-32"

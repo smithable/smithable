@@ -92,7 +92,7 @@ export function Combobox({
         {value && !required && (
           <button
             type="button"
-            aria-label="Clear"
+            aria-label={w.clear}
             className="flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => choose("")}
@@ -107,7 +107,7 @@ export function Combobox({
       </div>
       {open && (
         <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-card py-1 shadow-lg">
-          <div id={list} role="listbox" aria-label="Options">
+          <div id={list} role="listbox" aria-label={w.options}>
             {shown.map((option, i) => (
               <div
                 key={option.value}

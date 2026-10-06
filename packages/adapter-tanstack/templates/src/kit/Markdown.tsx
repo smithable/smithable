@@ -53,9 +53,7 @@ export function MarkdownEditor({ value, onChange, record: _, ...control }: Field
       ) : (
         <Textarea {...control} rows={10} value={value} onChange={(e) => onChange(e.target.value)} />
       )}
-      <p className="text-xs text-muted-foreground">
-        Markdown: **bold**, *italic*, ## a heading, - a list, [a link](https://…)
-      </p>
+      <p className="text-xs text-muted-foreground">{w.markdownHint}</p>
     </div>
   );
 }
