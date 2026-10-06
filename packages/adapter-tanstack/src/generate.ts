@@ -389,7 +389,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       // The public site's menu and contact details, for its landing pages and public blogs.
       ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
-      generated("src/routes/__root.tsx", rootRoute(ir, t, auth, ux)),
+      generated(
+        "src/routes/__root.tsx",
+        rootRoute(ir, t, auth, ux, options.analytics, options.content?.consent),
+      ),
       generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),
       generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
       ...(ir.pages.some((p) => p.route === "/")

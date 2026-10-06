@@ -4343,6 +4343,7 @@ test("the session cookie's name and attributes", async () => {
         },
       );
 
+    if (example === "status") await analyticsFlow(dir, port);
     step("regenerating changes nothing", () => {
       const out = run("node", [cli, "generate", dir], repo);
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
@@ -4364,6 +4365,108 @@ test("the session cookie's name and attributes", async () => {
     }
     // Continue with the next example.
   }
+}
+
+/**
+ * A counter of visits (docs/design/analytics.md), in a production build: Plausible's script is in
+ * the page and allowed by the policy, with no bar; Google's waits for Accept in the consent bar,
+ * and Decline is remembered. The providers' addresses answer from here, never the real ones.
+ */
+async function analyticsFlow(dir, port) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  /** The app built with the counter, served; `check` gets the address and a browser. */
+  const withCounter = async (provider, id, check) => {
+    ok(smithable(dir, "op", "setAnalytics", provider, id));
+    let stop;
+    const browser = await chromium.launch();
+    try {
+      run("pnpm", ["build"], dir);
+      stop = await serve(dir, port, "production");
+      await check(`http://localhost:${port}`, browser);
+    } finally {
+      await browser.close();
+      stop?.();
+      ok(smithable(dir, "undo"));
+    }
+  };
+  /** A page whose provider addresses are answered here, with what it asked of them. */
+  const page = async (context) => {
+    const asked = [];
+    const tab = await context.newPage();
+    await tab.route(/plausible\.io|googletagmanager\.com|google-analytics\.com/, (route) => {
+      asked.push(route.request().url());
+      return route.fulfill({ contentType: "text/javascript", body: "" });
+    });
+    return { tab, asked };
+  };
+  await asyncStep(
+    "Plausible in a production build: its script is in the page and allowed, and no consent bar",
+    () =>
+      withCounter("plausible", "status.example.com", async (base, browser) => {
+        const policy = (await fetch(`${base}/sign-in`)).headers.get("content-security-policy");
+        if (!/script-src [^;]*https:\/\/plausible\.io/.test(policy ?? ""))
+          throw new Error(`the policy: ${policy}`);
+        if (/googletagmanager/.test(policy ?? "")) throw new Error("Google is allowed too");
+        const { tab, asked } = await page(await browser.newContext());
+        await tab.goto(`${base}/sign-in`);
+        await tab.waitForSelector("body[data-hydrated]");
+        await tab.waitForSelector(
+          'script[src="https://plausible.io/js/script.js"][data-domain="status.example.com"]',
+          { state: "attached" },
+        );
+        if (!asked.some((u) => u.includes("plausible.io/js/script.js")))
+          throw new Error("the script was not loaded");
+        await tab.waitForTimeout(300);
+        if (await tab.locator('[data-part="consent"]').count())
+          throw new Error("a consent bar for a counter without cookies");
+      }),
+  );
+  await asyncStep(
+    "Google Analytics: the consent bar, nothing of Google's before Accept, its script after, Decline remembered",
+    () =>
+      withCounter("google", "G-TEST1234", async (base, browser) => {
+        const accepting = await browser.newContext();
+        const { tab, asked } = await page(accepting);
+        await tab.goto(`${base}/sign-in`);
+        await tab.waitForSelector("body[data-hydrated]");
+        const bar = tab.locator('[data-part="consent"]');
+        await bar.waitFor();
+        await tab.waitForTimeout(300);
+        if (asked.length) throw new Error(`asked Google before a yes: ${asked.join(", ")}`);
+        await bar.getByRole("button", { name: "Accept" }).click();
+        await tab.waitForSelector('script[src*="googletagmanager.com/gtag/js?id=G-TEST1234"]', {
+          state: "attached",
+        });
+        await bar.waitFor({ state: "detached" });
+        // The next page has the yes already: the script comes at once, with no bar.
+        await tab.reload();
+        await tab.waitForSelector('script[src*="googletagmanager.com/gtag/js"]', {
+          state: "attached",
+        });
+        if (await bar.count()) throw new Error("asked again after a yes");
+        // Cookie settings is there to take it back.
+        if (!(await tab.getByRole("button", { name: "Cookie settings" }).count()))
+          throw new Error("no Cookie settings");
+
+        const declining = await browser.newContext();
+        const other = await page(declining);
+        await other.tab.goto(`${base}/sign-in`);
+        await other.tab.waitForSelector("body[data-hydrated]");
+        await other.tab
+          .locator('[data-part="consent"]')
+          .getByRole("button", { name: "Decline" })
+          .click();
+        await other.tab.reload();
+        await other.tab.waitForSelector("body[data-hydrated]");
+        await other.tab.waitForTimeout(300);
+        if (await other.tab.locator('[data-part="consent"]').count())
+          throw new Error("asked again after a no");
+        if (other.asked.length)
+          throw new Error(`asked Google after a no: ${other.asked.join(", ")}`);
+      }),
+  );
 }
 
 /** Upgrading across a stack profile (ARCHITECTURE §14): checked, reported, undoable. */
