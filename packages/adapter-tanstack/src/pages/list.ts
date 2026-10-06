@@ -200,6 +200,9 @@ function filterCode(
   };
 }
 
+/** A list's page in the address (?page=3): a positive whole number, else the first. */
+const PAGE = "z.coerce.number().int().positive().optional().catch(undefined)";
+
 /** A searchable list's server function and route options: the search text is in the URL. */
 export function searchCode(
   page: PageIR,
@@ -209,6 +212,8 @@ export function searchCode(
   within?: Within,
   favorites?: Favorites,
   ownOnly?: boolean,
+  /** The list's order until someone sorts it, as an SQL expression (the ux file's sort). */
+  order?: string,
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
@@ -259,16 +264,13 @@ export function searchCode(
       ? `data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined`
       : "undefined";
     const view = favorites === "all";
-    // A page of only the viewer's saved records may have nothing else to read from the address.
-    const usesData =
-      searched !== "undefined" || filtering.names.length || filtering.columns.length || view;
     const keys = ["q", "sort", ...filtering.names];
     return {
       fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
 const ${fn} = createServerFn()
-  .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional() }))
-  .handler(async (${usesData ? "{ data }" : ""}) => {
+  .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional(), page: z.number().int().positive().optional() }))
+  .handler(async ({ data }) => {
     const viewer = await currentViewer();${
       favorites
         ? `
@@ -285,15 +287,15 @@ const ${fn} = createServerFn()
         : ""
     }
     return {
-      rows: await ${n.data}.list(viewer, where${filtering.columns.length ? (ir.pages.some((p) => p.pattern.kind === "data" && p.pattern.models.includes(model.name)) ? ", undefined, order" : ", order") : ""}),
+      ...(await ${n.data}.page(viewer, where, ${filtering.columns.length ? (order ? `order ?? ${order}` : "order") : (order ?? "undefined")}, data.page)),
       canCreate: allows(${n.access}.create, viewer),
       options: { ${filtering.options.join(", ")} },${favorites ? "\n      saved," : ""}
     };
   });
 `,
-      options: `  validateSearch: z.object({ ${keys.map((k) => `${k}: z.string().optional().catch(undefined)`).join(", ")}${view ? ', view: z.literal("saved").optional().catch(undefined)' : ""} }),
+      options: `  validateSearch: z.object({ ${keys.map((k) => `${k}: z.string().optional().catch(undefined)`).join(", ")}${view ? ', view: z.literal("saved").optional().catch(undefined)' : ""}, page: ${PAGE} }),
   loaderDeps: ({ search }) => search,
-  loader: ({ deps: { q, sort, ${view ? "view, " : ""}...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f } }),
+  loader: ({ deps: { q, sort, ${view ? "view, " : ""}page, ...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f, page } }),
   // While a search or filter loads, the page stays (and its controls keep their focus).
   pendingMs: Number.POSITIVE_INFINITY,
   gcTime: 0,
@@ -313,16 +315,20 @@ const ${fn} = createServerFn()
     fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
 const ${fn} = createServerFn()
-  .validator(z.object({ q: z.string().max(200).optional() }))
+  .validator(z.object({ q: z.string().max(200).optional()${within ? "" : ", page: z.number().int().positive().optional()"} }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined;
-    ${listed(n, "where", within)}
+    ${listed(n, "where", within, order)}
   });
 `,
-    options: `  validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
+    options: within
+      ? `  validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
-  loader: ({ deps }) => ${fn}({ data: { q: deps.q } }),
+  loader: ({ deps }) => ${fn}({ data: { q: deps.q } }),`
+      : `  validateSearch: z.object({ q: z.string().optional().catch(undefined), page: ${PAGE} }),
+  loaderDeps: ({ search }) => ({ q: search.q, page: search.page }),
+  loader: ({ deps }) => ${fn}({ data: { q: deps.q, page: deps.page } }),
   // While a search loads, the page stays (and the box keeps its focus and text), never the
   // placeholder; coming back loads afresh instead of showing rows from before a change.
   pendingMs: Number.POSITIVE_INFINITY,
@@ -352,6 +358,8 @@ export function listParts(
   ux: UxIR,
   within?: Within,
   auth?: AuthIR,
+  /** A page of the owner's own (src/custom/pages), which reads the route through getRouteApi. */
+  owned = false,
 ) {
   const n = names(model, t);
   // Hearts and the viewer's saved records (marketplace.md §2.3), for apps with sign-in.
@@ -366,9 +374,20 @@ export function listParts(
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
   const filtered =
     !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly);
+  // The ux file's order, in the query: a page of a longer list is the right fifty, not fifty
+  // sorted (a computed field is not a column, so it stays sorted in the page only).
+  const sorted = within ? undefined : ux.pages[page.id]?.sort;
+  const sortField = model.fields.find((f) => f.name === sorted?.replace(/^-/, ""));
+  const order =
+    sorted &&
+    sortField &&
+    !sortField.formula &&
+    !(sortField.type.kind === "relation" && sortField.type.many)
+      ? `${sorted.startsWith("-") ? "desc" : "asc"}(${n.table}.${dataKey(sortField)})`
+      : undefined;
   const search =
     page.search?.length || filtered
-      ? searchCode(page, model, t, ir, within, favorites, ownOnly)
+      ? searchCode(page, model, t, ir, within, favorites, ownOnly, order)
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;
   const searchable = Boolean(page.search?.length);
@@ -412,15 +431,18 @@ export function listParts(
     if (filtering?.columns.length) route.add("#/kit/filter", "orderOf");
     for (const t of search.imports.titled) route.add(t.module, t.data);
     route.add("#/lib/viewer.server", "currentViewer");
-  } else if (capped) {
+  } else {
     route
       .add("@tanstack/react-start", "createServerFn")
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
       .add("#/kit/access", "allows")
       .add("#/lib/viewer.server", "currentViewer");
-  } else {
-    route.add(n.module, n.list);
+    if (!capped) route.add("zod", "z");
   }
+  if (order)
+    route
+      .add("drizzle-orm", sorted?.startsWith("-") ? "desc" : "asc")
+      .add("#/db/schema", "* as schema");
   const view = importList()
     .add("@tanstack/react-router", "Link", "useNavigate")
     .add("#/components/ui/button", "buttonVariants");
@@ -462,21 +484,54 @@ export function listParts(
   if (icon) view.add("lucide-react", icon);
 
   const newest = `list${pascal(plural(model.name))}`;
-  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${search ? search.options : `  loader: () => ${capped ? newest : n.list}(),\n`}`;
+  // The server function the route loads with: a gallery calls it again for more cards.
+  const loading = search ? `search${pascal(plural(model.name))}` : newest;
+  const loadArgs = filtering
+    ? `{ q, sort, ${favorites === "all" ? "view, " : ""}f: values, page: next }`
+    : searchable
+      ? "{ q, page: next }"
+      : "{ page: next }";
+  const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${
+    search
+      ? search.options
+      : capped
+        ? `  loader: () => ${newest}(),\n`
+        : `  validateSearch: z.object({ page: ${PAGE} }),
+  loaderDeps: ({ search }) => ({ page: search.page }),
+  loader: ({ deps }) => ${newest}({ data: { page: deps.page } }),
+`
+  }`;
   /** The component, reading the route's data through \`api\` (Route, or getRouteApi's result). */
-  const body = (api: string) => `function ${component}() {
-  const { rows, canCreate${within ? ", more" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
+  const body = (api: string) => {
+    // Cards load more as the reader scrolls; a page of the owner's own, which cannot call the
+    // route's server function, and a table, are paged instead (docs/design/paging.md).
+    const scrolling = cards && !within && !owned;
+    return `function ${component}() {
+  const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
 ${actions.length || offered.length || selecting || filtering?.mine || favorites ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || selecting ? "\n  const router = useRouter();" : ""}${
-    selecting
-      ? `
+      scrolling
+        ? `
+  // The cards loaded after the first page, as the reader scrolls; a new search starts again.
+  const [extra, setExtra] = useState<typeof first>([]);
+  useEffect(() => setExtra([]), [first]);
+  const rows = [...first, ...extra];
+  const loadMore = async () => {
+    const next = Math.floor(rows.length / size) + 1;
+    const found = await ${loading}({ data: ${loadArgs} });
+    setExtra((shown) => [...shown, ...found.rows]);
+  };`
+        : ""
+    }${
+      selecting
+        ? `
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
   const selectable = rows.some((row) => ${[...many.map(fits), `allows(${n.deleteRule}, viewer, ${owner})`].join(" || ")});`
-      : ""
-  }${
-    favorites
-      ? `
+        : ""
+    }${
+      favorites
+        ? `
   // A heart saves the record for the viewer; a visitor signs in first and comes back.
   const toggleSaved = async (id: number) => {
     if (!viewer) {
@@ -486,8 +541,8 @@ ${actions.length || offered.length || selecting || filtering?.mine || favorites 
     await ${savedToggle(model)}({ data: id });
     await router.invalidate();
   };`
-      : ""
-  }
+        : ""
+    }
   const newButton = canCreate && (
     <Link to=${attr(join(page.route, "new"))} className={buttonVariants()}>
       New ${n.label.toLowerCase()}
@@ -513,7 +568,7 @@ ${
     ? `      <SearchBox
         value={q ?? ""}
         placeholder=${attr(search.placeholder)}
-        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: ${filtering ? "(prev) => ({ ...prev, q: text || undefined })" : "{ q: text || undefined }"}, replace: true })}
+        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: ${filtering ? "(prev) => ({ ...prev, q: text || undefined, page: undefined })" : "{ q: text || undefined }"}, replace: true })}
       />
 `
     : ""
@@ -522,7 +577,7 @@ ${
     ? `      {viewer && (
         <SavedTabs
           saved={view === "saved"}
-          onChange={(saved) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, view: saved ? "saved" : undefined }), replace: true })}
+          onChange={(saved) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, view: saved ? "saved" : undefined, page: undefined }), replace: true })}
         />
       )}
 `
@@ -565,7 +620,7 @@ ${
 `
     : ""
 }${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
-        ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
+        ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}
         rows={${(() => {
           const ordered = sort
@@ -613,6 +668,8 @@ ${
   );
 }
 `;
+  };
+  if (cards && !within && !owned) view.add("react", "useEffect", "useState");
   const serverFn =
     search?.fn ??
     (capped
@@ -623,7 +680,15 @@ const ${newest} = createServerFn().handler(async () => {
   ${listed(n, "undefined", within)}
 });
 `
-      : "");
+      : `
+/** A page of the ${n.pluralLabel.toLowerCase()} the viewer may read. */
+const ${newest} = createServerFn()
+  .validator(z.object({ page: z.number().int().positive().optional() }))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    ${listed(n, "undefined", undefined, order)}
+  });
+`);
   return { component, path, route, view, serverFn, options, body };
 }
 
@@ -658,9 +723,14 @@ ${p.body("Route")}`;
  * The statement that returns a list's rows: all of them, or inside a data page the newest
  * DATA_LIMIT, one more fetched to know whether there are others.
  */
-function listed(n: ReturnType<typeof names>, where: string, within?: Within): string {
+function listed(
+  n: ReturnType<typeof names>,
+  where: string,
+  within?: Within,
+  order?: string,
+): string {
   if (!within)
-    return `return { rows: await ${n.data}.list(viewer, ${where}), canCreate: allows(${n.access}.create, viewer) };`;
+    return `return { ...(await ${n.data}.page(viewer, ${where}, ${order ?? "undefined"}, data.page)), canCreate: allows(${n.access}.create, viewer) };`;
   return `const rows = await ${n.data}.list(viewer, ${where}, ${DATA_LIMIT + 1});
     return {
       rows: rows.slice(0, ${DATA_LIMIT}),
