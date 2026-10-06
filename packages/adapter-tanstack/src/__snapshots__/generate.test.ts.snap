@@ -3790,6 +3790,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { noteAccess, noteData } from "./note.server";
 import { writeAllowed } from "#/kit/limit";
@@ -3843,8 +3844,8 @@ export const noteUi: RecordUi<NoteRow> = {
 export const noteDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: false };
 
 export const noteSchema = createInsertSchema(schema.notes, {
-  title: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  body: (s) => s.max(10000, "At most 10,000 characters"),
+  title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  body: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type NoteValues = z.output<typeof noteSchema>;
@@ -4290,6 +4291,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { projectAccess, projectData } from "./project.server";
 import { writeAllowed } from "#/kit/limit";
@@ -4334,8 +4336,8 @@ export const projectUi: RecordUi<ProjectRow> = {
 export const projectDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: false };
 
 export const projectSchema = createInsertSchema(schema.projects, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  description: (s) => s.max(10000, "At most 10,000 characters"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  description: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ProjectValues = z.output<typeof projectSchema>;
@@ -4765,6 +4767,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { taskAccess, taskData } from "./task.server";
 import { writeAllowed } from "#/kit/limit";
@@ -4847,9 +4850,9 @@ export const taskUi: RecordUi<TaskRow> = {
 export const taskDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: false };
 
 export const taskSchema = createInsertSchema(schema.tasks, {
-  title: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  dueDate: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
-  details: (s) => s.max(10000, "At most 10,000 characters"),
+  title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  dueDate: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
+  details: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type TaskValues = z.output<typeof taskSchema>;
@@ -4905,6 +4908,7 @@ import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 export const ROLES = ["admin", "member", "assistant"] as const;
 export type Role = (typeof ROLES)[number];
@@ -5093,13 +5097,8 @@ async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void>
   const until = invited.expiresAt.toISOString().slice(0, 10);
   await sendMail({
     to: invited.email,
-    subject: \`Invitation to \${app.name}\`,
-    text: \`\${by.name} invited you to \${app.name} as \${ROLE_LABELS[invited.role] ?? invited.role}.
-
-Sign in with \${invited.email} here:
-\${invited.link}
-
-The invitation is valid until \${until}.\`,
+    subject: w.invitationSubject(app.name),
+    text: w.invitationText(by.name, app.name, ROLE_LABELS[invited.role] ?? invited.role, invited.email, invited.link, until),
   });
 }
 "
@@ -5253,6 +5252,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -5431,8 +5431,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -5471,6 +5471,7 @@ import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -5528,10 +5529,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -5589,6 +5590,7 @@ import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 const filters = z.object({
@@ -5669,10 +5671,10 @@ const getActivity = createServerFn()
     ]);
     // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
     for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
-      named.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
+      named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
     // A key's line once keys are gone from the app (the API turned off) still says it was a key.
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? \`a key (#\${id.slice(4)})\` : \`a removed user (#\${id})\`);
+      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -5687,8 +5689,8 @@ const getActivity = createServerFn()
           ? \`\${label} "\${now}"\`
           : gone
             ? r.title
-              ? \`\${label} "\${r.title}" (deleted)\`
-              : \`a deleted \${label?.toLowerCase()} (#\${r.recordId})\`
+              ? w.deletedNamed(label ?? "", r.title)
+              : w.aDeletedOne(label ?? "", String(r.recordId))
             : undefined,
         fields: r.fields,
         // As text: what touches security, by name and value.
@@ -5724,7 +5726,7 @@ function ActivityPage() {
   const router = useRouter();
   return (
     <>
-      <PageHeader page="admin" title="Activity" subtitle="Who did what, and when. Kept 12 months; the client's details 90 days." />
+      <PageHeader page="admin" title={w.activity} subtitle={w.activityLead} />
       <ActivityLog
         lines={lines}
         filters={search}
@@ -5756,6 +5758,7 @@ import { PageHeader } from "#/kit/AppShell";
 import type { AskKind } from "#/kit/ask";
 import { answer, hostModel } from "#/kit/assistant.server";
 import { Inspector } from "#/kit/Inspector";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** Each caller's kinds of record in the words people use, for the wording rules. */
@@ -5802,7 +5805,7 @@ export const Route = createFileRoute("/admin/ask")({
 function AskPage() {
   return (
     <>
-      <PageHeader page="admin" title="Ask the app" />
+      <PageHeader page="admin" title={w.askTheApp} />
       <p className="mb-4 max-w-prose text-sm text-muted-foreground">
         What an assistant gets with a key of each role: ask as that role, and see the answer and every
         tool it took. Changes are only shown, never made here.
@@ -5824,6 +5827,7 @@ import { taskData } from "#/generated/task.server";
 import { noteData } from "#/generated/note.server";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /**
@@ -5864,9 +5868,9 @@ function AdminPage() {
         title="Admin"
         actions={
           <>
-            <Link to="/admin/activity" className="text-sm font-medium text-primary">Activity</Link>
-            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary">Ask</Link>}
-            {restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
+            <Link to="/admin/activity" className="text-sm font-medium text-primary">{w.activity}</Link>
+            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary">{w.ask}</Link>}
+            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
           </>
         }
       />
@@ -5896,6 +5900,7 @@ import { projectOptions } from "#/generated/project";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/notes/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -5922,7 +5927,7 @@ function NotePage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateNote({ data: { id: row.id, values } });
           await back();
@@ -5958,6 +5963,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { noteUi } from "#/generated/note";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -5989,7 +5995,7 @@ function AdminNotesPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/notes/new" className={buttonVariants()}>
-      New note
+      {w.newOne("note")}
     </Link>
   );
   return (
@@ -6030,6 +6036,7 @@ import { projectOptions } from "#/generated/project";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/notes/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -6043,13 +6050,13 @@ function NewNotePage() {
   const back = () => navigate({ to: "/admin/notes" });
   return (
     <>
-      <PageHeader title="New note" />
+      <PageHeader title={w.newOne("note")} />
       <ModelForm
         ui={noteUi}
         app={app}
         schema={noteSchema}
         options={options}
-        submitLabel="Create note"
+        submitLabel={w.createOne("note")}
         onSubmit={async (values) => {
           await createNote({ data: values });
           await back();
@@ -6073,6 +6080,7 @@ import { noteUi } from "#/generated/note";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/projects/$id")({
@@ -6099,7 +6107,7 @@ function ProjectPage() {
         schema={projectSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateProject({ data: { id: row.id, values } });
           await back();
@@ -6154,6 +6162,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { projectUi } from "#/generated/project";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -6185,7 +6194,7 @@ function AdminProjectsPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/projects/new" className={buttonVariants()}>
-      New project
+      {w.newOne("project")}
     </Link>
   );
   return (
@@ -6225,6 +6234,7 @@ import { createProject, projectSchema, projectUi } from "#/generated/project";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/projects/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -6236,12 +6246,12 @@ function NewProjectPage() {
   const back = () => navigate({ to: "/admin/projects" });
   return (
     <>
-      <PageHeader title="New project" />
+      <PageHeader title={w.newOne("project")} />
       <ModelForm
         ui={projectUi}
         app={app}
         schema={projectSchema}
-        submitLabel="Create project"
+        submitLabel={w.createOne("project")}
         onSubmit={async (values) => {
           await createProject({ data: values });
           await back();
@@ -6265,6 +6275,7 @@ import { userOptions } from "#/generated/users";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/tasks/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -6291,7 +6302,7 @@ function TaskPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateTask({ data: { id: row.id, values } });
           await back();
@@ -6327,6 +6338,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { taskUi } from "#/generated/task";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -6358,7 +6370,7 @@ function AdminTasksPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/tasks/new" className={buttonVariants()}>
-      New task
+      {w.newOne("task")}
     </Link>
   );
   return (
@@ -6400,6 +6412,7 @@ import { userOptions } from "#/generated/users";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/tasks/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -6413,13 +6426,13 @@ function NewTaskPage() {
   const back = () => navigate({ to: "/admin/tasks" });
   return (
     <>
-      <PageHeader title="New task" />
+      <PageHeader title={w.newOne("task")} />
       <ModelForm
         ui={taskUi}
         app={app}
         schema={taskSchema}
         options={options}
-        submitLabel="Create task"
+        submitLabel={w.createOne("task")}
         onSubmit={async (values) => {
           await createTask({ data: values });
           await back();
@@ -6791,6 +6804,7 @@ import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -6822,7 +6836,7 @@ const signInOptions = createServerFn()
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
@@ -7423,16 +7437,16 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "c3e7e961 generated",
   "src/generated/mcp.server.ts": "9a3bec18 generated",
   "src/generated/note.server.ts": "62889225 generated",
-  "src/generated/note.ts": "4bbd09eb generated",
+  "src/generated/note.ts": "24a4c58b generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.server.ts": "794b007a generated",
-  "src/generated/project.ts": "3dee7710 generated",
+  "src/generated/project.ts": "83429f6c generated",
   "src/generated/task.server.ts": "2f211502 generated",
-  "src/generated/task.ts": "a2db981c generated",
-  "src/generated/users.server.ts": "bacb5017 generated",
+  "src/generated/task.ts": "6241b7be generated",
+  "src/generated/users.server.ts": "d819e564 generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Combobox.tsx": "fe690f90 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
@@ -7452,7 +7466,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
@@ -7463,26 +7477,26 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "bd3c41ee generated",
+  "src/lib/auth.ts": "f3ba8a00 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "19a9d12f generated",
-  "src/routes/admin/activity.tsx": "03b81dc8 generated",
-  "src/routes/admin/ask.tsx": "c6ca40bf generated",
-  "src/routes/admin/index.tsx": "403b25db generated",
-  "src/routes/admin/notes/$id.tsx": "ec603ba6 generated",
-  "src/routes/admin/notes/index.tsx": "82f74146 generated",
-  "src/routes/admin/notes/new.tsx": "b9bf769e generated",
-  "src/routes/admin/projects/$id.tsx": "37ca9e5d generated",
-  "src/routes/admin/projects/index.tsx": "9d4898ce generated",
-  "src/routes/admin/projects/new.tsx": "fd017855 generated",
-  "src/routes/admin/tasks/$id.tsx": "40ab1945 generated",
-  "src/routes/admin/tasks/index.tsx": "154eb59f generated",
-  "src/routes/admin/tasks/new.tsx": "a87327ea generated",
+  "src/routes/__root.tsx": "f6c87e0c generated",
+  "src/routes/admin/activity.tsx": "8376f5ac generated",
+  "src/routes/admin/ask.tsx": "b855ab11 generated",
+  "src/routes/admin/index.tsx": "ad2cc341 generated",
+  "src/routes/admin/notes/$id.tsx": "1f566524 generated",
+  "src/routes/admin/notes/index.tsx": "4352c33d generated",
+  "src/routes/admin/notes/new.tsx": "95936f2d generated",
+  "src/routes/admin/projects/$id.tsx": "2ccb73db generated",
+  "src/routes/admin/projects/index.tsx": "4ebb2433 generated",
+  "src/routes/admin/projects/new.tsx": "1e9bdfb6 generated",
+  "src/routes/admin/tasks/$id.tsx": "6b4cfa3d generated",
+  "src/routes/admin/tasks/index.tsx": "afbb1166 generated",
+  "src/routes/admin/tasks/new.tsx": "18502ff5 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.ts": "67cfabed generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
@@ -7496,7 +7510,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/index.tsx": "505b868e generated",
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "65517e82 generated",
+  "src/routes/sign-in.tsx": "c7a3ae3e generated",
   "src/routes/team/index.tsx": "b5193198 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
@@ -9132,6 +9146,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { classTypeAccess, classTypeData } from "./class-type.server";
 import { writeAllowed } from "#/kit/limit";
@@ -9197,8 +9212,8 @@ export const classTypeUi: RecordUi<ClassTypeRow> = {
 export const classTypeDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const classTypeSchema = createInsertSchema(schema.classTypes, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  summary: (s) => s.max(10000, "At most 10,000 characters"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  summary: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ClassTypeValues = z.output<typeof classTypeSchema>;
@@ -9664,6 +9679,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { bindPicture } from "#/kit/PictureInput";
@@ -9719,8 +9735,8 @@ export const instructorUi: RecordUi<InstructorRow> = {
 export const instructorDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const instructorSchema = createInsertSchema(schema.instructors, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  bio: (s) => s.max(50000, "At most 50,000 characters"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  bio: (s) => s.max(50000, w.atMostCharacters(50000)),
   portrait: z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
@@ -9959,6 +9975,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { messageAccess, messageData } from "./message.server";
 import { writeAllowed } from "#/kit/limit";
@@ -10010,9 +10027,9 @@ export const messageUi: RecordUi<MessageRow> = {
 export const messageDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
 
 export const messageSchema = createInsertSchema(schema.messages, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  email: z.email("Enter a valid email address"),
-  message: (s) => s.trim().min(1, "Required").max(2000, "At most 2,000 characters"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  email: z.email(w.enterValidEmail),
+  message: (s) => s.trim().min(1, w.required).max(2000, w.atMostCharacters(2000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type MessageValues = z.output<typeof messageSchema>;
@@ -10292,6 +10309,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { bindPicture } from "#/kit/PictureInput";
@@ -10378,12 +10396,12 @@ export const postUi: RecordUi<PostRow> = {
 export const postDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
 
 export const postSchema = createInsertSchema(schema.posts, {
-  title: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  address: (s) => s.max(200, "At most 200 characters"),
-  summary: (s) => s.max(10000, "At most 10,000 characters"),
+  title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  address: (s) => s.max(200, w.atMostCharacters(200)),
+  summary: (s) => s.max(10000, w.atMostCharacters(10000)),
   cover: z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() }).nullish(),
-  body: (s) => s.trim().min(1, "Required").max(50000, "At most 50,000 characters"),
-  publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
+  body: (s) => s.trim().min(1, w.required).max(50000, w.atMostCharacters(50000)),
+  publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type PostValues = z.output<typeof postSchema>;
@@ -10825,6 +10843,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -10960,8 +10979,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -11002,6 +11021,7 @@ import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -11118,10 +11138,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -11156,7 +11176,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
@@ -11187,6 +11207,7 @@ import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 const filters = z.object({
@@ -11307,7 +11328,7 @@ const getActivity = createServerFn()
     ]);
     // A key's line once keys are gone from the app (the API turned off) still says it was a key.
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? \`a key (#\${id.slice(4)})\` : \`a removed user (#\${id})\`);
+      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -11322,8 +11343,8 @@ const getActivity = createServerFn()
           ? \`\${label} "\${now}"\`
           : gone
             ? r.title
-              ? \`\${label} "\${r.title}" (deleted)\`
-              : \`a deleted \${label?.toLowerCase()} (#\${r.recordId})\`
+              ? w.deletedNamed(label ?? "", r.title)
+              : w.aDeletedOne(label ?? "", String(r.recordId))
             : undefined,
         fields: r.fields,
         // As text: what touches security, by name and value.
@@ -11359,7 +11380,7 @@ function ActivityPage() {
   const router = useRouter();
   return (
     <>
-      <PageHeader page="admin" title="Activity" subtitle="Who did what, and when. Kept 12 months; the client's details 90 days." />
+      <PageHeader page="admin" title={w.activity} subtitle={w.activityLead} />
       <ActivityLog
         lines={lines}
         filters={search}
@@ -11389,6 +11410,7 @@ import { sessionOptions } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/bookings/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11415,7 +11437,7 @@ function BookingPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateBooking({ data: { id: row.id, values } });
           await back();
@@ -11448,6 +11470,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { bookingUi } from "#/generated/booking";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -11473,7 +11496,7 @@ function AdminBookingsPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/bookings/new" className={buttonVariants()}>
-      New booking
+      {w.newOne("booking")}
     </Link>
   );
   return (
@@ -11508,6 +11531,7 @@ import { sessionOptions } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/bookings/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11521,13 +11545,13 @@ function NewBookingPage() {
   const back = () => navigate({ to: "/admin/bookings" });
   return (
     <>
-      <PageHeader title="New booking" />
+      <PageHeader title={w.newOne("booking")} />
       <ModelForm
         ui={bookingUi}
         app={app}
         schema={bookingSchema}
         options={options}
-        submitLabel="Create booking"
+        submitLabel={w.createOne("booking")}
         onSubmit={async (values) => {
           await createBooking({ data: values });
           await back();
@@ -11549,6 +11573,7 @@ import { classTypeSchema, classTypeUi, deleteClassType, getClassType, updateClas
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/class-types/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11574,7 +11599,7 @@ function ClassTypePage() {
         schema={classTypeSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateClassType({ data: { id: row.id, values } });
           await back();
@@ -11610,6 +11635,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { classTypeUi } from "#/generated/class-type";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -11641,7 +11667,7 @@ function AdminClassTypesPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/class-types/new" className={buttonVariants()}>
-      New class type
+      {w.newOne("class type")}
     </Link>
   );
   return (
@@ -11681,6 +11707,7 @@ import { createClassType, classTypeSchema, classTypeUi } from "#/generated/class
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/class-types/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11692,12 +11719,12 @@ function NewClassTypePage() {
   const back = () => navigate({ to: "/admin/class-types" });
   return (
     <>
-      <PageHeader title="New class type" />
+      <PageHeader title={w.newOne("class type")} />
       <ModelForm
         ui={classTypeUi}
         app={app}
         schema={classTypeSchema}
-        submitLabel="Create class type"
+        submitLabel={w.createOne("class type")}
         onSubmit={async (values) => {
           await createClassType({ data: values });
           await back();
@@ -11723,6 +11750,7 @@ import { postData } from "#/generated/post.server";
 import { messageData } from "#/generated/message.server";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /**
@@ -11768,8 +11796,8 @@ function AdminPage() {
         title="Admin"
         actions={
           <>
-            <Link to="/admin/activity" className="text-sm font-medium text-primary">Activity</Link>
-            {restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
+            <Link to="/admin/activity" className="text-sm font-medium text-primary">{w.activity}</Link>
+            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
           </>
         }
       />
@@ -11798,6 +11826,7 @@ import { deleteInstructor, getInstructor, instructorSchema, instructorUi, update
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/instructors/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11823,7 +11852,7 @@ function InstructorPage() {
         schema={instructorSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateInstructor({ data: { id: row.id, values } });
           await back();
@@ -11859,6 +11888,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { instructorUi } from "#/generated/instructor";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -11891,7 +11921,7 @@ function AdminInstructorsPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/instructors/new" className={buttonVariants()}>
-      New instructor
+      {w.newOne("instructor")}
     </Link>
   );
   return (
@@ -11932,6 +11962,7 @@ import { createInstructor, instructorSchema, instructorUi } from "#/generated/in
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/instructors/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11943,12 +11974,12 @@ function NewInstructorPage() {
   const back = () => navigate({ to: "/admin/instructors" });
   return (
     <>
-      <PageHeader title="New instructor" />
+      <PageHeader title={w.newOne("instructor")} />
       <ModelForm
         ui={instructorUi}
         app={app}
         schema={instructorSchema}
-        submitLabel="Create instructor"
+        submitLabel={w.createOne("instructor")}
         onSubmit={async (values) => {
           await createInstructor({ data: values });
           await back();
@@ -11970,6 +12001,7 @@ import { deleteMessage, getMessage, messageSchema, messageUi, updateMessage } fr
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/messages/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11995,7 +12027,7 @@ function MessagePage() {
         schema={messageSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateMessage({ data: { id: row.id, values } });
           await back();
@@ -12031,6 +12063,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { messageUi } from "#/generated/message";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -12062,7 +12095,7 @@ function AdminMessagesPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/messages/new" className={buttonVariants()}>
-      New message
+      {w.newOne("message")}
     </Link>
   );
   return (
@@ -12102,6 +12135,7 @@ import { createMessage, messageSchema, messageUi } from "#/generated/message";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/messages/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -12113,12 +12147,12 @@ function NewMessagePage() {
   const back = () => navigate({ to: "/admin/messages" });
   return (
     <>
-      <PageHeader title="New message" />
+      <PageHeader title={w.newOne("message")} />
       <ModelForm
         ui={messageUi}
         app={app}
         schema={messageSchema}
-        submitLabel="Create message"
+        submitLabel={w.createOne("message")}
         onSubmit={async (values) => {
           await createMessage({ data: values });
           await back();
@@ -12140,6 +12174,7 @@ import { deletePost, getPost, postSchema, postUi, updatePost } from "#/generated
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/posts/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -12165,7 +12200,7 @@ function PostPage() {
         schema={postSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updatePost({ data: { id: row.id, values } });
           await back();
@@ -12201,6 +12236,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { postUi } from "#/generated/post";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -12233,7 +12269,7 @@ function AdminPostsPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/posts/new" className={buttonVariants()}>
-      New post
+      {w.newOne("post")}
     </Link>
   );
   return (
@@ -12274,6 +12310,7 @@ import { createPost, postSchema, postUi } from "#/generated/post";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/posts/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -12285,12 +12322,12 @@ function NewPostPage() {
   const back = () => navigate({ to: "/admin/posts" });
   return (
     <>
-      <PageHeader title="New post" />
+      <PageHeader title={w.newOne("post")} />
       <ModelForm
         ui={postUi}
         app={app}
         schema={postSchema}
-        submitLabel="Create post"
+        submitLabel={w.createOne("post")}
         onSubmit={async (values) => {
           await createPost({ data: { ...values, address: values.address || addressFrom(values.title) } });
           await back();
@@ -12326,6 +12363,7 @@ import { instructorOptions } from "#/generated/instructor";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/sessions/$id")({
@@ -12353,7 +12391,7 @@ function SessionPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateSession({ data: { id: row.id, values } });
           await back();
@@ -12395,6 +12433,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { app } from "#/generated/app";
 import { sessionUi } from "#/generated/session";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -12420,7 +12459,7 @@ function AdminSessionsPage() {
   const navigate = useNavigate();
   const newButton = canCreate && (
     <Link to="/admin/sessions/new" className={buttonVariants()}>
-      New session
+      {w.newOne("session")}
     </Link>
   );
   return (
@@ -12456,6 +12495,7 @@ import { instructorOptions } from "#/generated/instructor";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { instantOf } from "#/kit/zoned";
 import { z } from "zod";
 
@@ -12473,14 +12513,14 @@ function NewSessionPage() {
   const back = () => navigate({ to: "/admin/sessions" });
   return (
     <>
-      <PageHeader title="New session" />
+      <PageHeader title={w.newOne("session")} />
       <ModelForm
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
         preset={search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : undefined}
         options={options}
-        submitLabel="Create session"
+        submitLabel={w.createOne("session")}
         onSubmit={async (values) => {
           await createSession({ data: values });
           await back();
@@ -12714,6 +12754,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -12733,7 +12774,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -12764,7 +12805,7 @@ function ClassTypePage() {
         schema={classTypeSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateClassType({ data: { id: row.id, values } });
           await back();
@@ -12782,7 +12823,7 @@ function ClassTypePage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -12806,6 +12847,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteClassTypes, classTypeDeleteRule, classTypeUi } from "#/generated/class-type";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -12836,7 +12878,7 @@ function ClassTypesPage() {
   const selectable = rows.some((row) => allows(classTypeDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/class-types/new" className={buttonVariants()}>
-      New class type
+      {w.newOne("class type")}
     </Link>
   );
   return (
@@ -12886,6 +12928,7 @@ import { createClassType, classTypeSchema, classTypeUi } from "#/generated/class
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/class-types/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["class-types"], context.viewer, location.href),
@@ -12897,12 +12940,12 @@ function NewClassTypePage() {
   const back = () => navigate({ to: "/class-types" });
   return (
     <>
-      <PageHeader title="New class type" />
+      <PageHeader title={w.newOne("class type")} />
       <ModelForm
         ui={classTypeUi}
         app={app}
         schema={classTypeSchema}
-        submitLabel="Create class type"
+        submitLabel={w.createOne("class type")}
         onSubmit={async (values) => {
           await createClassType({ data: values });
           await back();
@@ -12921,6 +12964,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pageAccess } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards, Section, CallToAction, Contact } from "#/kit/Landing";
+import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 import { listClassTypes } from "#/generated/class-type";
 import { listPosts } from "#/generated/post";
@@ -12941,7 +12985,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName="Stillwater Yoga" link={viewer ? { to: "/schedule", label: "Open Stillwater Yoga" } : { to: "/sign-in", label: "Sign in" }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName="Stillwater Yoga" link={viewer ? { to: "/schedule", label: w.openApp("Stillwater Yoga") } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
       <Hero
           texts="pages.home.hero"
           title="Stillwater Yoga"
@@ -13021,6 +13065,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -13040,7 +13085,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -13071,7 +13116,7 @@ function InstructorPage() {
         schema={instructorSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateInstructor({ data: { id: row.id, values } });
           await back();
@@ -13089,7 +13134,7 @@ function InstructorPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -13113,6 +13158,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteInstructors, instructorDeleteRule, instructorUi } from "#/generated/instructor";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { Users } from "lucide-react";
@@ -13144,7 +13190,7 @@ function InstructorsPage() {
   const selectable = rows.some((row) => allows(instructorDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/instructors/new" className={buttonVariants()}>
-      New instructor
+      {w.newOne("instructor")}
     </Link>
   );
   return (
@@ -13195,6 +13241,7 @@ import { createInstructor, instructorSchema, instructorUi } from "#/generated/in
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/instructors/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["instructors"], context.viewer, location.href),
@@ -13206,12 +13253,12 @@ function NewInstructorPage() {
   const back = () => navigate({ to: "/instructors" });
   return (
     <>
-      <PageHeader title="New instructor" />
+      <PageHeader title={w.newOne("instructor")} />
       <ModelForm
         ui={instructorUi}
         app={app}
         schema={instructorSchema}
-        submitLabel="Create instructor"
+        submitLabel={w.createOne("instructor")}
         onSubmit={async (values) => {
           await createInstructor({ data: values });
           await back();
@@ -13238,6 +13285,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -13257,7 +13305,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -13288,7 +13336,7 @@ function MessagePage() {
         schema={messageSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateMessage({ data: { id: row.id, values } });
           await back();
@@ -13306,7 +13354,7 @@ function MessagePage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -13330,6 +13378,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteMessages, messageDeleteRule, messageUi } from "#/generated/message";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -13360,7 +13409,7 @@ function MessagesPage() {
   const selectable = rows.some((row) => allows(messageDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/messages/new" className={buttonVariants()}>
-      New message
+      {w.newOne("message")}
     </Link>
   );
   return (
@@ -13410,6 +13459,7 @@ import { createMessage, messageSchema, messageUi } from "#/generated/message";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/messages/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["messages"], context.viewer, location.href),
@@ -13421,12 +13471,12 @@ function NewMessagePage() {
   const back = () => navigate({ to: "/messages" });
   return (
     <>
-      <PageHeader title="New message" />
+      <PageHeader title={w.newOne("message")} />
       <ModelForm
         ui={messageUi}
         app={app}
         schema={messageSchema}
-        submitLabel="Create message"
+        submitLabel={w.createOne("message")}
         onSubmit={async (values) => {
           await createMessage({ data: values });
           await back();
@@ -13454,6 +13504,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -13473,7 +13524,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -13505,7 +13556,7 @@ function BookingPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateBooking({ data: { id: row.id, values } });
           await back();
@@ -13523,7 +13574,7 @@ function BookingPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -13547,6 +13598,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteBookings, bookingDeleteRule, bookingUi } from "#/generated/booking";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -13577,7 +13629,7 @@ function MyBookingsPage() {
   const selectable = rows.some((row) => allows(bookingDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/my-bookings/new" className={buttonVariants()}>
-      New booking
+      {w.newOne("booking")}
     </Link>
   );
   return (
@@ -13628,6 +13680,7 @@ import { sessionOptions } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/my-bookings/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["my-bookings"], context.viewer, location.href),
@@ -13641,13 +13694,13 @@ function NewBookingPage() {
   const back = () => navigate({ to: "/my-bookings" });
   return (
     <>
-      <PageHeader title="New booking" />
+      <PageHeader title={w.newOne("booking")} />
       <ModelForm
         ui={bookingUi}
         app={app}
         schema={bookingSchema}
         options={options}
-        submitLabel="Create booking"
+        submitLabel={w.createOne("booking")}
         onSubmit={async (values) => {
           await createBooking({ data: values });
           await back();
@@ -13674,6 +13727,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -13693,7 +13747,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -13724,7 +13778,7 @@ function PostPage() {
         schema={postSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updatePost({ data: { id: row.id, values } });
           await back();
@@ -13742,7 +13796,7 @@ function PostPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -13766,6 +13820,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deletePosts, postDeleteRule, postUi } from "#/generated/post";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { BookOpen } from "lucide-react";
@@ -13797,7 +13852,7 @@ function PostsPage() {
   const selectable = rows.some((row) => allows(postDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/posts/new" className={buttonVariants()}>
-      New post
+      {w.newOne("post")}
     </Link>
   );
   return (
@@ -13848,6 +13903,7 @@ import { createPost, postSchema, postUi } from "#/generated/post";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/posts/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["posts"], context.viewer, location.href),
@@ -13859,12 +13915,12 @@ function NewPostPage() {
   const back = () => navigate({ to: "/posts" });
   return (
     <>
-      <PageHeader title="New post" />
+      <PageHeader title={w.newOne("post")} />
       <ModelForm
         ui={postUi}
         app={app}
         schema={postSchema}
-        submitLabel="Create post"
+        submitLabel={w.createOne("post")}
         onSubmit={async (values) => {
           await createPost({ data: { ...values, address: values.address || addressFrom(values.title) } });
           await back();
@@ -13917,6 +13973,7 @@ import { sessionAccess, sessionData } from "#/generated/session.server";
 import { allows, guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { Calendar, calendarRange } from "#/kit/Calendar";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { bookingPlaces, reserveBooking, deleteBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
@@ -13974,7 +14031,7 @@ function SchedulePage() {
         items={items}
         timeZone={app.timeZone}
         dateOnly={false}
-        newLabel="New session"
+        newLabel={w.newOne("session")}
         details={(id) => <Reserve id={id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />}
         onNavigate={(next) => navigate({ to: "/schedule", search: next })}
         onOpen={canOpen ? (id) => navigate({ to: "/sessions/$id", params: { id: String(id) } }) : undefined}
@@ -14008,6 +14065,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -14028,7 +14086,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -14060,7 +14118,7 @@ function SessionPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateSession({ data: { id: row.id, values } });
           await back();
@@ -14090,7 +14148,7 @@ function SessionPage() {
       </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -14114,6 +14172,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteSessions, sessionDeleteRule, sessionUi } from "#/generated/session";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -14144,7 +14203,7 @@ function SessionsPage() {
   const selectable = rows.some((row) => allows(sessionDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/sessions/new" className={buttonVariants()}>
-      New session
+      {w.newOne("session")}
     </Link>
   );
   return (
@@ -14196,6 +14255,7 @@ import { instructorOptions } from "#/generated/instructor";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { instantOf } from "#/kit/zoned";
 import { z } from "zod";
 
@@ -14213,14 +14273,14 @@ function NewSessionPage() {
   const back = () => navigate({ to: "/sessions" });
   return (
     <>
-      <PageHeader title="New session" />
+      <PageHeader title={w.newOne("session")} />
       <ModelForm
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
         preset={search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : undefined}
         options={options}
-        submitLabel="Create session"
+        submitLabel={w.createOne("session")}
         onSubmit={async (values) => {
           await createSession({ data: values });
           await back();
@@ -14244,6 +14304,7 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -14258,7 +14319,7 @@ const signInOptions = createServerFn().handler(() => {
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
@@ -14770,26 +14831,26 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.server.ts": "3e27c510 generated",
   "src/generated/booking.ts": "330b667f generated",
   "src/generated/class-type.server.ts": "cd7ee4f6 generated",
-  "src/generated/class-type.ts": "b9f640fb generated",
+  "src/generated/class-type.ts": "2c2990bd generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.server.ts": "28ae6cc3 generated",
-  "src/generated/instructor.ts": "f1647450 generated",
+  "src/generated/instructor.ts": "b9c29a10 generated",
   "src/generated/message.server.ts": "0bf3ad4d generated",
-  "src/generated/message.ts": "4c0e0fa3 generated",
+  "src/generated/message.ts": "6c2a658e generated",
   "src/generated/pages.ts": "dc5315b8 generated",
   "src/generated/pictures.ts": "8c898cf9 generated",
   "src/generated/post.server.ts": "dba61742 generated",
-  "src/generated/post.ts": "d35b4817 generated",
+  "src/generated/post.ts": "7254c32e generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.server.ts": "decc75a6 generated",
   "src/generated/session.ts": "622c256c generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Calculator.tsx": "f15e5001 kit",
@@ -14812,7 +14873,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
@@ -14820,63 +14881,63 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "e174634a kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/uploads.ts": "61fd1570 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "4cbe4a8b generated",
+  "src/lib/auth.ts": "3a82cc45 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "d8c7196e generated",
-  "src/routes/admin/activity.tsx": "e136e57f generated",
-  "src/routes/admin/bookings/$id.tsx": "b6a1277e generated",
-  "src/routes/admin/bookings/index.tsx": "22f4bc9f generated",
-  "src/routes/admin/bookings/new.tsx": "a801addd generated",
-  "src/routes/admin/class-types/$id.tsx": "d88fe7dd generated",
-  "src/routes/admin/class-types/index.tsx": "38bb5738 generated",
-  "src/routes/admin/class-types/new.tsx": "a6481283 generated",
-  "src/routes/admin/index.tsx": "47a07689 generated",
-  "src/routes/admin/instructors/$id.tsx": "defcd098 generated",
-  "src/routes/admin/instructors/index.tsx": "9eced0c8 generated",
-  "src/routes/admin/instructors/new.tsx": "98bb6917 generated",
-  "src/routes/admin/messages/$id.tsx": "55392984 generated",
-  "src/routes/admin/messages/index.tsx": "b0056fad generated",
-  "src/routes/admin/messages/new.tsx": "6d8977f3 generated",
-  "src/routes/admin/posts/$id.tsx": "0de86fa5 generated",
-  "src/routes/admin/posts/index.tsx": "338bc66c generated",
-  "src/routes/admin/posts/new.tsx": "979f6005 generated",
-  "src/routes/admin/sessions/$id.tsx": "b78f5a2f generated",
-  "src/routes/admin/sessions/index.tsx": "73356889 generated",
-  "src/routes/admin/sessions/new.tsx": "47205d21 generated",
+  "src/routes/__root.tsx": "165c966c generated",
+  "src/routes/admin/activity.tsx": "6fecdc74 generated",
+  "src/routes/admin/bookings/$id.tsx": "bc2060d2 generated",
+  "src/routes/admin/bookings/index.tsx": "f46892a4 generated",
+  "src/routes/admin/bookings/new.tsx": "4a386f7c generated",
+  "src/routes/admin/class-types/$id.tsx": "b4848dc5 generated",
+  "src/routes/admin/class-types/index.tsx": "c195fde1 generated",
+  "src/routes/admin/class-types/new.tsx": "496979ba generated",
+  "src/routes/admin/index.tsx": "d16f0602 generated",
+  "src/routes/admin/instructors/$id.tsx": "4193a42a generated",
+  "src/routes/admin/instructors/index.tsx": "e45fd181 generated",
+  "src/routes/admin/instructors/new.tsx": "d80ed9b2 generated",
+  "src/routes/admin/messages/$id.tsx": "a3c4a51e generated",
+  "src/routes/admin/messages/index.tsx": "90523a94 generated",
+  "src/routes/admin/messages/new.tsx": "d8bfe170 generated",
+  "src/routes/admin/posts/$id.tsx": "0e510deb generated",
+  "src/routes/admin/posts/index.tsx": "fcab6127 generated",
+  "src/routes/admin/posts/new.tsx": "4d9de052 generated",
+  "src/routes/admin/sessions/$id.tsx": "1653668d generated",
+  "src/routes/admin/sessions/index.tsx": "ccd33c46 generated",
+  "src/routes/admin/sessions/new.tsx": "9ea1a4fc generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "df43b8eb generated",
-  "src/routes/class-types/$id.tsx": "4ea4779b generated",
-  "src/routes/class-types/index.tsx": "5349826b generated",
-  "src/routes/class-types/new.tsx": "d60149e8 generated",
+  "src/routes/class-types/$id.tsx": "c60fd576 generated",
+  "src/routes/class-types/index.tsx": "8ec31572 generated",
+  "src/routes/class-types/new.tsx": "e05a9aa9 generated",
   "src/routes/files/$model.$field.ts": "cc327122 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "645364a7 generated",
-  "src/routes/instructors/$id.tsx": "c545d2e9 generated",
-  "src/routes/instructors/index.tsx": "e57e07a1 generated",
-  "src/routes/instructors/new.tsx": "f5955aca generated",
-  "src/routes/messages/$id.tsx": "4f813945 generated",
-  "src/routes/messages/index.tsx": "eed5a537 generated",
-  "src/routes/messages/new.tsx": "d2439c64 generated",
-  "src/routes/my-bookings/$id.tsx": "36c80cfa generated",
-  "src/routes/my-bookings/index.tsx": "5979fa2c generated",
-  "src/routes/my-bookings/new.tsx": "04696793 generated",
-  "src/routes/posts/$id.tsx": "64feefbc generated",
-  "src/routes/posts/index.tsx": "d243742f generated",
-  "src/routes/posts/new.tsx": "4235b855 generated",
+  "src/routes/index.tsx": "7f07c70e generated",
+  "src/routes/instructors/$id.tsx": "ac064eb6 generated",
+  "src/routes/instructors/index.tsx": "25a69e92 generated",
+  "src/routes/instructors/new.tsx": "cfdb7137 generated",
+  "src/routes/messages/$id.tsx": "db0dbe46 generated",
+  "src/routes/messages/index.tsx": "fc10d252 generated",
+  "src/routes/messages/new.tsx": "fb1a68cd generated",
+  "src/routes/my-bookings/$id.tsx": "5e5cec27 generated",
+  "src/routes/my-bookings/index.tsx": "b85ba8c5 generated",
+  "src/routes/my-bookings/new.tsx": "3bc0c01e generated",
+  "src/routes/posts/$id.tsx": "566a0431 generated",
+  "src/routes/posts/index.tsx": "5068fac2 generated",
+  "src/routes/posts/new.tsx": "dd5be2f6 generated",
   "src/routes/robots[.]txt.ts": "f0145ecd generated",
-  "src/routes/schedule/index.tsx": "15e0d04d generated",
-  "src/routes/sessions/$id.tsx": "a02a13c0 generated",
-  "src/routes/sessions/index.tsx": "14dae60a generated",
-  "src/routes/sessions/new.tsx": "38255b79 generated",
-  "src/routes/sign-in.tsx": "dbc09cc5 generated",
+  "src/routes/schedule/index.tsx": "d47f6b6c generated",
+  "src/routes/sessions/$id.tsx": "3a9d5927 generated",
+  "src/routes/sessions/index.tsx": "6eb8b323 generated",
+  "src/routes/sessions/new.tsx": "bd534252 generated",
+  "src/routes/sign-in.tsx": "50a41d17 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
@@ -15812,6 +15873,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { customerAccess, customerData } from "./customer.server";
 import { writeAllowed } from "#/kit/limit";
@@ -15900,11 +15962,11 @@ export const customerUi: RecordUi<CustomerRow> = {
 export const customerDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
 
 export const customerSchema = createInsertSchema(schema.customers, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  email: z.email("Enter a valid email address").nullish(),
-  phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, "Enter a valid phone number"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  email: z.email(w.enterValidEmail).nullish(),
+  phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone),
   creditLimit: (s) => s.min(0),
-  notes: (s) => s.max(10000, "At most 10,000 characters"),
+  notes: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type CustomerValues = z.output<typeof customerSchema>;
@@ -16271,6 +16333,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { orderDefaults, withOrderFormulas } from "./order.formulas";
 import { orderAccess, orderData } from "./order.server";
@@ -16369,7 +16432,7 @@ export const orderUi: RecordUi<OrderRow> = {
 export const orderDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
 
 export const orderSchema = createInsertSchema(schema.orders, {
-  number: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
+  number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type OrderValues = z.output<typeof orderSchema>;
@@ -16438,6 +16501,7 @@ import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 export const ROLES = ["admin", "sales"] as const;
 export type Role = (typeof ROLES)[number];
@@ -16618,13 +16682,8 @@ async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void>
   const until = invited.expiresAt.toISOString().slice(0, 10);
   await sendMail({
     to: invited.email,
-    subject: \`Invitation to \${app.name}\`,
-    text: \`\${by.name} invited you to \${app.name} as \${ROLE_LABELS[invited.role] ?? invited.role}.
-
-Sign in with \${invited.email} here:
-\${invited.link}
-
-The invitation is valid until \${until}.\`,
+    subject: w.invitationSubject(app.name),
+    text: w.invitationText(by.name, app.name, ROLE_LABELS[invited.role] ?? invited.role, invited.email, invited.link, until),
   });
 }
 "
@@ -16778,6 +16837,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -16959,8 +17019,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -16999,6 +17059,7 @@ import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -17062,10 +17123,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -17124,6 +17185,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -17144,7 +17206,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -17176,7 +17238,7 @@ function CustomerPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateCustomer({ data: { id: row.id, values } });
           await back();
@@ -17203,7 +17265,7 @@ function CustomerPage() {
       </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -17271,6 +17333,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteCustomers, customerDeleteRule, customerUi } from "#/generated/customer";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -17308,7 +17371,7 @@ function CustomersPage() {
   const selectable = rows.some((row) => allows(customerDeleteRule, viewer, row.accountManagerId));
   const newButton = canCreate && (
     <Link to="/customers/new" className={buttonVariants()}>
-      New customer
+      {w.newOne("customer")}
     </Link>
   );
   const mergeCustomersButton = allows(mergeCustomersAccess, viewer) && (
@@ -17370,6 +17433,7 @@ import { userOptions } from "#/generated/users";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/customers/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["customers"], context.viewer, location.href),
@@ -17383,13 +17447,13 @@ function NewCustomerPage() {
   const back = () => navigate({ to: "/customers" });
   return (
     <>
-      <PageHeader title="New customer" />
+      <PageHeader title={w.newOne("customer")} />
       <ModelForm
         ui={customerUi}
         app={app}
         schema={customerSchema}
         options={options}
-        submitLabel="Create customer"
+        submitLabel={w.createOne("customer")}
         onSubmit={async (values) => {
           await createCustomer({ data: values });
           await back();
@@ -17429,6 +17493,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -17448,7 +17513,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -17480,7 +17545,7 @@ function OrderPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateOrder({ data: { id: row.id, values } });
           await back();
@@ -17498,7 +17563,7 @@ function OrderPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -17526,6 +17591,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteOrders, orderDeleteRule, orderUi } from "#/generated/order";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -17563,7 +17629,7 @@ function OrdersPage() {
   const selectable = rows.some((row) => allows(orderDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/orders/new" className={buttonVariants()}>
-      New order
+      {w.newOne("order")}
     </Link>
   );
   return (
@@ -17620,6 +17686,7 @@ import { customerOptions } from "#/generated/customer";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/orders/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
@@ -17633,13 +17700,13 @@ function NewOrderPage() {
   const back = () => navigate({ to: "/orders" });
   return (
     <>
-      <PageHeader title="New order" />
+      <PageHeader title={w.newOne("order")} />
       <ModelForm
         ui={orderUi}
         app={app}
         schema={orderSchema}
         options={options}
-        submitLabel="Create order"
+        submitLabel={w.createOne("order")}
         onSubmit={async (values) => {
           await createOrder({ data: values });
           await back();
@@ -17679,6 +17746,7 @@ import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -17710,7 +17778,7 @@ const signInOptions = createServerFn()
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@acme.example\`;
     const password = \`\${prefix}-password\`;
@@ -18246,18 +18314,18 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.server.ts": "f5ac9709 generated",
-  "src/generated/customer.ts": "fe2f334e generated",
+  "src/generated/customer.ts": "af6ba4ad generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.server.ts": "fe7c245a generated",
-  "src/generated/order.ts": "4eba3439 generated",
+  "src/generated/order.ts": "bcb1a191 generated",
   "src/generated/pages.ts": "1660cc3e generated",
-  "src/generated/users.server.ts": "4d2fc346 generated",
+  "src/generated/users.server.ts": "32ba704b generated",
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Combobox.tsx": "fe690f90 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
@@ -18273,33 +18341,33 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "cbf9ed38 generated",
+  "src/lib/auth.ts": "7ccb0e1a generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "72023e6f generated",
+  "src/routes/__root.tsx": "67e36f02 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "4a955080 generated",
+  "src/routes/customers/$id.tsx": "ce821aa3 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
-  "src/routes/customers/index.tsx": "dc6f6f9a generated",
-  "src/routes/customers/new.tsx": "297d905c generated",
+  "src/routes/customers/index.tsx": "b905d803 generated",
+  "src/routes/customers/new.tsx": "967ef061 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
-  "src/routes/orders/$id.tsx": "532624aa generated",
-  "src/routes/orders/index.tsx": "a865d610 generated",
-  "src/routes/orders/new.tsx": "d433e790 generated",
+  "src/routes/orders/$id.tsx": "8ce133bb generated",
+  "src/routes/orders/index.tsx": "ccaa221b generated",
+  "src/routes/orders/new.tsx": "c6e61bdb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "3f96f545 generated",
+  "src/routes/sign-in.tsx": "7cea9e53 generated",
   "src/routes/team/index.tsx": "76cf26b8 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
@@ -19657,6 +19725,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { businessProfileAccess, businessProfileData } from "./business-profile.server";
 import { writeAllowed } from "#/kit/limit";
@@ -19722,10 +19791,10 @@ export const businessProfileUi: RecordUi<BusinessProfileRow> = {
 export const businessProfileDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const businessProfileSchema = createInsertSchema(schema.businessProfiles, {
-  businessName: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  vatNumber: (s) => s.max(200, "At most 200 characters"),
-  iban: (s) => s.max(200, "At most 200 characters"),
-  invoiceFooter: (s) => s.max(10000, "At most 10,000 characters"),
+  businessName: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  vatNumber: (s) => s.max(200, w.atMostCharacters(200)),
+  iban: (s) => s.max(200, w.atMostCharacters(200)),
+  invoiceFooter: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type BusinessProfileValues = z.output<typeof businessProfileSchema>;
@@ -19975,6 +20044,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { clientAccess, clientData } from "./client.server";
 import { writeAllowed } from "#/kit/limit";
@@ -20032,10 +20102,10 @@ export const clientUi: RecordUi<ClientRow> = {
 export const clientDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const clientSchema = createInsertSchema(schema.clients, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  email: z.email("Enter a valid email address"),
-  address: (s) => s.max(10000, "At most 10,000 characters"),
-  vatNumber: (s) => s.max(200, "At most 200 characters"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  email: z.email(w.enterValidEmail),
+  address: (s) => s.max(10000, w.atMostCharacters(10000)),
+  vatNumber: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ClientValues = z.output<typeof clientSchema>;
@@ -20443,6 +20513,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { invoiceDefaults, withInvoiceFormulas } from "./invoice.formulas";
 import { invoiceAccess, invoiceData } from "./invoice.server";
@@ -20529,9 +20600,9 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
 export const invoiceDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const invoiceSchema = createInsertSchema(schema.invoices, {
-  number: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  issuedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
-  dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
+  number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  issuedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
+  dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InvoiceValues = z.output<typeof invoiceSchema>;
@@ -20813,6 +20884,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { invoiceLineDefaults, withInvoiceLineFormulas } from "./invoice-line.formulas";
 import { invoiceLineAccess, invoiceLineData } from "./invoice-line.server";
@@ -20886,7 +20958,7 @@ export const invoiceLineUi: RecordUi<InvoiceLineRow> = {
 export const invoiceLineDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const invoiceLineSchema = createInsertSchema(schema.invoiceLines, {
-  description: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
+  description: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InvoiceLineValues = z.output<typeof invoiceLineSchema>;
@@ -20968,6 +21040,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -21103,8 +21176,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -21145,6 +21218,7 @@ import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -21232,10 +21306,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -21270,7 +21344,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
@@ -21301,6 +21375,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -21321,7 +21396,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -21352,7 +21427,7 @@ function ClientPage() {
         schema={clientSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateClient({ data: { id: row.id, values } });
           await back();
@@ -21379,7 +21454,7 @@ function ClientPage() {
       </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -21403,6 +21478,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteClients, clientDeleteRule, clientUi } from "#/generated/client";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -21433,7 +21509,7 @@ function ClientsPage() {
   const selectable = rows.some((row) => allows(clientDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/clients/new" className={buttonVariants()}>
-      New client
+      {w.newOne("client")}
     </Link>
   );
   return (
@@ -21483,6 +21559,7 @@ import { createClient, clientSchema, clientUi } from "#/generated/client";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/clients/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["clients"], context.viewer, location.href),
@@ -21494,12 +21571,12 @@ function NewClientPage() {
   const back = () => navigate({ to: "/clients" });
   return (
     <>
-      <PageHeader title="New client" />
+      <PageHeader title={w.newOne("client")} />
       <ModelForm
         ui={clientUi}
         app={app}
         schema={clientSchema}
-        submitLabel="Create client"
+        submitLabel={w.createOne("client")}
         onSubmit={async (values) => {
           await createClient({ data: values });
           await back();
@@ -21518,6 +21595,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pageAccess } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, CallToAction } from "#/kit/Landing";
+import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 
 export const Route = createFileRoute("/")({
@@ -21528,7 +21606,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName="Invoicely" link={viewer ? { to: "/overview", label: "Open Invoicely" } : { to: "/sign-in", label: "Sign in" }} site={site}>
+    <LandingLayout appName="Invoicely" link={viewer ? { to: "/overview", label: w.openApp("Invoicely") } : { to: "/sign-in", label: w.signIn }} site={site}>
       <Hero
           texts="pages.home.hero"
           title="Invoicely"
@@ -21562,6 +21640,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -21581,7 +21660,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -21613,7 +21692,7 @@ function InvoiceLinePage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateInvoiceLine({ data: { id: row.id, values } });
           await back();
@@ -21631,7 +21710,7 @@ function InvoiceLinePage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -21655,6 +21734,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteInvoiceLines, invoiceLineDeleteRule, invoiceLineUi } from "#/generated/invoice-line";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -21685,7 +21765,7 @@ function InvoiceLinesPage() {
   const selectable = rows.some((row) => allows(invoiceLineDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/invoice-lines/new" className={buttonVariants()}>
-      New invoice line
+      {w.newOne("invoice line")}
     </Link>
   );
   return (
@@ -21736,6 +21816,7 @@ import { invoiceOptions } from "#/generated/invoice";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/invoice-lines/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoice-lines"], context.viewer, location.href),
@@ -21749,13 +21830,13 @@ function NewInvoiceLinePage() {
   const back = () => navigate({ to: "/invoice-lines" });
   return (
     <>
-      <PageHeader title="New invoice line" />
+      <PageHeader title={w.newOne("invoice line")} />
       <ModelForm
         ui={invoiceLineUi}
         app={app}
         schema={invoiceLineSchema}
         options={options}
-        submitLabel="Create invoice line"
+        submitLabel={w.createOne("invoice line")}
         onSubmit={async (values) => {
           await createInvoiceLine({ data: values });
           await back();
@@ -21787,6 +21868,7 @@ import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -21807,7 +21889,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -21865,7 +21947,7 @@ function InvoicePage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateInvoice({ data: { id: row.id, values } });
           await back();
@@ -21892,7 +21974,7 @@ function InvoicePage() {
       </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -21919,6 +22001,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteInvoices, invoiceDeleteRule, invoiceUi } from "#/generated/invoice";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -21949,7 +22032,7 @@ function InvoicesPage() {
   const selectable = rows.some((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row) || allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row) || allows(invoiceDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/invoices/new" className={buttonVariants()}>
-      New invoice
+      {w.newOne("invoice")}
     </Link>
   );
   return (
@@ -22033,6 +22116,7 @@ import { clientOptions } from "#/generated/client";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/invoices/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
@@ -22046,13 +22130,13 @@ function NewInvoicePage() {
   const back = () => navigate({ to: "/invoices" });
   return (
     <>
-      <PageHeader title="New invoice" />
+      <PageHeader title={w.newOne("invoice")} />
       <ModelForm
         ui={invoiceUi}
         app={app}
         schema={invoiceSchema}
         options={options}
-        submitLabel="Create invoice"
+        submitLabel={w.createOne("invoice")}
         onSubmit={async (values) => {
           await createInvoice({ data: values });
           await back();
@@ -22153,6 +22237,7 @@ import { createBusinessProfile, businessProfileSchema, businessProfileUi, update
 import { businessProfileAccess, businessProfileData } from "#/generated/business-profile.server";
 import { allows, guardPage } from "#/kit/access";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { useState } from "react";
 import { PageHeader } from "#/kit/AppShell";
@@ -22187,7 +22272,7 @@ function SettingsPage() {
         schema={businessProfileSchema}
         initial={row ?? undefined}
         readOnly={!canSave}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           setSaved(false);
           if (row) await updateBusinessProfile({ data: { id: row.id, values } });
@@ -22216,6 +22301,7 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -22230,7 +22316,7 @@ const signInOptions = createServerFn().handler(() => {
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
@@ -22297,6 +22383,7 @@ import { createBusinessProfile, businessProfileSchema, businessProfileUi, type B
 import { businessProfileAccess, businessProfileData } from "#/generated/business-profile.server";
 import { allows, guardPage } from "#/kit/access";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { useState } from "react";
 import { OnboardingLayout } from "#/kit/Onboarding";
@@ -22342,7 +22429,7 @@ function WelcomePage() {
   const current = steps[step] as (typeof steps)[number];
   return (
     <OnboardingLayout
-      title="Welcome to Invoicely"
+      title={w.welcomeTo("Invoicely")}
       step={step}
       count={steps.length}
       stepTitle={current.title}
@@ -22799,22 +22886,22 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/business-profile.server.ts": "9fe0393f generated",
-  "src/generated/business-profile.ts": "70449542 generated",
+  "src/generated/business-profile.ts": "c3d116e0 generated",
   "src/generated/client.server.ts": "a12b4371 generated",
-  "src/generated/client.ts": "050eb240 generated",
+  "src/generated/client.ts": "80b05cce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.server.ts": "2707e1b7 generated",
-  "src/generated/invoice-line.ts": "7f9521f9 generated",
+  "src/generated/invoice-line.ts": "b19acfa3 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.server.ts": "3c77daf5 generated",
-  "src/generated/invoice.ts": "721281fb generated",
+  "src/generated/invoice.ts": "4e2f5475 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Combobox.tsx": "fe690f90 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
@@ -22833,38 +22920,38 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c37b1b43 generated",
+  "src/lib/auth.ts": "29808e97 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "14c028a7 generated",
+  "src/routes/__root.tsx": "ebf68191 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "5aa1148c generated",
-  "src/routes/clients/index.tsx": "5298ad7f generated",
-  "src/routes/clients/new.tsx": "156ce1da generated",
+  "src/routes/clients/$id.tsx": "46434e7d generated",
+  "src/routes/clients/index.tsx": "6919e4c2 generated",
+  "src/routes/clients/new.tsx": "d5b75cc7 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "916035f6 generated",
-  "src/routes/invoice-lines/$id.tsx": "fd42a6e7 generated",
-  "src/routes/invoice-lines/index.tsx": "584545a1 generated",
-  "src/routes/invoice-lines/new.tsx": "02678970 generated",
-  "src/routes/invoices/$id.tsx": "5d01c0f4 generated",
-  "src/routes/invoices/index.tsx": "8ca8a628 generated",
-  "src/routes/invoices/new.tsx": "c2112728 generated",
+  "src/routes/index.tsx": "6acc52d7 generated",
+  "src/routes/invoice-lines/$id.tsx": "b0e5b400 generated",
+  "src/routes/invoice-lines/index.tsx": "2b5771f2 generated",
+  "src/routes/invoice-lines/new.tsx": "6bbc5727 generated",
+  "src/routes/invoices/$id.tsx": "bcdc091f generated",
+  "src/routes/invoices/index.tsx": "4917f737 generated",
+  "src/routes/invoices/new.tsx": "2156b317 generated",
   "src/routes/overview/index.tsx": "66557c73 generated",
   "src/routes/robots[.]txt.ts": "2fff0478 generated",
-  "src/routes/settings/index.tsx": "ccb1cb37 generated",
-  "src/routes/sign-in.tsx": "cf78fb89 generated",
-  "src/routes/welcome/index.tsx": "d181401c generated",
+  "src/routes/settings/index.tsx": "a49512c5 generated",
+  "src/routes/sign-in.tsx": "3ac37de3 generated",
+  "src/routes/welcome/index.tsx": "b5bbe807 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
@@ -23703,6 +23790,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { bindPictures } from "#/kit/PictureInput";
 import { itemAccess, itemData } from "./item.server";
@@ -23807,10 +23895,10 @@ export const itemUi: RecordUi<ItemRow> = {
 export const itemDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const itemSchema = createInsertSchema(schema.items, {
-  title: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
+  title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   photos: z.array(z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })).max(10).nullish(),
-  description: (s) => s.trim().min(1, "Required").max(10000, "At most 10,000 characters"),
-  place: (s) => s.max(200, "At most 200 characters"),
+  description: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
+  place: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ItemValues = z.output<typeof itemSchema>;
@@ -23916,6 +24004,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -24051,8 +24140,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -24092,6 +24181,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { SaveButton } from "#/kit/ModelTable";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -24146,7 +24236,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -24191,7 +24281,7 @@ function ItemPage() {
         schema={itemSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateItem({ data: { id: row.id, values } });
           await back();
@@ -24214,7 +24304,7 @@ function ItemPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -24237,6 +24327,7 @@ import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -24309,10 +24400,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -24347,7 +24438,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || (r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : pathname.startsWith(\`\${r}/\`))) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
@@ -24381,6 +24472,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteItems, itemDeleteRule, itemUi, toggleSavedItem } from "#/generated/item";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -24443,7 +24535,7 @@ function CatalogPage() {
   };
   const newButton = canCreate && (
     <Link to="/new" className={buttonVariants()}>
-      New item
+      {w.newOne("item")}
     </Link>
   );
   return (
@@ -24550,6 +24642,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -24569,7 +24662,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -24600,7 +24693,7 @@ function ItemPage() {
         schema={itemSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateItem({ data: { id: row.id, values } });
           await back();
@@ -24618,7 +24711,7 @@ function ItemPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -24644,6 +24737,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteItems, itemDeleteRule, itemUi } from "#/generated/item";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { Package } from "lucide-react";
@@ -24687,7 +24781,7 @@ function MyItemsPage() {
   const selectable = rows.some((row) => allows(itemDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/my-items/new" className={buttonVariants()}>
-      New item
+      {w.newOne("item")}
     </Link>
   );
   return (
@@ -24739,6 +24833,7 @@ import { createItem, itemSchema, itemUi } from "#/generated/item";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/my-items/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["myItems"], context.viewer, location.href),
@@ -24750,12 +24845,12 @@ function NewItemPage() {
   const back = () => navigate({ to: "/my-items" });
   return (
     <>
-      <PageHeader title="New item" />
+      <PageHeader title={w.newOne("item")} />
       <ModelForm
         ui={itemUi}
         app={app}
         schema={itemSchema}
-        submitLabel="Create item"
+        submitLabel={w.createOne("item")}
         onSubmit={async (values) => {
           await createItem({ data: values });
           await back();
@@ -24777,6 +24872,7 @@ import { createItem, itemSchema, itemUi } from "#/generated/item";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["catalog"], context.viewer, location.href),
@@ -24788,12 +24884,12 @@ function NewItemPage() {
   const back = () => navigate({ to: "/" });
   return (
     <>
-      <PageHeader title="New item" />
+      <PageHeader title={w.newOne("item")} />
       <ModelForm
         ui={itemUi}
         app={app}
         schema={itemSchema}
-        submitLabel="Create item"
+        submitLabel={w.createOne("item")}
         onSubmit={async (values) => {
           await createItem({ data: values });
           await back();
@@ -24836,6 +24932,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { SaveButton } from "#/kit/ModelTable";
 
@@ -24856,7 +24953,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -24901,7 +24998,7 @@ function ItemPage() {
         schema={itemSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateItem({ data: { id: row.id, values } });
           await back();
@@ -24919,7 +25016,7 @@ function ItemPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -24945,6 +25042,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteItems, itemDeleteRule, itemUi, toggleSavedItem } from "#/generated/item";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { Package } from "lucide-react";
@@ -24999,7 +25097,7 @@ function SavedPage() {
   };
   const newButton = canCreate && (
     <Link to="/saved/new" className={buttonVariants()}>
-      New item
+      {w.newOne("item")}
     </Link>
   );
   return (
@@ -25052,6 +25150,7 @@ import { createItem, itemSchema, itemUi } from "#/generated/item";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/saved/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["saved"], context.viewer, location.href),
@@ -25063,12 +25162,12 @@ function NewItemPage() {
   const back = () => navigate({ to: "/saved" });
   return (
     <>
-      <PageHeader title="New item" />
+      <PageHeader title={w.newOne("item")} />
       <ModelForm
         ui={itemUi}
         app={app}
         schema={itemSchema}
-        submitLabel="Create item"
+        submitLabel={w.createOne("item")}
         onSubmit={async (values) => {
           await createItem({ data: values });
           await back();
@@ -25092,6 +25191,7 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -25106,7 +25206,7 @@ const signInOptions = createServerFn().handler(() => {
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
@@ -25169,6 +25269,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pageAccess } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
+import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 import { listItems } from "#/generated/item";
 import { app } from "#/generated/app";
@@ -25184,7 +25285,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName="Torget" link={viewer ? { to: "/", label: "Open Torget" } : { to: "/sign-in", label: "Sign in" }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName="Torget" link={viewer ? { to: "/", label: w.openApp("Torget") } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
       <Hero
           texts="pages.home.hero"
           title="Torget"
@@ -25609,12 +25710,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.server.ts": "108f9c93 generated",
-  "src/generated/item.ts": "dc271fff generated",
+  "src/generated/item.ts": "d9435da0 generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/pictures.ts": "1a4ef242 generated",
   "src/generated/site.ts": "b9832c55 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Combobox.tsx": "fe690f90 kit",
   "src/kit/ContactOwner.tsx": "15c951dd kit",
@@ -25634,7 +25735,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
@@ -25642,31 +25743,31 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "e174634a kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/uploads.ts": "61fd1570 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "5f4684a9 generated",
+  "src/lib/auth.ts": "c5155025 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "5286e050 generated",
-  "src/routes/__root.tsx": "d5881835 generated",
+  "src/routes/$id.tsx": "7c9fc969 generated",
+  "src/routes/__root.tsx": "e5922033 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "cc327122 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "fbae90bb kit",
   "src/routes/files/$model.$id.$field.ts": "31056f86 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "adcb65e0 generated",
-  "src/routes/my-items/$id.tsx": "b96d0328 generated",
-  "src/routes/my-items/index.tsx": "fb180e0d generated",
-  "src/routes/my-items/new.tsx": "d4a511a0 generated",
-  "src/routes/new.tsx": "b9d18340 generated",
+  "src/routes/index.tsx": "69947487 generated",
+  "src/routes/my-items/$id.tsx": "63b106f7 generated",
+  "src/routes/my-items/index.tsx": "9f02cff8 generated",
+  "src/routes/my-items/new.tsx": "c90fefe5 generated",
+  "src/routes/new.tsx": "d45546f7 generated",
   "src/routes/robots[.]txt.ts": "383380da generated",
-  "src/routes/saved/$id.tsx": "7cfb0fa3 generated",
-  "src/routes/saved/index.tsx": "11138ef6 generated",
-  "src/routes/saved/new.tsx": "09d0880f generated",
-  "src/routes/sign-in.tsx": "dbc09cc5 generated",
-  "src/routes/welcome/index.tsx": "a4ea7b3f generated",
+  "src/routes/saved/$id.tsx": "e2db8cfa generated",
+  "src/routes/saved/index.tsx": "89004ac3 generated",
+  "src/routes/saved/new.tsx": "dc6bc72e generated",
+  "src/routes/sign-in.tsx": "50a41d17 generated",
+  "src/routes/welcome/index.tsx": "f5193990 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
@@ -26473,6 +26574,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { itemDefaults, withItemFormulas } from "./item.formulas";
 import { itemAccess, itemData } from "./item.server";
@@ -26547,10 +26649,10 @@ export const itemUi: RecordUi<ItemRow> = {
 export const itemDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
 
 export const itemSchema = createInsertSchema(schema.items, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  summary: (s) => s.max(10000, "At most 10,000 characters"),
-  link: z.url("Enter a valid web address").nullish(),
-  addedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  summary: (s) => s.max(10000, w.atMostCharacters(10000)),
+  link: z.url(w.enterValidUrl).nullish(),
+  addedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ItemValues = z.output<typeof itemSchema>;
@@ -26627,6 +26729,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -26762,8 +26865,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -26804,6 +26907,7 @@ import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -26859,10 +26963,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -26897,7 +27001,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
@@ -26919,6 +27023,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pageAccess } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
+import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 import { listItems } from "#/generated/item";
 
@@ -26932,7 +27037,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName="Our Collection" link={viewer ? { to: "/items", label: "Open Our Collection" } : { to: "/sign-in", label: "Sign in" }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName="Our Collection" link={viewer ? { to: "/items", label: w.openApp("Our Collection") } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
       <Hero
           texts="pages.home.hero"
           title="Our Collection"
@@ -26972,6 +27077,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -26991,7 +27097,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -27022,7 +27128,7 @@ function ItemPage() {
         schema={itemSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateItem({ data: { id: row.id, values } });
           await back();
@@ -27040,7 +27146,7 @@ function ItemPage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -27066,6 +27172,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteItems, itemDeleteRule, itemUi } from "#/generated/item";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
@@ -27103,7 +27210,7 @@ function ItemsPage() {
   const selectable = rows.some((row) => allows(itemDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/items/new" className={buttonVariants()}>
-      New item
+      {w.newOne("item")}
     </Link>
   );
   return (
@@ -27159,6 +27266,7 @@ import { createItem, itemSchema, itemUi } from "#/generated/item";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/items/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["items"], context.viewer, location.href),
@@ -27170,12 +27278,12 @@ function NewItemPage() {
   const back = () => navigate({ to: "/items" });
   return (
     <>
-      <PageHeader title="New item" />
+      <PageHeader title={w.newOne("item")} />
       <ModelForm
         ui={itemUi}
         app={app}
         schema={itemSchema}
-        submitLabel="Create item"
+        submitLabel={w.createOne("item")}
         onSubmit={async (values) => {
           await createItem({ data: values });
           await back();
@@ -27215,6 +27323,7 @@ import { db } from "#/db";
 import { user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -27229,7 +27338,7 @@ const signInOptions = createServerFn().handler(() => {
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
@@ -27623,11 +27732,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.server.ts": "a56f9579 generated",
-  "src/generated/item.ts": "d6dbcd71 generated",
+  "src/generated/item.ts": "18978cbe generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Combobox.tsx": "fe690f90 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
@@ -27643,29 +27752,29 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "c54241ec kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "e174634a kit",
   "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "e48245dc generated",
+  "src/lib/auth.ts": "63d519fe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "ec290ed5 generated",
+  "src/routes/__root.tsx": "d4dead1f generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "9b03a82e generated",
-  "src/routes/items/$id.tsx": "cfd8ed79 generated",
-  "src/routes/items/index.tsx": "f6b8788e generated",
-  "src/routes/items/new.tsx": "161171aa generated",
+  "src/routes/index.tsx": "1f833f45 generated",
+  "src/routes/items/$id.tsx": "b8bbc436 generated",
+  "src/routes/items/index.tsx": "636359ef generated",
+  "src/routes/items/new.tsx": "09d8b88f generated",
   "src/routes/robots[.]txt.ts": "e5b1c876 generated",
-  "src/routes/sign-in.tsx": "dbc09cc5 generated",
+  "src/routes/sign-in.tsx": "50a41d17 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
@@ -30547,6 +30656,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { componentAccess, componentData } from "./component.server";
 import { writeAllowed } from "#/kit/limit";
@@ -30605,8 +30715,8 @@ export const componentUi: RecordUi<ComponentRow> = {
 export const componentDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const componentSchema = createInsertSchema(schema.components, {
-  name: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  description: (s) => s.max(10000, "At most 10,000 characters"),
+  name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  description: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type ComponentValues = z.output<typeof componentSchema>;
@@ -31185,6 +31295,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { incidentAccess, incidentData } from "./incident.server";
@@ -31270,8 +31381,8 @@ export const incidentUi: RecordUi<IncidentRow> = {
 export const incidentDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const incidentSchema = createInsertSchema(schema.incidents, {
-  title: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  summary: (s) => s.max(50000, "At most 50,000 characters"),
+  title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  summary: (s) => s.max(50000, w.atMostCharacters(50000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type IncidentValues = z.output<typeof incidentSchema>;
@@ -31511,6 +31622,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { incidentUpdateAccess, incidentUpdateData } from "./incident-update.server";
 import { writeAllowed } from "#/kit/limit";
@@ -31579,7 +31691,7 @@ export const incidentUpdateUi: RecordUi<IncidentUpdateRow> = {
 export const incidentUpdateDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const incidentUpdateSchema = createInsertSchema(schema.incidentUpdates, {
-  message: (s) => s.trim().min(1, "Required").max(10000, "At most 10,000 characters"),
+  message: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type IncidentUpdateValues = z.output<typeof incidentUpdateSchema>;
@@ -31965,6 +32077,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { maintenanceAccess, maintenanceData } from "./maintenance.server";
 import { writeAllowed } from "#/kit/limit";
@@ -32033,8 +32146,8 @@ export const maintenanceUi: RecordUi<MaintenanceRow> = {
 export const maintenanceDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 export const maintenanceSchema = createInsertSchema(schema.maintenances, {
-  title: (s) => s.trim().min(1, "Required").max(200, "At most 200 characters"),
-  description: (s) => s.max(10000, "At most 10,000 characters"),
+  title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  description: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type MaintenanceValues = z.output<typeof maintenanceSchema>;
@@ -32900,6 +33013,7 @@ import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 export const ROLES = ["admin", "staff"] as const;
 export type Role = (typeof ROLES)[number];
@@ -33088,13 +33202,8 @@ async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void>
   const until = invited.expiresAt.toISOString().slice(0, 10);
   await sendMail({
     to: invited.email,
-    subject: \`Invitation to \${app.name}\`,
-    text: \`\${by.name} invited you to \${app.name} as \${ROLE_LABELS[invited.role] ?? invited.role}.
-
-Sign in with \${invited.email} here:
-\${invited.link}
-
-The invitation is valid until \${until}.\`,
+    subject: w.invitationSubject(app.name),
+    text: w.invitationText(by.name, app.name, ROLE_LABELS[invited.role] ?? invited.role, invited.email, invited.link, until),
   });
 }
 "
@@ -33231,6 +33340,7 @@ import { audit } from "#/kit/audit.server";
 import { codeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ["email"];
@@ -33409,8 +33519,8 @@ export const auth = betterAuth({
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -33451,6 +33561,7 @@ import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
 
@@ -33547,10 +33658,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -33585,7 +33696,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
@@ -33832,6 +33943,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -33855,7 +33967,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -33886,7 +33998,7 @@ function ComponentPage() {
         schema={componentSchema}
         initial={row}
         readOnly={!canWrite}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateComponent({ data: { id: row.id, values } });
           await back();
@@ -33913,7 +34025,7 @@ function ComponentPage() {
       </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -33937,6 +34049,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteComponents, componentDeleteRule, componentUi } from "#/generated/component";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -33967,7 +34080,7 @@ function ComponentsPage() {
   const selectable = rows.some((row) => allows(componentDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/components/new" className={buttonVariants()}>
-      New component
+      {w.newOne("component")}
     </Link>
   );
   return (
@@ -34017,6 +34130,7 @@ import { createComponent, componentSchema, componentUi } from "#/generated/compo
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/components/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["components"], context.viewer, location.href),
@@ -34028,12 +34142,12 @@ function NewComponentPage() {
   const back = () => navigate({ to: "/components" });
   return (
     <>
-      <PageHeader title="New component" />
+      <PageHeader title={w.newOne("component")} />
       <ModelForm
         ui={componentUi}
         app={app}
         schema={componentSchema}
-        submitLabel="Create component"
+        submitLabel={w.createOne("component")}
         onSubmit={async (values) => {
           await createComponent({ data: values });
           await back();
@@ -34270,6 +34384,7 @@ import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -34293,7 +34408,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -34360,7 +34475,7 @@ function IncidentPage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateIncident({ data: { id: row.id, values } });
           await back();
@@ -34387,7 +34502,7 @@ function IncidentPage() {
       </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -34415,6 +34530,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteIncidents, incidentDeleteRule, incidentUi } from "#/generated/incident";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -34445,7 +34561,7 @@ function IncidentsPage() {
   const selectable = rows.some((row) => allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) || allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row) || allows(resolveAccess, viewer, row.ownerId) && resolveFits(row) || allows(incidentDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/incidents/new" className={buttonVariants()}>
-      New incident
+      {w.newOne("incident")}
     </Link>
   );
   return (
@@ -34543,6 +34659,7 @@ import { componentOptions } from "#/generated/component";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/incidents/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["incidents"], context.viewer, location.href),
@@ -34556,13 +34673,13 @@ function NewIncidentPage() {
   const back = () => navigate({ to: "/incidents" });
   return (
     <>
-      <PageHeader title="New incident" />
+      <PageHeader title={w.newOne("incident")} />
       <ModelForm
         ui={incidentUi}
         app={app}
         schema={incidentSchema}
         options={options}
-        submitLabel="Create incident"
+        submitLabel={w.createOne("incident")}
         onSubmit={async (values) => {
           await createIncident({ data: values });
           await back();
@@ -34581,6 +34698,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pageAccess } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
+import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 import { listComponents } from "#/generated/component";
 import { listIncidents } from "#/generated/incident";
@@ -34597,7 +34715,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName="Northwind Status" link={viewer ? { to: "/overview", label: "Open Northwind Status" } : { to: "/sign-in", label: "Sign in" }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName="Northwind Status" link={viewer ? { to: "/overview", label: w.openApp("Northwind Status") } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
       <Hero
           texts="pages.home.hero"
           title="Northwind Status"
@@ -34688,6 +34806,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -34710,7 +34829,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -34742,7 +34861,7 @@ function MaintenancePage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateMaintenance({ data: { id: row.id, values } });
           await back();
@@ -34760,7 +34879,7 @@ function MaintenancePage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -34784,6 +34903,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteMaintenances, maintenanceDeleteRule, maintenanceUi } from "#/generated/maintenance";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -34814,7 +34934,7 @@ function MaintenancePage() {
   const selectable = rows.some((row) => allows(maintenanceDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/maintenance/new" className={buttonVariants()}>
-      New maintenance
+      {w.newOne("maintenance")}
     </Link>
   );
   return (
@@ -34865,6 +34985,7 @@ import { componentOptions } from "#/generated/component";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/maintenance/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["maintenance"], context.viewer, location.href),
@@ -34878,13 +34999,13 @@ function NewMaintenancePage() {
   const back = () => navigate({ to: "/maintenance" });
   return (
     <>
-      <PageHeader title="New maintenance" />
+      <PageHeader title={w.newOne("maintenance")} />
       <ModelForm
         ui={maintenanceUi}
         app={app}
         schema={maintenanceSchema}
         options={options}
-        submitLabel="Create maintenance"
+        submitLabel={w.createOne("maintenance")}
         onSubmit={async (values) => {
           await createMaintenance({ data: values });
           await back();
@@ -35002,6 +35123,7 @@ import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -35033,7 +35155,7 @@ const signInOptions = createServerFn()
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
@@ -35243,6 +35365,7 @@ import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -35265,7 +35388,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -35297,7 +35420,7 @@ function IncidentUpdatePage() {
         initial={row}
         readOnly={!canWrite}
         options={options}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await updateIncidentUpdate({ data: { id: row.id, values } });
           await back();
@@ -35315,7 +35438,7 @@ function IncidentUpdatePage() {
 
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}
@@ -35339,6 +35462,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteIncidentUpdates, incidentUpdateDeleteRule, incidentUpdateUi } from "#/generated/incident-update";
 import { app } from "#/generated/app";
+import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 
@@ -35369,7 +35493,7 @@ function UpdatesPage() {
   const selectable = rows.some((row) => allows(incidentUpdateDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/updates/new" className={buttonVariants()}>
-      New incident update
+      {w.newOne("incident update")}
     </Link>
   );
   return (
@@ -35420,6 +35544,7 @@ import { incidentOptions } from "#/generated/incident";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/updates/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["updates"], context.viewer, location.href),
@@ -35433,13 +35558,13 @@ function NewIncidentUpdatePage() {
   const back = () => navigate({ to: "/updates" });
   return (
     <>
-      <PageHeader title="New incident update" />
+      <PageHeader title={w.newOne("incident update")} />
       <ModelForm
         ui={incidentUpdateUi}
         app={app}
         schema={incidentUpdateSchema}
         options={options}
-        submitLabel="Create incident update"
+        submitLabel={w.createOne("incident update")}
         onSubmit={async (values) => {
           await createIncidentUpdate({ data: values });
           await back();
@@ -35899,24 +36024,24 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/component.server.ts": "8b75586a generated",
-  "src/generated/component.ts": "a4ec356f generated",
+  "src/generated/component.ts": "f156a7db generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.server.ts": "58ca5de5 generated",
-  "src/generated/incident-update.ts": "20a029b3 generated",
+  "src/generated/incident-update.ts": "78a69a2f generated",
   "src/generated/incident.server.ts": "f39c6297 generated",
-  "src/generated/incident.ts": "81235c4d generated",
+  "src/generated/incident.ts": "4411580f generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.server.ts": "75046b95 generated",
-  "src/generated/maintenance.ts": "d8f14068 generated",
+  "src/generated/maintenance.ts": "0a683378 generated",
   "src/generated/mcp.server.ts": "0761c19c generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
-  "src/generated/users.server.ts": "15c188dd generated",
+  "src/generated/users.server.ts": "2b5c39fa generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "6f16e38d kit",
+  "src/kit/ActivityLog.tsx": "089b16f5 kit",
   "src/kit/AppShell.tsx": "cfc036ab kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Combobox.tsx": "fe690f90 kit",
@@ -35940,7 +36065,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/format.ts": "51f3e5e9 kit",
   "src/kit/formula.ts": "80d56605 kit",
-  "src/kit/limit.ts": "8a3882ff kit",
+  "src/kit/limit.ts": "12c13db0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
@@ -35951,14 +36076,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "ef52a824 kit",
+  "src/kit/words.ts": "89951d1c kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "324722d2 generated",
+  "src/lib/auth.ts": "d35a3346 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "10b74ab0 generated",
+  "src/routes/__root.tsx": "fa5de4fe generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "45b5815f generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -35966,27 +36091,27 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/$id.ts": "c9e3ef8f generated",
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "35024930 generated",
-  "src/routes/components/index.tsx": "413cbd87 generated",
-  "src/routes/components/new.tsx": "872a5c00 generated",
+  "src/routes/components/$id.tsx": "de279b99 generated",
+  "src/routes/components/index.tsx": "f4c3149a generated",
+  "src/routes/components/new.tsx": "52abed01 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "0bed1abf generated",
-  "src/routes/incidents/$id.tsx": "59ae575e generated",
-  "src/routes/incidents/index.tsx": "2d37b563 generated",
-  "src/routes/incidents/new.tsx": "8f10b8a0 generated",
-  "src/routes/index.tsx": "b06924e8 generated",
-  "src/routes/maintenance/$id.tsx": "f94bd412 generated",
-  "src/routes/maintenance/index.tsx": "866ca22a generated",
-  "src/routes/maintenance/new.tsx": "67635ee5 generated",
+  "src/routes/incidents/$id.tsx": "cee486cb generated",
+  "src/routes/incidents/index.tsx": "2e50f2aa generated",
+  "src/routes/incidents/new.tsx": "f47b100b generated",
+  "src/routes/index.tsx": "a93cebe7 generated",
+  "src/routes/maintenance/$id.tsx": "7b006379 generated",
+  "src/routes/maintenance/index.tsx": "4adc8a11 generated",
+  "src/routes/maintenance/new.tsx": "38a0b0b8 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "a6c168d7 generated",
   "src/routes/robots[.]txt.ts": "0db0004a generated",
-  "src/routes/sign-in.tsx": "c9a35e7c generated",
+  "src/routes/sign-in.tsx": "416bfaba generated",
   "src/routes/team/index.tsx": "5d5faa8f generated",
-  "src/routes/updates/$id.tsx": "54181324 generated",
-  "src/routes/updates/index.tsx": "da4a4153 generated",
-  "src/routes/updates/new.tsx": "c4bd32a9 generated",
+  "src/routes/updates/$id.tsx": "d7a59f2d generated",
+  "src/routes/updates/index.tsx": "377854ba generated",
+  "src/routes/updates/new.tsx": "94947978 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",

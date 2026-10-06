@@ -65,7 +65,8 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     .add(`${n.module}.server`, n.access, n.data)
     .add("#/kit/access", "allows", "guardPage")
     .add("#/kit/AppShell", "PageHeader")
-    .add("#/kit/Calendar", "Calendar", "calendarRange");
+    .add("#/kit/Calendar", "Calendar", "calendarRange")
+    .add("#/kit/words", "w");
   imports.add("#/lib/viewer.server", "currentViewer");
   // Places on a record (a session's bookings): its panel lets people book one.
   const reserve = reserveElement(model, ctx, (m, ...ns) => imports.add(m, ...ns), "id");
@@ -161,7 +162,7 @@ function ${component}() {
         items={items}
         timeZone={app.timeZone}
         dateOnly={${dateOnly}}
-        newLabel=${attr(`New ${n.label.toLowerCase()}`)}${
+        newLabel={w.newOne(${JSON.stringify(n.label.toLowerCase())})}${
           reserve
             ? `
         details={(id) => ${reserve}}`

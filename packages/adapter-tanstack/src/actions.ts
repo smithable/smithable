@@ -55,16 +55,16 @@ export function zodFor(field: FieldIR): string {
         schema = "z.date()";
         break;
       case "email":
-        schema = 'z.email("Enter a valid email address")';
+        schema = "z.email(w.enterValidEmail)";
         break;
       case "url":
-        schema = 'z.url("Enter a valid web address")';
+        schema = "z.url(w.enterValidUrl)";
         break;
       case "date":
-        schema = 'z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Enter a valid date")';
+        schema = "z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate)";
         break;
       default:
-        schema = `z.string()${["string", "text", "markdown"].includes(field.type.name) ? textBounds(field) : field.required ? '.trim().min(1, "Required")' : ""}`;
+        schema = `z.string()${["string", "text", "markdown"].includes(field.type.name) ? textBounds(field) : field.required ? ".trim().min(1, w.required)" : ""}`;
     }
   }
   return field.required ? schema : `${schema}.nullish()`;
@@ -145,6 +145,7 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { ${action.name} as implementation } from "${a.custom}";
+import { w } from "#/kit/words";
 ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
@@ -260,6 +261,7 @@ ${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === 
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 ${models.map((m) => `import { ${m.schema}, ${m.ui} } from "${m.module}";\n`).join("")}import type { Rule } from "#/kit/access";
+import { w } from "#/kit/words";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 ${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
