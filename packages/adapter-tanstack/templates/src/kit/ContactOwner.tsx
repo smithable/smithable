@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
+import { w } from "./words";
 
 export interface ContactValues {
   name: string;
@@ -40,7 +41,7 @@ export function ContactOwner({
       await onSend(values);
       setState("sent");
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "The message could not be sent.");
+      setFailure(error instanceof Error ? error.message : w.messageNotSent);
       setState("idle");
     }
   }
@@ -51,13 +52,13 @@ export function ContactOwner({
       </h2>
       {state === "sent" ? (
         <p role="status" className="mt-4">
-          Your message is sent.
+          {w.messageSent}
         </p>
       ) : (
         <form onSubmit={send} aria-labelledby={`${id}-title`} className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor={`${id}-name`}>Your name</Label>
+              <Label htmlFor={`${id}-name`}>{w.yourName}</Label>
               <Input
                 id={`${id}-name`}
                 required
@@ -68,7 +69,7 @@ export function ContactOwner({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`${id}-email`}>Your email</Label>
+              <Label htmlFor={`${id}-email`}>{w.yourEmail}</Label>
               <Input
                 id={`${id}-email`}
                 type="email"
@@ -81,7 +82,7 @@ export function ContactOwner({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${id}-message`}>Message</Label>
+            <Label htmlFor={`${id}-message`}>{w.message}</Label>
             <textarea
               id={`${id}-message`}
               required
@@ -98,7 +99,7 @@ export function ContactOwner({
             </p>
           )}
           <Button type="submit" disabled={state === "sending"}>
-            <Send aria-hidden className="size-4" /> {state === "sending" ? "Sending…" : "Send"}
+            <Send aria-hidden className="size-4" /> {state === "sending" ? w.sending : w.send}
           </Button>
         </form>
       )}

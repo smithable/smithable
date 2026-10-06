@@ -3,6 +3,7 @@
 // To change them, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
 import { MarkdownText } from "./Markdown";
+import { w } from "./words";
 
 export interface ArticleCard {
   href: string;
@@ -22,7 +23,7 @@ export function ArticleList({
   older?: string;
   newer?: string;
 }) {
-  if (!items.length) return <p className="text-muted-foreground">Nothing here yet.</p>;
+  if (!items.length) return <p className="text-muted-foreground">{w.nothingHereYet}</p>;
   return (
     <div data-kit="articles" className="space-y-8">
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,17 +58,17 @@ export function ArticleList({
         ))}
       </ul>
       {(older || newer) && (
-        <nav aria-label="More articles" className="flex justify-between gap-4">
+        <nav aria-label={w.moreArticles} className="flex justify-between gap-4">
           {newer ? (
             <a href={newer} className="font-medium text-primary">
-              Newer articles
+              {w.newerArticles}
             </a>
           ) : (
             <span />
           )}
           {older && (
             <a href={older} className="font-medium text-primary">
-              Older articles
+              {w.olderArticles}
             </a>
           )}
         </nav>
@@ -117,7 +118,7 @@ export function ArticleView({
         )}
         {edit && (
           <a href={edit} className="text-sm font-medium text-primary">
-            Edit
+            {w.edit}
           </a>
         )}
       </header>
@@ -125,7 +126,7 @@ export function ArticleView({
         <MarkdownText text={body} />
       </div>
       {(previous || next) && (
-        <nav aria-label="Other articles" className="flex justify-between gap-4 border-t pt-6">
+        <nav aria-label={w.otherArticles} className="flex justify-between gap-4 border-t pt-6">
           {previous ? (
             <a href={previous.href} className="text-primary">
               ← {previous.title}

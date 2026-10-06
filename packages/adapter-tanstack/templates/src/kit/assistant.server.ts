@@ -4,6 +4,7 @@
 // came back; a call that would change something is only proposed, never run here.
 import { type AskKind, readQuestion } from "./ask";
 import { type Offer, offered } from "./tools";
+import { w } from "./words";
 
 /** A value as JSON carries it: what tools take and give. */
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -119,9 +120,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
   if (!model)
     return done({
       source: "none",
-      note:
-        parts.unread ??
-        "The rules did not read this question, and the app has no model to ask (ASSISTANT_URL).",
+      note: parts.unread ?? w.noModelToAsk,
     });
 
   const fetchModel = parts.fetch ?? fetch;
@@ -154,9 +153,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
       const late = error instanceof Error && error.name === "TimeoutError";
       return done({
         source: steps.length ? "ai" : "none",
-        note: late
-          ? `The model did not answer within ${MODEL_WAIT / 1000} seconds.`
-          : "The model could not be reached.",
+        note: late ? w.modelTimedOut(MODEL_WAIT / 1000) : w.modelNotReached,
         tokens,
       });
     }
@@ -166,10 +163,9 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     if (!response.ok) {
-      const said = body.error?.message ?? `The model answered ${response.status}.`;
+      const said = body.error?.message ?? w.modelAnswered(response.status);
       // 402: the host's questions are used up; the rules still answer what they read.
-      const note =
-        response.status === 402 ? `${said} Questions the rules read are still answered.` : said;
+      const note = response.status === 402 ? `${said} ${w.rulesStillAnswer}` : said;
       return done({ source: steps.length ? "ai" : "none", note, tokens });
     }
     tokens.in += body.usage?.prompt_tokens ?? 0;
@@ -188,7 +184,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
       const step = await run(c.function.name, args);
       proposed ||= Boolean(step.proposed);
       const content = step.proposed
-        ? { proposed: true, note: "Shown to the person to confirm; nothing is changed yet." }
+        ? { proposed: true, note: w.proposedNote }
         : step.error
           ? { error: step.error }
           : step.result;
@@ -201,7 +197,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     // A proposed change ends the question: the person decides, not another model call.
     if (proposed) return done({ source: "ai", text, tokens });
   }
-  return done({ source: "ai", note: `Stopped after ${ROUNDS} model calls.`, tokens });
+  return done({ source: "ai", note: w.stoppedAfter(ROUNDS), tokens });
 }
 
 interface ToolCall {

@@ -3,11 +3,12 @@
 // app's own server functions: creating, changing and deleting records, booking, inviting, and
 // the sign-in codes it mails.
 // Counts live in memory: the app runs as one process, so that is the whole picture.
+import { w } from "./words";
 
 /** Refused because of how often, not because of who: the words are shown as they are. */
 export class TooMany extends Error {
   constructor(what: string) {
-    super(`Too many ${what} in a short time. Wait a minute and try again.`);
+    super(w.tooMany(what));
   }
 }
 

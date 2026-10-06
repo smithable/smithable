@@ -4,6 +4,7 @@ import { ChevronDown, X } from "lucide-react";
 import { useId, useState } from "react";
 import { fieldClassName } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
+import { w } from "./words";
 
 interface ComboboxProps {
   id: string;
@@ -75,7 +76,7 @@ export function Combobox({
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         autoComplete="off"
-        placeholder="Search…"
+        placeholder={w.search}
         className={cn(fieldClassName, "h-control pr-18")}
         value={text}
         onChange={(e) => {
@@ -129,9 +130,7 @@ export function Combobox({
           </div>
           {shown.length === 0 && (
             <p className="px-3 py-2 text-sm text-muted-foreground">
-              {options.length
-                ? `Nothing matches “${text.trim()}”.`
-                : "There is nothing to choose yet."}
+              {options.length ? w.nothingMatchesText(text.trim()) : w.nothingToChooseYet}
             </p>
           )}
         </div>
