@@ -386,7 +386,7 @@ ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(
 ${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-import { w } from "#/kit/words";
+${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
 ${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${sections.length || favorite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
 ${contact ? contact.fn : ""}${
   history
@@ -461,9 +461,9 @@ function ${component}() {
             ? `<PageHeader
         title={${heading}}
         actions={
-          <>
+          ${buttons.length > 3 ? "<Overflow>" : "<>"}
             ${buttons.join("\n            ")}
-          </>
+          ${buttons.length > 3 ? "</Overflow>" : "</>"}
         }
       />`
             : `<PageHeader title={${heading}} />`
