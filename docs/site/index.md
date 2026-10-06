@@ -13,6 +13,7 @@ Routine changes are made by deterministic generators, not by an AI rewriting cod
   - [Buttons that change a record](actions.md): standard actions, from setting a field to copying a record with its lines.
   - [Let other programs use your app](api.md): keys, the API's calls and its refusals, on the status starter.
   - [An app for programs and assistants](assistants.md): the api starter, a key for an AI assistant, and Claude Code connected to it.
+  - [An app in another language](language.md): Swedish for the booking starter, and what stays English on purpose.
   - [Sign in with Google](google-sign-in.md): offering Google beside the code by email.
   - [Run an app on your own machine](self-host.md): deploying, backing up, restoring and updating.
 - **[The spec reference](../spec/v0.1.md)**: everything `smithable.yml` and its companion files can say, with examples.
