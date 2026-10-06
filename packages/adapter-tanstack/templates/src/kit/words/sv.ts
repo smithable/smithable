@@ -317,6 +317,52 @@ export const w = {
   stepOf: (n: number, count: number) => `Steg ${n} av ${count}`,
   tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} token in, ${tokensOut} ut`,
   toolCalls: (n: number) => `${n} verktygsanrop`,
+  /** Integritetssidan (kit LegalPage), skriven ur appens egen definition. */
+  legalIntro: (app: string) =>
+    `Den här sidan berättar vad ${app} lagrar om dig och varför. Den är skriven ur appens egen definition och ändras med den.`,
+  legalOperatorTitle: "Vem som driver den",
+  legalOperator: (name: string, app: string) => `${app} drivs av ${name}.`,
+  legalOperatorUnknown: "Namn och kontaktuppgifter till den som driver appen är inte ifyllda än.",
+  legalPurpose: (app: string, purpose: string) => `${app}: ${purpose}`,
+  legalAccountTitle: "Ditt konto",
+  legalByEmailCode: "en kod som skickas till din e-postadress",
+  legalByGoogle: "ditt Google-konto",
+  legalAccount: (providers: string[]) =>
+    `När du loggar in sparar appen ditt namn, din e-postadress och din roll, och sätter en kaka som håller dig inloggad.${providers.length ? ` Du loggar in med ${providers.join(" eller ")}.` : ""}`,
+  legalInvitedOnly: "Bara den som är inbjuden kan logga in.",
+  legalRecordsTitle: "Uppgifter i poster",
+  legalRecordsIntro: "Utöver konton har appen dessa slags poster med personuppgifter:",
+  legalReadBy: (readers: "visitors" | "members" | string[]) =>
+    readers === "visitors"
+      ? "Vem som helst på internet kan läsa dem."
+      : readers === "members"
+        ? "Den som är inloggad kan läsa dem."
+        : `Läses av: ${readers.join(", ")}.`,
+  legalNoRecords: "Utöver konton finns inga poster med personuppgifter i appen.",
+  legalUploads:
+    "Bilder och dokument som laddas upp sparas med sina poster och visas för den som får läsa posten.",
+  legalCookiesTitle: "Kakor",
+  legalCookies:
+    "Appen sätter en kaka, som håller dig inloggad. Den behövs för att appen ska fungera. Det finns ingen spårningskaka.",
+  legalNoCookies: "Appen sätter inga egna kakor.",
+  legalAnalytics: (provider: string) =>
+    `Besök räknas med ${provider}, som inte sätter någon kaka och inte sparar personuppgifter.`,
+  legalAnalyticsConsent: (provider: string) =>
+    `Besök räknas med ${provider} först när du godkänt det i kakrutan. Du kan ändra ditt val under Kakinställningar längst ner på sidan.`,
+  legalMailTitle: "E-post",
+  legalMailSignIn: "Appen skickar e-post för inloggning och inbjudningar.",
+  legalMailEvents: (labels: string[]) =>
+    `Den skickar också e-post när något händer med ${labels.join(", ")}, till den det gäller eller till dem som arbetar i appen.`,
+  legalLogsTitle: "Loggar och säkerhetskopior",
+  legalLogs:
+    "Anrop loggas med din adress och webbläsare i 90 dagar. Ändringar av poster sparas i en aktivitetslogg i 12 månader; namn och adresser i den tas bort efter 90 dagar.",
+  legalBackups: "Säkerhetskopior sparas så att appen kan återställas efter ett misstag.",
+  legalBackupsAt: (hosting: string) =>
+    `Appen och dess säkerhetskopior finns ${hosting}. Säkerhetskopior sparas så att appen kan återställas efter ett misstag.`,
+  legalRightsTitle: "Dina rättigheter",
+  legalRights: (email?: string) =>
+    `Du får fråga vad appen har om dig, få det rättat eller borttaget, och invända mot att det används.${email ? ` Skriv till ${email}.` : " Kontakta den som driver appen."} Du kan också klaga hos dataskyddsmyndigheten i ditt land.`,
+  legalMoreTitle: "Mer",
   wouldPropose: (tool: string, what: string) =>
     `Skulle ${tool} ${what}: en assistent med den här rollen får föreslå det, och inget ändrades.`,
 } satisfies Words;

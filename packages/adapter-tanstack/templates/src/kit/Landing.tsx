@@ -48,6 +48,8 @@ export interface LandingSite {
   /** The landing page's address: the app's name leads there. */
   home?: LinkProps["to"];
   menu: LandingLink[];
+  /** The privacy page and the like: a footer line, not a menu entry. */
+  legal?: LandingLink[];
   contact?: { address?: string; phone?: string; email?: string; hours?: string };
 }
 
@@ -204,6 +206,7 @@ export function LandingLayout({
               <p>
                 © {new Date().getFullYear()} {appName}
               </p>
+              <LegalLinks links={site?.legal} />
               <ConsentSettings className="hover:underline" />
             </div>
           </div>
@@ -211,11 +214,26 @@ export function LandingLayout({
           <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
             {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
+            <LegalLinks links={site?.legal} />
             <ConsentSettings className="text-left hover:underline" />
           </div>
         )}
       </footer>
     </div>
+  );
+}
+
+/** The privacy page's link in the footer line. */
+function LegalLinks({ links }: { links?: LandingLink[] }) {
+  if (!links?.length) return null;
+  return (
+    <>
+      {links.map((l) => (
+        <Link key={String(l.to)} to={l.to} className="hover:underline">
+          {l.label}
+        </Link>
+      ))}
+    </>
   );
 }
 

@@ -397,6 +397,9 @@ const section: JsonSchema = {
     email: text("A contact section's email address."),
     hours: text("Opening hours, one per line."),
     thanks: text("What a visitor reads once the form is sent."),
+    name: text("A privacy page's operator: who runs the app (pages.<page>.operator)."),
+    country: text("The operator's country."),
+    hosting: text('Where the app is hosted, as a phrase: "in the EU", "in Stockholm".'),
     results: text("A calculator section's results heading."),
     label: text("A dashboard tile's label."),
     fields: {

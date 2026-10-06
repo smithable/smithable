@@ -2806,6 +2806,36 @@ async function sitemapCheck(dir, base) {
   if (!ok) failures.push("sitemap.xml");
 }
 
+/**
+ * A privacy page (legal: privacy): written from the app, open to visitors, naming the operator
+ * from the content file, with its parts; linked from the site's footer and never from the menu.
+ */
+async function legalCheck(dir, base) {
+  const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+  const page =
+    /^ {2}(\S+):\n(?: {4}.*\n)*? {4}route: (\S+)\n(?: {4}.*\n)*? {4}legal: privacy/m.exec(spec);
+  if (!page) return;
+  const [, id, route] = page;
+  const problems = [];
+  const response = await fetch(`${base}${route}`);
+  const html = await response.text();
+  if (response.status !== 200) problems.push(`${route} answers ${response.status}`);
+  const content = readFileSync(join(dir, "smithable.content.yml"), "utf8");
+  const operator = new RegExp(`^  ${id}:[\\s\\S]*?      name: (.+)$`, "m").exec(content)?.[1];
+  if (operator && !html.includes(operator)) problems.push("the operator's name is not on the page");
+  const parts = (html.match(/<h2[^>]*>/g) ?? []).length;
+  if (parts < 5) problems.push(`only ${parts} parts`);
+  for (const word of ["cookie", "sign in", "90 days"])
+    if (!html.toLowerCase().includes(word)) problems.push(`nothing about "${word}"`);
+  const home = await (await fetch(`${base}/`)).text();
+  if (!home.includes(`href="${route}"`)) problems.push("the home page does not link to it");
+  const ok = problems.length === 0;
+  console.log(
+    `  ${ok ? "✓" : "✗"} privacy page: written from the app, the operator named, linked from the footer${ok ? "" : `\n    ${problems.join("\n    ")}`}`,
+  );
+  if (!ok) failures.push("privacy page");
+}
+
 /** In the invoicing app, a new member is welcomed by the onboarding, then edits it in settings. */
 async function onboardingFlow(base) {
   const browser = await chromium.launch();
@@ -3847,8 +3877,10 @@ for (const [index, example] of examples.entries()) {
                 ? html.includes("<ol") && !/aria-label="New [a-z ]+, /.test(html)
                 : page.pattern.kind === "articles"
                   ? html.includes('data-kit="articles"') && !/>New [a-z ]+<\/a>/.test(html)
-                  : // A list, as a table or as cards.
-                    html.includes('data-kit="model-table"') && !/>New [a-z ]+<\/a>/.test(html))
+                  : page.pattern.kind === "legal"
+                    ? html.includes('data-kit="legal"')
+                    : // A list, as a table or as cards.
+                      html.includes('data-kit="model-table"') && !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
         const what = !isPublic
           ? "needs sign-in"
@@ -3858,7 +3890,9 @@ for (const [index, example] of examples.entries()) {
               ? "is public: this week's sample records without sign-in, and no way to add one"
               : page.pattern.kind === "articles"
                 ? "is public: the published articles without sign-in, read-only"
-                : "is public: lists sample data without sign-in, read-only";
+                : page.pattern.kind === "legal"
+                  ? "is public: the privacy page opens without sign-in"
+                  : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
         // A starter's pictures (its hero) are in the app and served.
@@ -4693,6 +4727,7 @@ test("the session cookie's name and attributes", async () => {
       await visualChecks(dir, base);
       await robotsCheck(base);
       await sitemapCheck(dir, base);
+      await legalCheck(dir, base);
       if (example === "crm") {
         await browserFlow(base);
         await filtersFlow(base);

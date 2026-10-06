@@ -264,6 +264,44 @@ const addCustomPage: Operation<{ page: string; component: string }> = {
 
 export const customOperations: AnyOperation[] = [addCustomPage];
 
+/** A privacy page written from the app (docs/design/legal-page.md); public, linked from the footer. */
+const addPrivacyPage: Operation<{ page?: string; route?: string }> = {
+  name: "addPrivacyPage",
+  summary:
+    "Add a privacy page written from the app itself (who runs it, what it stores and why, cookies, mail, logs, rights); open to visitors and linked from the site's footer. The operator's name and contact go in smithable.content.yml.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: 'Page name; "privacy" unless said otherwise.' },
+      route: { type: "string", description: "Defaults to /privacy." },
+    },
+  },
+  positional: ["page", "route"],
+  describe: ({ page = "privacy" }) => `Add the privacy page ${page}`,
+  destructive: () => false,
+  apply({ spec, auth }, { page = "privacy", route }, ir) {
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    if (ir.pages.some((p) => p.pattern.kind === "legal"))
+      throw new OperationError("The app has a privacy page already.");
+    const path = route ?? `/${page}`;
+    if (ir.pages.some((p) => p.route === path))
+      throw new OperationError(`Another page is at ${path} already.`);
+    spec.add(["pages"], page, { route: path, legal: "privacy" });
+    // For visitors: listed as public.
+    if (auth) {
+      const pages = auth.get(["public", "pages"]);
+      if (Array.isArray(pages)) auth.set(["public", "pages"], [...(pages as string[]), page]);
+      else auth.add(["public"], "pages", [page]);
+    }
+    return [];
+  },
+};
+
+export const legalOperations: AnyOperation[] = [addPrivacyPage];
+
 /** Puts a new page at the end of the main menu. */
 function addToMainMenu(spec: YamlEditor, page: string): void {
   // Without a "navigation" key every page is in the main menu already.
