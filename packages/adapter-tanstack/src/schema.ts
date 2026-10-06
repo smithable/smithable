@@ -9,6 +9,7 @@ import {
   kebab,
   type ModelIR,
   type SpecIR,
+  storesFiles,
   storesPictures,
   USER_MODEL,
   uniquePerOwner,
@@ -134,8 +135,10 @@ export const ${n.table}Favorites = sqliteTable(
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   for (const used of ["index", "integer", "text"]) imports.add(used);
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
+  const documents = ir.models.some((m) => m.fields.some(storesFiles));
+  const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
-${pictures ? 'import type { Picture } from "#/kit/uploads";\n' : ""}
+${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
 ${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
@@ -198,6 +201,13 @@ export function column(field: FieldIR): { expr: string; uses: string } {
       case "pictures":
         // Several of them, the first the cover.
         expr = `text({ mode: "json" }).$type<Picture[]>()`;
+        break;
+      case "file":
+        // The stored document, the name it was sent with, its kind and size, as JSON.
+        expr = `text({ mode: "json" }).$type<StoredFile>()`;
+        break;
+      case "files":
+        expr = `text({ mode: "json" }).$type<StoredFile[]>()`;
         break;
       default:
         expr = "text()";

@@ -27,7 +27,7 @@ export const sortableBy = (field: FieldIR): boolean =>
   !field.formula &&
   (field.type.kind === "choice" ||
     (field.type.kind === "scalar" &&
-      !["text", "markdown", "picture", "pictures"].includes(field.type.name)));
+      !["text", "markdown", "picture", "pictures", "file", "files"].includes(field.type.name)));
 
 /** A model's fields a list could be filtered by, in the model's order. */
 export const filterableFields = (model: ModelIR): string[] =>

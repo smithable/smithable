@@ -4,15 +4,20 @@ import {
   apiOffers,
   type Condition,
   defaultColumns,
+  FILES_MAX,
   type FieldIR,
   humanize,
+  isFile,
+  isFiles,
   isPicture,
   isPictures,
+  isUpload,
   kebab,
   type ModelIR,
   modelAccess,
   PICTURES_MAX,
   type SpecIR,
+  storesFiles,
   storesPictures,
   USER_MODEL,
   type UxIR,
@@ -177,7 +182,7 @@ ${SCHEMA_IMPORT}
 import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
-${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${model.fields.some(storesFiles) ? `import { ${[...(model.fields.some(isFile) ? ["bindFile"] : []), ...(model.fields.some(isFiles) ? ["bindFiles"] : [])].join(", ")} } from "#/kit/FileInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -334,7 +339,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     : [];
   // What a program or an assistant may filter, search and sort these records by (assistant.md §3).
   const stored = model.fields.filter(
-    (f) => !f.formula && !storesPictures(f) && !(f.type.kind === "relation" && f.type.many),
+    (f) => !f.formula && !isUpload(f) && !(f.type.kind === "relation" && f.type.many),
   );
   const filterable = (paged ? stored : []).map((f) => {
     const column = `${n.table}.${dataKey(f)}`;
@@ -570,7 +575,10 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   );
   const singles = model.fields.filter(isPicture).map(dataKey);
   const pictureLists = model.fields.filter(isPictures).map(dataKey);
-  const pictures = [...singles, ...pictureLists];
+  const docSingles = model.fields.filter(isFile).map(dataKey);
+  const docLists = model.fields.filter(isFiles).map(dataKey);
+  // Every stored upload, pictures and documents: selected with the owner, looked for when one goes.
+  const pictures = [...singles, ...pictureLists, ...docSingles, ...docLists];
   const selectOwner = `{ ${signedIn ? `${owner}: ${n.table}.${owner}` : `id: ${n.table}.id`}${pictures.map((k) => `, ${k}: ${n.table}.${k}`).join("")} }`;
   // A replaced or removed picture's file goes, unless a record still shows the same one in any of
   // the model's picture fields (files are named by their content, so they may be shared).
@@ -587,6 +595,15 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
         (k) =>
           `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")});\n`,
       ),
+      // Documents the same way.
+      ...docSingles.map(
+        (k) =>
+          `    if (row.${k} && row.${k}.file !== ${after(k)}) deleteFile(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
+      ),
+      ...docLists.map(
+        (k) =>
+          `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deleteFile(p, ${stillShown(k, "p.file")});\n`,
+      ),
     ].join("");
   return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${drizzle.sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
@@ -594,7 +611,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? 'import { deletePicture } from "#/kit/uploads";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1190,6 +1207,20 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
           ),
         }
       : {}),
+    ...(kind === "file"
+      ? {
+          input: code(
+            `bindFile(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(field.name)})`,
+          ),
+        }
+      : {}),
+    ...(kind === "files"
+      ? {
+          input: code(
+            `bindFiles(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(field.name)}, ${FILES_MAX})`,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -1249,6 +1280,11 @@ export function refinement(field: FieldIR, visitors = false): string | undefined
     case "pictures":
       // Several of them, at most the field's maximum.
       return `z.array(z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })).max(${field.max ?? PICTURES_MAX})${optional}`;
+    case "file":
+      // What src/kit/uploads.ts returned for a document.
+      return `z.object({ file: z.string().max(100), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })${optional}`;
+    case "files":
+      return `z.array(z.object({ file: z.string().max(100), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })).max(${FILES_MAX})${optional}`;
     default:
       return undefined;
   }

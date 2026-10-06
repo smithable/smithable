@@ -117,11 +117,33 @@ export function openApiCall(
   return call(request, run, status, true);
 }
 
+/**
+ * Runs a call whose body is a file (a record's picture or document), read by `run` itself with
+ * bytesOf; what `run` answers may be a Response of its own (the file, for a GET).
+ */
+export function fileCall(
+  request: Request,
+  run: (viewer: Viewer | null) => Promise<unknown>,
+  open = false,
+): Promise<Response> {
+  return call(request, (viewer) => run(viewer), 200, open, true);
+}
+
+/** A file sent as the body, at most `max` bytes. */
+export async function bytesOf(request: Request, max: number): Promise<Uint8Array> {
+  const tooLarge = `The file is larger than ${max / 1_000_000} MB.`;
+  if (Number(request.headers.get("content-length") ?? 0) > max) throw new BadInput(tooLarge);
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > max) throw new BadInput(tooLarge);
+  return bytes;
+}
+
 async function call(
   request: Request,
   run: (viewer: Viewer | null, body: unknown) => Promise<unknown>,
   status: number,
   open: boolean,
+  raw = false,
 ): Promise<Response> {
   try {
     const { viewer, keyless } = callerOf(request);
@@ -131,8 +153,11 @@ async function call(
     if (!viewer && !(open && keyless))
       return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
     const body =
-      request.method !== "GET" && request.method !== "DELETE" ? await bodyOf(request) : undefined;
+      !raw && request.method !== "GET" && request.method !== "DELETE"
+        ? await bodyOf(request)
+        : undefined;
     const result = await run(viewer, body);
+    if (result instanceof Response) return result;
     return result === undefined
       ? new Response(null, { status: 204 })
       : Response.json(result, { status });

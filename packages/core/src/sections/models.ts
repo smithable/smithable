@@ -608,10 +608,10 @@ function buildField(
   };
   let raw: FieldValue | undefined = shorthand.defaultText;
   let rawAt: ParsedNode | null = at;
-  // A picture is a stored file with its description: nothing to compare or default to.
+  // A picture or a document is a stored file: nothing to compare or default to.
   if (
     field.type.kind === "scalar" &&
-    (field.type.name === "picture" || field.type.name === "pictures")
+    ["picture", "pictures", "file", "files"].includes(field.type.name)
   ) {
     if (field.unique || raw !== undefined || defaultEntry) {
       ctx.error(

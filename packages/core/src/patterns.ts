@@ -657,11 +657,14 @@ function readCalculator(
         : field.type.kind === "scalar" &&
             (field.type.name === "picture" || field.type.name === "pictures")
           ? "cannot be a picture"
-          : field.unique
-            ? "cannot be unique"
-            : field.required && !field.formula
-              ? 'cannot be required ("!"): nothing is stored, and an empty input counts as 0'
-              : undefined;
+          : field.type.kind === "scalar" &&
+              (field.type.name === "file" || field.type.name === "files")
+            ? "cannot be a document"
+            : field.unique
+              ? "cannot be unique"
+              : field.required && !field.formula
+                ? 'cannot be required ("!"): nothing is stored, and an empty input counts as 0'
+                : undefined;
     if (unfit) {
       ctx.error(
         entry.value ?? entry.keyNode,

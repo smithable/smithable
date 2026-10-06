@@ -1168,6 +1168,30 @@ async function apiFlow(base) {
     // The assistant role deletes nothing: refused, in the app's words.
     const refused = await api(`/tasks/${task.id}`, { method: "DELETE" });
     if (refused.status !== 403) throw new Error(`deleting gave ${refused.status}`);
+    // A document sent as the body (docs/design/attachments.md §2), and fetched back as it was.
+    const note = (await (await api("/notes")).json()).items[0];
+    const pdf = Buffer.from("%PDF-1.4\n%%EOF\n");
+    const attach = (body, name) =>
+      fetch(`${base}/api/v1/notes/${note.id}/attachment`, {
+        method: "PUT",
+        headers: {
+          authorization: `Bearer ${key}`,
+          "content-type": "application/pdf",
+          "x-file-name": name,
+        },
+        body,
+      });
+    const sent = await attach(pdf, "Brief.pdf");
+    const stored = await sent.json();
+    if (sent.status !== 200 || stored.name !== "Brief.pdf" || stored.type !== "application/pdf")
+      throw new Error(`attaching gave ${sent.status} ${JSON.stringify(stored)}`);
+    const fetched = await fetch(`${base}/api/v1/notes/${note.id}/attachment`, {
+      headers: { authorization: `Bearer ${key}` },
+    });
+    if (!Buffer.from(await fetched.arrayBuffer()).equals(pdf))
+      throw new Error(`fetching the attachment gave ${fetched.status}`);
+    if ((await attach(Buffer.from("not a pdf"), "fake.pdf")).status !== 400)
+      throw new Error("a file that only claims to be a PDF was taken");
     const tools = await fetch(`${base}/mcp`, {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
@@ -2130,6 +2154,82 @@ async function landingFlow(base) {
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
     failures.push("booking landing flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Documents (docs/design/attachments.md): a contract attached to an invoice in its form is
+ * served through the invoice (inline, sandboxed, its own type); a file that only claims to be a
+ * PDF, or one over 10 MB, is refused; a visitor cannot fetch it; removing it removes its file.
+ */
+async function documentFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const pdf = Buffer.from("%PDF-1.4\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n");
+  const stored = `invoice/${createHash("sha256").update(pdf).digest("hex").slice(0, 24)}.pdf`;
+  const contract = () => page.locator('input[type="file"][accept*=".pdf"]').first();
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/invoices`);
+    await page.getByRole("cell", { name: "2026-005", exact: true }).click();
+    await page.waitForURL(/\/invoices\/\d+$/);
+    const id = page.url().match(/\/invoices\/(\d+)$/)?.[1];
+    // Only claiming to be a PDF: refused in the app's words.
+    await contract().setInputFiles({
+      name: "fake.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("not a pdf"),
+    });
+    await page.getByRole("alert").filter({ hasText: "Choose a PDF" }).waitFor({ timeout: 10000 });
+    await contract().setInputFiles({
+      name: "Contract 2026.pdf",
+      mimeType: "application/pdf",
+      buffer: pdf,
+    });
+    await page.getByText("Contract 2026.pdf").first().waitFor({ timeout: 10000 });
+    await page.getByRole("button", { name: "Save changes" }).click();
+    // Saved, the list opens; the invoice's page shows the contract as a link.
+    await page.waitForURL(/\/invoices$/);
+    await open(page, `${base}/invoices/${id}`);
+    await page.getByRole("link", { name: "Contract 2026.pdf" }).first().waitFor({ timeout: 10000 });
+    const served = await page.request.get(`${base}/files/invoice/${id}/contract`);
+    const headers = served.headers();
+    if (
+      served.status() !== 200 ||
+      headers["content-type"] !== "application/pdf" ||
+      !headers["content-disposition"]?.startsWith("inline;") ||
+      headers["content-security-policy"] !== "sandbox" ||
+      !(await served.body()).equals(pdf)
+    )
+      throw new Error(`the contract is served as ${served.status()} ${JSON.stringify(headers)}`);
+    // A visitor cannot read the invoice, so not its contract either.
+    const visitor = await fetch(`${base}/files/invoice/${id}/contract`);
+    if (visitor.status !== 404) throw new Error(`a visitor gets ${visitor.status}`);
+    // Larger than 10 MB: refused before it is stored.
+    const large = await page.request.post(`${base}/files/invoice/contract`, {
+      headers: { "x-file-name": "big.pdf", "x-smithable": "1" },
+      data: Buffer.concat([pdf, Buffer.alloc(10_000_001)]),
+    });
+    if (large.status() !== 400) throw new Error(`a file over 10 MB gets ${large.status()}`);
+    // Removed and saved: the stored file goes too.
+    if (!existsSync(join(dir, "data", "uploads", stored)))
+      throw new Error("the contract was not stored");
+    await page.getByRole("button", { name: "Remove" }).first().click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    for (let i = 0; existsSync(join(dir, "data", "uploads", stored)); i++) {
+      if (i === 50) throw new Error("the removed contract's file is still there");
+      await page.waitForTimeout(100);
+    }
+    console.log(
+      "  ✓ browser: a contract attached to an invoice is served through it (inline, sandboxed, its own type); a fake PDF and one over 10 MB are refused, a visitor gets nothing, and removing it removes its file",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("document flow");
   } finally {
     await browser.close();
   }
@@ -4183,6 +4283,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "api") await askPanelFlow(dir, base);
       if (example === "invoicing") {
         await copyFlow(base);
+        await documentFlow(dir, base);
         await formulaFlow(base);
         await onboardingFlow(base);
         await isolationFlow(dir, base);

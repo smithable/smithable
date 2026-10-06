@@ -66,6 +66,9 @@ export function convertValue(
     case "picture":
     case "pictures":
       return { expected: "a picture" };
+    case "file":
+    case "files":
+      return { expected: "a document" };
     default:
       return typeof value === "string" || typeof value === "number"
         ? { value: String(value) }
