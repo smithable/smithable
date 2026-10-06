@@ -80,6 +80,7 @@ import { pageAccess } from "#/generated/pages";
 ${models.map(({ n }) => `import { ${n.data} } from "${n.module}.server";`).join("\n")}
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /**
@@ -114,15 +115,15 @@ function ${component}() {
           <>
 ${
   activity
-    ? `            <Link to=${attr(`${page.route}/activity`.replace("//", "/"))} className="text-sm font-medium text-primary">Activity</Link>
+    ? `            <Link to=${attr(`${page.route}/activity`.replace("//", "/"))} className="text-sm font-medium text-primary">{w.activity}</Link>
 `
     : ""
 }${
   inspector
-    ? `            {admin && <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary">Ask</Link>}
+    ? `            {admin && <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary">{w.ask}</Link>}
 `
     : ""
-}            {restore && <a href={restore} className="text-sm font-medium text-primary">Restore data…</a>}
+}            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
           </>
         }
       />
@@ -192,6 +193,7 @@ import { PageHeader } from "#/kit/AppShell";
 import type { AskKind } from "#/kit/ask";
 import { answer, hostModel } from "#/kit/assistant.server";
 import { Inspector } from "#/kit/Inspector";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** Each caller's kinds of record in the words people use, for the wording rules. */
@@ -232,7 +234,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => adminOnly(),
 function AskPage() {
   return (
     <>
-      <PageHeader page=${attr(page.id)} title="Ask the app" />
+      <PageHeader page=${attr(page.id)} title={w.askTheApp} />
       <p className="mb-4 max-w-prose text-sm text-muted-foreground">
         What an assistant gets with a key of each role: ask as that role, and see the answer and every
         tool it took. Changes are only shown, never made here.
@@ -273,6 +275,7 @@ import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
+import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 const filters = z.object({
@@ -337,12 +340,12 @@ ${
   keys
     ? `    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
     for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
-      named.set(\`key:\${k.id}\`, \`key "\${k.name}"\`);
+      named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
 `
     : ""
 }    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? \`a key (#\${id.slice(4)})\` : \`a removed user (#\${id})\`);
+      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -357,8 +360,8 @@ ${
           ? \`\${label} "\${now}"\`
           : gone
             ? r.title
-              ? \`\${label} "\${r.title}" (deleted)\`
-              : \`a deleted \${label?.toLowerCase()} (#\${r.recordId})\`
+              ? w.deletedNamed(label ?? "", r.title)
+              : w.aDeletedOne(label ?? "", String(r.recordId))
             : undefined,
         fields: r.fields,
         // As text: what touches security, by name and value.
@@ -393,7 +396,7 @@ function ActivityPage() {
   const router = useRouter();
   return (
     <>
-      <PageHeader page=${attr(page.id)} title="Activity" subtitle="Who did what, and when. Kept 12 months; the client's details 90 days." />
+      <PageHeader page=${attr(page.id)} title={w.activity} subtitle={w.activityLead} />
       <ActivityLog
         lines={lines}
         filters={search}

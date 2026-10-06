@@ -107,6 +107,7 @@ import { db } from "#/db";
 import { ${tables} } from "#/db/schema";
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
+import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
 export const PROVIDERS = ${JSON.stringify(providers)};
@@ -288,8 +289,8 @@ ${
 }        // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: \`Your code for \${APP_NAME}\`,
-          text: \`Your code for \${APP_NAME} is \${otp.slice(0, 3)} \${otp.slice(3)}. It works for ten minutes. If you did not ask for it, ignore this mail.\`,
+          subject: w.codeSubject(APP_NAME),
+          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -391,6 +392,7 @@ import { db } from "#/db";
 import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
+import { w } from "#/kit/words";
 import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
@@ -400,7 +402,7 @@ ${invitations ? `const ROLE_LABELS: Record<string, string> = ${record(roleLabels
 const devSignIn = createServerFn({ method: "POST" })
   .validator(z.enum(ROLES))
   .handler(async ({ data: role }) => {
-    if (!import.meta.env.DEV && !demoSignIn) throw new Error("Only available in development.");
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
     const password = \`\${prefix}-password\`;

@@ -56,17 +56,17 @@ export function address(headers: Headers): string {
 
 /** Counts a write by the viewer, or by the visitor's address (from the request's headers). */
 export function writeAllowed(viewer: { id: string } | null, headers: Headers): void {
-  if (viewer) count(`write:${viewer.id}`, LIMITS.writes, "changes");
-  else count(`write:${address(headers)}`, LIMITS.visitorWrites, "submissions");
+  if (viewer) count(`write:${viewer.id}`, LIMITS.writes, w.changes);
+  else count(`write:${address(headers)}`, LIMITS.visitorWrites, w.submissions);
 }
 
 /** Counts an invitation sent by the viewer. */
 export function inviteAllowed(viewer: { id: string } | null): void {
-  if (viewer) count(`invite:${viewer.id}`, LIMITS.invitations, "invitations");
+  if (viewer) count(`invite:${viewer.id}`, LIMITS.invitations, w.invitations);
 }
 
 /** Counts a sign-in code mailed to the address, asked for from the request's network address. */
 export function codeAllowed(email: string, headers: Headers): void {
-  count(`code:${email}`, LIMITS.codes, "sign-in codes");
+  count(`code:${email}`, LIMITS.codes, w.signInCodes);
   count(`code-from:${address(headers)}`, LIMITS.codesFromAddress, "sign-in codes");
 }

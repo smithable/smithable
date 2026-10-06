@@ -71,6 +71,19 @@ const SCAFFOLD = new Set([
 const WORDS_DIR = "src/kit/words/";
 const WORDS_FILE = "src/kit/words.ts";
 
+const WORDS_IMPORT = 'import { w } from "#/kit/words";\n';
+/**
+ * A generated file imports the words where it says one; a module whose fields have no message
+ * to give (no required text, no email) would import them unused, which the app's type check
+ * refuses.
+ */
+function wordsIfUsed(content: string): string {
+  if (!content.includes(WORDS_IMPORT)) return content;
+  return /\bw\./.test(content.replace(WORDS_IMPORT, ""))
+    ? content
+    : content.replace(WORDS_IMPORT, "");
+}
+
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
   const ctx: GenContext = {
@@ -100,7 +113,8 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     .replace(/^import type \{ Words \} from "\.\/en";\n\n?/m, "")
     .replace(/\} satisfies Words;\n$/, "};\n\nexport type Words = typeof w;\n");
   files.push({ path: WORDS_FILE, content: own, zone: "kit" });
-  for (const generator of SECTION_GENERATORS) files.push(...generator.files(ctx));
+  for (const generator of SECTION_GENERATORS)
+    files.push(...generator.files(ctx).map((f) => ({ ...f, content: wordsIfUsed(f.content) })));
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 

@@ -142,7 +142,9 @@ export function ActivityLog({
                   app,
                 )}
               </time>
-              <span className="font-medium">{line.who}</span>
+              <span className="font-medium">
+                {line.who === "visitor" ? w.visitor : line.who === "the app" ? w.theApp : line.who}
+              </span>
               <span>{words(line.action)}</span>
               {line.record && <span className="font-medium">{line.record}</span>}
               {line.fields?.length ? (
