@@ -1,0 +1,20 @@
+import { expect, test } from "vitest";
+
+// The kit's csv.ts, as the generated apps get it (a path the build does not follow).
+const path: string = "../templates/src/kit/csv.ts";
+const { cell } = (await import(path)) as { cell(value: unknown): string };
+
+test("a cell is quoted when it must be, and a formula is written as text, a number never", () => {
+  expect(cell("Nordic Timber Oy")).toBe("Nordic Timber Oy");
+  expect(cell('Say "hi", then go')).toBe('"Say ""hi"", then go"');
+  expect(cell("two\nlines")).toBe('"two\nlines"');
+  expect(cell(null)).toBe("");
+  // Negative amounts and counts stay numbers (C's review of #408).
+  expect(cell("-12.50")).toBe("-12.50");
+  expect(cell(-3)).toBe("-3");
+  // What a spreadsheet would run, also after spaces, is text.
+  expect(cell("=1+1")).toBe("'=1+1");
+  expect(cell("@SUM(A1)")).toBe("'@SUM(A1)");
+  expect(cell("-2+3")).toBe("'-2+3");
+  expect(cell(" =1+1")).toBe("' =1+1");
+});
