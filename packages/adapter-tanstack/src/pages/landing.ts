@@ -395,7 +395,7 @@ export function landingRoute(
     : link(appPage?.route, `w.openApp(${JSON.stringify(ir.app.name)})`, true).slice(1, -1);
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {

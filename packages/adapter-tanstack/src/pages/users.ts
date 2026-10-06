@@ -115,7 +115,7 @@ const withdraw = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => getUsers(),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => getUsers(),
   component: ${component},
 });
 

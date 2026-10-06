@@ -138,7 +138,7 @@ const getRange = createServerFn()
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  validateSearch: z.object({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: z.object({
     week: z.string().regex(/^\\d{4}-W\\d{2}$/).optional().catch(undefined),
     month: z.string().regex(/^\\d{4}-\\d{2}$/).optional().catch(undefined),
   }),

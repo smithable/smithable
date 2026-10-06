@@ -21,6 +21,7 @@ outgoing:
 
 pages:
   home:
+    description: Small yoga classes in Mariehamn for every level. See the schedule and book a mat.
     estimate:
       title: Would a monthly pass pay off?
       text: Try your own numbers. Nothing is saved.

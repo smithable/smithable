@@ -482,6 +482,9 @@ export const CONTENT_SCHEMA: JsonSchema = {
         properties: {
           title: text("The page's heading and menu entry."),
           subtitle: text("A line under the heading."),
+          description: text(
+            "What search engines show under the page's name, one or two sentences; for a public page.",
+          ),
           form: {
             type: "object",
             description:
