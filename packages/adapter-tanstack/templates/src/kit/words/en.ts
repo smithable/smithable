@@ -77,6 +77,7 @@ export const w = {
   lastPlaceTaken: "Sorry, the last place was just taken.",
   leaveThisEmpty: "Leave this empty",
   less: "Less",
+  loading: "Loading…",
   makeAKey: "Make a key",
   menu: "Menu",
   message: "Message",
@@ -138,6 +139,7 @@ export const w = {
   saving: "Saving…",
   search: "Search…",
   searchAction: "Search",
+  selectAll: "Select all",
   send: "Send",
   sendInvitation: "Send invitation",
   sendMeACode: "Send me a code",
@@ -200,15 +202,21 @@ export const w = {
   newAt: (what: string, day: string, time: string) => `${what}, ${day} at ${time}`,
   noMailYet: (app: string) =>
     `Signing in by email is not available yet: ${app} cannot send mail. Please contact whoever runs it.`,
+  /** An empty list: "No customers yet". */
+  noneYet: (plural: string) => `No ${plural} yet`,
   nothingMatchesText: (text: string) => `Nothing matches “${text}”.`,
   openPicture: (alt: string) => `Open ${alt}`,
   placesLeft: (left: number, max: number) =>
     `${left} of ${max} ${max === 1 ? "place" : "places"} left`,
+  /** Under a table that is one page of a longer list: "1–50 of 1,234". */
+  range: (from: string, to: string, total: string) => `${from}–${to} of ${total}`,
   removeFilter: (label: string) => `Remove the ${label.toLowerCase()} filter`,
   removePicture: (n: number) => `Remove picture ${n}`,
   removeWho: (name: string) => `Remove ${name}?`,
   revokeKey: (name: string) => `Revoke "${name}"? Programs using it stop working at once.`,
   roleOf: (name: string) => `Role of ${name}`,
+  saveIt: (label: string) => `Save ${label}`,
+  selectIt: (label: string) => `Select ${label}`,
   signInAs: (role: string) => `Sign in as ${role}`,
   signInTo: (app: string) => `Sign in to ${app}`,
   stillInUse: (title: string) => `"${title}" is still in use, so nothing was deleted.`,
