@@ -16,7 +16,7 @@ import {
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
-import { mailsOut } from "./outgoing.js";
+import { outgoingOf } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -140,7 +140,7 @@ export const ${n.table}Favorites = sqliteTable(
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
   return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(mailsOut(ir).length ? [OUTGOING_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -194,6 +194,32 @@ const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
     error: text(),
   },
   (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);`;
+
+/**
+ * Calls to named targets (docs/design/integrations.md §4.1), signed with the target's secret:
+ * written by the change's own transaction, sent after it by src/kit/outgoing.server.ts.
+ */
+const OUTGOING_CALL_TABLE = `export const outgoingCall = sqliteTable(
+  "outgoing_call",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
+    target: text().notNull(),
+    body: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    /** The answer's status, or why there was none. */
+    status: integer(),
+    error: text(),
+  },
+  (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );`;
 
 export function column(field: FieldIR): { expr: string; uses: string } {

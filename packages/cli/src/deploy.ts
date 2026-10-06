@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { validateAuth } from "@smithable/core";
+import { validateAuth, validateSpec } from "@smithable/core";
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { security } from "./security.js";
@@ -60,6 +60,7 @@ export async function deploy(
   }
   const mail = mailWarning(dir, process.env);
   if (mail) io.err(`${mail}\n`);
+  for (const warning of targetWarnings(dir, process.env)) io.err(`${warning}\n`);
   // A remote Docker host is used over SSH by Docker itself.
   // The secret goes to `docker run -e NAME` through the environment, not on its command line.
   const env = {
@@ -113,7 +114,9 @@ export async function deploy(
     "BETTER_AUTH_SECRET",
     "-e",
     "BETTER_AUTH_URL",
-    ...PROVIDER_KEYS.filter((k) => process.env[k]).flatMap((k) => ["-e", k]),
+    ...[...PROVIDER_KEYS, ...targetKeys(dir)]
+      .filter((k) => process.env[k])
+      .flatMap((k) => ["-e", k]),
     name,
   ]);
   if (started.status !== 0) return putBack(`${started.stderr}\nThe container did not start.`);
@@ -201,4 +204,35 @@ export function mailWarning(dir: string, env: NodeJS.ProcessEnv): string | undef
   const email = auth && auth.signIn !== "none" && auth.signIn.providers.includes("email");
   if (!email || env.SMTP_URL || env.SMTP_HOST) return undefined;
   return "Warning: email sign-in needs mail settings (SMTP_URL, or SMTP_HOST and the others): without them no sign-in code reaches anyone.";
+}
+
+/** The outgoing targets smithable.yml names (integrations.md §4.1), e.g. statusFeed. */
+function targets(dir: string): string[] {
+  const path = join(dir, "smithable.yml");
+  if (!existsSync(path)) return [];
+  const { ir } = validateSpec({ path, text: readFileSync(path, "utf8") });
+  return [...new Set((ir?.outgoing ?? []).map((o) => o.to).filter((to) => to !== "mail"))];
+}
+
+/** Each target's settings: OUTGOING_<TARGET>_URL and OUTGOING_<TARGET>_SECRET. */
+function targetKeys(dir: string): string[] {
+  return targets(dir).flatMap((t) => [
+    `OUTGOING_${t.toUpperCase()}_URL`,
+    `OUTGOING_${t.toUpperCase()}_SECRET`,
+  ]);
+}
+
+/** A target without its address or secret keeps its calls in the outbox: said before a release. */
+export function targetWarnings(dir: string, env: NodeJS.ProcessEnv): string[] {
+  return targets(dir).flatMap((t) => {
+    const missing = [
+      `OUTGOING_${t.toUpperCase()}_URL`,
+      `OUTGOING_${t.toUpperCase()}_SECRET`,
+    ].filter((k) => !env[k]);
+    return missing.length
+      ? [
+          `Warning: the outgoing target ${t} is not set (${missing.join(", ")}): its calls wait in the outbox until it is.`,
+        ]
+      : [];
+  });
 }
