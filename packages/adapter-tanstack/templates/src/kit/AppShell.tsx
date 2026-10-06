@@ -2,6 +2,7 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
 import { useRef } from "react";
+import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { textMarker } from "./model";
@@ -163,9 +164,9 @@ function Navigation({
               </button>
             </>
           ) : (
-            <a href="/sign-in" className={`${sidebarItem} -mx-3`}>
+            <AppLink href="/sign-in" className={`${sidebarItem} -mx-3`}>
               {w.signIn}
-            </a>
+            </AppLink>
           )}
         </div>
       )}
