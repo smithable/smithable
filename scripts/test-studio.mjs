@@ -53,7 +53,11 @@ async function step(name, fn) {
   }
 }
 
-const created = spawnSync("node", [cli, "new", dir], { encoding: "utf8" });
+// The administrator is given, not taken from the machine's Git user: CI's is ci@example.com, and
+// an administrator nobody can mail is a problem the auth file's check reports (as it should).
+const created = spawnSync("node", [cli, "new", dir, "--admin", "studio-test@smithable.ai"], {
+  encoding: "utf8",
+});
 if (created.status !== 0) throw new Error(created.stdout + created.stderr);
 // A project plugin with a section of its own: the engine in the tab must load it, or it
 // reports the section as unknown and the app cannot be described.
