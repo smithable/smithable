@@ -1087,6 +1087,24 @@ try {
         .replace("admins:", "defaultRole: sales\nadmins:"),
     );
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+    // The auth file is helped from its own schema and the spec's names: a public page offered.
+    const authText = await auth.evaluate((e) => e.value);
+    const pagesAt = authText.indexOf("pages: [");
+    if (pagesAt < 0) throw new Error("no public pages line to complete on");
+    await auth.focus();
+    await auth.evaluate((e, to) => e.setSelectionRange(to), pagesAt + "pages: [".length);
+    await page.keyboard.type("cu");
+    await page
+      .locator(".cm-tooltip-autocomplete")
+      .getByText("customers", { exact: true })
+      .waitFor();
+    await page.keyboard.press("Escape");
+    await write(
+      text
+        .replace("  sales:", "  support: { description: Answers questions. }\n  sales:")
+        .replace("admins:", "defaultRole: sales\nadmins:"),
+    );
+    await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await status.getByText("Edit smithable.auth.yml").waitFor({ timeout: 60000 });
     // The spec's editor offers the roles as they are now, the new one among them.

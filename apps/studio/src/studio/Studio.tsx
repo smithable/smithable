@@ -422,8 +422,11 @@ function SpecEditor({
           problems={diagnostics.filter((d) => d.file === file)}
           select={select}
           kept={`smithable:editor:${file}`}
-          assist={file === "smithable.yml"}
-          {...(roles ? { roles } : {})}
+          assist
+          known={{
+            ...(roles ? { roles } : {}),
+            spec: drafts["smithable.yml"] ?? project.files.spec ?? "",
+          }}
         />
       </Suspense>
       {edited && saved !== base && saved !== text && (

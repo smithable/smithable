@@ -3,6 +3,8 @@
 // descriptions, the fixed values) and from the app's own names in the text (its kinds of
 // record, their fields, its pages and actions), which no schema knows. The place is read from
 // the text's indentation, since a text that is being typed is seldom valid YAML.
+
+import { COMPANION_SCHEMAS } from "./companion-schemas.js";
 import { SCALAR_TYPES, USER_MODEL } from "./ir.js";
 import { LANDING_SECTIONS } from "./patterns.js";
 import { buildJsonSchema } from "./schema.js";
@@ -25,10 +27,17 @@ export interface Completion {
   suggestions: Suggestion[];
 }
 
-/** What the editor knows that the text may not say: the roles of smithable.auth.yml. */
+/**
+ * What the editor knows that the text may not say: the roles of smithable.auth.yml, and for a
+ * companion file the spec's text, whose models, fields and pages it names.
+ */
 export interface Known {
   roles?: string[];
+  spec?: string;
 }
+
+/** The files the editor can help with: smithable.yml and its companions. */
+export type EditedFile = "smithable.yml" | keyof typeof COMPANION_SCHEMAS;
 
 interface Place {
   /** The keys above the cursor, outermost first; "-" is an item of a list. */
@@ -158,10 +167,13 @@ function under(nodes: Node[], segment: string): Node[] {
 
 // Built once: it is asked at every keystroke.
 let schema: Node | undefined;
-const schemaAt = (path: string[]): Node[] => {
+const rootOf = (file: EditedFile): Node => {
+  if (file !== "smithable.yml") return COMPANION_SCHEMAS[file] as Node;
   schema ??= buildJsonSchema() as Node;
-  return path.reduce((nodes, segment) => under(nodes, segment), [schema]);
+  return schema;
 };
+const schemaAt = (path: string[], file: EditedFile = "smithable.yml"): Node[] =>
+  path.reduce((nodes, segment) => under(nodes, segment), [rootOf(file)]);
 
 /** The app's own names, as far as the text's indentation tells them. */
 function namesIn(text: string) {
@@ -253,6 +265,52 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
   return undefined;
 }
 
+/**
+ * The spec's names where a companion file names them: models and their fields under "models",
+ * pages under "pages", and models, pages and roles in the auth file's lists.
+ */
+function companionNames(
+  file: EditedFile,
+  place: Place,
+  known: Known,
+  keys: boolean,
+): string[] | undefined {
+  const { models, pages } = namesIn(known.spec ?? "");
+  const kinds = [...models.keys()];
+  const pageIds = [...pages.keys()];
+  const [section, entry, part] = place.path;
+  const depth = place.path.length;
+  if (keys) {
+    if (section === "models" && depth === 1) return kinds;
+    if (section === "models" && depth === 3 && part === "fields")
+      return models.get(entry ?? "") ?? [];
+    if (section === "pages" && depth === 1) return pageIds;
+    if (file === "smithable.ux.yml" && section === "tones" && depth === 1)
+      return kinds.flatMap((m) => (models.get(m) ?? []).map((f) => `${m}.${f}`));
+    return undefined;
+  }
+  const key = place.key;
+  if (file === "smithable.auth.yml") {
+    if (section === "public" && depth === 1 && key === "pages") return pageIds;
+    if (section === "public" && depth === 1 && (key === "read" || key === "create")) return kinds;
+    if (section === "api" && depth === 1 && (key === "models" || key === "except")) return kinds;
+    if (section === "assistant" && depth === 1 && key === "for") return known.roles ?? [];
+    if (depth === 0 && key === "defaultRole") return known.roles ?? [];
+  }
+  if (file === "smithable.ux.yml" && section === "pages" && depth === 3) {
+    const fields = (() => {
+      const spec = known.spec ?? "";
+      const model = /^ {4}(?:crud|calendar|articles):\s*([A-Z][A-Za-z0-9]*)/m.exec(
+        spec.slice(spec.indexOf(`\n  ${entry}:`)),
+      )?.[1];
+      return model ? (models.get(model) ?? []) : kinds.flatMap((m) => models.get(m) ?? []);
+    })();
+    if (part === "table" && ["columns", "sort", "below"].includes(key ?? "")) return fields;
+    if (part === "form" && key === "fieldOrder") return fields;
+  }
+  return undefined;
+}
+
 /** The keys already written beside the one being written at `offset`: in its map, or its item of a list. */
 function siblings(text: string, offset: number): Set<string> {
   const lines = text.split("\n");
@@ -289,21 +347,26 @@ export function completeSpec(
   text: string,
   offset: number,
   known: Known = {},
+  file: EditedFile = "smithable.yml",
 ): Completion | undefined {
   const place = placeAt(text, offset);
   if (!place) return undefined;
+  const names = (keys: boolean) =>
+    file === "smithable.yml"
+      ? ownNames(place, text, known, keys)
+      : companionNames(file, place, known, keys);
   const fits = (label: string) => label.toLowerCase().startsWith(place.typed.toLowerCase());
   let suggestions: Suggestion[];
   if (place.key === undefined) {
     const there = siblings(text, offset);
-    const fromSchema = schemaAt(place.path)
+    const fromSchema = schemaAt(place.path, file)
       .flatMap(branches)
       .flatMap((node) => Object.entries(node.properties ?? {}))
       .map(([label, node]) => {
         const detail = sentence(branches(node).find((b) => b.description)?.description);
         return { label, insert: `${label}: `, ...(detail ? { detail } : {}) };
       });
-    const own = (ownNames(place, text, known, true) ?? []).map((label) => ({
+    const own = (names(true) ?? []).map((label) => ({
       label,
       insert: `${label}: `,
     }));
@@ -312,7 +375,7 @@ export function completeSpec(
       (s) => !there.has(s.label) && !seen.has(s.label) && seen.add(s.label) !== undefined,
     );
   } else {
-    let nodes = schemaAt([...place.path, place.key]);
+    let nodes = schemaAt([...place.path, place.key], file);
     if (place.list) nodes = under(nodes, "-");
     const fixed = nodes.flatMap(branches).flatMap((node) => {
       if (Array.isArray(node.enum))
@@ -320,7 +383,7 @@ export function completeSpec(
       const types = Array.isArray(node.type) ? node.type : [node.type];
       return types.includes("boolean") ? ["true", "false"] : [];
     });
-    const own = ownNames(place, text, known, false) ?? [];
+    const own = names(false) ?? [];
     suggestions = [...new Set([...own, ...fixed])]
       .filter((label) => !place.written.includes(label))
       .map((label) => ({ label }));
@@ -342,6 +405,8 @@ export function completeSpec(
 export function hoverSpec(
   text: string,
   offset: number,
+  file: EditedFile = "smithable.yml",
+  known: Known = {},
 ): { from: number; to: number; text: string } | undefined {
   const start = text.lastIndexOf("\n", offset - 1) + 1;
   const end = text.indexOf("\n", offset) === -1 ? text.length : text.indexOf("\n", offset);
@@ -356,7 +421,7 @@ export function hoverSpec(
       const place = placeAt(text, from);
       const declared =
         place?.key === undefined
-          ? schemaAt(place?.path ?? [])
+          ? schemaAt(place?.path ?? [], file)
               .flatMap(branches)
               .map((node) => node.properties?.[word])
               .find((node) => node !== undefined)
@@ -365,7 +430,7 @@ export function hoverSpec(
       if (description) return { from, to, text: description };
     }
     // One of the app's own kinds of record, wherever it is named: what it holds.
-    const fields = namesIn(text).models.get(word);
+    const fields = namesIn(file === "smithable.yml" ? text : (known.spec ?? "")).models.get(word);
     return fields
       ? { from, to, text: `${word}: ${fields.join(", ") || "no fields yet"}` }
       : undefined;
