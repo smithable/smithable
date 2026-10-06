@@ -4,7 +4,7 @@
 // development server is used in a real browser, signed in as the examples' roles.
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 import { spawn, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import {
   appendFileSync,
   chmodSync,
@@ -589,6 +589,111 @@ async function visitorMailFlow(dir, base) {
     // running server.
     for (const name of ["messageIn", "messageEcho"].slice(0, added))
       ok(smithable(dir, "op", "removeOutgoing", name));
+  }
+}
+
+/**
+ * A receiver for the status starter's calls (integrations.md §4.1), started before its dev server
+ * so the target's address and secret are in its environment: it keeps each call's body and
+ * whether its signature was right.
+ */
+async function callReceiver() {
+  const secret = "test-secret";
+  const calls = [];
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      const signed = `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
+      calls.push({
+        body,
+        event: req.headers["x-event"],
+        signed: req.headers["x-signature-256"] === signed,
+      });
+      res.writeHead(204).end();
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  process.env.OUTGOING_STATUSFEED_URL = `http://127.0.0.1:${server.address().port}/hook`;
+  process.env.OUTGOING_STATUSFEED_SECRET = secret;
+  return { calls, close: () => server.close() };
+}
+
+/**
+ * A call to a named target (integrations.md §4.1): an incident that becomes resolved is sent to
+ * the status feed, signed with its secret, as the API gives it; Activity says so.
+ */
+async function callFlow(dir, base, receiver) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let added = false;
+  try {
+    ok(
+      smithable(
+        dir,
+        "op",
+        "addOutgoing",
+        "incidentResolved",
+        "Incident changed",
+        "--where",
+        "status=resolved",
+        "--to",
+        "statusFeed",
+      ),
+    );
+    added = true;
+    const [{ id, title }] = query(
+      dir,
+      "select id, title from incidents where status != 'resolved' order by id limit 1",
+    );
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/incidents/${id}`);
+    await page
+      .getByLabel(/^Status/)
+      .first()
+      .selectOption("resolved");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    for (let i = 0; i < 100 && receiver.calls.length === 0; i++) await page.waitForTimeout(100);
+    const call = receiver.calls.at(-1);
+    if (!call) throw new Error("no call arrived");
+    if (!call.signed) throw new Error("the signature does not match the secret");
+    const sent = JSON.parse(call.body);
+    if (
+      call.event !== "incidentResolved" ||
+      sent.event !== "incidentResolved" ||
+      sent.happened !== "changed" ||
+      sent.record?.id !== id ||
+      sent.record?.title !== title ||
+      sent.record?.status !== "resolved"
+    )
+      throw new Error(`the call: ${call.body.slice(0, 300)}`);
+    for (
+      let i = 0;
+      i < 50 && !query(dir, "select id from audit_log where action = 'called'").length;
+      i++
+    )
+      await page.waitForTimeout(100);
+    if (
+      !query(dir, "select details from audit_log where action = 'called'").some((l) =>
+        l.details.includes('"status":204'),
+      )
+    )
+      throw new Error("no Activity line for the call");
+    console.log(
+      "  ✓ outgoing call: an incident that becomes resolved is sent to the status feed, signed with its secret, as the API gives it; Activity has the line",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ outgoing call: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("outgoing call");
+  } finally {
+    await browser.close();
+    // Removed by an operation, not undone: an undo puts back the database file under the server.
+    if (added) ok(smithable(dir, "op", "removeOutgoing", "incidentResolved"));
   }
 }
 
@@ -4438,6 +4543,7 @@ test("the session cookie's name and attributes", async () => {
           }
         },
       );
+    const receiver = example === "status" ? await callReceiver() : undefined;
     stop = await serve(dir, port + 100, "dev");
     try {
       const base = `http://localhost:${port + 100}`;
@@ -4475,6 +4581,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
+      if (receiver) await callFlow(dir, base, receiver);
       if (example === "api") await apiFlow(base);
       if (example === "api") await askPanelFlow(dir, base);
       if (example === "invoicing") {
@@ -4486,6 +4593,9 @@ test("the session cookie's name and attributes", async () => {
       }
     } finally {
       stop();
+      receiver?.close();
+      delete process.env.OUTGOING_STATUSFEED_URL;
+      delete process.env.OUTGOING_STATUSFEED_SECRET;
     }
     // The CRM's later steps work on its customers page as the starter has it.
     if (example === "crm")
