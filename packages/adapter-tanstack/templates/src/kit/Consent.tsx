@@ -3,6 +3,7 @@
 // Decline as equal buttons, and the privacy page when the app has one.
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "#/components/ui/button";
+import { AppLink } from "./AppLink";
 import { choose, consentAsked, consentWanted, onConsentChange, reopenConsent } from "./consent";
 import { w } from "./words";
 
@@ -35,9 +36,9 @@ export function Consent({ texts, privacy }: { texts?: ConsentTexts; privacy?: st
           {privacy && (
             <>
               {" "}
-              <a href={privacy} className="underline">
+              <AppLink href={privacy} className="underline">
                 {w.privacy}
-              </a>
+              </AppLink>
             </>
           )}
         </p>
