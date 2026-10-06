@@ -1,16 +1,11 @@
 smithableContent: 0.1
 pages:
-  instructors:
-    title: Teachers
   home:
     hero:
-      title: Find your breath, find your flow
-      subtitle: Yoga classes for every level, led by experienced teachers. See the schedule and book your place online.
-      button: See the schedule
-    classes:
-      title: Our classes
-    teachers:
-      title: Meet our teachers
+      title: Find your flow
+      subtitle: See this week's classes, meet our teachers and book your place online in seconds.
+      image:
+        src: images/hero.webp
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
     callToAction:
-      title: Ready to roll out your mat?
-      button: Book a class
+      title: Ready for your first class?

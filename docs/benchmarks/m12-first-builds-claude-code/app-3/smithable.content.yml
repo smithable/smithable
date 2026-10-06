@@ -2,11 +2,16 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Get paid for your work, without the paperwork
-      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still due.
+      title: Invoicing that keeps up with your freelance work
+      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still outstanding.
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
     callToAction:
       title: Send your next invoice in minutes
-      button: Sign in
+models:
+  Payment:
+    fields:
+      method:
+        values:
+          bankTransfer: Bank transfer

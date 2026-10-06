@@ -10,7 +10,7 @@ roles:
   admin:
     description: Runs the status page and the team.
   staff:
-    description: Writes incidents and their updates.
+    description: Writes incidents, their updates and planned maintenance.
 defaultRole: staff
 api:
   models: [Component, Incident]
