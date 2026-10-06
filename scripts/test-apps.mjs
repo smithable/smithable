@@ -265,6 +265,18 @@ async function detachFlow(dir, port) {
     const ok = about.includes("About Acme") && columns.includes("website");
     console.log(`  ${ok ? "✓" : "✗"} the detached app serves the new page and has the new column`);
     if (!ok) failures.push("detached app");
+    // The server had a migration to apply, so it kept the database as it was first: a copy
+    // without the new column, for a deploy to put back if the new version fails to come up.
+    const copy = join(dir, "data", "db", "before-migration.db");
+    const kept =
+      existsSync(copy) &&
+      !query(dir, "select name from pragma_table_info('customers')", copy).some(
+        (c) => c.name === "website",
+      );
+    console.log(
+      `  ${kept ? "✓" : "✗"} before migrating, the server kept a copy of the database as it was`,
+    );
+    if (!kept) failures.push("before-migration copy");
   } finally {
     stop();
   }
@@ -2663,8 +2675,8 @@ async function isolationFlow(dir, base) {
 }
 
 /** Runs a query against the app's dev database with the app's own SQLite driver. */
-function query(dir, sql) {
-  const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).all()))`;
+function query(dir, sql, file = "data/db/app.db") {
+  const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D(${JSON.stringify(file)}).prepare(${JSON.stringify(sql)}).all()))`;
   return JSON.parse(run("node", ["-e", code], dir));
 }
 

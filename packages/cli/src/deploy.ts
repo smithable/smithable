@@ -82,13 +82,20 @@ export async function deploy(
   docker(["rm", "-f", previous]);
   const hadOne = docker(["rename", name, previous]).status === 0;
   if (hadOne) docker(["stop", previous]);
+  const since = Date.now();
   const putBack = (why: string) => {
     docker(["rm", "-f", name]);
+    let restored = false;
     if (hadOne) {
+      // The new version copied the database before migrating it (src/db/index.ts); the copy goes
+      // back, so the previous version never runs on a schema it does not know.
+      restored = restoreBeforeMigration(docker, name, `${name}-data`, since);
       docker(["rename", previous, name]);
       docker(["start", name]);
     }
-    io.err(`${why}${hadOne ? " The previous version runs again." : ""}\n`);
+    io.err(
+      `${why}${hadOne ? ` The previous version runs again${restored ? ", on its database as it was before the migration" : ""}.` : ""}\n`,
+    );
     return 1;
   };
   const started = docker([
@@ -124,6 +131,33 @@ export async function deploy(
   return putBack(
     `${logs.stdout}${logs.stderr}\nThe container started but ${url}/health did not answer.`,
   );
+}
+
+/**
+ * Puts back db/before-migration.db over the database when the new version wrote it during this
+ * deploy (its time is after `since`): a one-off container of the new image, as root, so the file
+ * goes to the image's own user. Returns whether anything was put back.
+ */
+function restoreBeforeMigration(
+  docker: (args: string[]) => { status: number | null; stdout: string },
+  image: string,
+  volume: string,
+  since: number,
+): boolean {
+  const result = docker([
+    "run",
+    "--rm",
+    "--user",
+    "0",
+    "-v",
+    `${volume}:/data`,
+    "--entrypoint",
+    "/nodejs/bin/node",
+    image,
+    "-e",
+    `const fs=require("fs");const c="/data/db/before-migration.db";if(!fs.existsSync(c)||fs.statSync(c).mtimeMs<${since}){console.log("kept");process.exit(0)}for(const f of ["app.db-wal","app.db-shm"])fs.rmSync("/data/db/"+f,{force:true});fs.renameSync(c,"/data/db/app.db");fs.chownSync("/data/db/app.db",65532,65532);console.log("restored")`,
+  ]);
+  return result.status === 0 && result.stdout.trim() === "restored";
 }
 
 /** compose.yaml for `docker compose up -d`, with its secrets in .env (never committed). */
