@@ -1,6 +1,8 @@
 // Smithable app kit: the app's words in Swedish, the same keys as en.ts (checked by `satisfies`).
-// Written by Fable from en.ts on 2026-10-06 and read through once; correct what reads wrong
-// here, never in the app's code.
+// Written by Fable from en.ts on 2026-10-06 and read through by C the same day. Swedish nouns
+// have two genders and a definite form the label does not give, so a phrase around a label
+// avoids both: "Lägg till kund", "den här posten", not "Ny/Nytt …" or "den här kund". Correct
+// what reads wrong here, never in the app's code.
 import type { Words } from "./en";
 
 export const w = {
@@ -10,7 +12,8 @@ export const w = {
   active: "Aktiv",
   activeFilters: "Aktiva filter",
   activity: "Aktivitet",
-  activityLead: "Vem som gjorde vad, och när. Sparas i 12 månader; kundens uppgifter i 90 dagar.",
+  activityLead:
+    "Vem som gjorde vad, och när. Sparas i 12 månader; uppgifter om anslutningen i 90 dagar.",
   addPictures: "Lägg till bilder",
   adding: "Lägger till…",
   address: "Adress",
@@ -50,7 +53,7 @@ export const w = {
   cover: "Omslag",
   decline: "Avböj",
   delete: "Ta bort",
-  describedAt: "beskrivet på",
+  describedAt: "som beskrivs i",
   developmentOnly: "Endast under utveckling",
   developmentOnlyNote: "Finns bara under utveckling.",
   done: "Klart.",
@@ -72,7 +75,7 @@ export const w = {
   forgetInLog: "Glöm i loggen",
   from: "Från",
   fromYourRecords: "Från dina uppgifter",
-  full: "Fullt",
+  full: "Fullbokat",
   history: "Historik",
   if: "Om",
   inspectorPlaceholder: "Hur många … finns det? Visa de … som …",
@@ -96,7 +99,7 @@ export const w = {
   month: "Månad",
   more: "Mer",
   moreArticles: "Fler artiklar",
-  moreBelow: "Mer nedanför",
+  moreBelow: "Mer längre ned",
   name: "Namn",
   newerArticles: "Nyare artiklar",
   newestFirst: "Nyast först",
@@ -111,7 +114,7 @@ export const w = {
   notAllowed: "Du får inte göra det här.",
   notDone: "Inte gjort.",
   notFound: "Hittades inte",
-  notFoundNote: "Sidan eller uppgiften finns inte, eller så får du inte se den.",
+  notFoundNote: "Sidan eller posten finns inte, eller så får du inte se den.",
   notRun: "Inte utfört: en ändring som personen skulle bekräfta först.",
   nothing: "Inget",
   nothingHereYet: "Inget här ännu.",
@@ -135,7 +138,7 @@ export const w = {
   previousPicture: "Föregående bild",
   proposedNote: "Visas för personen att bekräfta; inget är ändrat ännu.",
   readAloud: "Läs upp",
-  records: "Uppgifter",
+  records: "Poster",
   remove: "Ta bort",
   removeUser: "Ta bort användare",
   removedUserNote:
@@ -188,7 +191,7 @@ export const w = {
   write: "Skriv",
   yes: "Ja",
   yesCancelIt: "Ja, avboka",
-  aDeletedOne: (label: string, id: string) => `en borttagen ${label.toLowerCase()} (#${id})`,
+  aDeletedOne: (label: string, id: string) => `${label.toLowerCase()} #${id} (finns inte längre)`,
   aKey: (id: string) => `en nyckel (#${id})`,
   aRemovedUser: (id: string) => `en borttagen användare (#${id})`,
   atLeastCharacters: (n: number) => `Minst ${n} tecken`,
@@ -197,7 +200,7 @@ export const w = {
   codeText: (app: string, code: string) =>
     `Din kod till ${app} är ${code}. Den gäller i tio minuter. Om du inte bad om den kan du bortse från det här mejlet.`,
   createOne: (label: string) => `Skapa ${label}`,
-  deletedNamed: (label: string, title: string) => `${label} ”${title}” (borttagen)`,
+  deletedNamed: (label: string, title: string) => `${label} ”${title}” (finns inte längre)`,
   invitationSubject: (app: string) => `Inbjudan till ${app}`,
   invitationText: (
     by: string,
@@ -209,17 +212,17 @@ export const w = {
   ) =>
     `${by} har bjudit in dig till ${app} som ${role}.\n\nLogga in med ${email} här:\n${link}\n\nInbjudan gäller till ${until}.`,
   keyNamed: (name: string) => `nyckeln ”${name}”`,
-  newOne: (label: string) => `Ny ${label}`,
+  newOne: (label: string) => `Lägg till ${label}`,
   openApp: (app: string) => `Öppna ${app}`,
   welcomeTo: (app: string) => `Välkommen till ${app}`,
   you: "(du)",
-  youAreBooked: "Du har en plats",
+  youAreBooked: "Du är bokad",
   yourEmail: "Din e-post",
   yourName: "Ditt namn",
-  alreadyHas: (label: string, field: string) =>
-    `En annan ${label.toLowerCase()} har redan samma ${field.toLowerCase()}.`,
+  alreadyHas: (_label: string, field: string) =>
+    `Det finns redan en post med samma ${field.toLowerCase()}.`,
   alreadyTaken: (booked: string) =>
-    `${booked} är redan ${booked === "1" ? "upptagen" : "upptagna"}; antalet kan inte bli lägre än så.`,
+    `${booked} ${booked === "1" ? "plats är redan bokad" : "platser är redan bokade"}; antalet kan inte bli lägre än så.`,
   atMostPictures: (max: number) => `Högst ${max} bilder; resten lämnades utanför.`,
   counted: (done: number, one: string, many: string, verb: string, skipped: number) =>
     `${done} ${done === 1 ? one : many} ${verb}${skipped ? `, ${skipped} hoppades över` : ""}.`,
@@ -253,12 +256,12 @@ export const w = {
   saveIt: (label: string) => `Spara ${label.toLowerCase()}`,
   selectIt: (label: string) => `Välj ${label.toLowerCase()}`,
   signInAs: (role: string) => `Logga in som ${role}`,
-  signInTo: (app: string) => `Logga in i ${app}`,
+  signInTo: (app: string) => `Logga in på ${app}`,
   stillInUse: (title: string) => `”${title}” används fortfarande, så inget togs bort.`,
-  stillUsed: (label: string) =>
-    `Den här ${label.toLowerCase()} används fortfarande av andra uppgifter. Ändra eller ta bort dem först.`,
+  stillUsed: (_label: string) =>
+    "Posten används fortfarande av andra poster. Ändra eller ta bort dem först.",
   stoppedAfter: (rounds: number) => `Stoppade efter ${rounds} modellanrop.`,
-  thisOne: (label: string) => `den här ${label.toLowerCase()}`,
+  thisOne: (_label: string) => "den här posten",
   tooMany: (what: string) => `För många ${what} på kort tid. Vänta en minut och försök igen.`,
   toolsAt: (origin: string) =>
     `För en AI-assistent: verktygen finns på ${origin}/mcp. Dess inställningar behöver:`,
@@ -266,4 +269,37 @@ export const w = {
   wentWrongReference: (reference: string | undefined) =>
     `Något gick fel. Försök igen.${reference ? ` Referens: ${reference}` : ""}`,
   wouldDo: (tool: string, what: string) => `Den skulle ${tool} ${what}; inget ändrades.`,
+  calculated: "(beräknat)",
+  changedVerb: "ändrades",
+  clear: "Rensa",
+  createFirst: "Lägg till den första posten för att komma i gång.",
+  deletedVerb: "togs bort",
+  endsOptional: "Slutar gälla (valfritt)",
+  filters: "Filter",
+  mainMenu: "Huvudmeny",
+  markdownHint: "Markdown: **fetstil**, *kursiv*, ## en rubrik, - en lista, [en länk](https://…)",
+  noModel: ", ingen modell",
+  options: "Alternativ",
+  pictureDescription: "Beskrivning (för den som inte kan se bilden)",
+  question: "Fråga",
+  asRole: (role: string) => `som ${role}`,
+  contactThe: (who: string) => `Kontakta ${who}`,
+  continueWith: (provider: string) => `Fortsätt med ${provider}`,
+  deleteHowMany: (n: number, noun: string) => `Ta bort ${n} ${noun}? Det går inte att ångra.`,
+  deleteIt: (label: string) => `Ta bort ${label}`,
+  deleteN: (n: number) => `Ta bort (${n})`,
+  endsOn: (day: string) => `gäller till ${day}`,
+  lastUsed: (day: string) => `senast använd ${day}`,
+  pictureDescriptionN: (n: number) => `Beskrivning av bild ${n}`,
+  rangeFrom: (label: string) => `${label} från`,
+  rangeTo: (label: string) => `${label} till`,
+  revokedOn: (day: string) => `Återkallad ${day}`,
+  selectedN: (n: number) => `${n} valda`,
+  signInUnavailable: (app: string) =>
+    `Inloggning går inte just nu. Kontakta den som ansvarar för ${app}.`,
+  stepOf: (n: number, count: number) => `Steg ${n} av ${count}`,
+  tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} token in, ${tokensOut} ut`,
+  toolCalls: (n: number) => `${n} verktygsanrop`,
+  wouldPropose: (tool: string, what: string) =>
+    `Skulle ${tool} ${what}: en assistent med den här rollen får föreslå det, och inget ändrades.`,
 } satisfies Words;
