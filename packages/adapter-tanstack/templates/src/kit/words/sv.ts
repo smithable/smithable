@@ -77,6 +77,7 @@ export const w = {
   enterWholeNumber: "Ange ett heltal",
   errorTitle: "Något gick fel",
   everyone: "Alla",
+  exportCsv: "Exportera CSV",
   fieldsMarked: "Fält märkta med",
   fileKinds: "Välj en PDF, ett dokument, ett kalkylark, en text eller en bild.",
   fileNotAdded: "Filen kunde inte läggas till.",

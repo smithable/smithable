@@ -188,12 +188,14 @@ describe("custom pages", () => {
     expect(source).toContain("export function CustomersPage() {");
     expect(source).toContain("route.useLoaderData()");
     expect(source).not.toContain("createFileRoute");
-    // The component's code is the generated one, with Route replaced by route.
+    // The component's code is the generated one, with Route replaced by route; without
+    // "Export CSV", which calls the route's own server function.
     const generated = route([]);
     expect(source.slice(source.indexOf("export function") + 7)).toBe(
       generated
         .slice(generated.indexOf("function CustomersPage"))
-        .replace(/\bRoute\.use/g, "route.use"),
+        .replace(/\bRoute\.use/g, "route.use")
+        .replace(/\n {8}exportRows=\{[^\n]*\}/, ""),
     );
   });
 

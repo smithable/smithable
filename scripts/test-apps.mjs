@@ -795,6 +795,37 @@ async function filtersFlow(base) {
     await open(page, page.url());
     if ((await names()).join() !== "Nordic Timber Oy,Helios Energy")
       throw new Error("a reloaded view differs");
+    // Export CSV: the list as it is filtered and sorted, then only the chosen row.
+    const saved = async (click) => {
+      const [file] = await Promise.all([page.waitForEvent("download"), click()]);
+      return readFileSync(await file.path(), "utf8");
+    };
+    const csv = await saved(() => page.getByRole("button", { name: "Export CSV" }).click());
+    const lines = csv.split("\r\n");
+    if (!csv.startsWith("\uFEFF") || !/^\uFEFFName,/.test(lines[0] ?? ""))
+      throw new Error(`the CSV's header: ${lines[0]}`);
+    if (
+      !lines[1]?.startsWith("Nordic Timber Oy,") ||
+      !lines[2]?.startsWith("Helios Energy,") ||
+      lines.length !== 4
+    )
+      throw new Error(`the CSV's rows: ${lines.slice(1).join(" | ")}`);
+    if (!/,\d+\.\d{2}(,|$)/.test(lines[1] ?? ""))
+      throw new Error(`no amount as a decimal: ${lines[1]}`);
+    await page.locator("tr", { hasText: "Helios Energy" }).getByRole("checkbox").check();
+    const chosen = await saved(() =>
+      page
+        .locator('[data-kit="selection-bar"]')
+        .getByRole("button", { name: "Export CSV" })
+        .click(),
+    );
+    const chosenLines = chosen.split("\r\n");
+    if (chosenLines.length !== 3 || !chosenLines[1]?.startsWith("Helios Energy,"))
+      throw new Error(`the chosen row's CSV: ${chosenLines.join(" | ")}`);
+    await page.locator("tr", { hasText: "Helios Energy" }).getByRole("checkbox").uncheck();
+    console.log(
+      "  ✓ browser: Export CSV saves the list as filtered and sorted (labels as headers, amounts as decimals); the selection bar's saves the chosen rows",
+    );
     await page.getByRole("button", { name: "Remove the segment filter" }).click();
     await page.waitForURL((url) => !url.searchParams.has("segment"));
     // "Mine": the admin manages no customers; a visitor is not offered it at all.
@@ -1415,6 +1446,18 @@ async function apiFlow(base) {
     const listed = await (await api("/tasks")).json();
     if (!listed.items?.some((t) => t.title === "Draft the newsletter"))
       throw new Error(`listing tasks gave ${JSON.stringify(listed).slice(0, 200)}`);
+    // The same list as CSV, for a spreadsheet; without a key, nothing.
+    const csv = await api("/tasks.csv?sort=title");
+    const bytes = new Uint8Array(await csv.arrayBuffer());
+    const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
+    if (
+      !csv.headers.get("content-type")?.startsWith("text/csv") ||
+      !text.startsWith("\uFEFFTitle,") ||
+      !text.includes("Draft the newsletter")
+    )
+      throw new Error(`tasks as CSV gave ${csv.status} ${text.slice(0, 200)}`);
+    if ((await fetch(`${base}/api/v1/tasks.csv`)).status !== 401)
+      throw new Error("the tasks' CSV answered without a key");
     const project = (await (await api("/projects")).json()).items[0];
     const added = await api("/tasks", {
       method: "POST",
@@ -2759,6 +2802,14 @@ async function isolationFlow(dir, base) {
     await page.getByRole("cell", { name: "My Client", exact: true }).waitFor({ timeout: 5000 });
     if (await page.getByText("Other Client").count())
       throw new Error("another user's client is listed");
+    // Export CSV takes what the member may read, nothing more.
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Export CSV" }).click(),
+    ]);
+    const exported = readFileSync(await file.path(), "utf8");
+    if (!exported.includes("My Client") || exported.includes("Other Client"))
+      throw new Error(`the member's export: ${exported.slice(0, 300)}`);
     await open(page, `${base}/invoices`);
     await page.getByRole("heading", { name: "Invoices" }).waitFor();
     if (await page.getByText("OTHER-001").count())
@@ -2768,7 +2819,9 @@ async function isolationFlow(dir, base) {
     await open(page, `${base}/invoices/new`);
     const clients = await page.getByLabel("Client *").locator("option").allTextContents();
     if (clients.includes("Other Client")) throw new Error("another user's client can be chosen");
-    console.log("  ✓ browser: a member sees only their own clients and invoices, even by id");
+    console.log(
+      "  ✓ browser: a member sees only their own clients and invoices, even by id, and exports only theirs",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,

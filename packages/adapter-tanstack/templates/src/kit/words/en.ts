@@ -76,6 +76,7 @@ export const w = {
   enterWholeNumber: "Enter a whole number",
   errorTitle: "Something went wrong",
   everyone: "Everyone",
+  exportCsv: "Export CSV",
   fieldsMarked: "Fields marked",
   fileKinds: "Choose a PDF, a document, a spreadsheet, a text or a picture.",
   fileNotAdded: "The file could not be added.",
