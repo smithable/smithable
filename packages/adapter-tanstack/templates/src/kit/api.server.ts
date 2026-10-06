@@ -32,9 +32,6 @@ export function problem(
 function conflict(code: string): string {
   const taken = /^taken:(\w+)$/.exec(code)?.[1];
   if (taken) return `That ${taken} is already taken.`;
-  const held = /^trashed:(\w+)$/.exec(code)?.[1];
-  if (held)
-    return `A deleted record with that ${held} is in the trash: restore it (POST …/restore) or delete it for good.`;
   if (code.startsWith("in-use"))
     return "It is still used by other records, so it cannot be deleted.";
   if (code === "full") return "No places left.";

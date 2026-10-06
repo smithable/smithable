@@ -15,10 +15,10 @@ models:
 
 ## 2. How it works
 
-- **Storage:** two hidden columns on the model's table, `deleted_at` and `deleted_by`. Deleting sets them; restoring clears them. Every reader skips rows with `deleted_at` set: lists and record pages, counts and dashboards, the calendar, the blog, the sitemap, the API, the tools, the outgoing mail's "who to tell". Partial indexes (`WHERE deleted_at IS NULL`) on the live rows keep every query over live records as fast as without a trash; a unique index stays over all rows.
+- **Storage:** two hidden columns on the model's table, `deleted_at` and `deleted_by`. Deleting sets them; restoring clears them. Every reader skips rows with `deleted_at` set: lists and record pages, counts and dashboards, the calendar, the blog, the sitemap, the API, the tools, the outgoing mail's "who to tell". Partial indexes (`WHERE deleted_at IS NULL`) on the live rows keep every query over live records as fast as without a trash; a unique value is unique among the live records only (a partial unique index).
 - **Who:** restoring and removing for good follow the model's delete rule, so in a private app a person sees only their own trash. The activity log gets three lines: trashed, restored, removed.
 - **Emptying:** a daily job removes what has been trashed for thirty days, uploads included; Empty trash does it at once for the records shown.
-- **Uniqueness:** a trashed record keeps its unique values. A new record with the same value is refused with "a deleted customer with this email is in the trash: restore it or empty the trash".
+- **Uniqueness:** a unique value holds among the live records only, so a value a trashed record has can be used again (an email after its customer was deleted; the same session booked again after a cancellation). Restore is refused when a live record has taken the value since, with the words a new record gets ("Another customer already has this email."); the trash row says so. (Changed 2026-10-06, from C's review of #414: a trashed record kept its values before.)
 - **References:** a record that other records point to with a restricting reference cannot be trashed, as it cannot be deleted today. One with a nullable reference can: the referrers show a dash while it is in the trash, and the reference is cleared only when the trash is emptied.
 - **Outgoing:** the `deleted` event fires when a record is trashed, since that is when it leaves the app; emptying the trash mails nobody.
 - **Turning it off** (`setTrash Customer false`) removes what is in the trash for good and asks first, saying how many.
@@ -37,7 +37,7 @@ models:
 ## 5. Steps
 
 1. Core (done 2026-10-06): `trash` on a model, `setTrash` (destructive when turned off), the summary line, the schema, the spec reference; the generator refuses a trashed model until step 2, and drafts do not propose it.
-2. Adapter (A): the columns and partial indexes in the schema and migration; the readers' filter in the data module (one place: `list`, `get`, counts) and the API, tools, sitemap and articles that go through it; the Trash view, the notice's Undo, the banner; the routes; the daily job and the uploads; the three audit lines; words in en and sv; the CRM starter's Customer and Order with `trash: true`; test-apps: delete, trash view, restore, the 410, permanent removal, the unique refusal; the API page. Then remove the generator's refusal and `setTrash` from NOT_FOR_DRAFTS.
+2. Adapter (A): the columns and partial indexes in the schema and migration; the readers' filter in the data module (one place: `list`, `get`, counts) and the API, tools, sitemap and articles that go through it; the Trash view, the notice's Undo, the banner; the routes; the daily job and the uploads; the three audit lines; words in en and sv; the CRM starter's Customer and Order with `trash: true`; test-apps: delete, trash view, restore, the 410, permanent removal, the refused restore; the API page. Then remove the generator's refusal and `setTrash` from NOT_FOR_DRAFTS.
 3. Later, when asked: a trash across models on the data page; a longer retention as a setting. And, noted on building step 2 (2026-10-06): outgoing mail whose recipient is one reference away (`customer.email`) still reads the address of a record in the trash; a nullable reference to a trashed record still shows its title.
 
 ## 6. The five questions (ARCHITECTURE §2.4)

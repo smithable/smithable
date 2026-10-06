@@ -9,6 +9,7 @@ import {
   kebab,
   type ModelIR,
   type SpecIR,
+  snake,
   storesFiles,
   storesPictures,
   USER_MODEL,
@@ -41,11 +42,14 @@ export function schemaModule(ir: SpecIR, auth: AuthIR): string {
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
     const perOwner = uniquePerOwner(model, auth);
+    // With a trash, a unique value is unique among the live records (docs/design/trash.md §2):
+    // an index over them, not the column's own constraint.
+    const indexed = perOwner || Boolean(model.trash);
     const reference = (field: FieldIR, target: string, type: string) => {
       const onDelete = field.required ? "restrict" : "set null";
       let expr = `${type}()`;
       if (field.required) expr += ".notNull()";
-      if (field.unique && !perOwner) expr += ".unique()";
+      if (field.unique && !indexed) expr += ".unique()";
       // Tables that refer to each other (or to themselves) need the column's type said, as
       // Drizzle's docs show, or TypeScript cannot infer either table.
       const cycle =
@@ -63,21 +67,27 @@ export function schemaModule(ir: SpecIR, auth: AuthIR): string {
         const target = isUser ? "user" : tableNames(modelNamed(ir, field.type.model)).table;
         return [`  ${field.name}Id: ${reference(field, target, isUser ? "text" : "integer")},`];
       }
-      const { expr, uses } = column(perOwner ? { ...field, unique: false } : field);
+      const { expr, uses } = column(indexed ? { ...field, unique: false } : field);
       imports.add(uses);
       return [`  ${field.name}: ${expr},`];
     });
     if (hasSignIn(auth) && !model.ownedBy)
       columns.push(`  ownerId: text().references(() => user.id, { onDelete: "set null" }),`);
-    const uniques = perOwner
+    const uniqueOn = (f: FieldIR) =>
+      perOwner ? `t.${ownerKey(model)}, t.${dataKey(f)}` : `t.${dataKey(f)}`;
+    const uniques = model.trash
       ? model.fields
-          .filter((f) => f.unique)
-          .map((f) => `unique().on(t.${ownerKey(model)}, t.${dataKey(f)})`)
-      : [];
-    if (uniques.length) imports.add("unique");
+          .filter((f) => f.unique && !(f.type.kind === "relation" && f.type.many))
+          .map(
+            (f) =>
+              `uniqueIndex(${JSON.stringify(`${n.sqlTable}_${snake(dataKey(f))}_unique`)}).on(${uniqueOn(f)}).where(sql\`\${t.deletedAt} is null\`)`,
+          )
+      : perOwner
+        ? model.fields.filter((f) => f.unique).map((f) => `unique().on(${uniqueOn(f)})`)
+        : [];
+    if (uniques.length) imports.add(model.trash ? "uniqueIndex" : "unique");
     // The trash (docs/design/trash.md): when and by whom a record was deleted; an index over the
-    // live records only keeps every reader as fast as without it. A unique value stays unique
-    // over all records, the trashed ones too.
+    // live records only keeps every reader as fast as without it.
     const trash = model.trash
       ? `
   /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
@@ -101,7 +111,7 @@ ${columns.join("\n")}
     .$onUpdate(() => new Date()),${trash}
 }`;
     return extras.length
-      ? `${uniques.length ? "// Records are private to their owner, so unique values are unique per owner.\n" : ""}export const ${n.table} = sqliteTable(
+      ? `${perOwner && uniques.length ? "// Records are private to their owner, so unique values are unique per owner.\n" : ""}export const ${n.table} = sqliteTable(
   ${JSON.stringify(n.sqlTable)},
   ${indent(body, 2)},
   (t) => [${extras.join(", ")}],

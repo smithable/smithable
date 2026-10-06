@@ -482,6 +482,7 @@ function ${component}() {
         <TrashedBanner
           {...trashed}
           app={app}
+          ui={${n.ui}}
           onRestore={async () => {
             await ${trashNames(model).restore}({ data: [row.id] });
             await router.invalidate();
