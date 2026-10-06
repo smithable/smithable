@@ -793,6 +793,8 @@ test("a removal leaves onboarding steps without the field, and is refused while 
     ...invoicing,
     spec: invoicing.spec
       .replace(/\nactions:\n[\s\S]*?\n\n/, "\n")
+      // The outgoing mail on markSent goes with the actions.
+      .replace(/\noutgoing:\n[\s\S]*?\n\n/, "\n")
       .replace("    actions: [markSent, markPaid]\n", ""),
   };
   expect(
