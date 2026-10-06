@@ -221,6 +221,7 @@ export function Builder({
         )}
         <div
           data-panel="details"
+          data-guide="details"
           className={cx(
             "flex min-h-0 shrink-0 flex-col border-l border-neutral-200 *:min-h-0 *:flex-1",
             paired ? "w-[22rem]" : "w-full snap-start",
