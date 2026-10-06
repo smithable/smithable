@@ -20,5 +20,5 @@ test("every stop of the guide has its place in Studio, and every place has a sto
   const stops = STOPS.map((s) => s.anchor);
   expect(stops.filter((a) => !found.has(a))).toEqual([]);
   expect([...found].filter((a) => !stops.includes(a))).toEqual([]);
-  expect(stops).toEqual(["preview", "summary", "change", "look", "publish"]);
+  expect(stops).toEqual(["mode", "preview", "summary", "details", "change", "look", "publish"]);
 });
