@@ -1,6 +1,7 @@
-import { type AuthIR, type SpecIR, validateAuth, validateSpec } from "@smithable/core";
+import { type AuthIR, LANGUAGES, type SpecIR, validateAuth, validateSpec } from "@smithable/core";
 import { describe, expect, test } from "vitest";
 import { customPageFromEdit, customPageSource, generateApp } from "./generate.js";
+import { TEMPLATES } from "./templates.gen.js";
 
 const examples = import.meta.glob("../../../examples/*/smithable.yml", {
   query: "?raw",
@@ -91,6 +92,7 @@ pages:
   const withContent = generateApp(spec, {
     ...options,
     content: {
+      language: "en",
       models: {
         Customer: {
           label: "Client",
@@ -113,7 +115,12 @@ pages:
   // A text with quotes goes in braces: a JSX attribute string cannot escape them.
   const quoted = generateApp(spec, {
     ...options,
-    content: { models: {}, pages: { customers: { title: 'Our "best" clients' } }, menus: {} },
+    content: {
+      language: "en",
+      models: {},
+      pages: { customers: { title: 'Our "best" clients' } },
+      menus: {},
+    },
   });
   expect(quoted.find((f) => f.path === "src/routes/customers/index.tsx")?.content).toContain(
     'title={"Our \\"best\\" clients"}',
@@ -361,4 +368,37 @@ test("every app carries the third-party notices, in its image too, and no Smitha
   expect(files.find((f) => f.path === "README.md")?.content).toContain("## Licenses");
   // Nothing in an app is Apache-licensed engine code: no file imports a Smithable package.
   for (const file of files) expect(file.content, file.path).not.toMatch(/@smithable\//);
+});
+
+test("the kit has words in every language the content file may name, and the app gets its own", () => {
+  for (const language of LANGUAGES) {
+    const file = TEMPLATES[`src/kit/words/${language}.ts`];
+    expect(file, language).toBeDefined();
+    // The same keys as English, in the same order: a missing one is a build error in the app
+    // (`satisfies Words`), and here a reader of the diff sees it at once.
+    const keys = (text: string) => [...text.matchAll(/^ {2}(\w+):/gm)].map((m) => m[1]);
+    expect(keys(file as string)).toEqual(keys(TEMPLATES["src/kit/words/en.ts"] as string));
+  }
+  const spec = ir(
+    "smithable.yml",
+    `smithable: 0.1
+app: { name: Kundregister }
+models:
+  Customer:
+    fields:
+      name: string!
+pages:
+  customers: { crud: Customer }
+`,
+  );
+  const swedish = generateApp(spec, {
+    ...options,
+    content: { language: "sv", models: {}, pages: {}, menus: {} },
+  });
+  const words = swedish.find((f) => f.path === "src/kit/words.ts")?.content ?? "";
+  expect(words).toContain('signIn: "Logga in"');
+  // On its own in the app: no English beside it to import.
+  expect(words).not.toContain("./en");
+  expect(words).toContain("export type Words = typeof w;");
+  expect(swedish.some((f) => f.path.startsWith("src/kit/words/"))).toBe(false);
 });

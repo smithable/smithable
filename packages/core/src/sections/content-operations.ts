@@ -1,3 +1,4 @@
+import { LANGUAGES } from "../content.js";
 import type { YamlEditor } from "../edit.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -124,4 +125,30 @@ const nameRecords: Operation<{ model: string; one: string; several?: string }> =
   },
 };
 
-export const contentOperations: AnyOperation[] = [setText, nameRecords];
+/** The app's language (docs/design/language.md §2): the kit's words follow it. */
+const setLanguage: Operation<{ language: string }> = {
+  name: "setLanguage",
+  summary: `The language of everything a person reads in the app: ${LANGUAGES.join(", ")}.`,
+  schema: {
+    type: "object",
+    required: ["language"],
+    additionalProperties: false,
+    properties: {
+      language: {
+        enum: [...LANGUAGES],
+        description: "A language the app kit has words in. The maker's own texts stay as written.",
+      },
+    },
+  },
+  positional: ["language"],
+  describe: ({ language }) => `Set the app's language to ${language}`,
+  destructive: () => false,
+  apply(editors, { language }) {
+    if (language === LANGUAGES[0]) {
+      if (editors.content.has(["language"])) editors.content.remove(["language"]);
+    } else put(editors.content, ["language"], language);
+    return [];
+  },
+};
+
+export const contentOperations: AnyOperation[] = [setText, nameRecords, setLanguage];

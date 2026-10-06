@@ -7385,7 +7385,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
 exports[`../../../examples/api/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -14740,7 +14740,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 exports[`../../../examples/booking/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -18215,7 +18215,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
 exports[`../../../examples/crm/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -22767,7 +22767,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 exports[`../../../examples/invoicing/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -25579,7 +25579,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 exports[`../../../examples/marketplace/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -27592,7 +27592,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 exports[`../../../examples/records/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -35863,7 +35863,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
 exports[`../../../examples/status/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "d116c038 scaffold",
+  ".gitignore": "9b776503 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",

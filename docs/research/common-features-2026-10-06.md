@@ -13,13 +13,13 @@ Research note, 2026-10-06 (Fable), asked by Johan: "the most common features of 
 | Blog or news | Yes: articles pages, Markdown, pictures, public `where: { status: published }` | none |
 | Booking and appointments | Yes: calendar page, capacity, Book and Cancel | recurring sessions are not there (a weekly class is many records) |
 | Search engine basics: titles, descriptions, Open Graph, sitemap, robots | Titles and robots.txt are there; Open Graph is in the generator; no `sitemap.xml`, no per-page description from the content file | **sitemap.xml** from the public pages, and a `description` text per page |
-| Analytics | Nothing | a setting for one script (Plausible or Umami, both EU and cookie-free) in the context file; GA needs consent, so leave it to custom code |
+| Analytics | Nothing | an `analytics` setting in the context file: Plausible, Umami or Fathom keep no cookies and need no banner, so the setting is one line; Google Analytics needs consent, so for it the same setting makes the kit show a consent bar and load the script only after a yes, with the choice remembered (Johan's question, 2026-10-06) |
 | Cookie consent | Not needed: the app sets one session cookie, which is strictly necessary | none, and a line in the FAQ saying why |
 | Privacy policy and terms pages | None generated; the hosted service has its own | a `legal` landing section or page with the operator's name, what is stored and why, written from the spec (it knows the fields with personal data) |
 | Reviews and ratings | A `rating` field type is in the spec; no "write a review" flow | medium: reviews are a model with a public create and a moderation status; a starter could show it |
 | Newsletter sign-up | No; the spec reference uses `newsletter` as the example of a taught plugin | medium: a `Subscriber` model with public create and a send-out; the send-out is the part that is not there (see §3) |
 | Social links in the footer | Not as a construct | small: footer texts can hold links already; an icon row is a look |
-| Several languages | One language, English words (docs/design/language.md) | in work |
+| Several languages | One language per app, with Swedish as the second language of the kit (docs/design/language.md) | later: several languages in one app, the reader's from the browser's own setting with a remembered switch, never from geo-IP (Johan's question, 2026-10-06) |
 | Video | Only as a link in Markdown | small: a video section (a hosted video's address, shown in a frame) |
 
 ## 2. Apps people sign in to (internal tools and member sites)
@@ -51,9 +51,10 @@ Research note, 2026-10-06 (Fable), asked by Johan: "the most common features of 
 1. **Mail on an event** (`notify`): small spec addition, one operation, the mail kit exists. It makes a CRM or a booking app useful to a team at once.
 2. **CSV export of a list** as filtered: a button on list pages and `GET /api/v1/<model>.csv`; no spec change.
 3. **Attachments**: the `file` field type beside `picture`; the pictures code is the mould.
-4. **sitemap.xml and a page description**: half a day, and what every site checker asks about first.
-5. **A legal page from the spec**: the operator's name from the context file, the stored personal data from the validator's own list; the hosted service already knows the operator.
-6. **Reviews** as a starter construct, after the website starter.
-7. **Trash with restore**, **comments on a record**, **a send-out to subscribers**, **recurring sessions**: each a design note first, none before the launch.
+4. **Analytics as a setting**, with the consent bar for Google: a day, and the question every business asks in its first week.
+5. **sitemap.xml and a page description**: half a day, and what every site checker asks about first.
+6. **A legal page from the spec**: the operator's name from the context file, the stored personal data from the validator's own list; the hosted service already knows the operator.
+7. **Reviews** as a starter construct, after the website starter.
+8. **Trash with restore**, **comments on a record**, **a send-out to subscribers**, **recurring sessions**: each a design note first, none before the launch.
 
 Not worth building: cookie banners (no third-party cookies), SSO before a customer asks, a report designer (print styles and the API do it), an embedded map (a link and a picture do it, and Google's embed needs consent).
