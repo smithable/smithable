@@ -51,7 +51,7 @@ curl -s https://status.example.com/api/v1/components?limit=2 -H "Authorization: 
 }
 ```
 
-The answers here leave out each record's lists (`incidents` on a component, `updates` on an incident), which the API gives as `null` for now. A list comes a page at a time: `limit` (at most 100) and `page`. Fields have the names they have in the spec; amounts come as decimal texts (`"12.50"`) and times as ISO texts in UTC.
+A record's lists (`incidents` on a component, `updates` on an incident) are not fields of the record: they are the other model's records that refer to it, so they are read from that side, `GET /api/v1/incidents?component=3`, a page at a time like any list. A list comes a page at a time: `limit` (at most 100) and `page`. Fields have the names they have in the spec; amounts come as decimal texts (`"12.50"`) and times as ISO texts in UTC.
 
 **Report an incident** (a monitoring tool would do this):
 
