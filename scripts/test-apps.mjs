@@ -527,6 +527,57 @@ async function outgoingFlow(dir, base) {
 }
 
 /**
+ * A visitor's change mails only the app's users (C's review of #401): with entries that mail the
+ * admins and the address typed into a contact message, a visitor's message reaches the admin and
+ * never the typed address, so the form cannot send anyone's text anywhere.
+ */
+async function visitorMailFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  let added = 0;
+  try {
+    ok(smithable(dir, "op", "addOutgoing", "messageIn", "Message created", "--recipient", "admin"));
+    added++;
+    ok(
+      smithable(dir, "op", "addOutgoing", "messageEcho", "Message created", "--recipient", "email"),
+    );
+    added++;
+    const before = mails().length;
+    await open(page, base);
+    await page.getByRole("textbox", { name: "Name *" }).fill("Mallory");
+    await page.getByRole("textbox", { name: "Email *" }).fill("victim@example.com");
+    await page.getByRole("textbox", { name: "Message *" }).fill("Click this link");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await page.getByText("Thank you!").first().waitFor({ timeout: 15000 });
+    for (let i = 0; i < 100 && mails().length === before; i++) await page.waitForTimeout(100);
+    await page.waitForTimeout(500);
+    const sent = mails()
+      .slice(before)
+      .map((f) => readFileSync(join(outbox, f), "utf8"));
+    if (!sent.some((m) => /^To: dev-admin@/m.test(m)))
+      throw new Error(`the admin was not mailed: ${sent.length} mails`);
+    if (sent.some((m) => /victim@example\.com/.test(m.split("\n\n")[0])))
+      throw new Error("a visitor's message mailed the address typed into it");
+    console.log(
+      "  ✓ outgoing mail: a visitor's contact message mails the admin, never the address typed into it",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ outgoing mail from a visitor: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("outgoing mail from a visitor");
+  } finally {
+    await browser.close();
+    for (let i = 0; i < added; i++) ok(smithable(dir, "undo"));
+  }
+}
+
+/**
  * Paging (docs/design/paging.md): with 1,200 more customers the list shows fifty a page with
  * the count, Next goes to ?page=2, a page past the end shows the remainder, and a filter
  * composes with the page.
@@ -4398,6 +4449,7 @@ test("the session cookie's name and attributes", async () => {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
+        await visitorMailFlow(dir, base);
         await markdownFlow(base);
         await inputSecurityFlow(dir, base);
         await articlesFlow(dir, base);
