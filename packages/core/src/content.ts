@@ -30,6 +30,8 @@ export interface PageContent {
   title?: string;
   /** A line under the title, e.g. "Keep every relationship in view." */
   subtitle?: string;
+  /** What search engines show under the page's name (its meta description); public pages. */
+  description?: string;
   /** Texts of a landing page's sections and a dashboard's tiles, by name. */
   sections?: Record<string, SectionContent>;
   /** A calculator page's fields' labels and help. */
@@ -332,7 +334,7 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
   const calculatorFields =
     page?.pattern.kind === "calculator" ? page.pattern.calculator.fields : undefined;
   for (const entry of mapEntries(ctx, node, where) ?? []) {
-    if (entry.key === "title" || entry.key === "subtitle") {
+    if (entry.key === "title" || entry.key === "subtitle" || entry.key === "description") {
       const text = readString(ctx, entry.value, `"${entry.key}" of ${where}`);
       if (text !== undefined) result[entry.key] = text;
       continue;

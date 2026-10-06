@@ -2718,11 +2718,92 @@ async function robotsCheck(base) {
     response.status === 200 &&
     response.headers.get("content-type")?.startsWith("text/plain") &&
     text.startsWith("User-agent: *\n") &&
-    text.endsWith("Disallow: /\n");
+    /\nDisallow: \/\n(Sitemap: \S+\n)?$/.test(text);
   console.log(
     `  ${ok ? "✓" : "✗"} robots.txt: the public pages allowed, the rest refused${ok ? "" : `\n    ${response.status} ${text}`}`,
   );
   if (!ok) failures.push("robots.txt");
+}
+
+/**
+ * /sitemap.xml with public pages: every public page's address at the site's own origin, a public
+ * blog's published posts with their dates and nothing unpublished, and robots.txt naming it;
+ * without public pages, no sitemap. A public page carries its description for search engines.
+ */
+async function sitemapCheck(dir, base) {
+  const auth = readFileSync(join(dir, "smithable.auth.yml"), "utf8");
+  const publicPages = /^public:[\s\S]*?\n\s+pages:\s*\[([^\]]*)\]/m.exec(auth)?.[1];
+  const robots = await (await fetch(`${base}/robots.txt`)).text();
+  const response = await fetch(`${base}/sitemap.xml`);
+  const problems = [];
+  if (!publicPages) {
+    if (response.status !== 404)
+      problems.push(`a sitemap without public pages (${response.status})`);
+    if (robots.includes("Sitemap:"))
+      problems.push("robots.txt names a sitemap without public pages");
+  } else {
+    const text = await response.text();
+    if (
+      response.status !== 200 ||
+      !response.headers.get("content-type")?.startsWith("application/xml")
+    )
+      problems.push(`${response.status} ${response.headers.get("content-type")}`);
+    if (!robots.includes(`Sitemap: ${base}/sitemap.xml`))
+      problems.push("robots.txt does not name the sitemap");
+    const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+    for (const id of publicPages
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
+      const route = new RegExp(`^  ${id}:[\\s\\S]*?\\n    route: (\\S+)`, "m").exec(spec)?.[1];
+      if (route && !text.includes(`<loc>${base}${route === "/" ? "/" : route}</loc>`))
+        problems.push(`${id} (${route}) missing`);
+    }
+    // A public blog: what its list page links to is in the sitemap (with a date), each entry
+    // answers a visitor, and nothing more is listed than the list shows.
+    const blog = /^ {2}(\S+):\n(?: {4}.*\n)*? {4}route: (\S+)\n(?: {4}.*\n)*? {4}articles:/m.exec(
+      spec,
+    );
+    if (blog && publicPages.includes(blog[1])) {
+      const route = blog[2];
+      const prefix = route === "/" ? "/" : `${route}/`;
+      const listPage = await (await fetch(`${base}${route}`)).text();
+      const linked = new Set(
+        [
+          ...listPage.matchAll(new RegExp(`href="(${prefix.replace(/\//g, "\\/")}[^"?#]+)"`, "g")),
+        ].map((m) => m[1]),
+      );
+      const listed = [...text.matchAll(/<loc>([^<]+)<\/loc>(<lastmod>[^<]*<\/lastmod>)?/g)]
+        .map((m) => ({ path: m[1].replace(base, ""), dated: Boolean(m[2]) }))
+        .filter((e) => e.path.startsWith(prefix) && e.path !== route);
+      for (const href of linked)
+        if (!listed.some((e) => e.path === href))
+          problems.push(`${href} linked but not in the sitemap`);
+      for (const e of listed) {
+        if (!linked.has(e.path))
+          problems.push(`${e.path} in the sitemap but not on the blog's first page`);
+        if (!e.dated) problems.push(`${e.path} has no lastmod`);
+        if ((await fetch(`${base}${e.path}`)).status !== 200)
+          problems.push(`${e.path} does not answer a visitor`);
+      }
+      if (!linked.size) problems.push("the blog's first page links to no article");
+    }
+    const content = readFileSync(join(dir, "smithable.content.yml"), "utf8");
+    const described = /^ {4}description: (.+)$/m.exec(content)?.[1];
+    if (described) {
+      const home = await (await fetch(`${base}/`)).text();
+      if (
+        !home.includes(`name="description"`) ||
+        !home.includes(described.replace(/"/g, "&quot;").slice(0, 40))
+      )
+        problems.push("the home page lacks its meta description");
+    }
+  }
+  const ok = problems.length === 0;
+  console.log(
+    `  ${ok ? "✓" : "✗"} sitemap.xml: ${publicPages ? "the public pages, a public blog's published posts, named by robots.txt, the page's description in its head" : "none without public pages"}${ok ? "" : `\n    ${problems.join("\n    ")}`}`,
+  );
+  if (!ok) failures.push("sitemap.xml");
 }
 
 /** In the invoicing app, a new member is welcomed by the onboarding, then edits it in settings. */
@@ -4611,6 +4692,7 @@ test("the session cookie's name and attributes", async () => {
       ).catch(() => {});
       await visualChecks(dir, base);
       await robotsCheck(base);
+      await sitemapCheck(dir, base);
       if (example === "crm") {
         await browserFlow(base);
         await filtersFlow(base);

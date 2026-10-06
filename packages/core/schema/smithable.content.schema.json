@@ -103,6 +103,10 @@
             "type": "string",
             "description": "A line under the heading."
           },
+          "description": {
+            "type": "string",
+            "description": "What search engines show under the page's name, one or two sentences; for a public page."
+          },
           "form": {
             "type": "object",
             "description": "The form's sections' headings: { sections: { contact: { title: How to reach them } } }.",
