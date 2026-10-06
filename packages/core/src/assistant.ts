@@ -189,6 +189,8 @@ export function assistantOffer(
   const addable = kinds.filter((k) => k.may.add).map((k) => k.model);
   const changeable = kinds.filter((k) => k.may.change).map((k) => k.model);
   const deletable = kinds.filter((k) => k.may.delete).map((k) => k.model);
+  // Kinds with a trash (docs/design/trash.md): find looks in it, run restores from it.
+  const trashing = deletable.filter((m) => ir.models.find((x) => x.name === m)?.trash);
   const kind = (names: string[]) => ({ type: "string", enum: names });
   const id = { type: "integer" };
   const where = {
@@ -218,6 +220,14 @@ export function assistantOffer(
             sort: { type: "string", description: 'A field; "-field" for the largest first.' },
             limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
             page: { type: "integer", minimum: 1 },
+            ...(trashing.length
+              ? {
+                  trashed: {
+                    type: "boolean",
+                    description: `true: the records in the trash the caller may delete, with when they were deleted (${trashing.join(", ")}).`,
+                  },
+                }
+              : {}),
           },
         },
         annotations: reading,
@@ -277,15 +287,18 @@ export function assistantOffer(
       },
       annotations: changing,
     });
-  if (actions.length)
+  if (actions.length || trashing.length)
     tools.push({
       name: "run",
-      description: "Run one of the app's actions on a record; `input` holds what it asks for.",
+      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
       inputSchema: {
         type: "object",
         required: ["action", "id"],
         properties: {
-          action: { type: "string", enum: actions.map((a) => a.name) },
+          action: {
+            type: "string",
+            enum: [...actions.map((a) => a.name), ...trashing.map((m) => `restore${m}`)],
+          },
           id,
           input: { type: "object" },
         },
@@ -295,7 +308,12 @@ export function assistantOffer(
   if (deletable.length)
     tools.push({
       name: "delete",
-      description: "Delete a record. It cannot be undone.",
+      description:
+        trashing.length === deletable.length
+          ? "Delete a record: it goes to the trash for thirty days."
+          : trashing.length
+            ? `Delete a record. ${trashing.join(", ")} go to the trash for thirty days; the others cannot be undone.`
+            : "Delete a record. It cannot be undone.",
       inputSchema: {
         type: "object",
         required: ["kind", "id"],

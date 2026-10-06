@@ -10,6 +10,7 @@ app:
 models:
   Customer:
     description: A company we have a commercial relationship with.
+    trash: true                       # a deleted customer can be restored for thirty days
     fields:
       name: string!
       email: email unique
@@ -28,6 +29,7 @@ models:
       delete: [admin]
 
   Order:
+    trash: true
     fields:
       number: string! unique
       customer: Customer!
