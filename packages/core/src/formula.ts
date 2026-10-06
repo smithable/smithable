@@ -1,4 +1,5 @@
 import type { FieldIR, ModelIR } from "./ir.js";
+import { isUpload } from "./ir.js";
 import { didYouMean } from "./suggest.js";
 
 /**
@@ -283,7 +284,7 @@ export function parseFormula(source: string): Expr {
 export function valueTypeOf(field: FieldIR): ValueType | undefined {
   if (field.type.kind === "choice") return "text";
   if (field.type.kind === "relation") return undefined;
-  if (["picture", "pictures", "file", "files"].includes(field.type.name)) return undefined;
+  if (isUpload(field)) return undefined;
   switch (field.type.name) {
     case "int":
     case "decimal":
