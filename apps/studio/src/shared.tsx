@@ -240,7 +240,7 @@ export function Preview({
         </div>
       }
     >
-      <div className="flex h-full flex-col">
+      <div data-guide="preview" className="flex h-full flex-col">
         {samples && (
           <div
             role="note"

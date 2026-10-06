@@ -120,7 +120,8 @@ export function Tabs<T extends string>({
   value,
   onChange,
 }: {
-  tabs: [T, string][];
+  /** Each tab's value and label, and the guide's name for it (data-guide), if it has one. */
+  tabs: [T, string, string?][];
   value: T;
   onChange: (value: T) => void;
 }) {
@@ -135,9 +136,10 @@ export function Tabs<T extends string>({
   };
   return (
     <div role="tablist" className="flex gap-1" onKeyDown={move}>
-      {tabs.map(([id, label]) => (
+      {tabs.map(([id, label, guide]) => (
         <button
           key={id}
+          data-guide={guide}
           type="button"
           role="tab"
           aria-selected={value === id}
