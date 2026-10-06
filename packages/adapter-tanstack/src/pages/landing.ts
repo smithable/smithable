@@ -47,6 +47,7 @@ export function landingRoute(
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "guardPage")
     .add("#/kit/Landing", "LandingLayout")
+    .add("#/kit/words", "w")
     .add("#/generated/site", "site");
   const routeOf = (id: string | undefined) => ir.pages.find((p) => p.id === id)?.route;
   // Into the app: the first page in the navigation that is not a landing page.
@@ -55,8 +56,11 @@ export function landingRoute(
     .map((id) => ir.pages.find((p) => p.id === id))
     .find((p) => p && p.pattern.kind !== "landing");
   const start = sections.map((s) => routeOf(s.button)).find(Boolean) ?? appPage?.route;
-  const link = (to: string | undefined, label: string) =>
-    to ? `{{ to: ${JSON.stringify(to)}, label: ${JSON.stringify(label)} }}` : "{undefined}";
+  /** A link as a prop; the label is a literal, or an expression such as `w.openApp(app.name)`. */
+  const link = (to: string | undefined, label: string, expression = false) =>
+    to
+      ? `{{ to: ${JSON.stringify(to)}, label: ${expression ? label : JSON.stringify(label)} }}`
+      : "{undefined}";
   const records = sections.filter((s) => s.model);
   const loaders = [...new Set(records.map((s) => s.model as string))].map((name) => {
     const n = names(modelNamed(ir, name), t);
@@ -387,8 +391,8 @@ export function landingRoute(
       })}}`
     : "";
   const header = hasSignIn(auth)
-    ? `viewer ? ${link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1)} : { to: "/sign-in", label: "Sign in" }`
-    : link(appPage?.route, `Open ${ir.app.name}`).slice(1, -1);
+    ? `viewer ? ${link(appPage?.route, `w.openApp(${JSON.stringify(ir.app.name)})`, true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
+    : link(appPage?.route, `w.openApp(${JSON.stringify(ir.app.name)})`, true).slice(1, -1);
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},

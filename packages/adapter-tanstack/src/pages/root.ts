@@ -112,6 +112,7 @@ ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}im
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { z } from "zod";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { pageHeaders } from "#/kit/security";
+import { w } from "#/kit/words";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
 const menus: MenuUi[] = [
@@ -185,10 +186,10 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   errorComponent: ({ error }) => (
-    <ErrorNotice title="Something went wrong" message={error instanceof Error ? error.message : undefined} />
+    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title="Not found" message="This page or record does not exist, or you cannot see it." />
+    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -209,7 +210,7 @@ ${
 `
     : ""
 }  return (
-    <html lang="en">
+    <html lang=${JSON.stringify(t.language)}>
       <head>
         <HeadContent />
       </head>
@@ -235,7 +236,7 @@ ${
               }${
                 visitorPages.length
                   ? `!viewer && visitorRoutes.some((r) => pathname === r || ${catalog ? `(r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : ${under})` : under}) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: "Sign in" }} site={site}>
+          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : `

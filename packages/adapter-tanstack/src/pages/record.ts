@@ -72,6 +72,7 @@ export function recordPageRoute(
     .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
     .add("#/kit/access", "allows", "guardPage")
     .add("#/kit/ModelForm", "ModelForm")
+    .add("#/kit/words", "w")
     .add("#/lib/viewer.server", "currentViewer");
   const writeCheck = `allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${ownerKey(model)}` : ""})`;
   const server = `
@@ -117,7 +118,7 @@ function ${component}() {
         schema={${n.schema}}
         initial={row ?? undefined}
         readOnly={!canSave}${options ? "\n        options={options}" : ""}
-        submitLabel="Save changes"
+        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           setSaved(false);
           if (row) await ${n.update}({ data: { id: row.id, values } });
@@ -149,7 +150,9 @@ function ${component}() {
     .add("#/kit/Onboarding", "OnboardingLayout")
     .add(n.module, `type ${n.values}`);
   const title =
-    t.pageTitle(page.id) === humanize(page.id) ? `Welcome to ${ir.app.name}` : t.pageTitle(page.id);
+    t.pageTitle(page.id) === humanize(page.id)
+      ? `{w.welcomeTo(${JSON.stringify(ir.app.name)})}`
+      : attr(t.pageTitle(page.id));
   return `${HEADER}${imports.render()}${optionImports}${server}
 const steps = [
 ${steps.join("\n")}
@@ -172,7 +175,7 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
   const current = steps[step] as (typeof steps)[number];
   return (
     <OnboardingLayout
-      title=${attr(title)}${t.pageSubtitle(page.id, 6)}
+      title=${title}${t.pageSubtitle(page.id, 6)}
       step={step}
       count={steps.length}
       stepTitle={current.title}${steps.some((s) => s.includes("text:")) ? '\n      stepText={"text" in current ? current.text : undefined}' : ""}
@@ -232,6 +235,7 @@ import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
 ${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 ${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${start ? 'import { z } from "zod";\n' : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${start ? `  validateSearch: z.object({ ${start.name}: z.string().max(40).optional().catch(undefined) }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
@@ -242,12 +246,12 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}${start ? "  c
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
-      <PageHeader title=${attr(`New ${n.label.toLowerCase()}`)} />
+      <PageHeader title={w.newOne(${JSON.stringify(n.label.toLowerCase())})} />
       <ModelForm
         ui={${n.ui}}
         app={app}
         schema={${n.schema}}${order}${preset}
-${options ? "        options={options}\n" : ""}        submitLabel=${attr(`Create ${n.label.toLowerCase()}`)}
+${options ? "        options={options}\n" : ""}        submitLabel={w.createOne(${JSON.stringify(n.label.toLowerCase())})}
         onSubmit={async (values) => {
           ${create}
           await back();
@@ -382,6 +386,7 @@ ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(
 ${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
 ${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${sections.length || favorite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
 ${contact ? contact.fn : ""}${
   history
@@ -409,7 +414,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? \`a key (#\${r.who.slice(4)})\` : \`a removed user (#\${r.who})\`)),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -470,7 +475,7 @@ function ${component}() {
         schema={${n.schema}}${order}
         initial={row}
         readOnly={!canWrite}
-${options ? "        options={options}\n" : ""}        submitLabel="Save changes"
+${options ? "        options={options}\n" : ""}        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await ${n.update}({ data: { id: row.id, values } });
           await back();
@@ -497,7 +502,7 @@ ${
     ? `
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">History</h2>
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
       )}`

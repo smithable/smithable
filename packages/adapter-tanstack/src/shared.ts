@@ -80,6 +80,8 @@ export const HEADER =
 /** Visible text: from smithable.content.yml when given there, otherwise derived from names. */
 export function texts(content: ContentIR) {
   return {
+    /** The app's language: the kit's words and the page's `lang` follow it. */
+    language: content.language,
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
       const own = content.models[model.name];
