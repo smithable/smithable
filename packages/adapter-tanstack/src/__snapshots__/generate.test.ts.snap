@@ -5508,6 +5508,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -5605,6 +5606,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
           {children}
         </AppShell>
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -7423,6 +7425,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/ActivityLog.tsx",
   "kit: src/kit/AppShell.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
   "kit: src/kit/Inspector.tsx",
@@ -7440,6 +7443,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/ask.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -7556,8 +7560,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
@@ -7575,6 +7580,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ask.ts": "4ecf379d kit",
   "src/kit/assistant.server.ts": "a530b6d0 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -7584,19 +7590,19 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/refusal.ts": "9d8d5da6 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3ba8a00 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f6c87e0c generated",
+  "src/routes/__root.tsx": "552566b4 generated",
   "src/routes/admin/activity.tsx": "8376f5ac generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "ad2cc341 generated",
@@ -11137,6 +11143,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -11301,6 +11308,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -14822,6 +14830,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/Calculator.tsx",
   "kit: src/kit/Calendar.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
   "kit: src/kit/Landing.tsx",
@@ -14838,6 +14847,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -14969,14 +14979,15 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/uploads.ts": "f3d3a0ce generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Calculator.tsx": "f15e5001 kit",
   "src/kit/Calendar.tsx": "e587c569 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Landing.tsx": "657fb0a4 kit",
+  "src/kit/Landing.tsx": "a347bc03 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "28b21f8f kit",
@@ -14990,6 +15001,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -14997,17 +15009,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3a82cc45 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "165c966c generated",
+  "src/routes/__root.tsx": "4aab984a generated",
   "src/routes/admin/activity.tsx": "6fecdc74 generated",
   "src/routes/admin/bookings/$id.tsx": "bc2060d2 generated",
   "src/routes/admin/bookings/index.tsx": "f46892a4 generated",
@@ -17177,6 +17189,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -17280,6 +17293,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut}>
           {children}
         </AppShell>
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -18347,6 +18361,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/ActivityLog.tsx",
   "kit: src/kit/AppShell.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/ModelForm.tsx",
   "kit: src/kit/ModelTable.tsx",
@@ -18358,6 +18373,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -18445,8 +18461,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/ModelForm.tsx": "28b21f8f kit",
   "src/kit/ModelTable.tsx": "5d2128c6 kit",
@@ -18458,6 +18475,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -18465,16 +18483,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7ccb0e1a generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "67e36f02 generated",
+  "src/routes/__root.tsx": "061174c0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "ce821aa3 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
@@ -21374,6 +21392,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -21509,6 +21528,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -22950,6 +22970,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/ActivityLog.tsx",
   "kit: src/kit/AppShell.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/Dashboard.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
@@ -22966,6 +22987,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/address.server.ts",
   "kit: src/kit/aggregate.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -23067,12 +23089,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/uploads.ts": "29095437 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Landing.tsx": "657fb0a4 kit",
+  "src/kit/Landing.tsx": "a347bc03 kit",
   "src/kit/ModelForm.tsx": "28b21f8f kit",
   "src/kit/ModelTable.tsx": "5d2128c6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -23085,6 +23108,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -23092,17 +23116,17 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "29808e97 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "ebf68191 generated",
+  "src/routes/__root.tsx": "92c4080d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "46434e7d generated",
   "src/routes/clients/index.tsx": "6919e4c2 generated",
@@ -24498,6 +24522,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -24618,6 +24643,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -25788,6 +25814,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/ActivityLog.tsx",
   "kit: src/kit/AppShell.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/ContactOwner.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
@@ -25803,6 +25830,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
@@ -25889,13 +25917,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/uploads.ts": "2ea504cf generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/ContactOwner.tsx": "0158824f kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "a055249c kit",
-  "src/kit/Landing.tsx": "657fb0a4 kit",
+  "src/kit/Landing.tsx": "a347bc03 kit",
   "src/kit/ModelForm.tsx": "28b21f8f kit",
   "src/kit/ModelTable.tsx": "5d2128c6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -25906,6 +25935,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -25914,10 +25944,10 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c5155025 generated",
@@ -25925,7 +25955,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "7c9fc969 generated",
-  "src/routes/__root.tsx": "e5922033 generated",
+  "src/routes/__root.tsx": "bf86c4d5 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -27080,6 +27110,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -27183,6 +27214,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -27825,6 +27857,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/ActivityLog.tsx",
   "kit: src/kit/AppShell.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/Landing.tsx",
   "kit: src/kit/ModelForm.tsx",
@@ -27836,6 +27869,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -27911,10 +27945,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/site.ts": "28332aa4 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
-  "src/kit/Landing.tsx": "657fb0a4 kit",
+  "src/kit/Landing.tsx": "a347bc03 kit",
   "src/kit/ModelForm.tsx": "28b21f8f kit",
   "src/kit/ModelTable.tsx": "5d2128c6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -27924,6 +27959,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -27931,16 +27967,16 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "63d519fe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "d4dead1f generated",
+  "src/routes/__root.tsx": "c989b303 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "1f833f45 generated",
@@ -33734,6 +33770,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
+import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
@@ -33878,6 +33915,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
+        <Consent />
         <Scripts />
       </body>
     </html>
@@ -36081,6 +36119,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/AppShell.tsx",
   "kit: src/kit/Articles.tsx",
   "kit: src/kit/Combobox.tsx",
+  "kit: src/kit/Consent.tsx",
   "kit: src/kit/Dashboard.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/Keys.tsx",
@@ -36099,6 +36138,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/aggregate.ts",
   "kit: src/kit/api.server.ts",
   "kit: src/kit/audit.server.ts",
+  "kit: src/kit/consent.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -36216,13 +36256,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "089b16f5 kit",
-  "src/kit/AppShell.tsx": "7cd5c867 kit",
+  "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Consent.tsx": "a504d0e6 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/Landing.tsx": "657fb0a4 kit",
+  "src/kit/Landing.tsx": "a347bc03 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "1865be51 kit",
   "src/kit/ModelForm.tsx": "28b21f8f kit",
@@ -36237,6 +36278,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/api.server.ts": "532ede94 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
+  "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -36246,18 +36288,18 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/refusal.ts": "9d8d5da6 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "e174634a kit",
+  "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "bf682547 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "1e19282b kit",
+  "src/kit/words.ts": "93263e3e kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d35a3346 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "fa5de4fe generated",
+  "src/routes/__root.tsx": "99b86b60 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "45b5815f generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",

@@ -300,6 +300,25 @@
         }
       }
     },
+    "consent": {
+      "type": "object",
+      "description": "The consent bar's words, when the app asks for consent (analytics that need it, or custom code): the sentence, and the two buttons.",
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The sentence that says what the yes is for."
+        },
+        "accept": {
+          "type": "string",
+          "description": "The button that says yes."
+        },
+        "decline": {
+          "type": "string",
+          "description": "The button that says no."
+        }
+      }
+    },
     "menus": {
       "type": "object",
       "description": "A named menu's heading: { admin: { label: Administration } }.",

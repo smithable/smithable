@@ -20,6 +20,8 @@ export interface ContentIR {
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
+  /** The consent bar's own words (docs/design/analytics.md §3), where the kit's are not wanted. */
+  consent?: { text?: string; accept?: string; decline?: string };
 }
 
 export interface PageContent {
@@ -160,7 +162,7 @@ export function validateContent(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.content.yml", {
-    allowed: ["smithableContent", "language", "models", "pages", "menus"],
+    allowed: ["smithableContent", "language", "models", "pages", "menus", "consent"],
     later: ["actions"],
   });
 
@@ -179,6 +181,8 @@ export function validateContent(
           `The app kit has no words in "${language}". Languages: ${LANGUAGES.join(", ")}.`,
         );
     }
+    if (key === "consent")
+      content.consent = readTexts(ctx, value, '"consent"', ["text", "accept", "decline"]);
     if (key === "models") readModels(ctx, value, ir, content, modelKeys);
     if (key === "pages") {
       for (const page of named(

@@ -1,5 +1,6 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
+  type AnalyticsSetting,
   type AuthIR,
   type ContentIR,
   camel,
@@ -70,6 +71,8 @@ export interface GenerateOptions {
   plugins?: SpecPlugin[];
   /** Libraries for custom code, from smithable.context.yml: name → exact version. */
   packages?: Record<string, string>;
+  /** The counter of visits smithable.context.yml names (docs/design/analytics.md). */
+  analytics?: AnalyticsSetting;
   /** The project's sample records (samples/<Model>.yml), seeded instead of generated ones. */
   samples?: SamplesIR;
 }

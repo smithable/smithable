@@ -6,6 +6,7 @@
 // help) are not here: they live in the content file.
 
 export const w = {
+  accept: "Accept",
   addFiles: "Add files",
   aFirstCall: "A first call:",
   actAs: "Act as",
@@ -45,7 +46,11 @@ export const w = {
   code: "Code",
   codeOnItsWay: "may sign in, a code is on its way. It works for ten minutes.",
   confirm: "Confirm",
+  consentText:
+    "This app would like to use cookies or similar to count visits or show content from other services. Nothing is used before you accept.",
+  consentTitle: "Cookies",
   contactUs: "Contact us",
+  cookieSettings: "Cookie settings",
   copy: "Copy",
   copyKeyNow: "Copy the key now: it is not shown again.",
   copyLink: "Copy link",
@@ -140,6 +145,7 @@ export const w = {
   preview: "Preview",
   previous: "Previous",
   previousPicture: "Previous picture",
+  privacy: "Privacy",
   proposedNote: "Shown to the person to confirm; nothing is changed yet.",
   readAloud: "Read aloud",
   records: "Records",

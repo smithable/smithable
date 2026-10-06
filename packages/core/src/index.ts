@@ -57,7 +57,14 @@ export {
   RESERVE_TEXTS,
   validateContent,
 } from "./content.js";
-export { CONTEXT_SCHEMA, validateContext } from "./context-file.js";
+export {
+  ANALYTICS,
+  type AnalyticsProvider,
+  type AnalyticsSetting,
+  analyticsOf,
+  CONTEXT_SCHEMA,
+  validateContext,
+} from "./context-file.js";
 export { type DiffTable, dataDiffSql, restoreOrder } from "./data-diff.js";
 export type { Diagnostic, Severity } from "./diagnostics.js";
 export { formatDiagnostic, hasErrors } from "./diagnostics.js";
