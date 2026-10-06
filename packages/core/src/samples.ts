@@ -193,6 +193,15 @@ function sampleValue(
     );
     return undefined;
   }
+  // A document is sent by someone: sample data has none, and a `files` field starts empty.
+  if (field.type.kind === "scalar" && (field.type.name === "file" || field.type.name === "files")) {
+    ctx.error(
+      node,
+      "invalid-value",
+      `"${field.name}" of ${model.name} is a document, which sample data does not have: leave it out.`,
+    );
+    return undefined;
+  }
   if (field.type.kind === "scalar" && field.type.name === "picture")
     return (
       samplePicture(node, model, row) ??

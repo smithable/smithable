@@ -107,7 +107,9 @@ function fieldWord(field: FieldIR): string {
                 : type.name
               : type.name === "picture" || type.name === "pictures"
                 ? "picture"
-                : "";
+                : type.name === "file" || type.name === "files"
+                  ? "document"
+                  : "";
   const notes = [holds, field.formula ? "computed" : ""].filter(Boolean);
   return `${name}${notes.length ? ` (${notes.join(", ")})` : ""}`;
 }

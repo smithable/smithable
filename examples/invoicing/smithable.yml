@@ -33,6 +33,7 @@ models:
         type: date!
         default: DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
+      contract: file                   # the agreement the invoice is for, as a PDF or a document
       lines: InvoiceLine[]
       total:
         type: money

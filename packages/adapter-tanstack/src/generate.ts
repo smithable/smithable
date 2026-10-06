@@ -2,9 +2,10 @@ import {
   type AuthIR,
   emptyContent,
   emptyUx,
+  isUpload,
   kebab,
   type SpecIR,
-  storesPictures,
+  storesFiles,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
@@ -120,36 +121,38 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
 
 /** Whether a model has a Markdown field (an action's input is a plain text box). */
 const hasMarkdown = (ir: SpecIR) => ir.models.some((m) => m.fields.some(isMarkdown));
-const hasPictures = (ir: SpecIR) => ir.models.some((m) => m.fields.some(storesPictures));
+const hasUploads = (ir: SpecIR) => ir.models.some((m) => m.fields.some(isUpload));
 
 /**
- * src/generated/pictures.ts: each picture field by the model's and the field's names in an
- * address, with the data function and access the file routes check through.
+ * src/generated/uploads.ts: each picture and document field by the model's and the field's
+ * names in an address, with its kind and the data function and access the file routes check
+ * through.
  */
-function picturesModule(ir: SpecIR, t: Texts): string {
-  const models = ir.models.filter((m) => m.fields.some(storesPictures));
+function uploadsModule(ir: SpecIR, t: Texts): string {
+  const models = ir.models.filter((m) => m.fields.some(isUpload));
   const entries = models.map((model) => {
     const n = names(model, t);
     const fields = model.fields
-      .filter(storesPictures)
+      .filter(isUpload)
       .map(
         (f) =>
-          `    ${JSON.stringify(f.name)}: { data: ${n.data}, access: ${n.access}, key: ${JSON.stringify(dataKey(f))} },`,
+          `    ${JSON.stringify(f.name)}: { kind: "${storesFiles(f) ? "file" : "picture"}", data: ${n.data}, access: ${n.access}, key: ${JSON.stringify(dataKey(f))} },`,
       );
     return `  ${JSON.stringify(kebab(model.name))}: {\n${fields.join("\n")}\n  },`;
   });
-  return `${HEADER}// The records' pictures: which data function and access each one goes through (src/routes/files/).
+  return `${HEADER}// The records' pictures and documents: which data function and access each one goes through (src/routes/files/).
 import type { ModelAccess, Viewer } from "#/kit/access";
 ${models.map((m) => `import { ${names(m, t).access}, ${names(m, t).data} } from "./${kebab(m.name)}.server";`).join("\n")}
 
-export interface PictureField {
+export interface UploadField {
+  kind: "picture" | "file";
   data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
   access: ModelAccess;
-  /** The picture's key in a record. */
+  /** The field's key in a record. */
   key: string;
 }
 
-export const PICTURES: Record<string, Record<string, PictureField>> = {
+export const UPLOADS: Record<string, Record<string, UploadField>> = {
 ${entries.join("\n")}
 };
 `;
@@ -522,17 +525,18 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         files: [
           "src/kit/uploads.ts",
           "src/kit/PictureInput.tsx",
+          "src/kit/FileInput.tsx",
           "src/routes/files/$model.$field.ts",
           "src/routes/files/$model.$id.$field.ts",
           "src/routes/files/$model.$id.$field.$n.ts",
         ],
-        used: ({ ir }) => hasPictures(ir),
+        used: ({ ir }) => hasUploads(ir),
       },
     ],
     files: ({ ir, t, auth, ux, options }) => [
       generated("src/db/schema.ts", schemaModule(ir, auth)),
       generated("src/db/seed.ts", seedModule(ir, options)),
-      ...(hasPictures(ir) ? [generated("src/generated/pictures.ts", picturesModule(ir, t))] : []),
+      ...(hasUploads(ir) ? [generated("src/generated/uploads.ts", uploadsModule(ir, t))] : []),
       ...(ir.models.length
         ? [
             generated("src/generated/access.test.ts", accessTestSource(ir, auth)),

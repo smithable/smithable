@@ -79,6 +79,8 @@ export const SCALAR_TYPES = [
   "url",
   "picture",
   "pictures",
+  "file",
+  "files",
 ] as const;
 
 export type ScalarType = (typeof SCALAR_TYPES)[number];
@@ -389,3 +391,18 @@ export const storesPictures = (f: FieldIR): boolean => isPicture(f) || isPicture
 
 /** How many pictures a `pictures` field holds at most. */
 export const PICTURES_MAX = 10;
+
+/** A field that stores one document (a file with its name, kind and size). */
+export const isFile = (f: FieldIR): boolean => f.type.kind === "scalar" && f.type.name === "file";
+
+/** A field that stores several documents (up to FILES_MAX). */
+export const isFiles = (f: FieldIR): boolean => f.type.kind === "scalar" && f.type.name === "files";
+
+/** A field that stores one document or several. */
+export const storesFiles = (f: FieldIR): boolean => isFile(f) || isFiles(f);
+
+/** How many documents a `files` field holds at most. */
+export const FILES_MAX = 10;
+
+/** A field whose value is an uploaded file: a picture or a document, one or several. */
+export const isUpload = (f: FieldIR): boolean => storesPictures(f) || storesFiles(f);

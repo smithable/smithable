@@ -33,6 +33,7 @@ models:
       title: string!
       project: Project!
       body: text
+      attachment: file                 # a document the note is about, sent through the API too
     access:
       delete: [admin, member]
       write: [admin, member, assistant]
