@@ -2,6 +2,9 @@
 import {
   type ArgRef,
   defaultColumns,
+  EDITABLE_FILES,
+  type EditableFile,
+  emptyFile,
   type JsonSchema,
   operationsFor,
   pageModel,
@@ -12,7 +15,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import type { Run } from "../builder/ChangeForms";
-import { readSpec, type Spec } from "../engine";
+import { checkFile, type Spec } from "../engine";
 import type { Place } from "../preview";
 import { Properties } from "../properties";
 import { Trace } from "../shared";
@@ -124,7 +127,7 @@ export function Studio({
         title={
           <Tabs
             tabs={[
-              ["spec", "smithable.yml"],
+              ["spec", "Files"],
               ["operation", "Operation"],
               ["diff", "Last change"],
               ["logs", "Logs"],
@@ -316,6 +319,11 @@ function ConceptDetails({
   );
 }
 
+/**
+ * The spec files as text: smithable.yml and its companions, each checked as you type by the
+ * same validator the CLI uses, and saved whole as one change (editSpec). A file the project does
+ * not have yet starts from its first line; the auth file is only offered when there is one.
+ */
 function SpecEditor({
   project,
   plugins,
@@ -327,51 +335,95 @@ function SpecEditor({
   run: Run;
   jump?: { concept: string; at: number };
 }) {
-  const saved = project.files.spec ?? "";
-  const [text, setText] = useState(saved);
-  // The file as it was when editing began: a change on disk replaces the text only when it has
-  // not been edited, and is otherwise offered, so typing is never lost.
-  const [base, setBase] = useState(saved);
+  const [file, setFile] = useState<EditableFile>("smithable.yml");
+  const offered = (Object.keys(EDITABLE_FILES) as EditableFile[]).filter(
+    (f) => project.files[EDITABLE_FILES[f]] !== undefined || emptyFile(f) !== undefined,
+  );
+  const saved = project.files[EDITABLE_FILES[file]] ?? emptyFile(file) ?? "";
+  // Unsaved edits, by file, and each file as it was when its editing began: a change on disk
+  // replaces the text only when it has not been edited, and is otherwise offered, so typing is
+  // never lost.
+  const [drafts, setDrafts] = useState<Partial<Record<EditableFile, string>>>({});
+  const [bases, setBases] = useState<Partial<Record<EditableFile, string>>>({});
+  const text = drafts[file] ?? saved;
+  const base = bases[file] ?? saved;
   const edited = text !== base;
+  const setText = (next: string) => {
+    setDrafts((d) => ({ ...d, [file]: next }));
+    if (bases[file] === undefined) setBases((b) => ({ ...b, [file]: saved }));
+  };
+  const useDisk = () => {
+    setDrafts(({ [file]: _, ...rest }) => rest);
+    setBases(({ [file]: _, ...rest }) => rest);
+  };
+  const draft = drafts[file];
+  const began = bases[file];
   useEffect(() => {
     // A save of this text lands here too.
     if (edited && saved !== text) return;
-    setText(saved);
-    setBase(saved);
-  }, [saved, edited, text]);
+    if (draft !== undefined || began !== undefined) {
+      setDrafts(({ [file]: _, ...rest }) => rest);
+      setBases(({ [file]: _, ...rest }) => rest);
+    }
+  }, [saved, edited, text, file, draft, began]);
   // Unsaved edits: the browser asks before a link, Back or closing the tab loses them.
+  const unsaved = Object.values(drafts).length > 0;
   useEffect(() => {
-    if (!edited) return;
+    if (!unsaved) return;
     const ask = (event: BeforeUnloadEvent) => event.preventDefault();
     addEventListener("beforeunload", ask);
     return () => removeEventListener("beforeunload", ask);
-  }, [edited]);
+  }, [unsaved]);
   // Where a concept is declared, to select and bring into view when asked (not as the text
   // changes).
   // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
+  useEffect(() => {
+    if (jump) setFile("smithable.yml");
+  }, [jump]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
   const select = useMemo(() => {
-    const range = jump && specRange(text, jump.concept);
+    const spec = drafts["smithable.yml"] ?? project.files.spec ?? "";
+    const range = jump && specRange(spec, jump.concept);
     return range && jump ? { from: range[0], to: range[1], at: jump.at } : undefined;
   }, [jump]);
-  // Checked in the tab, as you type: the same validator the CLI uses.
-  const { diagnostics, auth } = useMemo(
-    () => readSpec(project.files, text, plugins, project.ownThemes),
-    [project.files, text, plugins, project.ownThemes],
+  const { diagnostics, roles } = useMemo(
+    () => checkFile(project.files, file, text, plugins, project.ownThemes),
+    [project.files, file, text, plugins, project.ownThemes],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
   return (
     <div className="flex h-full min-w-0 flex-col">
+      <div className="flex items-center gap-2 border-b border-neutral-200 px-2 py-1.5 text-xs">
+        <Select
+          aria-label="File"
+          value={file}
+          onChange={(e) => setFile(e.target.value as EditableFile)}
+          className="text-xs"
+          options={offered.map((f) => [
+            f,
+            drafts[f] !== undefined &&
+            drafts[f] !== (project.files[EDITABLE_FILES[f]] ?? emptyFile(f))
+              ? `${f} (edited)`
+              : f,
+          ])}
+        />
+        {project.files[EDITABLE_FILES[file]] === undefined && (
+          <span className="text-neutral-500">Not in the project yet: saving adds it.</span>
+        )}
+      </div>
       <Suspense
         fallback={<p className="flex-1 p-3 text-xs text-neutral-500">Opening the editor…</p>}
       >
         <SpecText
-          label="smithable.yml"
+          key={file}
+          label={file}
           value={text}
           onChange={setText}
-          problems={diagnostics}
+          problems={diagnostics.filter((d) => d.file === file)}
           select={select}
-          kept="smithable:editor"
-          {...(auth ? { roles: auth.roles.map((r) => r.name) } : {})}
+          kept={`smithable:editor:${file}`}
+          assist={file === "smithable.yml"}
+          {...(roles ? { roles } : {})}
         />
       </Suspense>
       {edited && saved !== base && saved !== text && (
@@ -379,14 +431,8 @@ function SpecEditor({
           role="status"
           className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 p-2 text-xs"
         >
-          smithable.yml changed on disk while you were editing.
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setText(saved);
-              setBase(saved);
-            }}
-          >
+          {file} changed on disk while you were editing.
+          <Button variant="ghost" onClick={useDisk}>
             Use the file on disk
           </Button>
         </p>
@@ -398,17 +444,17 @@ function SpecEditor({
           ) : (
             diagnostics.slice(0, 5).map((d) => (
               <li
-                key={`${d.line}:${d.column}:${d.code}`}
+                key={`${d.file}:${d.line}:${d.column}:${d.code}`}
                 className={d.severity === "error" ? "text-red-700" : "text-amber-700"}
               >
-                Line {d.line}: {d.message}
+                {d.file === file ? "Line" : `${d.file} line`} {d.line}: {d.message}
               </li>
             ))
           )}
         </ul>
         <Button
           disabled={errors.length > 0 || text === saved}
-          onClick={() => run("editSpec", { text })}
+          onClick={() => run("editSpec", { text, ...(file === "smithable.yml" ? {} : { file }) })}
         >
           Save
         </Button>
