@@ -12,7 +12,7 @@ Research note, 2026-10-06 (Fable), asked by Johan: "the most common features of 
 | Address, phone, opening hours, map | Address, phone, hours and a "Show on map" link; no embedded map | small: a map picture or embed is a section look |
 | Blog or news | Yes: articles pages, Markdown, pictures, public `where: { status: published }` | none |
 | Booking and appointments | Yes: calendar page, capacity, Book and Cancel | recurring sessions are not there (a weekly class is many records) |
-| Search engine basics: titles, descriptions, Open Graph, sitemap, robots | Titles and robots.txt are there; Open Graph is in the generator; no `sitemap.xml`, no per-page description from the content file | **sitemap.xml** from the public pages, and a `description` text per page |
+| Search engine basics: titles, descriptions, Open Graph, sitemap, robots | Yes (2026-10-06): titles per page, robots.txt, `sitemap.xml` with a public blog's posts, a `description` per page in the content file, Open Graph on articles | none |
 | Analytics | Nothing | an `analytics` setting in the context file: Plausible, Umami or Fathom keep no cookies and need no banner, so the setting is one line; Google Analytics needs consent, so for it the same setting makes the kit show a consent bar and load the script only after a yes, with the choice remembered (Johan's question, 2026-10-06) |
 | Cookie consent | Not needed: the app sets one session cookie, which is strictly necessary | none, and a line in the FAQ saying why |
 | Privacy policy and terms pages | None generated; the hosted service has its own | a `legal` landing section or page with the operator's name, what is stored and why, written from the spec (it knows the fields with personal data) |

@@ -39,7 +39,7 @@ import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.
 import { hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
-import { indexRoute, pagesModule, robotsRoute, rootRoute } from "./pages/root.js";
+import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
   dataKey,
@@ -90,7 +90,7 @@ function wordsIfUsed(content: string): string {
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
   const ctx: GenContext = {
     ir,
-    t: texts(options.content ?? emptyContent()),
+    t: texts(options.content ?? emptyContent(), ir.app.name),
     auth: options.auth,
     ux: options.ux ?? emptyUx(),
     options,
@@ -403,6 +403,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         rootRoute(ir, t, auth, ux, options.analytics, options.content?.consent),
       ),
       generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),
+      ...(auth.public.pages.length
+        ? [generated("src/routes/sitemap[.]xml.ts", sitemapRoute(ir, auth, t))]
+        : []),
       generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
       ...(ir.pages.some((p) => p.route === "/")
         ? []
