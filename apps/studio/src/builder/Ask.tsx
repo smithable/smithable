@@ -81,6 +81,7 @@ export function Ask({
   return (
     <div className="space-y-4 p-4">
       <form
+        data-guide="change"
         className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
