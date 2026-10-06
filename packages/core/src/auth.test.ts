@@ -231,6 +231,36 @@ pages:
   expect(auth(", create: [Message]")).not.toContain("contact-form-closed");
 });
 
+test("outgoing mail meets the access rules: a visitor-typed address is not mailed, a role must read the model", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: X }
+models:
+  Message:
+    fields: { name: string!, email: email, message: text! }
+    access: { read: [admin] }
+outgoing:
+  thanks: { when: Message created, to: mail, recipient: email }
+  told: { when: Message created, to: mail, recipient: staff }
+`,
+  }).ir;
+  if (!ir) throw new Error("spec");
+  const auth = (text: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\nroles: { admin: {}, staff: {} }\ndefaultRole: staff\n${text}`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.code);
+  const withVisitors = auth("public: { create: [Message] }\n");
+  expect(withVisitors).toContain("visitor-typed-recipient");
+  expect(withVisitors).toContain("recipient-cannot-read");
+  expect(auth("")).not.toContain("visitor-typed-recipient");
+  expect(auth("")).toContain("recipient-cannot-read");
+});
+
 test("a public page's shortcut to a page visitors cannot open is warned about", () => {
   const ir = validateSpec({
     path: "smithable.yml",
