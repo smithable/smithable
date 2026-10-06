@@ -5,6 +5,8 @@ const path: string = "../templates/src/kit/uploads.ts";
 const kit = (await import(path)) as {
   webpSize(bytes: Uint8Array): { width: number; height: number } | undefined;
   pictureTag(picture: { file: string }): string;
+  fileKind(bytes: Uint8Array, name: string): { ext: string; type: string } | undefined;
+  fileHeaders(stored: { name: string; type: string }): Record<string, string>;
 };
 
 /** A WebP file's header: RIFF, then one chunk of the given kind with its bytes. */
@@ -68,4 +70,33 @@ test("a picture's tag is the content hash in its file name", () => {
   expect(kit.pictureTag({ file: "post/0123456789abcdef01234567.webp" })).toBe(
     '"0123456789abcdef01234567"',
   );
+});
+
+const bytes = (text: string) => new Uint8Array([...text].map((c) => c.charCodeAt(0)));
+
+test("a document's kind is read from its own first bytes, not only its name", () => {
+  expect(kit.fileKind(bytes("%PDF-1.7\n…"), "Contract.PDF")?.type).toBe("application/pdf");
+  // A name alone does not make a PDF, nor a picture renamed to one.
+  expect(kit.fileKind(bytes("just text"), "contract.pdf")).toBeUndefined();
+  expect(kit.fileKind(bytes("\x89PNG\r\n\x1a\n…"), "contract.pdf")).toBeUndefined();
+  expect(kit.fileKind(bytes("MZ…"), "tool.exe")).toBeUndefined();
+  // Text is text when it reads as UTF-8 without the NUL bytes of a binary file.
+  expect(kit.fileKind(bytes("a,b\n1,2\n"), "rows.csv")?.ext).toBe("csv");
+  expect(kit.fileKind(new Uint8Array([97, 0, 98]), "rows.csv")).toBeUndefined();
+  // An Office file is a ZIP that names its content types.
+  expect(kit.fileKind(bytes("PK\x03\x04…[Content_Types].xml…"), "cv.docx")?.ext).toBe("docx");
+  expect(kit.fileKind(bytes("PK\x03\x04…nothing…"), "cv.docx")).toBeUndefined();
+  expect(kit.fileKind(bytes("\xff\xd8\xff…"), "receipt.jpeg")?.ext).toBe("jpg");
+});
+
+test("a PDF opens in the browser, a document downloads, and neither can run anything", () => {
+  const pdf = kit.fileHeaders({ name: "Contract 2026.pdf", type: "application/pdf" });
+  expect(pdf["Content-Disposition"]).toBe("inline; filename*=UTF-8''Contract%202026.pdf");
+  expect(pdf["Content-Security-Policy"]).toBe("sandbox");
+  expect(pdf["X-Content-Type-Options"]).toBe("nosniff");
+  const docx = kit.fileHeaders({
+    name: "cv.docx",
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  expect(docx["Content-Disposition"]).toMatch(/^attachment;/);
 });

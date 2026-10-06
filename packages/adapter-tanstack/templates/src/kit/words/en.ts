@@ -6,6 +6,7 @@
 // help) are not here: they live in the content file.
 
 export const w = {
+  addFiles: "Add files",
   aFirstCall: "A first call:",
   actAs: "Act as",
   actions: "Actions",
@@ -36,6 +37,7 @@ export const w = {
   cannotBeUndone: "This cannot be undone.",
   changes: "changes",
   checkingPlaces: "Checking places…",
+  chooseFile: "Choose a file",
   choosePicture: "Choose a picture",
   choosePictures: "Choose pictures",
   close: "Close",
@@ -70,6 +72,9 @@ export const w = {
   errorTitle: "Something went wrong",
   everyone: "Everyone",
   fieldsMarked: "Fields marked",
+  fileKinds: "Choose a PDF, a document, a spreadsheet, a text or a picture.",
+  fileNotAdded: "The file could not be added.",
+  fileTooLarge: "The file is too large (at most 10 MB).",
   footer: "Footer",
   forgetInLog: "Forget in the log",
   from: "From",
@@ -215,9 +220,12 @@ export const w = {
   ) =>
     `${by} invited you to ${app} as ${role}.\n\nSign in with ${email} here:\n${link}\n\nThe invitation is valid until ${until}.`,
   keyNamed: (name: string) => `key "${name}"`,
+  moveEarlier: (name: string) => `Move ${name} earlier`,
+  moveLater: (name: string) => `Move ${name} later`,
   /** "New customer": the page and the button. */
   newOne: (label: string) => `New ${label}`,
   openApp: (app: string) => `Open ${app}`,
+  removeIt: (name: string) => `Remove ${name}`,
   welcomeTo: (app: string) => `Welcome to ${app}`,
   you: "(you)",
   youAreBooked: "You're booked",

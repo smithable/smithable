@@ -19,6 +19,10 @@ export type FieldKind =
   | "picture"
   /** Several stored pictures, the first the cover: a list of { file, alt, width, height }. */
   | "pictures"
+  /** A stored document: { file, name, type, size }. */
+  | "file"
+  /** Several stored documents, in order: a list of { file, name, type, size }. */
+  | "files"
   | "choice"
   | "relation"
   /** A reference to a user who signs in. */

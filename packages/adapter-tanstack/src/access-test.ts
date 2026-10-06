@@ -73,6 +73,9 @@ function testValue(field: FieldIR, model: ModelIR): string {
       return `\`+358 40 \${1000000 + n}\``;
     case "url":
       return `\`https://example.com/\${n}\``;
+    case "file":
+      // A stored document's record: the file need not exist for the access rules.
+      return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4 }`;
     case "picture":
       // A stored picture's record: the file need not exist for the access rules.
       return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3 }`;

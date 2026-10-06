@@ -27,6 +27,12 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
       const cover = Array.isArray(value) ? value[0] : undefined;
       return cover ? String(cover.alt || "Picture") : "—";
     }
+    case "file":
+      return typeof value === "object" && value && "name" in value ? String(value.name) : "—";
+    case "files": {
+      const names = Array.isArray(value) ? value.map((f) => String(f?.name ?? "")) : [];
+      return names.length ? names.join(", ") : "—";
+    }
     case "date":
       return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
         new Date(`${String(value)}T00:00:00Z`),
@@ -54,7 +60,12 @@ export function toInput(field: FieldUi, value: unknown, timeZone?: string): stri
   if (field.kind === "money") return (Number(value) / 100).toFixed(2);
   if (field.kind === "datetime")
     return wallTime(value instanceof Date ? value : new Date(String(value)), timeZone);
-  if (field.kind === "picture" || field.kind === "pictures")
+  if (
+    field.kind === "picture" ||
+    field.kind === "pictures" ||
+    field.kind === "file" ||
+    field.kind === "files"
+  )
     return typeof value === "object" ? JSON.stringify(value) : "";
   return String(value);
 }
@@ -76,8 +87,20 @@ export function fromInput(field: FieldUi, input: string | boolean, timeZone?: st
       return Number(text);
     case "picture":
     case "pictures":
+    case "file":
+    case "files":
       return JSON.parse(text);
     default:
       return text;
   }
+}
+
+/** A document's size as people read it: 820 kB, 2.4 MB. */
+export function fileSize(bytes: number): string {
+  const mb = bytes >= 1_000_000;
+  return new Intl.NumberFormat(undefined, {
+    style: "unit",
+    unit: mb ? "megabyte" : "kilobyte",
+    maximumFractionDigits: mb ? 1 : 0,
+  }).format(mb ? bytes / 1_000_000 : Math.max(1, bytes / 1000));
 }
