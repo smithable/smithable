@@ -222,6 +222,11 @@ export const modelsSection: SpecSection<"models"> = {
             ]),
           ),
         },
+        trash: {
+          type: "boolean",
+          description:
+            "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good.",
+        },
         capacity: {
           type: "object",
           description:
@@ -284,13 +289,18 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "access", "capacity", ...TEXT_KEYS],
+    allowed: ["fields", "ownedBy", "access", "capacity", "trash", ...TEXT_KEYS],
     later: ["unique", "examples"],
     content: ["label", "title"],
   });
   Object.assign(model, readSemanticText(ctx, known));
   const access = known.find((e) => e.key === "access");
   if (access) model.access = readModelAccess(ctx, access.value, `the access of "${name}"`);
+  const trash = known.find((e) => e.key === "trash");
+  if (trash) {
+    const on = readBoolean(ctx, trash.value, `"trash" of "${name}"`);
+    if (on) model.trash = true;
+  }
   const ownedBy = known.find((e) => e.key === "ownedBy");
   if (ownedBy) {
     const field = readString(ctx, ownedBy.value, `"ownedBy" of "${name}"`);

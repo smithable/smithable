@@ -478,6 +478,13 @@ export function requiredButEmpty(
 
 /** What a destructive change does to existing data, in plain words. */
 function dataImpact(dir: string, effects: Effect[], args: Record<string, unknown>): string {
+  // Turning a model's trash off: what is in it goes for good.
+  if (args.trash === false && typeof args.model === "string") {
+    const { table } = columnOf(args.model, "id");
+    const counts = countValues(dir, table, "deleted_at");
+    const n = counts?.filled ?? 0;
+    return `this removes the ${n} ${n === 1 ? plural(args.model).toLowerCase().replace(/s$/, "") : plural(args.model).toLowerCase()} in the trash for good.`;
+  }
   const removed = effects.find((e) => e.kind === "remove-field");
   const model = String(removed?.model ?? args.model);
   const field = String(removed?.field ?? args.field);
