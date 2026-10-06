@@ -16,10 +16,8 @@ models:
       component: Component
       detectedAt: datetime!
       resolvedAt: datetime
-      summary: markdown
+      summary: text
       updates: IncidentUpdate[]
-    access:
-      write: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -50,6 +48,9 @@ pages:
         records: Incident
         where:
           status: resolved
+  privacy:
+    route: /privacy
+    legal: privacy
   overview:
     dashboard:
       open:
