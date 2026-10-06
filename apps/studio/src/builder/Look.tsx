@@ -20,7 +20,7 @@ import { cx, Select } from "../ui";
 import type { Run } from "./ChangeForms";
 
 /** Each language the kit has words in, by its own name. */
-const LANGUAGE_NAMES: Record<(typeof LANGUAGES)[number], string> = {
+export const LANGUAGE_NAMES: Record<(typeof LANGUAGES)[number], string> = {
   en: "English",
   sv: "Svenska",
 };
