@@ -3565,7 +3565,7 @@ function operationsFlow(dir) {
 }
 
 /** Creates, edits and deletes a customer through the UI, checking messages on the way. */
-async function browserFlow(base) {
+async function browserFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const expectText = async (name, text) => {
@@ -3659,23 +3659,66 @@ async function browserFlow(base) {
     await page.waitForURL(`${base}/customers`);
     await expectText("edit: the change is saved", "€2,750.50");
 
+    // The trash (docs/design/trash.md): Move to trash, Undo, the unique value it keeps, the Trash
+    // page, the record's own page read-only with Restore, then removal for good.
+    const trashIt = async () => {
+      await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
+      await page.getByRole("button", { name: "Move to trash" }).click();
+      await page.waitForURL(`${base}/customers`);
+    };
+    await trashIt();
+    const notice = page.locator('[data-part="trash-notice"]');
+    await notice.getByText("“Mariehamn Marine AB” is in the trash.").waitFor();
+    if (await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).count())
+      throw new Error("a trashed customer is still listed");
+    await notice.getByRole("button", { name: "Undo" }).click();
+    await page
+      .getByRole("cell", { name: "Mariehamn Marine AB", exact: true })
+      .waitFor({ timeout: 10000 });
+    await trashIt();
+    await open(page, `${base}/customers/new`);
+    await page.getByRole("textbox", { name: "Name *" }).fill("Mariehamn Marine Again");
+    await page.getByRole("textbox", { name: "Email" }).fill("hello@mariehamn-marine.example.com");
+    await page.getByRole("button", { name: "Create customer" }).click();
+    await expectText(
+      "a value a trashed customer holds is refused with how to free it",
+      "A deleted customer with this email is in the trash: restore it or empty the trash.",
+    );
+    await open(page, `${base}/customers/trash`);
     await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).click();
-    // The confirmation names the record and starts on Cancel, so Enter does not delete.
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    const confirm = page.getByRole("dialog", { name: "Delete “Mariehamn Marine AB”?" });
-    await confirm.waitFor();
-    if (
-      !(await confirm
-        .getByRole("button", { name: "Cancel" })
-        .evaluate((b) => b === document.activeElement))
-    )
-      throw new Error("the delete confirmation does not start on Cancel");
-    await confirm.getByRole("button", { name: "Delete customer" }).click();
-    await page.waitForURL(`${base}/customers`);
-    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
-    if (await page.getByText("Mariehamn Marine AB").count())
-      throw new Error("The customer was not deleted");
-    console.log("  ✓ browser: delete asks first, naming the customer, then removes it");
+    await page.waitForURL(/\/customers\/\d+$/);
+    const banner = page.locator('[data-part="trashed"]');
+    await banner
+      .getByText(/^In the trash since .*, deleted by Dev admin\. It is removed for good on /)
+      .waitFor();
+    if (await page.getByRole("button", { name: "Save changes" }).count())
+      throw new Error("a trashed customer can be changed");
+    await banner.getByRole("button", { name: "Restore" }).click();
+    await banner.waitFor({ state: "detached" });
+    await open(page, `${base}/customers`);
+    await page.getByRole("cell", { name: "Mariehamn Marine AB", exact: true }).waitFor();
+    await trashIt();
+    await open(page, `${base}/customers/trash`);
+    await page.locator("tr", { hasText: "Mariehamn Marine AB" }).getByRole("checkbox").check();
+    await page
+      .locator('[data-kit="selection-bar"]')
+      .getByRole("button", { name: /^Delete/ })
+      .click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+    await page.getByText("Nothing is in the trash.").waitFor({ timeout: 10000 });
+    const kept = query(
+      dir,
+      "select count(*) as n from customers where name = 'Mariehamn Marine AB'",
+    );
+    const lines = query(
+      dir,
+      "select action from audit_log where model = 'Customer' and action in ('trashed', 'restored', 'removed')",
+    ).map((l) => l.action);
+    if (kept[0]?.n !== 0 || !["trashed", "restored", "removed"].every((a) => lines.includes(a)))
+      throw new Error(`for good: ${JSON.stringify(kept)} ${lines.join()}`);
+    console.log(
+      "  ✓ browser: Move to trash hides the customer, Undo brings it back; its email stays taken; its page is read-only with Restore; the Trash page removes it for good; the log has trashed, restored and removed",
+    );
 
     await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
@@ -3691,10 +3734,9 @@ async function browserFlow(base) {
     await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
 
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Delete customer" }).click();
+    await page.getByRole("button", { name: "Move to trash" }).click();
     await expectText(
-      "a customer with orders cannot be deleted, and it says why",
+      "a customer with orders cannot be moved to the trash, and it says why",
       "This customer is still used by other records.",
     );
     await open(page, `${base}/orders`);
@@ -3741,7 +3783,7 @@ async function browserFlow(base) {
       throw new Error("sales can merge customers");
     await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
     await page.getByRole("button", { name: "Save changes" }).waitFor();
-    if (await page.getByRole("button", { name: "Delete" }).count())
+    if (await page.getByRole("button", { name: /^(Delete|Move to trash)$/ }).count())
       throw new Error("sales can delete customers");
     console.log("  ✓ browser: sales edit customers but cannot delete or merge them; admins can");
   } catch (error) {
@@ -4729,7 +4771,7 @@ test("the session cookie's name and attributes", async () => {
       await sitemapCheck(dir, base);
       await legalCheck(dir, base);
       if (example === "crm") {
-        await browserFlow(base);
+        await browserFlow(dir, base);
         await filtersFlow(base);
         await pagingFlow(dir, base);
         await favoritesFlow(base);

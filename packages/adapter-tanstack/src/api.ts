@@ -153,6 +153,16 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         parameters: [
           { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
           { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          ...(model.trash
+            ? [
+                {
+                  name: "trashed",
+                  in: "query",
+                  description: "true: the records in the trash the key's role may delete",
+                  schema: { type: "boolean" },
+                },
+              ]
+            : []),
         ],
         responses: {
           200: { description: `A page of ${n.pluralLabel.toLowerCase()}` },
@@ -174,7 +184,18 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
       get: {
         summary: `One ${n.label.toLowerCase()}`,
-        responses: { 200: { description: "The record", ...one }, 404: problem },
+        responses: {
+          200: { description: "The record", ...one },
+          404: problem,
+          ...(model.trash
+            ? {
+                410: {
+                  ...problem,
+                  description: "In the trash: deletedAt, deletedBy, removedOn, restore",
+                },
+              }
+            : {}),
+        },
       },
       patch: {
         summary: `Change a ${n.label.toLowerCase()} (the fields given)`,
@@ -187,10 +208,23 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         },
       },
       delete: {
-        summary: `Delete a ${n.label.toLowerCase()}`,
+        summary: model.trash
+          ? `Move a ${n.label.toLowerCase()} to the trash; with permanent=true, remove one in the trash for good`
+          : `Delete a ${n.label.toLowerCase()}`,
+        ...(model.trash
+          ? { parameters: [{ name: "permanent", in: "query", schema: { type: "boolean" } }] }
+          : {}),
         responses: { 204: { description: "Deleted" }, 403: problem, 404: problem, 409: problem },
       },
     };
+    if (model.trash)
+      paths[`/api/v1/${path}/{id}/restore`] = {
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        post: {
+          summary: `Take a ${n.label.toLowerCase()} out of the trash`,
+          responses: { 200: { description: "Restored", ...one }, 401: problem, 404: problem },
+        },
+      };
   }
   for (const action of actions) {
     const path = models.find((m) => m.model.name === action.on)?.path;
@@ -404,7 +438,17 @@ export const Route = createFileRoute("/api/v1/${path}/")({
     handlers: {
       GET: ({ request }) =>
         ${reads}(request, async (viewer) => {
-          const query = new URL(request.url).searchParams;
+          const query = new URL(request.url).searchParams;${
+            model.trash
+              ? `
+          // ?trashed=true: the trash, what this key may delete in it (docs/design/trash.md).
+          if (query.get("trashed") === "true") {
+            const rows = await ${n.data}.trash(viewer);
+            const items = rows.map((row) => ({ ...${camelName}ToApi(row), deletedAt: row.deletedAt instanceof Date ? row.deletedAt.toISOString() : row.deletedAt }));
+            return { items, page: 1, pages: 1, total: items.length };
+          }`
+              : ""
+          }
           const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
           const page = Math.max(1, Number(query.get("page")) || 1);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
@@ -473,10 +517,23 @@ export const Route = createFileRoute("/api/v1/${path}.csv")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { ${reads === "openApiCall" ? "apiCall, NotFound, openApiCall" : "apiCall, NotFound"} } from "#/kit/api.server";
+import { ${[...(reads === "openApiCall" ? ["apiCall", "openApiCall"] : ["apiCall"]), ...(model.trash ? ["Gone"] : []), "NotFound"].sort().join(", ")} } from "#/kit/api.server";
 
 const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) => {
-  const row = await ${n.data}.get(viewer, Number(id));
+  const row = await ${n.data}.get(viewer, Number(id));${
+    model.trash
+      ? `
+  // In the trash (docs/design/trash.md): gone, with when, by whom and how to restore it.
+  const gone = row ? null : await ${n.data}.trashed(viewer, Number(id));
+  if (gone)
+    throw new Gone("This ${n.label.toLowerCase()} is in the trash.", {
+      deletedAt: gone.deletedAt.toISOString(),
+      deletedBy: gone.by,
+      removedOn: gone.until.toISOString(),
+      restore: \`/api/v1/${path}/\${id}/restore\`,
+    });`
+      : ""
+  }
   if (!row) throw new NotFound("No such ${n.label.toLowerCase()}, or not one this key may read.");
   return row;
 };
@@ -491,9 +548,44 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
           return ${camelName}ToApi(await ${n.data}.update(viewer, row.id, ${camelName}FromApi(body, row) as never));
         }),
       DELETE: ({ request, params }) =>
-        apiCall(request, async (viewer) => {
+        apiCall(request, async (viewer) => {${
+          model.trash
+            ? `
+          // ?permanent=true removes a record in the trash for good; otherwise it goes to the trash.
+          if (new URL(request.url).searchParams.get("permanent") === "true") {
+            if (!${n.data}.removeForGood(viewer, [Number(params.id)]).deleted)
+              throw new NotFound("No such ${n.label.toLowerCase()} in the trash, or not one this key may delete.");
+            return;
+          }`
+            : ""
+        }
           const row = await found(viewer, params.id);
           await ${n.data}.remove(viewer, row.id);
+        }),
+    },
+  },
+});
+`;
+    // Out of the trash (docs/design/trash.md): the record restored, as GET gives it.
+    if (model.trash)
+      files[`src/routes/api/v1/${path}/$id.restore.ts`] =
+        `${HEADER}// A ${n.label.toLowerCase()} taken out of the trash, by a key whose role may delete it.
+import { createFileRoute } from "@tanstack/react-router";
+import { ${camelName}ToApi } from "#/generated/api.server";
+import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { apiCall, NotFound } from "#/kit/api.server";
+
+export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
+  server: {
+    handlers: {
+      POST: ({ request, params }) =>
+        apiCall(request, async (viewer) => {
+          const id = Number(params.id);
+          if (!${n.data}.restore(viewer, [id]).restored)
+            throw new NotFound("No such ${n.label.toLowerCase()} in the trash, or not one this key may restore.");
+          const row = await ${n.data}.get(viewer, id);
+          if (!row) throw new NotFound("No such ${n.label.toLowerCase()}, or not one this key may read.");
+          return ${camelName}ToApi(row);
         }),
     },
   },
@@ -672,6 +764,18 @@ function toolsModule(
     const asks = askedFields(action).length ? `, asks: ${a.asks}` : "";
     return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
   });
+  // Out of the trash, as a built-in action per kind with a trash (docs/design/trash.md).
+  const restores = models
+    .filter(({ model }) => model.trash)
+    .map(({ model, n }) => {
+      const c = model.name[0]?.toLowerCase() + model.name.slice(1);
+      return `    case ${JSON.stringify(`restore${model.name}`)}: {
+      const id = Number(args.id);
+      if (!${n.data}.restore(viewer, [id]).restored)
+        throw new NotFound(\`No ${n.label.toLowerCase()} \${id} in the trash that you may restore.\`);
+      return ${c}ToApi((await ${n.data}.get(viewer, id)) as Record<string, any>);
+    }`;
+    });
   const runs = actions.map((action) => {
     const model = modelNamed(ir, action.on);
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
@@ -814,7 +918,21 @@ const keyed = (viewer: Viewer | null): Viewer => {
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "find": {
-      const kind = kindOf(args);
+      const kind = kindOf(args);${
+        models.some(({ model }) => model.trash)
+          ? `
+      // The trash: what the caller may delete in it, with when it was deleted.
+      if (args.trashed === true) {
+        if (!("trash" in kind.data)) throw new BadInput("This kind of record has no trash.");
+        const trashed = await kind.data.trash(viewer);
+        return {
+          columns: ["id", kind.title, "deletedAt"],
+          rows: trashed.map((row) => [row.id, (row as Record<string, unknown>)[kind.title] ?? null, row.deletedAt]),
+          total: trashed.length,
+        };
+      }`
+          : ""
+      }
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
       const { items, total } = await kind.data.find(viewer, {
@@ -876,7 +994,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       return { description: offerFor(viewer).describe[args.kind as string] };
     case "run":
       switch (args.action) {
-${runs.join("\n")}
+${[...runs, ...restores].join("\n")}
         default:
           throw new NotFound(\`There is no action "\${String(args.action)}".\`);
       }

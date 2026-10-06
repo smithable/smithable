@@ -15,7 +15,7 @@ import {
 } from "@smithable/core";
 import { askedFields } from "../actions.js";
 import { hasSignIn } from "../auth.js";
-import { reserveElement, savedToggle } from "../data.js";
+import { reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
 import {
   appStart,
@@ -295,8 +295,16 @@ export function detailRoute(
   const heading =
     title === "id" ? `\`${n.label} #\${row.id}\`` : `row.${title} || \`${n.label} #\${row.id}\``;
   const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  // The trash (docs/design/trash.md): Move to trash, and a trashed record read-only with Restore.
+  const trash = Boolean(model.trash && !within);
   const imports = new Map<string, string[]>([
-    [n.module, [n.remove, n.get, n.schema, n.ui, n.update]],
+    [
+      n.module,
+      [n.remove, n.get, n.schema, n.ui, n.update, ...(trash ? [trashNames(model).restore] : [])],
+    ],
+    ...(trash
+      ? ([["#/kit/Trash", ["rememberTrashed", "TrashedBanner"]]] as [string, string[]][])
+      : []),
   ]);
   // Places on this record (a session's bookings): staff book and cancel here too.
   const reserve =
@@ -352,7 +360,7 @@ export function detailRoute(
       </section>`;
   });
   // A copy opens the new record instead of reloading this one: it needs no router.
-  const router = favorite || offered.some((a) => !a.copy);
+  const router = favorite || trash || offered.some((a) => !a.copy);
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
@@ -433,7 +441,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const { row, canWrite, canDelete${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite
@@ -467,9 +475,23 @@ function ${component}() {
         }
       />`
             : `<PageHeader title={${heading}} />`
+      }${
+        trash
+          ? `
+      {trashed && (
+        <TrashedBanner
+          {...trashed}
+          app={app}
+          onRestore={async () => {
+            await ${trashNames(model).restore}({ data: [row.id] });
+            await router.invalidate();
+          }}
+        />
+      )}`
+          : ""
       }
       <ModelForm
-        key={String(row.updatedAt)}
+        key={String(row.updatedAt)}${trash ? "\n        trash" : ""}
         ui={${n.ui}}
         app={app}
         schema={${n.schema}}${order}
@@ -484,7 +506,7 @@ ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChange
         onDelete={
           canDelete
             ? async () => {
-                await ${n.remove}({ data: row.id });
+                await ${n.remove}({ data: row.id });${trash ? `\n                rememberTrashed(${JSON.stringify(model.name)}, row.id, String(${heading}));` : ""}
                 await back();
               }
             : undefined
@@ -602,4 +624,47 @@ export function actionButton(action: StandardActionIR, row: string, route: strin
                   ${after}
                 }}
               />`;
+}
+
+/**
+ * A list's Trash page (docs/design/trash.md): what the viewer may delete that is in the trash,
+ * with Restore, Delete for good and Empty trash.
+ */
+export function trashRoute(page: PageIR, model: ModelIR, t: Texts): string {
+  const n = names(model, t);
+  const fns = trashNames(model);
+  return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+import { ${[fns.erase, fns.restore, fns.list, n.ui].sort().join(", ")} } from "${n.module}";
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { TrashTable } from "#/kit/Trash";
+import { w } from "#/kit/words";
+
+export const Route = createFileRoute(${JSON.stringify(join(page.route, "trash"))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: () => ${fns.list}(),
+  component: ${model.name}TrashPage,
+});
+
+function ${model.name}TrashPage() {
+  const { rows } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  return (
+    <>
+      <PageHeader title={w.trashOf(${JSON.stringify(n.pluralLabel)})} subtitle={w.trashLead} />
+      <TrashTable
+        ui={${n.ui}}
+        app={app}
+        rows={rows}
+        restore={(ids) => ${fns.restore}({ data: ids })}
+        erase={(ids) => ${fns.erase}({ data: ids })}
+        onDone={() => router.invalidate()}
+        onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
+      />
+    </>
+  );
+}
+`;
 }

@@ -75,6 +75,22 @@ export function schemaModule(ir: SpecIR, auth: AuthIR): string {
           .map((f) => `unique().on(t.${ownerKey(model)}, t.${dataKey(f)})`)
       : [];
     if (uniques.length) imports.add("unique");
+    // The trash (docs/design/trash.md): when and by whom a record was deleted; an index over the
+    // live records only keeps every reader as fast as without it. A unique value stays unique
+    // over all records, the trashed ones too.
+    const trash = model.trash
+      ? `
+  /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
+  deletedAt: integer({ mode: "timestamp_ms" }),
+  deletedBy: text(),`
+      : "";
+    const live = model.trash
+      ? [
+          `index(${JSON.stringify(`${n.sqlTable}_live`)}).on(t.${hasSignIn(auth) || model.ownedBy ? ownerKey(model) : "id"}).where(sql\`\${t.deletedAt} is null\`)`,
+        ]
+      : [];
+    if (model.trash) imports.add("text");
+    const extras = [...uniques, ...live];
     const body = `{
   id: integer().primaryKey({ autoIncrement: true }),
 ${columns.join("\n")}
@@ -82,14 +98,13 @@ ${columns.join("\n")}
   updatedAt: integer({ mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date()),${trash}
 }`;
-    return uniques.length
-      ? `// Records are private to their owner, so unique values are unique per owner.
-export const ${n.table} = sqliteTable(
+    return extras.length
+      ? `${uniques.length ? "// Records are private to their owner, so unique values are unique per owner.\n" : ""}export const ${n.table} = sqliteTable(
   ${JSON.stringify(n.sqlTable)},
   ${indent(body, 2)},
-  (t) => [${uniques.join(", ")}],
+  (t) => [${extras.join(", ")}],
 );`
       : `export const ${n.table} = sqliteTable(${JSON.stringify(n.sqlTable)}, ${body});`;
   });
@@ -138,7 +153,9 @@ export const ${n.table}Favorites = sqliteTable(
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   const documents = ir.models.some((m) => m.fields.some(storesFiles));
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
-  return `${HEADER}${relationBlocks.length ? 'import { relations } from "drizzle-orm";\n' : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
+  const trashed = ir.models.some((m) => m.trash);
+  const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
+  return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
 ${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;

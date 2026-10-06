@@ -11,7 +11,7 @@ import { dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
 import { legalRoute } from "./legal.js";
 import { listRoute } from "./list.js";
-import { detailRoute, newRoute, recordPageRoute } from "./record.js";
+import { detailRoute, newRoute, recordPageRoute, trashRoute } from "./record.js";
 import { usersRoute } from "./users.js";
 
 type PageOf<K extends PatternKind> = PageIR & { pattern: PatternOf<K> };
@@ -33,6 +33,7 @@ export const PAGE_GENERATORS: {
         "index.tsx": listRoute(page, model, t, ir, custom, ux, undefined, auth),
         "new.tsx": newRoute(page, model, t, ir, ux),
         "$id.tsx": detailRoute(page, model, t, ir, ux, undefined, auth),
+        ...(model.trash ? { "trash.tsx": trashRoute(page, model, t) } : {}),
       };
     },
   },

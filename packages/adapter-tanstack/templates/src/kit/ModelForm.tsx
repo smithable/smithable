@@ -35,6 +35,8 @@ interface ModelFormProps<S extends z.ZodType> {
   /** The cancel button's text, e.g. "Back" in a step of an onboarding. */
   cancelLabel?: string;
   onDelete?: () => Promise<unknown>;
+  /** Deleting moves the record to the trash (docs/design/trash.md): no confirmation, it can be restored. */
+  trash?: boolean;
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
   /** These fields first, in this order; the others follow. */
@@ -56,6 +58,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     onCancel,
     cancelLabel,
     onDelete,
+    trash,
     readOnly,
   } = props;
   const ui = presented(props.ui, props);
@@ -278,12 +281,12 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               variant="outline"
               className="ml-auto border-destructive text-destructive"
               disabled={busy}
-              onClick={() => confirmDelete.current?.showModal()}
+              onClick={() => (trash ? run(onDelete) : confirmDelete.current?.showModal())}
             >
-              {w.delete}
+              {trash ? w.moveToTrash : w.delete}
             </Button>
           )}
-          {onDelete && (
+          {onDelete && !trash && (
             // Opening it focuses Cancel, the first button; Escape closes it.
             <dialog
               ref={confirmDelete}
@@ -352,6 +355,12 @@ function failureMessage(ui: ModelUi, error: unknown): string {
     (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
   );
   if (field) return w.alreadyHas(ui.label, field.label);
+  // The value belongs to a record in the trash (docs/design/trash.md).
+  const held = /^trashed:(\w+)$/.exec(message)?.[1];
+  const heldField = ui.fields.find(
+    (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === held,
+  );
+  if (heldField) return w.trashedHas(ui.label, heldField.label);
   if (message === "in-use") return w.stillUsed(ui.label);
   if (message === "full") return w.noPlacesLeft;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];
