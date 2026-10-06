@@ -69,6 +69,12 @@ actions:
     set: { status: paid }
     intent: The client paid the invoice.
 
+outgoing:
+  invoiceSent:
+    when: markSent                   # an action: when it has run
+    to: mail
+    recipient: client.email
+
 pages:
   home:
     route: /

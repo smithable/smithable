@@ -8,6 +8,17 @@ models:
   Booking:
     reserve: { book: Book a mat, cancel: Cancel my booking, full: No mats left }
 
+outgoing:
+  bookingMade:
+    subject: Your booking
+    text: Thank you for booking. We look forward to seeing you.
+  bookingChanged:
+    subject: Your booking was changed
+    text: The studio changed your booking. Here it is as it is now.
+  bookingCancelled:
+    subject: Your booking was cancelled
+    text: Your booking was cancelled. Here it is as it was.
+
 pages:
   home:
     estimate:

@@ -33,6 +33,7 @@ import { dataModule, isMarkdown, modelModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
+import { mailsOut, outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { hasInspector } from "./pages/data.js";
@@ -87,11 +88,12 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  // The spec can say who is told when something happens (integrations.md §4.1b); the app does
-  // not send it yet. Refused here rather than promised and never sent.
-  if (ir.outgoing.length)
+  // A signed call to a named target (integrations.md §4.1) is not built yet: refused here rather
+  // than promised and never sent. Mail is.
+  const target = ir.outgoing.find((o) => o.to !== "mail");
+  if (target)
     throw new Error(
-      `The app cannot send "${ir.outgoing[0]?.name}" yet: outgoing mail is not built in the generated app (docs/design/integrations.md §4.1b).`,
+      `The app cannot tell "${target.to}" yet: only mail is built in the generated app (docs/design/integrations.md §4.1).`,
     );
   const ctx: GenContext = {
     ir,
@@ -395,6 +397,14 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       // The public site's menu and contact details, for its landing pages and public blogs.
       ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
+      ...(mailsOut(ir).length
+        ? [
+            generated(
+              "src/generated/outgoing.server.ts",
+              outgoingModule(ir, t, ux, options.content),
+            ),
+          ]
+        : []),
       generated(
         "src/routes/__root.tsx",
         rootRoute(ir, t, auth, ux, options.analytics, options.content?.consent),
@@ -472,6 +482,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ir.pages.some(
             (p) => p.filters?.length || p.sortable?.length || (hasSignIn(auth) && p.favorites),
           ),
+      },
+      {
+        // Outgoing mail (integrations.md §4.1b): the outbox and its sender.
+        files: ["src/kit/outgoing.ts", "src/kit/outgoing.server.ts"],
+        used: ({ ir }) => mailsOut(ir).length > 0,
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).

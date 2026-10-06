@@ -3748,7 +3748,9 @@ export const noteData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.notes).where(eq(schema.notes.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Note", record: id, title: gone.title });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Note", record: id, title: gone.title });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -3772,7 +3774,9 @@ export const noteData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.notes).where(eq(schema.notes.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Note", record: row.id, title: gone.title });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Note", record: row.id, title: gone.title });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -4237,7 +4241,9 @@ export const projectData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.projects).where(eq(schema.projects.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Project", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Project", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -4260,7 +4266,9 @@ export const projectData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.projects).where(eq(schema.projects.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Project", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Project", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -4737,7 +4745,9 @@ export const taskData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.tasks).where(eq(schema.tasks.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Task", record: id, title: gone.title });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Task", record: id, title: gone.title });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -4760,7 +4770,9 @@ export const taskData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.tasks).where(eq(schema.tasks.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Task", record: row.id, title: gone.title });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Task", record: row.id, title: gone.title });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -7548,18 +7560,18 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
   "src/generated/mcp.server.ts": "bd70ca90 generated",
-  "src/generated/note.server.ts": "f6d4997a generated",
+  "src/generated/note.server.ts": "6d5e8eca generated",
   "src/generated/note.ts": "45ea7043 generated",
   "src/generated/pages.ts": "4b852c85 generated",
-  "src/generated/project.server.ts": "794b007a generated",
+  "src/generated/project.server.ts": "0b83c406 generated",
   "src/generated/project.ts": "83429f6c generated",
-  "src/generated/task.server.ts": "2f211502 generated",
+  "src/generated/task.server.ts": "ba2e6162 generated",
   "src/generated/task.ts": "6241b7be generated",
   "src/generated/uploads.ts": "38cfdcd9 generated",
   "src/generated/users.server.ts": "d819e564 generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -7592,10 +7604,10 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3ba8a00 generated",
@@ -7897,6 +7909,28 @@ export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);
+
+export const outgoingMail = sqliteTable(
+  "outgoing_mail",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    /** The outgoing entry's name in smithable.yml. */
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    to: text().notNull(),
+    subject: text().notNull(),
+    text: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    /** Given up after a day of tries; "Send again" in Activity clears it. */
+    failedAt: integer({ mode: "timestamp_ms" }),
+    error: text(),
+  },
+  (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
 
 export const classTypes = sqliteTable("class_types", {
@@ -8744,6 +8778,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { outgoing } from "#/generated/outgoing.server";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import type { BookingValues } from "./booking";
@@ -8858,6 +8893,7 @@ export const bookingData = {
       if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
         const made = tx.insert(schema.bookings).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Booking", record: made.id });
+        outgoing(tx, viewer, "Booking", "created", made);
         return made;
       });
     } catch (error) {
@@ -8886,6 +8922,7 @@ export const bookingData = {
         const before = tx.select().from(schema.bookings).where(eq(schema.bookings.id, id)).get();
         const after = tx.update(schema.bookings).set(updated).where(eq(schema.bookings.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Booking", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        outgoing(tx, viewer, "Booking", what, after, before);
         return after;
       });
     } catch (error) {
@@ -8906,7 +8943,10 @@ export const bookingData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.bookings).where(eq(schema.bookings.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Booking", record: id, title: gone.id });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Booking", record: id, title: gone.id });
+          outgoing(tx, viewer, "Booking", "deleted", gone);
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -8929,7 +8969,10 @@ export const bookingData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.bookings).where(eq(schema.bookings.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Booking", record: row.id, title: gone.id });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Booking", record: row.id, title: gone.id });
+            outgoing(tx, viewer, "Booking", "deleted", gone);
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -9198,7 +9241,9 @@ export const classTypeData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "ClassType", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "ClassType", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -9221,7 +9266,9 @@ export const classTypeData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "ClassType", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "ClassType", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -9729,7 +9776,9 @@ export const instructorData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Instructor", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Instructor", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -9753,7 +9802,9 @@ export const instructorData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Instructor", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Instructor", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -10051,7 +10102,9 @@ export const messageData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.messages).where(eq(schema.messages.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Message", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Message", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -10074,7 +10127,9 @@ export const messageData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.messages).where(eq(schema.messages.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Message", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Message", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -10190,6 +10245,85 @@ export const deleteMessage = createServerFn({ method: "POST" })
 export const deleteMessages = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
   .handler(async ({ data: ids }) => messageData.removeMany(await writer(), ids));
+"
+`;
+
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/outgoing.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { eq, type SQL } from "drizzle-orm";
+import type { db } from "#/db";
+import * as schema from "#/db/schema";
+import type { Viewer } from "#/kit/access";
+import { counts } from "#/kit/outgoing";
+import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
+
+type Tx = Pick<typeof db, "select" | "insert">;
+type Row = Record<string, unknown>;
+
+/** The users that fit, with their addresses. */
+function people(tx: Tx, where: SQL): Recipient[] {
+  return tx.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(where).all();
+}
+
+/** Each model's record as a mail shows it: the subject, its fields, its page. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
+  "Booking": (_tx, r) => ({
+    subject: \`Booking: #\${r.id}\`,
+    fields: [
+      ["Session", r.sessionId == null ? "—" : \`#\${r.sessionId}\`],
+    ],
+    link: \`/my-bookings/\${r.id}\`,
+  }),
+};
+
+/** The entries of smithable.yml's outgoing section that mail, with their texts. */
+const ENTRIES: {
+  name: string;
+  model: string;
+  when: string;
+  fits?: (r: Row) => boolean;
+  subject?: string;
+  text?: string;
+  to: (tx: Tx, r: Row) => Recipient[];
+}[] = [
+  {
+    name: "bookingMade",
+    model: "Booking",
+    when: "created",
+    to: (tx, r) => r.ownerId == null ? [] : people(tx, eq(schema.user.id, String(r.ownerId))),
+  },
+  {
+    name: "bookingChanged",
+    model: "Booking",
+    when: "changed",
+    to: (tx, r) => r.ownerId == null ? [] : people(tx, eq(schema.user.id, String(r.ownerId))),
+  },
+  {
+    name: "bookingCancelled",
+    model: "Booking",
+    when: "deleted",
+    to: (tx, r) => r.ownerId == null ? [] : people(tx, eq(schema.user.id, String(r.ownerId))),
+  },
+];
+
+/**
+ * Queues the mails a change asks for, in its transaction: \`what\` is created, changed, deleted or
+ * the action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
+ */
+export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
+  for (const entry of ENTRIES) {
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    const shown = SHOWN[model]?.(tx, record);
+    if (!shown) continue;
+    queueMail(
+      tx,
+      viewer,
+      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      entry.to(tx, record),
+      entry.when === "created",
+    );
+  }
+}
 "
 `;
 
@@ -10358,7 +10492,9 @@ export const postData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.posts).where(eq(schema.posts.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Post", record: id, title: gone.title });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Post", record: id, title: gone.title });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -10382,7 +10518,9 @@ export const postData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.posts).where(eq(schema.posts.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Post", record: row.id, title: gone.title });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Post", record: row.id, title: gone.title });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -10737,7 +10875,9 @@ export const sessionData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Session", record: id, title: gone.id });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Session", record: id, title: gone.id });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -10760,7 +10900,9 @@ export const sessionData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Session", record: row.id, title: gone.id });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Session", record: row.id, title: gone.id });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -11332,6 +11474,7 @@ import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
+import { sendAgain } from "#/kit/outgoing.server";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -11480,6 +11623,8 @@ const getActivity = createServerFn()
             : removed && !named.has(removed)
               ? { user: removed }
               : undefined,
+        // A mail given up after a day of tries can be sent again.
+        resend: r.action === "mail not sent" && typeof r.details?.mail === "number" ? r.details.mail : undefined,
       };
     });
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
@@ -11489,6 +11634,10 @@ const getActivity = createServerFn()
 const forget = createServerFn({ method: "POST" })
   .validator(z.union([z.object({ model: z.string(), record: z.number().int() }), z.object({ user: z.string() })]))
   .handler(async ({ data }) => forgetInLog(await currentViewer(), data));
+
+const resend = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data }) => sendAgain(await currentViewer(), data));
 
 export const Route = createFileRoute("/admin/activity")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -11516,6 +11665,10 @@ function ActivityPage() {
         onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true })}
         onForget={async (target) => {
           await forget({ data: target });
+          await router.invalidate();
+        }}
+        onResend={async (mail) => {
+          await resend({ data: mail });
           await router.invalidate();
         }}
       />
@@ -14815,6 +14968,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/generated/instructor.ts",
   "generated: src/generated/message.server.ts",
   "generated: src/generated/message.ts",
+  "generated: src/generated/outgoing.server.ts",
   "generated: src/generated/pages.ts",
   "generated: src/generated/post.server.ts",
   "generated: src/generated/post.ts",
@@ -14854,6 +15008,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
+  "kit: src/kit/outgoing.server.ts",
+  "kit: src/kit/outgoing.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
   "kit: src/kit/trace.server.ts",
@@ -14952,33 +15108,34 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
-  "src/db/schema.ts": "a29fd775 generated",
+  "src/db/schema.ts": "45d37521 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "1518628e generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/booking.server.ts": "3e27c510 generated",
+  "src/generated/booking.server.ts": "7e8dbb53 generated",
   "src/generated/booking.ts": "330b667f generated",
-  "src/generated/class-type.server.ts": "cd7ee4f6 generated",
+  "src/generated/class-type.server.ts": "77f461e6 generated",
   "src/generated/class-type.ts": "2c2990bd generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
-  "src/generated/instructor.server.ts": "28ae6cc3 generated",
+  "src/generated/instructor.server.ts": "17b1dcfb generated",
   "src/generated/instructor.ts": "b9c29a10 generated",
-  "src/generated/message.server.ts": "0bf3ad4d generated",
+  "src/generated/message.server.ts": "46f98559 generated",
   "src/generated/message.ts": "6c2a658e generated",
+  "src/generated/outgoing.server.ts": "c807ef9e generated",
   "src/generated/pages.ts": "dc5315b8 generated",
-  "src/generated/post.server.ts": "dba61742 generated",
+  "src/generated/post.server.ts": "8c466dfa generated",
   "src/generated/post.ts": "7254c32e generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.server.ts": "decc75a6 generated",
+  "src/generated/session.server.ts": "b25f6e36 generated",
   "src/generated/session.ts": "622c256c generated",
   "src/generated/site.ts": "9b0ce48a generated",
   "src/generated/uploads.ts": "f3d3a0ce generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Calculator.tsx": "f15e5001 kit",
@@ -15008,11 +15165,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
+  "src/kit/outgoing.server.ts": "569cff26 kit",
+  "src/kit/outgoing.ts": "ff33a7b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3a82cc45 generated",
@@ -15020,7 +15179,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "4aab984a generated",
-  "src/routes/admin/activity.tsx": "6fecdc74 generated",
+  "src/routes/admin/activity.tsx": "b3c5c975 generated",
   "src/routes/admin/bookings/$id.tsx": "bc2060d2 generated",
   "src/routes/admin/bookings/index.tsx": "f46892a4 generated",
   "src/routes/admin/bookings/new.tsx": "4a386f7c generated",
@@ -15934,7 +16093,9 @@ export const customerData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.customers).where(eq(schema.customers.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Customer", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Customer", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -15957,7 +16118,9 @@ export const customerData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.customers).where(eq(schema.customers.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Customer", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Customer", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -16418,7 +16581,9 @@ export const orderData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.orders).where(eq(schema.orders.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Order", record: id, title: gone.number });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Order", record: id, title: gone.number });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -16441,7 +16606,9 @@ export const orderData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Order", record: row.id, title: gone.number });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Order", record: row.id, title: gone.number });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -18448,19 +18615,19 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "bd812f10 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.server.ts": "f5ac9709 generated",
+  "src/generated/customer.server.ts": "b40824fd generated",
   "src/generated/customer.ts": "af6ba4ad generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "fe7c245a generated",
+  "src/generated/order.server.ts": "d2a531d6 generated",
   "src/generated/order.ts": "bcb1a191 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "32ba704b generated",
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -18484,8 +18651,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7ccb0e1a generated",
@@ -18769,6 +18936,28 @@ export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);
+
+export const outgoingMail = sqliteTable(
+  "outgoing_mail",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    /** The outgoing entry's name in smithable.yml. */
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    to: text().notNull(),
+    subject: text().notNull(),
+    text: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    /** Given up after a day of tries; "Send again" in Activity clears it. */
+    failedAt: integer({ mode: "timestamp_ms" }),
+    error: text(),
+  },
+  (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
 
 export const businessProfiles = sqliteTable("business_profiles", {
@@ -19483,6 +19672,7 @@ import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
+import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
 import { invoiceSchema } from "#/generated/invoice";
 import { invoiceData } from "#/generated/invoice.server";
@@ -19532,8 +19722,10 @@ export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
+      const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
       const changed = tx.update(schema.invoices).set(p.values).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markPaid", model: "Invoice", record: changed.id, fields: ["status"] });
+      outgoing(tx, viewer, "Invoice", "markPaid", changed, before);
       const inserted = [
 
       ] as const;
@@ -19592,6 +19784,7 @@ import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
+import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
 import { invoiceSchema } from "#/generated/invoice";
 import { invoiceData } from "#/generated/invoice.server";
@@ -19641,8 +19834,10 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
+      const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
       const changed = tx.update(schema.invoices).set(p.values).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, fields: ["status"] });
+      outgoing(tx, viewer, "Invoice", "markSent", changed, before);
       const inserted = [
 
       ] as const;
@@ -19818,7 +20013,9 @@ export const businessProfileData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.businessProfiles).where(eq(schema.businessProfiles.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: id, title: gone.businessName });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: id, title: gone.businessName });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -19841,7 +20038,9 @@ export const businessProfileData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.businessProfiles).where(eq(schema.businessProfiles.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: row.id, title: gone.businessName });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: row.id, title: gone.businessName });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -20113,7 +20312,9 @@ export const clientData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.clients).where(eq(schema.clients.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Client", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Client", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -20136,7 +20337,9 @@ export const clientData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.clients).where(eq(schema.clients.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Client", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Client", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -20429,6 +20632,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { outgoing } from "#/generated/outgoing.server";
 import { contains } from "#/kit/search";
 import { deleteFile } from "#/kit/uploads";
 import { afterChange, afterDelete } from "./hooks";
@@ -20537,6 +20741,7 @@ export const invoiceData = {
       row = db.transaction((tx) => {
         const made = tx.insert(schema.invoices).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Invoice", record: made.id });
+        outgoing(tx, viewer, "Invoice", "created", made);
         return made;
       });
     } catch (error) {
@@ -20563,6 +20768,7 @@ export const invoiceData = {
         const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, id)).get();
         const after = tx.update(schema.invoices).set(updated).where(eq(schema.invoices.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
+        outgoing(tx, viewer, "Invoice", what, after, before);
         return after;
       });
     } catch (error) {
@@ -20584,7 +20790,10 @@ export const invoiceData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Invoice", record: id, title: gone.number });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Invoice", record: id, title: gone.number });
+          outgoing(tx, viewer, "Invoice", "deleted", gone);
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -20608,7 +20817,10 @@ export const invoiceData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Invoice", record: row.id, title: gone.number });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Invoice", record: row.id, title: gone.number });
+            outgoing(tx, viewer, "Invoice", "deleted", gone);
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -20991,7 +21203,9 @@ export const invoiceLineData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.invoiceLines).where(eq(schema.invoiceLines.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: id, title: gone.description });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: id, title: gone.description });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -21014,7 +21228,9 @@ export const invoiceLineData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.invoiceLines).where(eq(schema.invoiceLines.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: row.id, title: gone.description });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: row.id, title: gone.description });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -21150,6 +21366,92 @@ export const deleteInvoiceLine = createServerFn({ method: "POST" })
 export const deleteInvoiceLines = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
   .handler(async ({ data: ids }) => invoiceLineData.removeMany(await writer(), ids));
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/outgoing.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { eq } from "drizzle-orm";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { db } from "#/db";
+import * as schema from "#/db/schema";
+import { app } from "#/generated/app";
+import type { Viewer } from "#/kit/access";
+import { formatValue } from "#/kit/format";
+import { counts } from "#/kit/outgoing";
+import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
+
+type Tx = Pick<typeof db, "select" | "insert">;
+type Row = Record<string, unknown>;
+
+/** One column of the record with the id, inside the transaction. */
+function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
+  if (value == null) return undefined;
+  return tx.select({ v: column }).from(table).where(eq(id, value)).get()?.v;
+}
+
+/** Each model's record as a mail shows it: the subject, its fields, its page. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
+  "Invoice": (tx, r) => ({
+    subject: \`Invoice: \${String(r.number ?? r.id)}\`,
+    fields: [
+      ["Number", formatValue({ name: "number", label: "Number", kind: "string", required: false }, r.number, app)],
+      ["Client", String(one(tx, schema.clients, schema.clients.id, schema.clients.name, r.clientId) ?? "—")],
+      ["Issued on", formatValue({ name: "issuedOn", label: "Issued on", kind: "date", required: false }, r.issuedOn, app)],
+      ["Due on", formatValue({ name: "dueOn", label: "Due on", kind: "date", required: false }, r.dueOn, app)],
+      ["Status", formatValue({
+  name: "status",
+  label: "Status",
+  kind: "choice",
+  required: false,
+  choices: [
+    { value: "draft", label: "Draft" },
+    { value: "sent", label: "Sent" },
+    { value: "paid", label: "Paid" },
+    { value: "overdue", label: "Overdue" },
+  ],
+}, r.status, app)],
+    ],
+    link: \`/invoices/\${r.id}\`,
+  }),
+};
+
+/** The entries of smithable.yml's outgoing section that mail, with their texts. */
+const ENTRIES: {
+  name: string;
+  model: string;
+  when: string;
+  fits?: (r: Row) => boolean;
+  subject?: string;
+  text?: string;
+  to: (tx: Tx, r: Row) => Recipient[];
+}[] = [
+  {
+    name: "invoiceSent",
+    model: "Invoice",
+    when: "markSent",
+    to: (tx, r) => [{ email: one(tx, schema.clients, schema.clients.id, schema.clients.email, r.clientId) as string | null }],
+  },
+];
+
+/**
+ * Queues the mails a change asks for, in its transaction: \`what\` is created, changed, deleted or
+ * the action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
+ */
+export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
+  for (const entry of ENTRIES) {
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    const shown = SHOWN[model]?.(tx, record);
+    if (!shown) continue;
+    queueMail(
+      tx,
+      viewer,
+      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      entry.to(tx, record),
+      entry.when === "created",
+    );
+  }
+}
 "
 `;
 
@@ -22963,6 +23265,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "generated: src/generated/invoice.formulas.ts",
   "generated: src/generated/invoice.server.ts",
   "generated: src/generated/invoice.ts",
+  "generated: src/generated/outgoing.server.ts",
   "generated: src/generated/pages.ts",
   "generated: src/generated/site.ts",
   "generated: src/generated/uploads.ts",
@@ -22994,6 +23297,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/log.server.ts",
   "kit: src/kit/mail.ts",
   "kit: src/kit/model.ts",
+  "kit: src/kit/outgoing.server.ts",
+  "kit: src/kit/outgoing.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
   "kit: src/kit/trace.server.ts",
@@ -23063,32 +23368,33 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "3139019d kit",
-  "src/db/schema.ts": "eb043469 generated",
+  "src/db/schema.ts": "d8859a49 generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "99771849 generated",
-  "src/generated/actions/mark-paid.server.ts": "e7b17e1b generated",
+  "src/generated/actions/mark-paid.server.ts": "c3ac26a3 generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
-  "src/generated/actions/mark-sent.server.ts": "09aaeee3 generated",
+  "src/generated/actions/mark-sent.server.ts": "b76994a3 generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/business-profile.server.ts": "9fe0393f generated",
+  "src/generated/business-profile.server.ts": "2ac349b3 generated",
   "src/generated/business-profile.ts": "c3d116e0 generated",
-  "src/generated/client.server.ts": "a12b4371 generated",
+  "src/generated/client.server.ts": "f76a3231 generated",
   "src/generated/client.ts": "80b05cce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.server.ts": "2707e1b7 generated",
+  "src/generated/invoice-line.server.ts": "25335233 generated",
   "src/generated/invoice-line.ts": "b19acfa3 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.server.ts": "08761d28 generated",
+  "src/generated/invoice.server.ts": "b44de611 generated",
   "src/generated/invoice.ts": "c26b710f generated",
+  "src/generated/outgoing.server.ts": "071c4462 generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
   "src/generated/uploads.ts": "29095437 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -23115,11 +23421,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/log.server.ts": "4f35dda4 kit",
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
+  "src/kit/outgoing.server.ts": "569cff26 kit",
+  "src/kit/outgoing.ts": "ff33a7b0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "29808e97 generated",
@@ -23937,7 +24245,9 @@ export const itemData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.items).where(eq(schema.items.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.title });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.title });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -23961,7 +24271,9 @@ export const itemData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.items).where(eq(schema.items.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Item", record: row.id, title: gone.title });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Item", record: row.id, title: gone.title });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -25910,13 +26222,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
-  "src/generated/item.server.ts": "108f9c93 generated",
+  "src/generated/item.server.ts": "0d1e0387 generated",
   "src/generated/item.ts": "d9435da0 generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/site.ts": "b9832c55 generated",
   "src/generated/uploads.ts": "2ea504cf generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -25945,9 +26257,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c5155025 generated",
@@ -26732,7 +27044,9 @@ export const itemData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.items).where(eq(schema.items.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -26755,7 +27069,9 @@ export const itemData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.items).where(eq(schema.items.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Item", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Item", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -27939,12 +28255,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.server.ts": "a56f9579 generated",
+  "src/generated/item.server.ts": "28290659 generated",
   "src/generated/item.ts": "18978cbe generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "a504d0e6 kit",
@@ -27968,8 +28284,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "63d519fe generated",
@@ -30796,7 +31112,9 @@ export const componentData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.components).where(eq(schema.components.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Component", record: id, title: gone.name });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Component", record: id, title: gone.name });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -30819,7 +31137,9 @@ export const componentData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.components).where(eq(schema.components.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Component", record: row.id, title: gone.name });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Component", record: row.id, title: gone.name });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -31435,7 +31755,9 @@ export const incidentData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Incident", record: id, title: gone.title });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Incident", record: id, title: gone.title });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -31458,7 +31780,9 @@ export const incidentData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Incident", record: row.id, title: gone.title });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Incident", record: row.id, title: gone.title });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -31786,7 +32110,9 @@ export const incidentUpdateData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: id, title: gone.id });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: id, title: gone.id });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -31809,7 +32135,9 @@ export const incidentUpdateData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: row.id, title: gone.id });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: row.id, title: gone.id });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -32241,7 +32569,9 @@ export const maintenanceData = {
     try {
       db.transaction((tx) => {
         const gone = tx.delete(schema.maintenances).where(eq(schema.maintenances.id, id)).returning().get();
-        if (gone) audit(tx, viewer, { action: "deleted", model: "Maintenance", record: id, title: gone.title });
+        if (gone) {
+          audit(tx, viewer, { action: "deleted", model: "Maintenance", record: id, title: gone.title });
+        }
       });
     } catch (error) {
       throw refusal(error);
@@ -32264,7 +32594,9 @@ export const maintenanceData = {
       for (const row of rows)
         try {
           const gone = tx.delete(schema.maintenances).where(eq(schema.maintenances.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "deleted", model: "Maintenance", record: row.id, title: gone.title });
+          if (gone) {
+            audit(tx, viewer, { action: "deleted", model: "Maintenance", record: row.id, title: gone.title });
+          }
         } catch (error) {
           const refused = refusal(error);
           throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
@@ -36237,17 +36569,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
   "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/component.server.ts": "8b75586a generated",
+  "src/generated/component.server.ts": "bb337736 generated",
   "src/generated/component.ts": "f156a7db generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
-  "src/generated/incident-update.server.ts": "58ca5de5 generated",
+  "src/generated/incident-update.server.ts": "707f5311 generated",
   "src/generated/incident-update.ts": "78a69a2f generated",
-  "src/generated/incident.server.ts": "f39c6297 generated",
+  "src/generated/incident.server.ts": "a39deaef generated",
   "src/generated/incident.ts": "4411580f generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
-  "src/generated/maintenance.server.ts": "75046b95 generated",
+  "src/generated/maintenance.server.ts": "f9bfae49 generated",
   "src/generated/maintenance.ts": "0a683378 generated",
   "src/generated/mcp.server.ts": "0761c19c generated",
   "src/generated/pages.ts": "f655ddb0 generated",
@@ -36255,7 +36587,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/users.server.ts": "2b5c39fa generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
-  "src/kit/ActivityLog.tsx": "089b16f5 kit",
+  "src/kit/ActivityLog.tsx": "cc467927 kit",
   "src/kit/AppShell.tsx": "ed6055e0 kit",
   "src/kit/Articles.tsx": "a71ac696 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
@@ -36290,9 +36622,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
-  "src/kit/trace.server.ts": "bf682547 kit",
+  "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "93263e3e kit",
+  "src/kit/words.ts": "804427f2 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d35a3346 generated",

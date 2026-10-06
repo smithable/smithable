@@ -17,6 +17,7 @@ import {
 } from "@smithable/core";
 import { textBounds } from "./data.js";
 import { formulaCompiler, formulasName } from "./formulas.js";
+import { mailsAbout, OUTGOING_IMPORT } from "./outgoing.js";
 import {
   attr,
   guard,
@@ -345,13 +346,20 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
   // The writes of one record's plan, inside a transaction ("tx"), each with its audit line,
   // returning what was written.
   const setFields = JSON.stringify(action.set.map((v) => v.field));
-  const writes = (p: string) => `{
+  // Who is told (outgoing mail, integrations.md §4.1b), in the same transaction.
+  const tell = (m: string, what: string, record: string, before = "") =>
+    mailsAbout(ir, m)
+      ? `\n      outgoing(tx, viewer, ${JSON.stringify(m)}, ${what}, ${record}${before && `, ${before}`});`
+      : "";
+  const writes = (
+    p: string,
+  ) => `{${mailsAbout(ir, model.name) ? `\n      const before = tx.select().from(${n.table}).where(eq(${n.table}.id, ${p}.id)).get();` : ""}
       const changed = tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get();
-      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });
+      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });${tell(model.name, JSON.stringify(action.name), "changed", "before")}
       const inserted = [
 ${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: personOf(viewer) }).returning().get(),`).join("\n")}
       ] as const;
-${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });`).join("\n")}
+${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });${tell(target.name, '"created"', `inserted[${i}]`)}`).join("\n")}
       return { changed, inserted };
     }`;
   const hooks = (w: string) =>
@@ -362,7 +370,7 @@ import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
-${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
+${[model.name, ...adds.map((x) => x.target.name)].some((m) => mailsAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
 import { ${n.data} } from "${n.module}.server";
 ${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
@@ -592,7 +600,7 @@ function copyActionServer(
 ${SCHEMA_IMPORT}
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
-${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
+${[model.name, ...lists.map((l) => l.listed.name)].some((m) => mailsAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}";
 import { ${n.data} } from "${n.module}.server";
 ${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
@@ -624,12 +632,12 @@ ${lists
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
     const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: personOf(viewer) }).returning().get();
-    audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });
+    audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });${mailsAbout(ir, model.name) ? `\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, "created", created);\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, ${JSON.stringify(action.name)}, created);` : ""}
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
       const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: personOf(viewer) }).returning().get();
-      audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });
+      audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });${mailsAbout(ir, l.listed.name) ? `\n      outgoing(tx, viewer, ${JSON.stringify(l.listed.name)}, "created", copy);` : ""}
       return copy;
     });`,
   )

@@ -20,6 +20,8 @@ export interface ActivityLine {
   details?: Record<string, string> | null;
   /** When the line is about a deleted record or a removed user: what Forget blanks. */
   forget?: Forgotten;
+  /** A mail that was given up: its id, for "Send again". */
+  resend?: number;
 }
 
 /** An action's name as its button reads it: markSent → mark sent. */
@@ -42,6 +44,7 @@ export function ActivityLog({
   app,
   onFilter,
   onForget,
+  onResend,
 }: {
   lines: ActivityLine[];
   app: AppUi;
@@ -52,6 +55,7 @@ export function ActivityLog({
   actions?: string[];
   onFilter?: (next: ActivityFilters) => void;
   onForget?: (target: Forgotten) => Promise<unknown>;
+  onResend?: (mail: number) => Promise<unknown>;
 }) {
   const set = (key: keyof ActivityFilters, value: string) =>
     onFilter?.({ ...filters, [key]: value || undefined });
@@ -157,6 +161,16 @@ export function ActivityLog({
                     .join(", ")}
                 </span>
               ) : null}
+              {line.resend !== undefined && onResend && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ml-auto h-7"
+                  onClick={() => line.resend !== undefined && onResend(line.resend)}
+                >
+                  {w.sendAgain}
+                </Button>
+              )}
               {line.forget && onForget && (
                 <Button
                   type="button"
