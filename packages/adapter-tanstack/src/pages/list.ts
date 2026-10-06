@@ -736,11 +736,12 @@ ${p.body("Route")}`;
  * The statement that returns a list's rows: all of them, or inside a data page the newest
  * DATA_LIMIT, one more fetched to know whether there are others.
  */
-/** The most records "Export CSV" takes from a list. */
+/** The most records "Export CSV" takes from a list; a visitor of a public list, fewer. */
 const EXPORT_ROWS = 10_000;
+const VISITOR_EXPORT_ROWS = 500;
 
-/** A list's page, or with \`all\` (an export) its first EXPORT_ROWS records. */
-const PAGED_ARGS = `data.all ? 1 : data.page, data.all ? ${EXPORT_ROWS} : undefined`;
+/** A list's page, or with \`all\` (an export) its first records. */
+const PAGED_ARGS = `data.all ? 1 : data.page, data.all ? (viewer ? ${EXPORT_ROWS} : ${VISITOR_EXPORT_ROWS}) : undefined`;
 
 function listed(
   n: ReturnType<typeof names>,

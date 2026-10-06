@@ -7704,7 +7704,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/assistant.server.ts": "a530b6d0 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -13277,7 +13277,7 @@ const listClassTypes = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await classTypeData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(classTypeAccess.create, viewer) };
+    return { ...(await classTypeData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(classTypeAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/class-types/")({
@@ -13592,7 +13592,7 @@ const listInstructors = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await instructorData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(instructorAccess.create, viewer) };
+    return { ...(await instructorData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(instructorAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/instructors/")({
@@ -13814,7 +13814,7 @@ const listMessages = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await messageData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(messageAccess.create, viewer) };
+    return { ...(await messageData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(messageAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/messages/")({
@@ -14037,7 +14037,7 @@ const listBookings = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await bookingData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(bookingAccess.create, viewer) };
+    return { ...(await bookingData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(bookingAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/my-bookings/")({
@@ -14263,7 +14263,7 @@ const listPosts = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await postData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(postAccess.create, viewer) };
+    return { ...(await postData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(postAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/posts/")({
@@ -14617,7 +14617,7 @@ const listSessions = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await sessionData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(sessionAccess.create, viewer) };
+    return { ...(await sessionData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(sessionAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/sessions/")({
@@ -15322,7 +15322,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -15367,7 +15367,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "df43b8eb generated",
   "src/routes/class-types/$id.tsx": "c60fd576 generated",
-  "src/routes/class-types/index.tsx": "a3bd83fc generated",
+  "src/routes/class-types/index.tsx": "d79d9a81 generated",
   "src/routes/class-types/new.tsx": "e05a9aa9 generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -15375,21 +15375,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "7f07c70e generated",
   "src/routes/instructors/$id.tsx": "ac064eb6 generated",
-  "src/routes/instructors/index.tsx": "c57cbb9d generated",
+  "src/routes/instructors/index.tsx": "aaf2d664 generated",
   "src/routes/instructors/new.tsx": "cfdb7137 generated",
   "src/routes/messages/$id.tsx": "db0dbe46 generated",
-  "src/routes/messages/index.tsx": "19e6b7ab generated",
+  "src/routes/messages/index.tsx": "08dc881c generated",
   "src/routes/messages/new.tsx": "fb1a68cd generated",
   "src/routes/my-bookings/$id.tsx": "5e5cec27 generated",
-  "src/routes/my-bookings/index.tsx": "609e34aa generated",
+  "src/routes/my-bookings/index.tsx": "b951034d generated",
   "src/routes/my-bookings/new.tsx": "3bc0c01e generated",
   "src/routes/posts/$id.tsx": "566a0431 generated",
-  "src/routes/posts/index.tsx": "fdc725c4 generated",
+  "src/routes/posts/index.tsx": "4e1f8f8f generated",
   "src/routes/posts/new.tsx": "dd5be2f6 generated",
   "src/routes/robots[.]txt.ts": "f0145ecd generated",
   "src/routes/schedule/index.tsx": "d47f6b6c generated",
   "src/routes/sessions/$id.tsx": "3a9d5927 generated",
-  "src/routes/sessions/index.tsx": "a0c6f4ad generated",
+  "src/routes/sessions/index.tsx": "182d026a generated",
   "src/routes/sessions/new.tsx": "bd534252 generated",
   "src/routes/sign-in.tsx": "50a41d17 generated",
   "src/start.ts": "5379c2a6 kit",
@@ -17809,7 +17809,7 @@ const searchCustomers = createServerFn()
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? contains([schema.customers.name, schema.customers.email], data.q) : undefined;
-    return { ...(await customerData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(customerAccess.create, viewer) };
+    return { ...(await customerData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(customerAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/customers/")({
@@ -18070,7 +18070,7 @@ const searchOrders = createServerFn()
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? or(contains([schema.orders.number], data.q), inArray(schema.orders.customerId, customerData.titled(viewer, data.q))) : undefined;
-    return { ...(await orderData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(orderAccess.create, viewer) };
+    return { ...(await orderData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(orderAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/orders/")({
@@ -18816,7 +18816,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -18837,12 +18837,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "ce821aa3 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
-  "src/routes/customers/index.tsx": "b3aea402 generated",
+  "src/routes/customers/index.tsx": "8a70da97 generated",
   "src/routes/customers/new.tsx": "967ef061 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "8ce133bb generated",
-  "src/routes/orders/index.tsx": "00ed23ba generated",
+  "src/routes/orders/index.tsx": "8bcc8acb generated",
   "src/routes/orders/new.tsx": "c6e61bdb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "7cea9e53 generated",
@@ -22163,7 +22163,7 @@ const listClients = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await clientData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(clientAccess.create, viewer) };
+    return { ...(await clientData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(clientAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/clients/")({
@@ -22422,7 +22422,7 @@ const listInvoiceLines = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await invoiceLineData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(invoiceLineAccess.create, viewer) };
+    return { ...(await invoiceLineData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(invoiceLineAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/invoice-lines/")({
@@ -22692,7 +22692,7 @@ const listInvoices = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await invoiceData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(invoiceAccess.create, viewer) };
+    return { ...(await invoiceData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(invoiceAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/invoices/")({
@@ -23623,7 +23623,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -23646,7 +23646,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/__root.tsx": "92c4080d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "46434e7d generated",
-  "src/routes/clients/index.tsx": "3825604f generated",
+  "src/routes/clients/index.tsx": "ee51cef0 generated",
   "src/routes/clients/new.tsx": "d5b75cc7 generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -23654,10 +23654,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "6acc52d7 generated",
   "src/routes/invoice-lines/$id.tsx": "b0e5b400 generated",
-  "src/routes/invoice-lines/index.tsx": "89d88ab7 generated",
+  "src/routes/invoice-lines/index.tsx": "307cb5a0 generated",
   "src/routes/invoice-lines/new.tsx": "6bbc5727 generated",
   "src/routes/invoices/$id.tsx": "bcdc091f generated",
-  "src/routes/invoices/index.tsx": "e5198d68 generated",
+  "src/routes/invoices/index.tsx": "14f28261 generated",
   "src/routes/invoices/new.tsx": "2156b317 generated",
   "src/routes/overview/index.tsx": "66557c73 generated",
   "src/routes/robots[.]txt.ts": "2fff0478 generated",
@@ -25216,7 +25216,7 @@ const searchItems = createServerFn()
     // The order the viewer chose, among the fields the page offers; else the newest first.
     const order = orderOf({ price: schema.items.price, createdAt: schema.items.createdAt }, data.sort);
     return {
-      ...(await itemData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? 10000 : undefined)),
+      ...(await itemData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(itemAccess.create, viewer),
       options: {  },
       saved,
@@ -25475,7 +25475,7 @@ const searchItems = createServerFn()
       eq(schema.items.ownerId, viewer?.id ?? ""),
     );
     return {
-      ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)),
+      ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(itemAccess.create, viewer),
       options: {  },
     };
@@ -25784,7 +25784,7 @@ const searchItems = createServerFn()
       inArray(schema.items.id, saved),
     );
     return {
-      ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)),
+      ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(itemAccess.create, viewer),
       options: {  },
       saved,
@@ -26469,7 +26469,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
@@ -26495,14 +26495,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "7f2e6d16 generated",
+  "src/routes/index.tsx": "003f7fc3 generated",
   "src/routes/my-items/$id.tsx": "63b106f7 generated",
-  "src/routes/my-items/index.tsx": "4833f562 generated",
+  "src/routes/my-items/index.tsx": "8db041dd generated",
   "src/routes/my-items/new.tsx": "c90fefe5 generated",
   "src/routes/new.tsx": "d45546f7 generated",
   "src/routes/robots[.]txt.ts": "383380da generated",
   "src/routes/saved/$id.tsx": "e2db8cfa generated",
-  "src/routes/saved/index.tsx": "542ae387 generated",
+  "src/routes/saved/index.tsx": "d24f54a0 generated",
   "src/routes/saved/new.tsx": "dc6bc72e generated",
   "src/routes/sign-in.tsx": "50a41d17 generated",
   "src/routes/welcome/index.tsx": "f5193990 generated",
@@ -27928,7 +27928,7 @@ const searchItems = createServerFn()
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? contains([schema.items.name, schema.items.summary], data.q) : undefined;
-    return { ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(itemAccess.create, viewer) };
+    return { ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(itemAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/items/")({
@@ -28504,7 +28504,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -28526,7 +28526,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "1f833f45 generated",
   "src/routes/items/$id.tsx": "b8bbc436 generated",
-  "src/routes/items/index.tsx": "a3e42157 generated",
+  "src/routes/items/index.tsx": "9b89e192 generated",
   "src/routes/items/new.tsx": "09d8b88f generated",
   "src/routes/robots[.]txt.ts": "e5b1c876 generated",
   "src/routes/sign-in.tsx": "50a41d17 generated",
@@ -34902,7 +34902,7 @@ const listComponents = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await componentData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(componentAccess.create, viewer) };
+    return { ...(await componentData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(componentAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/components/")({
@@ -35386,7 +35386,7 @@ const listIncidents = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await incidentData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(incidentAccess.create, viewer) };
+    return { ...(await incidentData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(incidentAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/incidents/")({
@@ -35762,7 +35762,7 @@ const listMaintenances = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await maintenanceData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(maintenanceAccess.create, viewer) };
+    return { ...(await maintenanceData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(maintenanceAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/maintenance/")({
@@ -36324,7 +36324,7 @@ const listIncidentUpdates = createServerFn()
   .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await incidentUpdateData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? 10000 : undefined)), canCreate: allows(incidentUpdateAccess.create, viewer) };
+    return { ...(await incidentUpdateData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(incidentUpdateAccess.create, viewer) };
   });
 
 export const Route = createFileRoute("/updates/")({
@@ -36927,7 +36927,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/api.server.ts": "532ede94 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "1d7c88d5 kit",
+  "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -36959,17 +36959,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/components/$id.tsx": "de279b99 generated",
-  "src/routes/components/index.tsx": "253b0a93 generated",
+  "src/routes/components/index.tsx": "87d8ae24 generated",
   "src/routes/components/new.tsx": "52abed01 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "0bed1abf generated",
   "src/routes/incidents/$id.tsx": "cee486cb generated",
-  "src/routes/incidents/index.tsx": "59aee176 generated",
+  "src/routes/incidents/index.tsx": "cfc3c55d generated",
   "src/routes/incidents/new.tsx": "f47b100b generated",
   "src/routes/index.tsx": "a93cebe7 generated",
   "src/routes/maintenance/$id.tsx": "7b006379 generated",
-  "src/routes/maintenance/index.tsx": "2cc8d78a generated",
+  "src/routes/maintenance/index.tsx": "8c481717 generated",
   "src/routes/maintenance/new.tsx": "38a0b0b8 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "a6c168d7 generated",
@@ -36977,7 +36977,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sign-in.tsx": "416bfaba generated",
   "src/routes/team/index.tsx": "5d5faa8f generated",
   "src/routes/updates/$id.tsx": "d7a59f2d generated",
-  "src/routes/updates/index.tsx": "14e44e13 generated",
+  "src/routes/updates/index.tsx": "f6ed94f6 generated",
   "src/routes/updates/new.tsx": "94947978 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",

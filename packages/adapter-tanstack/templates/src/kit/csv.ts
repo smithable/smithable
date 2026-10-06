@@ -7,9 +7,11 @@ import { w } from "./words";
 const SKIPPED = new Set(["picture", "pictures", "file", "files"]);
 
 /** One cell: quoted when it must be, and never read as a formula by a spreadsheet. */
-function cell(value: unknown): string {
+export function cell(value: unknown): string {
   let text = value == null ? "" : String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  // A number stays a number (-12.50); anything else that starts like a formula, even after
+  // spaces, is written as text.
+  if (!/^-?\d+(\.\d+)?$/.test(text) && /^[=+\-@\t\r]/.test(text.trimStart())) text = `'${text}`;
   return /[",\r\n;]/.test(text) || text !== text.trim() ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
