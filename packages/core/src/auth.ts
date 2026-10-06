@@ -824,6 +824,35 @@ function checkAgainstSpec(
         );
     }
   }
+  // Outgoing mail (integrations.md §4.1b) meets the access rules here. An address typed by a
+  // visitor is not sent to: the app would mail whoever a stranger names. A role that may not
+  // read the record would be told what it holds.
+  for (const o of ir.outgoing) {
+    const r = o.recipient;
+    if (o.to !== "mail" || !r) continue;
+    const model = ir.models.find((m) => m.name === o.when.model);
+    if (!model) continue;
+    const field =
+      r.kind === "field" && r.via === "email" && r.path.length === 1 ? r.path[0] : undefined;
+    const createdByVisitors = publicNodes.create?.find((n) => n.name === model.name);
+    if (field && createdByVisitors)
+      ctx.warning(
+        createdByVisitors.at,
+        "visitor-typed-recipient",
+        `Visitors may add ${model.name} records and type any address in ${field}, so the app does not send "${o.name}" to it: a stranger could make the app mail anyone.`,
+        `Mail the owner or a role instead, or take ${model.name} out of "create" under "public".`,
+      );
+    if (r.kind === "role") {
+      const read = modelAccess(model, auth).read;
+      if (!read.public && !read.roles.includes(r.role))
+        ctx.warning(
+          accessAt,
+          "recipient-cannot-read",
+          `"${o.name}" mails every ${r.role} about ${model.name} records, which ${r.role} may not read: the mail would tell them what the record holds.`,
+          `Let ${r.role} read ${model.name} (access: { read: [...] } on the model), or mail another role.`,
+        );
+    }
+  }
   // A public landing page's shortcuts are for visitors (one behind sign-in has none to mislead):
   // a shortcut to a page they cannot open meets sign-in.
   // (A hero's button into the app is often meant to: "Get started" leads to signing in.)
