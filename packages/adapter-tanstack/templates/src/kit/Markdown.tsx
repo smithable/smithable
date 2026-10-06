@@ -3,6 +3,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Textarea } from "#/components/ui/input";
 import type { FieldControlProps } from "./model";
+import { w } from "./words";
 
 const Formatted = lazy(() => import("./MarkdownFormatted"));
 
@@ -30,7 +31,7 @@ export function MarkdownEditor({ value, onChange, record: _, ...control }: Field
           aria-pressed={!preview}
           onClick={() => setPreview(false)}
         >
-          Write
+          {w.write}
         </button>
         <button
           type="button"
@@ -38,7 +39,7 @@ export function MarkdownEditor({ value, onChange, record: _, ...control }: Field
           aria-pressed={preview}
           onClick={() => setPreview(true)}
         >
-          Preview
+          {w.preview}
         </button>
       </div>
       {preview ? (
@@ -46,7 +47,7 @@ export function MarkdownEditor({ value, onChange, record: _, ...control }: Field
           {value.trim() ? (
             <MarkdownText text={value} />
           ) : (
-            <p className="text-muted-foreground">Nothing to preview.</p>
+            <p className="text-muted-foreground">{w.nothingToPreview}</p>
           )}
         </div>
       ) : (

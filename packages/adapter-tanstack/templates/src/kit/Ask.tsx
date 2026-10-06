@@ -7,6 +7,7 @@ import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import type { Answer } from "./assistant.server";
 import { Shown } from "./Inspector";
+import { w } from "./words";
 
 export function Ask({
   ask,
@@ -43,7 +44,7 @@ export function Ask({
         className="fixed right-4 bottom-4 z-20 shadow-lg"
         onClick={() => sheet.current?.showModal()}
       >
-        Ask
+        {w.ask}
       </Button>
       <dialog
         ref={sheet}
@@ -53,28 +54,26 @@ export function Ask({
         <div className="flex max-h-[85vh] flex-col gap-4 overflow-y-auto p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 id="ask-title" className="text-lg font-semibold">
-              Ask
+              {w.ask}
             </h2>
             <Button type="button" variant="ghost" size="sm" onClick={() => sheet.current?.close()}>
-              Close
+              {w.close}
             </Button>
           </div>
           <form onSubmit={submit} className="space-y-2">
             <div className="flex gap-2">
               <Input
                 aria-label="Question"
-                placeholder="How many … ? Show the … that …"
+                placeholder={w.askPlaceholder}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 className="flex-1"
               />
               <Button type="submit" disabled={busy || !question.trim()}>
-                {busy ? "Asking…" : "Ask"}
+                {busy ? w.asking : w.ask}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Answers may come from an AI and can be wrong. Check what matters.
-            </p>
+            <p className="text-xs text-muted-foreground">{w.aiMayBeWrong}</p>
           </form>
           <ol className="space-y-3">
             {asked.map((a, i) => (
@@ -86,9 +85,9 @@ export function Ask({
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-medium">{a.question}</p>
                   {a.answer?.source === "records" && (
-                    <Badge variant="success">From your records</Badge>
+                    <Badge variant="success">{w.fromYourRecords}</Badge>
                   )}
-                  {a.answer?.source === "ai" && <Badge>AI</Badge>}
+                  {a.answer?.source === "ai" && <Badge>{w.ai}</Badge>}
                 </div>
                 {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
                 {a.answer && <Shown answer={a.answer} trace={false} confirm={confirm} />}

@@ -4,6 +4,7 @@ import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
 import { useRef } from "react";
 import { allows, type Rule, type Viewer } from "./access";
 import { textMarker } from "./model";
+import { w } from "./words";
 
 export interface MenuUi {
   name: string;
@@ -44,7 +45,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
       >
         <button
           type="button"
-          aria-label="Open menu"
+          aria-label={w.openMenu}
           className={`${sidebarItem} size-11 justify-center px-0`}
           onClick={() => drawer.current?.showModal()}
         >
@@ -66,7 +67,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
           </p>
           <button
             type="button"
-            aria-label="Close menu"
+            aria-label={w.closeMenu}
             className={`${sidebarItem} size-11 justify-center px-0`}
             onClick={() => drawer.current?.close()}
           >
@@ -156,12 +157,12 @@ function Navigation({
               <p className="capitalize">{viewer.role}</p>
               <button type="button" onClick={onSignOut} className={`${sidebarItem} -mx-3 mt-2`}>
                 <LogOut aria-hidden className="size-5" />
-                Sign out
+                {w.signOut}
               </button>
             </>
           ) : (
             <a href="/sign-in" className={`${sidebarItem} -mx-3`}>
-              Sign in
+              {w.signIn}
             </a>
           )}
         </div>

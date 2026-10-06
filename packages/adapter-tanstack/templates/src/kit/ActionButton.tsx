@@ -6,6 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ModelForm } from "./ModelForm";
 import type { AppUi, ModelUi } from "./model";
+import { w } from "./words";
 
 export function ActionButton({
   label,
@@ -27,7 +28,7 @@ export function ActionButton({
     try {
       await onRun();
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "Something went wrong.");
+      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
     }
     setBusy(false);
   };

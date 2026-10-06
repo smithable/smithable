@@ -6,6 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ActionButton } from "./ActionButton";
 import type { AppUi, ModelUi } from "./model";
+import { w } from "./words";
 
 export interface SelectionAction {
   label: string;
@@ -44,12 +45,12 @@ export function SelectionBar({
   const [busy, setBusy] = useState(false);
   const confirm = useRef<HTMLDialogElement>(null);
   const counted = (done: number, skipped: number, verb: string) =>
-    `${done} ${done === 1 ? noun[0] : noun[1]} ${verb}${skipped ? `, ${skipped} skipped` : ""}.`;
+    w.counted(done, noun[0], noun[1], verb, skipped);
   // A refusal from the server: "in-use:12" names the record still in use.
   const words = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
     const inUse = /^in-use:(\d+)$/.exec(text);
-    return inUse ? `"${titleOf(Number(inUse[1]))}" is still in use, so nothing was deleted.` : text;
+    return inUse ? w.stillInUse(titleOf(Number(inUse[1]))) : text;
   };
   if (count === 0 && !message) return null;
   return (
@@ -128,10 +129,10 @@ export function SelectionBar({
                 confirm.current?.close();
               }}
             >
-              Delete
+              {w.delete}
             </Button>
             <Button type="button" variant="outline" onClick={() => confirm.current?.close()}>
-              Cancel
+              {w.cancel}
             </Button>
           </div>
         </Card>

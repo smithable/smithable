@@ -6,6 +6,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
+import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
 
 /** Where a calendar is: a week (`2026-W40`) or a month (`2026-10`), as in the page's address. */
@@ -219,18 +220,18 @@ export function Calendar({
         <Button
           type="button"
           variant="outline"
-          aria-label="Previous"
+          aria-label={w.previous}
           onClick={() => onNavigate(range.prev)}
         >
           <ChevronLeft aria-hidden className="size-4" />
         </Button>
         <Button type="button" variant="outline" onClick={() => onNavigate(range.today)}>
-          Today
+          {w.today}
         </Button>
         <Button
           type="button"
           variant="outline"
-          aria-label="Next"
+          aria-label={w.next}
           onClick={() => onNavigate(range.next)}
         >
           <ChevronRight aria-hidden className="size-4" />
@@ -244,7 +245,7 @@ export function Calendar({
           className="ml-auto"
           onClick={() => onNavigate(range.other)}
         >
-          {range.view === "week" ? "Month" : "Week"}
+          {range.view === "week" ? w.month : w.week}
         </Button>
       </div>
 
@@ -300,7 +301,7 @@ export function Calendar({
                       <button
                         key={h}
                         type="button"
-                        aria-label={`${newLabel}, ${longDay(d)} at ${clock(h * 60)}`}
+                        aria-label={w.newAt(newLabel, longDay(d), clock(h * 60))}
                         className="absolute inset-x-0 hidden border-t border-border/50 hover:bg-muted md:block"
                         style={{
                           top: `${((h - firstHour) * 60 * 100) / span}%`,
@@ -310,7 +311,7 @@ export function Calendar({
                       />
                     ))}
                 {records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground md:sr-only">Nothing</p>
+                  <p className="text-sm text-muted-foreground md:sr-only">{w.nothing}</p>
                 ) : (
                   <ol className="space-y-1 md:space-y-0">
                     {records.map((p) => (
@@ -367,7 +368,7 @@ export function Calendar({
         )}
         <div className="mt-6 flex justify-end">
           <Button type="button" variant="outline" onClick={() => panel.current?.close()}>
-            Close
+            {w.close}
           </Button>
         </div>
       </dialog>
