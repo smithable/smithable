@@ -50,7 +50,7 @@ Call ClassType records "Passtyp" and "Passtyper". Undo with: smithable undo
 
 Each writes `label` and `pluralLabel` into the content file, and renames the list pages that carried the old name. `smithable validate` now says only `smithable.yml is valid: 6 models, 10 pages.`
 
-The app builds its phrases around these names so that they read right in Swedish whatever the word's gender: **Lägg till pass**, **Inga bokningar ännu**, **Ta bort den här posten?**
+The app builds its phrases around these names so that they read right in Swedish whatever the word's gender: **Lägg till pass**, **Inga bokningar ännu**.
 
 ## 3. Translate your own texts
 
@@ -61,12 +61,19 @@ smithable op setText "Boka en matta" models Booking reserve book
 smithable op setText "Inga mattor kvar" models Booking reserve full
 smithable op setText "Schema" pages schedule title
 smithable op setText "En stund bara för dig." pages schedule subtitle
+smithable op setText "Börjar" models Session fields startsAt label
+smithable op setText "Platser" models Session fields capacity label
+smithable op setText "Mina bokningar" pages my-bookings title
 ```
 
 ```text
 Change the text models.Booking.reserve.book to "Boka en matta". Undo with: smithable undo
 …
 ```
+
+A field's label and a page's title that you never wrote come from their names in `smithable.yml` (`startsAt` reads "Starts at"), so they are English too until you give them a text. Dates and times are shown the way the reader's browser writes them.
+
+![The booking app in Swedish: the list of sessions titled Pass, with a Lägg till pass button, Swedish column headings and menu, and Swedish dates](language/sessions.webp)
 
 ## 4. What stays English, on purpose
 
