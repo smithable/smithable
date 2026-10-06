@@ -538,6 +538,19 @@ export const CONTENT_SCHEMA: JsonSchema = {
         properties: { label: { type: "string" } },
       },
     },
+    outgoing: {
+      type: "object",
+      description:
+        "An outgoing mail's words, by its name in smithable.yml: { bookingMade: { subject: Your booking, text: Thank you! } }. The record follows the text.",
+      additionalProperties: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          subject: { type: "string", description: "The mail's subject; else the record's title." },
+          text: { type: "string", description: "A sentence or two above the record's details." },
+        },
+      },
+    },
   },
 };
 

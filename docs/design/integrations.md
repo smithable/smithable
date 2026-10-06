@@ -96,6 +96,29 @@ outgoing:
 - **Where the address lives:** a setting named after the target: `OUTGOING_STATUSFEED_URL` and `OUTGOING_STATUSFEED_SECRET` in the environment for a self-hosted app; the project's "Connections" page on the hosted service. Without it the outbox keeps the calls and a release check says the target is not set.
 - **Guard:** the app refuses addresses that point at itself or at private networks, so a wrong setting cannot make the app call the machine it runs on.
 - **Mail the same way (step 4b):** `to: mail` with `recipient: owner | <role> | <email field>` and a text in the content file, through the mail outbox that already exists. "Send a confirmation when a booking is made" is the most common outgoing call of all, and today it is custom code.
+
+#### 4.1b Mail, in detail (Johan's go, 2026-10-06: "events, mail first")
+
+```yaml
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner                 # the record's owner; or a role (admin); or an email field
+  invoiceSent:
+    when: send                       # an action: fires when it has run
+    to: mail
+    recipient: customer.email        # a field of the record, or one reference away
+```
+
+- **`when`** is `<Model> created | changed | deleted`, or the name of a standard action (the model is the action's `on`). With `where`, a creation or deletion counts when the record fits it; a change counts when the record fits it after the change and did not before ("when an order becomes shipped"), so an edit to a shipped order sends nothing. Without `where`, every change counts.
+- **`recipient`**, for mail: `owner` (the record's owner, who must have an address: a record without an owner sends nothing); a role from the auth file (every user who has it; `admin` is always one); an `email` field of the record, or `<reference>.<email field>` one step away (`customer.email`); a field that refers to User, or `<reference>.<user field>` (the person's address). One recipient per entry; two entries for two.
+- **The mail** says what happened in the app's language: the subject is the content file's, else "<Model label>: <record title>" ("Booking: Yoga Basics, 12 Oct"); the body is the content file's text, if any, then the record's fields as the record page shows them (labels, formatted values, references by their title, nothing a `files` or `pictures` field holds), then a link to the record for someone who can sign in. No placeholders in the texts: the record follows the text as it is, so there is no template language to learn or to get wrong; one comes when a project needs a sentence with a value in it.
+- **Texts** live in `smithable.content.yml`: `outgoing: { bookingMade: { subject: Your booking, text: Thank you, we look forward to seeing you. } }`, checked against the spec's names like the models' texts.
+- **Who is not mailed:** the person whose change it is, when they are the recipient (their own edit needs no mail), and anyone with no address. A deletion mails about the record as it was. Development puts the mail in the outbox the sign-in codes use; a release needs the mail provider set, as sign-in does.
+- **Operations:** `addOutgoing <name> --when "Booking created" --to mail --recipient owner [--where status=confirmed]`, `removeOutgoing <name>`. The summary line: "When a booking is added: mails its owner." / "When an invoice is sent: mails the customer's email." A removed field, action or renamed choice value is followed or refused as for actions.
+- **Order:** core first (the section, the operations, validation, the summary, the schema, the spec reference; Fable, 2026-10-06), then the adapter (A): the outbox row written in the change's transaction by the generated hooks and the action's server function, the sender beside the mail outbox with the retries, the mail's rendering from the record page's formatting, the Activity line, test-apps steps on booking (a member books: the member is mailed; the admin changes it: the member is mailed, not the admin). A `to` other than `mail` is refused by the generator until §4.1's signed call is built.
+
 - **Operations:** `addOutgoing <name> --when "Incident created" [--where field=value…] --to <target>`, `removeOutgoing <name>`.
 - **Summary:** "When an incident is added that is investigating or identified: tells the status feed."
 

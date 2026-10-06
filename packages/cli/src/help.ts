@@ -334,6 +334,7 @@ export function operationHelp(op: AnyOperation): string {
         role: "a role",
         choiceValue: "a choice value",
         section: "a landing section",
+        outgoing: "an outgoing entry's name",
       }[ref] ??
       (p.enum
         ? (p.enum as unknown[]).map(String).join(" or ")

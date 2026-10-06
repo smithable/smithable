@@ -25,6 +25,7 @@ const NAMES = {
   action: [FIELD_NAME_PATTERN, "Action name", LOWER, '"mergeCustomers"'],
   tile: [FIELD_NAME_PATTERN, "Tile name", LOWER, '"totalFuelCost"'],
   query: [FIELD_NAME_PATTERN, "Query name", LOWER, '"churnRisk"'],
+  outgoing: [FIELD_NAME_PATTERN, "Outgoing name", LOWER, '"bookingMade"'],
   role: [FIELD_NAME_PATTERN, "Role name", LOWER, '"staff"'],
   page: [NAME_PATTERN, "Page name", DASHED, '"orders" or "my-bookings"'],
   menu: [NAME_PATTERN, "Menu name", DASHED, '"main"'],

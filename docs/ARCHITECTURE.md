@@ -33,7 +33,7 @@ Every change, whether it comes from the CLI, Studio, AI or a plugin, goes throug
 
 The manifest describes application functionality in technology-neutral terms. It never contains React, Drizzle, Tailwind, file paths, CSS or visible copy.
 
-v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions, `actions`, `queries`, `pages`, `navigation`, `jobs`. Integrations and external endpoints come later. Roles, access defaults and everything public are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
+v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions, `actions`, `outgoing` (who is told when something happens to a record: mail, later a signed call; [design/integrations.md §4](design/integrations.md)), `queries`, `pages`, `navigation`, `jobs`. Incoming integrations and external endpoints come later. Roles, access defaults and everything public are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
 
 ### 2.2 Style: neat by default, explicit when needed
 
