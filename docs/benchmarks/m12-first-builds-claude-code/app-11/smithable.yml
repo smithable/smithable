@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: Is the API working? Live status, incidents and planned maintenance.
+  description: "The live state of our API: incidents as they happen and planned maintenance ahead."
 models:
   Component:
     fields:
@@ -61,6 +61,9 @@ pages:
           status: resolved
       planned:
         records: Maintenance
+  privacy:
+    route: /privacy
+    legal: privacy
   overview:
     dashboard:
       open:

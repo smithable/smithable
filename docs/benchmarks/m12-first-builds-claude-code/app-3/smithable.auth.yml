@@ -3,5 +3,5 @@ signIn:
   providers: [email]
 defaultAccess: private
 public:
-  pages: [home]
+  pages: [home, privacy]
 admins: [johan@smithable.ai]

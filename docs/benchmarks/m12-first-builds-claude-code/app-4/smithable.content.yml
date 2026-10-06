@@ -2,11 +2,6 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Borrow the tool, skip the store
-      subtitle: "Drills, ladders, hedge trimmers: your neighbors already own them. Browse what's nearby and ask to borrow it."
-      button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
-    latest:
-      title: Available now
