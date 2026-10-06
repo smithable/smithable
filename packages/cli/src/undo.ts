@@ -27,7 +27,8 @@ export function undo(dir: string, io: Io): number {
     for (const match of body.matchAll(/This reverts commit ([0-9a-f]{40})/g))
       reverted.add(match[1] ?? "");
     if (!subject.startsWith("smithable: ") || subject === "smithable: start of history") continue;
-    if (reverted.has(sha)) continue;
+    // A change that set the project up for its owner (op --setup) is not the owner's to undo.
+    if (reverted.has(sha) || trailer(body, "Smithable-Setup")) continue;
     const snapshot = trailer(body, "Smithable-Snapshot");
     target = { sha, subject, ...(snapshot && snapshot !== "none" ? { snapshot } : {}) };
     break;
