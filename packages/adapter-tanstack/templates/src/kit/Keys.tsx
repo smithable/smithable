@@ -179,7 +179,7 @@ export function Keys({
           </select>
         </label>
         <label htmlFor={`${id}-until`} className="grid gap-1 text-sm">
-          Ends (optional)
+          {w.endsOptional}
           <Input
             id={`${id}-until`}
             type="date"
@@ -223,10 +223,12 @@ export function Keys({
               <span className="font-medium">{k.name}</span>
               <span>{label(k.role)}</span>
               <code className="text-muted-foreground">{k.prefix}…</code>
-              <span className="text-muted-foreground">ends {day(k.expiresAt)}</span>
-              <span className="text-muted-foreground">last used {day(k.lastUsedAt)}</span>
+              <span className="text-muted-foreground">{w.endsOn(day(k.expiresAt))}</span>
+              <span className="text-muted-foreground">{w.lastUsed(day(k.lastUsedAt))}</span>
               {k.revokedAt ? (
-                <span className="ml-auto text-muted-foreground">Revoked {day(k.revokedAt)}</span>
+                <span className="ml-auto text-muted-foreground">
+                  {w.revokedOn(day(k.revokedAt))}
+                </span>
               ) : (
                 <Button
                   type="button"

@@ -48,7 +48,7 @@ export function ContactOwner({
   return (
     <Card data-kit="contact-owner" className="mt-10 max-w-3xl p-card">
       <h2 id={`${id}-title`} className="text-lg font-semibold">
-        Contact the {recipient}
+        {w.contactThe(recipient)}
       </h2>
       {state === "sent" ? (
         <p role="status" className="mt-4">
