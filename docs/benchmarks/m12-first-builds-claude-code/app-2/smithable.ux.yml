@@ -1,22 +1,10 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
 smithableUx: 0.1
-pages:
-  deals:
-    table:
-      columns: [title, company, stage, value, expectedClose, salesperson]
-    icon: briefcase
-  follow-ups:
-    table:
-      columns: [due, kind, deal, assignee, status]
-      sort: due
-    icon: calendar
-  companies:
-    icon: building
-  contacts:
-    icon: users
+
+theme:
+  preset: corporate
+  density: compact          # an internal tool: more rows on screen
+
+
 tones:
-  Deal.stage:
-    won: success
-    lost: danger
-    negotiation: warning
-  FollowUp.status:
-    done: success
+  Order.status: { shipped: success, canceled: danger }

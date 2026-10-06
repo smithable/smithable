@@ -7,8 +7,8 @@ public:
   read: [Team, Player, Match]
 roles:
   admin:
-    description: "Runs the club's site: teams, players and matches."
+    description: "Runs the club's site: teams, players, matches and results."
   member:
-    description: A club member who follows the teams.
+    description: A club member who signs in to follow the club.
 defaultRole: member
 admins: [johan@smithable.ai]

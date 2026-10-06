@@ -2,17 +2,15 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Riverside FC
-      subtitle: Fixtures, results and squads for every team in the club.
-      button: See all matches
+      title: Welcome to the club
+      subtitle: Follow our teams, meet the players and catch up on every fixture and result.
+      button: See fixtures and results
       image:
         src: images/hero.webp
-        alt: A team standing at a whiteboard by a window over the harbour
-    fixtures:
-      title: Upcoming fixtures
+        alt: People playing badminton and stretching in a sports hall with a wooden floor
+    upcoming:
+      title: Upcoming matches
     results:
       title: Latest results
-    squads:
+    ourTeams:
       title: Our teams
-    footer:
-      text: Riverside FC · Come on you Rivers!

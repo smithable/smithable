@@ -7,10 +7,12 @@ pages:
     icon: calendar
   players:
     table:
+      columns: [shirtNumber, name, position, team]
       sort: shirtNumber
-      columns: [shirtNumber, name, team, position]
     icon: user
   teams:
+    table:
+      sort: name
     icon: users
 tones:
   Match.status:
@@ -21,4 +23,3 @@ theme:
   preset: modern
   brand:
     primary: "#15803d"
-    font: Inter
