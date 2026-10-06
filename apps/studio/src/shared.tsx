@@ -1,5 +1,5 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type TraceEntry } from "./api";
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
@@ -56,6 +56,10 @@ export function Preview({
     server: "starting" as "starting" | "up" | "down",
   });
   const server = answer.key === frameKey ? answer.server : "starting";
+  // The address a frame is made with, fixed for that frame: the app's own navigation inside it
+  // updates the address bar (current), and a src that followed would load the page again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new frame (frameKey) takes the page shown now
+  const src = useMemo(() => `${url}${current.current}`, [frameKey, url]);
   // The last page that was up stays on screen while the next one starts (a change can restart
   // the app's server for seconds), instead of an empty panel.
   // It is the last frame whose page said it was ready: one that loaded an error page while the
@@ -294,7 +298,7 @@ export function Preview({
                   key={frameKey}
                   title="App preview"
                   data-flashed={flashedConcepts}
-                  src={`${url}${current.current}`}
+                  src={src}
                   onLoad={loaded}
                   className={cx("absolute inset-0 h-full w-full border-0", stale && "opacity-0")}
                 />

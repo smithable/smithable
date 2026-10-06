@@ -5,6 +5,7 @@
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "#/components/ui/button";
+import { AppLink } from "./AppLink";
 import { w } from "./words";
 
 export interface Places {
@@ -111,12 +112,12 @@ export function Reserve({
           )}
         </div>
       ) : !places.signedIn ? (
-        <a
+        <AppLink
           href={`/sign-in?redirect=${encodeURIComponent(here)}`}
           className={buttonVariants({ variant: "default" })}
         >
           {w.signInToBook}
-        </a>
+        </AppLink>
       ) : places.canBook && !full ? (
         <Button type="button" disabled={busy} onClick={() => run(() => book({ data: id }))}>
           {busy ? w.booking : bookLabel}

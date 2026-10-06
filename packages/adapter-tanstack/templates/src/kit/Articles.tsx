@@ -2,6 +2,7 @@
 // picture, date, author and formatted body, and links to the ones before and after it.
 // To change them, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
+import { AppLink } from "./AppLink";
 import { MarkdownText } from "./Markdown";
 import { w } from "./words";
 
@@ -44,12 +45,12 @@ export function ArticleList({
                 {item.date && <p className="text-sm text-muted-foreground">{item.date}</p>}
                 <h2 className="text-lg font-semibold">
                   {/* The whole card opens the article; the link is the title. */}
-                  <a
+                  <AppLink
                     href={item.href}
                     className="outline-none after:absolute after:inset-0 focus-visible:underline"
                   >
                     {item.title}
-                  </a>
+                  </AppLink>
                 </h2>
                 {item.summary && <p className="text-muted-foreground">{item.summary}</p>}
               </div>
@@ -60,16 +61,16 @@ export function ArticleList({
       {(older || newer) && (
         <nav aria-label={w.moreArticles} className="flex justify-between gap-4">
           {newer ? (
-            <a href={newer} className="font-medium text-primary">
+            <AppLink href={newer} className="font-medium text-primary">
               {w.newerArticles}
-            </a>
+            </AppLink>
           ) : (
             <span />
           )}
           {older && (
-            <a href={older} className="font-medium text-primary">
+            <AppLink href={older} className="font-medium text-primary">
               {w.olderArticles}
-            </a>
+            </AppLink>
           )}
         </nav>
       )}
@@ -117,9 +118,9 @@ export function ArticleView({
           <p className="text-muted-foreground">{[date, author].filter(Boolean).join(" · ")}</p>
         )}
         {edit && (
-          <a href={edit} className="text-sm font-medium text-primary">
+          <AppLink href={edit} className="text-sm font-medium text-primary">
             {w.edit}
-          </a>
+          </AppLink>
         )}
       </header>
       <div className="text-lg">
@@ -128,16 +129,16 @@ export function ArticleView({
       {(previous || next) && (
         <nav aria-label={w.otherArticles} className="flex justify-between gap-4 border-t pt-6">
           {previous ? (
-            <a href={previous.href} className="text-primary">
+            <AppLink href={previous.href} className="text-primary">
               ← {previous.title}
-            </a>
+            </AppLink>
           ) : (
             <span />
           )}
           {next && (
-            <a href={next.href} className="text-right text-primary">
+            <AppLink href={next.href} className="text-right text-primary">
               {next.title} →
-            </a>
+            </AppLink>
           )}
         </nav>
       )}
