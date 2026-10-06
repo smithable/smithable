@@ -1,7 +1,9 @@
 // The keys a list offers its viewer besides search: filters and a sort choice (marketplace.md
 // §2.2). Shared by crud pages and a landing page's records section.
+
 import type { At, ParseContext } from "../context.js";
 import type { FieldIR, ModelIR, SpecIR } from "../ir.js";
+import { isUpload } from "../ir.js";
 import { didYouMean } from "../suggest.js";
 
 /** A number or a date: a filter offers a range, "from" and "to". */
@@ -27,7 +29,8 @@ export const sortableBy = (field: FieldIR): boolean =>
   !field.formula &&
   (field.type.kind === "choice" ||
     (field.type.kind === "scalar" &&
-      !["text", "markdown", "picture", "pictures", "file", "files"].includes(field.type.name)));
+      !["text", "markdown"].includes(field.type.name) &&
+      !isUpload(field)));
 
 /** A model's fields a list could be filtered by, in the model's order. */
 export const filterableFields = (model: ModelIR): string[] =>

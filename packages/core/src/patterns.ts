@@ -30,6 +30,8 @@ import {
   SECTION_KINDS,
   type SectionKind,
   type SpecIR,
+  storesFiles,
+  storesPictures,
 } from "./ir.js";
 import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Note, Refusal } from "./operation.js";
@@ -654,11 +656,9 @@ function readCalculator(
     const unfit =
       field.type.kind === "relation"
         ? "cannot refer to records"
-        : field.type.kind === "scalar" &&
-            (field.type.name === "picture" || field.type.name === "pictures")
+        : storesPictures(field)
           ? "cannot be a picture"
-          : field.type.kind === "scalar" &&
-              (field.type.name === "file" || field.type.name === "files")
+          : storesFiles(field)
             ? "cannot be a document"
             : field.unique
               ? "cannot be unique"
