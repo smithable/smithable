@@ -295,7 +295,7 @@ export function App() {
         <span className="min-w-0 truncate text-sm text-neutral-500">
           {project.making ? "" : project.name}
         </span>
-        <fieldset className="flex rounded-md bg-neutral-100 p-0.5 sm:ml-4">
+        <fieldset data-guide="mode" className="flex rounded-md bg-neutral-100 p-0.5 sm:ml-4">
           <legend className="sr-only">Mode</legend>
           {(["builder", "studio"] as const).map((m) => (
             <label
@@ -434,7 +434,11 @@ export function App() {
       )}
       {reporting && <ReportDialog onClose={() => setReporting(false)} />}
       {guiding && mode === "builder" && !project.making && (
-        <Guide app={project.name} onEnd={() => setGuiding(false)} />
+        <Guide
+          app={project.name}
+          onEnd={() => setGuiding(false)}
+          onCode={() => switchMode("studio")}
+        />
       )}
       {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
           never moves in the page, so switching modes keeps its page. Wide windows show it on
