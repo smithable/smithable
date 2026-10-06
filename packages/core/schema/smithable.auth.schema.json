@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://docs.smithable.ai/schema/smithable-auth-0.1.json",
+  "title": "smithable.auth.yml",
+  "description": "Who signs in, the roles, the default access, and what is public.",
+  "type": "object",
+  "required": [
+    "smithableAuth"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "smithableAuth": {
+      "description": "The file format version.",
+      "enum": [
+        0.1,
+        "0.1"
+      ]
+    },
+    "signIn": {
+      "description": "\"none\" for an app without sign-in (only \"public\" is reachable then), or how people sign in.",
+      "oneOf": [
+        {
+          "const": "none"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "providers": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "email",
+                  "google",
+                  "facebook"
+                ]
+              },
+              "description": "The sign-in methods, in button order: email, google, facebook."
+            },
+            "allowedDomains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only addresses on these domains may sign up, e.g. [acme.example]."
+            },
+            "selfSignUp": {
+              "type": "boolean",
+              "description": "Whether anyone with an account at a provider may sign up (true by default); false lets only invited addresses and the admins sign in."
+            }
+          }
+        }
+      ]
+    },
+    "defaultAccess": {
+      "enum": [
+        "shared",
+        "private"
+      ],
+      "description": "The default access to records: shared (colleagues see each other's) or private (each sees their own)."
+    },
+    "roles": {
+      "type": "object",
+      "description": "The roles, by name (camelCase), each with an optional description. admin always exists, and so does a role for everyone else: member, when none is named.",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "What the role is for, in a sentence."
+              }
+            }
+          }
+        ]
+      }
+    },
+    "defaultRole": {
+      "type": "string",
+      "description": "The role new users get; never admin."
+    },
+    "admins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Email addresses that get the admin role when they first sign in, and may always sign in."
+    },
+    "public": {
+      "type": "object",
+      "description": "What anyone may open, read or create without signing in.",
+      "additionalProperties": false,
+      "properties": {
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pages anyone may open (the sign-in page always is)."
+        },
+        "read": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "A model anyone may read."
+              },
+              {
+                "type": "object",
+                "description": "A model with only the records that have these values: { Post: { where: { status: published } } }.",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "where"
+                  ],
+                  "properties": {
+                    "where": {
+                      "type": "object",
+                      "description": "A choice field's value or a list of them, or a yes/no field's true or false."
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Models anyone may read, or only the records of them with certain values."
+        },
+        "create": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Models anyone may create a record of, e.g. a contact form's."
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "description": "What other programs may reach with a key, under /api/v1. A key is made in the app by an administrator, with a role, and that role's access decides what it may do.",
+      "additionalProperties": false,
+      "required": [
+        "models"
+      ],
+      "properties": {
+        "models": {
+          "description": "all (also models added later), or the models other programs may reach.",
+          "oneOf": [
+            {
+              "const": "all"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The models, e.g. [Customer, Order]."
+            }
+          ]
+        },
+        "except": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With all: the models left out."
+        },
+        "actions": {
+          "description": "Standard actions of the offered models they may run: all, or a list.",
+          "oneOf": [
+            {
+              "const": "all"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actions, e.g. [markPaid]."
+            }
+          ]
+        },
+        "assistants": {
+          "description": "true offers the same to AI assistants as tools (/mcp); { delete: true } lets them delete too.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "delete": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "assistant": {
+      "type": "object",
+      "description": "\"Ask\", the assistant in the app, for the people who use it. It acts as the person asking.",
+      "additionalProperties": false,
+      "required": [
+        "for"
+      ],
+      "properties": {
+        "for": {
+          "description": "Who gets it: the roles ([admin, staff]), or signed-in (everyone who signs in), or anyone (visitors too, answered by the app's wording rules over what is public, never by a model).",
+          "oneOf": [
+            {
+              "enum": [
+                "signed-in",
+                "anyone"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The roles that get it."
+            }
+          ]
+        },
+        "may": {
+          "enum": [
+            "read",
+            "change"
+          ],
+          "description": "read (the default): it finds, counts and adds up; change: it also adds, changes and runs standard actions, each confirmed by the person. It never deletes."
+        }
+      }
+    }
+  }
+}

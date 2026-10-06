@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://docs.smithable.ai/schema/smithable-context-0.1.json",
+  "title": "smithable.context.yml",
+  "description": "Implementation choices: the adapter, the database, conventions, packages, plugins and the AI policy. The only file that may name technologies.",
+  "type": "object",
+  "required": [
+    "smithableContext"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "smithableContext": {
+      "enum": [
+        0.1
+      ],
+      "description": "The file format version."
+    },
+    "adapter": {
+      "type": "string",
+      "description": "The adapter that generates the app (tanstack)."
+    },
+    "database": {
+      "type": "string",
+      "description": "The database the app stores its records in (sqlite)."
+    },
+    "conventions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Conventions custom code follows, one per line, for people and models writing it."
+    },
+    "guidance": {
+      "type": "string",
+      "description": "What a model writing custom code should know about this app."
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The project's own plugins (smithable/plugins/<name>/), by name."
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "description": "Libraries for custom code: name to exact version."
+    },
+    "ai": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "enum": [
+            "local-only",
+            "eu-only",
+            "best-available",
+            "custom"
+          ],
+          "description": "local-only, eu-only, best-available (the default when nothing is said), or custom."
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With custom: the models allowed, by name."
+        }
+      },
+      "description": "Where a model may run: the policy, and with custom the models allowed."
+    }
+  }
+}

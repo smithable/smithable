@@ -2,7 +2,14 @@ import { Ajv } from "ajv";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import schemaText from "../schema/smithable.schema.json?raw";
+import { COMPANION_SCHEMAS } from "./companion-schemas.js";
 import { buildJsonSchema } from "./schema.js";
+
+const companions = import.meta.glob("../schema/smithable.*.schema.json", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 const valid = {
   ...import.meta.glob("./__fixtures__/valid/*.yml", {
@@ -21,6 +28,11 @@ const validate = new Ajv({ allErrors: true }).compile(buildJsonSchema());
 
 test("the committed schema file is up to date (run `pnpm schema` to regenerate)", () => {
   expect(JSON.parse(schemaText)).toEqual(buildJsonSchema());
+  for (const [file, schema] of Object.entries(COMPANION_SCHEMAS)) {
+    const committed = companions[`../schema/${file.replace(/\.yml$/, ".schema.json")}`];
+    expect(committed, file).toBeDefined();
+    expect(JSON.parse(committed as string), file).toEqual(schema);
+  }
 });
 
 describe("every valid spec matches the published JSON Schema", () => {

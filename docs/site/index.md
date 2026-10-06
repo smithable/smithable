@@ -17,6 +17,6 @@ Routine changes are made by deterministic generators, not by an AI rewriting cod
   - [Run an app on your own machine](self-host.md): deploying, backing up, restoring and updating.
 - **[The spec reference](../spec/v0.1.md)**: everything `smithable.yml` and its companion files can say, with examples.
 - **[AI setup](../ai.md)**: the models behind `smithable ask` and drafting an app from a sentence, local first.
-- **[JSON Schema](https://docs.smithable.ai/schema/smithable-0.1.json)** for `smithable.yml`, for autocomplete and checking in your editor.
+- **[JSON Schema](https://docs.smithable.ai/schema/smithable-0.1.json)** for `smithable.yml`, for autocomplete and checking in your editor, and one for each companion file: [auth](https://docs.smithable.ai/schema/smithable-auth-0.1.json), [ux](https://docs.smithable.ai/schema/smithable-ux-0.1.json), [content](https://docs.smithable.ai/schema/smithable-content-0.1.json), [context](https://docs.smithable.ai/schema/smithable-context-0.1.json).
 
 The source is on [GitHub](https://github.com/smithable/smithable), under the Apache-2.0 licence.
