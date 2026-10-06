@@ -457,10 +457,18 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       .map((f) => `${f.name}: { columns: ${title(modelNamed(ir, f.type.model))} }`),
     ...userFields(m).map((f) => `${f.name}: { columns: { id: true, name: true } }`),
   ];
-  const listWith = [
-    ...withReferences(model),
-    ...aggregatedLists(model).map((list) => `${list}: true`),
-  ];
+  // A list of a model with a trash counts its live records only (docs/design/trash.md).
+  const liveList = (list: string) => {
+    const f = model.fields.find((x) => x.name === list);
+    const target =
+      f?.type.kind === "relation"
+        ? ir.models.find((m) => m.name === (f.type as { model: string }).model)
+        : undefined;
+    return target?.trash
+      ? `${list}: { where: (t, { isNull }) => isNull(t.deletedAt) }`
+      : `${list}: true`;
+  };
+  const listWith = [...withReferences(model), ...aggregatedLists(model).map(liveList)];
   const others = new Set<ModelIR>();
   const getWith = [
     ...withReferences(model),
@@ -548,6 +556,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
     ...(paged ? ["avg", "desc", "isNotNull", "max", "min", "sum"] : []),
     ...(model.trash ? ["desc", "isNotNull", "isNull", "lt"] : []),
+    ...(holds.some((m) => m.trash) ? ["isNull"] : []),
   ];
   // Visitors (and anyone reading only because it is public) read the records the public
   // condition fits; an owner reads their own too.
@@ -565,6 +574,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ? [
         `eq(${n.table}.${capacity.per}Id, values.${capacity.per}Id)`,
         ...Object.entries(capacity.where ?? {}).map((entry) => fits(n.table, entry)),
+        // What is in the trash holds no place.
+        ...(model.trash ? [`isNull(${n.table}.deletedAt)`] : []),
       ]
     : [];
   const perField = capacity && model.fields.find((f) => f.name === capacity.per);
@@ -589,6 +600,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     const conditions = [
       `eq(${tn.table}.${c.per}Id, id)`,
       ...Object.entries(c.where ?? {}).map((entry) => fits(tn.table, entry)),
+      ...(m.trash ? [`isNull(${tn.table}.deletedAt)`] : []),
     ];
     return `
       if (values.${field} != null) {
@@ -645,10 +657,6 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       ? `tx.update(${n.table}).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(${n.table}.id, ${id}), isNull(${n.table}.deletedAt))).returning().get()`
       : `tx.delete(${n.table}).where(eq(${n.table}.id, ${id})).returning().get()`;
   const goneAction = trashing ? "trashed" : "deleted";
-  // A unique value a trashed record holds: refused with how to free it.
-  const uniquesInTrash = trashing
-    ? model.fields.filter((f) => f.unique && f.type.kind !== "relation")
-    : [];
   const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${self}.scoped(viewer))`;
   const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
   const named = signedIn
@@ -698,12 +706,17 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), ${trashedRows}))
       .all()${allowed};
-    db.transaction((tx) => {
-      for (const row of rows) {
-        const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null }).where(eq(${n.table}.id, row.id)).returning().get();
-        audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });
-      }
-    });
+    // A unique value a live record has taken since refuses it, as it refuses a new record.
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null }).where(eq(${n.table}.id, row.id)).returning().get();
+          audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
     return { restored: rows.length, skipped: new Set(ids).size - rows.length };
   },
 
@@ -894,24 +907,7 @@ ${
     ? `/** How long a record stays in the trash, and the most a trash view shows. */
 const TRASH_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
-${
-  uniquesInTrash.length
-    ? `
-/** A unique value held by a record in the trash is refused with how to free it. */
-function heldInTrash(refused: Error, values: Record<string, unknown>): Error {
-  const column = /^taken:(\\w+)$/.exec(refused.message)?.[1];
-${uniquesInTrash
-  .map(
-    (f) =>
-      `  if (column === ${JSON.stringify(snake(f.name))} && db.select({ id: ${n.table}.id }).from(${n.table}).where(and(isNotNull(${n.table}.deletedAt), eq(${n.table}.${f.name}, values.${f.name} as never))).get())
-    return new Conflict("trashed:${snake(f.name)}");`,
-  )
-  .join("\n")}
-  return refused;
-}
 `
-    : ""
-}`
     : ""
 }export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
@@ -1189,7 +1185,7 @@ ${
 
   /** The viewer's own ${n.label.toLowerCase()} for a ${capacity.per}, if they have one. */
   mine(viewer: Viewer, ${capacity.per}Id: number): number | undefined {
-    return db.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.${capacity.per}Id, ${capacity.per}Id), eq(${n.table}.${owner}, viewer.id))).get()?.id;
+    return db.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.${capacity.per}Id, ${capacity.per}Id), eq(${n.table}.${owner}, viewer.id)${model.trash ? `, isNull(${n.table}.deletedAt)` : ""})).get()?.id;
   },
 
 `
@@ -1213,7 +1209,7 @@ ${
   hiddenTotals.length
     ? `    if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
-    const all = await db.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map((l) => `${l}: true`).join(", ")} } });
+    const all = await db.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map(liveList).join(", ")} } });
     return { ...${compute(`{ ...row, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
     : `    return row ? ${compute("row")} : null;`
 }
@@ -1256,7 +1252,7 @@ ${
       });`
       }
     } catch (error) {
-      throw ${capacity ? "error instanceof Conflict ? error : " : ""}${uniquesInTrash.length ? "heldInTrash(refusal(error), values)" : "refusal(error)"};
+      throw ${capacity ? "error instanceof Conflict ? error : " : ""}refusal(error);
     }
     await afterChange("afterCreate", "${model.name}", row, viewer);
     return row;
@@ -1281,7 +1277,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
         return after;
       });
     } catch (error) {
-      throw ${capacity || holds.length ? "error instanceof Conflict ? error : " : ""}${uniquesInTrash.length ? "heldInTrash(refusal(error), values)" : "refusal(error)"};
+      throw ${capacity || holds.length ? "error instanceof Conflict ? error : " : ""}refusal(error);
     }
 ${dropPictures(
   (k) => `changed.${k}?.file`,

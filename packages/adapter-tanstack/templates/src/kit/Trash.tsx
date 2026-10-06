@@ -6,7 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { formatValue } from "./format";
 import { ModelTable } from "./ModelTable";
-import type { AppUi, RecordUi, Row } from "./model";
+import type { AppUi, ModelUi, RecordUi, Row } from "./model";
 import { SelectionBar } from "./SelectionBar";
 import { w } from "./words";
 
@@ -63,20 +63,36 @@ export function TrashNotice({
   );
 }
 
+/**
+ * Why a restore was refused, in the form's words: a live record has taken a unique value since
+ * ("Another customer already has this email."), or the app's own message.
+ */
+export function restoreRefusal(ui: Pick<ModelUi, "label" | "fields">, error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  const column = /^taken:(\w+)$/.exec(message)?.[1];
+  const field = ui.fields.find(
+    (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
+  );
+  return field ? w.alreadyHas(ui.label, field.label) : message || w.tryAgain;
+}
+
 /** On a trashed record's page: since when, by whom, when it goes for good, and Restore. */
 export function TrashedBanner({
   at,
   by,
   until,
   app,
+  ui,
   onRestore,
 }: {
   at: Date;
   by: string | null;
   until: Date;
   app: AppUi;
+  ui: Pick<ModelUi, "label" | "fields">;
   onRestore: () => Promise<unknown>;
 }) {
+  const [refused, setRefused] = useState<string>();
   const when = (d: Date) =>
     formatValue({ name: "at", label: "", kind: "datetime", required: false }, d, app);
   const day = (d: Date) =>
@@ -92,9 +108,18 @@ export function TrashedBanner({
       className="mb-6 flex flex-wrap items-center gap-3 rounded-md border border-warning bg-warning/10 px-4 py-3 text-sm"
     >
       <span className="flex-1">{w.inTrash(when(at), by, day(until))}</span>
-      <Button variant="outline" size="sm" onClick={() => void onRestore()}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onRestore().catch((error) => setRefused(restoreRefusal(ui, error)))}
+      >
         {w.restore}
       </Button>
+      {refused && (
+        <p role="alert" className="w-full text-destructive">
+          {refused}
+        </p>
+      )}
     </div>
   );
 }
@@ -123,6 +148,8 @@ export function TrashTable<R extends Trashed>({
   onOpen: (row: R) => void;
 }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // A restore refused because a live record has taken a unique value since.
+  const [refused, setRefused] = useState<string>();
   const confirm = useRef<HTMLDialogElement>(null);
   const chosen = rows.filter((row) => selected.has(row.id));
   const shown: RecordUi<R> = {
@@ -169,7 +196,9 @@ export function TrashTable<R extends Trashed>({
             label: w.restore,
             applies: chosen.length,
             run: async () => {
-              const r = await restore(chosen.map((row) => row.id));
+              const r = await restore(chosen.map((row) => row.id)).catch((error) => {
+                throw new Error(restoreRefusal(ui, error));
+              });
               return { changed: r.restored, skipped: r.skipped };
             },
           },
@@ -178,6 +207,11 @@ export function TrashTable<R extends Trashed>({
         onDelete={() => erase(chosen.map((row) => row.id))}
         onDone={done}
       />
+      {refused && (
+        <p role="alert" className="text-sm text-destructive">
+          {refused}
+        </p>
+      )}
       <ModelTable
         ui={shown}
         app={app}
@@ -189,8 +223,13 @@ export function TrashTable<R extends Trashed>({
             variant="outline"
             size="sm"
             onClick={async () => {
-              await restore([row.id]);
-              await done();
+              try {
+                await restore([row.id]);
+                setRefused(undefined);
+                await done();
+              } catch (error) {
+                setRefused(restoreRefusal(ui, error));
+              }
             }}
           >
             {w.restore}

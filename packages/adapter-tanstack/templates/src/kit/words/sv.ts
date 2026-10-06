@@ -203,8 +203,6 @@ export const w = {
   thisUser: "den här användaren",
   to: "Till",
   today: "I dag",
-  trashedHas: (label: string, field: string) =>
-    `En borttagen ${label.toLowerCase()} med samma ${field.toLowerCase()} ligger i papperskorgen: återställ den eller töm papperskorgen.`,
   trashEmpty: "Papperskorgen är tom.",
   trashLead: "Borttagna poster ligger här i trettio dagar och tas sedan bort för gott.",
   trashOf: (plural: string) => `${plural} i papperskorgen`,

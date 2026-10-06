@@ -355,12 +355,6 @@ function failureMessage(ui: ModelUi, error: unknown): string {
     (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
   );
   if (field) return w.alreadyHas(ui.label, field.label);
-  // The value belongs to a record in the trash (docs/design/trash.md).
-  const held = /^trashed:(\w+)$/.exec(message)?.[1];
-  const heldField = ui.fields.find(
-    (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === held,
-  );
-  if (heldField) return w.trashedHas(ui.label, heldField.label);
   if (message === "in-use") return w.stillUsed(ui.label);
   if (message === "full") return w.noPlacesLeft;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];
