@@ -50,6 +50,9 @@ export function blankFor(starter?: SpecFiles): SpecFiles {
 /** Operations a first draft never needs: they change or undo what a draft has not made yet. */
 const NOT_FOR_DRAFTS = new Set([
   "editSpec",
+  // Outgoing mail waits for the generated app to send it (integrations.md §4.1b).
+  "addOutgoing",
+  "removeOutgoing",
   "removeField",
   "renameField",
   "changeField",

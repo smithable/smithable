@@ -503,6 +503,54 @@
         }
       }
     },
+    "outgoing": {
+      "type": "object",
+      "description": "Who is told when something happens to a record: a mail to the owner, a role or an address on the record; or a signed call to a named target.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "when",
+          "to"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "when": {
+            "type": "string",
+            "description": "What happens: \"<Model> created\", \"<Model> changed\" or \"<Model> deleted\", or the name of a standard action, e.g. \"Booking created\" or \"resolve\"."
+          },
+          "where": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "boolean",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Only for records with these values, e.g. { status: confirmed }; a change counts when the record comes to fit them."
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z][A-Za-z0-9]*$",
+            "description": "\"mail\", or the name of a target whose address and secret are settings."
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
+            "description": "For mail: owner, a role, an email field or a field that refers to User, or one reference away (customer.email)."
+          }
+        }
+      }
+    },
     "queries": {
       "type": "object",
       "description": "Records chosen or ordered by code in src/custom/queries/.",

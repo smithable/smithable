@@ -104,6 +104,7 @@ pages:
       },
       pages: { customers: { title: "Our clients" } },
       menus: {},
+      outgoing: {},
     },
   });
   expect(customer(withContent)).toContain('help: "As on the invoice."');
@@ -120,6 +121,7 @@ pages:
       models: {},
       pages: { customers: { title: 'Our "best" clients' } },
       menus: {},
+      outgoing: {},
     },
   });
   expect(quoted.find((f) => f.path === "src/routes/customers/index.tsx")?.content).toContain(
@@ -393,7 +395,7 @@ pages:
   );
   const swedish = generateApp(spec, {
     ...options,
-    content: { language: "sv", models: {}, pages: {}, menus: {} },
+    content: { language: "sv", models: {}, pages: {}, menus: {}, outgoing: {} },
   });
   const words = swedish.find((f) => f.path === "src/kit/words.ts")?.content ?? "";
   expect(words).toContain('signIn: "Logga in"');

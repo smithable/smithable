@@ -8,6 +8,7 @@ import { actionsSection } from "./sections/actions.js";
 import { appSection } from "./sections/app.js";
 import { modelsSection } from "./sections/models.js";
 import { navigationSection } from "./sections/navigation.js";
+import { outgoingSection } from "./sections/outgoing.js";
 import { pagesSection } from "./sections/pages.js";
 import { queriesSection } from "./sections/queries.js";
 import { didYouMean } from "./suggest.js";
@@ -20,6 +21,7 @@ export const SECTIONS: readonly SpecSection[] = [
   appSection,
   modelsSection,
   actionsSection,
+  outgoingSection,
   queriesSection,
   pagesSection,
   navigationSection,
