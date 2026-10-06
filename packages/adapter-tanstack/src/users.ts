@@ -30,6 +30,7 @@ import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
+import { w } from "#/kit/words";
 
 export const ROLES = ${literal(roles)} as const;
 export type Role = (typeof ROLES)[number];
@@ -222,13 +223,8 @@ async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void>
   const until = invited.expiresAt.toISOString().slice(0, 10);
   await sendMail({
     to: invited.email,
-    subject: \`Invitation to \${app.name}\`,
-    text: \`\${by.name} invited you to \${app.name} as \${ROLE_LABELS[invited.role] ?? invited.role}.
-
-Sign in with \${invited.email} here:
-\${invited.link}
-
-The invitation is valid until \${until}.\`,
+    subject: w.invitationSubject(app.name),
+    text: w.invitationText(by.name, app.name, ROLE_LABELS[invited.role] ?? invited.role, invited.email, invited.link, until),
   });
 }
 `;

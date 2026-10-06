@@ -473,7 +473,7 @@ export function listParts(
   const owner = `row.${ownerKey(model)}`;
   const fits = (a: (typeof many)[number]) =>
     `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row)`;
-  view.add("#/generated/app", "app").add(n.module, n.ui);
+  view.add("#/generated/app", "app").add(n.module, n.ui).add("#/kit/words", "w");
   if (actions.length) view.add("#/kit/access", "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
   if (sort) view.add("#/kit/model", "sortRows");
@@ -545,7 +545,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || favorites 
     }
   const newButton = canCreate && (
     <Link to=${attr(join(page.route, "new"))} className={buttonVariants()}>
-      New ${n.label.toLowerCase()}
+      {w.newOne(${JSON.stringify(n.label.toLowerCase())})}
     </Link>
   );${actions
     .map(
