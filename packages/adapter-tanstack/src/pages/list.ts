@@ -269,7 +269,7 @@ export function searchCode(
       fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
 const ${fn} = createServerFn()
-  .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional(), page: z.number().int().positive().optional() }))
+  .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional(), page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();${
       favorites
@@ -287,7 +287,7 @@ const ${fn} = createServerFn()
         : ""
     }
     return {
-      ...(await ${n.data}.page(viewer, where, ${filtering.columns.length ? (order ? `order ?? ${order}` : "order") : (order ?? "undefined")}, data.page)),
+      ...(await ${n.data}.page(viewer, where, ${filtering.columns.length ? (order ? `order ?? ${order}` : "order") : (order ?? "undefined")}, ${PAGED_ARGS})),
       canCreate: allows(${n.access}.create, viewer),
       options: { ${filtering.options.join(", ")} },${favorites ? "\n      saved," : ""}
     };
@@ -315,7 +315,7 @@ const ${fn} = createServerFn()
     fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
 const ${fn} = createServerFn()
-  .validator(z.object({ q: z.string().max(200).optional()${within ? "" : ", page: z.number().int().positive().optional()"} }))
+  .validator(z.object({ q: z.string().max(200).optional()${within ? "" : ", page: z.number().int().positive().optional(), all: z.boolean().optional()"} }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined;
@@ -466,6 +466,7 @@ export function listParts(
       .add("react", "useState")
       .add("@tanstack/react-router", "useRouter")
       .add("#/kit/SelectionBar", "SelectionBar")
+      .add("#/kit/csv", "csvName", "csvOf", "download")
       .add("#/kit/access", "allows")
       .add(n.module, n.removeMany, n.deleteRule);
     for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
@@ -491,6 +492,12 @@ export function listParts(
     : searchable
       ? "{ q, page: next }"
       : "{ page: next }";
+  // The whole list as it is filtered, for "Export CSV" (at most EXPORT_ROWS records).
+  const exportArgs = filtering
+    ? `{ q, sort, ${favorites === "all" ? "view, " : ""}f: values, all: true }`
+    : searchable
+      ? "{ q, all: true }"
+      : "{ all: true }";
   const options = `${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${
     search
       ? search.options
@@ -615,13 +622,19 @@ ${
             setSelected(new Set());
             await router.invalidate();
           }}
+          onExport={() => download(csvName(${n.ui}), csvOf(${n.ui}, chosen))}
         />
       )}
 `
     : ""
 }${within ? `      {more && (\n        <p className="text-sm text-muted-foreground">The newest ${DATA_LIMIT} are shown${search ? "; search to find the others" : ""}.</p>\n      )}\n` : ""}      <ModelTable
         ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
-        app={app}
+        app={app}${
+          within || capped || owned
+            ? ""
+            : `
+        exportRows={async () => (await ${loading}({ data: ${exportArgs} })).rows}`
+        }
         rows={${(() => {
           const ordered = sort
             ? `sortRows(rows, ${JSON.stringify(sort.field)}${sort.descending ? ", true" : ""})`
@@ -683,7 +696,7 @@ const ${newest} = createServerFn().handler(async () => {
       : `
 /** A page of the ${n.pluralLabel.toLowerCase()} the viewer may read. */
 const ${newest} = createServerFn()
-  .validator(z.object({ page: z.number().int().positive().optional() }))
+  .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     ${listed(n, "undefined", undefined, order)}
@@ -723,6 +736,13 @@ ${p.body("Route")}`;
  * The statement that returns a list's rows: all of them, or inside a data page the newest
  * DATA_LIMIT, one more fetched to know whether there are others.
  */
+/** The most records "Export CSV" takes from a list; a visitor of a public list, fewer. */
+const EXPORT_ROWS = 10_000;
+const VISITOR_EXPORT_ROWS = 500;
+
+/** A list's page, or with \`all\` (an export) its first records. */
+const PAGED_ARGS = `data.all ? 1 : data.page, data.all ? (viewer ? ${EXPORT_ROWS} : ${VISITOR_EXPORT_ROWS}) : undefined`;
+
 function listed(
   n: ReturnType<typeof names>,
   where: string,
@@ -730,7 +750,7 @@ function listed(
   order?: string,
 ): string {
   if (!within)
-    return `return { ...(await ${n.data}.page(viewer, ${where}, ${order ?? "undefined"}, data.page)), canCreate: allows(${n.access}.create, viewer) };`;
+    return `return { ...(await ${n.data}.page(viewer, ${where}, ${order ?? "undefined"}, ${PAGED_ARGS})), canCreate: allows(${n.access}.create, viewer) };`;
   return `const rows = await ${n.data}.list(viewer, ${where}, ${DATA_LIMIT + 1});
     return {
       rows: rows.slice(0, ${DATA_LIMIT}),
