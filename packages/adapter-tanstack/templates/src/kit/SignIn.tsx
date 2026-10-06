@@ -149,7 +149,7 @@ export function SignIn({
             disabled={busy}
             onClick={() => run(() => onProvider(provider))}
           >
-            Continue with {PROVIDER_LABELS[provider] ?? provider}
+            {w.continueWith(PROVIDER_LABELS[provider] ?? provider)}
           </Button>
         ))}
       {/* Setup notes are for the developer, not a demo's visitors; others only learn that sign-in is unavailable. */}
@@ -160,9 +160,7 @@ export function SignIn({
         </p>
       )}
       {!devRoles && providers.length === 0 && (
-        <p className="text-muted-foreground">
-          Signing in is not available right now. Please contact whoever runs {appName}.
-        </p>
+        <p className="text-muted-foreground">{w.signInUnavailable(appName)}</p>
       )}
       {failure && (
         <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{failure}</p>
