@@ -19,7 +19,7 @@ export const ANALYTICS = {
     consent: false,
     example: "4f2a1c3e-…",
   },
-  fathom: { id: "^[A-Z]{8}$", consent: false, example: "ABCDEFGH" },
+  fathom: { id: "^[A-Z0-9]{8}$", consent: false, example: "ABCDEFGH" },
   google: { id: "^G-[A-Z0-9]{4,12}$", consent: true, example: "G-XXXXXXXXXX" },
 } as const;
 

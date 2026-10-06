@@ -571,7 +571,7 @@ export const COMPANION_SCHEMAS: Record<string, JsonSchema> = {
       "analytics.plausible":
         "Plausible: the app's domain as Plausible knows it, e.g. shop.example.com.",
       "analytics.umami": "Umami (its hosted service): the website id.",
-      "analytics.fathom": "Fathom: the site id, eight capital letters.",
+      "analytics.fathom": "Fathom: the site id, eight capital letters or digits.",
       "analytics.google":
         "Google Analytics: the measurement id, e.g. G-XXXXXXXXXX. Asks for consent first.",
     }),

@@ -67,8 +67,8 @@
         },
         "fathom": {
           "type": "string",
-          "pattern": "^[A-Z]{8}$",
-          "description": "Fathom: the site id, eight capital letters."
+          "pattern": "^[A-Z0-9]{8}$",
+          "description": "Fathom: the site id, eight capital letters or digits."
         },
         "google": {
           "type": "string",
