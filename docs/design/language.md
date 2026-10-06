@@ -40,7 +40,7 @@ Formatting follows the language for what the app writes (a date in a mail, a num
 
 A language is a file in the repository, reviewed by a reader of it, never generated at build time: the first time a model writes `sv.ts` from `en.ts` (one call, about 600 strings, under a euro), then a person corrects it and it is kept. The booking starter in Swedish is the check that it is complete: a test renders its pages and mails and fails on any English word from `en.ts` found in them.
 
-A first build from a Swedish description sets `language: sv` and writes its labels, texts and `pluralLabel`s in Swedish (the draft's prompt says so); the reader without a model (`read-description.ts`) leaves it `en` and the maker sets it in Builder's Look tab or the content file.
+A first build from a Swedish description sets `language: sv` before the model answers (the same short-word count that tells an English description apart, `packages/ai/src/language.ts`, now knows Swedish; `setLanguage sv` is the draft's first operation, applied by Smithable, and the prompt lists it as applied) and the model writes the labels, texts and `pluralLabel`s in Swedish; the reader without a model (`read-description.ts`) leaves it `en` and the maker sets it in Builder's Look tab or the content file. The plural warning sits on the model's entry in the content file when it has one, else on the `language` key.
 
 ## 5. What this is not
 
@@ -53,5 +53,5 @@ A first build from a Swedish description sets `language: sv` and writes its labe
 1. **Words out of the code** (engine, no visible change; the gate's byte-identity check is the proof): every string in the kit and the generator into `words/en.ts`, with the phrases as functions; `generate` copies it as `words.ts`. One pull request, large but mechanical.
 2. **`language` in the content file** (core): the key, its check against the kit's languages, the `pluralLabel` warning, the spec reference and the schema, `setLanguage` as an operation (a form in the Look tab is A's).
 3. **Swedish**: `sv.ts`, the booking starter's Swedish copy as a test app (`examples/booking-sv`? no: a test-apps variant that sets the language and the labels from a small file, so the starter itself stays English), the no-English check.
-4. **First builds**: the draft's prompt names the language; the reader leaves `en`.
+4. **First builds**: a Swedish description makes `setLanguage sv` the draft's first operation; the reader leaves `en`. Done 2026-10-06.
 5. Later, each its own change: a second language when someone asks; several languages per app.
