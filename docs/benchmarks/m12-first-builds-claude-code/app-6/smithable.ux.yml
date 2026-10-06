@@ -3,15 +3,11 @@ pages:
   jobs:
     table:
       columns: [title, employer, location, jobType, closesOn, status]
-  applications:
-    table:
-      below:
-        email: phone
 tones:
   Job.status:
     open: success
   Application.status:
-    reviewing: warning
+    shortlisted: warning
     accepted: success
     declined: danger
 theme:

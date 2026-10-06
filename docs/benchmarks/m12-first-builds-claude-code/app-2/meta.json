@@ -1,10 +1,6 @@
 {
   "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
-  "starter": "crm",
+  "starter": "?",
   "wordStarter": "crm",
-  "questions": [
-    "Can everyone on the team see and edit all deals, or does each salesperson mainly work on their own?",
-    "What should a deal track besides its company and contact?",
-    "What is a follow-up?"
-  ]
+  "questions": []
 }

@@ -1,7 +1,9 @@
 smithable: 0.1
 app:
-  name: Tidewater Yoga
+  name: Lotus Flow Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
