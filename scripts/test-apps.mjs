@@ -573,7 +573,10 @@ async function visitorMailFlow(dir, base) {
     failures.push("outgoing mail from a visitor");
   } finally {
     await browser.close();
-    for (let i = 0; i < added; i++) ok(smithable(dir, "undo"));
+    // Removed by operations, not undone: an undo puts back the database file under the
+    // running server.
+    for (const name of ["messageIn", "messageEcho"].slice(0, added))
+      ok(smithable(dir, "op", "removeOutgoing", name));
   }
 }
 
