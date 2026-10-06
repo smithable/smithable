@@ -10,11 +10,12 @@ import { cn } from "#/lib/utils";
 import { FieldInput } from "./FieldInput";
 import { formatValue, fromInput, toInput } from "./format";
 import type { AppUi, ModelUi } from "./model";
+import { w } from "./words";
 
 export function Calculator({
   ui,
   app,
-  resultsTitle = "Results",
+  resultsTitle = w.results,
   layout = "beside",
 }: {
   ui: ModelUi;

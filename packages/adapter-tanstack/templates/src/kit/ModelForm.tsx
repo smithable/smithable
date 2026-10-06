@@ -17,6 +17,7 @@ import {
   type Options,
   textMarker,
 } from "./model";
+import { w } from "./words";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
@@ -233,7 +234,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       <form onSubmit={submit} noValidate className="space-y-6 p-card">
         {!readOnly && ui.fields.some((f) => f.required && !f.computed) && (
           <p className="text-sm text-muted-foreground">
-            Fields marked <span className="text-destructive">*</span> are required.
+            {w.fieldsMarked} <span className="text-destructive">*</span> {w.areRequired}
           </p>
         )}
         <fieldset disabled={readOnly} className="space-y-6">
@@ -262,7 +263,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         <div data-part="actions" className="flex flex-wrap items-center gap-3 border-t pt-6">
           {!readOnly && (
             <Button type="submit" disabled={busy}>
-              {busy ? "Saving…" : submitLabel}
+              {busy ? w.saving : submitLabel}
             </Button>
           )}
           {onCancel && (
@@ -278,7 +279,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               disabled={busy}
               onClick={() => confirmDelete.current?.showModal()}
             >
-              Delete
+              {w.delete}
             </Button>
           )}
           {onDelete && (
@@ -289,20 +290,20 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
             >
               <h2 id="delete-title" className="text-lg font-semibold">
-                Delete{" "}
+                {w.delete}{" "}
                 {typeof recordName === "string" && recordName
                   ? `“${recordName}”`
-                  : `this ${ui.label.toLowerCase()}`}
+                  : w.thisOne(ui.label)}
                 ?
               </h2>
-              <p className="mt-2 text-muted-foreground">This cannot be undone.</p>
+              <p className="mt-2 text-muted-foreground">{w.cannotBeUndone}</p>
               <div className="mt-6 flex flex-wrap justify-end gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => confirmDelete.current?.close()}
                 >
-                  Cancel
+                  {w.cancel}
                 </Button>
                 <Button
                   type="button"
@@ -329,14 +330,14 @@ function friendly(field: FieldUi, issue: z.core.$ZodIssue, value: unknown): stri
   if (issue.code !== "invalid_type") return issue.message;
   switch (field.kind) {
     case "int":
-      return "Enter a whole number";
+      return w.enterWholeNumber;
     case "decimal":
     case "money":
-      return "Enter a number";
+      return w.enterNumber;
     case "date":
-      return "Enter a valid date";
+      return w.enterValidDate;
     case "datetime":
-      return "Enter a valid date and time";
+      return w.enterValidDateTime;
     default:
       return issue.message;
   }
@@ -349,15 +350,12 @@ function failureMessage(ui: ModelUi, error: unknown): string {
   const field = ui.fields.find(
     (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
   );
-  if (field)
-    return `Another ${ui.label.toLowerCase()} already has this ${field.label.toLowerCase()}.`;
-  if (message === "in-use")
-    return `This ${ui.label.toLowerCase()} is still used by other records. Change or delete those first.`;
-  if (message === "full") return "No places left.";
+  if (field) return w.alreadyHas(ui.label, field.label);
+  if (message === "in-use") return w.stillUsed(ui.label);
+  if (message === "full") return w.noPlacesLeft;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];
-  if (booked)
-    return `${booked} ${booked === "1" ? "is" : "are"} already taken; the number cannot go below that.`;
-  return message || "Something went wrong. Please try again.";
+  if (booked) return w.alreadyTaken(booked);
+  return message || w.tryAgain;
 }
 
 /** Form inputs for a record being edited, or for a new one: defaults, including formula defaults. */

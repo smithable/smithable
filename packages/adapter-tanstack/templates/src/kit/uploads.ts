@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { w } from "./words";
 
 /** What a picture field stores: the file under uploads/, its description, and its size. */
 export interface Picture {
@@ -53,11 +54,9 @@ export function webpSize(bytes: Uint8Array): { width: number; height: number } |
 
 /** Stores a picture sent by a browser under `model/`, and returns what the record keeps of it. */
 export function savePicture(model: string, bytes: Uint8Array, alt: string): Picture {
-  if (bytes.length > PICTURE_MAX_BYTES)
-    throw new BadPicture("The picture is too large (at most 1 MB).");
+  if (bytes.length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
   const size = webpSize(bytes);
-  if (!size || size.width < 1 || size.height < 1)
-    throw new BadPicture("Choose a picture (JPEG, PNG, WebP or HEIC).");
+  if (!size || size.width < 1 || size.height < 1) throw new BadPicture(w.pictureKinds);
   const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 24);
   const file = `${model}/${hash}.webp`;
   mkdirSync(join(uploadsDir(), model), { recursive: true });

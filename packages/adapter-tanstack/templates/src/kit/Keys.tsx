@@ -6,6 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
 import type { RoleOption } from "./Users";
+import { w } from "./words";
 
 export interface KeyRow {
   id: number;
@@ -43,7 +44,7 @@ function Copyable({ label, text }: { label: string; text: string }) {
           variant="outline"
           onClick={() => navigator.clipboard?.writeText(text)}
         >
-          Copy
+          {w.copy}
         </Button>
       </div>
     </div>
@@ -66,27 +67,27 @@ function UsingAKey({ use, secret }: { use: KeyUse; secret?: string }) {
       .replace(/^-|-$/g, "") || "app";
   return (
     <div data-part="using-a-key" className="space-y-3">
-      <h3 className="text-base font-semibold">Using a key</h3>
+      <h3 className="text-base font-semibold">{w.usingAKey}</h3>
       <p className="text-sm text-muted-foreground">
-        The API is at <code>{origin}/api/v1</code>, described at{" "}
+        {w.apiIsAt} <code>{origin}/api/v1</code>, {w.describedAt}{" "}
         <code>{origin}/api/v1/openapi.json</code>.{" "}
         <a
           href="/api/v1/openapi.json"
           download="openapi.json"
           className="underline underline-offset-4"
         >
-          Download the description
+          {w.downloadDescription}
         </a>
       </p>
       {use.path && (
         <Copyable
-          label="A first call:"
+          label={w.aFirstCall}
           text={`curl -H "Authorization: Bearer ${key}" ${origin}/api/v1/${use.path}`}
         />
       )}
       {use.tools && (
         <Copyable
-          label={`For an AI assistant: the tools are at ${origin}/mcp. Its settings need:`}
+          label={w.toolsAt(origin)}
           text={JSON.stringify(
             {
               mcpServers: {
@@ -136,10 +137,8 @@ export function Keys({
   return (
     <section data-kit="keys" className="mt-10 space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Keys</h2>
-        <p className="text-sm text-muted-foreground">
-          For other programs that use this app's API. A key acts with its role and owns nothing.
-        </p>
+        <h2 className="text-lg font-semibold">{w.keys}</h2>
+        <p className="text-sm text-muted-foreground">{w.keysLead}</p>
       </div>
       <form
         className="flex flex-wrap items-end gap-3"
@@ -151,12 +150,12 @@ export function Keys({
             setName("");
             setUntil("");
           } catch (error) {
-            setFailure(error instanceof Error ? error.message : "Something went wrong.");
+            setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
           }
         }}
       >
         <label htmlFor={`${id}-name`} className="grid gap-1 text-sm">
-          What it is for
+          {w.whatItIsFor}
           <Input
             id={`${id}-name`}
             required
@@ -166,7 +165,7 @@ export function Keys({
           />
         </label>
         <label className="grid gap-1 text-sm">
-          Role
+          {w.role}
           <select
             className="h-control rounded-md border border-input bg-background px-2"
             value={role}
@@ -188,7 +187,7 @@ export function Keys({
             onChange={(e) => setUntil(e.target.value)}
           />
         </label>
-        <Button type="submit">Make a key</Button>
+        <Button type="submit">{w.makeAKey}</Button>
       </form>
       {failure && (
         <p role="alert" className="text-sm text-destructive">
@@ -197,7 +196,7 @@ export function Keys({
       )}
       {made && (
         <Card role="status" className="space-y-2 p-card">
-          <p className="text-sm font-medium">Copy the key now: it is not shown again.</p>
+          <p className="text-sm font-medium">{w.copyKeyNow}</p>
           <div className="flex items-center gap-2">
             <code data-part="key" className="break-all rounded bg-muted px-2 py-1 text-sm">
               {made}
@@ -207,7 +206,7 @@ export function Keys({
               variant="outline"
               onClick={() => navigator.clipboard?.writeText(made)}
             >
-              Copy
+              {w.copy}
             </Button>
           </div>
           <UsingAKey use={use} secret={made} />
@@ -234,11 +233,10 @@ export function Keys({
                   variant="outline"
                   className="ml-auto h-7"
                   onClick={() => {
-                    if (confirm(`Revoke "${k.name}"? Programs using it stop working at once.`))
-                      onRevoke(k.id);
+                    if (confirm(w.revokeKey(k.name))) onRevoke(k.id);
                   }}
                 >
-                  Revoke
+                  {w.revoke}
                 </Button>
               )}
             </li>

@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "#/components/ui/table";
+import { w } from "./words";
 
 export interface RoleOption {
   value: string;
@@ -84,9 +85,7 @@ export function Users({
       await action();
       if (done) setNotice(done);
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : "Something went wrong. Please try again.",
-      );
+      setFailure(error instanceof Error ? error.message : w.tryAgain);
     } finally {
       setBusy(false);
     }
@@ -99,13 +98,13 @@ export function Users({
     await run(async () => {
       await onInvite(address, role);
       setEmail("");
-    }, `Invitation sent to ${address}.`);
+    }, w.invitationSentTo(address));
   }
 
   async function copy(link: string) {
     try {
       await navigator.clipboard.writeText(link);
-      setNotice("Invitation link copied.");
+      setNotice(w.invitationLinkCopied);
     } catch {
       setNotice(link);
     }
@@ -117,7 +116,7 @@ export function Users({
       <span>{label(u.role)}</span>
     ) : (
       <NativeSelect
-        aria-label={`Role of ${u.name}`}
+        aria-label={w.roleOf(u.name)}
         className="h-9 w-auto"
         value={u.role}
         disabled={busy}
@@ -143,15 +142,15 @@ export function Users({
           confirmRemove.current?.showModal();
         }}
       >
-        Remove
+        {w.remove}
       </Button>
     );
   const expired = (i: InvitationRow) => new Date(i.expiresAt).getTime() < Date.now();
   const invitationStatus = (i: InvitationRow) =>
     expired(i) ? (
-      <Badge variant="danger">Invitation expired</Badge>
+      <Badge variant="danger">{w.invitationExpired}</Badge>
     ) : (
-      <Badge variant="warning">Invited, valid until {date(i.expiresAt)}</Badge>
+      <Badge variant="warning">{w.invitedUntil(date(i.expiresAt))}</Badge>
     );
   const invitationActions = (i: InvitationRow) => (
     <div className="flex flex-wrap gap-2 md:justify-end">
@@ -162,16 +161,16 @@ export function Users({
         disabled={busy || expired(i)}
         onClick={() => copy(i.link)}
       >
-        Copy link
+        {w.copyLink}
       </Button>
       <Button
         type="button"
         variant="outline"
         size="sm"
         disabled={busy}
-        onClick={() => run(() => onResend(i.id), `Invitation sent again to ${i.email}.`)}
+        onClick={() => run(() => onResend(i.id), w.invitationSentAgain(i.email))}
       >
-        Resend
+        {w.resend}
       </Button>
       <Button
         type="button"
@@ -180,19 +179,19 @@ export function Users({
         disabled={busy}
         onClick={() => run(() => onWithdraw(i.id))}
       >
-        Withdraw
+        {w.withdraw}
       </Button>
     </div>
   );
   const you = (u: UserRow) =>
-    u.id === viewerId && <span className="text-muted-foreground"> (you)</span>;
+    u.id === viewerId && <span className="text-muted-foreground"> {w.you}</span>;
 
   return (
     <div data-kit="users" className="space-y-6">
       <Card className="p-card">
         <form onSubmit={invite} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
-            <Label htmlFor="invite-email">Email address</Label>
+            <Label htmlFor="invite-email">{w.emailAddress}</Label>
             <Input
               id="invite-email"
               type="email"
@@ -204,7 +203,7 @@ export function Users({
             />
           </div>
           <div className="space-y-1.5 sm:w-56">
-            <Label htmlFor="invite-role">Role</Label>
+            <Label htmlFor="invite-role">{w.role}</Label>
             <NativeSelect
               id="invite-role"
               value={role}
@@ -219,7 +218,7 @@ export function Users({
             </NativeSelect>
           </div>
           <Button type="submit" disabled={busy}>
-            Send invitation
+            {w.sendInvitation}
           </Button>
         </form>
         {chosen?.description && (
@@ -237,9 +236,7 @@ export function Users({
         </p>
       )}
       {users.length + invitations.length === 0 && (
-        <Card className="px-6 py-16 text-center text-muted-foreground">
-          Nobody yet. Invite the first person above.
-        </Card>
+        <Card className="px-6 py-16 text-center text-muted-foreground">{w.nobodyYet}</Card>
       )}
       <ul className="space-y-3 md:hidden">
         {users.map((u) => (
@@ -253,7 +250,7 @@ export function Users({
                   </p>
                   <p className="truncate text-sm text-muted-foreground">{u.email}</p>
                 </div>
-                <Badge variant="success">Active</Badge>
+                <Badge variant="success">{w.active}</Badge>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {roleControl(u)}
@@ -280,11 +277,11 @@ export function Users({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{w.name}</TableHead>
+                <TableHead>{w.email}</TableHead>
+                <TableHead>{w.role}</TableHead>
+                <TableHead>{w.status}</TableHead>
+                <TableHead className="text-right">{w.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -297,7 +294,7 @@ export function Users({
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{roleControl(u)}</TableCell>
                   <TableCell>
-                    <Badge variant="success">Active</Badge>
+                    <Badge variant="success">{w.active}</Badge>
                   </TableCell>
                   <TableCell className="text-right">{removeButton(u)}</TableCell>
                 </TableRow>
@@ -322,15 +319,12 @@ export function Users({
         className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
       >
         <h2 id="remove-title" className="text-lg font-semibold">
-          Remove {removing?.name ?? "this user"}?
+          {w.removeWho(removing?.name ?? w.thisUser)}
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          They can no longer sign in. What they created stays, without an owner. They can be invited
-          again.
-        </p>
+        <p className="mt-2 text-muted-foreground">{w.removedUserNote}</p>
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => confirmRemove.current?.close()}>
-            Cancel
+            {w.cancel}
           </Button>
           <Button
             type="button"
@@ -340,7 +334,7 @@ export function Users({
               if (removing) run(() => onRemove(removing.id));
             }}
           >
-            Remove user
+            {w.removeUser}
           </Button>
         </div>
       </dialog>

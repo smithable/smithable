@@ -4,6 +4,7 @@
 //   log.warn("Payment provider slow", { ms: 5200 })
 import { AccessDenied, Conflict } from "./access";
 import { traceId, traceWhoNow } from "./trace.server";
+import { w } from "./words";
 
 type Values = Record<string, unknown>;
 
@@ -49,7 +50,5 @@ export function refusal(error: unknown): Error {
   if (message.includes("FOREIGN KEY constraint failed")) return new Conflict("in-use");
   log.error("A change could not be saved", { error });
   const reference = traceId();
-  return new Error(
-    `Something went wrong. Please try again.${reference ? ` Reference: ${reference}` : ""}`,
-  );
+  return new Error(w.wentWrongReference(reference));
 }
