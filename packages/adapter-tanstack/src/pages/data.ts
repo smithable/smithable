@@ -15,6 +15,7 @@ import {
 } from "@smithable/core";
 import { hasSignIn, roleLabels } from "../auth.js";
 import { hasKeys } from "../keys.js";
+import { mailsOut } from "../outgoing.js";
 import {
   attr,
   dataRoute,
@@ -262,6 +263,7 @@ function activityRoute(
     n: names(model, t),
     title: titleField(model),
   }));
+  const mails = mailsOut(ir).length > 0;
   return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
@@ -275,7 +277,7 @@ import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
-import { w } from "#/kit/words";
+${mails ? 'import { sendAgain } from "#/kit/outgoing.server";\n' : ""}import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 const filters = z.object({
@@ -371,7 +373,13 @@ ${
             ? { model: r.model, record: r.recordId as number }
             : removed && !named.has(removed)
               ? { user: removed }
-              : undefined,
+              : undefined,${
+                mails
+                  ? `
+        // A mail given up after a day of tries can be sent again.
+        resend: r.action === "mail not sent" && typeof r.details?.mail === "number" ? r.details.mail : undefined,`
+                  : ""
+              }
       };
     });
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
@@ -381,7 +389,15 @@ ${
 const forget = createServerFn({ method: "POST" })
   .validator(z.union([z.object({ model: z.string(), record: z.number().int() }), z.object({ user: z.string() })]))
   .handler(async ({ data }) => forgetInLog(await currentViewer(), data));
-
+${
+  mails
+    ? `
+const resend = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data }) => sendAgain(await currentViewer(), data));
+`
+    : ""
+}
 export const Route = createFileRoute(${JSON.stringify(route)})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  validateSearch: filters,
   loaderDeps: ({ search }) => search,
@@ -408,7 +424,15 @@ function ActivityPage() {
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
-        }}
+        }}${
+          mails
+            ? `
+        onResend={async (mail) => {
+          await resend({ data: mail });
+          await router.invalidate();
+        }}`
+            : ""
+        }
       />
     </>
   );

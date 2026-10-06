@@ -65,6 +65,20 @@ models:
       message: text!
     access: { read: [admin], write: [admin], delete: [admin] }
 
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner                 # the member who booked
+  bookingChanged:
+    when: Booking changed
+    to: mail
+    recipient: owner                 # when the studio moves it; not for the member's own edit
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner
+
 pages:
   home:
     route: /
