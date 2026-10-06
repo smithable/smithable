@@ -518,6 +518,17 @@ export const CONTENT_SCHEMA: JsonSchema = {
         additionalProperties: section,
       },
     },
+    consent: {
+      type: "object",
+      description:
+        "The consent bar's words, when the app asks for consent (analytics that need it, or custom code): the sentence, and the two buttons.",
+      additionalProperties: false,
+      properties: {
+        text: { type: "string", description: "The sentence that says what the yes is for." },
+        accept: { type: "string", description: "The button that says yes." },
+        decline: { type: "string", description: "The button that says no." },
+      },
+    },
     menus: {
       type: "object",
       description: "A named menu's heading: { admin: { label: Administration } }.",
@@ -555,6 +566,14 @@ export const COMPANION_SCHEMAS: Record<string, JsonSchema> = {
       "ai.policy":
         "local-only, eu-only, best-available (the default when nothing is said), or custom.",
       "ai.allow": "With custom: the models allowed, by name.",
+      analytics:
+        "Counting visits with one provider and the app's id with it, in production builds only. Google needs the visitor's consent, so it turns on the consent bar; the others keep no cookies.",
+      "analytics.plausible":
+        "Plausible: the app's domain as Plausible knows it, e.g. shop.example.com.",
+      "analytics.umami": "Umami (its hosted service): the website id.",
+      "analytics.fathom": "Fathom: the site id, eight capital letters.",
+      "analytics.google":
+        "Google Analytics: the measurement id, e.g. G-XXXXXXXXXX. Asks for consent first.",
     }),
   },
 };

@@ -1,12 +1,15 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
+  type AnalyticsSetting,
   type AuthIR,
+  type ContentIR,
   type Icon,
   pageAccess,
   pageIcon,
   type SpecIR,
   type UxIR,
 } from "@smithable/core";
+import { analyticsConstants } from "../analytics.js";
 import { hasSignIn } from "../auth.js";
 import { HEADER, literal, type Texts } from "../shared.js";
 import { publicArticles } from "./articles.js";
@@ -47,7 +50,17 @@ export const LUCIDE: Record<Icon, string> = {
   list: "List",
 };
 
-export function rootRoute(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
+export function rootRoute(
+  ir: SpecIR,
+  t: Texts,
+  auth: AuthIR,
+  ux: UxIR,
+  analytics?: AnalyticsSetting,
+  consent?: ContentIR["consent"],
+): string {
+  // The consent bar's link to the privacy page, when the app has one (docs/design/analytics.md).
+  const privacy = ir.pages.find((p) => p.id === "privacy")?.route;
+  const consentProps = `${consent ? ` texts={${JSON.stringify(consent)}}` : ""}${privacy ? ` privacy=${JSON.stringify(privacy)}` : ""}`;
   const pageRoute = new Map(ir.pages.map((p) => [p.id, p.route]));
   const iconOf = (id: string) => {
     const page = ir.pages.find((p) => p.id === id);
@@ -111,7 +124,8 @@ import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { z } from "zod";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
-import { pageHeaders } from "#/kit/security";
+import { Consent } from "#/kit/Consent";
+${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
@@ -119,7 +133,7 @@ const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
 ${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}${visitorPages.length ? `/** Public pages that visitors see in the site's frame (signed in, the app's). */\nconst visitorRoutes = ${literal(visitorPages)};\n` : ""}
-/** Each page's route and name, longest route first. */
+${analytics ? `${analyticsConstants(analytics)}\n` : ""}/** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = ${literal(pageRoutes)};
 
 /** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
@@ -172,7 +186,7 @@ const confirmApp = createServerFn({ method: "POST" })
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
   beforeLoad: () => getViewer(),
-  headers: ({ ssr }) => pageHeaders(ssr?.nonce),
+  headers: ({ ssr }) => pageHeaders(ssr?.nonce${analytics ? ", analyticsAllow" : ""}),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -200,7 +214,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   // click before the page's handlers are attached (body[data-hydrated]).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
-${
+${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
   signIn
     ? `  const router = useRouter();
   const signOut = async () => {
@@ -250,7 +264,8 @@ ${
           {children}
         </AppShell>`
         }
-${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""} />}\n` : ""}        <Scripts />
+${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""} />}\n` : ""}        <Consent${consentProps} />
+        <Scripts />
       </body>
     </html>
   );
