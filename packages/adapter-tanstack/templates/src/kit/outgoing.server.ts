@@ -64,7 +64,8 @@ export function mailText(happening: Happening, at = base()): string {
 /**
  * Queues the mail to each recipient with an address, in the change's transaction. The person
  * whose change it is is not told about their own change; a confirmation of what they created is
- * theirs (`own`).
+ * theirs (`own`). A visitor's change (no one signed in) mails only the app's users, never an
+ * address typed into the record: otherwise a contact form would send anyone's text anywhere.
  */
 export function queueMail(
   tx: Writer,
@@ -77,9 +78,11 @@ export function queueMail(
   const sent = new Set<string>();
   for (const person of to) {
     const email = person.email?.trim();
-    if (!email || sent.has(email.toLowerCase())) continue;
-    if (!own && viewer && (person.id === viewer.id || email === viewer.email)) continue;
-    sent.add(email.toLowerCase());
+    const key = email?.toLowerCase();
+    if (!email || !key || sent.has(key)) continue;
+    if (!viewer && !person.id) continue;
+    if (!own && viewer && (person.id === viewer.id || key === viewer.email.toLowerCase())) continue;
+    sent.add(key);
     tx.insert(outgoingMail)
       .values({
         entry: happening.entry,

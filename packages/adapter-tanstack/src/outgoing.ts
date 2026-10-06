@@ -10,6 +10,7 @@ import {
   pageModel,
   type RecipientIR,
   type SpecIR,
+  sensitiveKind,
   titleField,
   USER_MODEL,
   type UxIR,
@@ -75,10 +76,17 @@ export function outgoingModule(
       : `((id) => (id == null ? [] : ${people("eq(schema.user.id, String(id))")}))(${value(target, `${second}Id`, `r.${first}Id`)})`;
   };
   // The record's fields as its page shows them: labels, formatted values, references by title;
-  // nothing a picture or document field holds, and no lists of other records.
+  // nothing a picture or document field holds, nothing sensitive, and no lists of other records.
   const shown = (model: ModelIR) =>
     model.fields
-      .filter((f) => !f.formula && !isUpload(f) && !(f.type.kind === "relation" && f.type.many))
+      .filter(
+        (f) =>
+          !f.formula &&
+          !isUpload(f) &&
+          // What looks like a card number, a password or an identity number stays in the app.
+          !sensitiveKind(f) &&
+          !(f.type.kind === "relation" && f.type.many),
+      )
       .map((f) => {
         const ui = fieldUi(model, f, t, ir, ux);
         return `      [${JSON.stringify(ui.label)}, ${formatted(f, ui)}],`;
@@ -103,7 +111,7 @@ export function outgoingModule(
     const title = titleField(model);
     const page = ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === model.name);
     return `  ${JSON.stringify(model.name)}: (${lines.some((l) => /\btx\b/.test(l)) ? "tx" : "_tx"}, r) => ({
-    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${title === "id" ? "#\${r.id}" : `\${String(r.${title} ?? r.id)}`}\`,
+    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${title === "id" ? "#${r.id}" : `\${String(r.${title} ?? r.id)}`}\`,
     fields: [
 ${lines.join("\n")}
     ],${page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
