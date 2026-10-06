@@ -36,7 +36,7 @@ Business applications with records, relations, formulas, status workflows, roles
 
 ## Will search engines find my public pages?
 
-Yes, and nothing else. Every app answers `/robots.txt` from the auth file's `public` block: the public pages and their pictures are allowed, everything behind sign-in is refused, and with nothing public all of it is. With public pages the app also serves `/sitemap.xml`, listing them and a public blog's published posts with their dates, and robots.txt names it. Each page's tab says its name and the app's; a `description` under the page in `smithable.content.yml` is what a search engine shows under the link. Article pages carry Open Graph tags for links shared elsewhere.
+Yes, and nothing else. A public app also gets a privacy page written from itself (`legal: privacy`): who runs it, what it stores and why, cookies, mail, logs, your rights, in the app's language and true as the app changes; you fill in who you are. Every app answers `/robots.txt` from the auth file's `public` block: the public pages and their pictures are allowed, everything behind sign-in is refused, and with nothing public all of it is. With public pages the app also serves `/sitemap.xml`, listing them and a public blog's published posts with their dates, and robots.txt names it. Each page's tab says its name and the app's; a `description` under the page in `smithable.content.yml` is what a search engine shows under the link. Article pages carry Open Graph tags for links shared elsewhere.
 
 ## What happens when the spec cannot say what I need?
 

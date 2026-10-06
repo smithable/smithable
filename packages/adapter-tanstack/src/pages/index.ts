@@ -9,6 +9,7 @@ import { customRoute } from "./custom.js";
 import { dashboardRoute } from "./dashboard.js";
 import { dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
+import { legalRoute } from "./legal.js";
 import { listRoute } from "./list.js";
 import { detailRoute, newRoute, recordPageRoute } from "./record.js";
 import { usersRoute } from "./users.js";
@@ -72,6 +73,10 @@ export const PAGE_GENERATORS: {
   },
   custom: {
     routes: (page, { t }) => ({ "index.tsx": customRoute(page, t) }),
+  },
+  legal: {
+    kit: ["src/kit/LegalPage.tsx"],
+    routes: (page, ctx) => ({ "index.tsx": legalRoute(page, ctx) }),
   },
   data: {
     // An overview and each model's crud routes inside the page; no kit of its own.

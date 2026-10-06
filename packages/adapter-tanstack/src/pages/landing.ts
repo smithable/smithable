@@ -419,8 +419,15 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
   const menu = ir.pages
     .filter(
       (p) =>
-        auth.public.pages.includes(p.id) && p.pattern.kind !== "landing" && !p.route.includes("$"),
+        auth.public.pages.includes(p.id) &&
+        p.pattern.kind !== "landing" &&
+        p.pattern.kind !== "legal" &&
+        !p.route.includes("$"),
     )
+    .map((p) => ({ to: p.route, label: t.pageTitle(p.id) }));
+  // The privacy page: a footer line, beside the cookie settings.
+  const legal = ir.pages
+    .filter((p) => p.pattern.kind === "legal" && auth.public.pages.includes(p.id))
     .map((p) => ({ to: p.route, label: t.pageTitle(p.id) }));
   const section =
     home?.pattern.kind === "landing"
@@ -438,6 +445,7 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
 export const site: LandingSite = ${literal({
     ...(home ? { home: home.route } : {}),
     menu,
+    ...(legal.length ? { legal } : {}),
     ...(Object.keys(contact).length ? { contact } : {}),
   })};
 `;

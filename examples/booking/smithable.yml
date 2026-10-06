@@ -118,6 +118,9 @@ pages:
     access: [admin]
   blog:                               # the studio's articles, for visitors too
     articles: Post
+  privacy:
+    route: /privacy
+    legal: privacy                      # written from the app: who runs it, what it stores, cookies, mail
   posts:                              # where staff write them
     crud: Post
     access: [admin]

@@ -168,6 +168,11 @@ export interface PageIR extends SemanticText {
     /** A page of your own: the component in src/custom/pages/, in a route Smithable owns. */
     | { kind: "custom"; component: string }
     /**
+     * A privacy page written from the app itself (docs/design/legal-page.md): who runs it, what it
+     * stores and why, cookies, mail, logs, rights; the operator's details are texts.
+     */
+    | { kind: "legal"; legal: "privacy" }
+    /**
      * A model's records as articles (a blog, news): `title` and `body` (a markdown field) always;
      * a `picture`, a `date`, an `address` (a unique string for the article's address) and a
      * `summary` when the model has them.
