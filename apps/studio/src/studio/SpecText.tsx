@@ -6,7 +6,7 @@ import { yaml } from "@codemirror/lang-yaml";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView, hoverTooltip } from "@codemirror/view";
-import { completeSpec, hoverSpec } from "@smithable/core";
+import { completeSpec, type EditedFile, hoverSpec, type Known } from "@smithable/core";
 import { basicSetup } from "codemirror";
 import { useEffect, useRef } from "react";
 import { type Problem, problemRange } from "./problems";
@@ -18,7 +18,7 @@ export default function SpecText({
   problems,
   select,
   kept,
-  roles,
+  known,
   assist = false,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
@@ -30,17 +30,18 @@ export default function SpecText({
   select?: { from: number; to: number; at: number };
   /** The session-storage key the cursor and scroll are kept under. */
   kept: string;
-  /** The roles of smithable.auth.yml, to suggest where the text names one. */
-  roles?: string[];
-  /** Offer what can be written and explain keys: for smithable.yml, whose schema we have. */
+  /** What the text may name that it does not say: the auth file's roles, the spec's text. */
+  known?: Known;
+  /** Offer what can be written and explain keys, from the file's schema: `label` says which. */
   assist?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
   const changed = useRef(onChange);
   changed.current = onChange;
-  const known = useRef(roles);
-  known.current = roles;
+  const knows = useRef(known);
+  knows.current = known;
+  const file = label as EditedFile;
   // Made once. The text, the problems and the selection reach it through the effects below.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the editor is made once
   useEffect(() => {
@@ -66,7 +67,8 @@ export default function SpecText({
           const found = completeSpec(
             context.state.doc.toString(),
             context.pos,
-            known.current ? { roles: known.current } : {},
+            knows.current ?? {},
+            file,
           );
           if (!found || (!context.explicit && found.from === found.to && !found.value)) return null;
           return {
@@ -86,7 +88,7 @@ export default function SpecText({
       },
     ];
     const hover = hoverTooltip((editor, pos) => {
-      const found = hoverSpec(editor.state.doc.toString(), pos);
+      const found = hoverSpec(editor.state.doc.toString(), pos, file, knows.current ?? {});
       if (!found) return null;
       return {
         pos: found.from,

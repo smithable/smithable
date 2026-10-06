@@ -1,0 +1,317 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://docs.smithable.ai/schema/smithable-content-0.1.json",
+  "title": "smithable.content.yml",
+  "description": "Visible text that should read differently from what the names give, and the app's language.",
+  "type": "object",
+  "required": [
+    "smithableContent"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "smithableContent": {
+      "description": "The file format version.",
+      "enum": [
+        0.1,
+        "0.1"
+      ]
+    },
+    "language": {
+      "enum": [
+        "en",
+        "sv"
+      ],
+      "description": "The language of everything a person reads in the app (the app's own words follow it): en, sv; en is the default."
+    },
+    "models": {
+      "type": "object",
+      "description": "Each model's texts, by the model's name.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "The singular, e.g. \"Client\"; the plural follows unless pluralLabel says otherwise."
+          },
+          "pluralLabel": {
+            "type": "string",
+            "description": "The plural, e.g. \"Clients\". In another language than English, give it."
+          },
+          "fields": {
+            "type": "object",
+            "description": "Each field's texts, by the field's name.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "The field's label."
+                },
+                "help": {
+                  "type": "string",
+                  "description": "A line under the form field."
+                },
+                "values": {
+                  "type": "object",
+                  "description": "A choice field's values' texts: { smb: Small business }.",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "reserve": {
+            "type": "object",
+            "description": "A model with a capacity: the reservation block's words.",
+            "additionalProperties": false,
+            "properties": {
+              "book": {
+                "type": "string",
+                "description": "The button to take a place."
+              },
+              "cancel": {
+                "type": "string",
+                "description": "The button to give it up."
+              },
+              "full": {
+                "type": "string",
+                "description": "When no place is left."
+              },
+              "booked": {
+                "type": "string",
+                "description": "When the viewer has a place."
+              }
+            }
+          }
+        }
+      }
+    },
+    "pages": {
+      "type": "object",
+      "description": "Each page's texts, by the page's name: its title and subtitle, and its sections' or tiles' texts by their names.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The page's heading and menu entry."
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "A line under the heading."
+          },
+          "form": {
+            "type": "object",
+            "description": "The form's sections' headings: { sections: { contact: { title: How to reach them } } }.",
+            "additionalProperties": false,
+            "properties": {
+              "sections": {
+                "type": "object",
+                "description": "Each section's heading, by the section's name in smithable.ux.yml.",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "fields": {
+            "type": "object",
+            "description": "A calculator page's fields' labels and help.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "help": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "results": {
+            "type": "object",
+            "description": "A calculator page's results heading.",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalProperties": {
+          "type": "object",
+          "description": "A landing page's section's texts, by the section's name in smithable.yml.",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "The section's heading."
+            },
+            "subtitle": {
+              "type": "string",
+              "description": "A hero's line under the heading."
+            },
+            "text": {
+              "type": "string",
+              "description": "A paragraph under the heading."
+            },
+            "button": {
+              "type": "string",
+              "description": "The button's text."
+            },
+            "image": {
+              "type": "object",
+              "description": "A hero's picture: { src: /images/hero.webp, alt: what it shows }.",
+              "additionalProperties": false,
+              "properties": {
+                "src": {
+                  "type": "string"
+                },
+                "alt": {
+                  "type": "string"
+                }
+              }
+            },
+            "items": {
+              "type": "array",
+              "description": "The section's items: features, plans, testimonials, questions, pictures, footer links.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "string"
+                  },
+                  "period": {
+                    "type": "string"
+                  },
+                  "features": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "A plan's features."
+                  },
+                  "button": {
+                    "type": "string"
+                  },
+                  "quote": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "answer": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "object",
+                    "description": "A gallery picture: { src: images/…, alt: what it shows }.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "src": {
+                        "type": "string"
+                      },
+                      "alt": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "caption": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "link": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "address": {
+              "type": "string",
+              "description": "A contact section's address, one line per line."
+            },
+            "phone": {
+              "type": "string",
+              "description": "A contact section's phone number."
+            },
+            "email": {
+              "type": "string",
+              "description": "A contact section's email address."
+            },
+            "hours": {
+              "type": "string",
+              "description": "Opening hours, one per line."
+            },
+            "thanks": {
+              "type": "string",
+              "description": "What a visitor reads once the form is sent."
+            },
+            "results": {
+              "type": "string",
+              "description": "A calculator section's results heading."
+            },
+            "label": {
+              "type": "string",
+              "description": "A dashboard tile's label."
+            },
+            "fields": {
+              "type": "object",
+              "description": "A calculator section's fields' labels and help.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "help": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "menus": {
+      "type": "object",
+      "description": "A named menu's heading: { admin: { label: Administration } }.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
