@@ -2,8 +2,10 @@
 // columns matched to a model's fields by name, label or an explicit map, each value converted
 // as a sample's is (values.ts). Pure, so the CLI, MCP and Studio read a file the same way and a
 // dry run shows exactly what would land. References come out as titles for the host to look up.
+
 import type { ContentIR } from "./content.js";
 import type { FieldIR, ModelIR } from "./ir.js";
+import { isUpload } from "./ir.js";
 import { humanize } from "./naming.js";
 import { convertValue } from "./values.js";
 
@@ -87,7 +89,7 @@ export function readRecords(
   // records or people who sign in.
   const importable = (f: FieldIR) =>
     !f.formula &&
-    !(f.type.kind === "scalar" && ["picture", "pictures", "file", "files"].includes(f.type.name)) &&
+    !isUpload(f) &&
     !(f.type.kind === "relation" && (f.type.many || f.type.model === "User"));
   const label = (f: FieldIR) => content?.models?.[model.name]?.fields?.[f.name]?.label;
   const columns: { column: string; field: string; at: number }[] = [];

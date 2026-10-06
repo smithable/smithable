@@ -26,6 +26,7 @@ import {
   type FieldIR,
   type FieldType,
   type FieldValue,
+  isUpload,
   type ModelAccessIR,
   type ModelIR,
   SCALAR_TYPES,
@@ -609,10 +610,7 @@ function buildField(
   let raw: FieldValue | undefined = shorthand.defaultText;
   let rawAt: ParsedNode | null = at;
   // A picture or a document is a stored file: nothing to compare or default to.
-  if (
-    field.type.kind === "scalar" &&
-    ["picture", "pictures", "file", "files"].includes(field.type.name)
-  ) {
+  if (field.type.kind === "scalar" && isUpload(field)) {
     if (field.unique || raw !== undefined || defaultEntry) {
       ctx.error(
         at,

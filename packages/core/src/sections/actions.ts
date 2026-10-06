@@ -27,6 +27,8 @@ import {
   type ModelIR,
   type SemanticText,
   type StandardActionIR,
+  storesFiles,
+  storesPictures,
   USER_MODEL,
 } from "../ir.js";
 import { capitalize } from "../naming.js";
@@ -315,13 +317,8 @@ function readAction(
 function unsettable(field: FieldIR): string | undefined {
   if (field.formula) return "it is computed";
   if (field.type.kind === "relation") return "it is a reference";
-  if (
-    field.type.kind === "scalar" &&
-    (field.type.name === "picture" || field.type.name === "pictures")
-  )
-    return "it is a picture";
-  if (field.type.kind === "scalar" && (field.type.name === "file" || field.type.name === "files"))
-    return "it is a document";
+  if (storesPictures(field)) return "it is a picture";
+  if (storesFiles(field)) return "it is a document";
   return undefined;
 }
 
@@ -513,9 +510,9 @@ function readStandardAction(
 function copyGap(model: ModelIR, values: ActionValueIR[] | undefined): string | undefined {
   for (const f of model.fields) {
     if (!f.required || f.formula) continue;
-    if (f.type.kind === "scalar" && (f.type.name === "picture" || f.type.name === "pictures"))
+    if (storesPictures(f))
       return `${model.name}.${f.name} is a required picture, which a copy starts without: ${model.name} cannot be copied by an action yet.`;
-    if (f.type.kind === "scalar" && (f.type.name === "file" || f.type.name === "files"))
+    if (storesFiles(f))
       return `${model.name}.${f.name} is a required document, which a copy starts without: ${model.name} cannot be copied by an action yet.`;
     const given = values?.find((v) => v.field === f.name);
     if (f.unique && !(given && ("formula" in given || "asked" in given)))
