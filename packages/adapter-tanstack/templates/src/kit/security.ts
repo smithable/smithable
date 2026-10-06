@@ -7,17 +7,22 @@
  * nonce run. Inline style attributes are allowed (a chart's bars are sized with them); inline
  * style elements need the nonce.
  */
-export function pageHeaders(nonce: string | undefined): Record<string, string> {
+export function pageHeaders(
+  nonce: string | undefined,
+  /** A counter of visits' addresses (the app's analytics setting), added to the policy. */
+  allow: { script?: string[]; connect?: string[]; img?: string[] } = {},
+): Record<string, string> {
   if (!import.meta.env.PROD || !nonce) return {};
+  const more = (list?: string[]) => (list?.length ? ` ${list.join(" ")}` : "");
   return {
     "Content-Security-Policy": [
       "default-src 'self'",
-      `script-src 'self' 'nonce-${nonce}'`,
+      `script-src 'self' 'nonce-${nonce}'${more(allow.script)}`,
       `style-src 'self' 'nonce-${nonce}'`,
       "style-src-attr 'unsafe-inline'",
-      "img-src 'self' data:",
+      `img-src 'self' data:${more(allow.img)}`,
       "font-src 'self'",
-      "connect-src 'self'",
+      `connect-src 'self'${more(allow.connect)}`,
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
