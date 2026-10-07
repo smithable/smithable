@@ -11,7 +11,7 @@ import {
   refHint,
 } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import type { Run } from "../builder/ChangeForms";
@@ -75,92 +75,143 @@ export function Studio({
   // "Show in smithable.yml": the editor selects the concept's lines.
   const [jump, setJump] = useState<{ concept: string; at: number }>();
   const concept = project.concepts.find((c) => c.concept === selected);
+  // On a phone: which panel of the row is shown, and a bar to go to another (as Builder has).
+  const strip = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState<PhonePanel>("editor");
+  const show = (id: PhonePanel) =>
+    strip.current
+      ?.querySelector<HTMLElement>(`[data-panel="${id}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  const onScroll = () => {
+    const el = strip.current;
+    if (!el || framed) return;
+    const near = [...el.querySelectorAll<HTMLElement>("[data-panel]")].find(
+      (c) => Math.abs(c.offsetLeft - el.scrollLeft) < el.clientWidth / 2,
+    );
+    if (near) setShown(near.dataset.panel as PhonePanel);
+  };
   return (
-    // The details sit beside the concept tree from lg when the preview is hidden, else only on
-    // very wide screens (the preview takes the right of the window from lg); under it otherwise.
-    // On a phone (under lg) the panels are one horizontal row that snaps, as in Builder: the
-    // concepts, the details and the trace, then the editor, each the screen's width.
-    <div
-      data-strip
-      className={cx(
-        "flex h-full min-h-0 snap-x snap-mandatory divide-x divide-neutral-200 overflow-x-auto overscroll-x-contain",
-        "lg:grid lg:snap-none lg:grid-cols-[260px_1fr] lg:overflow-visible",
-        previewHidden
-          ? "lg:grid-cols-[240px_320px_1fr]"
-          : "min-[1800px]:grid-cols-[240px_320px_1fr]",
+    <div className="flex h-full min-h-0 flex-col">
+      {!framed && (
+        <nav
+          aria-label="Panels"
+          className="flex shrink-0 border-b border-neutral-200 bg-white px-3 py-1.5"
+        >
+          <div className="flex rounded-md bg-neutral-100 p-0.5">
+            {PHONE_PANELS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-current={shown === id ? "true" : undefined}
+                onClick={() => show(id)}
+                className={cx(
+                  "h-7 rounded px-3 text-xs font-medium",
+                  shown === id ? "bg-white shadow-xs" : "text-neutral-600",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
       )}
-    >
+      {/* The details sit beside the concept tree from lg when the preview is hidden, else only on
+          very wide screens (the preview takes the right of the window from lg); under it
+          otherwise. On a phone (under lg) the panels are one horizontal row that snaps, as in
+          Builder: the editor, then the concepts, the details and the trace, each the screen's
+          width. */}
       <div
+        ref={strip}
+        data-strip
+        onScroll={onScroll}
         className={cx(
-          "grid min-h-0 grid-rows-[1fr_2fr] max-lg:contents",
-          previewHidden ? "lg:contents" : "min-[1800px]:contents",
+          "flex min-h-0 flex-1 snap-x snap-mandatory divide-x divide-neutral-200 overflow-x-auto overscroll-x-contain",
+          "lg:grid lg:snap-none lg:grid-cols-[260px_1fr] lg:overflow-visible",
+          previewHidden
+            ? "lg:grid-cols-[240px_320px_1fr]"
+            : "min-[1800px]:grid-cols-[240px_320px_1fr]",
         )}
       >
-        <Panel title="Concepts" className={PHONE_PANEL}>
-          <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
-        </Panel>
         <div
           className={cx(
-            "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200",
-            PHONE_PANEL,
-            "max-lg:border-t-0",
-            previewHidden
-              ? "lg:border-t-0 lg:border-l"
-              : "min-[1800px]:border-t-0 min-[1800px]:border-l",
+            "grid min-h-0 grid-rows-[1fr_2fr] max-lg:contents",
+            previewHidden ? "lg:contents" : "min-[1800px]:contents",
           )}
         >
-          <Panel title="Details">
-            {concept ? (
-              <>
-                <Properties key={concept.concept} concept={concept.concept} spec={spec} run={run} />
-                <ConceptDetails
-                  info={concept}
-                  onCustomize={onCustomize}
-                  onShow={() => {
-                    setTab("spec");
-                    setJump({ concept: concept.concept, at: Date.now() });
-                  }}
-                />
-              </>
-            ) : (
-              <p className="p-3 text-sm text-neutral-500">Choose a concept.</p>
-            )}
+          <Panel title="Concepts" className={PHONE_PANEL} panel="concepts">
+            <ConceptTree concepts={project.concepts} selected={selected} onSelect={setSelected} />
           </Panel>
-          <Trace entries={project.trace} />
+          <div
+            data-panel="details"
+            className={cx(
+              "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200",
+              PHONE_PANEL,
+              "max-lg:border-t-0",
+              previewHidden
+                ? "lg:border-t-0 lg:border-l"
+                : "min-[1800px]:border-t-0 min-[1800px]:border-l",
+            )}
+          >
+            <Panel title="Details">
+              {concept ? (
+                <>
+                  <Properties
+                    key={concept.concept}
+                    concept={concept.concept}
+                    spec={spec}
+                    run={run}
+                  />
+                  <ConceptDetails
+                    info={concept}
+                    onCustomize={onCustomize}
+                    onShow={() => {
+                      setTab("spec");
+                      setJump({ concept: concept.concept, at: Date.now() });
+                    }}
+                  />
+                </>
+              ) : (
+                <p className="p-3 text-sm text-neutral-500">Choose a concept.</p>
+              )}
+            </Panel>
+            <Trace entries={project.trace} />
+          </div>
         </div>
+        {/* On a phone the editor comes first: Code mode is for editing the text. */}
+        <Panel
+          className={cx(PHONE_PANEL, "max-lg:order-first")}
+          panel="editor"
+          title={
+            <Tabs
+              tabs={[
+                ["spec", "Files"],
+                ["operation", "Operation"],
+                ["diff", "Last change"],
+                ["logs", "Logs"],
+                // Narrow windows only: from lg the preview has its own column.
+                ...(framed ? [] : [["preview", "Preview"] as [Tab, string]]),
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
+          }
+        >
+          {tab === "spec" && (
+            <SpecEditor project={project} plugins={spec.plugins} run={run} jump={jump} />
+          )}
+          {tab === "operation" && <OperationForm run={run} spec={spec} />}
+          {/* Remounted for every new change. */}
+          {tab === "diff" && <Diff key={version} />}
+          {tab === "logs" && (
+            <section aria-label="Logs">
+              <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-neutral-700">
+                {logs.slice(-300).join("\n")}
+              </pre>
+            </section>
+          )}
+          {tab === "preview" && !framed && <div ref={previewSlot} className="h-full" />}
+        </Panel>
       </div>
-      <Panel
-        className={PHONE_PANEL}
-        title={
-          <Tabs
-            tabs={[
-              ["spec", "Files"],
-              ["operation", "Operation"],
-              ["diff", "Last change"],
-              ["logs", "Logs"],
-              // Narrow windows only: from lg the preview has its own column.
-              ...(framed ? [] : [["preview", "Preview"] as [Tab, string]]),
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-        }
-      >
-        {tab === "spec" && (
-          <SpecEditor project={project} plugins={spec.plugins} run={run} jump={jump} />
-        )}
-        {tab === "operation" && <OperationForm run={run} spec={spec} />}
-        {/* Remounted for every new change. */}
-        {tab === "diff" && <Diff key={version} />}
-        {tab === "logs" && (
-          <section aria-label="Logs">
-            <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-neutral-700">
-              {logs.slice(-300).join("\n")}
-            </pre>
-          </section>
-        )}
-        {tab === "preview" && !framed && <div ref={previewSlot} className="h-full" />}
-      </Panel>
     </div>
   );
 }
@@ -669,6 +720,13 @@ export function specRange(text: string, concept: string): [number, number] | und
   );
   return line < 0 ? undefined : [offset(line), offset(line) + (lines[line]?.length ?? 0)];
 }
+
+type PhonePanel = "editor" | "concepts" | "details";
+const PHONE_PANELS: [PhonePanel, string][] = [
+  ["editor", "Editor"],
+  ["concepts", "Concepts"],
+  ["details", "Details"],
+];
 
 /** A panel of the phone's snapping row: the screen's width, snapping to its start. */
 const PHONE_PANEL = "max-lg:w-full max-lg:shrink-0 max-lg:snap-start";

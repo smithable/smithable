@@ -358,15 +358,20 @@ export function App() {
               data-guide="publish"
               target="_blank"
               rel="noreferrer"
+              title="smithable deploy runs it, with its Release checks, as a container"
               className="text-xs font-medium text-accent hover:underline"
             >
-              Publish
+              How to publish
             </a>
           )}
-          {mode === "builder" && !project.making && !guideOff() && (
+          {!project.making && !guideOff() && (
             <button
               type="button"
-              onClick={() => setGuiding(true)}
+              // The tour is Builder's: from Code mode it switches there first.
+              onClick={() => {
+                if (mode !== "builder") switchMode("builder");
+                setGuiding(true);
+              }}
               className="text-xs font-medium text-neutral-600 hover:underline"
             >
               Guide
