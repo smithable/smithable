@@ -265,8 +265,42 @@ describe("the check in `smithable security`", () => {
     const read = lists([], ["TanStack/router"]);
     const result = await published(dir, read, {});
     expect(result.ok).toBe(false);
-    expect(result.findings[0]).toContain("Not read, so not checked: TanStack/router");
+    expect(result.findings[0]).toContain("The advisory lists of TanStack/router could not be read");
+    expect(result.findings[0]).toContain("GITHUB_TOKEN");
     await published(dir, read, {});
     expect(read.calls()).toBe(2);
   });
+
+  test("GitHub's hourly limit is said as such, with when it opens again", async () => {
+    const dir = app({ "@tanstack/react-start": "1.168.60" });
+    const at = Date.now() + 25 * 60_000;
+    const read = async () => ({ advisories: [], unread: ["TanStack/router"], limitedUntil: at });
+    const result = await published(dir, read, {});
+    expect(result.ok).toBe(false);
+    expect(result.findings[0]).toContain(
+      "GitHub allowed no more reads from this machine this hour",
+    );
+    expect(result.findings[0]).toContain(
+      `run again after ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`,
+    );
+  });
+});
+
+test("the lists are kept a day on the machine, so a second read asks GitHub nothing", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-advisories-cache-"));
+  let github = 0;
+  const fetchFn = (async (url: string) => {
+    if (String(url).startsWith("https://registry.npmjs.org/"))
+      return new Response(
+        JSON.stringify({ repository: { url: "git+https://github.com/TanStack/router.git" } }),
+      );
+    github++;
+    return new Response(JSON.stringify([]), { headers: { "content-type": "application/json" } });
+  }) as unknown as typeof fetch;
+  const packages = { "@tanstack/react-start": "1.168.60" };
+  const first = await readAdvisories(packages, { fetch: fetchFn, cacheDir: dir });
+  const second = await readAdvisories(packages, { fetch: fetchFn, cacheDir: dir });
+  expect(first.unread).toEqual([]);
+  expect(second.unread).toEqual([]);
+  expect(github).toBe(1);
 });
