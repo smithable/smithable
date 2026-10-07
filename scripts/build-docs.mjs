@@ -6,6 +6,7 @@
 // Usage: node scripts/build-docs.mjs [out dir]
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -127,6 +128,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-appl
 a{color:var(--accent)}
 header{border-bottom:1px solid var(--line);padding:.75rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;align-items:baseline}
 header strong{margin-right:auto}
+header .home{display:flex;align-items:center}header .home img{display:block}
 header a{text-decoration:none}
 header a[aria-current]{color:var(--fg);font-weight:600}
 .layout{max-width:72rem;margin:0 auto;padding:1.5rem 1rem 4rem;display:grid;gap:2rem}
@@ -163,10 +165,12 @@ const html = (page, body) => {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">${PRERELEASE}
 <title>${esc(title)} · Smithable docs</title>
+<link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <style>${CSS}</style>
 </head>
 <body>
-<header><strong>Smithable docs</strong>${PAGES.map((p) => `<a href="/${p.out === "index.html" ? "" : p.out}"${p === page ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("")}<a href="${SITE}${schemaPath}">JSON Schema</a></header>
+<header><a class="home" href="/"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable" height="26" width="116"></picture></a><strong>docs</strong>${PAGES.map((p) => `<a href="/${p.out === "index.html" ? "" : p.out}"${p === page ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("")}<a href="${SITE}${schemaPath}">JSON Schema</a></header>
 <div class="layout${page.toc ? " toc" : ""}">${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
@@ -177,6 +181,9 @@ ${body}</main></div>
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, dirname(schemaPath)), { recursive: true });
+// The brand's files (the logo, the icons, the smithy picture), served as they are: smithable.ai's
+// start page and the docs' own header use them from here.
+cpSync(join(root, "docs/site/brand"), join(out, "brand"), { recursive: true });
 for (const page of PAGES) {
   // A heading's id by its text: the next unused one of that text, so repeated headings keep
   // GitHub's -1, -2 suffixes.
