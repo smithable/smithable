@@ -4088,6 +4088,19 @@ for (const [index, example] of examples.entries()) {
           if (!served) failures.push(`${example} ${src}`);
         }
       }
+      // A page is asked for again every time; the build's hashed files are kept a year.
+      {
+        const page = await fetch(`${base}/sign-in`);
+        const asset = /(?:src|href)="(\/assets\/[^"]+\.(?:js|css))"/.exec(await page.text())?.[1];
+        const assetCache = asset && (await fetch(`${base}${asset}`)).headers.get("cache-control");
+        const ok =
+          page.headers.get("cache-control") === "no-store" &&
+          assetCache === "public, max-age=31536000, immutable";
+        console.log(
+          `  ${ok ? "✓" : "✗"} a page is never cached (${page.headers.get("cache-control")}); the build's files a year (${asset}: ${assetCache})`,
+        );
+        if (!ok) failures.push(`${example} cache headers`);
+      }
       const signIn = await (await fetch(`${base}/sign-in`)).text();
       const devSignIn = await fetch(`${base}/api/auth/sign-in/email`, {
         method: "POST",
