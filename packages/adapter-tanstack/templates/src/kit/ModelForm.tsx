@@ -514,7 +514,9 @@ function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app
   if (field.view && typeof value === "string" && value) return field.view({ text: value });
   if (field.relation) {
     const related = record[field.relation.key] as Record<string, unknown> | null | undefined;
-    return formatValue(field, related?.[field.relation.titleField] ?? value, app);
+    // One in the trash shows as a dash (its value is then null).
+    const title = related?.deletedAt ? null : related?.[field.relation.titleField];
+    return formatValue(field, title ?? value, app);
   }
   if (field.kind === "text" && typeof value === "string" && value)
     return <p className="whitespace-pre-wrap">{value}</p>;
