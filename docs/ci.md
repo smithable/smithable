@@ -46,6 +46,10 @@ systemctl --user status actions-runner-engine --no-pager | head -5
 
 The first three runs each lost a browser step to a page that never opened: the service's soft limit on open files was 1024 (a shell's is 1048576), which seven dev servers and Chromium exhaust; `LimitNOFILE` in the unit fixes it. The job runs three examples at a time (`TEST_APPS_CONCURRENCY=3`; a session's gate runs all seven), since the runner shares the machine with the sessions' builds and tests: the first two runs each lost one browser step to a hydration wait under that load. The job finds Node through fnm's default alias (`~/.local/share/fnm/aliases/default/bin`, put on the job's PATH by the workflow), installs the dependencies into the runner's own checkout (`_work/smithable/smithable`, with the machine's pnpm store), and runs the gate on ports 8600 and 8610, which no session uses. The generated apps' commits are made as `CI <ci@smithable.invalid>` through the job's environment; the machine's global Git identity is left alone.
 
+## Ports the runner uses
+
+The `full` job's gate takes `TEST_APPS_PORT=8600` (ten ports per example, so 8600 to 8699) and `TEST_STUDIO_PORT=8610` (to 8613). Nothing else on the machine may listen there: a session's own dev server or Studio in that range answers the runner's checks instead of the example under test (2026-10-07: a stranger-walk server on 8640 failed the marketplace checks of two runs). Sessions' gates use their own bases (8450 and up); anything run by hand goes on 8700 and up.
+
 ## When the machine is off
 
 A queued job waits for the runner for up to 24 hours, then fails as "no runner". The scheduled check of main simply runs when the machine is back; a labelled pull request's check waits with it. `~/repos/stop` stops sessions, not the runner: a gate it holds finishes; the runner's queue drains when the machine is on.
