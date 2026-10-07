@@ -176,8 +176,13 @@ export function ModelTable<R extends Row>({
         ) : (
           <>
             <p className="font-medium">{w.noneYet(ui.pluralLabel.toLowerCase())}</p>
-            <p className="text-sm text-muted-foreground">{w.createFirst}</p>
-            {emptyAction}
+            {/* Asked to create one only when there is a button for it (a visitor gets none). */}
+            {emptyAction && (
+              <>
+                <p className="text-sm text-muted-foreground">{w.createFirst}</p>
+                {emptyAction}
+              </>
+            )}
           </>
         )}
       </Card>
