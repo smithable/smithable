@@ -7078,8 +7078,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -7784,7 +7790,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/index.tsx": "505b868e generated",
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "6d8ddce7 generated",
+  "src/routes/sign-in.tsx": "765aa7b9 generated",
   "src/routes/team/index.tsx": "156920a5 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
@@ -14886,8 +14892,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -15566,7 +15578,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/$id.tsx": "c4c81ff4 generated",
   "src/routes/sessions/index.tsx": "edb77035 generated",
   "src/routes/sessions/new.tsx": "03834f6a generated",
-  "src/routes/sign-in.tsx": "50a41d17 generated",
+  "src/routes/sign-in.tsx": "5cf2405f generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
@@ -18906,8 +18918,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@acme.example\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -19511,7 +19529,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "300d8d3e generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "9e2cb9ca generated",
+  "src/routes/sign-in.tsx": "7bd738ee generated",
   "src/routes/team/index.tsx": "84f68638 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
@@ -23728,8 +23746,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -24429,7 +24453,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "45384b2f generated",
-  "src/routes/sign-in.tsx": "3ac37de3 generated",
+  "src/routes/sign-in.tsx": "1d04adab generated",
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "a0e943ba generated",
   "src/start.ts": "5379c2a6 kit",
@@ -26717,8 +26741,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -27326,7 +27356,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/$id.tsx": "af55ef4b generated",
   "src/routes/saved/index.tsx": "23af7057 generated",
   "src/routes/saved/new.tsx": "925c48d7 generated",
-  "src/routes/sign-in.tsx": "50a41d17 generated",
+  "src/routes/sign-in.tsx": "5cf2405f generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "293fa7c3 generated",
   "src/start.ts": "5379c2a6 kit",
@@ -28918,8 +28948,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -29400,7 +29436,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/index.tsx": "d9693bc3 generated",
   "src/routes/items/new.tsx": "64aef572 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
-  "src/routes/sign-in.tsx": "50a41d17 generated",
+  "src/routes/sign-in.tsx": "5cf2405f generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
@@ -36936,8 +36972,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
@@ -37952,7 +37994,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "d77fe1dc generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
-  "src/routes/sign-in.tsx": "89c85283 generated",
+  "src/routes/sign-in.tsx": "9073cc75 generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/index.tsx": "796850fe generated",
   "src/routes/updates/$id.tsx": "70a07947 generated",
