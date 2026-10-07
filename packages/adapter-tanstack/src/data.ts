@@ -112,7 +112,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
           ? "string"
           : "string | null";
       return [
-        `${f.name}?: { id: ${user ? "string" : "number"}${title === "id" ? "" : `; ${title}: ${titleType}`} } | null`,
+        `${f.name}?: { id: ${user ? "string" : "number"}${title === "id" ? "" : `; ${title}: ${titleType}`}${trashed(f) ? "; deletedAt?: Date | null" : ""} } | null`,
       ];
     }
     return f.formula ? [`${f.name}?: unknown`] : [];
@@ -121,9 +121,19 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
   function accessor(f: FieldIR): string {
     if (f.type.kind !== "relation") return `(row) => row.${f.name}`;
     const title = relatedTitle(ir, f.type.model);
-    return title === "id"
-      ? `(row) => (row.${f.name} ? \`#\${row.${f.name}.id}\` : null)`
+    const live = trashed(f) ? ` && !row.${f.name}.deletedAt` : "";
+    if (title === "id") return `(row) => (row.${f.name}${live} ? \`#\${row.${f.name}.id}\` : null)`;
+    return live
+      ? `(row) => (row.${f.name}${live} ? row.${f.name}.${title} : null)`
       : `(row) => row.${f.name}?.${title} ?? null`;
+  }
+  // A reference to a model with a trash: what it points to may be in the trash.
+  function trashed(f: FieldIR) {
+    return (
+      f.type.kind === "relation" &&
+      f.type.model !== USER_MODEL &&
+      modelNamed(ir, f.type.model).trash
+    );
   }
   const uiSource = literal({
     ...ui,
@@ -456,9 +466,10 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
   );
+  // With whether it is in the trash: its referrers then show a dash (docs/design/trash.md).
   const title = (m: ModelIR) => {
     const f = titleField(m);
-    return f === "id" ? "{ id: true }" : `{ id: true, ${f}: true }`;
+    return `{ id: true${f === "id" ? "" : `, ${f}: true`}${m.trash ? ", deletedAt: true" : ""} }`;
   };
   // Related records to include: the title of each referenced record (and user), and for
   // lists the listed records the viewer may read, with the titles of what they refer to.

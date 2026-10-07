@@ -114,6 +114,36 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   expect(files.some((f) => f.path === "src/kit/outgoing.server.ts")).toBe(true);
 });
 
+test("a customer in the trash is neither mailed nor named, and its orders show a dash", () => {
+  const customer = ir.models.find((m) => m.name === "Customer");
+  const order = ir.models.find((m) => m.name === "Order");
+  const trashed = {
+    ...ir,
+    models: ir.models.map((m) =>
+      m === customer
+        ? { ...m, trash: true }
+        : m === order
+          ? {
+              ...m,
+              fields: m.fields.map((f) => (f.name === "customer" ? { ...f, required: false } : f)),
+            }
+          : m,
+    ),
+  } as SpecIR;
+  const files = generateApp(trashed, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const file = (p: string) => files.find((f) => f.path === p)?.content ?? "";
+  const module = file("src/generated/outgoing.server.ts");
+  expect(module).toContain(
+    "one(tx, schema.customers, schema.customers.id, schema.customers.email, r.customerId, schema.customers.deletedAt)",
+  );
+  expect(module).toContain("trashed ? and(eq(id, value), isNull(trashed)) : eq(id, value)");
+  const data = file("src/generated/order.server.ts");
+  expect(data).toContain("customer: { columns: { id: true, name: true, deletedAt: true } }");
+  expect(file("src/generated/order.ts")).toContain(
+    "(row) => (row.customer && !row.customer.deletedAt ? row.customer.name : null)",
+  );
+});
+
 test("an entry to a target queues a call with the record as the API gives it", () => {
   const withTarget = {
     ...ir,

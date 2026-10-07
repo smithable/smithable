@@ -3309,7 +3309,8 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
-  if (title && related && typeof related === "object") return { id: related.id, title: related[title] };
+  if (title && related && typeof related === "object")
+    return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
   if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
   return api[field];
 }
@@ -7690,7 +7691,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
-  "src/generated/mcp.server.ts": "bd70ca90 generated",
+  "src/generated/mcp.server.ts": "f42b738c generated",
   "src/generated/note.server.ts": "6d5e8eca generated",
   "src/generated/note.ts": "45ea7043 generated",
   "src/generated/pages.ts": "4b852c85 generated",
@@ -7711,7 +7712,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -15480,7 +15481,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -17005,7 +17006,7 @@ export const orderData = {
     if (readScope(orderAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const found = await db.query.orders.findMany({
       where: and(orderData.readable(viewer), where),
-      with: { customer: { columns: { id: true, name: true } } },
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
     });
     const rows = found.map((row) => shownTo(viewer, row));
@@ -17023,7 +17024,7 @@ export const orderData = {
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
     const found = await db.query.orders.findMany({
       where: condition,
-      with: { customer: { columns: { id: true, name: true } } },
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
@@ -17035,7 +17036,7 @@ export const orderData = {
   async get(viewer: Viewer | null, id: number) {
     const found = await db.query.orders.findFirst({
       where: and(eq(schema.orders.id, id), orderData.readable(viewer)),
-      with: { customer: { columns: { id: true, name: true } } },
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
     });
     const row = found && shownTo(viewer, found);
     return row ? withOrderFormulas(row) : null;
@@ -17142,7 +17143,7 @@ export const orderData = {
     const rows = (
       await db.query.orders.findMany({
         where: and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer)),
-        with: { customer: { columns: { id: true, name: true } } },
+        with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
         orderBy: (t) => [desc(t.deletedAt)],
         limit: 1000,
       })
@@ -17158,7 +17159,7 @@ export const orderData = {
   async trashed(viewer: Viewer | null, id: number) {
     const row = await db.query.orders.findFirst({
       where: and(eq(schema.orders.id, id), and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer))),
-      with: { customer: { columns: { id: true, name: true } } },
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
     });
     if (!row || !allows(orderAccess.delete, viewer, row.ownerId)) return null;
     const rows = [row];
@@ -17278,7 +17279,7 @@ async function writer() {
 
 /** Order records as the kit reads them. */
 export type OrderRow = typeof schema.orders.$inferSelect & {
-  customer?: { id: number; name: string } | null;
+  customer?: { id: number; name: string; deletedAt?: Date | null } | null;
   shippingCost?: unknown;
 };
 
@@ -17302,7 +17303,7 @@ export const orderUi: RecordUi<OrderRow> = {
       kind: "relation",
       required: true,
       relation: { key: "customer", titleField: "name" },
-      get: (row) => row.customer?.name ?? null,
+      get: (row) => (row.customer && !row.customer.deletedAt ? row.customer.name : null),
     },
     {
       name: "status",
@@ -19450,8 +19451,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.server.ts": "8c881705 generated",
-  "src/generated/order.ts": "bb85d834 generated",
+  "src/generated/order.server.ts": "869281e1 generated",
+  "src/generated/order.ts": "b3128ced generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/users.server.ts": "32ba704b generated",
   "src/generated/users.test.ts": "f49c4632 generated",
@@ -19463,7 +19464,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -24372,7 +24373,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
@@ -27275,7 +27276,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "a055249c kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -29360,7 +29361,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -34519,7 +34520,8 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
-  if (title && related && typeof related === "object") return { id: related.id, title: related[title] };
+  if (title && related && typeof related === "object")
+    return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
   if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
   return api[field];
 }
@@ -37867,7 +37869,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.server.ts": "f9bfae49 generated",
   "src/generated/maintenance.ts": "0a683378 generated",
-  "src/generated/mcp.server.ts": "0761c19c generated",
+  "src/generated/mcp.server.ts": "a3ccdc68 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "2b5c39fa generated",
@@ -37885,7 +37887,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "b4abe79a kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "06de85ff kit",
+  "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
