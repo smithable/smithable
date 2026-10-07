@@ -1,6 +1,7 @@
 // Smithable app kit: the production server (`pnpm start`, and the container). It serves the
-// built files and the app, and gives every response the security headers; pages also get a
-// Content Security Policy from the root route (src/kit/security.ts).
+// built files and the app, and gives every response the security headers and a cache rule (the
+// hashed build files kept a year, pages never); pages also get a Content Security Policy from
+// the root route (src/kit/security.ts).
 import { serve } from "srvx";
 import { staticMiddleware } from "srvx/static";
 import app from "./dist/server/server.js";
@@ -76,6 +77,14 @@ serve({
       const response = await next();
       for (const [name, value] of Object.entries(HEADERS))
         if (!response.headers.has(name)) response.headers.set(name, value);
+      if (!response.headers.has("Cache-Control")) {
+        // The build's files have their content's hash in the name, so a browser keeps them a
+        // year; a page (often a signed-in person's own) is asked for again every time.
+        if (response.ok && new URL(request.url).pathname.startsWith("/assets/"))
+          response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        else if (response.headers.get("Content-Type")?.startsWith("text/html"))
+          response.headers.set("Cache-Control", "no-store");
+      }
       return response;
     },
     staticMiddleware({ dir: new URL("./dist/client", import.meta.url).pathname }),
