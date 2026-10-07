@@ -140,6 +140,8 @@ export const w = {
   nothing: "Inget",
   nothingHereYet: "Inget här ännu.",
   nothingMatches: "Inget som matchar har hänt.",
+  nothingThisMonth: "Inget den här månaden ännu.",
+  nothingThisWeek: "Inget den här veckan ännu.",
   nothingToChooseYet: "Det finns inget att välja ännu.",
   nothingToPreview: "Inget att förhandsgranska.",
   olderArticles: "Äldre artiklar",

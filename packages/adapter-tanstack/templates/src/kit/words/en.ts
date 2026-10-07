@@ -139,6 +139,8 @@ export const w = {
   nothing: "Nothing",
   nothingHereYet: "Nothing here yet.",
   nothingMatches: "Nothing has happened that matches.",
+  nothingThisMonth: "Nothing this month yet.",
+  nothingThisWeek: "Nothing this week yet.",
   nothingToChooseYet: "There is nothing to choose yet.",
   nothingToPreview: "Nothing to preview.",
   olderArticles: "Older articles",

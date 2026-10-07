@@ -198,6 +198,7 @@ export function Calendar({
   const byDay = new Map(range.days.map((d) => [d, place(placed.filter((p) => p.day === d))]));
   // Hours shown: 07:00 to 21:00, widened to the week's earliest and latest record.
   const timed = !dateOnly && range.view === "week";
+  const empty = range.days.every((d) => !byDay.get(d)?.length);
   const inWeek = placed.filter((p) => byDay.has(p.day));
   const firstHour = Math.min(7, ...inWeek.map((p) => Math.floor(p.from / 60)));
   const lastHour = Math.max(21, ...inWeek.map((p) => Math.ceil(p.to / 60)));
@@ -269,6 +270,12 @@ export function Calendar({
             ))}
           </div>
         )}
+        {/* On a phone an empty week or month says so once, not "Nothing" under every day. */}
+        {empty && (
+          <p className="py-3 text-sm text-muted-foreground md:hidden">
+            {range.view === "week" ? w.nothingThisWeek : w.nothingThisMonth}
+          </p>
+        )}
         {range.days.map((d) => {
           const records = byDay.get(d) ?? [];
           const outside = range.month !== undefined && !d.startsWith(range.month);
@@ -276,7 +283,7 @@ export function Calendar({
             <section
               key={d}
               aria-label={longDay(d)}
-              className={`border-b py-3 md:border md:border-border md:py-0 ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
+              className={`border-b py-3 md:border md:border-border md:py-0 ${empty ? "max-md:hidden" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
             >
               <h3
                 className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today ? "text-primary" : ""}`}

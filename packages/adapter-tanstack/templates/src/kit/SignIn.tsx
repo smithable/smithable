@@ -13,6 +13,7 @@ export function SignIn({
   providers,
   missing,
   invitation,
+  invitedOnly,
   devRoles,
   demo,
   onProvider,
@@ -28,6 +29,8 @@ export function SignIn({
   missing: string[];
   /** Whom the invitation link that opened the page is for; the address must sign in itself. */
   invitation?: { email: string; role: string } | null;
+  /** Only invited people may sign in (and the administrators). */
+  invitedOnly?: boolean;
   /** Roles to sign in as; given in development, and in a demo. */
   devRoles?: string[];
   /** A demo: the role buttons are the way in, not a development aid. */
@@ -58,6 +61,9 @@ export function SignIn({
   return (
     <Card data-kit="sign-in" className="mx-auto mt-10 max-w-sm space-y-5 p-card">
       <h1 className="text-2xl font-bold">{w.signInTo(appName)}</h1>
+      {invitedOnly && !invitation && (
+        <p className="text-sm text-muted-foreground">{w.legalInvitedOnly}</p>
+      )}
       {invitation && (
         <p className="rounded-md bg-accent p-3 text-sm">
           {w.invitedAs(appName, invitation.role)} <strong>{invitation.email}</strong>.

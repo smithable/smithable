@@ -441,7 +441,12 @@ function SignInPage() {
     <SignIn
       appName={app.name}
       providers={providers}
-      missing={missing}${invitations ? "\n      invitation={invitation}" : ""}
+      missing={missing}${invitations ? "\n      invitation={invitation}" : ""}${
+        // Only invited people may sign in: the page says so before anyone waits for a code.
+        invitations && auth.signIn !== "none" && !auth.signIn.selfSignUp
+          ? "\n      invitedOnly"
+          : ""
+      }
       devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}
       demo={demo}
       onProvider={async (provider) => {
