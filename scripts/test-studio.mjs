@@ -153,15 +153,18 @@ try {
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
   });
-  await step("the header has Publish and Help, which open the docs (finding 14)", async () => {
-    const header = page.locator("header").first();
-    for (const [name, href] of [
-      ["Publish", "https://docs.smithable.ai/self-host.html"],
-      ["Help", "https://docs.smithable.ai/start.html"],
-    ])
-      if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
-        throw new Error(`${name} does not lead to ${href}`);
-  });
+  await step(
+    "the header has How to publish and Help, which open the docs (finding 14)",
+    async () => {
+      const header = page.locator("header").first();
+      for (const [name, href] of [
+        ["How to publish", "https://docs.smithable.ai/self-host.html"],
+        ["Help", "https://docs.smithable.ai/start.html"],
+      ])
+        if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
+          throw new Error(`${name} does not lead to ${href}`);
+    },
+  );
   await step("the change box folds to one line and opens again (finding 10)", async () => {
     await page.getByRole("button", { name: "Fold", exact: true }).click();
     await page.getByRole("button", { name: "Show the change box" }).waitFor();
@@ -679,7 +682,8 @@ try {
       await page.getByRole("button", { name: "Make the change" }).click();
       await page
         .getByText(
-          /^Done: Customers: added a mobile \(a phone number\)\. Local model \(fake-model\)/,
+          // In No code: which model made it, in words; the trace keeps the tier and tokens.
+          /^Done: Customers: added a mobile \(a phone number\)\. Made with fake-model\./,
         )
         .waitFor({ timeout: 60000 });
       await trace

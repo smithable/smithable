@@ -12,11 +12,17 @@ import { PREFILLED, type Prefill } from "./ChangeForms";
  * server); once the app is in place each is taken in turn, as if typed then.
  */
 export function Ask({
+  example,
+  onDone,
   onEdit,
   words,
   making = false,
   waiting = [],
 }: {
+  /** The box's example, in the app's own words. */
+  example?: string;
+  /** A change was made. */
+  onDone?: () => void;
   onEdit: (prefill: Prefill) => void;
   words?: Words;
   making?: boolean;
@@ -54,8 +60,13 @@ export function Ask({
       if (proposed.kind === "change" && !proposed.operations.some((o) => o.destructive)) {
         const result = await api.applyProposal(proposed.id);
         const done = proposed.operations.map((o) => words?.(o.op, o.args) ?? o.description);
-        setOutput(result.ok ? `Done: ${done.join("; ")}. ${proposed.usage}` : result.output);
-        if (result.ok) setRequest("");
+        setOutput(
+          result.ok ? `Done: ${done.join("; ")}. ${plainUsage(proposed.usage)}` : result.output,
+        );
+        if (result.ok) {
+          setRequest("");
+          onDone?.();
+        }
       } else setProposal(proposed);
     } catch (error) {
       setOutput((error as Error).message);
@@ -70,7 +81,10 @@ export function Ask({
       const result = await api.applyProposal(proposal.id);
       setOutput(result.output);
       setProposal(undefined);
-      if (result.ok) setRequest("");
+      if (result.ok) {
+        setRequest("");
+        onDone?.();
+      }
     } catch (error) {
       setOutput((error as Error).message);
     } finally {
@@ -96,7 +110,10 @@ export function Ask({
       >
         <Label
           text="Describe a change, or ask a question"
-          hint="For example: customers should have a mobile number. Or: who can delete orders?"
+          hint={
+            example ??
+            "For example: customers should have a mobile number. Or: who can delete orders?"
+          }
         >
           <textarea
             value={request}
@@ -181,7 +198,7 @@ export function ProposalView({
       aria-live="polite"
       className="space-y-3 rounded-md border border-neutral-200 p-3"
     >
-      {proposal.usage && <p className="text-xs text-neutral-500">{proposal.usage}</p>}
+      {proposal.usage && <p className="text-xs text-neutral-500">{plainUsage(proposal.usage)}</p>}
       {proposal.kind === "change" && (
         <>
           <p className="text-sm font-medium">Proposed change</p>
@@ -241,4 +258,15 @@ export function ProposalView({
       {proposal.kind === "failed" && <p className="text-sm text-red-700">{proposal.message}</p>}
     </section>
   );
+}
+
+/**
+ * The usage line in No code's words: whether a model was needed, and which. Code mode shows the
+ * engine's own line (the tier, tokens and cost).
+ */
+function plainUsage(usage: string): string {
+  if (!usage || usage.startsWith("Generator") || usage === "No model was used")
+    return "No AI needed.";
+  const model = /\(([^)]+)\)/.exec(usage)?.[1];
+  return model ? `Made with ${model}.` : "";
 }
