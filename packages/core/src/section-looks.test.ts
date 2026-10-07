@@ -123,7 +123,7 @@ test("a landing page may have a theme of its own, set with setTheme --page; othe
   expect(crud).toBe("A theme of its own is for a landing page; items is not one.");
   const set = applyOperation({ spec }, "setTheme", { page: "home", preset: "playful" });
   if (!set.ok) throw new Error(set.message);
-  expect(set.description).toBe("Use the playful theme on the home page");
+  expect(set.description).toBe("Use the Playful theme on the home page");
   expect(set.files.ux).toContain("home:\n    theme:\n      preset: playful");
   const back = applyOperation(set.files, "setTheme", { page: "home", preset: "none" });
   expect(back.ok && back.files.ux).not.toContain("playful");

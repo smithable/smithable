@@ -53,9 +53,27 @@ describe("the seven benchmark tasks", () => {
   test("Customers should have a phone number", () => {
     const o = ops("Customers should have a phone number.");
     expect(o).toEqual([
-      { op: "addField", args: { model: "Customer", field: "phone", type: "phone" } },
+      { op: "addField", args: { model: "Customer", field: "phone", type: "phone", list: true } },
     ]);
     applies(o as PhraseOperation[]);
+  });
+  test("a grade is a choice, and a status says its values or asks for them (the stranger walk)", () => {
+    expect(ops("Products should have a severity.")).toEqual([
+      {
+        op: "addField",
+        args: { model: "Product", field: "severity", type: "low | medium | high", list: true },
+      },
+    ]);
+    expect(ops("Products should have a priority.")?.[0]?.args.type).toBe("low | normal | high");
+    expect(ops("Products should have a status: draft, on sale or sold out.")).toEqual([
+      {
+        op: "addField",
+        args: { model: "Product", field: "status", type: "draft | onSale | soldOut", list: true },
+      },
+    ]);
+    expect(refusalOf(ir(), "Products should have a status.", ROLES)?.refusal).toContain(
+      "needs its values",
+    );
   });
   test("The customer email should be required", () => {
     const o = ops("The customer email should be required.");
@@ -229,7 +247,7 @@ describe("other wordings", () => {
     ],
   ])("%s", (request, args) => {
     const o = ops(request);
-    expect(o).toEqual([{ op: "addField", args }]);
+    expect(o).toEqual([{ op: "addField", args: { ...args, list: true } }]);
     applies(o as PhraseOperation[]);
   });
 
@@ -349,13 +367,15 @@ describe("the words box, as a first-time owner types into it (studio-review-2026
   const ops = (request: string) => matchRequest(ir(), request, ROLES)?.operations;
 
   test("its own printed example and its everyday variants add the field asked for", () => {
-    const phone = [{ op: "addField", args: { model: "Customer", field: "mobile", type: "phone" } }];
+    const phone = [
+      { op: "addField", args: { model: "Customer", field: "mobile", type: "phone", list: true } },
+    ];
     expect(ops("customers should have a mobile number")).toEqual(phone);
     expect(ops("Add a mobile number to customers.")).toEqual(phone);
     expect(ops("let me add a mobile number to customers")).toEqual(phone);
     // "A field called region" is a field named region.
     expect(ops("add a field called region to customers")).toEqual([
-      { op: "addField", args: { model: "Customer", field: "region", type: "string" } },
+      { op: "addField", args: { model: "Customer", field: "region", type: "string", list: true } },
     ]);
     expect(ops("make email required for customers")).toEqual([
       { op: "changeField", args: { model: "Customer", field: "email", type: "email! unique" } },
