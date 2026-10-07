@@ -53,7 +53,8 @@ export function outgoingModule(
   const value = (target: ModelIR, column: string, id: string) => {
     const n = names(target, t);
     tables.add(n.table);
-    return `one(tx, ${n.table}, ${n.table}.id, ${n.table}.${column}, ${id})`;
+    // A record in the trash is gone to the mail too: no address, no title (docs/design/trash.md).
+    return `one(tx, ${n.table}, ${n.table}.id, ${n.table}.${column}, ${id}${target.trash ? `, ${n.table}.deletedAt` : ""})`;
   };
   const people = (where: string) => {
     users = true;
@@ -158,7 +159,8 @@ ${apiFields(model)
   });
   const body = [...showers, ...senders, ...list].join("\n");
   const ones = body.includes("one(tx,");
-  return `${HEADER}${ones || users ? `import { eq${users ? ", type SQL" : ""} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
+  const trashOne = body.includes(".deletedAt)");
+  return `${HEADER}${ones || users ? `import { ${trashOne ? "and, " : ""}eq${trashOne ? ", isNull" : ""}${users ? ", type SQL" : ""} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
 ${body.includes("formatValue(") ? 'import { formatValue } from "#/kit/format";\n' : ""}import { counts } from "#/kit/outgoing";
 import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : [])].join(", ")} } from "#/kit/outgoing.server";
@@ -168,10 +170,10 @@ type Row = Record<string, unknown>;
 ${
   ones
     ? `
-/** One column of the record with the id, inside the transaction. */
-function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
+/** One column of the record with the id, inside the transaction${trashOne ? "; nothing of one in the trash" : ""}. */
+function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown${trashOne ? ", trashed?: SQLiteColumn" : ""}): unknown {
   if (value == null) return undefined;
-  return tx.select({ v: column }).from(table).where(eq(id, value)).get()?.v;
+  return tx.select({ v: column }).from(table).where(${trashOne ? "trashed ? and(eq(id, value), isNull(trashed)) : eq(id, value)" : "eq(id, value)"}).get()?.v;
 }
 `
     : ""
