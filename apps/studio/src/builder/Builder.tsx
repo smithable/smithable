@@ -1,4 +1,5 @@
 // Builder mode: the app in plain language, forms for changes, and the preview.
+import { humanize, pageModel, plural } from "@smithable/core";
 import { describeChange, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
@@ -61,6 +62,19 @@ export function Builder({
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins) : []),
     [spec],
   );
+  // The change box's example in the app's own records (a booking app has no customers): the
+  // first listed on a page, and the last.
+  const example = useMemo(() => {
+    const ir = spec.ir;
+    if (!ir) return undefined;
+    const listed = ir.pages.flatMap((p) => (p.pattern.kind === "crud" ? [pageModel(p)] : []));
+    const models = ir.models.filter((m) => listed.includes(m.name));
+    const [first, last] = [models[0] ?? ir.models[0], models.at(-1) ?? ir.models.at(-1)];
+    if (!first || !last) return undefined;
+    const many = (name: string) => humanize(plural(name)).toLowerCase();
+    const field = first.fields.some((f) => f.name === "phone") ? "a website" : "a phone number";
+    return `For example: ${many(first.name)} should have ${field}. Or: who can delete ${many(last.name)}?`;
+  }, [spec]);
   // The panels are a strip that snaps, one wide each; the change box stays docked under
   // whichever is shown. From lg the app's preview has its own column beside the panels (App.tsx);
   // below it the Preview panel is where the frame is placed. Very wide windows may show Your
@@ -69,6 +83,7 @@ export function Builder({
   const [shown, setShown] = useState<PanelId>("app");
   const framed = useMedia("(min-width: 1024px)");
   const wide = useMedia("(min-width: 1680px)");
+  const phone = useMedia("(max-width: 639px)");
   const panels = framed ? PANELS.filter(([id]) => id !== "preview") : PANELS;
   const [twoUp, setTwoUp] = useState(() => localStorage.getItem("builder-two-up") !== "no");
   // The change box folded to one line: as the person left it, else folded at phone width.
@@ -215,6 +230,7 @@ export function Builder({
           // The preview frame is placed over this panel (it never moves, so it keeps its page).
           <div
             data-panel="preview"
+            data-guide-place="preview"
             ref={previewSlot}
             className="w-full shrink-0 snap-start border-l border-neutral-200"
           />
@@ -251,7 +267,11 @@ export function Builder({
           while looking at the preview. The box stays; the list scrolls. Folded to one line it
           leaves the panels the room (at phone width it starts folded). */}
       {folded ? (
-        <div className="flex shrink-0 items-center gap-3 border-t border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-600">
+        // Folded, the bar is the guide's change stop: it says where the box opens.
+        <div
+          data-guide="change"
+          className="flex shrink-0 items-center gap-3 border-t border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-600"
+        >
           <span className="min-w-0 flex-1 truncate">
             {project.trace[0] ? `Last change: ${lastWords}` : "No changes yet."}
           </span>
@@ -268,6 +288,9 @@ export function Builder({
           </div>
           <div className="max-h-[22vh] shrink-0 overflow-auto">
             <Ask
+              example={example}
+              // On a phone the box folds once a change is made, so the preview has the room again.
+              onDone={() => phone && setFolded(true)}
               words={words}
               waiting={project.waiting}
               onEdit={(p) => {

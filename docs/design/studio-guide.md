@@ -9,7 +9,7 @@ Five stops, each a small card beside the thing it is about, with one or two sent
 | Stop | Beside | Says |
 |---|---|---|
 | 0 | The mode switch (No code, Code) | How do you want to work? No code changes the app in plain words and forms; Code edits its definition as text. **No code** goes on with the tour; **Code** ends it in Code mode, remembered. (Johan, 2026-10-06) |
-| 1 | The preview and its samples notice | This is your app, running. The records in it are samples for trying it; your published app starts empty. |
+| 1 | The preview | This is your app, running: click around as anyone would. What you change shows here at once. (The samples are the preview's own notice, above it; the card does not say it again.) |
 | 2 | "What it does" | Your app in plain words, kept true as it changes. Click a sentence to change that part; the buttons add a record, a page, an action. |
 | 2b | The Details panel | Choose Select above the preview and click a part, or click a sentence in What it does: its details and forms open here; with nothing chosen, the app's own details. (Johan, 2026-10-06) |
 | 3 | The change box | Describe a change in your own words, or ask a question about the app. A change is checked and shown before it is kept, and every change can be undone. |

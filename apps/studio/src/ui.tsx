@@ -88,6 +88,7 @@ export function Panel({
   children,
   className,
   busy,
+  panel,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
@@ -95,9 +96,12 @@ export function Panel({
   className?: string;
   /** Its content is about to change (aria-busy), e.g. a preview that will reload. */
   busy?: boolean;
+  /** Its name in a phone's row of panels (data-panel). */
+  panel?: string;
 }) {
   return (
     <section
+      data-panel={panel}
       aria-busy={busy || undefined}
       className={cx("flex min-h-0 min-w-0 flex-col border-neutral-200 bg-white", className)}
     >
