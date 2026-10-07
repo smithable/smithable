@@ -8,6 +8,7 @@ import type { Words } from "./en";
 export const w = {
   accept: "Godkänn",
   addFiles: "Lägg till filer",
+  addOne: (label: string) => `Lägg till ${label}`,
   aFirstCall: "Ett första anrop:",
   actAs: "Agera som",
   actions: "Åtgärder",
