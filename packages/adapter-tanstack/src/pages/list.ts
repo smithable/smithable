@@ -521,7 +521,7 @@ export function listParts(
     const scrolling = cards && !within && !owned;
     return `function ${component}() {
   const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || offered.length || selecting || filtering?.mine || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate();${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
+${actions.length || offered.length || selecting || filtering?.mine || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate(${within ? "" : `{ from: ${JSON.stringify(path)} }`});${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
       scrolling
         ? `
   // The cards loaded after the first page, as the reader scrolls; a new search starts again.
