@@ -48,7 +48,7 @@ The first three runs each lost a browser step to a page that never opened: the s
 
 ## Ports the runner uses
 
-The `full` job's gate takes `TEST_APPS_PORT=8600` (ten ports per example, so 8600 to 8699) and `TEST_STUDIO_PORT=8610` (to 8613). Nothing else on the machine may listen there: a session's own dev server or Studio in that range answers the runner's checks instead of the example under test (2026-10-07: a stranger-walk server on 8640 failed the marketplace checks of two runs). Sessions' gates use their own bases (8450 and up); anything run by hand goes on 8700 and up.
+The `full` job's gate takes `TEST_APPS_PORT=8600` and `TEST_STUDIO_PORT=8610`. Each example gets ten ports from the base and uses its port P, P+100, P+200 (the smoke tests) and P+300 (the no-secret check), so the runner owns **8600 to 8999**. Nothing else on the machine may listen there: a session's own dev server or Studio in that range answers the runner's checks instead of the example under test (2026-10-07: a stranger-walk server on 8640 failed the marketplace checks of two runs). A session's gate takes a base whose whole span stays clear of it (A: 7000, so 7000–7399; Fable: 9600, so 9600–9999), and anything run by hand (a walk, a dev server, `test:apps:one`) goes on its own hundred outside every gate's span (A: 9100–9299; Fable: 9500–9599).
 
 ## When the machine is off
 
