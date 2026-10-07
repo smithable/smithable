@@ -140,6 +140,26 @@ test("an app whose records have no pictures gets no sample pictures, only its he
   expect(written.map((w) => w.file)).toEqual(["hero.webp"]);
 });
 
+test("an app with no picture fields and no hero wants no pictures, and the line says so", async () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Bageri }\nmodels:\n  Loaf: { fields: { name: string! } }\npages:\n  loaves: { crud: Loaf }\n",
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const out: string[] = [];
+  const written = await addLibraryPictures({
+    description: "a bakery's loaves",
+    ir,
+    files: {},
+    io: { out: (s: string) => out.push(s), err: (s: string) => out.push(s) } as never,
+    fetchFn: fakeFetch,
+    index,
+  });
+  expect(written).toEqual([]);
+  expect(out.join("")).toContain("no picture fields and no landing page with a hero");
+  expect(out.join("")).not.toContain("could be fetched");
+});
+
 test("an unreachable library means no pictures and one line, never an error", async () => {
   const ir = validateSpec({
     path: "smithable.yml",
