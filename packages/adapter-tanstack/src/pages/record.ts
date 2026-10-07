@@ -18,6 +18,7 @@ import { hasSignIn } from "../auth.js";
 import { reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
 import {
+  addable,
   appStart,
   attr,
   dataKey,
@@ -37,6 +38,7 @@ import {
   names,
   optionsFor,
   ownerKey,
+  parentRefs,
   references,
   standardActions,
   type Texts,
@@ -218,9 +220,35 @@ export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux:
   // A model on a calendar: the new form can start at the hour chosen there (?startsAt=…).
   const start = calendarStart(model, ir);
   const timed = start?.type.kind === "scalar" && start.type.name === "datetime";
-  const preset = start
-    ? `\n        preset={search.${start.name} ? { ${start.name}: ${timed ? `instantOf(search.${start.name}, app.timeZone)` : `search.${start.name}`} } : undefined}`
+  // Opened from a record's related list ("Add line" on an invoice): the reference to that record
+  // is filled in and fixed (?invoice=12), and the form goes back to it.
+  const parents = parentRefs(model, ir);
+  const searched = [
+    ...(start ? [`${start.name}: z.string().max(40).optional().catch(undefined)`] : []),
+    ...parents.map(
+      ({ field }) =>
+        `${field.name}: z.coerce.number().int().positive().optional().catch(undefined)`,
+    ),
+  ];
+  const presets = [
+    ...(start
+      ? [
+          `...(search.${start.name} ? { ${start.name}: ${timed ? `instantOf(search.${start.name}, app.timeZone)` : `search.${start.name}`} } : {})`,
+        ]
+      : []),
+    ...parents.map(
+      ({ field }) => `...(search.${field.name} ? { ${dataKey(field)}: search.${field.name} } : {})`,
+    ),
+  ];
+  const preset = presets.length ? `\n        preset={{ ${presets.join(", ")} }}` : "";
+  const fixed = parents.length
+    ? `\n        fixed={[${parents.map(({ field }) => `...(search.${field.name} ? [${JSON.stringify(dataKey(field))}] : [])`).join(", ")}]}`
     : "";
+  const back = parents.reduceRight(
+    (otherwise, { field, route }) =>
+      `search.${field.name} ? navigate({ to: ${JSON.stringify(join(route, "$id"))}, params: { id: String(search.${field.name}) } }) : ${otherwise}`,
+    `navigate({ to: ${JSON.stringify(page.route)} })`,
+  );
   // An article's address, when left empty, is made from its title (docs/design/articles.md).
   const articles = ir.pages.find(
     (p) => p.pattern.kind === "articles" && p.pattern.model === model.name && p.pattern.address,
@@ -236,21 +264,21 @@ ${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
-${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${start ? 'import { z } from "zod";\n' : ""}
+${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${searched.length ? 'import { z } from "zod";\n' : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${start ? `  validateSearch: z.object({ ${start.name}: z.string().max(40).optional().catch(undefined) }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${searched.length ? `  validateSearch: z.object({ ${searched.join(", ")} }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
-${options ? "  const { options } = Route.useLoaderData();\n" : ""}${start ? "  const search = Route.useSearch();\n" : ""}  const navigate = useNavigate();
-  const back = () => navigate({ to: ${JSON.stringify(page.route)} });
+${options ? "  const { options } = Route.useLoaderData();\n" : ""}${searched.length ? "  const search = Route.useSearch();\n" : ""}  const navigate = useNavigate();
+  const back = () => ${back};
   return (
     <>
       <PageHeader title={w.newOne(${JSON.stringify(n.label.toLowerCase())})} />
       <ModelForm
         ui={${n.ui}}
         app={app}
-        schema={${n.schema}}${order}${preset}
+        schema={${n.schema}}${order}${preset}${fixed}
 ${options ? "        options={options}\n" : ""}        submitLabel={w.createOne(${JSON.stringify(n.label.toLowerCase())})}
         onSubmit={async (values) => {
           ${create}
@@ -332,6 +360,12 @@ export function detailRoute(
     page.contact && auth && hasSignIn(auth) && !within
       ? contactParts(page, model, t, ir)
       : undefined;
+  const adds = within ? [] : addable(model, ir);
+  if (adds.length)
+    imports.set("#/components/ui/button", [
+      ...(imports.get("#/components/ui/button") ?? []),
+      "buttonVariants",
+    ]);
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -348,16 +382,28 @@ export function detailRoute(
     const open = targetRoute
       ? `\n          onOpen={(item) => navigate({ to: ${JSON.stringify(join(targetRoute, "$id"))}, params: { id: String(item.id) } })}`
       : "";
-    // Without a button to add one here, the list says only that there are none.
     const label = t.field(model, field).label ?? humanize(field.name);
+    // "Add line" on an invoice, for whoever may create one: the new form with this record filled
+    // in. Without it, the list says only that there are none.
+    const add = adds.find((a) => a.list === field);
+    const button = add
+      ? `canAdd?.${field.name} && (
+              <Link to=${attr(join(add.route, "new"))} search={{ ${add.ref.name}: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne(${JSON.stringify(tn.label.toLowerCase())})}
+              </Link>
+            )`
+      : "";
     return `      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">${label}</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">${label}</h2>
+          ${add ? `{row.${field.name}.length > 0 && ${button}}` : ""}
+        </div>
         <ModelTable
           ui={${tn.ui}}
           app={app}
           rows={row.${field.name}}
           hide={${JSON.stringify(back)}}${open}
-          emptyMessage={w.noneYet(${JSON.stringify(tn.pluralLabel.toLowerCase())})}
+          ${add ? `emptyAction={${button}}\n          emptyMessage={canAdd?.${field.name} ? undefined : w.noneYet(${JSON.stringify(tn.pluralLabel.toLowerCase())})}` : `emptyMessage={w.noneYet(${JSON.stringify(tn.pluralLabel.toLowerCase())})}`}
         />
       </section>`;
   });
@@ -378,7 +424,7 @@ export function detailRoute(
       ? [`<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />`]
       : []),
   ];
-  return `${HEADER}import { createFileRoute, notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
+  return `${HEADER}import { createFileRoute, ${adds.length ? "Link, " : ""}notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
 ${
   // The contact block imports some of the same: each name once.
   history
@@ -443,7 +489,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const { row, canWrite, canDelete${adds.length ? ", canAdd" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite

@@ -30,6 +30,7 @@ import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./
 import { hasKeys } from "./keys.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
+  addable,
   code,
   dataKey,
   type GenContext,
@@ -159,6 +160,7 @@ export const ${n.options} = createServerFn().handler(async () =>
   // record's places, and taking one in a step. Canceling is the delete above.
   const capacity = hasSignIn(auth) ? model.capacity : undefined;
   const perModel = capacity && relationTarget(model, capacity.per, ir);
+  const adds = addable(model, ir);
   const perData = perModel && names(perModel, t).data;
   const reservation =
     capacity && perModel
@@ -196,7 +198,12 @@ import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${model.fields.some(storesFiles) ? `import { ${[...(model.fields.some(isFile) ? ["bindFile"] : []), ...(model.fields.some(isFiles) ? ["bindFiles"] : [])].join(", ")} } from "#/kit/FileInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
-${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}import { writeAllowed } from "#/kit/limit";
+${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}${[
+  ...new Set(adds.map((a) => a.target)),
+]
+  .filter((m) => m !== model)
+  .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
+  .join("")}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
@@ -233,7 +240,7 @@ export const ${n.get} = createServerFn()
     // In the trash: its page shows it read-only, with when, by whom and Restore.
     if (!row) {
       const gone = await ${n.data}.trashed(viewer, id);
-      return gone && { row: gone.row, ${hasFavorites(model, ir, auth) ? "saved: false, " : ""}canWrite: false, canDelete: false, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+      return gone && { row: gone.row, ${hasFavorites(model, ir, auth) ? "saved: false, " : ""}canWrite: false, canDelete: false,${adds.length ? ` canAdd: { ${adds.map((a) => `${a.list.name}: false`).join(", ")} },` : ""} trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
     }`
         : ""
     }
@@ -246,7 +253,11 @@ export const ${n.get} = createServerFn()
           : ""
       }
       canWrite: allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
-      canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
+      canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),${
+        adds.length
+          ? `\n      // Who may add to its related lists from here ("Add line" on an invoice).\n      canAdd: { ${adds.map((a) => `${a.list.name}: allows(${names(a.target, t).access}.create, viewer)`).join(", ")} },`
+          : ""
+      }
     };
   });
 ${options}
