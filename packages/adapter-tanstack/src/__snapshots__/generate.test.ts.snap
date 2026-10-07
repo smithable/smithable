@@ -6187,6 +6187,7 @@ function ProjectPage() {
           rows={row.tasks}
           hide={["projectId"]}
           onOpen={(item) => navigate({ to: "/admin/tasks/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("tasks")}
         />
       </section>
       <section className="mt-10">
@@ -6197,6 +6198,7 @@ function ProjectPage() {
           rows={row.notes}
           hide={["projectId"]}
           onOpen={(item) => navigate({ to: "/admin/notes/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("notes")}
         />
       </section>
     </>
@@ -7748,7 +7750,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/notes/$id.tsx": "51019555 generated",
   "src/routes/admin/notes/index.tsx": "de932c7a generated",
   "src/routes/admin/notes/new.tsx": "0f610f7a generated",
-  "src/routes/admin/projects/$id.tsx": "4cba1ffa generated",
+  "src/routes/admin/projects/$id.tsx": "a33d6579 generated",
   "src/routes/admin/projects/index.tsx": "2990d644 generated",
   "src/routes/admin/projects/new.tsx": "f65ab23b generated",
   "src/routes/admin/tasks/$id.tsx": "a03ed326 generated",
@@ -12869,6 +12871,7 @@ function SessionPage() {
           rows={row.bookings}
           hide={["sessionId"]}
           onOpen={(item) => navigate({ to: "/admin/bookings/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("bookings")}
         />
       </section>
     </>
@@ -14661,6 +14664,7 @@ function SessionPage() {
           rows={row.bookings}
           hide={["sessionId"]}
           onOpen={(item) => navigate({ to: "/my-bookings/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("bookings")}
         />
       </section>
       {history && history.length > 0 && (
@@ -15493,7 +15497,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/posts/$id.tsx": "2367f316 generated",
   "src/routes/admin/posts/index.tsx": "dc1da756 generated",
   "src/routes/admin/posts/new.tsx": "b4814367 generated",
-  "src/routes/admin/sessions/$id.tsx": "d81c74e4 generated",
+  "src/routes/admin/sessions/$id.tsx": "0f56fd9f generated",
   "src/routes/admin/sessions/index.tsx": "d432c3ef generated",
   "src/routes/admin/sessions/new.tsx": "49acfd01 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -15522,7 +15526,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/privacy/index.tsx": "69fada0f generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "30ecef7d generated",
-  "src/routes/sessions/$id.tsx": "502b5634 generated",
+  "src/routes/sessions/$id.tsx": "951a9469 generated",
   "src/routes/sessions/index.tsx": "edb77035 generated",
   "src/routes/sessions/new.tsx": "7d75bc09 generated",
   "src/routes/sign-in.tsx": "50a41d17 generated",
@@ -18188,6 +18192,7 @@ function CustomerPage() {
           rows={row.orders}
           hide={["customerId"]}
           onOpen={(item) => navigate({ to: "/orders/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("orders")}
         />
       </section>
       {history && history.length > 0 && (
@@ -19435,7 +19440,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "061174c0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "46a7aac3 generated",
+  "src/routes/customers/$id.tsx": "712d62ff generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
   "src/routes/customers/index.tsx": "47323df1 generated",
   "src/routes/customers/new.tsx": "fa890209 generated",
@@ -22728,6 +22733,7 @@ function ClientPage() {
           rows={row.invoices}
           hide={["clientId"]}
           onOpen={(item) => navigate({ to: "/invoices/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("invoices")}
         />
       </section>
       {history && history.length > 0 && (
@@ -23261,6 +23267,7 @@ function InvoicePage() {
           rows={row.lines}
           hide={["invoiceId"]}
           onOpen={(item) => navigate({ to: "/invoice-lines/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("invoice lines")}
         />
       </section>
       {history && history.length > 0 && (
@@ -24304,7 +24311,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "92c4080d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "1db8d368 generated",
+  "src/routes/clients/$id.tsx": "b58b63ad generated",
   "src/routes/clients/index.tsx": "d930ce63 generated",
   "src/routes/clients/new.tsx": "4b69a878 generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
@@ -24315,7 +24322,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoice-lines/$id.tsx": "3d065149 generated",
   "src/routes/invoice-lines/index.tsx": "30a5ee9d generated",
   "src/routes/invoice-lines/new.tsx": "2c3e74a2 generated",
-  "src/routes/invoices/$id.tsx": "ed27c19c generated",
+  "src/routes/invoices/$id.tsx": "2ef6326b generated",
   "src/routes/invoices/index.tsx": "d4d373e8 generated",
   "src/routes/invoices/new.tsx": "f3338000 generated",
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
@@ -35629,6 +35636,7 @@ function ComponentPage() {
           rows={row.incidents}
           hide={["componentId"]}
           onOpen={(item) => navigate({ to: "/incidents/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("incidents")}
         />
       </section>
       {history && history.length > 0 && (
@@ -36112,6 +36120,7 @@ function IncidentPage() {
           rows={row.updates}
           hide={["incidentId"]}
           onOpen={(item) => navigate({ to: "/updates/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("incident updates")}
         />
       </section>
       {history && history.length > 0 && (
@@ -37782,13 +37791,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "bd5a3f75 generated",
+  "src/routes/components/$id.tsx": "ef4bb50b generated",
   "src/routes/components/index.tsx": "84ec2fe0 generated",
   "src/routes/components/new.tsx": "4a2c9cef generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "465e509d generated",
-  "src/routes/incidents/$id.tsx": "0179ab08 generated",
+  "src/routes/incidents/$id.tsx": "d2277469 generated",
   "src/routes/incidents/index.tsx": "696ba9ea generated",
   "src/routes/incidents/new.tsx": "28cb94d2 generated",
   "src/routes/index.tsx": "dca8d976 generated",
