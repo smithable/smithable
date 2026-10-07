@@ -203,6 +203,8 @@ export async function proposeChange(options: {
   context: ContextSlice;
   /** Allowed by the AI policy, in the order to try them (see `route`). */
   providers: Provider[];
+  /** Whether any model is set up at all, so an empty list is the policy's doing, not a missing setup. */
+  anyConfigured?: boolean;
   /**
    * What only the host can check, e.g. that a new required field has no existing rows to
    * fill. A message sends the proposal back for repair like any other error.
@@ -242,11 +244,13 @@ export async function proposeChange(options: {
         generator: phrased.rule,
       };
   }
+  // Said for the maker: what is missing and where to read how (the stranger walk, 2026-10-07).
   if (providers.length === 0)
     return {
       kind: "failed",
-      message:
-        "No model is available under the AI policy. Set up a local model or the Smithable model, or change the policy.",
+      message: options.anyConfigured
+        ? "No model is available under the AI policy: the models set up run where the policy does not allow. Change the policy (SMITHABLE_AI_POLICY) or set up one that fits; see AI setup (docs.smithable.ai/ai.html)."
+        : "This needs an AI model, and none is set up yet: see AI setup (docs.smithable.ai/ai.html). A local model, the Smithable model or Claude Code can do it.",
       usage,
     };
   let problem = "";
