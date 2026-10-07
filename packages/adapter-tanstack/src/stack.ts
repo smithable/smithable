@@ -67,7 +67,7 @@ export const STACK_PROFILE = {
     "drizzle-kit": "0.31.11",
     tsx: "4.23.15",
     typescript: "6.0.3",
-    vite: "8.3.2",
+    vite: "8.3.3",
     vitest: "5.0.3",
   },
 } as const;
