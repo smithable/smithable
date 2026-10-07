@@ -95,3 +95,28 @@ Made with `smithable new --starter status`, then `smithable studio`; desktop and
 - status · app, staff, both sizes · Overview, Incidents, Updates, Maintenance: no page wider than the screen, no console errors · fine
 - status · `smithable deploy`: not walked, refused like crm (vite advisories, Fable's bump)
 
+
+## Records (Fable, phone)
+
+| # | Where | What | Severity |
+|---|---|---|---|
+| R1 | Studio, What it does | "an added (a date, required, today by default)": a field named by a verb reads wrong with an article. Fields named `added`, `created`, `updated`, `due` and the like should read "the date added" / "added on". | cosmetic |
+| R2 | Studio, a question | "who can see the items?" answers "Anyone, without signing in can see items.": the comma is in the wrong place. "Anyone can see items, without signing in." | cosmetic |
+| R3 | Studio, the words box | "members should be able to add items" is not read by the rules and falls to the model (none here): the shape "<role> should be able to / can / may <verb> <model>" is setAccess, which the rules know in the "Only admins may delete customers" form. Add it. | confuses |
+| R4 | Studio on a phone, the change box open | With the change box open, the preview is a letterbox of a few lines between the panel bar and the box. After a change is made, fold the box by itself; or make it a sheet that slides up over the preview and down after. | confuses |
+| R5 | Studio preview | A hydration error in the console on every preview load (`draggable`): the preview script sets the attribute before hydration. Fixed by A's #424. | cosmetic |
+| R6 | The published app, /items as a visitor | An empty list says "No items yet. Create the first one to get started." to a visitor who may not add one (only admins may). The empty state should say only "No items yet" unless the viewer may add, and then carry the button (A's add-child change does this for related lists; the same for list pages). | confuses |
+
+What went well: the summary reads well for a one-model app; a price added by words in under two seconds; the list's search on the phone, with "No items match “zzz”".
+
+## Api (Fable, desktop)
+
+| # | Where | What | Severity |
+|---|---|---|---|
+| A1 | Studio, What it does | "Only member users and admins can add projects", "member users, assistant users and admins": a role is said as "<role> users". Say "members", "assistants" (the role's plural as a word), with "users" only for a role whose name is not a noun. | cosmetic |
+
+What went well: the preview opens on the Team page as the development admin with the keys right there; a key made with one form, the curl line and the assistant's settings shown to copy; the API answers with the key (200) and refuses without (401); the OpenAPI description is served. A stranger who wants an API for an assistant gets one in a minute.
+
+## Summary of the walks
+
+Seven starters, two sessions, one day. Nothing in a published app broke for a visitor. What broke was getting there: a fresh app's deploy was refused twice today (a type error in the privacy page with a public personal field; advisories published mid-week; and, for a newcomer without a GitHub token, the advisory lists not readable), all three fixed. The rest is Studio: its words for strangers (examples from another app, engineer's lines after a change, the no-model refusal, role words), the phone layout (the guide skipping the preview, Code mode without a panel bar, the change box over the preview), and the reading rules missing natural phrasings ("who can book a class", "members should be able to add items", "a severity"), several fixed the same day. The invited testers' walks will find what a model cannot: whether it feels worth paying for.
