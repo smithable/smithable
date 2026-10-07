@@ -272,9 +272,22 @@ export function Calendar({
         )}
         {/* On a phone an empty week or month says so once, not "Nothing" under every day. */}
         {empty && (
-          <p className="py-3 text-sm text-muted-foreground md:hidden">
-            {range.view === "week" ? w.nothingThisWeek : w.nothingThisMonth}
-          </p>
+          <div className="flex items-center justify-between gap-3 py-3 md:hidden">
+            <p className="text-sm text-muted-foreground">
+              {range.view === "week" ? w.nothingThisWeek : w.nothingThisMonth}
+            </p>
+            {/* Whoever may add one gets the button here (the hours to tap are a wide screen's). */}
+            {onCreate && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  onCreate(`${range.days.find((d) => d >= today) ?? range.days[0]}T09:00`)
+                }
+              >
+                {w.newOne(newLabel)}
+              </Button>
+            )}
+          </div>
         )}
         {range.days.map((d) => {
           const records = byDay.get(d) ?? [];
