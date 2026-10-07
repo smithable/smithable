@@ -430,7 +430,15 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
       const rest = [name, ...notes.filter((n) => n !== kind)];
       return `${kind} (${rest.join(", ")})`;
     }
-    // "notes" and "issued on" read better without "a".
+    // "notes" and "issued on" read better without "a"; a date named by a verb ("added",
+    // "created", "due", "sent") reads "the date added", not "an added".
+    const dated =
+      f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime");
+    const verbNamed = /^(?:[a-z]+(?:ed|en)|due|sent|paid|born)$/.test(name) && dated;
+    if (verbNamed) {
+      const rest = notes.filter((n) => n !== kind);
+      return `the ${kind ?? "date"} ${name}${rest.length ? ` (${rest.join(", ")})` : ""}`;
+    }
     const named = /s$| (on|at)$/.test(name) ? name : article(name);
     return notes.length ? `${named} (${notes.join(", ")})` : named;
   };
@@ -502,11 +510,30 @@ function lower(label: string): string {
     .join(" ");
 }
 
+/**
+ * A role as people: "members", "assistants"; a role named for a department or a mass noun
+ * ("sales", "staff", "support") stays "sales users".
+ */
+const MASS = new Set([
+  "sales",
+  "staff",
+  "support",
+  "hr",
+  "it",
+  "finance",
+  "marketing",
+  "management",
+  "ops",
+  "crew",
+]);
+export const roleWord = (r: string): string =>
+  MASS.has(r.toLowerCase()) || plural(r) === r ? `${r} users` : plural(r);
+
 /** Who a list of roles means; admins can always do everything, so they come last. */
 export function who(roles: string[]): string {
   const others = roles
     .filter((r) => r !== "admin")
-    .map((r) => (r === "owner" ? "the record's owner" : `${r} users`));
+    .map((r) => (r === "owner" ? "the record's owner" : roleWord(r)));
   return list([...others, "admins"]);
 }
 
@@ -517,7 +544,7 @@ export function who(roles: string[]): string {
  */
 export function whoCan(roles: string[], verb: string, things: string): string {
   if (!roles.includes("owner")) return `Only ${who(roles)} can ${verb} ${things}`;
-  const all = roles.filter((r) => r !== "owner" && r !== "admin").map((r) => `${r} users`);
+  const all = roles.filter((r) => r !== "owner" && r !== "admin").map(roleWord);
   return all.length
     ? `${capitalize(list([...all, "admins"]))} can ${verb} all ${things}; everyone else only the ones they own`
     : `Each person can ${verb} only the ${things} they own; admins can ${verb} all`;

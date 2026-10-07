@@ -1,4 +1,4 @@
-import { applyOperation, validateSpec } from "@smithable/core";
+import { applyOperation, validateAuth, validateSpec } from "@smithable/core";
 import { describe, expect, test } from "vitest";
 import { matchRequest, type PhraseOperation, refusalOf } from "./phrases.js";
 
@@ -157,6 +157,32 @@ describe("the seven benchmark tasks", () => {
       { op: "setAccess", args: { target: "model:Customer.delete", roles: ["admin"] } },
     ]);
     applies(o as PhraseOperation[]);
+  });
+  test("a grant keeps whoever may already: sales should be able to delete customers (the stranger walk)", () => {
+    const auth = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {} }\ndefaultRole: sales\n",
+      },
+      ir(),
+    ).auth;
+    // With shared access each person deletes their own: the grant adds sales beside the owner.
+    expect(
+      matchRequest(ir(), "Sales should be able to delete customers.", ROLES, auth)?.operations,
+    ).toEqual([
+      { op: "setAccess", args: { target: "model:Customer.delete", roles: ["owner", "sales"] } },
+    ]);
+    expect(matchRequest(ir(), "Let sales delete customers.", ROLES, auth)?.operations).toEqual([
+      { op: "setAccess", args: { target: "model:Customer.delete", roles: ["owner", "sales"] } },
+    ]);
+    // Already allowed: said so, nothing proposed.
+    expect(
+      refusalOf(ir(), "Sales should be able to see customers.", ROLES, auth)?.refusal,
+    ).toContain("already");
+    // Not a role: another rule's sentence, not a refusal.
+    expect(ops("Let people filter customers by segment on the customers page")?.[0]?.op).toBe(
+      "setFilters",
+    );
   });
   test("Make it possible to search customers by name on the customers page", () => {
     const o = ops("Make it possible to search customers by name on the customers page.");
