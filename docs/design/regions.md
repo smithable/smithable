@@ -2,7 +2,7 @@
 
 Johan, 2026-10-05, from testing smithable.ai: the start page should not say "an EU-hosted AI model" to a global audience; those texts belong on smithable.eu; from there "we should probably have a region picker", clear about what each choice means; "should we let people switch region later? We are currently planning for two regions, EU and global."
 
-This note says what a region is, what each would promise, how one is chosen and changed, and what to build when. It ends with the decisions that are Johan's.
+This note says what a region is, what each would promise, how one is chosen and changed, and what to build when. It ends with the decisions, taken by Johan on 2026-10-07.
 
 ## 1. What is already decided
 
@@ -31,8 +31,10 @@ A region is a place: its own hosts at one provider, with its own copy of the ser
 
 ## 3. Whose choice, and when
 
-- **The account is in one region**, the one it was made in. Signing up on smithable.eu makes an EU account; on smithable.ai a global one.
-- **The picker** is shown on both domains before sign-up, with the table above in its words: where the data is, who the providers are (by name, linked to that region's privacy notice), which AI reads what you write, and that an app can be moved later. Choosing the other region sends the visitor to the other domain. Later the visitor's country may preselect; nothing decides silently.
+- **The account is in one region**, the one it was made in, and **all of its apps live there**. Signing up on smithable.eu makes an EU account; on smithable.ai a global one.
+- **The picker** is shown on both domains before sign-up, with the table above in its words: where the data is, who the providers are (by name, linked to that region's privacy notice), which AI reads what you write, and that an app can be moved later. Choosing the other region sends the visitor to the other domain. Nothing decides silently.
+- **Visitors from Europe are recommended the EU region**, and the picker says what the recommendation means: price, speed, stability and features are the same in both regions; the one difference is where the infrastructure, the data and the code run, and who operates them. Nothing else is promised for one and not the other.
+- **Before the first app is published** the owner is told again, on the publish step, which region the account is in, what that implies for the app's visitors and data, and what the options are later (a move, §4). Sign-up is where the region is chosen; publishing is where it starts to matter, so that is where it must be clear.
 - **One person may have an account in each**, with the same address: they are two accounts.
 
 ## 4. Moving an app to the other region
@@ -41,9 +43,11 @@ It is not hard, because an app is already a thing that can be picked up: the pro
 
 **What moves:** the project (its history too), the app's database and uploads, the app's own session secret (so its users stay signed in), and its settings. **What does not:** the old region's backups (they age out there, and the owner is told how long that takes: copies under a deletion lock cannot be removed sooner), secrets of connections (sealed with the old region's key: the owner enters them again, or they are passed once, re-sealed), and usage history.
 
+**Who may, and on what terms:** a paying customer may move between global and EU, in either direction. Every move is a change of operator, so at every move the customer accepts the target region's terms and privacy notice, acknowledged each time, never carried over from an earlier move. Smithable asks for one month's notice to guarantee the move; it is usually done far sooner, but the notice is what is promised.
+
 **How:** the owner asks for it on the app's page, signed in to both regions. The app stops taking writes, a last backup is taken, the bundle goes to the other region's storage, is restored and checked there (the pages answer, the record counts match), and only then is the old one removed. Minutes for an app of ordinary size. If the check fails, the app starts again where it was.
 
-**The address** is what the owner notices. An app's own address under Smithable's domain belongs to a region's hosts, so it changes (or each region gets a label in it); the old address redirects for a time. A custom domain keeps its name: its owner points it at the new region, and the move waits for that.
+**The address** is what the owner notices. An app's own address under Smithable's domain belongs to a region's hosts, so it changes (or each region gets a label in it); the old address redirects for a time. A custom domain keeps its name, but its owner has to act: the domain's DNS is pointed at the new region, and the move waits for that. The move flow says so at the start, before anything is copied, and again at the step that waits.
 
 **What is real work** is not the move but the second region: the parts of operations that are AWS's own today (remote administration, alarms and metrics, the image registry, the deployment's identity, the backup bucket's deletion lock) need their counterparts at the other provider, in the infrastructure code and the scripts. The service itself is a virtual machine, S3-compatible storage and DNS, as decided when OpenTofu was chosen.
 
@@ -56,10 +60,10 @@ It is not hard, because an app is already a thing that can be picked up: the pro
 
 The engine needs nothing new: `smithable backup` and `restore` already work against any S3-compatible storage, and the AI policy and its pinning exist (ARCHITECTURE §9).
 
-## 6. Decisions (Johan)
+## 6. Decisions (Johan, 2026-10-07: yes to all five, with additions)
 
-1. **A region is a place with its own service: global on AWS, EU on an EU-owned provider.** Said by Johan on 2026-10-05. The consequence to confirm: two services that share only the code, so an account is in one region.
-2. **The EU region promises what only it can: EU location and EU companies,** for hosting, AI and built-in services. Recommended. DNS for smithable.eu then also belongs at an EU provider.
-3. **The picker is shown on both domains before sign-up; the domain, and later the country, only preselect.** Recommended.
-4. **An app can be moved to the other region when its owner asks,** as a transfer between the two services with a check before the old copy goes, never by itself. Recommended. The address changes unless the app has its own domain.
-5. **When:** the EU region is built when there is a customer for it or at the public release, whichever Johan chooses; until then smithable.eu redirects and the texts claim nothing. Recommended: not for the invited beta.
+1. **A region is a place with its own service: global on AWS, EU on an EU-owned provider.** Two services that share only the code, so an account is in one region, and all of a customer's apps are in that region.
+2. **The EU region promises what only it can: EU location and EU companies,** for hosting, AI and built-in services. DNS for smithable.eu then also belongs at an EU provider. Everything else, price, speed, stability and features, is the same in both regions, and the texts say so.
+3. **The picker is shown on both domains before sign-up; the domain, and later the country, only preselect.** Visitors from Europe are recommended the EU region, with what the recommendation means. The region is chosen at sign-up and made very clear again before the first app is published: which region, what it implies, and the options later.
+4. **A paying customer may move an app to the other region,** as a transfer between the two services with a check before the old copy goes, never by itself. At every move the customer accepts the target region's terms and privacy notice, acknowledged each time. One month's notice guarantees the move. The address changes unless the app has its own domain; a custom domain needs the customer's DNS pointed at the new region, said up front and in the move flow.
+5. **When:** the EU region is built when there is a customer for it or at the public release, whichever Johan chooses; until then smithable.eu redirects and the texts claim nothing. Not for the invited beta. The stack itself is designed in the cloud repository's `docs/design/smithable-eu.md`.
