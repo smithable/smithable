@@ -20,7 +20,7 @@ Code mode has no tour of its own: its editor is for people who read a spec, and 
 
 ## 2. When it shows
 
-- The first time a browser opens a project's Studio in Builder, once the project is loaded and, for a described app, after the making screen has handed over (docs/design/while-it-is-made.md): never over the stage. The hosted beta's claim lands here too.
+- The first time a browser opens a project's Studio in Builder, once the project is loaded and, for a described app, after the making screen has handed over (docs/design/while-it-is-made.md): never over the stage; and once the preview shows the app (its second stop points at it), or after twenty seconds when the preview is slow to start. The hosted beta's claim lands here too.
 - Not again for that project in that browser after Done or Skip (`localStorage`, `guideDone:<app>`); a new project starts it once more, since the first visit to any app is what the tour is for. Through **Guide** whenever wanted.
 - Never in Code mode, never in the Studio tests except the one that walks it, and never when `?guide=off` is in the address (the screenshot scripts).
 

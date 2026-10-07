@@ -348,6 +348,7 @@ export function detailRoute(
     const open = targetRoute
       ? `\n          onOpen={(item) => navigate({ to: ${JSON.stringify(join(targetRoute, "$id"))}, params: { id: String(item.id) } })}`
       : "";
+    // Without a button to add one here, the list says only that there are none.
     const label = t.field(model, field).label ?? humanize(field.name);
     return `      <section className="mt-10">
         <h2 className="mb-3 text-lg font-semibold">${label}</h2>
@@ -356,6 +357,7 @@ export function detailRoute(
           app={app}
           rows={row.${field.name}}
           hide={${JSON.stringify(back)}}${open}
+          emptyMessage={w.noneYet(${JSON.stringify(tn.pluralLabel.toLowerCase())})}
         />
       </section>`;
   });

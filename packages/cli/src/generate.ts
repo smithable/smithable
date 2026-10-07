@@ -12,7 +12,7 @@ import {
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
 import { analyticsOf, YamlEditor } from "@smithable/core";
-import { exec, type Io, lap, tool } from "./io.js";
+import { exec, execQuiet, type Io, lap, tool } from "./io.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -211,7 +211,8 @@ export async function runTools(
   const run = (args: string[]) => {
     const [command, rest] =
       args[0] === "exec" ? tool(dir, args[1] as string, args.slice(2)) : ["pnpm", args];
-    const code = exec(command, rest, dir);
+    // drizzle-kit lists every table it read: said only if it fails.
+    const code = (args[1] === "drizzle-kit" ? execQuiet : exec)(command, rest, dir);
     if (code !== 0) io.err(`\`pnpm ${args.join(" ")}\` failed.\n`);
     return code === 0;
   };
