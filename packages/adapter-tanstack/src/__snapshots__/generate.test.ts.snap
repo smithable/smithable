@@ -6180,7 +6180,10 @@ function ProjectPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Tasks</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Tasks</h2>
+          
+        </div>
         <ModelTable
           ui={taskUi}
           app={app}
@@ -6191,7 +6194,10 @@ function ProjectPage() {
         />
       </section>
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Notes</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Notes</h2>
+          
+        </div>
         <ModelTable
           ui={noteUi}
           app={app}
@@ -7705,7 +7711,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -7736,7 +7742,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3ba8a00 generated",
@@ -7750,7 +7756,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/notes/$id.tsx": "51019555 generated",
   "src/routes/admin/notes/index.tsx": "de932c7a generated",
   "src/routes/admin/notes/new.tsx": "0f610f7a generated",
-  "src/routes/admin/projects/$id.tsx": "a33d6579 generated",
+  "src/routes/admin/projects/$id.tsx": "01ba955f generated",
   "src/routes/admin/projects/index.tsx": "2990d644 generated",
   "src/routes/admin/projects/new.tsx": "f65ab23b generated",
   "src/routes/admin/tasks/$id.tsx": "a03ed326 generated",
@@ -11094,6 +11100,7 @@ import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 import { sessionDefaults, withSessionFormulas } from "./session.formulas";
 import { sessionAccess, sessionData } from "./session.server";
+import { bookingAccess } from "./booking.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -11184,6 +11191,8 @@ export const getSession = createServerFn()
       row,
       canWrite: allows(sessionAccess.write, viewer, row.ownerId),
       canDelete: allows(sessionAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { bookings: allows(bookingAccess.create, viewer) },
     };
   });
 
@@ -11974,18 +11983,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/admin/bookings/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Admin · Stillwater Yoga"}] }),
+  validateSearch: z.object({ session: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { sessionId: await sessionOptions() } }),
   component: NewBookingPage,
 });
 
 function NewBookingPage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/admin/bookings" });
+  const back = () => search.session ? navigate({ to: "/sessions/$id", params: { id: String(search.session) } }) : navigate({ to: "/admin/bookings" });
   return (
     <>
       <PageHeader title={w.newOne("booking")} />
@@ -11993,6 +12005,8 @@ function NewBookingPage() {
         ui={bookingUi}
         app={app}
         schema={bookingSchema}
+        preset={{ ...(search.session ? { sessionId: search.session } : {}) }}
+        fixed={[...(search.session ? ["sessionId"] : [])]}
         options={options}
         submitLabel={w.createOne("booking")}
         onSubmit={async (values) => {
@@ -12864,7 +12878,10 @@ function SessionPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Bookings</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Bookings</h2>
+          
+        </div>
         <ModelTable
           ui={bookingUi}
           app={app}
@@ -12978,7 +12995,7 @@ function NewSessionPage() {
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
-        preset={search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : undefined}
+        preset={{ ...(search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : {}) }}
         options={options}
         submitLabel={w.createOne("session")}
         onSubmit={async (values) => {
@@ -14165,18 +14182,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/my-bookings/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["my-bookings"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"My bookings · Stillwater Yoga"}] }),
+  validateSearch: z.object({ session: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { sessionId: await sessionOptions() } }),
   component: NewBookingPage,
 });
 
 function NewBookingPage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/my-bookings" });
+  const back = () => search.session ? navigate({ to: "/sessions/$id", params: { id: String(search.session) } }) : navigate({ to: "/my-bookings" });
   return (
     <>
       <PageHeader title={w.newOne("booking")} />
@@ -14184,6 +14204,8 @@ function NewBookingPage() {
         ui={bookingUi}
         app={app}
         schema={bookingSchema}
+        preset={{ ...(search.session ? { sessionId: search.session } : {}) }}
+        fixed={[...(search.session ? ["sessionId"] : [])]}
         options={options}
         submitLabel={w.createOne("booking")}
         onSubmit={async (values) => {
@@ -14568,7 +14590,7 @@ function SchedulePage() {
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/routes/sessions/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -14578,6 +14600,7 @@ import { pageAccess } from "#/generated/pages";
 import { deleteSession, getSession, sessionSchema, sessionUi, updateSession } from "#/generated/session";
 import { bookingPlaces, bookingUi, deleteBooking, reserveBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
+import { buttonVariants } from "#/components/ui/button";
 import { classTypeOptions } from "#/generated/class-type";
 import { instructorOptions } from "#/generated/instructor";
 import { guardPage } from "#/kit/access";
@@ -14624,7 +14647,7 @@ export const Route = createFileRoute("/sessions/$id")({
 });
 
 function SessionPage() {
-  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, options, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/sessions" });
   return (
@@ -14657,14 +14680,26 @@ function SessionPage() {
         <Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />
       </section>
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Bookings</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Bookings</h2>
+          {row.bookings.length > 0 && canAdd?.bookings && (
+              <Link to="/my-bookings/new" search={{ session: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("booking")}
+              </Link>
+            )}
+        </div>
         <ModelTable
           ui={bookingUi}
           app={app}
           rows={row.bookings}
           hide={["sessionId"]}
           onOpen={(item) => navigate({ to: "/my-bookings/$id", params: { id: String(item.id) } })}
-          emptyMessage={w.noneYet("bookings")}
+          emptyAction={canAdd?.bookings && (
+              <Link to="/my-bookings/new" search={{ session: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("booking")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.bookings ? undefined : w.noneYet("bookings")}
         />
       </section>
       {history && history.length > 0 && (
@@ -14804,7 +14839,7 @@ function NewSessionPage() {
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
-        preset={search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : undefined}
+        preset={{ ...(search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : {}) }}
         options={options}
         submitLabel={w.createOne("session")}
         onSubmit={async (values) => {
@@ -15427,7 +15462,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.ts": "7254c32e generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.server.ts": "b25f6e36 generated",
-  "src/generated/session.ts": "622c256c generated",
+  "src/generated/session.ts": "2b04d491 generated",
   "src/generated/site.ts": "eb007da3 generated",
   "src/generated/uploads.ts": "f3d3a0ce generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
@@ -15445,7 +15480,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -15472,7 +15507,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3a82cc45 generated",
@@ -15483,7 +15518,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/activity.tsx": "d0b9907e generated",
   "src/routes/admin/bookings/$id.tsx": "ef46ba8b generated",
   "src/routes/admin/bookings/index.tsx": "4ac07a9d generated",
-  "src/routes/admin/bookings/new.tsx": "4acacabb generated",
+  "src/routes/admin/bookings/new.tsx": "dfab54ae generated",
   "src/routes/admin/class-types/$id.tsx": "5e71473c generated",
   "src/routes/admin/class-types/index.tsx": "7106c8a4 generated",
   "src/routes/admin/class-types/new.tsx": "db4446c7 generated",
@@ -15497,9 +15532,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/posts/$id.tsx": "2367f316 generated",
   "src/routes/admin/posts/index.tsx": "dc1da756 generated",
   "src/routes/admin/posts/new.tsx": "b4814367 generated",
-  "src/routes/admin/sessions/$id.tsx": "0f56fd9f generated",
+  "src/routes/admin/sessions/$id.tsx": "e87240a2 generated",
   "src/routes/admin/sessions/index.tsx": "d432c3ef generated",
-  "src/routes/admin/sessions/new.tsx": "49acfd01 generated",
+  "src/routes/admin/sessions/new.tsx": "2f525fc2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "58aed3f5 generated",
@@ -15519,16 +15554,16 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/messages/new.tsx": "22a96639 generated",
   "src/routes/my-bookings/$id.tsx": "97d5d7a3 generated",
   "src/routes/my-bookings/index.tsx": "92e976a7 generated",
-  "src/routes/my-bookings/new.tsx": "93317142 generated",
+  "src/routes/my-bookings/new.tsx": "c8e3b2eb generated",
   "src/routes/posts/$id.tsx": "ee687dd0 generated",
   "src/routes/posts/index.tsx": "674ade22 generated",
   "src/routes/posts/new.tsx": "6a904157 generated",
   "src/routes/privacy/index.tsx": "69fada0f generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "30ecef7d generated",
-  "src/routes/sessions/$id.tsx": "951a9469 generated",
+  "src/routes/sessions/$id.tsx": "c4c81ff4 generated",
   "src/routes/sessions/index.tsx": "edb77035 generated",
-  "src/routes/sessions/new.tsx": "7d75bc09 generated",
+  "src/routes/sessions/new.tsx": "03834f6a generated",
   "src/routes/sign-in.tsx": "50a41d17 generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "5379c2a6 kit",
@@ -16615,6 +16650,7 @@ import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { customerAccess, customerData } from "./customer.server";
+import { orderAccess } from "./order.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -16723,7 +16759,7 @@ export const getCustomer = createServerFn()
     // In the trash: its page shows it read-only, with when, by whom and Restore.
     if (!row) {
       const gone = await customerData.trashed(viewer, id);
-      return gone && { row: gone.row, canWrite: false, canDelete: false, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+      return gone && { row: gone.row, canWrite: false, canDelete: false, canAdd: { orders: false }, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
     }
     if (!row) return null;
     return {
@@ -16731,6 +16767,8 @@ export const getCustomer = createServerFn()
       trashed: null,
       canWrite: allows(customerAccess.write, viewer, row.accountManagerId),
       canDelete: allows(customerAccess.delete, viewer, row.accountManagerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { orders: allows(orderAccess.create, viewer) },
     };
   });
 
@@ -18086,7 +18124,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/customers/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -18095,6 +18133,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { customerSchema, customerUi, deleteCustomer, getCustomer, restoreCustomers, updateCustomer } from "#/generated/customer";
 import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
+import { buttonVariants } from "#/components/ui/button";
 import { orderUi } from "#/generated/order";
 import { userOptions } from "#/generated/users";
 import { guardPage } from "#/kit/access";
@@ -18141,7 +18180,7 @@ export const Route = createFileRoute("/customers/$id")({
 });
 
 function CustomerPage() {
-  const { row, canWrite, canDelete, trashed, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, trashed, options, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
   const back = () => navigate({ to: "/customers" });
@@ -18185,14 +18224,26 @@ function CustomerPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Orders</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Orders</h2>
+          {row.orders.length > 0 && canAdd?.orders && (
+              <Link to="/orders/new" search={{ customer: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("order")}
+              </Link>
+            )}
+        </div>
         <ModelTable
           ui={orderUi}
           app={app}
           rows={row.orders}
           hide={["customerId"]}
           onOpen={(item) => navigate({ to: "/orders/$id", params: { id: String(item.id) } })}
-          emptyMessage={w.noneYet("orders")}
+          emptyAction={canAdd?.orders && (
+              <Link to="/orders/new" search={{ customer: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("order")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.orders ? undefined : w.noneYet("orders")}
         />
       </section>
       {history && history.length > 0 && (
@@ -18713,18 +18764,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/orders/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Orders · Acme CRM"}] }),
+  validateSearch: z.object({ customer: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { customerId: await customerOptions() } }),
   component: NewOrderPage,
 });
 
 function NewOrderPage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/orders" });
+  const back = () => search.customer ? navigate({ to: "/customers/$id", params: { id: String(search.customer) } }) : navigate({ to: "/orders" });
   return (
     <>
       <PageHeader title={w.newOne("order")} />
@@ -18732,6 +18786,8 @@ function NewOrderPage() {
         ui={orderUi}
         app={app}
         schema={orderSchema}
+        preset={{ ...(search.customer ? { customerId: search.customer } : {}) }}
+        fixed={[...(search.customer ? ["customerId"] : [])]}
         options={options}
         submitLabel={w.createOne("order")}
         onSubmit={async (values) => {
@@ -19390,7 +19446,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.server.ts": "346d61bf generated",
-  "src/generated/customer.ts": "7b16a0f8 generated",
+  "src/generated/customer.ts": "90a372b8 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
@@ -19407,7 +19463,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -19431,7 +19487,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7ccb0e1a generated",
@@ -19440,7 +19496,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "061174c0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "712d62ff generated",
+  "src/routes/customers/$id.tsx": "15ef5636 generated",
   "src/routes/customers/actions/merge-customers.tsx": "63a5744f generated",
   "src/routes/customers/index.tsx": "47323df1 generated",
   "src/routes/customers/new.tsx": "fa890209 generated",
@@ -19449,7 +19505,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "4b07e869 generated",
   "src/routes/orders/index.tsx": "87f25c0b generated",
-  "src/routes/orders/new.tsx": "2b905695 generated",
+  "src/routes/orders/new.tsx": "300d8d3e generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "7cea9e53 generated",
@@ -21192,6 +21248,7 @@ import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { clientAccess, clientData } from "./client.server";
+import { invoiceAccess } from "./invoice.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -21270,6 +21327,8 @@ export const getClient = createServerFn()
       row,
       canWrite: allows(clientAccess.write, viewer, row.ownerId),
       canDelete: allows(clientAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { invoices: allows(invoiceAccess.create, viewer) },
     };
   });
 
@@ -21676,6 +21735,7 @@ import type { RecordUi } from "#/kit/model";
 import { bindFile } from "#/kit/FileInput";
 import { invoiceDefaults, withInvoiceFormulas } from "./invoice.formulas";
 import { invoiceAccess, invoiceData } from "./invoice.server";
+import { invoiceLineAccess } from "./invoice-line.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -21790,6 +21850,8 @@ export const getInvoice = createServerFn()
       row,
       canWrite: allows(invoiceAccess.write, viewer, row.ownerId),
       canDelete: allows(invoiceAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { lines: allows(invoiceLineAccess.create, viewer) },
     };
   });
 
@@ -22644,7 +22706,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/clients/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -22652,6 +22714,7 @@ import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { clientSchema, clientUi, deleteClient, getClient, updateClient } from "#/generated/client";
+import { buttonVariants } from "#/components/ui/button";
 import { invoiceUi } from "#/generated/invoice";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -22697,7 +22760,7 @@ export const Route = createFileRoute("/clients/$id")({
 });
 
 function ClientPage() {
-  const { row, canWrite, canDelete, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/clients" });
   return (
@@ -22726,14 +22789,26 @@ function ClientPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Invoices</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Invoices</h2>
+          {row.invoices.length > 0 && canAdd?.invoices && (
+              <Link to="/invoices/new" search={{ client: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("invoice")}
+              </Link>
+            )}
+        </div>
         <ModelTable
           ui={invoiceUi}
           app={app}
           rows={row.invoices}
           hide={["clientId"]}
           onOpen={(item) => navigate({ to: "/invoices/$id", params: { id: String(item.id) } })}
-          emptyMessage={w.noneYet("invoices")}
+          emptyAction={canAdd?.invoices && (
+              <Link to="/invoices/new" search={{ client: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("invoice")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.invoices ? undefined : w.noneYet("invoices")}
         />
       </section>
       {history && history.length > 0 && (
@@ -23112,18 +23187,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/invoice-lines/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoice-lines"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Invoice lines · Invoicely"}] }),
+  validateSearch: z.object({ invoice: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { invoiceId: await invoiceOptions() } }),
   component: NewInvoiceLinePage,
 });
 
 function NewInvoiceLinePage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/invoice-lines" });
+  const back = () => search.invoice ? navigate({ to: "/invoices/$id", params: { id: String(search.invoice) } }) : navigate({ to: "/invoice-lines" });
   return (
     <>
       <PageHeader title={w.newOne("invoice line")} />
@@ -23131,6 +23209,8 @@ function NewInvoiceLinePage() {
         ui={invoiceLineUi}
         app={app}
         schema={invoiceLineSchema}
+        preset={{ ...(search.invoice ? { invoiceId: search.invoice } : {}) }}
+        fixed={[...(search.invoice ? ["invoiceId"] : [])]}
         options={options}
         submitLabel={w.createOne("invoice line")}
         onSubmit={async (values) => {
@@ -23147,7 +23227,7 @@ function NewInvoiceLinePage() {
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoices/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -23157,6 +23237,7 @@ import { pageAccess } from "#/generated/pages";
 import { deleteInvoice, getInvoice, invoiceSchema, invoiceUi, updateInvoice } from "#/generated/invoice";
 import { markSent, markSentAccess, markSentFits } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits } from "#/generated/actions/mark-paid";
+import { buttonVariants } from "#/components/ui/button";
 import { invoiceLineUi } from "#/generated/invoice-line";
 import { clientOptions } from "#/generated/client";
 import { allows, guardPage } from "#/kit/access";
@@ -23204,7 +23285,7 @@ export const Route = createFileRoute("/invoices/$id")({
 });
 
 function InvoicePage() {
-  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, options, history } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
@@ -23260,14 +23341,26 @@ function InvoicePage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Lines</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Lines</h2>
+          {row.lines.length > 0 && canAdd?.lines && (
+              <Link to="/invoice-lines/new" search={{ invoice: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("invoice line")}
+              </Link>
+            )}
+        </div>
         <ModelTable
           ui={invoiceLineUi}
           app={app}
           rows={row.lines}
           hide={["invoiceId"]}
           onOpen={(item) => navigate({ to: "/invoice-lines/$id", params: { id: String(item.id) } })}
-          emptyMessage={w.noneYet("invoice lines")}
+          emptyAction={canAdd?.lines && (
+              <Link to="/invoice-lines/new" search={{ invoice: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("invoice line")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.lines ? undefined : w.noneYet("invoice lines")}
         />
       </section>
       {history && history.length > 0 && (
@@ -23419,18 +23512,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/invoices/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Invoices · Invoicely"}] }),
+  validateSearch: z.object({ client: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { clientId: await clientOptions() } }),
   component: NewInvoicePage,
 });
 
 function NewInvoicePage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/invoices" });
+  const back = () => search.client ? navigate({ to: "/clients/$id", params: { id: String(search.client) } }) : navigate({ to: "/invoices" });
   return (
     <>
       <PageHeader title={w.newOne("invoice")} />
@@ -23438,6 +23534,8 @@ function NewInvoicePage() {
         ui={invoiceUi}
         app={app}
         schema={invoiceSchema}
+        preset={{ ...(search.client ? { clientId: search.client } : {}) }}
+        fixed={[...(search.client ? ["clientId"] : [])]}
         options={options}
         submitLabel={w.createOne("invoice")}
         onSubmit={async (values) => {
@@ -24250,7 +24348,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/business-profile.server.ts": "2ac349b3 generated",
   "src/generated/business-profile.ts": "c3d116e0 generated",
   "src/generated/client.server.ts": "f76a3231 generated",
-  "src/generated/client.ts": "80b05cce generated",
+  "src/generated/client.ts": "779edf23 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
@@ -24259,7 +24357,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.ts": "b19acfa3 generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.server.ts": "b44de611 generated",
-  "src/generated/invoice.ts": "c26b710f generated",
+  "src/generated/invoice.ts": "87cb1a0a generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -24274,7 +24372,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
@@ -24302,7 +24400,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "29808e97 generated",
@@ -24311,7 +24409,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "92c4080d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "b58b63ad generated",
+  "src/routes/clients/$id.tsx": "df2e7e3e generated",
   "src/routes/clients/index.tsx": "d930ce63 generated",
   "src/routes/clients/new.tsx": "4b69a878 generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
@@ -24321,10 +24419,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/index.tsx": "b2ab0ec3 generated",
   "src/routes/invoice-lines/$id.tsx": "3d065149 generated",
   "src/routes/invoice-lines/index.tsx": "30a5ee9d generated",
-  "src/routes/invoice-lines/new.tsx": "2c3e74a2 generated",
-  "src/routes/invoices/$id.tsx": "2ef6326b generated",
+  "src/routes/invoice-lines/new.tsx": "d97da762 generated",
+  "src/routes/invoices/$id.tsx": "fb29a9b0 generated",
   "src/routes/invoices/index.tsx": "d4d373e8 generated",
-  "src/routes/invoices/new.tsx": "f3338000 generated",
+  "src/routes/invoices/new.tsx": "732b9856 generated",
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "45384b2f generated",
@@ -27177,7 +27275,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "a055249c kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -27202,7 +27300,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c5155025 generated",
@@ -29262,7 +29360,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -29284,7 +29382,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "63d519fe generated",
@@ -32189,6 +32287,7 @@ import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { componentAccess, componentData } from "./component.server";
+import { incidentAccess } from "./incident.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -32266,6 +32365,8 @@ export const getComponent = createServerFn()
       row,
       canWrite: allows(componentAccess.write, viewer, row.ownerId),
       canDelete: allows(componentAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { incidents: allows(incidentAccess.create, viewer) },
     };
   });
 
@@ -32833,6 +32934,7 @@ import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
 import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { incidentAccess, incidentData } from "./incident.server";
+import { incidentUpdateAccess } from "./incident-update.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -32936,6 +33038,8 @@ export const getIncident = createServerFn()
       row,
       canWrite: allows(incidentAccess.write, viewer, row.ownerId),
       canDelete: allows(incidentAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { updates: allows(incidentUpdateAccess.create, viewer) },
     };
   });
 
@@ -35544,7 +35648,7 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
 
 exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/components/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -35552,6 +35656,7 @@ import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { componentSchema, componentUi, deleteComponent, getComponent, updateComponent } from "#/generated/component";
+import { buttonVariants } from "#/components/ui/button";
 import { incidentUi } from "#/generated/incident";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -35600,7 +35705,7 @@ export const Route = createFileRoute("/components/$id")({
 });
 
 function ComponentPage() {
-  const { row, canWrite, canDelete, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/components" });
   return (
@@ -35629,14 +35734,26 @@ function ComponentPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Incidents</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Incidents</h2>
+          {row.incidents.length > 0 && canAdd?.incidents && (
+              <Link to="/incidents/new" search={{ component: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("incident")}
+              </Link>
+            )}
+        </div>
         <ModelTable
           ui={incidentUi}
           app={app}
           rows={row.incidents}
           hide={["componentId"]}
           onOpen={(item) => navigate({ to: "/incidents/$id", params: { id: String(item.id) } })}
-          emptyMessage={w.noneYet("incidents")}
+          emptyAction={canAdd?.incidents && (
+              <Link to="/incidents/new" search={{ component: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("incident")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.incidents ? undefined : w.noneYet("incidents")}
         />
       </section>
       {history && history.length > 0 && (
@@ -35987,7 +36104,7 @@ function ArticlesPage() {
 
 exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/incidents/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -35998,6 +36115,7 @@ import { deleteIncident, getIncident, incidentSchema, incidentUi, updateIncident
 import { identified, identifiedAccess, identifiedFits } from "#/generated/actions/identified";
 import { monitoring, monitoringAccess, monitoringFits } from "#/generated/actions/monitoring";
 import { resolve, resolveAccess, resolveFits } from "#/generated/actions/resolve";
+import { buttonVariants } from "#/components/ui/button";
 import { incidentUpdateUi } from "#/generated/incident-update";
 import { componentOptions } from "#/generated/component";
 import { allows, guardPage } from "#/kit/access";
@@ -36048,7 +36166,7 @@ export const Route = createFileRoute("/incidents/$id")({
 });
 
 function IncidentPage() {
-  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, options, history } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
@@ -36113,14 +36231,26 @@ function IncidentPage() {
         }
       />
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Updates</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Updates</h2>
+          {row.updates.length > 0 && canAdd?.updates && (
+              <Link to="/updates/new" search={{ incident: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("incident update")}
+              </Link>
+            )}
+        </div>
         <ModelTable
           ui={incidentUpdateUi}
           app={app}
           rows={row.updates}
           hide={["incidentId"]}
           onOpen={(item) => navigate({ to: "/updates/$id", params: { id: String(item.id) } })}
-          emptyMessage={w.noneYet("incident updates")}
+          emptyAction={canAdd?.updates && (
+              <Link to="/updates/new" search={{ incident: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("incident update")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.updates ? undefined : w.noneYet("incident updates")}
         />
       </section>
       {history && history.length > 0 && (
@@ -36287,18 +36417,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/incidents/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["incidents"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Incidents · Northwind Status"}] }),
+  validateSearch: z.object({ component: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { componentId: await componentOptions() } }),
   component: NewIncidentPage,
 });
 
 function NewIncidentPage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/incidents" });
+  const back = () => search.component ? navigate({ to: "/components/$id", params: { id: String(search.component) } }) : navigate({ to: "/incidents" });
   return (
     <>
       <PageHeader title={w.newOne("incident")} />
@@ -36306,6 +36439,8 @@ function NewIncidentPage() {
         ui={incidentUi}
         app={app}
         schema={incidentSchema}
+        preset={{ ...(search.component ? { componentId: search.component } : {}) }}
+        fixed={[...(search.component ? ["componentId"] : [])]}
         options={options}
         submitLabel={w.createOne("incident")}
         onSubmit={async (values) => {
@@ -37227,18 +37362,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { z } from "zod";
 
 export const Route = createFileRoute("/updates/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["updates"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Updates · Northwind Status"}] }),
+  validateSearch: z.object({ incident: z.coerce.number().int().positive().optional().catch(undefined) }),
   loader: async () => ({ options: { incidentId: await incidentOptions() } }),
   component: NewIncidentUpdatePage,
 });
 
 function NewIncidentUpdatePage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/updates" });
+  const back = () => search.incident ? navigate({ to: "/incidents/$id", params: { id: String(search.incident) } }) : navigate({ to: "/updates" });
   return (
     <>
       <PageHeader title={w.newOne("incident update")} />
@@ -37246,6 +37384,8 @@ function NewIncidentUpdatePage() {
         ui={incidentUpdateUi}
         app={app}
         schema={incidentUpdateSchema}
+        preset={{ ...(search.incident ? { incidentId: search.incident } : {}) }}
+        fixed={[...(search.incident ? ["incidentId"] : [])]}
         options={options}
         submitLabel={w.createOne("incident update")}
         onSubmit={async (values) => {
@@ -37716,13 +37856,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/api.server.ts": "e88863cd generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/component.server.ts": "bb337736 generated",
-  "src/generated/component.ts": "f156a7db generated",
+  "src/generated/component.ts": "e81973da generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.server.ts": "707f5311 generated",
   "src/generated/incident-update.ts": "78a69a2f generated",
   "src/generated/incident.server.ts": "a39deaef generated",
-  "src/generated/incident.ts": "4411580f generated",
+  "src/generated/incident.ts": "34383f77 generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.server.ts": "f9bfae49 generated",
@@ -37745,7 +37885,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "b4abe79a kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "b7183de7 kit",
+  "src/kit/ModelForm.tsx": "06de85ff kit",
   "src/kit/ModelTable.tsx": "c0283a17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -37774,7 +37914,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "6c90dda0 kit",
+  "src/kit/words.ts": "cf739e77 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d35a3346 generated",
@@ -37791,15 +37931,15 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "ef4bb50b generated",
+  "src/routes/components/$id.tsx": "ff53ceb6 generated",
   "src/routes/components/index.tsx": "84ec2fe0 generated",
   "src/routes/components/new.tsx": "4a2c9cef generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "465e509d generated",
-  "src/routes/incidents/$id.tsx": "d2277469 generated",
+  "src/routes/incidents/$id.tsx": "ea33366e generated",
   "src/routes/incidents/index.tsx": "696ba9ea generated",
-  "src/routes/incidents/new.tsx": "28cb94d2 generated",
+  "src/routes/incidents/new.tsx": "071bd1e6 generated",
   "src/routes/index.tsx": "dca8d976 generated",
   "src/routes/maintenance/$id.tsx": "3d783610 generated",
   "src/routes/maintenance/index.tsx": "1ea331c6 generated",
@@ -37812,7 +37952,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/team/index.tsx": "796850fe generated",
   "src/routes/updates/$id.tsx": "70a07947 generated",
   "src/routes/updates/index.tsx": "bd0ddf88 generated",
-  "src/routes/updates/new.tsx": "fb3fbdbe generated",
+  "src/routes/updates/new.tsx": "f58cfd59 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",
   "src/theme.css": "e87e4a57 generated",
