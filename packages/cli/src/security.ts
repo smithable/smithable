@@ -2,7 +2,13 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
-import { affected, lockedVersions, type Read, readAdvisories } from "./advisories.js";
+import {
+  advisoriesCacheDir,
+  affected,
+  lockedVersions,
+  type Read,
+  readAdvisories,
+} from "./advisories.js";
 import { appName } from "./build.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
@@ -168,7 +174,10 @@ export async function published(
   const fresh = kept && kept.key === key && Date.now() - kept.at < 3_600_000;
   const lists = fresh
     ? kept.read
-    : await read(packages, { token: process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN });
+    : await read(packages, {
+        token: process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN,
+        cacheDir: advisoriesCacheDir(),
+      });
   if (!fresh && !lists.unread.length) {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, JSON.stringify({ at: Date.now(), key, read: lists }));
@@ -177,10 +186,21 @@ export async function published(
     versions,
     lists.advisories.filter((a) => !(a.id in accepted)),
   );
-  if (lists.unread.length)
+  if (lists.unread.length) {
+    // Said as what happened and what to do: a newcomer's first deploy met this with "fix the
+    // findings" and nothing to fix (the stranger walk, 2026-10-07).
+    const at = lists.limitedUntil
+      ? new Date(lists.limitedUntil).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : undefined;
     findings.push(
-      `Not read, so not checked: ${lists.unread.join(", ")} (no network, or GitHub's hourly limit: set GITHUB_TOKEN to any token).`,
+      at
+        ? `GitHub allowed no more reads from this machine this hour, so the advisory lists of ${lists.unread.join(", ")} were not read and the check cannot pass. Set GITHUB_TOKEN to any GitHub token (no permissions needed), or run again after ${at}.`
+        : `The advisory lists of ${lists.unread.join(", ")} could not be read (no network?), so the check cannot pass. With a network, set GITHUB_TOKEN to any GitHub token in case GitHub's hourly limit is the cause.`,
     );
+  }
   // Shown at every run, never hidden: what was looked at and found not to reach the app.
   const notes = lists.advisories
     .filter((a) => a.id in accepted)
