@@ -160,7 +160,7 @@ function FieldShapeControls({
             aria-label="Links to"
             value={shape.target}
             onChange={(e) => set({ target: e.target.value })}
-            options={[...models, "User"]}
+            options={[...models, "User"].map((m) => [m, humanize(m)] as [string, string])}
           />
         </Label>
       )}
@@ -375,7 +375,7 @@ function useModelField(spec: Spec, initial?: { model?: string; field?: string })
             setModel(e.target.value);
             setField(models.find((m) => m.name === e.target.value)?.fields[0]?.name ?? "");
           }}
-          options={models.map((m) => m.name)}
+          options={models.map((m) => [m.name, humanize(m.name)])}
         />
       </Label>
       <Label text="Field">
@@ -464,7 +464,7 @@ function AddField({ spec, run, initial }: FormProps) {
           aria-label="Kind of record"
           value={model}
           onChange={(e) => setModel(e.target.value)}
-          options={models.map((m) => m.name)}
+          options={models.map((m) => [m.name, humanize(m.name)])}
         />
       </Label>
       <Label text="Name">
@@ -776,7 +776,7 @@ function AddStandardAction({ spec, run }: FormProps) {
             setSetName("");
             setWhenName("");
           }}
-          options={models.map((m) => m.name)}
+          options={models.map((m) => [m.name, humanize(m.name)])}
         />
       </Label>
       <Label text="It sets">
@@ -983,7 +983,7 @@ function AddPage({ spec, run, initial }: FormProps) {
             aria-label="Lists"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            options={models.map((m) => m.name)}
+            options={models.map((m) => [m.name, humanize(m.name)])}
           />
         </Label>
       )}
@@ -1366,7 +1366,7 @@ function AddSection({ spec, run }: FormProps) {
               aria-label="Shows"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              options={models.map((m) => m.name)}
+              options={models.map((m) => [m.name, humanize(m.name)])}
             />
           </Label>
         </>

@@ -91,7 +91,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
     document.documentElement.toggleAttribute("data-sm-selecting", selecting);
     clear("data-sm-hover");
     if (!selecting) clear("data-sm-selected");
-    document.querySelectorAll("[data-sm-part=column]").forEach((th) => (th.draggable = selecting));
+    // Out of select mode the attribute goes, not false: the page may not have hydrated yet.
+    document
+      .querySelectorAll("[data-sm-part=column]")
+      .forEach((th) => (selecting ? (th.draggable = true) : th.removeAttribute("draggable")));
   });
   document.addEventListener("mouseover", (event) => {
     if (!selecting) return;

@@ -275,9 +275,24 @@ export function App() {
   const [guiding, setGuiding] = useState(false);
   const firstVisit =
     project && !project.making && mode === "builder" && !guideOff() && !seenGuide(project.name);
+  // The first tour waits for the preview's page (its second stop points at the running app),
+  // or twenty seconds when the preview is slow to start.
+  const [previewUp, setPreviewUp] = useState(false);
   useEffect(() => {
-    if (firstVisit) setGuiding(true);
-  }, [firstVisit]);
+    if (previewUp) return;
+    const ready = (e: MessageEvent) => {
+      if (isPreviewMessage(e) && e.data.type === "ready") setPreviewUp(true);
+    };
+    const late = setTimeout(() => setPreviewUp(true), 20_000);
+    window.addEventListener("message", ready);
+    return () => {
+      clearTimeout(late);
+      window.removeEventListener("message", ready);
+    };
+  }, [previewUp]);
+  useEffect(() => {
+    if (firstVisit && previewUp) setGuiding(true);
+  }, [firstVisit, previewUp]);
   if (!project) return <p className="p-6 text-sm text-neutral-500">Opening the project…</p>;
   return (
     <div className="flex h-full flex-col">
