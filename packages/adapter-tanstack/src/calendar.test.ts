@@ -49,7 +49,7 @@ test("a calendar loads the range shown through the model's data function, with l
 test("the new session's form takes its start from the address; seeds are placed around today", () => {
   const form = file("src/routes/sessions/new.tsx") ?? "";
   expect(form).toContain(
-    "validateSearch: z.object({ startsAt: z.string().max(40).optional().catch(undefined) })",
+    "validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40) })",
   );
   expect(form).toContain("instantOf(search.startsAt, app.timeZone)");
   expect(file("src/db/seed.ts")).toContain("function aroundToday(");

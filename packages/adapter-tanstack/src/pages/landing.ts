@@ -270,7 +270,7 @@ export function landingRoute(
         // The model's own form; visitors send it, and the thanks replace it.
         const model = modelNamed(ir, section.form);
         const n = names(model, t);
-        imports.add(n.module, n.create).add(n.module, n.schema).add(n.module, n.ui);
+        imports.add(n.module, n.create).add(`${n.module}.schema`, n.schema).add(n.module, n.ui);
         imports.add("#/generated/app", "app").add("#/kit/ModelForm", "ModelForm");
         return [
           `${open("Contact")}${props}

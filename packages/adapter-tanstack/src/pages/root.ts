@@ -125,7 +125,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { z } from "zod";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
@@ -168,14 +168,14 @@ ${
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator(z.object({ question: z.string().trim().min(1).max(500) }))
+  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
   .handler(async ({ data }) => ask(await currentViewer(), data.question));${
     confirming
       ? `
 
 /** A change Ask proposed, made as the person once they confirm it (by the proposal's id alone). */
 const confirmApp = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().max(100) }))
+  .validator((data: unknown) => ({ id: field(data, "id", 100) }))
   .handler(async ({ data }) => {
     await confirm(await currentViewer(), data.id, getRequestHeaders());
     return null;

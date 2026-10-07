@@ -59,6 +59,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     .add("@tanstack/react-start", "createServerFn")
     .add("drizzle-orm", "and", "gte", "lt")
     .add("zod", "z")
+    .add("#/kit/params", "optional", "type Search", "shaped")
     .add("#/db/schema", "* as schema")
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
@@ -138,9 +139,9 @@ const getRange = createServerFn()
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: z.object({
-    week: z.string().regex(/^\\d{4}-W\\d{2}$/).optional().catch(undefined),
-    month: z.string().regex(/^\\d{4}-\\d{2}$/).optional().catch(undefined),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: (s: Search) => optional({
+    week: shaped(s.week, /^\\d{4}-W\\d{2}$/),
+    month: shaped(s.month, /^\\d{4}-\\d{2}$/),
   }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => {

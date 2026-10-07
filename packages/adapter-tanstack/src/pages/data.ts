@@ -277,16 +277,18 @@ import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
+import { count, optional, type Search, text } from "#/kit/params";
 ${mails ? 'import { sendAgain } from "#/kit/outgoing.server";\n' : ""}import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
-const filters = z.object({
-  who: z.string().optional(),
-  model: z.string().optional(),
-  record: z.coerce.number().int().optional(),
-  action: z.string().optional(),
-  from: z.string().optional(),
-  to: z.string().optional(),
+/** The activity's filters, from the address. */
+const filters = (s: Search) => optional({
+  who: text(s.who),
+  model: text(s.model),
+  record: count(s.record),
+  action: text(s.action),
+  from: text(s.from),
+  to: text(s.to),
 });
 
 /** Each model's label, for the filter and the lines. */

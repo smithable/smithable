@@ -358,7 +358,7 @@ export function signInRoute(auth: AuthIR, start = "/", invitations = false): str
     ? `
 /** The sign-in choices, and whom an invitation link is for (by its token; never signs anyone in). */
 const signInOptions = createServerFn()
-  .validator(z.object({ invite: z.string().max(100).optional() }))
+  .validator((data: unknown) => ({ invite: text((data as Search | null)?.invite, 100) }))
   .handler(({ data }) => {
     const providers = configuredProviders();
     const invited = data.invite
@@ -387,9 +387,9 @@ const signInOptions = createServerFn().handler(() => {
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "#/db";
 import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
+import { oneOf, optional, type Search, shaped${invitations ? ", text" : ""} } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
@@ -400,7 +400,11 @@ const ROLES = ${JSON.stringify(roles)} as const;
 ${invitations ? `const ROLE_LABELS: Record<string, string> = ${record(roleLabels(auth))};\n` : ""}${options}
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
-  .validator(z.enum(ROLES))
+  .validator((role: unknown) => {
+    const known = oneOf(role, ROLES);
+    if (!known) throw new Error("No such role.");
+    return known;
+  })
   .handler(async ({ data: role }) => {
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
@@ -421,11 +425,11 @@ const devSignIn = createServerFn({ method: "POST" })
 
 export const Route = createFileRoute("/sign-in")({
   // Only paths within the app, so the page cannot send anyone elsewhere.
-  validateSearch: z.object({
-    redirect: z.string().regex(/^\\/(?!\\/)/).optional().catch(undefined),${
+  validateSearch: (s: Search) => optional({
+    redirect: shaped(s.redirect, /^\\/(?!\\/)/),${
       invitations
         ? `
-    invite: z.string().max(100).optional().catch(undefined),`
+    invite: text(s.invite, 100),`
         : ""
     }
   }),${
