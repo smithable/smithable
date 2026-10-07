@@ -72,13 +72,17 @@ export function Guide({
   // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
   useLayoutEffect(() => {
     if (!current) return;
-    current.element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // A place laid over a panel (the preview on a phone) is brought in by scrolling to the panel.
+    const panel = document.querySelector(`[data-guide-place="${current.stop.anchor}"]`);
+    (panel ?? current.element).scrollIntoView({ block: "nearest", inline: "nearest" });
     const measure = () => setBox(current.element.getBoundingClientRect());
     measure();
     const later = setTimeout(measure, 350);
+    const settled = setTimeout(measure, 800);
     window.addEventListener("resize", measure);
     return () => {
       clearTimeout(later);
+      clearTimeout(settled);
       window.removeEventListener("resize", measure);
     };
   }, [current]);
