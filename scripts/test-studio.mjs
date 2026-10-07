@@ -153,15 +153,18 @@ try {
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
   });
-  await step("the header has Publish and Help, which open the docs (finding 14)", async () => {
-    const header = page.locator("header").first();
-    for (const [name, href] of [
-      ["Publish", "https://docs.smithable.ai/self-host.html"],
-      ["Help", "https://docs.smithable.ai/start.html"],
-    ])
-      if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
-        throw new Error(`${name} does not lead to ${href}`);
-  });
+  await step(
+    "the header has How to publish and Help, which open the docs (finding 14)",
+    async () => {
+      const header = page.locator("header").first();
+      for (const [name, href] of [
+        ["How to publish", "https://docs.smithable.ai/self-host.html"],
+        ["Help", "https://docs.smithable.ai/start.html"],
+      ])
+        if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
+          throw new Error(`${name} does not lead to ${href}`);
+    },
+  );
   await step("the change box folds to one line and opens again (finding 10)", async () => {
     await page.getByRole("button", { name: "Fold", exact: true }).click();
     await page.getByRole("button", { name: "Show the change box" }).waitFor();

@@ -69,7 +69,7 @@ export function Look({
                   className={cx(
                     "w-full overflow-hidden rounded-md border text-left",
                     current
-                      ? "border-accent ring-2 ring-accent/30"
+                      ? "border-accent ring-4 ring-accent/40"
                       : "border-neutral-200 hover:border-neutral-400",
                   )}
                 >
@@ -80,8 +80,10 @@ export function Look({
                     height={100}
                     className="block h-auto w-full"
                   />
-                  <span className="block px-2 py-1.5 text-xs">
+                  <span className={cx("block px-2 py-1.5 text-xs", current && "bg-accent-soft")}>
                     <span className="font-medium">{humanize(t.name)}</span>
+                    {/* The one in use says so in words, not only by its outline. */}
+                    {current && <span className="ml-1.5 font-medium text-accent">· In use</span>}
                     <span className="block text-neutral-500">
                       {t.source === "project" ? `themes/${t.name}.yml · ` : ""}
                       {t.font}

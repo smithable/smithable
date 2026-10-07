@@ -21,7 +21,7 @@ export const STOPS: Stop[] = [
   {
     anchor: "preview",
     title: "Your app, running",
-    text: "This is your app. The records in it are samples for trying it; your published app starts empty.",
+    text: "This is your app, running: click around as anyone would. What you change on the left shows here at once.",
   },
   {
     anchor: "summary",
