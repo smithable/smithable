@@ -682,7 +682,8 @@ try {
       await page.getByRole("button", { name: "Make the change" }).click();
       await page
         .getByText(
-          /^Done: Customers: added a mobile \(a phone number\)\. Local model \(fake-model\)/,
+          // In No code: which model made it, in words; the trace keeps the tier and tokens.
+          /^Done: Customers: added a mobile \(a phone number\)\. Made with fake-model\./,
         )
         .waitFor({ timeout: 60000 });
       await trace
