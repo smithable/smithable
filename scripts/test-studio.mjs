@@ -885,7 +885,11 @@ try {
       await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
     },
   );
+  // The log's last line before the undo: the next step reads only what came after it, since a
+  // start before the undo (a page reloaded without its stylesheet) can still be in the log.
+  let beforeUndo;
   await step("Ctrl+Z outside a text field undoes the last change", async () => {
+    beforeUndo = (await (await fetch(`${base}/api/logs`)).json()).at(-1);
     await page.locator("header").first().click();
     await page.keyboard.press("Control+z");
     await trace
@@ -897,7 +901,8 @@ try {
   await step("an undo does not start the preview again", async () => {
     await new Promise((r) => setTimeout(r, 3000));
     const lines = await (await fetch(`${base}/api/logs`)).json();
-    const started = lines.slice(-150).filter((l) => /The preview (answers|stopped)/.test(l));
+    const since = lines.slice(lines.lastIndexOf(beforeUndo) + 1);
+    const started = since.filter((l) => /The preview (answers|stopped)/.test(l));
     if (started.length) throw new Error(`the preview was started again: ${started[0]}`);
     if (!(await fetch(`http://localhost:${port + 1}/health`)).ok)
       throw new Error("the preview does not answer after the undo");
