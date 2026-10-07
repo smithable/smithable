@@ -1,21 +1,21 @@
-# M12 first builds: claude-code (2026-10-06)
+# M12 first builds: claude-code (2026-10-07)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 409,787 tokens (383,317 in, 26,470 out), €0.0000 + $1.0094 (as Claude Code reports it); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 9 type-check, 0 tokens (0 in, 0 out), €0.0000; 12 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
-| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 29,990 | 2,671 | $0.2933 | 0 | 1 | 31 s |
+| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 7 s |
 | A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 6 s |
-| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 60,245 | 3,754 | $0.1275 | 0 | 2 | 37 s |
-| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 28,844 | 2,073 | $0.0574 | 0 | 1 | 27 s |
-| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 28,718 | 1,232 | $0.0396 | 0 | 1 | 18 s |
-| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 28,844 | 2,839 | $0.0728 | 0 | 1 | 35 s |
-| A football club's site: teams, players, matches and results. | records | yes | yes | 28,707 | 2,480 | $0.0645 | 0 | 1 | 27 s |
-| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 29,988 | 2,047 | $0.0661 | 0 | 1 | 27 s |
-| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 28,714 | 1,262 | $0.0402 | 0 | 1 | 19 s |
-| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 59,589 | 2,616 | $0.0903 | 0 | 1 | 30 s |
-| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 29,837 | 2,926 | $0.0824 | 0 | 1 | 30 s |
-| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 29,841 | 2,570 | $0.0753 | 0 | 1 | 27 s |
+| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | **no** | 0 | 0 | €0.0000 | 2 | 2 | 7 s |
+| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 8 s |
+| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 6 s |
+| A job board for a local union, with job posts and applications. | marketplace | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 7 s |
+| A football club's site: teams, players, matches and results. | records | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 7 s |
+| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 8 s |
+| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 6 s |
+| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 6 s |
+| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 7 s |
+| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 7 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code/](m12-first-builds-claude-code/), one folder per description (app-1 …).
 
@@ -114,32 +114,17 @@ Sign-in and access
   New users get the member role.
   Open to anyone without signing in: the home page, the schedule page, the privacy page, reading class types, reading instructors, reading sessions and adding messages.
 Pictures from the Smithable image library: hero.webp.
-Generated 135 files (135 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-1/drizzle.config.ts'
-12 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-bookings 5 columns 1 indexes 2 fks
-class_types 8 columns 0 indexes 1 fks
-instructors 6 columns 0 indexes 1 fks
-messages 7 columns 0 indexes 1 fks
-outgoing_call 13 columns 1 indexes 0 fks
-outgoing_mail 13 columns 1 indexes 0 fks
-session 8 columns 2 indexes 1 fks
-sessions 9 columns 0 indexes 3 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 141 files (141 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_many_thor_girl.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-1. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-1. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-1
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-1
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-1/smithable.yml:52:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-1/smithable.yml:52:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
     hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
-/tmp/smithable-bench-m12-4n3Kp4/app-1/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-nNatGW/app-1/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 2. A CRM for a small sales team: companies, contacts, deals and follow-ups.
@@ -159,30 +144,15 @@ Added companies with a name and notes: say what else they hold.
 Added contacts with a name and notes: say what else they hold.
 Added deals with a name and notes: say what else they hold.
 Added follow-ups with a name and notes: say what else they hold.
-Sign-in was limited to acme.example, the starter's sample domain: taken out.
-Generated 115 files (114 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-2/drizzle.config.ts'
-12 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-companies 6 columns 0 indexes 1 fks
-contacts 6 columns 0 indexes 1 fks
-customers 12 columns 2 indexes 1 fks
-deals 6 columns 0 indexes 1 fks
-follow_ups 6 columns 0 indexes 1 fks
-invitation 7 columns 2 indexes 1 fks
-orders 13 columns 2 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+The starter let only acme.example addresses sign in (a sample domain no one has); that limit is gone.
+Generated 123 files (122 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_safe_victor_mancha.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-2. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-2. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-2
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-2
-  smithable run
+or only run the app with smithable run.
 ```
 
 ### 3. Invoicing for freelancers, with clients, invoices and payments.
@@ -257,37 +227,23 @@ Sign-in and access
   New users get the member role.
   Open to anyone without signing in: the home page and the privacy page.
 Pictures from the Smithable image library: hero.webp.
-Generated 121 files (121 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-3/drizzle.config.ts'
-11 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-clients 8 columns 0 indexes 1 fks
-invoice_lines 9 columns 0 indexes 2 fks
-invoices 12 columns 1 indexes 2 fks
-outgoing_call 13 columns 1 indexes 0 fks
-outgoing_mail 13 columns 1 indexes 0 fks
-payments 9 columns 0 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 126 files (126 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_sudden_black_queen.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-3. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-3. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-3
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-3
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 
-/tmp/smithable-bench-m12-4n3Kp4/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
+/tmp/smithable-bench-m12-nNatGW/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
 		return this.stmt.run(...params);
 		                 ^
 SqliteError: FOREIGN KEY constraint failed
-    at PreparedQuery.run (/tmp/smithable-bench-m12-4n3Kp4/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-4n3Kp4/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-4n3Kp4/app-3/src/db/seed.ts:59:6)
+    at PreparedQuery.run (/tmp/smithable-bench-m12-nNatGW/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
+    at QueryPromise.run (/tmp/smithable-bench-m12-nNatGW/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
+    at <anonymous> (/tmp/smithable-bench-m12-nNatGW/app-3/src/db/seed.ts:59:6)
     at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
     at async node:internal/modules/esm/loader:647:26
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
@@ -345,26 +301,15 @@ Sign-in and access
   New users get the member role.
   Open to anyone without signing in: the home page, the catalog page and reading tools.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 114 files (114 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-4/drizzle.config.ts'
-8 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-loans 11 columns 0 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-tools 11 columns 0 indexes 1 fks
-tools_favorites 4 columns 1 indexes 2 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 117 files (117 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_amusing_imperial_guard.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-4. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-4. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-4
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-4
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.
@@ -406,25 +351,14 @@ Sign-in and access
   - member
   New users get the member role.
 No pictures: none of the library's files could be fetched.
-Generated 96 files (96 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-5/drizzle.config.ts'
-8 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-ingredients 12 columns 1 indexes 2 fks
-invitation 7 columns 2 indexes 1 fks
-session 8 columns 2 indexes 1 fks
-suppliers 9 columns 0 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 99 files (99 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_little_lily_hollister.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-5. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-5. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-5
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-5
-  smithable run
+or only run the app with smithable run.
 ```
 
 ### 6. A job board for a local union, with job posts and applications.
@@ -496,26 +430,15 @@ Sign-in and access
   New users get the member role.
   Open to anyone without signing in: the home page, the jobs page and reading jobs where status is open.
 Pictures from the Smithable image library: hero.webp.
-Generated 109 files (109 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-6/drizzle.config.ts'
-8 tables
-account 13 columns 1 indexes 1 fks
-applications 11 columns 1 indexes 2 fks
-audit_log 13 columns 2 indexes 0 fks
-jobs 13 columns 0 indexes 1 fks
-jobs_favorites 4 columns 1 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 112 files (112 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_silky_surge.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-6. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-6. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-6
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-6
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 7. A football club's site: teams, players, matches and results.
@@ -588,26 +511,15 @@ Sign-in and access
   New users get the member role.
   Open to anyone without signing in: the home page, the matches page, the teams page, the players page, the privacy page, reading teams, reading players and reading matches.
 Pictures from the Smithable image library: hero.webp.
-Generated 107 files (107 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-7/drizzle.config.ts'
-8 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-matches 13 columns 0 indexes 2 fks
-players 9 columns 0 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-teams 8 columns 0 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 111 files (111 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_freezing_korvac.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-7. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-7. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-7
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-7
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 8. Event registration for a conference: talks, speakers and attendees.
@@ -660,28 +572,17 @@ Sign-in and access
   New users get the attendee role.
   Open to anyone without signing in: the home page, the schedule page, the privacy page, reading talks and reading speakers.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
-Generated 125 files (125 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-8/drizzle.config.ts'
-8 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-registrations 5 columns 1 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-speakers 8 columns 0 indexes 1 fks
-talks 12 columns 0 indexes 2 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 129 files (129 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_blue_echo.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-8. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-8. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-8
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-8
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-8/smithable.yml:37:15  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-8/smithable.yml:37:15  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
     hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
-/tmp/smithable-bench-m12-4n3Kp4/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-nNatGW/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 9. A help desk for an IT team: tickets, priorities and who handles them.
@@ -728,24 +629,14 @@ Sign-in and access
   - member
   New users get the member role.
 No pictures: none of the library's files could be fetched.
-Generated 101 files (101 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-9/drizzle.config.ts'
-7 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-invitation 7 columns 2 indexes 1 fks
-session 8 columns 2 indexes 1 fks
-tickets 11 columns 0 indexes 2 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 103 files (103 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_lean_sleeper.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-9. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-9. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-9
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-9
-  smithable run
+or only run the app with smithable run.
 ```
 
 ### 10. A recipe collection for a family, with ingredients and shopping lists.
@@ -807,27 +698,14 @@ Sign-in and access
   - member (A family member: adds and edits recipes and shopping lists)
   New users get the member role.
 No pictures: none of the library's files could be fetched.
-Generated 105 files (105 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-10/drizzle.config.ts'
-10 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-ingredients 7 columns 0 indexes 2 fks
-invitation 7 columns 2 indexes 1 fks
-recipes 12 columns 0 indexes 1 fks
-session 8 columns 2 indexes 1 fks
-shopping_items 8 columns 0 indexes 2 fks
-shopping_lists 7 columns 0 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 110 files (110 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_lush_the_watchers.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-10. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-10. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-10
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-10
-  smithable run
+or only run the app with smithable run.
 ```
 
 ### 11. A status page for our API, with incidents and planned maintenance.
@@ -904,29 +782,15 @@ Sign-in and access
   Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
   Other programs can read and change components and incidents with a key, and run resolve. AI assistants can use it too.
 Pictures from the Smithable image library: hero.webp.
-Generated 138 files (138 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-11/drizzle.config.ts'
-11 tables
-account 13 columns 1 indexes 1 fks
-api_key 10 columns 1 indexes 0 fks
-audit_log 13 columns 2 indexes 0 fks
-components 7 columns 0 indexes 1 fks
-incident_updates 8 columns 0 indexes 2 fks
-incidents 10 columns 0 indexes 2 fks
-invitation 7 columns 2 indexes 1 fks
-maintenances 9 columns 0 indexes 2 fks
-session 8 columns 2 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 143 files (143 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_furry_dust.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-11. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-11. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-11
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-11
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.
@@ -992,25 +856,13 @@ Sign-in and access
   New users get the staff role.
   Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved and reading incident updates.
 Pictures from the Smithable image library: hero.webp.
-Generated 114 files (114 changed, 0 removed).
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/tmp/smithable-bench-m12-4n3Kp4/app-12/drizzle.config.ts'
-9 tables
-account 13 columns 1 indexes 1 fks
-audit_log 13 columns 2 indexes 0 fks
-components 7 columns 0 indexes 1 fks
-incident_updates 8 columns 0 indexes 2 fks
-incidents 10 columns 0 indexes 2 fks
-invitation 7 columns 2 indexes 1 fks
-session 8 columns 2 indexes 1 fks
-user 8 columns 1 indexes 0 fks
-verification 6 columns 1 indexes 0 fks
+Generated 118 files (118 changed, 0 removed).
 
-[✓] Your SQL migration file ➜ drizzle/0000_busy_ink.sql 🚀
+Created /tmp/smithable-bench-m12-nNatGW/app-12. Open it in Studio, to see it and change it:
 
-Created /tmp/smithable-bench-m12-4n3Kp4/app-12. Start it with:
+  cd /tmp/smithable-bench-m12-nNatGW/app-12
+  smithable studio
 
-  cd /tmp/smithable-bench-m12-4n3Kp4/app-12
-  smithable run
-/tmp/smithable-bench-m12-4n3Kp4/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+or only run the app with smithable run.
+/tmp/smithable-bench-m12-nNatGW/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
