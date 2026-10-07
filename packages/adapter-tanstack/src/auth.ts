@@ -406,8 +406,14 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
     const password = \`\${prefix}-password\`;
-    if (!db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
-      await auth.api.signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } });
+    const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+    if (!made()) {
+      // Two tabs signing in at once (Studio and its guide): the other may make the user first.
+      await auth.api
+        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
+        .catch((error) => {
+          if (!made()) throw error;
+        });
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
