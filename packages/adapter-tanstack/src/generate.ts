@@ -9,6 +9,7 @@ import {
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
+  actionInputModule,
   actionModule,
   actionRoute,
   actionStub,
@@ -29,7 +30,7 @@ import {
   viewerModule,
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
-import { dataModule, isMarkdown, modelModule } from "./data.js";
+import { dataModule, isMarkdown, modelModule, modelSchemaModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
@@ -577,6 +578,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         const test = hasFormulas(model) ? formulasTestSource(model) : undefined;
         return [
           generated(`${base}.ts`, modelModule(model, t, ir, auth, ux)),
+          generated(`${base}.schema.ts`, modelSchemaModule(model, t, auth)),
           generated(`${base}.server.ts`, dataModule(model, t, ir, auth)),
           ...(hasFormulas(model)
             ? [generated(`${base}.formulas.ts`, formulasModuleSource(model, ir))]
@@ -596,6 +598,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               generated(
                 `src/generated/actions/${kebab(action.name)}.ts`,
                 actionModule(action, ir, auth, t),
+              ),
+              generated(
+                `src/generated/actions/${kebab(action.name)}.input.ts`,
+                actionInputModule(action),
               ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
             ]

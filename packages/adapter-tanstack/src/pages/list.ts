@@ -34,6 +34,7 @@ import {
   modelNamed,
   names,
   ownerKey,
+  paramsUsed,
   relatedTitle,
   standardActions,
   type Texts,
@@ -201,7 +202,7 @@ function filterCode(
 }
 
 /** A list's page in the address (?page=3): a positive whole number, else the first. */
-const PAGE = "z.coerce.number().int().positive().optional().catch(undefined)";
+const PAGE = "count(s.page)";
 
 /** A searchable list's server function and route options: the search text is in the URL. */
 export function searchCode(
@@ -269,7 +270,7 @@ export function searchCode(
       fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
 const ${fn} = createServerFn()
-  .validator(z.object({ q: z.string().max(200).optional(), sort: z.string().max(60).optional(),${view ? ' view: z.literal("saved").optional(),' : ""} f: z.record(z.string(), z.string().max(200)).optional(), page: z.number().int().positive().optional(), all: z.boolean().optional() }))
+  .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();${
       favorites
@@ -293,7 +294,7 @@ const ${fn} = createServerFn()
     };
   });
 `,
-      options: `  validateSearch: z.object({ ${keys.map((k) => `${k}: z.string().optional().catch(undefined)`).join(", ")}${view ? ', view: z.literal("saved").optional().catch(undefined)' : ""}, page: ${PAGE} }),
+      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => `${k}: text(s.${k})`).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps: { q, sort, ${view ? "view, " : ""}page, ...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f, page } }),
   // While a search or filter loads, the page stays (and its controls keep their focus).
@@ -315,7 +316,7 @@ const ${fn} = createServerFn()
     fn: `
 /** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
 const ${fn} = createServerFn()
-  .validator(z.object({ q: z.string().max(200).optional()${within ? "" : ", page: z.number().int().positive().optional(), all: z.boolean().optional()"} }))
+  .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     const where = data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined;
@@ -323,10 +324,10 @@ const ${fn} = createServerFn()
   });
 `,
     options: within
-      ? `  validateSearch: z.object({ q: z.string().optional().catch(undefined) }),
+      ? `  validateSearch: (s: Search) => optional({ q: text(s.q) }),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ deps }) => ${fn}({ data: { q: deps.q } }),`
-      : `  validateSearch: z.object({ q: z.string().optional().catch(undefined), page: ${PAGE} }),
+      : `  validateSearch: (s: Search) => optional({ q: text(s.q), page: ${PAGE} }),
   loaderDeps: ({ search }) => ({ q: search.q, page: search.page }),
   loader: ({ deps }) => ${fn}({ data: { q: deps.q, page: deps.page } }),
   // While a search loads, the page stays (and the box keeps its focus and text), never the
@@ -416,7 +417,6 @@ export function listParts(
   if (search) {
     route
       .add("@tanstack/react-start", "createServerFn")
-      .add("zod", "z")
       .add("#/db/schema", "* as schema", ...search.imports.related)
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
       .add("#/kit/access", "allows");
@@ -437,7 +437,6 @@ export function listParts(
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
       .add("#/kit/access", "allows")
       .add("#/lib/viewer.server", "currentViewer");
-    if (!capped) route.add("zod", "z");
   }
   if (order)
     route
@@ -510,7 +509,7 @@ export function listParts(
       ? search.options
       : capped
         ? `  loader: () => ${newest}(),\n`
-        : `  validateSearch: z.object({ page: ${PAGE} }),
+        : `  validateSearch: (s: Search) => optional({ page: ${PAGE} }),
   loaderDeps: ({ search }) => ({ page: search.page }),
   loader: ({ deps }) => ${newest}({ data: { page: deps.page } }),
 `
@@ -725,7 +724,7 @@ const ${newest} = createServerFn().handler(async () => {
       : `
 /** A page of the ${n.pluralLabel.toLowerCase()} the viewer may read. */
 const ${newest} = createServerFn()
-  .validator(z.object({ page: z.number().int().positive().optional(), all: z.boolean().optional() }))
+  .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     ${listed(n, "undefined", undefined, order)}
@@ -746,6 +745,8 @@ export function listRoute(
   auth?: AuthIR,
 ): string {
   const p = listParts(page, model, t, ir, ux, within, auth);
+  const checks = paramsUsed(`${p.serverFn}${p.options}`);
+  if (checks.length) p.route.add("#/kit/params", ...checks);
   const head = `export const Route = createFileRoute(${JSON.stringify(p.path)})({
 ${p.options}  component: ${p.component},
 });
