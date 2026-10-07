@@ -126,10 +126,13 @@ export async function addLibraryPictures(options: {
       }
     }
   }
+  const wanted = (pictured && picked.samples.length > 0) || (picked.hero && landing && hero);
   options.io.out(
     written.length
       ? `Pictures from the Smithable image library: ${written.map((w) => w.file).join(", ")}.\n`
-      : "No pictures: none of the library's files could be fetched.\n",
+      : wanted
+        ? "No pictures: none of the library's files could be fetched.\n"
+        : "No pictures: the app has no picture fields and no landing page with a hero.\n",
   );
   return written;
 }
