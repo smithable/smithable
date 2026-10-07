@@ -58,8 +58,15 @@ test("who can do what, from the access rules", () => {
   expect(ask("who can open the customers page?")).toBe(
     "Sales users and admins can open the customers page.",
   );
-  expect(ask("who can see orders?")).toContain(
-    "Anyone, without signing in, for records where status is shipped",
+  expect(ask("who can see orders?")).toBe(
+    "Anyone can see orders where status is shipped, without signing in; the rest, sales users and admins.",
+  );
+  expect(ask("who can open the home page?")).toBe(
+    "Anyone can open the home page, without signing in.",
+  );
+  // The app's own verb for adding a record of its model (the stranger walk: "who can book a class?").
+  expect(ask("who can order a product?")).toBe(
+    "Sales users and admins can order a product (adding an order).",
   );
   expect(answerQuestion(ir, "who can delete invoices?", auth)).toBeUndefined();
 });
