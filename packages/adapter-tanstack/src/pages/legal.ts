@@ -88,39 +88,25 @@ export function legalRoute(
   const facts = legalFacts(ir, auth, t, ctx);
   const operator = t.section(page.id, "operator") as Record<string, string | undefined>;
   const more = t.section(page.id, "more") as { title?: string; text?: string };
-  const framed = ir.pages.some(
-    (p) => p.pattern.kind === "landing" && auth.public.pages.includes(p.id),
-  );
+  // The root frames a public page for visitors in the site's layout and for signed-in people in
+  // the app's shell (root.ts, visitorRoutes): the page renders itself alone.
   const imports = importList()
     .add("@tanstack/react-router", "createFileRoute")
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "guardPage")
-    .add("#/kit/LegalPage", "LegalPage");
-  if (framed)
-    imports
-      .add("#/kit/Landing", "LandingLayout")
-      .add("#/generated/app", "app")
-      .add("#/generated/site", "site");
+    .add("#/kit/LegalPage", "LegalPage", "type LegalFacts");
   const given = Object.fromEntries(Object.entries(operator).filter(([, v]) => v));
   const page_ = `<LegalPage title=${JSON.stringify(t.pageTitle(page.id))} facts={facts} />`;
   return `${HEADER}${imports.render()}
 /** What the page says, from the app's definition when it was generated. */
-const facts = ${literal({
+const facts: LegalFacts = ${literal({
     ...facts,
     ...(Object.keys(given).length ? { operator: given } : {}),
     ...(more.text ? { more } : {}),
   })};
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  component: () => ${
-    framed
-      ? `(
-    <LandingLayout appName={app.name} site={site}>
-      ${page_}
-    </LandingLayout>
-  )`
-      : page_
-  },
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  component: () => ${page_},
 });
 `;
 }
