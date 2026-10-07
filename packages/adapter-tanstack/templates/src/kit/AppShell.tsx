@@ -31,6 +31,10 @@ const sidebarItem =
 
 export function AppShell({ children, ...shell }: ShellProps & { children: React.ReactNode }) {
   const drawer = useRef<HTMLDialogElement>(null);
+  // A visitor to an app with no page for visitors (an invite-only CRM): the menu would hold only
+  // Sign in, the page they are on, so there is none.
+  const anyPage = shell.menus.some((m) => m.items.some((i) => allows(i.access, shell.viewer)));
+  const menu = Boolean(shell.viewer) || anyPage;
   return (
     <div data-kit="app-shell" className="min-h-screen lg:flex">
       {/* Desktop: a sidebar. */}
@@ -45,14 +49,16 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         data-part="header"
         className="sticky top-0 z-10 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden"
       >
-        <button
-          type="button"
-          aria-label={w.openMenu}
-          className={`${sidebarItem} size-11 justify-center px-0`}
-          onClick={() => drawer.current?.showModal()}
-        >
-          <Menu aria-hidden className="size-6" />
-        </button>
+        {menu && (
+          <button
+            type="button"
+            aria-label={w.openMenu}
+            className={`${sidebarItem} size-11 justify-center px-0`}
+            onClick={() => drawer.current?.showModal()}
+          >
+            <Menu aria-hidden className="size-6" />
+          </button>
+        )}
         <p className="min-w-0 truncate text-lg font-bold">
           <AppName {...shell} />
         </p>

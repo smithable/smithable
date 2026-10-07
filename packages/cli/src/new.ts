@@ -470,7 +470,7 @@ export function withoutSampleDomains(
   };
   const closed = closeShared(project, []);
   io.out(
-    `Sign-in was limited to ${domains.join(" and ")}, the starter's sample domain${domains.length > 1 ? "s" : ""}: taken out.${
+    `The starter let only ${domains.join(" and ")} addresses sign in (${domains.length > 1 ? "sample domains" : "a sample domain"} no one has); that limit is gone.${
       closed !== project
         ? " So that not anyone may sign up and read everything, only invited people and the administrator may sign in (the team page invites them; smithable op setSignUp anyone opens it)."
         : ""
