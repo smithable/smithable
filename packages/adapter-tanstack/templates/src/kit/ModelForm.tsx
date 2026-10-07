@@ -39,6 +39,8 @@ interface ModelFormProps<S extends z.ZodType> {
   trash?: boolean;
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
+  /** Fields shown with their preset value but not changed here, e.g. the invoice a new line is on. */
+  fixed?: string[];
   /** These fields first, in this order; the others follow. */
   fieldOrder?: string[];
   /** The form's groups, columns and controls, when the page chose them (the ux file). */
@@ -60,6 +62,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     onDelete,
     trash,
     readOnly,
+    fixed,
   } = props;
   const ui = presented(props.ui, props);
   const [inputs, setInputs] = useState(() =>
@@ -122,6 +125,18 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     const inline = field.kind === "bool";
     const described =
       [field.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+    const input = (
+      <FieldInput
+        field={field}
+        id={id}
+        value={inputs[field.name] ?? ""}
+        invalid={error !== undefined}
+        describedBy={described}
+        options={options}
+        record={typeof initial?.id === "number" ? initial.id : undefined}
+        onChange={(value) => setInputs((current) => ({ ...current, [field.name]: value }))}
+      />
+    );
     return (
       <div
         key={field.name}
@@ -147,17 +162,13 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             {formatValue(field, computed[field.name], app)}
             <span className="sr-only">{w.calculated}</span>
           </p>
+        ) : fixed?.includes(field.name) ? (
+          // Shown with its value, as an input that cannot be changed.
+          <fieldset disabled className="contents">
+            {input}
+          </fieldset>
         ) : (
-          <FieldInput
-            field={field}
-            id={id}
-            value={inputs[field.name] ?? ""}
-            invalid={error !== undefined}
-            describedBy={described}
-            options={options}
-            record={typeof initial?.id === "number" ? initial.id : undefined}
-            onChange={(value) => setInputs((current) => ({ ...current, [field.name]: value }))}
-          />
+          input
         )}
         {inline && (
           <Label htmlFor={id} data-part="label">
