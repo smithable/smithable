@@ -299,7 +299,9 @@ export async function create(
   if (code !== 0) return code;
   if (sampleData && exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
-  io.out(`\nCreated ${dir}. Start it with:\n\n  cd ${dir}\n  smithable run\n`);
+  io.out(
+    `\nCreated ${dir}. Open it in Studio, to see it and change it:\n\n  cd ${dir}\n  smithable studio\n\nor only run the app with smithable run.\n`,
+  );
   return 0;
 }
 
