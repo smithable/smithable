@@ -75,6 +75,39 @@ export function trashNames(model: ModelIR) {
 /** The most records a trash view shows; the oldest are removed after thirty days anyway. */
 const TRASH_SHOWN = 1000;
 
+/**
+ * A model's form schema (the validation library and the table's columns), in a module of its own:
+ * forms, the API and the server load it; a page that only lists or names the records does not
+ * (docs/benchmarks/app-size-2026-10-07.md).
+ */
+export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): string {
+  const n = names(model, t);
+  // Records visitors add, without an account (e.g. a contact form's messages).
+  const visitors = modelAccess(model, auth).create.public;
+  const refinements = storedFields(model).flatMap((f) => {
+    const r = refinement(f, visitors);
+    return r ? [`  ${f.name}: ${r},`] : [];
+  });
+  const schema = refinements.length
+    ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
+    : `createInsertSchema(${n.table})`;
+  const omitted = [
+    "id",
+    ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
+    "createdAt",
+    "updatedAt",
+  ];
+  return `${HEADER}import { createInsertSchema } from "drizzle-zod";
+import ${/\bz\.(?!output)/.test(schema) ? "{ z }" : "type { z }"} from "zod";
+${SCHEMA_IMPORT}
+${schema.includes("w.") ? 'import { w } from "#/kit/words";\n' : ""}
+/** What a ${n.label.toLowerCase()}'s form sends, checked. */
+export const ${n.schema} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
+
+export type ${n.values} = z.output<typeof ${n.schema}>;
+`;
+}
+
 export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, ux: UxIR): string {
   const n = names(model, t);
   const stored = storedFields(model);
@@ -201,9 +234,8 @@ export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
       : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-${SCHEMA_IMPORT}
+import type * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import type { RecordUi } from "#/kit/model";
@@ -215,6 +247,9 @@ ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perMod
   .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
   .join("")}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { ${n.schema}${capacity ? `, type ${n.values}` : ""} } from "./${kebab(model.name)}.schema";
+
+export type { ${n.values} } from "./${kebab(model.name)}.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -231,9 +266,6 @@ export const ${n.ui}: RecordUi<${model.name}Row> = ${uiSource};
 /** Who may delete ${n.pluralLabel.toLowerCase()}: a list's selection offers Delete by it (the server checks again). */
 export const ${n.deleteRule}: Rule = ${literal(modelAccess(model, auth).delete)};
 
-export const ${n.schema} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
-
-export type ${n.values} = z.output<typeof ${n.schema}>;
 
 export const ${n.list} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
