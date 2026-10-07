@@ -5,13 +5,21 @@
 // --gate the duration of the engine's `pnpm check` (docs/benchmarks/app-size-2026-10-07.md).
 //
 //   node scripts/measure-app.mjs [--engine <checkout>] [--starters crm,booking] [--port 9100]
-//                                [--image] [--gate] [--keep]
+//                                [--image] [--gate [--gate-log <file>]] [--keep]
 //
 // --engine measures another checkout's engine (built, e.g. a worktree of an older main) with
 // this script; its starters are the ones its `smithable new` lists. Ports are the hand-run
 // range (docs/ci.md): 9100 and up, two per starter. Free, no model.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  createWriteStream,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -146,15 +154,20 @@ function imageSize(dir, name) {
   return size;
 }
 
-/** `pnpm check` of the engine under the machine's gate lock: the time from its turn to its end. */
-async function gate() {
+/**
+ * `pnpm check` of the engine under the machine's gate lock: the time from its turn to its end.
+ * Its output goes to `log`, to see why when it fails.
+ */
+async function gate(log) {
   return new Promise((done) => {
     let began;
+    const out = createWriteStream(log);
     const child = spawn(join(repo, "scripts/gate.sh"), [], {
       cwd: engine,
       env: { ...process.env, SESSION: "A", TEST_APPS_PORT: "7000", TEST_STUDIO_PORT: "7600" },
     });
     const watch = (chunk) => {
+      out.write(chunk);
       // Lines of gate.sh itself are the queue; the first other line is pnpm check starting.
       if (
         !began &&
@@ -212,6 +225,9 @@ console.log("\nKit files per starter:");
 for (const r of rows) console.log(`- ${r.starter}: ${r.kit.names.join(", ")}`);
 if (flag("gate")) {
   process.stderr.write("gate…\n");
-  const g = await gate();
-  console.log(`\nGate (pnpm check under scripts/gate.sh): ${sec(g.ms)}, exit ${g.code}`);
+  const log = resolve(arg("gate-log") ?? join(tmpdir(), `measure-gate-${Date.now()}.log`));
+  const g = await gate(log);
+  console.log(
+    `\nGate (pnpm check under scripts/gate.sh): ${sec(g.ms)}, exit ${g.code} (its output: ${log})`,
+  );
 }
