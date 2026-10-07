@@ -1,8 +1,11 @@
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 // Holes in the packages an app depends on, read where they are published first: each package's
 // own repository on GitHub. The vulnerability databases the scanners read (OSV, GitHub's reviewed
 // list) take days to list them: six advisories of 2026-09-30 for the web framework, the sign-in
 // library and the mail library were in neither four days later. No model, no tool to install.
-// This file imports nothing, so scripts/stack-advisories.mjs runs it as it is.
+// This file imports only Node itself, so scripts/stack-advisories.mjs runs it as it is.
 
 export interface Advisory {
   id: string;
@@ -17,6 +20,8 @@ export interface Read {
   advisories: Advisory[];
   /** Packages and repositories that could not be read (no network, GitHub's hourly limit). */
   unread: string[];
+  /** When GitHub's hourly limit opens again (ms since the epoch), when that is what stopped a read. */
+  limitedUntil?: number;
 }
 
 /** A version's numbers and what follows a hyphen (a pre-release comes before its release). */
@@ -172,18 +177,49 @@ const githubOf = (url: unknown) =>
  */
 export async function readAdvisories(
   packages: Record<string, string>,
-  options: { token?: string; fetch?: typeof fetch } = {},
+  options: { token?: string; fetch?: typeof fetch; cacheDir?: string } = {},
 ): Promise<Read> {
+  let limitedUntil: number | undefined;
   const get = async (url: string, headers: Record<string, string> = {}) => {
     try {
       const answer = await (options.fetch ?? fetch)(url, {
         headers: { "User-Agent": "smithable", ...headers },
         signal: AbortSignal.timeout(20_000),
       });
-      return answer.ok ? ((await answer.json()) as unknown) : undefined;
+      if (answer.ok) return (await answer.json()) as unknown;
+      // GitHub's hourly limit: when it opens again, for the message.
+      if (
+        (answer.status === 403 || answer.status === 429) &&
+        answer.headers.get("x-ratelimit-remaining") === "0"
+      ) {
+        const reset = Number(answer.headers.get("x-ratelimit-reset")) * 1000;
+        if (reset) limitedUntil = Math.max(limitedUntil ?? 0, reset);
+      }
+      return undefined;
     } catch {
       return undefined;
     }
+  };
+  // A repository's list, kept a day on this machine: every gate, check and deploy here shares
+  // the reads, so GitHub's sixty an hour without a token go a long way.
+  const cached = (repository: string): unknown => {
+    if (!options.cacheDir) return undefined;
+    try {
+      const file = join(options.cacheDir, `${repository.replace("/", "__")}.json`);
+      if (existsSync(file) && Date.now() - statSync(file).mtimeMs < DAY)
+        return JSON.parse(readFileSync(file, "utf8"));
+    } catch {}
+    return undefined;
+  };
+  const keep = (repository: string, list: unknown) => {
+    if (!options.cacheDir) return;
+    try {
+      mkdirSync(options.cacheDir, { recursive: true });
+      writeFileSync(
+        join(options.cacheDir, `${repository.replace("/", "__")}.json`),
+        JSON.stringify(list),
+      );
+    } catch {}
   };
   const unread: string[] = [];
   const repositories = new Set<string>();
@@ -203,13 +239,17 @@ export async function readAdvisories(
   const advisories: Advisory[] = [];
   await Promise.all(
     [...repositories].map(async (repository) => {
-      const list = (await get(
-        `https://api.github.com/repos/${repository}/security-advisories?state=published&per_page=100`,
-        {
-          Accept: "application/vnd.github+json",
-          ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-        },
-      )) as
+      const fetched =
+        cached(repository) ??
+        (await get(
+          `https://api.github.com/repos/${repository}/security-advisories?state=published&per_page=100`,
+          {
+            Accept: "application/vnd.github+json",
+            ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+          },
+        ));
+      if (Array.isArray(fetched)) keep(repository, fetched);
+      const list = fetched as
         | {
             ghsa_id: string;
             severity?: string;
@@ -241,8 +281,15 @@ export async function readAdvisories(
   return {
     advisories: advisories.sort((a, b) => a.id.localeCompare(b.id)),
     unread: unread.sort(),
+    ...(limitedUntil ? { limitedUntil } : {}),
   };
 }
+
+/** Where the lists are kept: $XDG_CACHE_HOME/smithable/advisories, else ~/.cache/smithable/advisories. */
+export const advisoriesCacheDir = (): string =>
+  join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "smithable", "advisories");
+
+const DAY = 86_400_000;
 
 /** The newest release with the same first two numbers (a patch), when it is newer; pre-releases never. */
 export function newerPatch(version: string, released: string[]): string | undefined {
