@@ -11,6 +11,7 @@ import {
   identifier,
   kebab,
   type ModelIR,
+  modelAccess,
   type PageIR,
   pageModel,
   type SpecIR,
@@ -158,6 +159,29 @@ const key = (s: string) =>
 
 /** "in progress" → "inProgress", for a value or a name said in words, as said (no singular). */
 const camel = (s: string) => identifier(dropArticles(s).trim());
+
+/**
+ * The model an app's own verb makes a record of: "book" a class is adding a Booking, "order" an
+ * Order, "register" a Registration, "apply" an Application ("who can book a class?", the stranger
+ * walk). The verb's stems against the models' names; undefined when none fits.
+ */
+export function modelByVerb(ir: SpecIR, verb: string): ModelIR | undefined {
+  const v = verb.toLowerCase().replace(/ing$|ed$|s$/, "");
+  const stems = [v, `${v}e`, v.replace(/e$/, ""), v.replace(/y$/, "i")];
+  return ir.models.find((m) => {
+    const k = key(m.name).replace(/ /g, "");
+    return stems.some(
+      (s) =>
+        s.length >= 3 &&
+        (k === s ||
+          k.startsWith(`${s}ing`) ||
+          k.startsWith(`${s}ation`) ||
+          k.startsWith(`${s}ment`) ||
+          k === `${s}er` ||
+          k === `${s}r`),
+    );
+  });
+}
 
 /** The one model a phrase names ("customers", "each class type"), or undefined. */
 export function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
@@ -667,16 +691,40 @@ const RULES: Rule[] = [
         /^(?<roles>.+?) (?:only|alone) (?:may|can|should) (?<verb>[a-z]+) (?<target>.+)$/.exec(
           text,
         );
-      if (!m?.groups) return undefined;
-      const roles = rolesFor(m.groups.roles ?? "", scope);
-      const verb = verbOf(m.groups.verb ?? "");
+      // "members should be able to add items", "let members add items": those roles too, beside
+      // whoever may already (the stranger walk, 2026-10-07); "only" above restricts instead.
+      const grant =
+        m ??
+        /^(?<roles>.+?) (?:should|must) (?:also )?be able to (?<verb>[a-z]+) (?<target>.+)$/.exec(
+          text,
+        ) ??
+        /^(?:let|allow) (?<roles>.+?) (?:to )?(?<verb>[a-z]+) (?<target>.+)$/.exec(text);
+      if (!grant?.groups) return undefined;
+      const roles = rolesFor(grant.groups.roles ?? "", scope);
+      const verb = verbOf(grant.groups.verb ?? "");
+      // "let people filter customers": not a role, not an access verb: another rule's.
+      if (!m && (!roles || !verb)) return undefined;
       if (!roles || !verb) return null;
-      const target = dropArticles(m.groups.target ?? "").replace(
+      const target = dropArticles(grant.groups.target ?? "").replace(
         /^(?:records? of |entries of )/,
         "",
       );
       const model = modelFor(scope.ir, target);
       if (!model || model.name === USER_MODEL) return null;
+      if (!m) {
+        // A grant keeps whoever may already: the model's rule, or the app's default when the
+        // auth file is at hand; without it the grant is read as the whole list.
+        const now = scope.auth ? modelAccess(model, scope.auth)[verb] : undefined;
+        const kept = now
+          ? [...now.roles.filter((r) => r !== "admin"), ...(now.owner ? ["owner"] : [])]
+          : [];
+        const all = [...new Set([...kept, ...roles])];
+        if (now && all.length === kept.length)
+          return {
+            refusal: `${sentence(roles.map((r) => (r === "owner" ? "the record's owner" : plural(r))).join(" and "))} can ${verb === "write" ? "change" : verb} ${plural(words(model.name))} already.`,
+          };
+        return [{ op: "setAccess", args: { target: `model:${model.name}.${verb}`, roles: all } }];
+      }
       return [{ op: "setAccess", args: { target: `model:${model.name}.${verb}`, roles } }];
     },
   },
