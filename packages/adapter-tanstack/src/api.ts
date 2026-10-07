@@ -891,7 +891,8 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
-  if (title && related && typeof related === "object") return { id: related.id, title: related[title] };
+  if (title && related && typeof related === "object")
+    return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
   if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
   return api[field];
 }
