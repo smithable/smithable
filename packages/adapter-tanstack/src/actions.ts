@@ -109,9 +109,26 @@ export function actionNames(action: ActionIR) {
   };
 }
 
+/**
+ * A custom action's input schema, in a module of its own: only its form and its server function
+ * load it, so the validation library is not in every first page (the action's module is shared
+ * by several of a page's chunks and may end up in the entry).
+ */
+export function actionInputModule(action: ActionIR): string {
+  const a = actionNames(action);
+  return `${HEADER}import { z } from "zod";
+
+/** What the "${action.name}" action needs. */
+export const ${a.input} = z.object({
+${action.input.map((f) => `  ${f.name}: ${zodFor(f)},`).join("\n")}
+});
+
+export type ${a.inputType} = z.infer<typeof ${a.input}>;
+`;
+}
+
 export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Texts): string {
   const a = actionNames(action);
-  const input = action.input.map((f) => `  ${f.name}: ${zodFor(f)},`);
   const output = action.output?.length
     ? `{ ${action.output.map((f) => `${f.name}: ${outputType(f)}`).join("; ")} }`
     : "void";
@@ -144,22 +161,17 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
   );
   const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { ${action.name} as implementation } from "${a.custom}";
 import { w } from "#/kit/words";
 ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
+import { ${a.input}, type ${a.inputType} } from "./${kebab(action.name)}.input";
+
+export type { ${a.inputType} } from "./${kebab(action.name)}.input";
 
 /** Who may run the "${action.name}" action. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth))};
-
-/** What the "${action.name}" action needs. */
-export const ${a.input} = z.object({
-${input.join("\n")}
-});
-
-export type ${a.inputType} = z.infer<typeof ${a.input}>;
 
 /** What the "${action.name}" action returns. */
 export type ${a.outputType} = ${output};
@@ -261,7 +273,7 @@ ${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === 
     : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-${models.map((m) => `import { ${m.schema}, ${m.ui} } from "${m.module}";\n`).join("")}import type { Rule } from "#/kit/access";
+${models.map((m) => `import { ${m.ui} } from "${m.module}";\nimport { ${m.schema} } from "${m.module}.schema";\n`).join("")}import type { Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 ${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { writeAllowed } from "#/kit/limit";
@@ -371,9 +383,9 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${[model.name, ...adds.map((x) => x.target.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
-import { ${n.schema} } from "${n.module}";
+import { ${n.schema} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
-${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}.schema";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
 ${asked ? 'import type { z } from "zod";\n' : ""}
 type Row = NonNullable<Awaited<ReturnType<typeof ${n.data}.get>>>;
 
@@ -523,7 +535,8 @@ export function actionRoute(page: PageIR, action: ActionIR, ir: SpecIR, t: Texts
   const route = join(page.route, `actions/${kebab(action.name)}`);
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
-import { ${action.name}, ${a.access}, ${a.input}, ${a.ui} } from "${a.module}";
+import { ${action.name}, ${a.access}, ${a.ui} } from "${a.module}";
+import { ${a.input} } from "${a.module}.input";
 ${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
@@ -601,9 +614,9 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${[model.name, ...lists.map((l) => l.listed.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
-import { ${n.schema} } from "${n.module}";
+import { ${n.schema} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
-${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}.schema";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
 ${asked ? 'import type { z } from "zod";\n' : ""}
 /** Makes a copy of the ${n.label.toLowerCase()} as the viewer${asked ? ", with what was asked" : ""}; returns the copy's id. */
 export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, asked: z.output<typeof ${a.asks}>` : ""}): Promise<number> {

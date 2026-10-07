@@ -103,6 +103,7 @@ function listRoute(page: ArticlesPage, ctx: GenContext): string {
   imports
     .add("@tanstack/react-router", "createFileRoute")
     .add("#/kit/Articles", "ArticleList")
+    .add("#/kit/params", "count", "optional", "type Search")
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "allows", "guardPage");
   if (framed)
@@ -128,7 +129,7 @@ const getArticles = createServerFn()
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: z.object({ page: z.number().int().min(1).optional().catch(undefined) }),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: (s: Search) => optional({ page: count(s.page) }),
   loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
   loader: ({ deps }) => getArticles({ data: deps.page }),
   component: ArticlesPage,

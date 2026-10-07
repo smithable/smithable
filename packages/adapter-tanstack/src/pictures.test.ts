@@ -36,7 +36,7 @@ test("a picture field: a JSON column, the form's own control, and the files rout
   expect(file("src/generated/instructor.ts")).toContain(
     'input: bindPicture("instructor", "portrait")',
   );
-  expect(file("src/generated/instructor.ts")).toContain(
+  expect(file("src/generated/instructor.schema.ts")).toContain(
     "portrait: z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() }).nullish()",
   );
   expect(file("src/generated/uploads.ts")).toContain(
@@ -106,7 +106,7 @@ pages:
   const at = (path: string) => gen.find((f) => f.path === path)?.content ?? "";
   expect(at("src/db/schema.ts")).toContain('photos: text({ mode: "json" }).$type<Picture[]>()');
   expect(at("src/generated/item.ts")).toContain('input: bindPictures("item", "photos", 10)');
-  expect(at("src/generated/item.ts")).toContain(".max(10).nullish()");
+  expect(at("src/generated/item.schema.ts")).toContain(".max(10).nullish()");
   expect(at("src/generated/uploads.ts")).toContain('"photos": { kind: "picture", data: itemData');
   expect(gen.some((f) => f.path === "src/routes/files/$model.$id.$field.$n.ts")).toBe(true);
   // A removed picture's file goes unless a record still shows it.
