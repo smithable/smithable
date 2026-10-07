@@ -353,22 +353,36 @@ function command(dir: string, what: string, args: string[]): Result {
 
 /**
  * The checks of a level. Release also needs the built image and the app running: `release`
- * gives their name and address.
+ * gives their name and address. `say` hears each check's name as it starts (they take
+ * minutes together, and the report comes at the end).
  */
 export async function checks(
   dir: string,
   level: Level,
   release?: { image: string; url: string },
+  say: (what: string) => void = () => {},
 ): Promise<Result[]> {
-  const results = [command(dir, "Type check", ["typecheck"]), command(dir, "Tests", ["test"])];
+  const run = <T>(what: string, check: () => T) => {
+    say(what);
+    return check();
+  };
+  const results = [
+    run("Type check", () => command(dir, "Type check", ["typecheck"])),
+    run("Tests", () => command(dir, "Tests", ["test"])),
+  ];
   if (level === "fast") return results;
-  results.push(dependencies(dir), await published(dir), secrets(dir), code(dir));
+  results.push(
+    run("Dependencies", () => dependencies(dir)),
+    await run("Dependencies, at their source", () => published(dir)),
+    run("Secrets", () => secrets(dir)),
+    run("Code", () => code(dir)),
+  );
   if (level === "normal") return results;
   if (!release) throw new Error("Release checks need the built image and the running app.");
   results.push(
-    command(dir, "Smoke tests", ["test:smoke"]),
-    image(dir, release.image),
-    running(dir, release.url),
+    run("Smoke tests", () => command(dir, "Smoke tests", ["test:smoke"])),
+    run("Container image", () => image(dir, release.image)),
+    run("Running app", () => running(dir, release.url)),
   );
   return results;
 }
@@ -439,7 +453,11 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
       } catch {}
       await new Promise((r) => setTimeout(r, 500));
     }
-    return report(io, level, await checks(dir, level, { image: name, url }));
+    return report(
+      io,
+      level,
+      await checks(dir, level, { image: name, url }, (what) => io.out(`  ${what}…\n`)),
+    );
   } finally {
     docker(["rm", "-f", container]);
   }
