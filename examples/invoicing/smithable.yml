@@ -93,6 +93,7 @@ pages:
       latest: { list: Invoice, limit: 5 }
   invoices:
     crud: Invoice
+    filters: [client, status]
     actions: [markSent, markPaid]
   clients:
     crud: Client

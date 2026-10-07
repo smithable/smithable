@@ -13502,7 +13502,7 @@ export const Route = createFileRoute("/class-types/")({
 function ClassTypesPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/class-types/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -13824,7 +13824,7 @@ export const Route = createFileRoute("/instructors/")({
 function InstructorsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/instructors/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -14051,7 +14051,7 @@ export const Route = createFileRoute("/messages/")({
 function MessagesPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/messages/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -14279,7 +14279,7 @@ export const Route = createFileRoute("/my-bookings/")({
 function MyBookingsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/my-bookings/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -14515,7 +14515,7 @@ export const Route = createFileRoute("/posts/")({
 function PostsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/posts/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -14917,7 +14917,7 @@ export const Route = createFileRoute("/sessions/")({
 function SessionsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/sessions/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -15728,7 +15728,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "7780e10a generated",
   "src/routes/class-types/$id.tsx": "9477aa95 generated",
-  "src/routes/class-types/index.tsx": "37dfff82 generated",
+  "src/routes/class-types/index.tsx": "61af656e generated",
   "src/routes/class-types/new.tsx": "a71084fa generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -15736,22 +15736,22 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "a3838f47 generated",
   "src/routes/instructors/$id.tsx": "6c7926bc generated",
-  "src/routes/instructors/index.tsx": "bfe7d554 generated",
+  "src/routes/instructors/index.tsx": "80ad7f32 generated",
   "src/routes/instructors/new.tsx": "2215504d generated",
   "src/routes/messages/$id.tsx": "6430d7b6 generated",
-  "src/routes/messages/index.tsx": "b219e138 generated",
+  "src/routes/messages/index.tsx": "78c8b9b0 generated",
   "src/routes/messages/new.tsx": "33d34827 generated",
   "src/routes/my-bookings/$id.tsx": "376054c5 generated",
-  "src/routes/my-bookings/index.tsx": "8caace73 generated",
+  "src/routes/my-bookings/index.tsx": "781a4870 generated",
   "src/routes/my-bookings/new.tsx": "c3d668d7 generated",
   "src/routes/posts/$id.tsx": "9cbe564f generated",
-  "src/routes/posts/index.tsx": "0e6bfd3e generated",
+  "src/routes/posts/index.tsx": "534cc3c1 generated",
   "src/routes/posts/new.tsx": "1c031198 generated",
   "src/routes/privacy/index.tsx": "69fada0f generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "728a780d generated",
   "src/routes/sessions/$id.tsx": "039d653f generated",
-  "src/routes/sessions/index.tsx": "c0a3a897 generated",
+  "src/routes/sessions/index.tsx": "c9621246 generated",
   "src/routes/sessions/new.tsx": "954f9cb1 generated",
   "src/routes/sign-in.tsx": "cec1d0a9 generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
@@ -18572,7 +18572,7 @@ function CustomersPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { q } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/customers/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -18907,7 +18907,7 @@ function OrdersPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { q } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/orders/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -19743,13 +19743,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "caf03fad generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
-  "src/routes/customers/index.tsx": "bbc41408 generated",
+  "src/routes/customers/index.tsx": "4338a5f9 generated",
   "src/routes/customers/new.tsx": "a80fd5cc generated",
   "src/routes/customers/trash.tsx": "79ca3586 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "c27f263a generated",
-  "src/routes/orders/index.tsx": "5fa57bde generated",
+  "src/routes/orders/index.tsx": "acb64f79 generated",
   "src/routes/orders/new.tsx": "330bd071 generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -23156,7 +23156,7 @@ export const Route = createFileRoute("/clients/")({
 function ClientsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/clients/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -23421,7 +23421,7 @@ export const Route = createFileRoute("/invoice-lines/")({
 function InvoiceLinesPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/invoice-lines/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -23679,9 +23679,12 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { pageAccess } from "#/generated/pages";
 import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
 import { invoiceAccess, invoiceData } from "#/generated/invoice.server";
+import { inArray, and } from "drizzle-orm";
+import { clientData } from "#/generated/client.server";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { markSent, markSentAccess, markSentFits, markSentMany } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits, markPaidMany } from "#/generated/actions/mark-paid";
@@ -23694,28 +23697,42 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { Filters } from "#/kit/Filters";
 
-/** A page of the invoices the viewer may read. */
-const listInvoices = createServerFn()
+/** The invoices matching the search and the filters, among those the viewer may read. */
+const searchInvoices = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await invoiceData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(invoiceAccess.create, viewer) };
+    const where = and(
+      undefined,
+      data.f?.client ? inArray(schema.invoices.clientId, data.f?.client.split(",").map(Number).filter(Number.isInteger)) : undefined,
+      data.f?.status ? inArray(schema.invoices.status, data.f?.status.split(",").filter((v) => ["draft", "sent", "paid", "overdue"].includes(v)) as ("draft" | "sent" | "paid" | "overdue")[]) : undefined,
+    );
+    return {
+      ...(await invoiceData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(invoiceAccess.create, viewer),
+      options: { client: (await clientData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })) },
+    };
   });
 
 export const Route = createFileRoute("/invoices/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Invoices · Invoicely"}] }),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listInvoices({ data: { page: deps.page } }),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), client: text(s.client), status: text(s.status), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchInvoices({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: InvoicesPage,
 });
 
 function InvoicesPage() {
-  const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { rows, canCreate, total, page: at, size, options } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/invoices/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -23732,6 +23749,24 @@ function InvoicesPage() {
         page="invoices"
         title="Invoices"
         actions={newButton}
+      />
+      <Filters
+        filters={[
+  { name: "client", label: "Client", kind: "chips", options: options.client },
+  {
+    name: "status",
+    label: "Status",
+    kind: "chips",
+    options: [
+      { value: "draft", label: "Draft" },
+      { value: "sent", label: "Sent" },
+      { value: "paid", label: "Paid" },
+      { value: "overdue", label: "Overdue" },
+    ],
+  },
+]}
+        values={values}
+        onChange={(next) => navigate({ to: "/invoices", search: { q, ...next }, replace: true })}
       />
       {selectable && (
         <SelectionBar
@@ -23765,7 +23800,7 @@ function InvoicesPage() {
         page="invoices"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listInvoices({ data: { all: true } })).rows}
+        exportRows={async () => (await searchInvoices({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -23790,6 +23825,7 @@ function InvoicesPage() {
             )}
           </>
         )}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No invoices match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/invoices/$id", params: { id: String(row.id) } })}
       />
@@ -24557,6 +24593,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/Dashboard.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
+  "kit: src/kit/Filters.tsx",
   "kit: src/kit/Landing.tsx",
   "kit: src/kit/ModelForm.tsx",
   "kit: src/kit/ModelTable.tsx",
@@ -24573,6 +24610,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
+  "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -24691,6 +24729,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
+  "src/kit/Filters.tsx": "a055249c kit",
   "src/kit/Landing.tsx": "b4abe79a kit",
   "src/kit/ModelForm.tsx": "0a762fe3 kit",
   "src/kit/ModelTable.tsx": "a89cec7f kit",
@@ -24707,6 +24746,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "8bd0794c kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "12c13db0 kit",
@@ -24731,7 +24771,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/__root.tsx": "92c4080d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "10978402 generated",
-  "src/routes/clients/index.tsx": "6d75e90b generated",
+  "src/routes/clients/index.tsx": "a56f858f generated",
   "src/routes/clients/new.tsx": "4bcda80c generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -24739,10 +24779,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "b2ab0ec3 generated",
   "src/routes/invoice-lines/$id.tsx": "cc9932da generated",
-  "src/routes/invoice-lines/index.tsx": "ae57eaaf generated",
+  "src/routes/invoice-lines/index.tsx": "e58cdd3a generated",
   "src/routes/invoice-lines/new.tsx": "f02e0160 generated",
   "src/routes/invoices/$id.tsx": "5e7cbae4 generated",
-  "src/routes/invoices/index.tsx": "e6c1b64a generated",
+  "src/routes/invoices/index.tsx": "a1ea4cf9 generated",
   "src/routes/invoices/new.tsx": "3c460685 generated",
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -26339,7 +26379,7 @@ function CatalogPage() {
   const { rows, canCreate, total, page: at, size, saved } = Route.useLoaderData();
   const { q, sort, view, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -26600,7 +26640,7 @@ function MyItemsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/my-items/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -26919,7 +26959,7 @@ function SavedPage() {
   const { rows, canCreate, total, page: at, size, saved } = Route.useLoaderData();
   const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/saved/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -27667,14 +27707,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "e3a5dca0 generated",
+  "src/routes/index.tsx": "09120645 generated",
   "src/routes/my-items/$id.tsx": "1384a2fb generated",
-  "src/routes/my-items/index.tsx": "53fbb056 generated",
+  "src/routes/my-items/index.tsx": "9c3e2af3 generated",
   "src/routes/my-items/new.tsx": "cc85bb39 generated",
   "src/routes/new.tsx": "ec30513e generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
   "src/routes/saved/$id.tsx": "2c47048b generated",
-  "src/routes/saved/index.tsx": "534f44fe generated",
+  "src/routes/saved/index.tsx": "6bd97bfb generated",
   "src/routes/saved/new.tsx": "062ab243 generated",
   "src/routes/sign-in.tsx": "cec1d0a9 generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
@@ -29136,7 +29176,7 @@ function ItemsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { q } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/items/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -29775,7 +29815,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "1586d9ed generated",
   "src/routes/items/$id.tsx": "16b3ed0d generated",
-  "src/routes/items/index.tsx": "2f8aa080 generated",
+  "src/routes/items/index.tsx": "e4883b2c generated",
   "src/routes/items/new.tsx": "b2461bfe generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "cec1d0a9 generated",
@@ -36238,7 +36278,7 @@ export const Route = createFileRoute("/components/")({
 function ComponentsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/components/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -36742,7 +36782,7 @@ export const Route = createFileRoute("/incidents/")({
 function IncidentsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/incidents/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -37129,7 +37169,7 @@ export const Route = createFileRoute("/maintenance/")({
 function MaintenancePage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/maintenance/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -37749,7 +37789,7 @@ export const Route = createFileRoute("/updates/")({
 function UpdatesPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/updates/" });
   const router = useRouter();
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -38392,17 +38432,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/components/$id.tsx": "e752a452 generated",
-  "src/routes/components/index.tsx": "272e12e4 generated",
+  "src/routes/components/index.tsx": "7680ec80 generated",
   "src/routes/components/new.tsx": "2462d80d generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "973b9b6e generated",
   "src/routes/incidents/$id.tsx": "bc1317f1 generated",
-  "src/routes/incidents/index.tsx": "ef4f18de generated",
+  "src/routes/incidents/index.tsx": "3672bdf1 generated",
   "src/routes/incidents/new.tsx": "ca089b54 generated",
   "src/routes/index.tsx": "dca8d976 generated",
   "src/routes/maintenance/$id.tsx": "fbf0129a generated",
-  "src/routes/maintenance/index.tsx": "f1e34da2 generated",
+  "src/routes/maintenance/index.tsx": "c9c89067 generated",
   "src/routes/maintenance/new.tsx": "2579f179 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "d77fe1dc generated",
@@ -38411,7 +38451,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/index.tsx": "796850fe generated",
   "src/routes/updates/$id.tsx": "be12a96a generated",
-  "src/routes/updates/index.tsx": "3faf79f2 generated",
+  "src/routes/updates/index.tsx": "27093f7a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "62ace354 kit",

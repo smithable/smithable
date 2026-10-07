@@ -1793,6 +1793,10 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "markSent",
         "markPaid",
       ],
+      "filters": [
+        "client",
+        "status",
+      ],
       "id": "invoices",
       "pattern": {
         "kind": "crud",
