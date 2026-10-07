@@ -56,6 +56,17 @@ export function timed(what: string, since: number): void {
     process.stderr.write(`[time] ${what}: ${Date.now() - since} ms\n`);
 }
 
+/** Runs a command and shows its output only when it fails (a tool that talks while it works). */
+export function execQuiet(command: string, args: string[], cwd: string): number {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  if (result.status !== 0) process.stderr.write(`${result.stdout ?? ""}${result.stderr ?? ""}`);
+  return result.status ?? 1;
+}
+
 /** Runs a command with inherited output. Returns its exit code. */
 export function exec(command: string, args: string[], cwd: string): number {
   const result = spawnSync(command, args, {

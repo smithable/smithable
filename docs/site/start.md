@@ -45,10 +45,10 @@ A marketplace made, changed and deployed. This is a real run, shortened; the tim
 ```console
 $ smithable new torget --starter marketplace                 # 3.7 s
 Generated 86 files (86 changed, 0 removed).
-[✓] Your SQL migration file ➜ drizzle/0000_striped_proudstar.sql 🚀
-Created torget. Start it with:
+Created torget. Open it in Studio, to see it and change it:
   cd torget
-  smithable run
+  smithable studio
+or only run the app with smithable run.
 
 $ cd torget
 $ smithable op addField Item delivery "pickup | shipping"    # 1.8 s

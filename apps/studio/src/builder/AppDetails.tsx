@@ -25,7 +25,13 @@ export function AppDetails({
       <p className="p-3 text-sm text-neutral-500">The spec has errors; fix them in Code mode.</p>
     );
   const signIn = spec.auth?.signIn;
-  const changed = name.trim() !== app.name || description.trim() !== (app.description ?? "");
+  // Only what was changed, so the change list says what it was.
+  const edits = {
+    ...(name.trim() !== app.name ? { name: name.trim() } : {}),
+    ...(description.trim() !== (app.description ?? "") ? { description: description.trim() } : {}),
+  };
+  const changed = Object.keys(edits).length > 0;
+  const preset = spec.ux?.theme.preset;
   return (
     <section aria-label="The app" className="space-y-5 p-3 text-sm">
       <p className="text-neutral-600">
@@ -36,7 +42,7 @@ export function AppDetails({
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (changed) void run("setApp", { name: name.trim(), description: description.trim() });
+          if (changed) void run("setApp", edits);
         }}
       >
         <h3 className="text-xs font-semibold text-neutral-500">The app</h3>
@@ -61,7 +67,7 @@ export function AppDetails({
         <div className="space-y-1">
           <p className="text-xs font-medium text-neutral-600">Theme</p>
           <p className="flex items-center justify-between gap-2">
-            <span>{spec.ux?.theme.preset ?? "The default theme"}</span>
+            <span>{preset ? preset[0]?.toUpperCase() + preset.slice(1) : "The default theme"}</span>
             <Button variant="ghost" onClick={onLook}>
               Change it in Look
             </Button>
