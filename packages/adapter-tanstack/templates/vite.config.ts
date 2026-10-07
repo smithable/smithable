@@ -5,7 +5,23 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  plugins: [tailwindcss(), tanstackStart(), viteReact()],
+  plugins: [
+    tailwindcss(),
+    // A route's loader is fetched with its page, like its component: what the loaders use (the
+    // models' modules, their schemas) stays out of the first page every visitor downloads.
+    tanstackStart({
+      router: {
+        codeSplittingOptions: {
+          defaultBehavior: [
+            ["loader"],
+            ["component"],
+            ["pendingComponent", "errorComponent", "notFoundComponent"],
+          ],
+        },
+      },
+    }),
+    viteReact(),
+  ],
   // The dev server hands any file of the project to whoever can reach it (`?raw`). The app's
   // data is not for that: the database, the uploads, and the outbox with its sign-in codes.
   // Vite's own list comes first, since naming one replaces it.

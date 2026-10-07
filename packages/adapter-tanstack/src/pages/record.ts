@@ -70,7 +70,8 @@ export function recordPageRoute(
     .add("@tanstack/react-start", "createServerFn")
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
-    .add(n.module, n.create, n.schema, n.ui)
+    .add(n.module, n.create, n.ui)
+    .add(`${n.module}.schema`, n.schema)
     .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
     .add("#/kit/access", "allows", "guardPage")
     .add("#/kit/ModelForm", "ModelForm")
@@ -224,11 +225,8 @@ export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux:
   // is filled in and fixed (?invoice=12), and the form goes back to it.
   const parents = parentRefs(model, ir);
   const searched = [
-    ...(start ? [`${start.name}: z.string().max(40).optional().catch(undefined)`] : []),
-    ...parents.map(
-      ({ field }) =>
-        `${field.name}: z.coerce.number().int().positive().optional().catch(undefined)`,
-    ),
+    ...(start ? [`${start.name}: text(s.${start.name}, 40)`] : []),
+    ...parents.map(({ field }) => `${field.name}: count(s.${field.name})`),
   ];
   const presets = [
     ...(start
@@ -259,14 +257,15 @@ export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux:
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { ${n.create}, ${n.schema}, ${n.ui} } from "${n.module}";
+import { ${n.create}, ${n.ui} } from "${n.module}";
+import { ${n.schema} } from "${n.module}.schema";
 ${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
-${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${searched.length ? 'import { z } from "zod";\n' : ""}
+${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${searched.length ? `import { ${[...(parents.length ? ["count"] : []), "optional", "type Search", ...(start ? ["text"] : [])].join(", ")} } from "#/kit/params";\n` : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${searched.length ? `  validateSearch: z.object({ ${searched.join(", ")} }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${searched.length ? `  validateSearch: (s: Search) => optional({ ${searched.join(", ")} }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
@@ -326,10 +325,8 @@ export function detailRoute(
   // The trash (docs/design/trash.md): Move to trash, and a trashed record read-only with Restore.
   const trash = Boolean(model.trash && !within);
   const imports = new Map<string, string[]>([
-    [
-      n.module,
-      [n.remove, n.get, n.schema, n.ui, n.update, ...(trash ? [trashNames(model).restore] : [])],
-    ],
+    [n.module, [n.remove, n.get, n.ui, n.update, ...(trash ? [trashNames(model).restore] : [])]],
+    [`${n.module}.schema`, [n.schema]],
     ...(trash
       ? ([["#/kit/Trash", ["rememberTrashed", "TrashedBanner"]]] as [string, string[]][])
       : []),

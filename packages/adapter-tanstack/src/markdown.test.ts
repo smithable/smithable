@@ -27,7 +27,7 @@ test("a markdown field is edited with the kit's Markdown editor; the formatter i
   expect(post).toContain('import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";');
   expect(post).toMatch(/name: "body",[^}]*kind: "markdown",[^}]*input: MarkdownEditor/s);
   // Long, and not a list column.
-  expect(post).toContain(".max(50000");
+  expect(file("src/generated/post.schema.ts")).toContain(".max(50000");
   expect(post).toContain('columns: ["title"]');
   expect(file("src/kit/Markdown.tsx")).toContain('lazy(() => import("./MarkdownFormatted"))');
   expect(file("src/kit/MarkdownFormatted.tsx")).toContain('disallowedElements={["img"]}');
