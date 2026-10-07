@@ -2797,6 +2797,9 @@ async function visualChecks(dir, base) {
           const violations = await page.evaluate(async () => {
             const result = await window.axe.run(document, {
               runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] },
+              // And one main landmark a page (a best practice, outside the tags): the privacy page
+              // once framed itself inside the visitors' frame (the stranger walk, B11).
+              rules: { "landmark-no-duplicate-main": { enabled: true } },
             });
             return result.violations.map((v) => `${v.id} at ${v.nodes[0]?.target.join(" ")}`);
           });
