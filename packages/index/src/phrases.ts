@@ -12,6 +12,7 @@ import {
   kebab,
   type ModelIR,
   type PageIR,
+  pageModel,
   type SpecIR,
   sortableBy,
   USER_MODEL,
@@ -154,6 +155,9 @@ const american = (w: string) =>
 /** The words of a name or phrase, lowercased, singular and US-spelled: "ClassTypes" → "class type". */
 const key = (s: string) =>
   kebab(dropArticles(s)).split("-").filter(Boolean).map(singular).map(american).join(" ");
+
+/** "in progress" → "inProgress", for a value or a name said in words, as said (no singular). */
+const camel = (s: string) => identifier(dropArticles(s).trim());
 
 /** The one model a phrase names ("customers", "each class type"), or undefined. */
 export function modelFor(ir: SpecIR, phrase: string): ModelIR | undefined {
@@ -335,6 +339,9 @@ function inferKind(text: string): { type: string; name: string } | undefined {
       "text",
       (m) => m[0],
     ],
+    // A grade with its usual steps; a status needs its own values (below).
+    [/^(.*?)\s*\b(?:severity)$/, "low | medium | high", (m) => m[0]],
+    [/^(.*?)\s*\b(?:priority)$/, "low | normal | high", (m) => m[0]],
     [/^(?:whether|if) (.+)$/, "bool", (m) => m[1] ?? m[0]],
     [/^(?:is|has) (.+)$/, "bool", (m) => m[0]],
     [/^(.*?)\s*\b(?:flag|yes or no)$/, "bool", (m) => m[1] || m[0] || ""],
@@ -931,7 +938,26 @@ const RULES: Rule[] = [
       if (!model) return null;
       const required =
         /\b(?:must|required|mandatory)\b/.test(text) && !/\b(?:optional|not required)\b/.test(text);
-      const field = newField(m.groups.field ?? "", scope, required);
+      // "a status: draft, sent or paid" names its values; "a status" alone cannot be guessed.
+      const asked = m.groups.field ?? "";
+      const status =
+        /^(?:a |an |the )?(?<name>[a-z][a-z ]*?(?:status|state|stage))(?:\s*(?::|,|with (?:the )?values|which can be|one of|that is)\s*(?<values>.+))?$/.exec(
+          asked.trim(),
+        );
+      if (status?.groups && !status.groups.values)
+        return {
+          refusal: `A ${status.groups.name} needs its values: say which, e.g. "${m.groups.model} should have a ${status.groups.name}: draft, sent or paid".`,
+        };
+      const field = status?.groups?.values
+        ? {
+            name: camel(status.groups.name ?? "status"),
+            type: status.groups.values
+              .split(/,| or | and /)
+              .map((v) => camel(v.trim().replace(/^(?:a |an |the )/, "")))
+              .filter(Boolean)
+              .join(" | "),
+          }
+        : newField(asked, scope, required);
       if (!field) return null;
       const there = model.fields.find(
         (f) => f.name === field.name || key(f.name) === key(field.name),
@@ -940,7 +966,22 @@ const RULES: Rule[] = [
         return {
           refusal: `${sentence(plural(words(model.name)))} already have a field called "${words(there.name)}".`,
         };
-      return [{ op: "addField", args: { model: model.name, field: field.name, type: field.type } }];
+      // Shown in the model's list as the Change form does by default: a starter names its list's
+      // columns, and without this the preview showed no change at all (the stranger walk).
+      const listed = scope.ir.pages.some(
+        (p) => p.pattern.kind === "crud" && pageModel(p) === model.name,
+      );
+      return [
+        {
+          op: "addField",
+          args: {
+            model: model.name,
+            field: field.name,
+            type: field.type,
+            ...(listed ? { list: true } : {}),
+          },
+        },
+      ];
     },
   },
 ];
