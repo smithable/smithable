@@ -8,6 +8,7 @@
 export const w = {
   accept: "Accept",
   addFiles: "Add files",
+  addOne: (label: string) => `Add ${label}`,
   aFirstCall: "A first call:",
   actAs: "Act as",
   actions: "Actions",

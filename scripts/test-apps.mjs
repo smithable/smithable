@@ -2729,6 +2729,38 @@ async function formulaFlow(base) {
 }
 
 /**
+ * A related list adds from its record (the stranger walk of 2026-10-07): "Add invoice line" on
+ * an invoice opens the new line with the invoice filled in and fixed, and goes back to it.
+ */
+async function addChildFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/invoices/1`);
+    await page.getByRole("link", { name: "Add invoice line" }).first().click();
+    await page.waitForURL(/\/invoice-lines\/new\?invoice=1$/);
+    if (!(await page.getByLabel("Invoice *").isDisabled()))
+      throw new Error("the invoice can be changed on the new line");
+    await page.getByRole("textbox", { name: "Description *" }).fill("Added from the invoice");
+    await page.getByRole("textbox", { name: "Unit price *" }).fill("40");
+    await page.getByRole("button", { name: "Create invoice line" }).click();
+    await page.waitForURL(`${base}/invoices/1`);
+    await page.getByRole("cell", { name: "Added from the invoice" }).waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: Add invoice line on an invoice opens the new line with the invoice fixed, and the line is on the invoice after",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("invoicing add-child flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Every page, in light and dark, on desktop and on a phone: no accessibility violations
  * (axe-core, WCAG 2 A and AA, including contrast) and no sideways scrolling.
  */
@@ -4926,6 +4958,7 @@ test("the session cookie's name and attributes", async () => {
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);
+        await addChildFlow(base);
         await onboardingFlow(base);
         await isolationFlow(dir, base);
       }

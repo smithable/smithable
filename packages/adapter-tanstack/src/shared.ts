@@ -219,6 +219,37 @@ export function references(
   );
 }
 
+/**
+ * The references of a new record that a record page's related list fills in ("Add line" on an
+ * invoice): to a model whose record page lists this one, and which has a page of its own.
+ */
+export function parentRefs(model: ModelIR, ir: SpecIR) {
+  return references(model).flatMap((field) => {
+    const parent = modelNamed(ir, field.type.model);
+    const route = ir.pages.find(
+      (p) => p.pattern.kind === "crud" && pageModel(p) === parent.name,
+    )?.route;
+    return route && lists(parent).some((l) => l.type.model === model.name)
+      ? [{ field, route }]
+      : [];
+  });
+}
+
+/**
+ * The related lists of a record's page that offer "Add <child>": the child has a page of its
+ * own, and its new form fills in the reference back to the record (parentRefs).
+ */
+export function addable(model: ModelIR, ir: SpecIR) {
+  return lists(model).flatMap((list) => {
+    const target = modelNamed(ir, list.type.model);
+    const route = ir.pages.find(
+      (p) => p.pattern.kind === "crud" && pageModel(p) === target.name,
+    )?.route;
+    const ref = parentRefs(target, ir).find((p) => p.field.type.model === model.name)?.field;
+    return route && ref ? [{ list, target, ref, route }] : [];
+  });
+}
+
 /** The lists of related records a model shows, e.g. Customer.orders. */
 export function lists(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: string } })[] {
   return model.fields.filter(
