@@ -299,7 +299,8 @@ export function ModelTable<R extends Row>({
                 view === "cards" && pictureField && "overflow-hidden pt-0",
               )}
             >
-              {selection && (
+              {/* The checkbox sits in the picture's corner, or in a column of its own beside the title. */}
+              {selection && view === "cards" && pictureField && (
                 <span className="absolute top-3 left-3 z-10 rounded bg-card/90 p-1">
                   {check(row, index, "size-6")}
                 </span>
@@ -321,7 +322,10 @@ export function ModelTable<R extends Row>({
                   />
                 ))}
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
+                {selection && !(view === "cards" && pictureField) && (
+                  <span className="-ml-1 shrink-0">{check(row, index, "size-6")}</span>
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
                   {title && open(row, cell(title, row), "break-words text-base font-semibold")}
                   {secondary && <p className="break-words text-sm">{stacked(secondary, row)}</p>}
                   {description && Boolean(displayValue(description, row)) && (

@@ -16,7 +16,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
     "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}" +
     "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
-    "[data-sm-text][contenteditable=true]{outline:2px solid #e8590c!important;outline-offset:2px;background:#fff4e6}" +
+    // Being edited: an outline only, so the text keeps its own colors (a hero's white title on a pale box could not be read).
+    "[data-sm-text][contenteditable=true]{outline:2px solid #e8590c!important;outline-offset:2px}" +
     // What the last change touched, outlined briefly and fading (motion.md 9a); still, without motion.
     "@keyframes sm-flash{from{outline-color:#e8590c}to{outline-color:transparent}}" +
     "[data-sm-flash]{outline:3px solid #e8590c!important;outline-offset:3px;animation:sm-flash 1.6s ease-out forwards}" +
