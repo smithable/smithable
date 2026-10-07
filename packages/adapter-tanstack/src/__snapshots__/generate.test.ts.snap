@@ -15473,7 +15473,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "144446e5 kit",
   "src/kit/Articles.tsx": "fe12da59 kit",
   "src/kit/Calculator.tsx": "f15e5001 kit",
-  "src/kit/Calendar.tsx": "dda72e56 kit",
+  "src/kit/Calendar.tsx": "37ba7570 kit",
   "src/kit/Combobox.tsx": "dff16d84 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "811ce2cc kit",
