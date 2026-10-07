@@ -68,7 +68,11 @@ const setTheme: Operation<{
           ? `${v} ${k}`
           : `${WORDS[k] ?? k} ${v}`,
     );
-    const theme = preset === undefined ? "" : `Use the ${preset} theme${where}`;
+    const named = String(preset);
+    const theme =
+      preset === undefined
+        ? ""
+        : `Use the ${named.charAt(0).toUpperCase()}${named.slice(1)} theme${where}`;
     if (!others.length) return theme || `Set the look${where}`;
     return theme
       ? `${theme}, with ${others.join(", ")}`

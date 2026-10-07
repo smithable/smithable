@@ -555,7 +555,7 @@ try {
         }, 50);
       });
       await themes.getByRole("button", { name: /Playful/ }).click();
-      await trace.getByText("Use the playful theme").first().waitFor({ timeout: 60000 });
+      await trace.getByText("Use the Playful theme").first().waitFor({ timeout: 60000 });
       await themes
         .getByRole("button", { name: /Playful/, pressed: true })
         .waitFor({ timeout: 60000 });
@@ -574,7 +574,7 @@ try {
   await step("a theme and its undo change no package: its font was installed already", async () => {
     const before = readFileSync(join(dir, "package.json"), "utf8");
     await page.getByRole("button", { name: "Undo", exact: true }).click();
-    await status.getByText(/Undid: Use the playful theme/).waitFor({ timeout: 60000 });
+    await status.getByText(/Undid: Use the Playful theme/).waitFor({ timeout: 60000 });
     if (readFileSync(join(dir, "package.json"), "utf8") !== before)
       throw new Error("the theme changed package.json");
     const after = JSON.parse(before).dependencies;
