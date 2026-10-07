@@ -48,16 +48,8 @@ export function implementationIndex(ir: SpecIR, auth: AuthIR): Record<string, Ge
     const concept = `model:${model.name}`;
     const n = names(model, t);
     const base = `src/generated/${kebab(model.name)}`;
-    file(concept, `${base}.ts`, [
-      n.ui,
-      n.schema,
-      n.values,
-      n.list,
-      n.get,
-      n.create,
-      n.update,
-      n.remove,
-    ]);
+    file(concept, `${base}.schema.ts`, [n.schema, n.values]);
+    file(concept, `${base}.ts`, [n.ui, n.list, n.get, n.create, n.update, n.remove]);
     file(concept, `${base}.server.ts`, [n.access, n.data]);
     file(concept, "src/db/schema.ts", [n.tableKey]);
     entry(concept).tables.push(tableNames(model).sqlTable);

@@ -250,6 +250,20 @@ export function addable(model: ModelIR, ir: SpecIR) {
   });
 }
 
+/**
+ * The kit's address checks (kit/params.ts) that a route's code uses, to import exactly those:
+ * a route checks its address and its query without a validation library, which would otherwise
+ * be in every first page.
+ */
+export function paramsUsed(code: string): string[] {
+  return [
+    ...(code.includes("(s: Search)") ? ["type Search"] : []),
+    ...["count", "listQuery", "oneOf", "optional", "shaped", "text"].filter((name) =>
+      new RegExp(`(?<![.\\w])${name}\\(|\\(${name}\\)`).test(code),
+    ),
+  ];
+}
+
 /** The lists of related records a model shows, e.g. Customer.orders. */
 export function lists(model: ModelIR): (FieldIR & { type: { kind: "relation"; model: string } })[] {
   return model.fields.filter(

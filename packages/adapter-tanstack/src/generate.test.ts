@@ -218,7 +218,7 @@ describe("custom pages", () => {
     expect(moved.ok && moved.source).not.toMatch(
       /customerData|pageAccess|createFileRoute|searchCustomers/,
     );
-    const routeEdit = generated.replace("z.string().max(200)", "z.string().max(50)");
+    const routeEdit = generated.replace("text(s.q)", "text(s.q, 50)");
     expect(customPageFromEdit(spec, "customers", { ...options, auth }, routeEdit).ok).toBe(false);
   });
 });

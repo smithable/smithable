@@ -326,7 +326,7 @@ export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
  */
 function conversionsCode(models: { model: ModelIR; n: ReturnType<typeof names> }[]): string {
   const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
-  return `${models.map(({ n }) => `import { ${n.schema} } from "${n.module}";`).join("\n")}
+  return `${models.map(({ n }) => `import { ${n.schema} } from "${n.module}.schema";`).join("\n")}
 
 ${
   uses("relation")
