@@ -210,8 +210,8 @@ describe("custom pages", () => {
   test("a hand edit of the component moves into the custom page; an edit of the route does not", () => {
     const generated = route([]);
     const edited = generated.replace(
-      "  const navigate = useNavigate();",
-      "  const navigate = useNavigate();\n  const total = rows.length;",
+      '  const navigate = useNavigate({ from: "/customers/" });',
+      '  const navigate = useNavigate({ from: "/customers/" });\n  const total = rows.length;',
     );
     const moved = customPageFromEdit(spec, "customers", { ...options, auth }, edited);
     expect(moved.ok && moved.source).toContain("const total = rows.length;");
