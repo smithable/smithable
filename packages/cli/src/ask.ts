@@ -124,6 +124,7 @@ export async function proposeFor(
     files,
     context,
     providers,
+    anyConfigured: aiProviders().length > 0,
     // What only the project's data can tell: a new required field on a table with rows.
     check: (before, after, effects) => {
       const [was, will] = [irOf(before.spec), irOf(after.spec)];

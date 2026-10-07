@@ -19,6 +19,7 @@ import {
   dropArticles,
   fieldAnywhere,
   fieldFor,
+  modelByVerb,
   modelFor,
   normalize,
   pageFor,
@@ -59,14 +60,15 @@ export function answerQuestion(
   const w = wordsFor(ir, content);
   const plural = (m: ModelIR) => w.pluralLabel(m).toLowerCase();
   const the = (m: ModelIR) => w.label(m).toLowerCase();
-  const rolesOf = (rule: Allowed) =>
+  // "Anyone can see items, without signing in."; with a where, who sees the rest.
+  const sentence = (rule: Allowed, does: string) =>
     rule.public
       ? rule.where
-        ? `Anyone, without signing in, for records where ${conditionWords(rule.where)}; otherwise ${who([...rule.roles, ...(rule.owner ? ["owner"] : [])]).toLowerCase()}`
-        : "Anyone, without signing in"
+        ? `Anyone can ${does} where ${conditionWords(rule.where)}, without signing in; the rest, ${who([...rule.roles, ...(rule.owner ? ["owner"] : [])]).toLowerCase()}.`
+        : `Anyone can ${does}, without signing in.`
       : rule.roles.length || rule.owner
-        ? capitalize(who([...rule.roles, ...(rule.owner ? ["owner"] : [])]))
-        : "Nobody";
+        ? `${capitalize(who([...rule.roles, ...(rule.owner ? ["owner"] : [])]))} can ${does}.`
+        : `Nobody can ${does}.`;
 
   // "who can delete orders", "who may see customers", "who is allowed to add sessions"
   let m = /^who (?:can|may|is allowed to|is able to|are allowed to) (\w+) (.+)$/.exec(text);
@@ -77,7 +79,7 @@ export function answerQuestion(
     if (verb && model) {
       const rule = modelAccess(model, auth)[verb];
       return {
-        text: `${rolesOf(rule)} can ${VERB_WORDS[verb]} ${plural(model)}.`,
+        text: sentence(rule, `${VERB_WORDS[verb]} ${plural(model)}`),
         concepts: [`model:${model.name}`],
         rule: "who-can",
       };
@@ -85,10 +87,22 @@ export function answerQuestion(
     if (page && (verb === "read" || /^(?:open|use|visit|access)$/.test(m[1] as string))) {
       const rule = pageAccess(page, auth);
       return {
-        text: `${rolesOf(rule)} can open the ${humanize(page.id).toLowerCase()} page.`,
+        text: sentence(rule, `open the ${humanize(page.id).toLowerCase()} page`),
         concepts: [`page:${page.id}`],
         rule: "who-can",
       };
+    }
+    // "who can book a class?": the app's own verb for adding a record of its model.
+    if (!verb) {
+      const made = modelByVerb(ir, m[1] as string);
+      if (made) {
+        const rule = modelAccess(made, auth).create;
+        return {
+          text: sentence(rule, `${m[1]} ${m[2]} (adding ${article(the(made))})`),
+          concepts: [`model:${made.name}`],
+          rule: "who-can",
+        };
+      }
     }
     if (verb && !model && !page) return undefined;
   }
