@@ -433,7 +433,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Invitations and user management, for the users page (see users.ts).
         ...(hasInvitations(ir, auth)
           ? [
-              generated("src/generated/users.server.ts", usersServerModule(ir, auth)),
+              generated("src/generated/users.server.ts", usersServerModule(ir, auth, t)),
               generated("src/generated/users.test.ts", usersTestSource(ir, auth)),
             ]
           : []),
