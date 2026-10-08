@@ -17,14 +17,12 @@ models:
         type: beginner | allLevels | advanced
         default: allLevels
       durationMinutes: int! = 60
-    access: { create: [admin] }         # members don't add classes
 
   Instructor:
     fields:
       name: string!
       bio: markdown                     # formatted text: headings, lists, links
       portrait: picture                 # a stored picture with its description
-    access: { create: [admin] }
 
   Session:
     description: One scheduled occurrence of a class.
@@ -35,7 +33,6 @@ models:
       capacity: int! = 12
       bookings: Booking[]
       placesLeft: { type: int, formula: capacity - COUNT(bookings) }
-    access: { create: [admin] }
 
   Booking:
     description: A member's place in a session.
@@ -55,7 +52,6 @@ models:
       body: markdown!
       publishedOn: date
       status: draft | published
-    access: { create: [admin], write: [admin], delete: [admin] }
 
   Message:
     description: A question a visitor sends from the contact form on the home page.
@@ -63,7 +59,6 @@ models:
       name: string!
       email: email!
       message: text!
-    access: { read: [admin], write: [admin], delete: [admin] }
 
 outgoing:
   bookingMade:
@@ -106,16 +101,12 @@ pages:
     calendar: { model: Session, duration: classType.durationMinutes }
   sessions:                           # the staff's list of sessions
     crud: Session
-    access: [admin]
   class-types:
     crud: ClassType
-    access: [admin]
   instructors:
     crud: Instructor
-    access: [admin]
   messages:
     crud: Message
-    access: [admin]
   blog:                               # the studio's articles, for visitors too
     articles: Post
   privacy:
@@ -123,7 +114,6 @@ pages:
     legal: privacy                      # written from the app: who runs it, what it stores, cookies, mail
   posts:                              # where staff write them
     crud: Post
-    access: [admin]
   my-bookings:                        # a member's own bookings (private access)
     crud: Booking
   admin:

@@ -14,7 +14,6 @@ models:
       email: email!
       creditLimit: money
       orders: Order[]
-    access: { delete: [admin] }
   Order:
     fields:
       number: string!
@@ -36,7 +35,7 @@ const auth = validateAuth(
     text: `smithableAuth: 0.1
 signIn: { providers: [google], allowedDomains: [acme.com] }
 defaultAccess: shared
-roles: { admin: {}, sales: {} }
+roles: { admin: all, sales: { pages: all, create: all } }
 defaultRole: sales
 public: { pages: [home], read: [{ Order: { where: { status: shipped } } }] }
 `,
@@ -52,7 +51,9 @@ test("a question is told from a change by its wording", () => {
 });
 
 test("who can do what, from the access rules", () => {
-  expect(ask("who can delete customers?")).toBe("Admins can delete customers.");
+  expect(ask("who can delete customers?")).toBe(
+    "The record's owner and admins can delete customers.",
+  );
   expect(ask("Who may change orders?")).toBe("The record's owner and admins can change orders.");
   expect(ask("who can see customers")).toBe("Sales users and admins can see customers.");
   expect(ask("who can open the customers page?")).toBe(

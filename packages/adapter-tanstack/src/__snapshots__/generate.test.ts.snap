@@ -502,7 +502,7 @@ describe("Project", () => {
       readOthers: await reads(projectData, viewer, others.id),
       readOwn: await reads(projectData, viewer, own.id),
       create: await can(() => projectData.create(viewer, projectValues(viewer.id))),
-      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(viewer.id))),
+      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(stranger.id))),
       changeOwn: await can(() => projectData.update(viewer, own.id, projectValues(viewer.id))),
       deleteOthers: await can(() => projectData.remove(viewer, others.id)),
       deleteOwn: await can(() => projectData.remove(viewer, own.id)),
@@ -525,7 +525,7 @@ describe("Project", () => {
       readOthers: await reads(projectData, viewer, others.id),
       readOwn: await reads(projectData, viewer, own.id),
       create: await can(() => projectData.create(viewer, projectValues(viewer.id))),
-      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(viewer.id))),
+      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(stranger.id))),
       changeOwn: await can(() => projectData.update(viewer, own.id, projectValues(viewer.id))),
       deleteOthers: await can(() => projectData.remove(viewer, others.id)),
       deleteOwn: await can(() => projectData.remove(viewer, own.id)),
@@ -548,7 +548,7 @@ describe("Project", () => {
       readOthers: await reads(projectData, viewer, others.id),
       readOwn: await reads(projectData, viewer, own.id),
       create: await can(() => projectData.create(viewer, projectValues(viewer.id))),
-      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(viewer.id))),
+      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(stranger.id))),
       changeOwn: await can(() => projectData.update(viewer, own.id, projectValues(viewer.id))),
       deleteOthers: await can(() => projectData.remove(viewer, others.id)),
       deleteOwn: await can(() => projectData.remove(viewer, own.id)),
@@ -557,9 +557,9 @@ describe("Project", () => {
       readOwn: true,
       create: false,
       changeOthers: false,
-      changeOwn: false,
+      changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -570,7 +570,7 @@ describe("Project", () => {
       readOthers: await reads(projectData, viewer, others.id),
       readOwn: false,
       create: await can(() => projectData.create(viewer, projectValues(null))),
-      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(null))),
+      changeOthers: await can(() => projectData.update(viewer, others.id, projectValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => projectData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -595,7 +595,7 @@ describe("Task", () => {
       readOthers: await reads(taskData, viewer, others.id),
       readOwn: await reads(taskData, viewer, own.id),
       create: await can(() => taskData.create(viewer, taskValues(viewer.id))),
-      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(viewer.id))),
+      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(stranger.id))),
       changeOwn: await can(() => taskData.update(viewer, own.id, taskValues(viewer.id))),
       deleteOthers: await can(() => taskData.remove(viewer, others.id)),
       deleteOwn: await can(() => taskData.remove(viewer, own.id)),
@@ -618,7 +618,7 @@ describe("Task", () => {
       readOthers: await reads(taskData, viewer, others.id),
       readOwn: await reads(taskData, viewer, own.id),
       create: await can(() => taskData.create(viewer, taskValues(viewer.id))),
-      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(viewer.id))),
+      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(stranger.id))),
       changeOwn: await can(() => taskData.update(viewer, own.id, taskValues(viewer.id))),
       deleteOthers: await can(() => taskData.remove(viewer, others.id)),
       deleteOwn: await can(() => taskData.remove(viewer, own.id)),
@@ -641,7 +641,7 @@ describe("Task", () => {
       readOthers: await reads(taskData, viewer, others.id),
       readOwn: await reads(taskData, viewer, own.id),
       create: await can(() => taskData.create(viewer, taskValues(viewer.id))),
-      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(viewer.id))),
+      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(stranger.id))),
       changeOwn: await can(() => taskData.update(viewer, own.id, taskValues(viewer.id))),
       deleteOthers: await can(() => taskData.remove(viewer, others.id)),
       deleteOwn: await can(() => taskData.remove(viewer, own.id)),
@@ -652,7 +652,7 @@ describe("Task", () => {
       changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -663,7 +663,7 @@ describe("Task", () => {
       readOthers: await reads(taskData, viewer, others.id),
       readOwn: false,
       create: await can(() => taskData.create(viewer, taskValues(null))),
-      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(null))),
+      changeOthers: await can(() => taskData.update(viewer, others.id, taskValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => taskData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -688,7 +688,7 @@ describe("Note", () => {
       readOthers: await reads(noteData, viewer, others.id),
       readOwn: await reads(noteData, viewer, own.id),
       create: await can(() => noteData.create(viewer, noteValues(viewer.id))),
-      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(viewer.id))),
+      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(stranger.id))),
       changeOwn: await can(() => noteData.update(viewer, own.id, noteValues(viewer.id))),
       deleteOthers: await can(() => noteData.remove(viewer, others.id)),
       deleteOwn: await can(() => noteData.remove(viewer, own.id)),
@@ -711,7 +711,7 @@ describe("Note", () => {
       readOthers: await reads(noteData, viewer, others.id),
       readOwn: await reads(noteData, viewer, own.id),
       create: await can(() => noteData.create(viewer, noteValues(viewer.id))),
-      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(viewer.id))),
+      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(stranger.id))),
       changeOwn: await can(() => noteData.update(viewer, own.id, noteValues(viewer.id))),
       deleteOthers: await can(() => noteData.remove(viewer, others.id)),
       deleteOwn: await can(() => noteData.remove(viewer, own.id)),
@@ -734,7 +734,7 @@ describe("Note", () => {
       readOthers: await reads(noteData, viewer, others.id),
       readOwn: await reads(noteData, viewer, own.id),
       create: await can(() => noteData.create(viewer, noteValues(viewer.id))),
-      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(viewer.id))),
+      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(stranger.id))),
       changeOwn: await can(() => noteData.update(viewer, own.id, noteValues(viewer.id))),
       deleteOthers: await can(() => noteData.remove(viewer, others.id)),
       deleteOwn: await can(() => noteData.remove(viewer, own.id)),
@@ -745,7 +745,7 @@ describe("Note", () => {
       changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -756,7 +756,7 @@ describe("Note", () => {
       readOthers: await reads(noteData, viewer, others.id),
       readOwn: false,
       create: await can(() => noteData.create(viewer, noteValues(null))),
-      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(null))),
+      changeOthers: await can(() => noteData.update(viewer, others.id, noteValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => noteData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -1031,7 +1031,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { runComplete, runCompleteMany } from "./complete.server";
 
 /** Who may run the "complete" action: whoever may edit the task. */
-export const completeAccess: Rule = { public: false, roles: ["admin", "member", "assistant"], owner: false };
+export const completeAccess: Rule = { public: false, roles: ["admin", "member", "assistant"], owner: true };
 
 /** Whether the "complete" action fits the task: it is offered and allowed only then. */
 export function completeFits(row: { status?: unknown }): boolean {
@@ -1140,7 +1140,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { runReopen, runReopenMany } from "./reopen.server";
 
 /** Who may run the "reopen" action: whoever may edit the task. */
-export const reopenAccess: Rule = { public: false, roles: ["admin", "member", "assistant"], owner: false };
+export const reopenAccess: Rule = { public: false, roles: ["admin", "member", "assistant"], owner: true };
 
 /** Whether the "reopen" action fits the task: it is offered and allowed only then. */
 export function reopenFits(row: { status?: unknown }): boolean {
@@ -3184,6 +3184,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
             "kind": {
               "type": "string",
               "enum": [
+                "Project",
                 "Task",
                 "Note"
               ]
@@ -3454,8 +3455,8 @@ import type { NoteValues } from "./note";
 export const noteAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
   create: { public: false, roles: ["admin", "member", "assistant"], owner: false },
-  write: { public: false, roles: ["admin", "member", "assistant"], owner: false },
-  delete: { public: false, roles: ["admin", "member"], owner: false },
+  write: { public: false, roles: ["admin", "member", "assistant"], owner: true },
+  delete: { public: false, roles: ["admin", "member"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -3884,7 +3885,7 @@ export const noteUi: RecordUi<NoteRow> = {
 };
 
 /** Who may delete notes: a list's selection offers Delete by it (the server checks again). */
-export const noteDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: false };
+export const noteDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: true };
 
 
 export const listNotes = createServerFn().handler(async () => {
@@ -3995,8 +3996,8 @@ function usedBy(tx: Tx, id: number, title: string) {
 export const projectAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
   create: { public: false, roles: ["admin", "member"], owner: false },
-  write: { public: false, roles: ["admin", "member"], owner: false },
-  delete: { public: false, roles: ["admin", "member"], owner: false },
+  write: { public: false, roles: ["admin", "member"], owner: true },
+  delete: { public: false, roles: ["admin", "member"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -4419,7 +4420,7 @@ export const projectUi: RecordUi<ProjectRow> = {
 };
 
 /** Who may delete projects: a list's selection offers Delete by it (the server checks again). */
-export const projectDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: false };
+export const projectDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: true };
 
 
 export const listProjects = createServerFn().handler(async () => {
@@ -4502,8 +4503,8 @@ import type { TaskValues } from "./task";
 export const taskAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
   create: { public: false, roles: ["admin", "member", "assistant"], owner: false },
-  write: { public: false, roles: ["admin", "member", "assistant"], owner: false },
-  delete: { public: false, roles: ["admin", "member"], owner: false },
+  write: { public: false, roles: ["admin", "member", "assistant"], owner: true },
+  delete: { public: false, roles: ["admin", "member"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -4952,7 +4953,7 @@ export const taskUi: RecordUi<TaskRow> = {
 };
 
 /** Who may delete tasks: a list's selection offers Delete by it (the server checks again). */
-export const taskDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: false };
+export const taskDeleteRule: Rule = { public: false, roles: ["admin", "member"], owner: true };
 
 
 export const listTasks = createServerFn().handler(async () => {
@@ -7492,11 +7493,7 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  {
-    value: "admin",
-    label: "Admin",
-    description: "Runs the team, its keys and the data.",
-  },
+  { value: "admin", label: "Admin" },
   {
     value: "member",
     label: "Member",
@@ -8033,28 +8030,28 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "aa3bd8ec generated",
   "src/db/seed.ts": "224df43d generated",
-  "src/generated/access.test.ts": "86201605 generated",
+  "src/generated/access.test.ts": "130041c9 generated",
   "src/generated/actions/complete.server.ts": "2fc92460 generated",
-  "src/generated/actions/complete.ts": "7f503863 generated",
+  "src/generated/actions/complete.ts": "da69e750 generated",
   "src/generated/actions/reopen.server.ts": "9d1bc2ca generated",
-  "src/generated/actions/reopen.ts": "38a0b9a3 generated",
+  "src/generated/actions/reopen.ts": "12e879b4 generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
-  "src/generated/mcp.server.ts": "013957ba generated",
+  "src/generated/mcp.server.ts": "c1a602b1 generated",
   "src/generated/note.schema.ts": "5ff1136e generated",
-  "src/generated/note.server.ts": "722a4027 generated",
-  "src/generated/note.ts": "94b91e51 generated",
+  "src/generated/note.server.ts": "bbd92009 generated",
+  "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "90cc7671 generated",
-  "src/generated/project.ts": "bada24bf generated",
+  "src/generated/project.server.ts": "1a818acf generated",
+  "src/generated/project.ts": "4ce797fe generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "83876b81 generated",
-  "src/generated/task.ts": "ec1c8a2d generated",
+  "src/generated/task.server.ts": "99564abb generated",
+  "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "38cfdcd9 generated",
   "src/generated/users.server.ts": "1354a6fb generated",
   "src/generated/users.test.ts": "b686c0ea generated",
@@ -8143,7 +8140,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "efde7e0b generated",
   "src/routes/team/activity.tsx": "1a9c5e5b generated",
-  "src/routes/team/index.tsx": "5dc59d41 generated",
+  "src/routes/team/index.tsx": "59b3387f generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
@@ -8796,7 +8793,7 @@ describe("ClassType", () => {
       readOthers: await reads(classTypeData, viewer, others.id),
       readOwn: await reads(classTypeData, viewer, own.id),
       create: await can(() => classTypeData.create(viewer, classTypeValues(viewer.id))),
-      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(viewer.id))),
+      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(stranger.id))),
       changeOwn: await can(() => classTypeData.update(viewer, own.id, classTypeValues(viewer.id))),
       deleteOthers: await can(() => classTypeData.remove(viewer, others.id)),
       deleteOwn: await can(() => classTypeData.remove(viewer, own.id)),
@@ -8819,7 +8816,7 @@ describe("ClassType", () => {
       readOthers: await reads(classTypeData, viewer, others.id),
       readOwn: await reads(classTypeData, viewer, own.id),
       create: await can(() => classTypeData.create(viewer, classTypeValues(viewer.id))),
-      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(viewer.id))),
+      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(stranger.id))),
       changeOwn: await can(() => classTypeData.update(viewer, own.id, classTypeValues(viewer.id))),
       deleteOthers: await can(() => classTypeData.remove(viewer, others.id)),
       deleteOwn: await can(() => classTypeData.remove(viewer, own.id)),
@@ -8841,7 +8838,7 @@ describe("ClassType", () => {
       readOthers: await reads(classTypeData, viewer, others.id),
       readOwn: false,
       create: await can(() => classTypeData.create(viewer, classTypeValues(null))),
-      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(null))),
+      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => classTypeData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -8866,7 +8863,7 @@ describe("Instructor", () => {
       readOthers: await reads(instructorData, viewer, others.id),
       readOwn: await reads(instructorData, viewer, own.id),
       create: await can(() => instructorData.create(viewer, instructorValues(viewer.id))),
-      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(viewer.id))),
+      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(stranger.id))),
       changeOwn: await can(() => instructorData.update(viewer, own.id, instructorValues(viewer.id))),
       deleteOthers: await can(() => instructorData.remove(viewer, others.id)),
       deleteOwn: await can(() => instructorData.remove(viewer, own.id)),
@@ -8889,7 +8886,7 @@ describe("Instructor", () => {
       readOthers: await reads(instructorData, viewer, others.id),
       readOwn: await reads(instructorData, viewer, own.id),
       create: await can(() => instructorData.create(viewer, instructorValues(viewer.id))),
-      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(viewer.id))),
+      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(stranger.id))),
       changeOwn: await can(() => instructorData.update(viewer, own.id, instructorValues(viewer.id))),
       deleteOthers: await can(() => instructorData.remove(viewer, others.id)),
       deleteOwn: await can(() => instructorData.remove(viewer, own.id)),
@@ -8911,7 +8908,7 @@ describe("Instructor", () => {
       readOthers: await reads(instructorData, viewer, others.id),
       readOwn: false,
       create: await can(() => instructorData.create(viewer, instructorValues(null))),
-      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(null))),
+      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => instructorData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -8936,7 +8933,7 @@ describe("Session", () => {
       readOthers: await reads(sessionData, viewer, others.id),
       readOwn: await reads(sessionData, viewer, own.id),
       create: await can(() => sessionData.create(viewer, sessionValues(viewer.id))),
-      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(viewer.id))),
+      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(stranger.id))),
       changeOwn: await can(() => sessionData.update(viewer, own.id, sessionValues(viewer.id))),
       deleteOthers: await can(() => sessionData.remove(viewer, others.id)),
       deleteOwn: await can(() => sessionData.remove(viewer, own.id)),
@@ -8959,7 +8956,7 @@ describe("Session", () => {
       readOthers: await reads(sessionData, viewer, others.id),
       readOwn: await reads(sessionData, viewer, own.id),
       create: await can(() => sessionData.create(viewer, sessionValues(viewer.id))),
-      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(viewer.id))),
+      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(stranger.id))),
       changeOwn: await can(() => sessionData.update(viewer, own.id, sessionValues(viewer.id))),
       deleteOthers: await can(() => sessionData.remove(viewer, others.id)),
       deleteOwn: await can(() => sessionData.remove(viewer, own.id)),
@@ -8981,7 +8978,7 @@ describe("Session", () => {
       readOthers: await reads(sessionData, viewer, others.id),
       readOwn: false,
       create: await can(() => sessionData.create(viewer, sessionValues(null))),
-      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(null))),
+      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => sessionData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -9012,7 +9009,7 @@ describe("Booking", () => {
       readOthers: await reads(bookingData, viewer, others.id),
       readOwn: await reads(bookingData, viewer, own.id),
       create: await can(() => bookingData.create(viewer, bookingValues(viewer.id))),
-      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(viewer.id))),
+      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(stranger.id))),
       changeOwn: await can(() => bookingData.update(viewer, own.id, bookingValues(viewer.id))),
       deleteOthers: await can(() => bookingData.remove(viewer, others.id)),
       deleteOwn: await can(() => bookingData.remove(viewer, own.id)),
@@ -9035,7 +9032,7 @@ describe("Booking", () => {
       readOthers: await reads(bookingData, viewer, others.id),
       readOwn: await reads(bookingData, viewer, own.id),
       create: await can(() => bookingData.create(viewer, bookingValues(viewer.id))),
-      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(viewer.id))),
+      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(stranger.id))),
       changeOwn: await can(() => bookingData.update(viewer, own.id, bookingValues(viewer.id))),
       deleteOthers: await can(() => bookingData.remove(viewer, others.id)),
       deleteOwn: await can(() => bookingData.remove(viewer, own.id)),
@@ -9057,7 +9054,7 @@ describe("Booking", () => {
       readOthers: await reads(bookingData, viewer, others.id),
       readOwn: false,
       create: await can(() => bookingData.create(viewer, bookingValues(null))),
-      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(null))),
+      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => bookingData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -9091,7 +9088,7 @@ describe("Post", () => {
       readOthers: await reads(postData, viewer, others.id),
       readOwn: await reads(postData, viewer, own.id),
       create: await can(() => postData.create(viewer, postValues(viewer.id))),
-      changeOthers: await can(() => postData.update(viewer, others.id, postValues(viewer.id))),
+      changeOthers: await can(() => postData.update(viewer, others.id, postValues(stranger.id))),
       changeOwn: await can(() => postData.update(viewer, own.id, postValues(viewer.id))),
       deleteOthers: await can(() => postData.remove(viewer, others.id)),
       deleteOwn: await can(() => postData.remove(viewer, own.id)),
@@ -9114,7 +9111,7 @@ describe("Post", () => {
       readOthers: await reads(postData, viewer, others.id),
       readOwn: await reads(postData, viewer, own.id),
       create: await can(() => postData.create(viewer, postValues(viewer.id))),
-      changeOthers: await can(() => postData.update(viewer, others.id, postValues(viewer.id))),
+      changeOthers: await can(() => postData.update(viewer, others.id, postValues(stranger.id))),
       changeOwn: await can(() => postData.update(viewer, own.id, postValues(viewer.id))),
       deleteOthers: await can(() => postData.remove(viewer, others.id)),
       deleteOwn: await can(() => postData.remove(viewer, own.id)),
@@ -9123,9 +9120,9 @@ describe("Post", () => {
       readOwn: true,
       create: false,
       changeOthers: false,
-      changeOwn: false,
+      changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -9136,7 +9133,7 @@ describe("Post", () => {
       readOthers: await reads(postData, viewer, others.id),
       readOwn: false,
       create: await can(() => postData.create(viewer, postValues(null))),
-      changeOthers: await can(() => postData.update(viewer, others.id, postValues(null))),
+      changeOthers: await can(() => postData.update(viewer, others.id, postValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => postData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -9170,7 +9167,7 @@ describe("Message", () => {
       readOthers: await reads(messageData, viewer, others.id),
       readOwn: await reads(messageData, viewer, own.id),
       create: await can(() => messageData.create(viewer, messageValues(viewer.id))),
-      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(viewer.id))),
+      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(stranger.id))),
       changeOwn: await can(() => messageData.update(viewer, own.id, messageValues(viewer.id))),
       deleteOthers: await can(() => messageData.remove(viewer, others.id)),
       deleteOwn: await can(() => messageData.remove(viewer, own.id)),
@@ -9193,18 +9190,18 @@ describe("Message", () => {
       readOthers: await reads(messageData, viewer, others.id),
       readOwn: await reads(messageData, viewer, own.id),
       create: await can(() => messageData.create(viewer, messageValues(viewer.id))),
-      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(viewer.id))),
+      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(stranger.id))),
       changeOwn: await can(() => messageData.update(viewer, own.id, messageValues(viewer.id))),
       deleteOthers: await can(() => messageData.remove(viewer, others.id)),
       deleteOwn: await can(() => messageData.remove(viewer, own.id)),
     }).toEqual({
       readOthers: false,
-      readOwn: false,
+      readOwn: true,
       create: true,
       changeOthers: false,
-      changeOwn: false,
+      changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -9215,7 +9212,7 @@ describe("Message", () => {
       readOthers: await reads(messageData, viewer, others.id),
       readOwn: false,
       create: await can(() => messageData.create(viewer, messageValues(null))),
-      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(null))),
+      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => messageData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -10600,10 +10597,10 @@ import type { MessageValues } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
-  read: { public: false, roles: ["admin"], owner: false },
-  create: { public: true, roles: ["admin", "member"], owner: false },
-  write: { public: false, roles: ["admin"], owner: false },
-  delete: { public: false, roles: ["admin"], owner: false },
+  read: { public: false, roles: ["admin"], owner: true },
+  create: { public: true, roles: ["admin"], owner: false },
+  write: { public: false, roles: ["admin"], owner: true },
+  delete: { public: false, roles: ["admin"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -10833,7 +10830,7 @@ export const messageUi: RecordUi<MessageRow> = {
 };
 
 /** Who may delete messages: a list's selection offers Delete by it (the server checks again). */
-export const messageDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
+export const messageDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 
 export const listMessages = createServerFn().handler(async () => {
@@ -11011,8 +11008,8 @@ import type { PostValues } from "./post";
 export const postAccess: ModelAccess = {
   read: { public: true, roles: ["admin"], owner: true, where: { status: "published" } },
   create: { public: false, roles: ["admin"], owner: false },
-  write: { public: false, roles: ["admin"], owner: false },
-  delete: { public: false, roles: ["admin"], owner: false },
+  write: { public: false, roles: ["admin"], owner: true },
+  delete: { public: false, roles: ["admin"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -11278,7 +11275,7 @@ export const postUi: RecordUi<PostRow> = {
 };
 
 /** Who may delete posts: a list's selection offers Delete by it (the server checks again). */
-export const postDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
+export const postDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 
 export const listPosts = createServerFn().handler(async () => {
@@ -16021,7 +16018,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "20f0416a generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "1518628e generated",
+  "src/generated/access.test.ts": "6ae9bd4d generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
   "src/generated/booking.server.ts": "4767a3a6 generated",
@@ -16038,13 +16035,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.server.ts": "2dffd8bc generated",
   "src/generated/instructor.ts": "c90d3dae generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "5215e942 generated",
-  "src/generated/message.ts": "3dd0dd49 generated",
+  "src/generated/message.server.ts": "9e70fdcf generated",
+  "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
   "src/generated/post.schema.ts": "425829af generated",
-  "src/generated/post.server.ts": "bc2973c7 generated",
-  "src/generated/post.ts": "16492461 generated",
+  "src/generated/post.server.ts": "b7e9ab65 generated",
+  "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
   "src/generated/session.server.ts": "89e959f0 generated",
@@ -16624,7 +16621,7 @@ describe("Customer", () => {
       readOthers: await reads(customerData, viewer, others.id),
       readOwn: await reads(customerData, viewer, own.id),
       create: await can(() => customerData.create(viewer, customerValues(viewer.id))),
-      changeOthers: await can(() => customerData.update(viewer, others.id, customerValues(viewer.id))),
+      changeOthers: await can(() => customerData.update(viewer, others.id, customerValues(stranger.id))),
       changeOwn: await can(() => customerData.update(viewer, own.id, customerValues(viewer.id))),
       deleteOthers: await can(() => customerData.remove(viewer, others.id)),
       deleteOwn: await can(() => customerData.remove(viewer, own.id)),
@@ -16647,7 +16644,7 @@ describe("Customer", () => {
       readOthers: await reads(customerData, viewer, others.id),
       readOwn: await reads(customerData, viewer, own.id),
       create: await can(() => customerData.create(viewer, customerValues(viewer.id))),
-      changeOthers: await can(() => customerData.update(viewer, others.id, customerValues(viewer.id))),
+      changeOthers: await can(() => customerData.update(viewer, others.id, customerValues(stranger.id))),
       changeOwn: await can(() => customerData.update(viewer, own.id, customerValues(viewer.id))),
       deleteOthers: await can(() => customerData.remove(viewer, others.id)),
       deleteOwn: await can(() => customerData.remove(viewer, own.id)),
@@ -16658,7 +16655,7 @@ describe("Customer", () => {
       changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -16669,7 +16666,7 @@ describe("Customer", () => {
       readOthers: await reads(customerData, viewer, others.id),
       readOwn: false,
       create: await can(() => customerData.create(viewer, customerValues(null))),
-      changeOthers: await can(() => customerData.update(viewer, others.id, customerValues(null))),
+      changeOthers: await can(() => customerData.update(viewer, others.id, customerValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => customerData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -16694,7 +16691,7 @@ describe("Order", () => {
       readOthers: await reads(orderData, viewer, others.id),
       readOwn: await reads(orderData, viewer, own.id),
       create: await can(() => orderData.create(viewer, orderValues(viewer.id))),
-      changeOthers: await can(() => orderData.update(viewer, others.id, orderValues(viewer.id))),
+      changeOthers: await can(() => orderData.update(viewer, others.id, orderValues(stranger.id))),
       changeOwn: await can(() => orderData.update(viewer, own.id, orderValues(viewer.id))),
       deleteOthers: await can(() => orderData.remove(viewer, others.id)),
       deleteOwn: await can(() => orderData.remove(viewer, own.id)),
@@ -16717,7 +16714,7 @@ describe("Order", () => {
       readOthers: await reads(orderData, viewer, others.id),
       readOwn: await reads(orderData, viewer, own.id),
       create: await can(() => orderData.create(viewer, orderValues(viewer.id))),
-      changeOthers: await can(() => orderData.update(viewer, others.id, orderValues(viewer.id))),
+      changeOthers: await can(() => orderData.update(viewer, others.id, orderValues(stranger.id))),
       changeOwn: await can(() => orderData.update(viewer, own.id, orderValues(viewer.id))),
       deleteOthers: await can(() => orderData.remove(viewer, others.id)),
       deleteOwn: await can(() => orderData.remove(viewer, own.id)),
@@ -16728,7 +16725,7 @@ describe("Order", () => {
       changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -16739,7 +16736,7 @@ describe("Order", () => {
       readOthers: await reads(orderData, viewer, others.id),
       readOwn: false,
       create: await can(() => orderData.create(viewer, orderValues(null))),
-      changeOthers: await can(() => orderData.update(viewer, others.id, orderValues(null))),
+      changeOthers: await can(() => orderData.update(viewer, others.id, orderValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => orderData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -16963,8 +16960,8 @@ function usedBy(tx: Tx, id: number, title: string) {
 export const customerAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "sales"], owner: false },
   create: { public: false, roles: ["admin", "sales"], owner: false },
-  write: { public: false, roles: ["admin", "sales"], owner: false },
-  delete: { public: false, roles: ["admin"], owner: false },
+  write: { public: false, roles: ["admin", "sales"], owner: true },
+  delete: { public: false, roles: ["admin"], owner: true },
 };
 
 
@@ -17385,7 +17382,7 @@ export const customerUi: RecordUi<CustomerRow> = {
 };
 
 /** Who may delete customers: a list's selection offers Delete by it (the server checks again). */
-export const customerDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
+export const customerDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 
 export const listCustomers = createServerFn().handler(async () => {
@@ -17631,8 +17628,8 @@ function rootInTrash(tag: string): string | undefined {
 export const orderAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "sales"], owner: false },
   create: { public: false, roles: ["admin", "sales"], owner: false },
-  write: { public: false, roles: ["admin", "sales"], owner: false },
-  delete: { public: false, roles: ["admin"], owner: false },
+  write: { public: false, roles: ["admin", "sales"], owner: true },
+  delete: { public: false, roles: ["admin"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -18055,7 +18052,7 @@ export const orderUi: RecordUi<OrderRow> = {
 };
 
 /** Who may delete orders: a list's selection offers Delete by it (the server checks again). */
-export const orderDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
+export const orderDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 
 export const listOrders = createServerFn().handler(async () => {
@@ -19946,11 +19943,7 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  {
-    value: "admin",
-    label: "Admin",
-    description: "Sales management. Full access.",
-  },
+  { value: "admin", label: "Admin" },
   {
     value: "sales",
     label: "Sales",
@@ -20490,20 +20483,20 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "e6620168 generated",
   "src/db/seed.ts": "cfae0905 generated",
-  "src/generated/access.test.ts": "7b543aec generated",
+  "src/generated/access.test.ts": "0901dddc generated",
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
   "src/generated/actions/merge-customers.ts": "da1a7fd7 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "4826263e generated",
-  "src/generated/customer.ts": "80f11d86 generated",
+  "src/generated/customer.server.ts": "e9915908 generated",
+  "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "a97514d4 generated",
-  "src/generated/order.ts": "0bc7ab14 generated",
+  "src/generated/order.server.ts": "63fbfa62 generated",
+  "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
   "src/generated/users.server.ts": "432e3193 generated",
@@ -20565,7 +20558,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "2d049a58 generated",
   "src/routes/team/activity.tsx": "95063ee2 generated",
-  "src/routes/team/index.tsx": "c14e68a6 generated",
+  "src/routes/team/index.tsx": "184b5fba generated",
   "src/routes/team/trash.tsx": "490a41ed generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
@@ -21145,7 +21138,7 @@ describe("BusinessProfile", () => {
       readOthers: await reads(businessProfileData, viewer, others.id),
       readOwn: await reads(businessProfileData, viewer, own.id),
       create: await can(() => businessProfileData.create(viewer, businessProfileValues(viewer.id))),
-      changeOthers: await can(() => businessProfileData.update(viewer, others.id, businessProfileValues(viewer.id))),
+      changeOthers: await can(() => businessProfileData.update(viewer, others.id, businessProfileValues(stranger.id))),
       changeOwn: await can(() => businessProfileData.update(viewer, own.id, businessProfileValues(viewer.id))),
       deleteOthers: await can(() => businessProfileData.remove(viewer, others.id)),
       deleteOwn: await can(() => businessProfileData.remove(viewer, own.id)),
@@ -21168,7 +21161,7 @@ describe("BusinessProfile", () => {
       readOthers: await reads(businessProfileData, viewer, others.id),
       readOwn: await reads(businessProfileData, viewer, own.id),
       create: await can(() => businessProfileData.create(viewer, businessProfileValues(viewer.id))),
-      changeOthers: await can(() => businessProfileData.update(viewer, others.id, businessProfileValues(viewer.id))),
+      changeOthers: await can(() => businessProfileData.update(viewer, others.id, businessProfileValues(stranger.id))),
       changeOwn: await can(() => businessProfileData.update(viewer, own.id, businessProfileValues(viewer.id))),
       deleteOthers: await can(() => businessProfileData.remove(viewer, others.id)),
       deleteOwn: await can(() => businessProfileData.remove(viewer, own.id)),
@@ -21190,7 +21183,7 @@ describe("BusinessProfile", () => {
       readOthers: await reads(businessProfileData, viewer, others.id),
       readOwn: false,
       create: await can(() => businessProfileData.create(viewer, businessProfileValues(null))),
-      changeOthers: await can(() => businessProfileData.update(viewer, others.id, businessProfileValues(null))),
+      changeOthers: await can(() => businessProfileData.update(viewer, others.id, businessProfileValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => businessProfileData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -21215,7 +21208,7 @@ describe("Client", () => {
       readOthers: await reads(clientData, viewer, others.id),
       readOwn: await reads(clientData, viewer, own.id),
       create: await can(() => clientData.create(viewer, clientValues(viewer.id))),
-      changeOthers: await can(() => clientData.update(viewer, others.id, clientValues(viewer.id))),
+      changeOthers: await can(() => clientData.update(viewer, others.id, clientValues(stranger.id))),
       changeOwn: await can(() => clientData.update(viewer, own.id, clientValues(viewer.id))),
       deleteOthers: await can(() => clientData.remove(viewer, others.id)),
       deleteOwn: await can(() => clientData.remove(viewer, own.id)),
@@ -21238,7 +21231,7 @@ describe("Client", () => {
       readOthers: await reads(clientData, viewer, others.id),
       readOwn: await reads(clientData, viewer, own.id),
       create: await can(() => clientData.create(viewer, clientValues(viewer.id))),
-      changeOthers: await can(() => clientData.update(viewer, others.id, clientValues(viewer.id))),
+      changeOthers: await can(() => clientData.update(viewer, others.id, clientValues(stranger.id))),
       changeOwn: await can(() => clientData.update(viewer, own.id, clientValues(viewer.id))),
       deleteOthers: await can(() => clientData.remove(viewer, others.id)),
       deleteOwn: await can(() => clientData.remove(viewer, own.id)),
@@ -21260,7 +21253,7 @@ describe("Client", () => {
       readOthers: await reads(clientData, viewer, others.id),
       readOwn: false,
       create: await can(() => clientData.create(viewer, clientValues(null))),
-      changeOthers: await can(() => clientData.update(viewer, others.id, clientValues(null))),
+      changeOthers: await can(() => clientData.update(viewer, others.id, clientValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => clientData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -21285,7 +21278,7 @@ describe("Invoice", () => {
       readOthers: await reads(invoiceData, viewer, others.id),
       readOwn: await reads(invoiceData, viewer, own.id),
       create: await can(() => invoiceData.create(viewer, invoiceValues(viewer.id))),
-      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(viewer.id))),
+      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(stranger.id))),
       changeOwn: await can(() => invoiceData.update(viewer, own.id, invoiceValues(viewer.id))),
       deleteOthers: await can(() => invoiceData.remove(viewer, others.id)),
       deleteOwn: await can(() => invoiceData.remove(viewer, own.id)),
@@ -21308,7 +21301,7 @@ describe("Invoice", () => {
       readOthers: await reads(invoiceData, viewer, others.id),
       readOwn: await reads(invoiceData, viewer, own.id),
       create: await can(() => invoiceData.create(viewer, invoiceValues(viewer.id))),
-      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(viewer.id))),
+      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(stranger.id))),
       changeOwn: await can(() => invoiceData.update(viewer, own.id, invoiceValues(viewer.id))),
       deleteOthers: await can(() => invoiceData.remove(viewer, others.id)),
       deleteOwn: await can(() => invoiceData.remove(viewer, own.id)),
@@ -21330,7 +21323,7 @@ describe("Invoice", () => {
       readOthers: await reads(invoiceData, viewer, others.id),
       readOwn: false,
       create: await can(() => invoiceData.create(viewer, invoiceValues(null))),
-      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(null))),
+      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => invoiceData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -21361,7 +21354,7 @@ describe("InvoiceLine", () => {
       readOthers: await reads(invoiceLineData, viewer, others.id),
       readOwn: await reads(invoiceLineData, viewer, own.id),
       create: await can(() => invoiceLineData.create(viewer, invoiceLineValues(viewer.id))),
-      changeOthers: await can(() => invoiceLineData.update(viewer, others.id, invoiceLineValues(viewer.id))),
+      changeOthers: await can(() => invoiceLineData.update(viewer, others.id, invoiceLineValues(stranger.id))),
       changeOwn: await can(() => invoiceLineData.update(viewer, own.id, invoiceLineValues(viewer.id))),
       deleteOthers: await can(() => invoiceLineData.remove(viewer, others.id)),
       deleteOwn: await can(() => invoiceLineData.remove(viewer, own.id)),
@@ -21384,7 +21377,7 @@ describe("InvoiceLine", () => {
       readOthers: await reads(invoiceLineData, viewer, others.id),
       readOwn: await reads(invoiceLineData, viewer, own.id),
       create: await can(() => invoiceLineData.create(viewer, invoiceLineValues(viewer.id))),
-      changeOthers: await can(() => invoiceLineData.update(viewer, others.id, invoiceLineValues(viewer.id))),
+      changeOthers: await can(() => invoiceLineData.update(viewer, others.id, invoiceLineValues(stranger.id))),
       changeOwn: await can(() => invoiceLineData.update(viewer, own.id, invoiceLineValues(viewer.id))),
       deleteOthers: await can(() => invoiceLineData.remove(viewer, others.id)),
       deleteOwn: await can(() => invoiceLineData.remove(viewer, own.id)),
@@ -21406,7 +21399,7 @@ describe("InvoiceLine", () => {
       readOthers: await reads(invoiceLineData, viewer, others.id),
       readOwn: false,
       create: await can(() => invoiceLineData.create(viewer, invoiceLineValues(null))),
-      changeOthers: await can(() => invoiceLineData.update(viewer, others.id, invoiceLineValues(null))),
+      changeOthers: await can(() => invoiceLineData.update(viewer, others.id, invoiceLineValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => invoiceLineData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -25578,7 +25571,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "3a51e1e4 generated",
   "src/db/seed.ts": "9bacb9ab generated",
-  "src/generated/access.test.ts": "99771849 generated",
+  "src/generated/access.test.ts": "d2fd305f generated",
   "src/generated/actions/mark-paid.server.ts": "ed9d8fa4 generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
   "src/generated/actions/mark-sent.server.ts": "a9fd039c generated",
@@ -26076,7 +26069,7 @@ describe("Item", () => {
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: await reads(itemData, viewer, own.id),
       create: await can(() => itemData.create(viewer, itemValues(viewer.id))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(viewer.id))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
       changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id))),
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: await can(() => itemData.remove(viewer, own.id)),
@@ -26099,7 +26092,7 @@ describe("Item", () => {
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: await reads(itemData, viewer, own.id),
       create: await can(() => itemData.create(viewer, itemValues(viewer.id))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(viewer.id))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
       changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id))),
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: await can(() => itemData.remove(viewer, own.id)),
@@ -26121,7 +26114,7 @@ describe("Item", () => {
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: false,
       create: await can(() => itemData.create(viewer, itemValues(null))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(null))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -28550,7 +28543,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "0d802f59 generated",
   "src/db/seed.ts": "c3d62db3 generated",
-  "src/generated/access.test.ts": "528f263a generated",
+  "src/generated/access.test.ts": "8dad91ce generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
@@ -29003,7 +28996,7 @@ describe("Item", () => {
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: await reads(itemData, viewer, own.id),
       create: await can(() => itemData.create(viewer, itemValues(viewer.id))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(viewer.id))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
       changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id))),
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: await can(() => itemData.remove(viewer, own.id)),
@@ -29026,7 +29019,7 @@ describe("Item", () => {
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: await reads(itemData, viewer, own.id),
       create: await can(() => itemData.create(viewer, itemValues(viewer.id))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(viewer.id))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
       changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id))),
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: await can(() => itemData.remove(viewer, own.id)),
@@ -29035,9 +29028,9 @@ describe("Item", () => {
       readOwn: true,
       create: false,
       changeOthers: false,
-      changeOwn: false,
+      changeOwn: true,
       deleteOthers: false,
-      deleteOwn: false,
+      deleteOwn: true,
     });
   });
 
@@ -29048,7 +29041,7 @@ describe("Item", () => {
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: false,
       create: await can(() => itemData.create(viewer, itemValues(null))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(null))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -29283,8 +29276,8 @@ import { withItemFormulas } from "./item.formulas";
 export const itemAccess: ModelAccess = {
   read: { public: true, roles: ["admin"], owner: true },
   create: { public: false, roles: ["admin"], owner: false },
-  write: { public: false, roles: ["admin"], owner: false },
-  delete: { public: false, roles: ["admin"], owner: false },
+  write: { public: false, roles: ["admin"], owner: true },
+  delete: { public: false, roles: ["admin"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -29527,7 +29520,7 @@ export const itemUi: RecordUi<ItemRow> = {
 };
 
 /** Who may delete items: a list's selection offers Delete by it (the server checks again). */
-export const itemDeleteRule: Rule = { public: false, roles: ["admin"], owner: false };
+export const itemDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
 
 
 export const listItems = createServerFn().handler(async () => {
@@ -30685,14 +30678,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "3f96f60a generated",
   "src/db/seed.ts": "71825882 generated",
-  "src/generated/access.test.ts": "4974e9e6 generated",
+  "src/generated/access.test.ts": "6338c554 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "735d9f12 generated",
-  "src/generated/item.ts": "1ddf13f3 generated",
+  "src/generated/item.server.ts": "1b8756e8 generated",
+  "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
@@ -31305,7 +31298,7 @@ describe("Component", () => {
       readOthers: await reads(componentData, viewer, others.id),
       readOwn: await reads(componentData, viewer, own.id),
       create: await can(() => componentData.create(viewer, componentValues(viewer.id))),
-      changeOthers: await can(() => componentData.update(viewer, others.id, componentValues(viewer.id))),
+      changeOthers: await can(() => componentData.update(viewer, others.id, componentValues(stranger.id))),
       changeOwn: await can(() => componentData.update(viewer, own.id, componentValues(viewer.id))),
       deleteOthers: await can(() => componentData.remove(viewer, others.id)),
       deleteOwn: await can(() => componentData.remove(viewer, own.id)),
@@ -31328,7 +31321,7 @@ describe("Component", () => {
       readOthers: await reads(componentData, viewer, others.id),
       readOwn: await reads(componentData, viewer, own.id),
       create: await can(() => componentData.create(viewer, componentValues(viewer.id))),
-      changeOthers: await can(() => componentData.update(viewer, others.id, componentValues(viewer.id))),
+      changeOthers: await can(() => componentData.update(viewer, others.id, componentValues(stranger.id))),
       changeOwn: await can(() => componentData.update(viewer, own.id, componentValues(viewer.id))),
       deleteOthers: await can(() => componentData.remove(viewer, others.id)),
       deleteOwn: await can(() => componentData.remove(viewer, own.id)),
@@ -31336,7 +31329,7 @@ describe("Component", () => {
       readOthers: true,
       readOwn: true,
       create: true,
-      changeOthers: false,
+      changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
       deleteOwn: true,
@@ -31350,7 +31343,7 @@ describe("Component", () => {
       readOthers: await reads(componentData, viewer, others.id),
       readOwn: false,
       create: await can(() => componentData.create(viewer, componentValues(null))),
-      changeOthers: await can(() => componentData.update(viewer, others.id, componentValues(null))),
+      changeOthers: await can(() => componentData.update(viewer, others.id, componentValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => componentData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -31383,7 +31376,7 @@ describe("Incident", () => {
       readOthers: await reads(incidentData, viewer, others.id),
       readOwn: await reads(incidentData, viewer, own.id),
       create: await can(() => incidentData.create(viewer, incidentValues(viewer.id))),
-      changeOthers: await can(() => incidentData.update(viewer, others.id, incidentValues(viewer.id))),
+      changeOthers: await can(() => incidentData.update(viewer, others.id, incidentValues(stranger.id))),
       changeOwn: await can(() => incidentData.update(viewer, own.id, incidentValues(viewer.id))),
       deleteOthers: await can(() => incidentData.remove(viewer, others.id)),
       deleteOwn: await can(() => incidentData.remove(viewer, own.id)),
@@ -31406,7 +31399,7 @@ describe("Incident", () => {
       readOthers: await reads(incidentData, viewer, others.id),
       readOwn: await reads(incidentData, viewer, own.id),
       create: await can(() => incidentData.create(viewer, incidentValues(viewer.id))),
-      changeOthers: await can(() => incidentData.update(viewer, others.id, incidentValues(viewer.id))),
+      changeOthers: await can(() => incidentData.update(viewer, others.id, incidentValues(stranger.id))),
       changeOwn: await can(() => incidentData.update(viewer, own.id, incidentValues(viewer.id))),
       deleteOthers: await can(() => incidentData.remove(viewer, others.id)),
       deleteOwn: await can(() => incidentData.remove(viewer, own.id)),
@@ -31428,7 +31421,7 @@ describe("Incident", () => {
       readOthers: await reads(incidentData, viewer, others.id),
       readOwn: false,
       create: await can(() => incidentData.create(viewer, incidentValues(null))),
-      changeOthers: await can(() => incidentData.update(viewer, others.id, incidentValues(null))),
+      changeOthers: await can(() => incidentData.update(viewer, others.id, incidentValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => incidentData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -31461,7 +31454,7 @@ describe("IncidentUpdate", () => {
       readOthers: await reads(incidentUpdateData, viewer, others.id),
       readOwn: await reads(incidentUpdateData, viewer, own.id),
       create: await can(() => incidentUpdateData.create(viewer, incidentUpdateValues(viewer.id))),
-      changeOthers: await can(() => incidentUpdateData.update(viewer, others.id, incidentUpdateValues(viewer.id))),
+      changeOthers: await can(() => incidentUpdateData.update(viewer, others.id, incidentUpdateValues(stranger.id))),
       changeOwn: await can(() => incidentUpdateData.update(viewer, own.id, incidentUpdateValues(viewer.id))),
       deleteOthers: await can(() => incidentUpdateData.remove(viewer, others.id)),
       deleteOwn: await can(() => incidentUpdateData.remove(viewer, own.id)),
@@ -31484,7 +31477,7 @@ describe("IncidentUpdate", () => {
       readOthers: await reads(incidentUpdateData, viewer, others.id),
       readOwn: await reads(incidentUpdateData, viewer, own.id),
       create: await can(() => incidentUpdateData.create(viewer, incidentUpdateValues(viewer.id))),
-      changeOthers: await can(() => incidentUpdateData.update(viewer, others.id, incidentUpdateValues(viewer.id))),
+      changeOthers: await can(() => incidentUpdateData.update(viewer, others.id, incidentUpdateValues(stranger.id))),
       changeOwn: await can(() => incidentUpdateData.update(viewer, own.id, incidentUpdateValues(viewer.id))),
       deleteOthers: await can(() => incidentUpdateData.remove(viewer, others.id)),
       deleteOwn: await can(() => incidentUpdateData.remove(viewer, own.id)),
@@ -31492,7 +31485,7 @@ describe("IncidentUpdate", () => {
       readOthers: true,
       readOwn: true,
       create: true,
-      changeOthers: false,
+      changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
       deleteOwn: true,
@@ -31506,7 +31499,7 @@ describe("IncidentUpdate", () => {
       readOthers: await reads(incidentUpdateData, viewer, others.id),
       readOwn: false,
       create: await can(() => incidentUpdateData.create(viewer, incidentUpdateValues(null))),
-      changeOthers: await can(() => incidentUpdateData.update(viewer, others.id, incidentUpdateValues(null))),
+      changeOthers: await can(() => incidentUpdateData.update(viewer, others.id, incidentUpdateValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => incidentUpdateData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -31531,7 +31524,7 @@ describe("Maintenance", () => {
       readOthers: await reads(maintenanceData, viewer, others.id),
       readOwn: await reads(maintenanceData, viewer, own.id),
       create: await can(() => maintenanceData.create(viewer, maintenanceValues(viewer.id))),
-      changeOthers: await can(() => maintenanceData.update(viewer, others.id, maintenanceValues(viewer.id))),
+      changeOthers: await can(() => maintenanceData.update(viewer, others.id, maintenanceValues(stranger.id))),
       changeOwn: await can(() => maintenanceData.update(viewer, own.id, maintenanceValues(viewer.id))),
       deleteOthers: await can(() => maintenanceData.remove(viewer, others.id)),
       deleteOwn: await can(() => maintenanceData.remove(viewer, own.id)),
@@ -31554,7 +31547,7 @@ describe("Maintenance", () => {
       readOthers: await reads(maintenanceData, viewer, others.id),
       readOwn: await reads(maintenanceData, viewer, own.id),
       create: await can(() => maintenanceData.create(viewer, maintenanceValues(viewer.id))),
-      changeOthers: await can(() => maintenanceData.update(viewer, others.id, maintenanceValues(viewer.id))),
+      changeOthers: await can(() => maintenanceData.update(viewer, others.id, maintenanceValues(stranger.id))),
       changeOwn: await can(() => maintenanceData.update(viewer, own.id, maintenanceValues(viewer.id))),
       deleteOthers: await can(() => maintenanceData.remove(viewer, others.id)),
       deleteOwn: await can(() => maintenanceData.remove(viewer, own.id)),
@@ -31562,7 +31555,7 @@ describe("Maintenance", () => {
       readOthers: true,
       readOwn: true,
       create: true,
-      changeOthers: false,
+      changeOthers: true,
       changeOwn: true,
       deleteOthers: false,
       deleteOwn: true,
@@ -31576,7 +31569,7 @@ describe("Maintenance", () => {
       readOthers: await reads(maintenanceData, viewer, others.id),
       readOwn: false,
       create: await can(() => maintenanceData.create(viewer, maintenanceValues(null))),
-      changeOthers: await can(() => maintenanceData.update(viewer, others.id, maintenanceValues(null))),
+      changeOthers: await can(() => maintenanceData.update(viewer, others.id, maintenanceValues(stranger.id))),
       changeOwn: false,
       deleteOthers: await can(() => maintenanceData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -31904,13 +31897,8 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runIdentified, runIdentifiedMany } from "./identified.server";
 
-/** Who may run the "identified" action: whoever may edit the incident, among the roles it allows, and may create what it adds. */
-export const identifiedAccess: Rule = {
-  public: false,
-  roles: ["admin", "staff"],
-  owner: false,
-  among: ["admin", "staff"],
-};
+/** Who may run the "identified" action: whoever may edit the incident, and may create what it adds. */
+export const identifiedAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "identified" action fits the incident: it is offered and allowed only then. */
 export function identifiedFits(row: { status?: unknown }): boolean {
@@ -32040,13 +32028,8 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runMonitoring, runMonitoringMany } from "./monitoring.server";
 
-/** Who may run the "monitoring" action: whoever may edit the incident, among the roles it allows, and may create what it adds. */
-export const monitoringAccess: Rule = {
-  public: false,
-  roles: ["admin", "staff"],
-  owner: false,
-  among: ["admin", "staff"],
-};
+/** Who may run the "monitoring" action: whoever may edit the incident, and may create what it adds. */
+export const monitoringAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "monitoring" action fits the incident: it is offered and allowed only then. */
 export function monitoringFits(row: { status?: unknown }): boolean {
@@ -32177,13 +32160,8 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runResolve, runResolveMany } from "./resolve.server";
 
-/** Who may run the "resolve" action: whoever may edit the incident, among the roles it allows, and may create what it adds. */
-export const resolveAccess: Rule = {
-  public: false,
-  roles: ["admin", "staff"],
-  owner: false,
-  among: ["admin", "staff"],
-};
+/** Who may run the "resolve" action: whoever may edit the incident, and may create what it adds. */
+export const resolveAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "resolve" action fits the incident: it is offered and allowed only then. */
 export function resolveFits(row: { status?: unknown }): boolean {
@@ -33259,7 +33237,7 @@ import type { ComponentValues } from "./component";
 export const componentAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
   create: { public: false, roles: ["admin", "staff"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
@@ -33922,7 +33900,7 @@ export const incidentAccess: ModelAccess = {
     where: { status: ["investigating", "identified", "monitoring", "resolved"] },
   },
   create: { public: false, roles: ["admin", "staff"], owner: false },
-  write: { public: false, roles: ["admin", "staff"], owner: false },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
@@ -34498,7 +34476,7 @@ import type { IncidentUpdateValues } from "./incident-update";
 export const incidentUpdateAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
   create: { public: false, roles: ["admin", "staff"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
@@ -34972,7 +34950,7 @@ import type { MaintenanceValues } from "./maintenance";
 export const maintenanceAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
   create: { public: false, roles: ["admin", "staff"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
@@ -38756,11 +38734,7 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  {
-    value: "admin",
-    label: "Admin",
-    description: "Runs the status page and the team.",
-  },
+  { value: "admin", label: "Admin" },
   {
     value: "staff",
     label: "Staff",
@@ -39574,30 +39548,30 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "b3c07d9b generated",
   "src/db/seed.ts": "a04b6693 generated",
-  "src/generated/access.test.ts": "a01e5c02 generated",
+  "src/generated/access.test.ts": "d35ee30f generated",
   "src/generated/actions/identified.server.ts": "ab98f807 generated",
-  "src/generated/actions/identified.ts": "4baad691 generated",
+  "src/generated/actions/identified.ts": "267f914e generated",
   "src/generated/actions/monitoring.server.ts": "30e18d35 generated",
-  "src/generated/actions/monitoring.ts": "44cd9703 generated",
+  "src/generated/actions/monitoring.ts": "d0f21008 generated",
   "src/generated/actions/resolve.server.ts": "4e132840 generated",
-  "src/generated/actions/resolve.ts": "d0b27f45 generated",
+  "src/generated/actions/resolve.ts": "a587d798 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "f6ed2ad7 generated",
+  "src/generated/component.server.ts": "4665205d generated",
   "src/generated/component.ts": "d63a4c5b generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "258b95de generated",
+  "src/generated/incident-update.server.ts": "d6538db8 generated",
   "src/generated/incident-update.ts": "83130019 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "7f53fe63 generated",
+  "src/generated/incident.server.ts": "26ba2650 generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "9d3ab8d6 generated",
+  "src/generated/maintenance.server.ts": "3b2b1fa6 generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "8a9bce72 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
@@ -39684,7 +39658,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sign-in.tsx": "86edddef generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/activity.tsx": "fb17a3c3 generated",
-  "src/routes/team/index.tsx": "f6b29206 generated",
+  "src/routes/team/index.tsx": "9100f9bd generated",
   "src/routes/updates/$id.tsx": "0fffa578 generated",
   "src/routes/updates/index.tsx": "40f4b24a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",

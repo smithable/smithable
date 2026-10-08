@@ -33,7 +33,7 @@ Every change, whether it comes from the CLI, Studio, AI or a plugin, goes throug
 
 The manifest describes application functionality in technology-neutral terms. It never contains React, Drizzle, Tailwind, file paths, CSS or visible copy.
 
-v0.1 covers: `app`, `models` (fields, relations, formulas), `access` exceptions, `actions`, `outgoing` (who is told when something happens to a record: mail, later a signed call; [design/integrations.md §4](design/integrations.md)), `queries`, `pages`, `navigation`, `jobs`. Incoming integrations and external endpoints come later. Roles, access defaults and everything public are defined in `smithable.auth.yml`. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
+v0.1 covers: `app`, `models` (fields, relations, formulas), `actions`, `outgoing` (who is told when something happens to a record: mail, later a signed call; [design/integrations.md §4](design/integrations.md)), `queries`, `pages`, `navigation`, `jobs`. Incoming integrations and external endpoints come later. Roles, what each may do, and everything public are defined in `smithable.auth.yml`; `smithable.yml` names no role. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
 
 ### 2.2 Style: neat by default, explicit when needed
 
@@ -60,9 +60,6 @@ models:
         min: 0
         description: Maximum outstanding balance before orders are held.
       orders: Order[]                      # has many (inverse of Order.customer)
-    access:                                # only exceptions to the defaults (§3.1)
-      write: [sales]
-      delete: [admin]
 
   Order:
     fields:
@@ -193,8 +190,8 @@ signIn:
   selfSignUp: true                 # false = only invited email addresses
 defaultAccess: private             # shared | private; required when sign-in is enabled
 roles:
-  admin: { description: Full access, manages users. }
-  member: { description: A regular user. }
+  admin: all                       # the whole app; always
+  member: { description: A regular user., pages: all, create: all }   # beyond the record rule (below)
 defaultRole: member
 admins: [owner@acme.com]           # bootstrap: these get admin on first sign-in
 user:
@@ -224,10 +221,10 @@ Every model gets an automatic **owner** field, set to the user who created the r
 | Edit and delete | The owner | The owner |
 | Everything | Admins | Admins |
 
-- **Only exceptions are written down.** An `access:` entry in `smithable.yml` on a model, page or action replaces the default for the operations it lists, for example `access: { write: [sales], delete: [admin] }`. Admins can always do everything.
-- **Pages** require sign-in by default. Public pages are listed in the `public` section; admin-only pages say `access: [admin]`.
+- **Who may do what is said in this file, in full** ([design/access-in-auth.md](design/access-in-auth.md), 2026-10-09). `defaultAccess` is the record rule for everyone who signs in: with `shared` everyone reads every record, with `private` their own; everyone changes and deletes their own. Nothing else is implied: a role's block, shaped like `public`, lists the pages it opens, the models it adds to (`create`), reads for everyone (`read`, with `private`), changes or deletes for everyone (`write`, `delete`), and the custom actions it runs (`actions`); each is a list or `all`. `admin: all` is written out, and administrators are always `all`. `smithable.yml` names no role: `access` on a model or a page and `allow` on an action are errors that say where it went. The operation `grant <role> <what> <names…|all|none>` sets a grant.
+- **Pages** require sign-in by default. Public pages are listed in the `public` section; a role opens the pages its `pages` grant names, and `all` is every page but the administrators' (the users page, a data page), which a role gets by naming them.
 - **A reference shows its title, nothing else.** A viewer who may read a record also sees the display title of each record it refers to (an order shows its customer's name), even without read access to that record; no other field of it. A search through a relation matches that title only, among the related records the viewer may read. A stricter per-model rule can come when someone needs it.
-- **Standard actions** follow the model's write access. Custom actions default to signed-in users, and `allow:` narrows that.
+- **Standard actions** follow the model's write access: whoever may change the record may run them. Custom actions are run by the roles whose `actions` grant names them.
 - **Without sign-in** (`signIn: none`), only what the `public` section lists is reachable at all.
 - **What programs may reach is said here too.** The `api` block, beside `public`, lists the models and standard actions offered to other programs with a key (a list, or `all` with `except`), so everything an app exposes is read in one file. Listing is not granting: a key is made in the running app with a role, and goes through the same access rules as a person with that role. Built in steps ([design/integrations.md](design/integrations.md)): the block, its checks and `setApi` are in core; the routes, the keys and the tools for assistants follow. What an assistant gets of it is described by core too ([design/assistant.md](design/assistant.md) §3, `assistantOffer`): a few tools that are the same for every app (find, measure, read, add, change, run, describe), a summary of the app with one line per kind of record, and what each field can be matched by, all worked out for one caller (a role, or a visitor without a key) so that nothing the caller may not reach is even named. The adapter generates what runs them; a test holds the size of every starter's tools and summary under a budget. Who gets the assistant inside the app is said in the same file: the `assistant` block (`for`: roles, `signed-in` or `anyone`; `may`: `read` or `change`), set by `setAssistant`; visitors are answered by the app's wording rules only, never by a model.
 - **A public condition** (`Post: { where: { status: published } }`) is applied where the read scope is decided, in the generated data functions' `readable(viewer)`, so every list, search, reference title, landing card and picture follows it without knowing about it; an owner reads their own records or the public ones, a role that may read the model reads everything. The generated access test proves each condition: a visitor reads a fitting record and not another. The auth companion follows a rename of the field and refuses its removal or the loss of the value.
@@ -335,7 +332,7 @@ It is checked against a JSON Schema like the other companions. It has structured
 
 The **only** way to change application semantics programmatically.
 
-- Each operation (`addModel`, `addField`, `changeField`, `renameField`, `removeField`, `addRelation`, `addPage`, `setAccess`, `addAction`, `addExample`, …) has a JSON Schema for its arguments. The same schema is used for CLI parsing, Studio forms and constrained AI output.
+- Each operation (`addModel`, `addField`, `changeField`, `renameField`, `removeField`, `addRelation`, `addPage`, `grant`, `addAction`, `addExample`, …) has a JSON Schema for its arguments. The same schema is used for CLI parsing, Studio forms and constrained AI output.
 - An operation is a pure function `manifest → manifest` plus validation. Side effects (regeneration, migration) follow from the changed manifest, not from the operation itself.
 - Applied operations are appended to an **operation log** (`.smithable/oplog.jsonl`, committed). Operations also report **effects**, such as a rename, so the migration step can rename a column instead of dropping and re-adding it.
 - **Edits preserve formatting.** Operations never re-serialize a file: a source editor splices text at the positions the YAML parser reports, so comments, alignment, flow style and blank lines outside the edited entry stay byte-for-byte identical. After every edit the result is re-parsed, and the operation is refused if the spec or content file would become invalid.

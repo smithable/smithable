@@ -77,7 +77,7 @@ Strategy: prove the core loop (**spec → operation → regenerated app → undo
 - Automatic owner field on every model, `ownedBy`, and `access` exceptions on models, actions and pages, validated against the defined roles.
 - One generated access layer in the kit that filters every query and write, including row-level filtering by owner. Generated tests prove the effective access per model and role.
 - Validator warnings for risky combinations (shared access with open sign-up; public read of personal-data fields).
-- `setAccess` operation.
+- `grant` operation (`setAccess` until 2026-10-09, when who may do what moved to the auth file).
 
 **Exit:** sign in with a real Google account works locally. Dev sign-in works offline and is absent from production builds. A `sales` user cannot delete customers and an `admin` can. In the invoicing app, one user cannot see another user's invoices, even by guessing URLs or IDs. In the booking app, the public schedule works without signing in. Generated tests prove all of this.
 

@@ -5,12 +5,17 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
-    description: Runs the team, its keys and the data.
+  admin: all
   member:
     description: A team member who works with the tasks and notes.
+    pages: [admin]                   # the data page; the team page is the administrators'
+    create: all
+    write: all
+    delete: all
   assistant:
     description: "The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes."
+    create: [Task, Note]
+    write: [Task, Note]
 defaultRole: member
 # What programs and assistants reach with a key made on the team page. A key acts with its role:
 # give an assistant's key the assistant role, which reads everything, adds and changes tasks and

@@ -16,6 +16,7 @@ import { type Condition, conditionFits, type SpecIR, USER_MODEL } from "./ir.js"
 
 export type { Condition } from "./ir.js";
 
+import { capitalize } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { FIELD_NAME_PATTERN, nameRule } from "./sections/names.js";
 import { didYouMean } from "./suggest.js";
@@ -119,9 +120,22 @@ export interface SignInIR {
   selfSignUp: boolean;
 }
 
+/** Names a grant lists, or `all`. */
+export type GrantNames = "all" | string[];
+export const GRANT_KEYS = ["pages", "read", "create", "write", "delete", "actions"] as const;
+export type GrantKey = (typeof GRANT_KEYS)[number];
+/**
+ * What a role may do beyond the record rule (docs/design/access-in-auth.md): the pages it opens,
+ * the models it adds to, reads (with private access), changes and deletes for anyone, and the
+ * custom actions it runs. `all` on the role is every grant; `all` in a grant is every name.
+ */
+export type RoleGrants = Partial<Record<GrantKey, GrantNames>>;
+
 export interface RoleIR {
   name: string;
   description?: string;
+  /** `all` for the whole app (always admin's), or the role's grants, each absent when nothing. */
+  grants: "all" | RoleGrants;
 }
 
 export const AUTH_VERSION = "0.1";
@@ -156,7 +170,7 @@ export function validateAuth(
   const auth: AuthIR = {
     signIn: { providers: ["google"], selfSignUp: true },
     defaultAccess: "private",
-    roles: [{ name: "admin" }],
+    roles: [{ name: "admin", grants: "all" }],
     defaultRole: "admin",
     admins: [],
     public: { pages: [], read: [], create: [], readWhere: {} },
@@ -239,6 +253,8 @@ export function validateAuth(
 
   const roles = byKey.get("roles");
   const roleNodes = new Map<string, At>();
+  const grantNodes: { role: string; key: GrantKey; at: At; items: { name: string; at: At }[] }[] =
+    [];
   if (roles) {
     for (const { key, keyNode, value } of mapEntries(ctx, roles.value, `"roles"`) ?? []) {
       roleNodes.set(key, keyNode);
@@ -252,14 +268,38 @@ export function validateAuth(
         );
         continue;
       }
-      const role: RoleIR = { name: key };
-      if (value !== null && !(isScalar(value) && value.value === null)) {
-        const where = `role "${key}"`;
+      const role: RoleIR = { name: key, grants: key === "admin" ? "all" : {} };
+      const where = `role "${key}"`;
+      if (isScalar(value) && value.value === "all") {
+        role.grants = "all";
+      } else if (isScalar(value) && value.value !== null) {
+        ctx.error(
+          value,
+          "invalid-value",
+          `${capitalize(where)} is "all" (the whole app) or a block: description, pages, read, create, write, delete, actions.`,
+        );
+      } else if (value !== null && !isScalar(value)) {
         for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
-          allowed: ["description"],
+          allowed: ["description", ...GRANT_KEYS],
         })) {
-          const description = readString(ctx, entry.value, `The description of ${where}`);
-          if (description !== undefined) role.description = description;
+          if (entry.key === "description") {
+            const description = readString(ctx, entry.value, `The description of ${where}`);
+            if (description !== undefined) role.description = description;
+            continue;
+          }
+          const grant = entry.key as GrantKey;
+          if (key === "admin") {
+            ctx.error(
+              entry.keyNode,
+              "invalid-key",
+              `Administrators do everything: "admin" is "all", or a block with only a description.`,
+            );
+            continue;
+          }
+          const read = readGrant(ctx, entry.value, `"${grant}" of ${where}`);
+          if (!read) continue;
+          (role.grants as RoleGrants)[grant] = read.names;
+          grantNodes.push({ role: key, key: grant, at: entry.keyNode, items: read.items });
         }
       }
       if (key === "admin") auth.roles[0] = role;
@@ -268,7 +308,7 @@ export function validateAuth(
   }
   // "admin" always exists, and so does a role for everyone else: "member" when none is declared
   // (also when "roles" lists only admin, which would otherwise make every newcomer one).
-  if (!auth.roles.some((r) => r.name !== "admin")) auth.roles.push({ name: "member" });
+  if (!auth.roles.some((r) => r.name !== "admin")) auth.roles.push({ name: "member", grants: {} });
   const roleNames = auth.roles.map((r) => r.name);
 
   const defaultRole = byKey.get("defaultRole");
@@ -401,38 +441,11 @@ export function validateAuth(
           "Replace it with a real address (smithable op setAdmins you@your-domain).",
         );
   }
-  if (ir) checkAgainstSpec(ctx, auth, ir, publicNodes, defaultAccess?.value ?? root);
-  if (ir && apiNodes) checkApi(ctx, auth, ir, apiNodes);
-  // A standard action follows its model's write access: "allow" narrows it and never widens it,
-  // so a role there that may not edit the record still cannot run the action.
-  for (const action of ir?.actions ?? []) {
-    const model = !action.custom && ir?.models.find((m) => m.name === action.on);
-    if (!model || action.custom) continue;
-    const write = modelAccess(model, auth).write;
-    // Neither by role nor as an owner: the action is out of their reach.
-    // A related record it adds needs the right to create one, too.
-    for (const add of action.add ?? []) {
-      const added = ir?.models.find((m) => m.name === add.model);
-      const create = added && modelAccess(added, auth).create;
-      if (!create || create.public) continue;
-      for (const role of action.allow ?? [])
-        if (roleNames.includes(role) && !create.roles.includes(role))
-          ctx.warning(
-            roleNodes.get(role) ?? roles?.keyNode,
-            "action-role-cannot-create",
-            `The action "${action.name}" allows ${role} and adds a ${add.model}, but ${role} may not create ${add.model} records, so ${role} still cannot run it.`,
-            `Let ${role} create ${add.model} (its "access" in smithable.yml), or take ${role} out of the action's "allow".`,
-          );
-    }
-    for (const role of action.allow ?? [])
-      if (!write.roles.includes(role) && !write.owner && roleNames.includes(role))
-        ctx.warning(
-          roleNodes.get(role) ?? roles?.keyNode,
-          "action-role-cannot-write",
-          `The action "${action.name}" allows ${role}, but ${role} may not edit ${model.name} records, so ${role} still cannot run it.`,
-          `Let ${role} edit ${model.name} (its "access" in smithable.yml), or take ${role} out of the action's "allow".`,
-        );
+  if (ir) {
+    checkAgainstSpec(ctx, auth, ir, publicNodes, defaultAccess?.value ?? root);
+    checkGrants(ctx, auth, ir, grantNodes, roleNodes, roles?.keyNode ?? root);
   }
+  if (ir && apiNodes) checkApi(ctx, auth, ir, apiNodes);
   return done();
 }
 
@@ -703,6 +716,21 @@ function readSignIn(ctx: ParseContext, node: ParsedNode | null): SignInIR {
   return signIn;
 }
 
+/** A role's grant: `all`, or a list of names. */
+function readGrant(
+  ctx: ParseContext,
+  node: At,
+  what: string,
+): { names: GrantNames; items: { name: string; at: At }[] } | undefined {
+  if (isScalar(node) && node.value === "all") return { names: "all", items: [] };
+  if (!isSeq(node)) {
+    ctx.error(node, "expected-list", `${what} is "all" or a list of names, like [a, b].`);
+    return undefined;
+  }
+  const items = readNameList(ctx, node, what);
+  return { names: items.map((i) => i.name), items };
+}
+
 /**
  * The models anyone may read: names, or a name with the records it is limited to,
  * `Post: { where: { status: published } }`.
@@ -748,6 +776,66 @@ function readPublicRead(
     names.push({ name: entry.key, at: entry.keyNode });
   }
   return names;
+}
+
+/**
+ * A role's grants name what exists: pages, models, and custom actions (a standard action
+ * follows the model's write access). A role that can open no page is warned about, and so is
+ * "read" under shared access, where everyone who signs in reads every record already.
+ */
+function checkGrants(
+  ctx: ParseContext,
+  auth: AuthIR,
+  ir: SpecIR,
+  grantNodes: { role: string; key: GrantKey; at: At; items: { name: string; at: At }[] }[],
+  roleNodes: Map<string, At>,
+  at: At,
+): void {
+  const pages = ir.pages.map((p) => p.id);
+  const models = ir.models.map((m) => m.name);
+  const custom = ir.actions.filter((a) => a.custom).map((a) => a.name);
+  for (const { role, key, at, items } of grantNodes) {
+    const names = key === "pages" ? pages : key === "actions" ? custom : models;
+    const kind = key === "pages" ? "page" : key === "actions" ? "custom action" : "model";
+    for (const { name, at: itemAt } of items) {
+      if (names.includes(name)) continue;
+      if (key === "actions" && ir.actions.some((a) => a.name === name)) {
+        ctx.error(
+          itemAt,
+          "standard-action-grant",
+          `"${name}" is a standard action: it is run by whoever may change the record, so it is not granted by name.`,
+          `Grant ${role} "write" on its model instead.`,
+        );
+        continue;
+      }
+      ctx.error(
+        itemAt,
+        `unknown-${kind.replace(" ", "-")}`,
+        `There is no ${kind} named "${name}" in smithable.yml.`,
+        didYouMean(name, names),
+      );
+    }
+    if (key === "read" && auth.defaultAccess === "shared")
+      ctx.warning(
+        at,
+        "read-with-shared",
+        `Everyone who signs in reads every record under shared access, so "read" of ${role} says nothing.`,
+        `Remove it, or use "defaultAccess: private" and grant reading to the roles that read everyone's records.`,
+      );
+  }
+  if (auth.signIn === "none") return;
+  const closed = ir.pages.filter((p) => !auth.public.pages.includes(p.id));
+  for (const role of auth.roles) {
+    if (role.grants === "all" || !closed.length) continue;
+    const opens = role.grants.pages === "all" || (role.grants.pages?.length ?? 0) > 0;
+    if (!opens)
+      ctx.warning(
+        roleNodes.get(role.name) ?? at,
+        "role-opens-nothing",
+        `${role.name} can open no page: a role opens only the pages its "pages" lists.`,
+        `Add "pages: all" (or a list of pages) under roles.${role.name} in smithable.auth.yml.`,
+      );
+  }
 }
 
 /** What the public section names must exist, and the spec must fit the sign-in setting. */
@@ -849,7 +937,7 @@ function checkAgainstSpec(
           accessAt,
           "recipient-cannot-read",
           `"${o.name}" mails every ${r.role} about ${model.name} records, which ${r.role} may not read: the mail would tell them what the record holds.`,
-          `Let ${r.role} read ${model.name} (access: { read: [...] } on the model), or mail another role.`,
+          `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or mail another role.`,
         );
     }
   }

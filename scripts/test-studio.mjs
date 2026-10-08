@@ -409,16 +409,15 @@ try {
       await status.getByText(/^Undid: .*mergeCustomers/).waitFor({ timeout: 60000 });
     },
   );
-  await step("access: only admins may create orders", async () => {
+  await step("access: sales may add orders, and nothing else", async () => {
     await change("Who can do what");
-    await page.getByLabel("Who can").selectOption({ label: "Create order records" });
-    await page.getByRole("checkbox", { name: "admin" }).check();
-    await page.getByRole("button", { name: "Set access" }).click();
-    await status
-      .getByText("Only admins can add orders", { exact: true })
-      .waitFor({ timeout: 60000 });
+    await page.getByLabel("Role", { exact: true }).selectOption("sales");
+    await page.getByLabel("What", { exact: true }).selectOption("create");
+    await page.getByRole("checkbox", { name: "Order" }).check();
+    await page.getByRole("button", { name: "Grant" }).click();
+    await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 });
     await page.getByRole("tab", { name: "What it does" }).click();
-    await page.getByText("Only admins can add orders.").waitFor();
+    await page.getByText(/adds orders/).waitFor();
   });
 
   const project = async () => (await fetch(`${base}/api/project`)).json();
@@ -702,26 +701,19 @@ try {
       await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
       await customers.getByRole("button", { name: "Save label" }).click();
       await trace.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
-      // Who can: a record's properties, a chip per role.
+      // Who can: a record's properties, a chip per role; a chip grants the role the operation
+      // on this kind of record in the auth file, and again takes it back. Each one's own
+      // records stay theirs, and seeing is the record rule's under shared access.
       await customers.getByRole("button", { name: "Customers", exact: true }).click();
       await customers.getByRole("button", { name: "Delete: sales" }).click();
       await trace
-        .getByText(/delete customers/i)
+        .getByText(/sales may delete everyone's customers/i)
         .first()
         .waitFor({ timeout: 60000 });
-      // "Their own" beside a role that may see them all says so, in the chips and the change
-      // (finding 9); Default takes the row back.
-      await customers.getByRole("button", { name: "See: their own" }).click();
+      await customers.getByText("and each one their own").first().waitFor();
+      await customers.getByRole("button", { name: "Delete: sales" }).click();
       await trace
-        .getByText(
-          "Sales users and admins can see all customers; everyone else only the ones they own",
-        )
-        .first()
-        .waitFor({ timeout: 60000 });
-      await customers.getByText("sales users may see all of them").waitFor();
-      await customers.getByRole("button", { name: "See: default" }).click();
-      await trace
-        .getByText("Everyone with access can see customers again")
+        .getByText("sales may delete only their own records")
         .first()
         .waitFor({ timeout: 60000 });
       // Adding a field: the Change tab's form, with the record filled in.
@@ -1203,7 +1195,7 @@ try {
     await status.getByText("Edit smithable.yml").waitFor({ timeout: 60000 });
   });
   await step("the companion files are edited the same way, each with its own checks", async () => {
-    // The auth file: a role the spec names cannot go; a role added is saved as one change.
+    // The auth file: a grant must name a model there is; a role added is saved as one change.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.auth.yml");
     const auth = page.getByLabel("smithable.auth.yml");
     const text = await auth.evaluate((e) => e.value);
@@ -1212,17 +1204,18 @@ try {
       auth.evaluate((e, value) => {
         e.value = value;
       }, to);
-    await write(text.replace(/^ {2}sales:.*\n/m, ""));
+    if (!text.includes("    write: all")) throw new Error("no write grant to break");
+    await write(text.replace("    write: all", "    write: [Custmer]"));
     await page
       .getByRole("list", { name: "Problems" })
-      .getByText(/smithable.yml line \d+: .*sales/)
+      .getByText(/Line \d+: There is no model named "Custmer"/)
       .first()
       .waitFor();
     if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
-      throw new Error("Save is enabled with a role the spec needs gone");
+      throw new Error("Save is enabled with a grant that names no model");
     await write(
       text
-        .replace("  sales:", "  support: { description: Answers questions. }\n  sales:")
+        .replace("  sales:", "  support: { description: Answers questions., pages: all }\n  sales:")
         .replace("admins:", "defaultRole: sales\nadmins:"),
     );
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
@@ -1240,26 +1233,24 @@ try {
     await page.keyboard.press("Escape");
     await write(
       text
-        .replace("  sales:", "  support: { description: Answers questions. }\n  sales:")
+        .replace("  sales:", "  support: { description: Answers questions., pages: all }\n  sales:")
         .replace("admins:", "defaultRole: sales\nadmins:"),
     );
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await status.getByText("Edit smithable.auth.yml").waitFor({ timeout: 60000 });
-    // The spec's editor offers the roles as they are now, the new one among them.
-    await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
-    const spec = page.getByLabel("smithable.yml");
-    const specText = await spec.evaluate((e) => e.value);
-    const at = specText.indexOf("      write: [sales]");
-    if (at < 0) throw new Error("no access line to complete on");
-    await spec.focus();
-    await spec.evaluate((e, to) => e.setSelectionRange(to), at + "      write: [".length);
-    await page.keyboard.type("sup");
-    await page.locator(".cm-tooltip-autocomplete").getByText("support", { exact: true }).waitFor();
+    // A role's grant is completed with the spec's names: a kind of record for "create".
+    const saved = await auth.evaluate((e) => e.value);
+    // (sales may add orders since the access step: the grant is a list.)
+    const createAt = saved.indexOf("    create: [Order]");
+    if (createAt < 0) throw new Error("no create grant to complete on");
+    await write(saved.replace("    create: [Order]", "    create: ["));
+    await auth.focus();
+    await auth.evaluate((e, to) => e.setSelectionRange(to), createAt + "    create: [".length);
+    await page.keyboard.type("Or");
+    await page.locator(".cm-tooltip-autocomplete").getByText("Order", { exact: true }).waitFor();
     await page.keyboard.press("Escape");
-    await spec.evaluate((e, value) => {
-      e.value = value;
-    }, specText);
+    await write(saved);
     // The context file is offered too (the test project has one; a project without starts it
     // from its first line), with its own checks.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.context.yml");
@@ -1281,7 +1272,7 @@ try {
     await page.getByRole("tab", { name: "Last change" }).click();
     await page
       .getByLabel("Last change")
-      .getByText("+  support: { description: Answers questions. }")
+      .getByText("+  support: { description: Answers questions., pages: all }")
       .waitFor();
   });
   await step("any operation can be applied from a form built from its schema", async () => {

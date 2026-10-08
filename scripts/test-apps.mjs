@@ -3591,10 +3591,10 @@ function operationsFlow(dir) {
     const refused = smithable(dir, "op", "setPackage", "react", "19.0.0");
     if (refused.code === 0) throw new Error("setPackage react was accepted");
   });
-  step("op setAccess changes who may do what; the access tests follow; undo reverts it", () => {
+  step("op grant changes who may do what; the access tests follow; undo reverts it", () => {
     const data = join(dir, "src/generated/customer.server.ts");
-    const salesDelete = 'delete: { public: false, roles: ["admin", "sales"], owner: false }';
-    expectOk(smithable(dir, "op", "setAccess", "model:Customer.delete", "admin", "sales"));
+    const salesDelete = 'delete: { public: false, roles: ["admin", "sales"], owner: true }';
+    expectOk(smithable(dir, "op", "grant", "sales", "delete", "Customer"));
     if (!readFileSync(data, "utf8").includes(salesDelete)) throw new Error("rule not regenerated");
     run("pnpm", ["test"], dir);
     expectOk(smithable(dir, "undo"));

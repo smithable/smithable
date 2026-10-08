@@ -1,6 +1,6 @@
 // The names an operation's argument can take in a spec, from its `x-smithable` annotation: one
 // answer for Studio's and Builder's forms and the command line's completion.
-import { ACCESS_OPERATIONS, type SpecIR } from "./ir.js";
+import type { SpecIR } from "./ir.js";
 import { humanize } from "./naming.js";
 import type { ArgRef } from "./operation.js";
 import { pageModel } from "./patterns.js";
@@ -31,28 +31,18 @@ export function namesFor(
         m,
         humanize(m),
       ]);
-    case "accessTarget":
-      return [
-        ...ir.models.flatMap((m) =>
-          ACCESS_OPERATIONS.map((op): [string, string] => [
-            `model:${m.name}.${op}`,
-            `${humanize(op)} ${humanize(m.name).toLowerCase()} records`,
-          ]),
-        ),
-        ...ir.pages.map((p): [string, string] => [
-          `page:${p.id}`,
-          `Open the ${humanize(p.id).toLowerCase()} page`,
-        ]),
-        ...ir.actions.map((a): [string, string] => [`action:${a.name}`, humanize(a.name)]),
-      ];
-    case "role": {
-      // A record's owner is a rule for reading, changing and deleting records, not creating them.
-      const target = ref.target ? one(ref.target) : undefined;
-      const owner = !ref.target || (target?.startsWith("model:") && !target.endsWith(".create"));
-      return [...roles, ...(owner ? ["owner"] : [])].map((r) => [
-        r,
-        r === "owner" ? "the record's owner" : r,
-      ]);
+    case "role":
+      return roles.map((r) => [r, r]);
+    case "grantNames": {
+      const what = one(ref.what);
+      if (what === "pages") return ir.pages.map((p): [string, string] => [p.id, humanize(p.id)]);
+      if (what === "actions")
+        return ir.actions
+          .filter((a) => a.custom)
+          .map((a): [string, string] => [a.name, humanize(a.name)]);
+      return ["read", "create", "write", "delete"].includes(what ?? "")
+        ? ir.models.map((m): [string, string] => [m.name, humanize(m.name)])
+        : [];
     }
     case "field":
       return (modelOf(ref)?.fields ?? []).map((f) => [f.name, humanize(f.name)]);

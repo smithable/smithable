@@ -17,7 +17,6 @@ models:
       kind: general | favorite | archived      # the first value is the default
       link: url
       addedOn: date! = TODAY()
-    access: { create: [admin], write: [admin], delete: [admin] }
 
 pages:
   home:

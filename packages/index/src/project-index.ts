@@ -345,14 +345,7 @@ function summary(ir: SpecIR, concept: string): string {
     case "model": {
       const model = ir.models.find((m) => m.name === name);
       if (!model) return "";
-      const extra = [
-        model.ownedBy ? `owned by ${model.ownedBy}` : "",
-        model.access
-          ? `access: ${Object.entries(model.access)
-              .map(([op, roles]) => `${op} ${roles.join("/")}`)
-              .join(", ")}`
-          : "",
-      ].filter(Boolean);
+      const extra = [model.ownedBy ? `owned by ${model.ownedBy}` : ""].filter(Boolean);
       return `Model ${name} { ${model.fields.map((f) => `${f.name}: ${fieldSummary(f)}`).join(", ")} }${extra.length ? `; ${extra.join("; ")}` : ""}`;
     }
     case "field": {
@@ -366,7 +359,7 @@ function summary(ir: SpecIR, concept: string): string {
       if (!action) return "";
       const list = (fields: FieldIR[]) =>
         fields.map((f) => `${f.name}: ${fieldSummary(f)}`).join(", ");
-      return `Custom action ${name}(${list(action.input)})${action.output ? ` → { ${list(action.output)} }` : ""}${action.allow ? `; allowed for ${action.allow.join(", ")}` : ""}`;
+      return `Custom action ${name}(${list(action.input)})${action.output ? ` → { ${list(action.output)} }` : ""}`;
     }
     case "query": {
       const query = ir.queries.find((q) => q.name === name);
@@ -380,7 +373,7 @@ function summary(ir: SpecIR, concept: string): string {
       const pattern = (PAGE_WORDS[page.pattern.kind] as (p: PageIR["pattern"]) => string)(
         page.pattern,
       );
-      return `Page ${name} at ${page.route}: ${pattern}${page.actions ? `; actions ${page.actions.join(", ")}` : ""}${page.access ? `; for ${page.access.join(", ")}` : ""}`;
+      return `Page ${name} at ${page.route}: ${pattern}${page.actions ? `; actions ${page.actions.join(", ")}` : ""}`;
     }
     default:
       return "";
