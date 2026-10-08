@@ -133,6 +133,8 @@ ${
     ? `
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 `
     : ""
 }${
@@ -353,7 +355,7 @@ export const userOptions = createServerFn().handler(async () => {
 export function signInRoute(auth: AuthIR, start = "/", invitations = false): string {
   const roles = auth.roles.map((r) => r.name);
   const email = auth.signIn !== "none" && auth.signIn.providers.includes("email");
-  const codes = email ? ", codes: codesReachPeople()" : "";
+  const codes = email ? ", codes: codesReachPeople(), kept: mailKept()" : "";
   const options = invitations
     ? `
 /** The sign-in choices, and whom an invitation link is for (by its token; never signs anyone in). */
@@ -393,7 +395,7 @@ import { oneOf, optional, type Search, shaped${invitations ? ", text" : ""} } fr
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, ${email ? "mailKept, " : ""}PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
@@ -444,7 +446,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo${invitations ? ", invitation" : ""}${email ? ", codes" : ""} } = Route.useLoaderData();
+  const { providers, missing, demo${invitations ? ", invitation" : ""}${email ? ", codes, kept" : ""} } = Route.useLoaderData();
   const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
   const router = useRouter();
   return (
@@ -466,6 +468,7 @@ function SignInPage() {
         email
           ? `
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);

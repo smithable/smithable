@@ -6,6 +6,7 @@ import { useSpec } from "./engine";
 import { Guide } from "./GuideTour";
 import { doneKey, guideOff } from "./guide";
 import { Making } from "./Making";
+import { OutboxDialog } from "./Outbox";
 import { isPreviewMessage, type Place, shared, touched } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
@@ -41,6 +42,7 @@ export function App() {
     report?: "sent" | "offer";
   }>();
   const [reporting, setReporting] = useState(false);
+  const [outbox, setOutbox] = useState(false);
   const [holding, setHolding] = useState(false);
   useEffect(() => {
     if (!message?.ok || holding) return;
@@ -377,6 +379,14 @@ export function App() {
               Guide
             </button>
           )}
+          <button
+            type="button"
+            title="The mail the preview kept instead of sending: invitations, sign-in codes"
+            onClick={() => setOutbox(true)}
+            className="text-xs font-medium text-neutral-600 hover:underline"
+          >
+            Outbox
+          </button>
           <a
             href="https://docs.smithable.ai/start.html"
             target="_blank"
@@ -453,6 +463,7 @@ export function App() {
         </div>
       )}
       {reporting && <ReportDialog onClose={() => setReporting(false)} />}
+      {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
       {guiding && mode === "builder" && !project.making && (
         <Guide
           app={project.name}

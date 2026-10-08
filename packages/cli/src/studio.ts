@@ -14,6 +14,7 @@ import { type Io, tool } from "./io.js";
 import { mcpServer } from "./mcp.js";
 import { openQuestions } from "./new.js";
 import { runOperation } from "./op.js";
+import { readOutbox } from "./outbox.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
 import { previewConfig } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
@@ -583,6 +584,8 @@ export async function studio(
         return json(answer);
       }
       if (url.pathname === "/api/logs") return json(logs);
+      // What the preview kept instead of sending: invitations, sign-in codes, notifications.
+      if (url.pathname === "/api/outbox") return json(readOutbox(dir));
       const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
       if (plugin && declaredPlugins(dir).includes(plugin)) {
         res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
