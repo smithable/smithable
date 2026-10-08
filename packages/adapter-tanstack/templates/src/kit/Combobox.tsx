@@ -117,7 +117,7 @@ export function Combobox({
                 aria-selected={String(option.value) === value}
                 className={cn(
                   "cursor-pointer px-3 py-2 text-sm aria-selected:font-semibold",
-                  i === active && "bg-accent text-accent-foreground",
+                  i === active && "bg-hover",
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault();

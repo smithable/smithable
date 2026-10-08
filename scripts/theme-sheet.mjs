@@ -37,10 +37,18 @@ op(dir, "addField", "ClassType", "contact", "email");
 const serve = () => serveDev(dir, port);
 const open = (page, path) => openUrl(page, `${base}${path}`);
 
-// The shots on a sheet: [label, path, what to do before the picture, full page].
+// The shots on a sheet: [label, path, what to do before the picture, full page]. A dialog shot
+// waits for its dialog; a hover shot shows the element in its own hue, a step lighter or darker.
 const SHOTS = [
   ["Landing page", "/", null, true],
   ["List", "/class-types", null, false],
+  [
+    "Hover, the new button",
+    "/class-types",
+    (page) => page.getByRole("link", { name: /^New/ }).first().hover(),
+    false,
+  ],
+  ["Hover, a row", "/class-types", (page) => page.getByRole("row").nth(1).hover(), false],
   ["Form", "/class-types/new", null, true],
   [
     "Dialog",
@@ -72,7 +80,11 @@ try {
       for (const [label, path, act, fullPage] of SHOTS) {
         await open(page, path);
         // A click before a freshly started dev server's page is ready does nothing: try again.
-        for (let attempt = 1; act; attempt++) {
+        if (act && !label.startsWith("Dialog")) {
+          await act(page);
+          await page.waitForTimeout(300);
+        }
+        for (let attempt = 1; act && label.startsWith("Dialog"); attempt++) {
           await act(page);
           try {
             await page
