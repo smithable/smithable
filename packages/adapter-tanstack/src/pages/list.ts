@@ -623,7 +623,7 @@ ${
             )
             .join("")}${many.length ? "\n          " : ""}]}
           deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
-          onDelete={() => ${n.removeMany}({ data: chosen.map((row) => row.id) })}${trash ? "\n          trash" : ""}
+          onDelete={(together) => ${n.removeMany}({ data: { ids: chosen.map((row) => row.id), together } })}${trash ? "\n          trash" : ""}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();

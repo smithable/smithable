@@ -65,10 +65,13 @@ export function TrashNotice({
 
 /**
  * Why a restore was refused, in the form's words: a live record has taken a unique value since
- * ("Another customer already has this email."), or the app's own message.
+ * ("Another customer already has this email."), the record went to the trash with another that
+ * is still there (docs/design/delete-together.md), or the app's own message.
  */
 export function restoreRefusal(ui: Pick<ModelUi, "label" | "fields">, error: unknown): string {
   const message = error instanceof Error ? error.message : "";
+  const root = /^restore-root-first:([^:]+):(.*)$/.exec(message);
+  if (root) return w.restoreRootFirst(root[1] as string, root[2] as string);
   const column = /^taken:(\w+)$/.exec(message)?.[1];
   const field = ui.fields.find(
     (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
@@ -124,7 +127,13 @@ export function TrashedBanner({
   );
 }
 
-type Trashed = Row & { deletedAt?: Date | string | null; deletedByName?: string | null };
+type Trashed = Row & {
+  deletedAt?: Date | string | null;
+  deletedByName?: string | null;
+  /** The record it went to the trash with, by title, and how many went with it (delete-together.md). */
+  withTitle?: string | null;
+  withCount?: number;
+};
 
 /**
  * A list's trash: the records with when and by whom, Restore on each, Restore and Delete in the
@@ -152,9 +161,11 @@ export function TrashTable<R extends Trashed>({
   const [refused, setRefused] = useState<string>();
   const confirm = useRef<HTMLDialogElement>(null);
   const chosen = rows.filter((row) => selected.has(row.id));
+  // A record that went with another is restored with it; one that others went with says how many.
+  const grouped = rows.some((row) => row.withTitle || row.withCount);
   const shown: RecordUi<R> = {
     ...ui,
-    columns: [...ui.columns, "deletedAt", "deletedByName"],
+    columns: [...ui.columns, "deletedAt", "deletedByName", ...(grouped ? ["together"] : [])],
     fields: [
       ...ui.fields,
       {
@@ -170,6 +181,18 @@ export function TrashTable<R extends Trashed>({
         kind: "string",
         required: false,
         get: (row) => row.deletedByName,
+      },
+      {
+        name: "together",
+        label: w.togetherColumn,
+        kind: "string",
+        required: false,
+        get: (row) =>
+          row.withTitle
+            ? w.withRoot(row.withTitle)
+            : row.withCount
+              ? w.andRecords(row.withCount)
+              : null,
       },
     ],
   };
@@ -218,23 +241,25 @@ export function TrashTable<R extends Trashed>({
         rows={rows}
         emptyMessage={w.trashEmpty}
         selection={{ ids: selected, onChange: setSelected }}
-        rowActions={(row) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                await restore([row.id]);
-                setRefused(undefined);
-                await done();
-              } catch (error) {
-                setRefused(restoreRefusal(ui, error));
-              }
-            }}
-          >
-            {w.restore}
-          </Button>
-        )}
+        rowActions={(row) =>
+          row.withTitle ? null : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await restore([row.id]);
+                  setRefused(undefined);
+                  await done();
+                } catch (error) {
+                  setRefused(restoreRefusal(ui, error));
+                }
+              }}
+            >
+              {w.restore}
+            </Button>
+          )
+        }
         onOpen={onOpen}
       />
       <dialog

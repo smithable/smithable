@@ -308,16 +308,25 @@ export function assistantOffer(
   if (deletable.length)
     tools.push({
       name: "delete",
-      description:
+      description: `${
         trashing.length === deletable.length
           ? "Delete a record: it goes to the trash for thirty days."
           : trashing.length
             ? `Delete a record. ${trashing.join(", ")} go to the trash for thirty days; the others cannot be undone.`
-            : "Delete a record. It cannot be undone.",
+            : "Delete a record. It cannot be undone."
+      } A record that others point to is refused with what points to it; ask the person before passing together: true, which moves them all to the trash with it.`,
       inputSchema: {
         type: "object",
         required: ["kind", "id"],
-        properties: { kind: kind(deletable), id },
+        properties: {
+          kind: kind(deletable),
+          id,
+          together: {
+            type: "boolean",
+            description:
+              "Move the records that point to it to the trash with it. Only after the person agreed.",
+          },
+        },
       },
       annotations: changing,
     });

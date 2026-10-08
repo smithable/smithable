@@ -211,8 +211,18 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         summary: model.trash
           ? `Move a ${n.label.toLowerCase()} to the trash; with permanent=true, remove one in the trash for good`
           : `Delete a ${n.label.toLowerCase()}`,
+        description: `A ${n.label.toLowerCase()} that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no ${n.label.toLowerCase()} (loose), and whether they can go to the trash together.${
+          model.trash
+            ? " With together=true they are moved to the trash with it, and restored with it."
+            : ""
+        }`,
         ...(model.trash
-          ? { parameters: [{ name: "permanent", in: "query", schema: { type: "boolean" } }] }
+          ? {
+              parameters: [
+                { name: "permanent", in: "query", schema: { type: "boolean" } },
+                { name: "together", in: "query", schema: { type: "boolean" } },
+              ],
+            }
           : {}),
         responses: { 204: { description: "Deleted" }, 403: problem, 404: problem, 409: problem },
       },
@@ -560,7 +570,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
             : ""
         }
           const row = await found(viewer, params.id);
-          await ${n.data}.remove(viewer, row.id);
+          // ?together=true takes the records that point to it along (docs/design/delete-together.md).
+          await ${n.data}.remove(viewer, row.id, new URL(request.url).searchParams.get("together") === "true");
         }),
     },
   },
@@ -987,7 +998,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "delete": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "delete");
-      await kind.data.remove(viewer, row.id);
+      await kind.data.remove(viewer, row.id, args.together === true);
       return { deleted: row.id };
     }
     case "describe":

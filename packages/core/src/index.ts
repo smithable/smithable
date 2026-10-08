@@ -171,6 +171,7 @@ export {
   tokensOf,
   withBackground,
 } from "./theme.js";
+export { type GroupEdge, looseReferrers, type Referrer, trashGroup } from "./trash-group.js";
 export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
 export {
   CONTROLS,
