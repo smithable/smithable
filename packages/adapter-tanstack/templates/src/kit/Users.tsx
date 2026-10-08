@@ -49,13 +49,24 @@ interface UsersProps {
   /** Resolves to whether the invitation stayed in the outbox (the preview sends no mail). */
   onInvite: (email: string, role: string) => Promise<{ kept?: boolean } | undefined>;
   onSetRole: (userId: string, role: string) => Promise<unknown>;
-  onRemove: (userId: string) => Promise<unknown>;
+  /** Removes a person; what names them goes to the heir, else what may be empty is cleared. */
+  onRemove: (userId: string, heirId?: string) => Promise<unknown>;
+  /** The records that name a person (an assignee, the records that are theirs). */
+  usesOf?: (userId: string) => Promise<UserUse[]>;
   onResend: (invitationId: string) => Promise<{ kept?: boolean } | undefined>;
   onWithdraw: (invitationId: string) => Promise<unknown>;
 }
 
 const date = (value: Date | string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+
+/** What names a person: records of one kind by one column (users.server.ts). */
+interface UserUse {
+  field: string | null;
+  noun: [string, string];
+  required: boolean;
+  count: number;
+}
 
 export function Users({
   viewerId,
@@ -65,6 +76,7 @@ export function Users({
   onInvite,
   onSetRole,
   onRemove,
+  usesOf,
   onResend,
   onWithdraw,
 }: UsersProps) {
@@ -74,6 +86,10 @@ export function Users({
   const [failure, setFailure] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [removing, setRemoving] = useState<UserRow>();
+  // What names the person being removed, and whom it goes to ("" is nobody).
+  const [uses, setUses] = useState<UserUse[]>();
+  const [heir, setHeir] = useState("");
+  const needsHeir = uses?.some((u) => u.required) ?? false;
   const confirmRemove = useRef<HTMLDialogElement>(null);
   const label = (value: string) => roles.find((r) => r.value === value)?.label ?? value;
   const chosen = roles.find((r) => r.value === role);
@@ -144,6 +160,9 @@ export function Users({
         disabled={busy}
         onClick={() => {
           setRemoving(u);
+          setHeir("");
+          setUses(usesOf ? undefined : []);
+          usesOf?.(u.id).then(setUses, () => setUses([]));
           confirmRemove.current?.showModal();
         }}
       >
@@ -336,6 +355,36 @@ export function Users({
           {w.removeWho(removing?.name ?? w.thisUser)}
         </h2>
         <p className="mt-2 text-muted-foreground">{w.removedUserNote}</p>
+        {removing && uses && uses.length > 0 && (
+          <div data-part="uses" className="mt-4 space-y-3">
+            <ul className="list-disc space-y-1 pl-5 text-sm">
+              {uses.map((u) => {
+                const noun = u.count === 1 ? u.noun[0] : u.noun[1];
+                const name = removing.name || removing.email;
+                return (
+                  <li key={`${u.noun[0]}-${u.field}`}>
+                    {u.field
+                      ? w.namedAs(u.count, noun, name, u.field)
+                      : w.belongTo(u.count, noun, name)}
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="space-y-1.5">
+              <Label htmlFor="remove-heir">{w.giveThemTo}</Label>
+              <NativeSelect id="remove-heir" value={heir} onChange={(e) => setHeir(e.target.value)}>
+                <option value="">{needsHeir ? w.chooseSomeone : w.nobodyLeaveEmpty}</option>
+                {users
+                  .filter((other) => other.id !== removing.id)
+                  .map((other) => (
+                    <option key={other.id} value={other.id}>
+                      {other.name || other.email}
+                    </option>
+                  ))}
+              </NativeSelect>
+            </div>
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => confirmRemove.current?.close()}>
             {w.cancel}
@@ -343,9 +392,10 @@ export function Users({
           <Button
             type="button"
             variant="destructive"
+            disabled={uses === undefined || (needsHeir && !heir)}
             onClick={() => {
               confirmRemove.current?.close();
-              if (removing) run(() => onRemove(removing.id));
+              if (removing) run(() => onRemove(removing.id, heir || undefined));
             }}
           >
             {w.removeUser}
