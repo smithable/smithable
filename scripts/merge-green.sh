@@ -13,6 +13,13 @@
 # pull request, and when every changed file is on it, none that a page of the site links to is
 # removed, and the commits hold no secret (Gitleaks, as CI runs it; needs Docker), it merges the
 # pull request itself, as the administrator. Anything else waits for its check as before.
+# Conflicts only in generated files (the embedded templates *.gen.ts, Vitest snapshots) it
+# resolves itself when it runs in the pull request's own worktree, clean: those are build outputs,
+# and two branches that touch the kit clash in them every time (#448 was rebased three times in a
+# day for them, 2026-10-08). It rebases on main taking the branch's side of each, runs the build
+# (which regenerates the embedded files) and the snapshot's tests with -u, commits "Rebased on
+# main: generated files refreshed" and pushes, then waits for the new head's checks like any
+# other; CI's units catch a stale snapshot. Any other conflict is refused: rebase it by hand.
 # One pull request at a time across both repositories and every session on this machine: the
 # lock ~/repos/.merge-lock (or $MERGE_LOCK) names the pull request, repository, session and time;
 # others wait for it, and one older than 60 minutes is taken as stale. SESSION names the caller.
@@ -107,6 +114,45 @@ if plain_docs; then
   echo "Merged #$pr (plain documents: no check to wait for)."
   exit 0
 fi
+# Conflicts in generated files alone (see the top): 0 when they were resolved and pushed, 1 when
+# the pull request is refused as before. During a rebase "theirs" is the branch's commit.
+rebase_generated() {
+  [ ${#repo[@]} -eq 0 ] || return 1
+  local branch f files=() tests=() t
+  branch=$(gh pr view "$pr" --json headRefName -q .headRefName)
+  [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] || return 1
+  [ -z "$(git status --porcelain)" ] || return 1
+  git fetch -q origin main "$branch"
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)" ] || return 1
+  echo "#$pr has conflicts: rebasing on main, where only generated files may clash."
+  if ! git rebase -q origin/main >/dev/null 2>&1; then
+    while :; do
+      mapfile -t files < <(git diff --name-only --diff-filter=U)
+      [ ${#files[@]} -gt 0 ] || break
+      for f in "${files[@]}"; do
+        case "$f" in
+          *.gen.ts) ;;
+          */__snapshots__/*.snap) tests+=("$(dirname "$(dirname "$f")")/$(basename "$f" .snap)") ;;
+          *) git rebase --abort; echo "#$pr: a conflict beyond the generated files: $f"; return 1 ;;
+        esac
+      done
+      git checkout -q --theirs -- "${files[@]}"
+      git add -- "${files[@]}"
+      GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+    done
+    [ -z "$(git rev-parse -q --verify REBASE_HEAD 2>/dev/null)" ] || { git rebase --abort; echo "#$pr: the rebase did not finish."; return 1; }
+  fi
+  pnpm build >/dev/null 2>&1 || { git reset -q --hard FETCH_HEAD; echo "#$pr: the build failed after the rebase."; return 1; }
+  for t in $(printf '%s\n' ${tests[@]+"${tests[@]}"} | sort -u); do
+    pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard FETCH_HEAD; echo "#$pr: $t failed after the rebase."; return 1; }
+  done
+  if [ -n "$(git status --porcelain)" ]; then
+    git add -A
+    git commit -q -s -m "Rebased on main: generated files refreshed"
+  fi
+  git push -q --force-with-lease origin "$branch"
+  echo "#$pr rebased and pushed ($(git rev-parse --short HEAD))."
+}
 for attempt in 1 2 3 4 5 6 7 8; do
   # GitHub says UNKNOWN for a few seconds after a push: wait for a real answer (up to a minute).
   merge_state=UNKNOWN
@@ -115,7 +161,10 @@ for attempt in 1 2 3 4 5 6 7 8; do
     [ "$merge_state" != UNKNOWN ] && break
     sleep 5
   done
-  [ "$merge_state" = DIRTY ] && refuse "it has conflicts: rebase it."
+  if [ "$merge_state" = DIRTY ]; then
+    rebase_generated || refuse "it has conflicts: rebase it."
+    continue
+  fi
   if [ "$merge_state" = BEHIND ]; then
     echo "#$pr is behind main: updating it."
     before=$(head_sha)
