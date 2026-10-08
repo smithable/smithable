@@ -128,7 +128,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-appl
 a{color:var(--accent)}
 header{border-bottom:1px solid var(--line);padding:.75rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;align-items:baseline}
 header strong{margin-right:auto}
-header .home{display:flex;align-items:center}header .home img{display:block}
+header .home{display:flex;align-items:center}header .home img{display:block;border:0;border-radius:0}
 header a{text-decoration:none}
 header a[aria-current]{color:var(--fg);font-weight:600}
 .layout{max-width:72rem;margin:0 auto;padding:1.5rem 1rem 4rem;display:grid;gap:2rem}
