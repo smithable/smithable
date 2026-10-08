@@ -32,6 +32,7 @@ import {
   reportText,
   sendReport,
   setReportChoice,
+  traceIdOf,
 } from "./report.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
@@ -655,6 +656,7 @@ export async function studio(
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
             reportLater: true,
+            trace: traceIdOf(req.headers.traceparent),
           }),
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
@@ -673,7 +675,13 @@ export async function studio(
         const tail = logs.slice(-40);
         // Each Retry asks again: recorded, and sent for "always", once while it stays stuck.
         if (!stuck) {
-          recordFailure(dir, "preview", { url: preview }, tail.join("\n") || "No log lines.");
+          recordFailure(
+            dir,
+            "preview",
+            { url: preview },
+            tail.join("\n") || "No log lines.",
+            traceIdOf(req.headers.traceparent),
+          );
           stuck = { report: await offerReport() };
         }
         return json({ log: tail.slice(-12), report: stuck.report });
