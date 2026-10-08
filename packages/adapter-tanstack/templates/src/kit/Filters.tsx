@@ -209,9 +209,7 @@ function Filter({
               }}
               className={cn(
                 "rounded-full border px-3 py-1 text-sm",
-                on
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "bg-card hover:bg-accent",
+                on ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-hover",
               )}
             >
               {o.label}

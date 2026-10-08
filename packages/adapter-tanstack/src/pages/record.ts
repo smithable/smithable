@@ -2,6 +2,7 @@
 
 import {
   type AuthIR,
+  camel,
   humanize,
   kebab,
   type ModelIR,
@@ -43,6 +44,7 @@ import {
   standardActions,
   type Texts,
   titleField,
+  trashedLists,
   type Within,
 } from "../shared.js";
 import { calendarStart } from "./calendar.js";
@@ -670,6 +672,67 @@ export function actionButton(action: StandardActionIR, row: string, route: strin
                   ${after}
                 }}
               />`;
+}
+
+/**
+ * The Team page's Trash (docs/design/admin.md): every model's trash on one page, each under its
+ * name, with Restore and Delete for good, so an administrator needs no list's own Trash page.
+ */
+export function allTrashRoute(team: PageIR, ir: SpecIR, t: Texts): string {
+  const lists = trashedLists(ir).map(({ model, page }) => ({
+    model,
+    page,
+    n: names(model, t),
+    fns: trashNames(model),
+  }));
+  return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+${lists.map(({ n, fns }) => `import { ${[fns.erase, fns.restore, fns.list, n.ui].sort().join(", ")} } from "${n.module}";`).join("\n")}
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { TrashTable } from "#/kit/Trash";
+import { w } from "#/kit/words";
+
+export const Route = createFileRoute(${JSON.stringify(join(team.route, "trash"))})({
+${guard(`pageAccess[${JSON.stringify(team.id)}]`)}  loader: async () => {
+    const [${lists.map(({ model }) => camel(model.name)).join(", ")}] = await Promise.all([${lists.map(({ fns }) => `${fns.list}()`).join(", ")}]);
+    return { ${lists.map(({ model }) => `${camel(model.name)}: ${camel(model.name)}.rows`).join(", ")} };
+  },
+  component: TrashPage,
+});
+
+function TrashPage() {
+  const rows = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const empty = Object.values(rows).every((list) => list.length === 0);
+  return (
+    <>
+      <PageHeader title={w.trashView} subtitle={w.trashLead} />
+      {empty && <p className="text-muted-foreground">{w.trashEmpty}</p>}
+${lists
+  .map(
+    ({ model, page, n, fns }) => `      {rows.${camel(model.name)}.length > 0 && (
+        <section data-model=${JSON.stringify(model.name)} className="space-y-3 pb-8">
+          <h2 className="text-lg font-semibold">{${JSON.stringify(n.pluralLabel)}}</h2>
+          <TrashTable
+            ui={${n.ui}}
+            app={app}
+            rows={rows.${camel(model.name)}}
+            restore={(ids) => ${fns.restore}({ data: ids })}
+            erase={(ids) => ${fns.erase}({ data: ids })}
+            onDone={() => router.invalidate()}
+            onOpen={(row) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(row.id) } })}
+          />
+        </section>
+      )}`,
+  )
+  .join("\n")}
+    </>
+  );
+}
+`;
 }
 
 /**

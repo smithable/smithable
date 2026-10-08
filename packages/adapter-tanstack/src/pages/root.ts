@@ -11,7 +11,16 @@ import {
 } from "@smithable/core";
 import { analyticsConstants } from "../analytics.js";
 import { hasSignIn } from "../auth.js";
-import { HEADER, literal, modelNamed, names, type Texts } from "../shared.js";
+import {
+  adminPage,
+  HEADER,
+  join,
+  literal,
+  modelNamed,
+  names,
+  type Texts,
+  trashedLists,
+} from "../shared.js";
 import { publicArticles } from "./articles.js";
 
 // ── Routes ───────────────────────────────────────────────────────────────────
@@ -68,16 +77,39 @@ export function rootRoute(
     const page = ir.pages.find((p) => p.id === id);
     return LUCIDE[page ? pageIcon(ux, page) : "list"];
   };
-  const icons = [...new Set(ir.navigation.flatMap((m) => m.pages.map(iconOf)))].sort();
-  const menus = ir.navigation.map((menu) => {
-    const items = menu.pages.map(
+  // The users page leaves its menu for the last one, Admin, with every trash and the activity
+  // (docs/design/admin.md).
+  const team = adminPage(ir);
+  const trash = team && trashedLists(ir).length > 0;
+  const icons = [
+    ...new Set([
+      ...ir.navigation.flatMap((m) => m.pages.map(iconOf)),
+      ...(team ? ["History", ...(trash ? ["Trash2"] : [])] : []),
+    ]),
+  ].sort();
+  const item = (to: string, label: string, icon: string, id: string) =>
+    `      {\n        to: ${JSON.stringify(to)},\n        label: ${label},\n        icon: ${icon},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`;
+  const admin = team
+    ? `  {\n    name: "admin",\n    label: w.admin,\n    items: [\n${[
+        item(team.route, JSON.stringify(t.pageTitle(team.id)), iconOf(team.id), team.id),
+        ...(trash ? [item(join(team.route, "trash"), "w.trashView", "Trash2", team.id)] : []),
+        item(join(team.route, "activity"), "w.activity", "History", team.id),
+      ].join("\n")}\n    ],\n  },`
+    : undefined;
+  const menus = ir.navigation.flatMap((menu) => {
+    const pages = menu.pages.filter((id) => id !== team?.id);
+    if (pages.length === 0) return [];
+    const items = pages.map(
       (id) =>
         `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${JSON.stringify(t.pageTitle(id))},\n        icon: ${iconOf(id)},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
     );
     const menuLabel = t.menuLabel(menu.name);
     const label = menuLabel === undefined ? "" : ` label: ${JSON.stringify(menuLabel)},`;
-    return `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`;
+    return [
+      `  {\n    name: ${JSON.stringify(menu.name)},${label}\n    items: [\n${items.join("\n")}\n    ],\n  },`,
+    ];
   });
+  if (admin) menus.push(admin);
   const signIn = hasSignIn(auth);
   // "Ask" in the app (docs/design/assistant.md §6): the button and its answers, for the people
   // the auth file's assistant block names.
@@ -223,6 +255,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
     await authClient.signOut();
     await router.invalidate();
   };
+  const rename = async (name: string) => {
+    const { error } = await authClient.updateUser({ name });
+    if (error) throw new Error(error.message);
+    await router.invalidate();
+  };
 `
     : ""
 }  return (
@@ -258,11 +295,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
         ) : `
                   : ""
               }(
-          <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
+          <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut}" : ""}>
+            : `<AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}>
           {children}
         </AppShell>`
         }

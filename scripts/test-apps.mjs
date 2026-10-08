@@ -3863,6 +3863,51 @@ async function browserFlow(dir, base) {
       "  ✓ browser: Move to trash hides the customer, Undo brings it back; its email is free for a new customer, and restoring it is refused until that one goes; its page is read-only with Restore; the Trash page removes it for good; the log has trashed, restored and removed",
     );
 
+    // The Admin group (docs/design/admin.md): Team, every trash and the activity, beside Team.
+    const adminMenu = page.locator('[data-kit="nav"]').first();
+    for (const name of ["Team", "Trash", "Activity"])
+      await adminMenu.getByRole("link", { name, exact: true }).waitFor();
+    await open(page, `${base}/team/trash`);
+    const customersTrash = page.locator('section[data-model="Customer"]');
+    await customersTrash.getByRole("heading", { name: "Customers" }).waitFor();
+    await customersTrash
+      .locator("tr", { hasText: "Mariehamn Marine Again" })
+      .getByRole("button", { name: "Restore" })
+      .click();
+    await customersTrash
+      .getByRole("cell", { name: "Mariehamn Marine Again", exact: true })
+      .waitFor({ state: "detached", timeout: 10000 });
+    await open(page, `${base}/customers`);
+    await page.getByRole("cell", { name: "Mariehamn Marine Again", exact: true }).waitFor();
+    await open(page, `${base}/team/activity`);
+    await page.getByRole("heading", { name: "Activity" }).waitFor();
+    console.log(
+      "  ✓ browser: the menu's Admin group has Team, Trash and Activity; the Team page's Trash names each model and restores from there",
+    );
+
+    // A field is checked when it is left, before saving.
+    await open(page, `${base}/customers/new`);
+    await page.getByRole("textbox", { name: "Credit limit" }).fill("lots");
+    await page.getByRole("textbox", { name: "Credit limit" }).press("Tab");
+    await expectText(
+      "a field left with a non-number says Enter a number at once",
+      "Enter a number",
+    );
+    await page.getByRole("textbox", { name: "Credit limit" }).fill("12");
+    await page.getByText("Enter a number").waitFor({ state: "detached" });
+
+    // A person sets the name others see from the menu (an invited one starts with none).
+    const renameTo = async (from, to) => {
+      await page.getByRole("button", { name: from, exact: true }).filter({ visible: true }).click();
+      await page.getByRole("textbox", { name: "Your name" }).fill(to);
+      await page.getByRole("dialog").getByRole("button", { name: "Save changes" }).click();
+      await page.getByRole("button", { name: to, exact: true }).filter({ visible: true }).waitFor();
+    };
+    await open(page, `${base}/customers`);
+    await renameTo("Dev admin", "Dev Admin Renamed");
+    await renameTo("Dev Admin Renamed", "Dev admin");
+    console.log("  ✓ browser: a signed-in person sets their own name from the menu");
+
     await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
     await chooseRecord(page, "Customer *", "Skerry Software");

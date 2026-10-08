@@ -224,6 +224,7 @@ export function Users({
         {chosen?.description && (
           <p className="mt-2 text-sm text-muted-foreground">{chosen.description}</p>
         )}
+        <p className="mt-2 text-sm text-muted-foreground">{w.invitedNameLater}</p>
       </Card>
       {failure && (
         <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">

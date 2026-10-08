@@ -9,6 +9,8 @@ export const w = {
   accept: "Accept",
   addFiles: "Add files",
   addOne: (label: string) => `Add ${label}`,
+  addYourName: "Add your name",
+  admin: "Admin",
   aFirstCall: "A first call:",
   actAs: "Act as",
   actions: "Actions",
@@ -100,6 +102,8 @@ export const w = {
   invitationExpired: "Invitation expired",
   invitationLinkCopied: "Invitation link copied.",
   invitations: "invitations",
+  invitedNameLater:
+    "An invited person chooses the name others see after signing in: their name at the bottom of the menu.",
   keepIt: "Keep it",
   keys: "Keys",
   keysLead:
@@ -258,6 +262,7 @@ export const w = {
   youAreBooked: "You're booked",
   yourEmail: "Your email",
   yourName: "Your name",
+  yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
   alreadyHas: (label: string, field: string) =>
     `Another ${label.toLowerCase()} already has this ${field.toLowerCase()}.`,
@@ -332,6 +337,7 @@ export const w = {
   options: "Options",
   pictureDescription: "Description (for those who cannot see it)",
   question: "Question",
+  trashedVerb: "moved to the trash",
   asRole: (role: string) => `as ${role}`,
   contactThe: (who: string) => `Contact the ${who}`,
   continueWith: (provider: string) => `Continue with ${provider}`,
@@ -351,6 +357,9 @@ export const w = {
   stepOf: (n: number, count: number) => `Step ${n} of ${count}`,
   tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} tokens in, ${tokensOut} out`,
   toolCalls: (n: number) => `${n} tool ${n === 1 ? "call" : "calls"}`,
+  trashHowMany: (n: number, noun: string) =>
+    `Move ${n} ${noun} to the trash? ${n === 1 ? "It" : "They"} can be restored from there for 30 days.`,
+  trashN: (n: number) => `Move to trash (${n})`,
   /** The privacy page (kit LegalPage), written from the app's own definition. */
   legalIntro: (app: string) =>
     `This page says what ${app} stores about you and why. It is written from the app's own definition and changes with it.`,
