@@ -47,6 +47,8 @@ export const w = {
   close: "Close",
   closeMenu: "Close menu",
   code: "Code",
+  codeKept:
+    "The preview sends no mail: the code is in Studio's Outbox. Or sign in with a role below (development only).",
   codeOnItsWay: "may sign in, a code is on its way. It works for ten minutes.",
   confirm: "Confirm",
   consentText:
@@ -115,6 +117,7 @@ export const w = {
   makeAKey: "Make a key",
   menu: "Menu",
   message: "Message",
+  messageKept: "Your message is in the preview's outbox, not sent: the preview sends no mail.",
   messageNotSent: "The message could not be sent.",
   messageSent: "Your message is sent.",
   modelNotReached: "The model could not be reached.",
@@ -278,6 +281,8 @@ export const w = {
   /** A range filter with no end. */
   fromValue: (from: string) => `from ${from}`,
   inAll: (total: number) => `${total} in all`,
+  invitationKept: (address: string) =>
+    `Invitation to ${address} written to the preview's outbox, not sent: the preview sends no mail. Studio's Outbox shows it.`,
   invitationSentAgain: (address: string) => `Invitation sent again to ${address}.`,
   invitationSentTo: (address: string) => `Invitation sent to ${address}.`,
   /** Followed by the address in bold. */

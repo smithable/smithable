@@ -46,10 +46,11 @@ interface UsersProps {
   roles: RoleOption[];
   users: UserRow[];
   invitations: InvitationRow[];
-  onInvite: (email: string, role: string) => Promise<unknown>;
+  /** Resolves to whether the invitation stayed in the outbox (the preview sends no mail). */
+  onInvite: (email: string, role: string) => Promise<{ kept?: boolean } | undefined>;
   onSetRole: (userId: string, role: string) => Promise<unknown>;
   onRemove: (userId: string) => Promise<unknown>;
-  onResend: (invitationId: string) => Promise<unknown>;
+  onResend: (invitationId: string) => Promise<{ kept?: boolean } | undefined>;
   onWithdraw: (invitationId: string) => Promise<unknown>;
 }
 
@@ -77,13 +78,13 @@ export function Users({
   const label = (value: string) => roles.find((r) => r.value === value)?.label ?? value;
   const chosen = roles.find((r) => r.value === role);
 
-  async function run(action: () => Promise<unknown>, done?: string) {
+  async function run(action: () => Promise<unknown>, done?: string | (() => string)) {
     setBusy(true);
     setFailure(undefined);
     setNotice(undefined);
     try {
       await action();
-      if (done) setNotice(done);
+      if (done) setNotice(typeof done === "function" ? done() : done);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : w.tryAgain);
     } finally {
@@ -95,10 +96,14 @@ export function Users({
     event.preventDefault();
     const address = email.trim();
     if (!address) return;
-    await run(async () => {
-      await onInvite(address, role);
-      setEmail("");
-    }, w.invitationSentTo(address));
+    let kept = false;
+    await run(
+      async () => {
+        kept = Boolean((await onInvite(address, role))?.kept);
+        setEmail("");
+      },
+      () => (kept ? w.invitationKept(address) : w.invitationSentTo(address)),
+    );
   }
 
   async function copy(link: string) {
@@ -168,7 +173,15 @@ export function Users({
         variant="outline"
         size="sm"
         disabled={busy}
-        onClick={() => run(() => onResend(i.id), w.invitationSentAgain(i.email))}
+        onClick={() => {
+          let kept = false;
+          return run(
+            async () => {
+              kept = Boolean((await onResend(i.id))?.kept);
+            },
+            () => (kept ? w.invitationKept(i.email) : w.invitationSentAgain(i.email)),
+          );
+        }}
       >
         {w.resend}
       </Button>
