@@ -26,6 +26,8 @@ export interface Report {
   operation: string;
   args: Record<string, unknown>;
   error: string;
+  /** The trace id of the request that failed, when one came with it (the hosted front door). */
+  trace?: string;
   log: string[];
   files: Record<string, string>;
 }
@@ -35,6 +37,18 @@ interface Failure {
   operation: string;
   args: Record<string, unknown>;
   error: string;
+  trace?: string;
+}
+
+const TRACEPARENT = /^[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$/;
+
+/**
+ * The trace id in a request's W3C traceparent header, which the hosted service's front door sends
+ * on every request: with it in a report, the service finds the request in its logs.
+ */
+export function traceIdOf(header: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(header) ? header[0] : header;
+  return value ? TRACEPARENT.exec(value.trim())?.[1] : undefined;
 }
 
 /**
@@ -46,6 +60,7 @@ export function recordFailure(
   operation: string,
   args: Record<string, unknown>,
   output: string,
+  trace?: string,
 ): void {
   if (operation === "importRecords" || output.includes("Run again with")) return;
   const failure: Failure = {
@@ -53,6 +68,7 @@ export function recordFailure(
     operation,
     args: redactArgs(args),
     error: output.trim().split("\n").slice(-40).join("\n"),
+    ...(trace ? { trace } : {}),
   };
   mkdirSync(dirname(join(dir, FAILURE)), { recursive: true });
   writeFileSync(join(dir, FAILURE), `${JSON.stringify(failure, null, 2)}\n`);
@@ -132,6 +148,7 @@ export async function sendReport(
     `Smithable ${report.smithable}, Node ${report.node}, ${report.platform}`,
     "",
     `Operation: ${report.operation} ${JSON.stringify(report.args)}`,
+    ...(report.trace ? [`Trace: ${report.trace}`] : []),
     "",
     "```",
     report.error,

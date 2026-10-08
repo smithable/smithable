@@ -62,6 +62,8 @@ export interface OpFlags {
   setup?: boolean;
   /** Who imported records belong to (a user id or email); else the first admin who signed in. */
   owner?: string;
+  /** The trace id of the request that asked for it (Studio's, from the front door), for a report. */
+  trace?: string;
   /** The caller offers a report of a failure itself (Studio, with its log). */
   reportLater?: boolean;
 }
@@ -131,7 +133,7 @@ export async function runOperation(
   };
   const code = await applyAndCheckpoint(dir, kept, name, args, flags);
   if (code !== FAILED) return code;
-  recordFailure(dir, name, args, said.join(""));
+  recordFailure(dir, name, args, said.join(""), flags.trace);
   if (!flags.reportLater) await afterFailure(dir, io);
   return 1;
 }
