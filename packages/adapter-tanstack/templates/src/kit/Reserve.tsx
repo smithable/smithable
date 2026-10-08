@@ -32,7 +32,7 @@ export function Reserve({
   load: (options: { data: number }) => Promise<Places | null>;
   book: (options: { data: number }) => Promise<unknown>;
   /** Deletes the viewer's booking. */
-  cancel: (options: { data: number }) => Promise<unknown>;
+  cancel: (options: { data: { id: number } }) => Promise<unknown>;
   bookLabel?: string;
   cancelLabel?: string;
   fullLabel?: string;
@@ -92,7 +92,7 @@ export function Reserve({
                 type="button"
                 variant="destructive"
                 disabled={busy}
-                onClick={() => run(() => cancel({ data: places.mine as number }))}
+                onClick={() => run(() => cancel({ data: { id: places.mine as number } }))}
               >
                 {w.yesCancelIt}
               </Button>

@@ -30,7 +30,7 @@ import {
   viewerModule,
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
-import { dataModule, isMarkdown, modelModule, modelSchemaModule } from "./data.js";
+import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
@@ -565,6 +565,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("src/db/schema.ts", schemaModule(ir, auth)),
       generated("src/db/seed.ts", seedModule(ir, options)),
       ...(hasUploads(ir) ? [generated("src/generated/uploads.ts", uploadsModule(ir, t))] : []),
+      // The daily emptying of the trash, in the order the models point to each other.
+      ...(ir.models.some((m) => m.trash)
+        ? [generated("src/generated/trash.server.ts", trashModule(ir, t))]
+        : []),
       ...(ir.models.length
         ? [
             generated("src/generated/access.test.ts", accessTestSource(ir, auth)),

@@ -7,6 +7,7 @@ import { Card } from "#/components/ui/card";
 import { ActionButton } from "./ActionButton";
 import type { AppUi, ModelUi } from "./model";
 import { Overflow } from "./Overflow";
+import { type InUse, inUseFacts, TogetherDialog } from "./Together";
 import { w } from "./words";
 
 export interface SelectionAction {
@@ -36,7 +37,8 @@ export function SelectionBar({
   actions: SelectionAction[];
   /** How many of them the viewer may delete. */
   deletable: number;
-  onDelete?: () => Promise<{ deleted: number; skipped: number }>;
+  /** Deletes them; `together` takes what points to them along (docs/design/delete-together.md). */
+  onDelete?: (together?: boolean) => Promise<{ deleted: number; skipped: number }>;
   /** A record's title, to name one that stopped a run. */
   titleOf: (id: number) => string;
   app: AppUi;
@@ -50,6 +52,8 @@ export function SelectionBar({
   const [message, setMessage] = useState<string>();
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // A delete refused because other records point to one of them: the facts, for the dialog.
+  const [inUse, setInUse] = useState<InUse>();
   const confirm = useRef<HTMLDialogElement>(null);
   const counted = (done: number, skipped: number, verb: string) =>
     w.counted(done, noun[0], noun[1], verb, skipped);
@@ -57,7 +61,27 @@ export function SelectionBar({
   const words = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
     const inUse = /^in-use:(\d+)$/.exec(text);
-    return inUse ? w.stillInUse(titleOf(Number(inUse[1]))) : text;
+    const noRight = /^no-right:(.+)$/.exec(text)?.[1];
+    return inUse
+      ? w.stillInUse(titleOf(Number(inUse[1])))
+      : noRight
+        ? w.noRightToDelete(noRight)
+        : text;
+  };
+  const remove = async (together?: boolean) => {
+    setBusy(true);
+    setFailure(undefined);
+    try {
+      const r = await onDelete?.(together);
+      if (r) setMessage(counted(r.deleted, r.skipped, trash ? w.trashedVerb : w.deletedVerb));
+      await onDone();
+    } catch (error) {
+      const facts = inUseFacts(error);
+      if (facts) setInUse(facts);
+      else setFailure(words(error));
+    }
+    setBusy(false);
+    confirm.current?.close();
   };
   if (count === 0 && !message) return null;
   return (
@@ -128,27 +152,7 @@ export function SelectionBar({
             )}
           </p>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                setFailure(undefined);
-                try {
-                  const r = await onDelete?.();
-                  if (r)
-                    setMessage(
-                      counted(r.deleted, r.skipped, trash ? w.trashedVerb : w.deletedVerb),
-                    );
-                  await onDone();
-                } catch (error) {
-                  setFailure(words(error));
-                }
-                setBusy(false);
-                confirm.current?.close();
-              }}
-            >
+            <Button type="button" variant="destructive" disabled={busy} onClick={() => remove()}>
               {trash ? w.moveToTrash : w.delete}
             </Button>
             <Button type="button" variant="outline" onClick={() => confirm.current?.close()}>
@@ -157,6 +161,19 @@ export function SelectionBar({
           </div>
         </Card>
       </dialog>
+      {inUse && (
+        <TogetherDialog
+          facts={inUse}
+          what={deletable === 1 ? `“${inUse.title}”` : w.nOf(deletable, noun[0], noun[1])}
+          rootLabel={noun[0]}
+          busy={busy}
+          onTogether={() => {
+            setInUse(undefined);
+            remove(true);
+          }}
+          onClose={() => setInUse(undefined)}
+        />
+      )}
     </div>
   );
 }
