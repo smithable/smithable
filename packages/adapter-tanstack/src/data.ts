@@ -13,6 +13,7 @@ import {
   isPictures,
   isUpload,
   kebab,
+  looseReferrers,
   type ModelIR,
   modelAccess,
   PICTURES_MAX,
@@ -22,6 +23,7 @@ import {
   snake,
   storesFiles,
   storesPictures,
+  trashGroup,
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
@@ -311,14 +313,15 @@ export const ${n.update} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: ${n.schema} }))
   .handler(async ({ data }) => ${n.data}.update(await writer(), data.id, data.values));
 
+/** Deletes a ${n.label.toLowerCase()}; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const ${n.remove} = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => ${n.data}.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => ${n.data}.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen ${n.pluralLabel.toLowerCase()}, all or none (at most 1,000 at once). */
 export const ${n.removeMany} = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => ${n.data}.removeMany(await writer(), ids));${
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => ${n.data}.removeMany(await writer(), data.ids, data.together));${
     model.trash
       ? `
 
@@ -683,34 +686,202 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
         audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${tell('"created"', "made")}
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
-  // The trash (docs/design/trash.md): a delete moves the record there; what still refers to it
-  // with a required reference keeps it out, as it keeps a delete out today.
+  // The trash (docs/design/trash.md): a delete moves the record there.
   const trashing = Boolean(model.trash);
-  const holders = trashing
-    ? ir.models.flatMap((m) =>
-        m.fields
-          .filter(
-            (f) =>
-              f.type.kind === "relation" &&
-              !f.type.many &&
-              f.type.model === model.name &&
-              f.required,
-          )
-          .map((f) => ({ table: tableRef(m), column: `${f.name}Id` })),
-      )
+  // What points to a record with a required reference cannot exist without it: it goes to the
+  // trash with it, when the root and every model in the group have a trash; otherwise the delete
+  // is refused, with the facts (docs/design/delete-together.md). Optional referrers stay.
+  const group = trashGroup(ir, model.name);
+  const members = [...new Set(group.map((e) => e.model))].map((m) => modelNamed(ir, m));
+  const loose = looseReferrers(ir, model.name).map((r) => modelNamed(ir, r.model));
+  const together = trashing && members.every((m) => m.trash);
+  const missing = [...(trashing ? [] : [model]), ...members.filter((m) => !m.trash)].map(
+    (m) => names(m, t).label,
+  );
+  // The roots whose group this model is in: a member comes back with its root, not alone.
+  const roots = trashing
+    ? ir.models.filter((r) => {
+        const edges = trashGroup(ir, r.name);
+        return (
+          r.trash &&
+          edges.some((e) => e.model === model.name) &&
+          edges.every((e) => modelNamed(ir, e.model).trash)
+        );
+      })
     : [];
-  const inUse = (id: string, indent: string) =>
-    holders
-      .map(
-        (h) =>
-          `${indent}if (tx.select({ id: ${h.table}.id }).from(${h.table}).where(eq(${h.table}.${h.column}, ${id})).limit(1).get()) throw new Conflict("in-use");\n`,
-      )
-      .join("");
+  // The member modules this one calls: trashWith and restoreWith when the group goes together,
+  // erase for the trashed members of a root removed for good. A root's module is never needed:
+  // rootInTrash reads its table.
+  for (const m of members)
+    if (m !== model && ((together && group.length) || (trashing && m.trash))) others.add(m);
+  const dataOf = (m: ModelIR) => (m === model ? self : names(m, t).data);
+  let usesOr = false;
+  const anyOf = (conditions: string[]): string => {
+    if (conditions.length === 0) return "sql`false`";
+    if (conditions.length > 1) usesOr = true;
+    return conditions.length === 1 ? (conditions[0] as string) : `or(${conditions.join(", ")})`;
+  };
+  // Only live records count: a condition to add for a model with a trash.
+  const liveIn = (m: ModelIR) => (m.trash ? `, isNull(${tableRef(m)}.deletedAt)` : "");
+  const labelled = (m: ModelIR) =>
+    `model: ${JSON.stringify(m.name)}, label: ${JSON.stringify(names(m, t).label)}, plural: ${JSON.stringify(names(m, t).pluralLabel)}`;
+  // How many live records of a member point to the root: directly, or through their parent
+  // (one join); deeper members are only named.
+  const countIn = (m: ModelIR) => {
+    const te = tableRef(m);
+    const depth = Math.min(...group.filter((e) => e.model === m.name).map((e) => e.depth));
+    const direct = group.filter((e) => e.model === m.name && e.depth === depth);
+    if (depth === 1)
+      return `tx.select({ n: count() }).from(${te}).where(and(${anyOf(direct.map((e) => `eq(${te}.${e.via}Id, id)`))}${liveIn(m)})).get()?.n ?? 0`;
+    if (depth > 2) return "null";
+    const parent = modelNamed(ir, (direct[0] as (typeof group)[number]).from);
+    const tp = tableRef(parent);
+    const via = direct.filter((e) => e.from === parent.name);
+    const up = group.filter((e) => e.model === parent.name && e.depth === 1);
+    return `tx.select({ n: count() }).from(${te}).innerJoin(${tp}, ${anyOf(via.map((e) => `eq(${te}.${e.via}Id, ${tp}.id)`))}).where(and(${anyOf(up.map((e) => `eq(${tp}.${e.via}Id, id)`))}${liveIn(parent)}${liveIn(m)})).get()?.n ?? 0`;
+  };
+  const usedBy = group.length
+    ? `
+/**
+ * What points to a ${n.label.toLowerCase()} (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no ${n.label.toLowerCase()}; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+${members
+  .map((m) => {
+    const first = group.find((e) => e.model === m.name) as (typeof group)[number];
+    return `    { ${labelled(m)}, from: ${JSON.stringify(first.from)}, depth: ${first.depth}, count: ${countIn(m)} },`;
+  })
+  .join("\n")}
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [${
+    loose.length
+      ? `
+${loose
+  .map((m) => {
+    const te = tableRef(m);
+    const vias = looseReferrers(ir, model.name).filter((r) => r.model === m.name);
+    return `    { ${labelled(m)}, count: tx.select({ n: count() }).from(${te}).where(and(${anyOf(vias.map((r) => `eq(${te}.${r.via}Id, id)`))}${liveIn(m)})).get()?.n ?? 0 },`;
+  })
+  .join("\n")}
+  ].filter((e) => e.count > 0)`
+      : "] as { model: string; label: string; plural: string; count: number }[]"
+  };
+  return { id, title, ${labelled(model).replace(/, plural: .*$/, "")}, with: with_, loose, together: ${together}, missing: ${JSON.stringify(missing)} };
+}
+`
+    : "";
+  const titleOf = (row: string, id: string) =>
+    titleField(model) === "id" ? `\`#\${${id}}\`` : `String(${row}.${titleField(model)} ?? ${id})`;
+  const groupCheck = (id: string, row: string, indent: string) =>
+    group.length
+      ? `${indent}const used = usedBy(tx, ${id}, ${titleOf(row, id)});\n${indent}if (used${together ? " && !together" : ""}) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);\n`
+      : "";
+  // The group goes with the root, level by level: each member's records that point to it, then
+  // those that point to them (found by the group's mark), with the same time and mark.
+  const groupTrash = (id: string, indent: string) =>
+    together && group.length
+      ? `\n${indent}if (used) {\n${indent}  const tag = \`${model.name}:\${${id}}\`;\n${group
+          .map((e) => {
+            const te = tableRef(modelNamed(ir, e.model));
+            const tp = tableRef(modelNamed(ir, e.from));
+            const fits =
+              e.depth === 1
+                ? `eq(${te}.${e.via}Id, ${id})`
+                : `inArray(${te}.${e.via}Id, tx.select({ id: ${tp}.id }).from(${tp}).where(eq(${tp}.deletedWith, tag)))`;
+            return `${indent}  ${dataOf(modelNamed(ir, e.model))}.trashWith(tx, viewer, ${fits}, tag, when);\n`;
+          })
+          .join("")}${indent}}`
+      : "";
   const goneBy = (id: string) =>
     trashing
-      ? `tx.update(${n.table}).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(${n.table}.id, ${id}), isNull(${n.table}.deletedAt))).returning().get()`
+      ? `tx.update(${n.table}).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(${n.table}.id, ${id}), isNull(${n.table}.deletedAt))).returning().get()`
       : `tx.delete(${n.table}).where(eq(${n.table}.id, ${id})).returning().get()`;
   const goneAction = trashing ? "trashed" : "deleted";
+  // The records in the trash that point to the roots, through the group's chain of references.
+  const pointsAt = (m: string, path: string[]): string =>
+    anyOf(
+      group
+        .filter((e) => e.model === m && (e.from === model.name || !path.includes(e.from)))
+        .map((e) => {
+          const te = tableRef(modelNamed(ir, e.model));
+          const tf = tableRef(modelNamed(ir, e.from));
+          return e.from === model.name
+            ? `inArray(${te}.${e.via}Id, ids)`
+            : `inArray(${te}.${e.via}Id, db.select({ id: ${tf}.id }).from(${tf}).where(${pointsAt(e.from, [...path, e.from])}))`;
+        }),
+    );
+  // Removing roots for good takes the trashed members that point to them first, deepest first.
+  const eraseMembers = trashing
+    ? [...members]
+        .reverse()
+        .filter((m) => m.trash)
+        .map((m) => {
+          const tm = tableRef(m);
+          return `    ${dataOf(m)}.erase(viewer, db.select({ id: ${tm}.id }).from(${tm}).where(and(isNotNull(${tm}.deletedAt), ${pointsAt(m.name, [m.name])})).all().map((r) => r.id));\n`;
+        })
+        .join("")
+    : "";
+  if (usesOr) drizzle.push("or");
+  if (group.length) drizzle.push("count");
+  if ((group.length && [...members, ...loose].some((m) => m.trash)) || roots.length)
+    drizzle.push("isNull");
+  // In the trash view: the record a member went with, by name, and how many went with a root.
+  const groupShown = `${
+    roots.length
+      ? `
+    const withTitle = new Map<string, string>();
+${roots
+  .map((r) => {
+    const tr = tableRef(r);
+    const rt = titleField(r);
+    return `    for (const r of db.select({ id: ${tr}.id${rt === "id" ? "" : `, title: ${tr}.${rt}`} }).from(${tr}).where(inArray(${tr}.id, rows.flatMap((row) => (row.deletedWith?.startsWith("${r.name}:") ? [Number(row.deletedWith.slice(${r.name.length + 1}))] : [])))).all())
+      withTitle.set(\`${r.name}:\${r.id}\`, ${rt === "id" ? "`#${r.id}`" : "String(r.title ?? r.id)"});`;
+  })
+  .join("\n")}`
+      : ""
+  }${
+    together && group.length
+      ? `
+    const withCount = new Map<string, number>();
+    const tags = rows.map((row) => \`${model.name}:\${row.id}\`);
+${members
+  .map((m) => {
+    const tm = tableRef(m);
+    return `    for (const r of db.select({ tag: ${tm}.deletedWith, n: count() }).from(${tm}).where(inArray(${tm}.deletedWith, tags)).groupBy(${tm}.deletedWith).all())
+      withCount.set(r.tag as string, (withCount.get(r.tag as string) ?? 0) + r.n);`;
+  })
+  .join("\n")}`
+      : ""
+  }`;
+  const rootInTrash = roots.length
+    ? `
+/** The record one went to the trash with, while it is still there: its label and title, by the mark ("Customer:12"). */
+function rootInTrash(tag: string): string | undefined {
+  const [model, id] = tag.split(":");
+  switch (model) {
+${roots
+  .map((r) => {
+    const tr = tableRef(r);
+    const rt = titleField(r);
+    return `    case "${r.name}": {
+      const root = db.select({ deletedAt: ${tr}.deletedAt${rt === "id" ? "" : `, title: ${tr}.${rt}`} }).from(${tr}).where(eq(${tr}.id, Number(id))).get();
+      return root?.deletedAt ? \`${names(r, t).label}:\${${rt === "id" ? "`#${id}`" : "String(root.title ?? id)"}}\` : undefined;
+    }`;
+  })
+  .join("\n")}
+    default:
+      return undefined;
+  }
+}
+`
+    : "";
   const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${self}.scoped(viewer))`;
   const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
   const named = signedIn
@@ -734,8 +905,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
         orderBy: (t) => [desc(t.deletedAt)],
         limit: ${TRASH_SHOWN},
       })
-    )${allowed};${named}
-    ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName} }))`, "return ")}
+    )${allowed};${named}${groupShown}
+    ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName}${roots.length ? ", withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null" : ""}${together && group.length ? `, withCount: withCount.get(\`${model.name}:\${row.id}\`) ?? 0` : ""} }))`, "return ")}
   },
 
   /** A ${n.label.toLowerCase()} in the trash, as its page shows it read-only, with when and by whom; else nothing. */
@@ -756,16 +927,31 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   /** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash, those the viewer may delete. */
   restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
     const rows = db
-      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}`)})
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), ${trashedRows}))
-      .all()${allowed};
+      .all()${allowed};${
+        roots.length
+          ? `
+    // One that went to the trash with another record comes back with it, not alone (delete-together.md).
+    for (const row of rows) {
+      const root = row.deletedWith && rootInTrash(row.deletedWith);
+      if (root) throw new Conflict(\`restore-root-first:\${root}\`);
+    }`
+          : ""
+      }
     // A unique value a live record has taken since refuses it, as it refuses a new record.
     try {
       db.transaction((tx) => {
         for (const row of rows) {
-          const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null }).where(eq(${n.table}.id, row.id)).returning().get();
-          audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });
+          const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.id, row.id)).returning().get();
+          audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });${
+            together && group.length
+              ? `
+          // What went to the trash with it comes back with it.
+${members.map((m) => `          ${dataOf(m)}.restoreWith(tx, viewer, \`${model.name}:\${row.id}\`);`).join("\n")}`
+              : ""
+          }
         }
       });
     } catch (error) {
@@ -787,7 +973,13 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
   erase(viewer: Viewer | null, ids: number[]): void {
-    if (ids.length === 0) return;
+    if (ids.length === 0) return;${
+      eraseMembers
+        ? `
+    // What is in the trash pointing to them goes first, deepest first (docs/design/delete-together.md).
+${eraseMembers}`
+        : ""
+    }
     const rows = db
       .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
       .from(${n.table})
@@ -814,7 +1006,7 @@ ${dropPictures(
     : ""
 }  },
 
-  /** What has been in the trash for thirty days goes for good (once a day). */
+  /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
   purge(now = Date.now()): number {
     const old = db
       .select({ id: ${n.table}.id })
@@ -824,7 +1016,33 @@ ${dropPictures(
       .map((row) => row.id);
     ${self}.erase(null, old);
     return old.length;
-  },`;
+  },${
+    roots.length
+      ? `
+
+  /**
+   * Moves the live ${n.pluralLabel.toLowerCase()} the condition fits to the trash with another record
+   * (docs/design/delete-together.md), marked as its group; the viewer must be allowed to delete each.
+   */
+  trashWith(tx: Tx, viewer: Viewer | null, fits: SQL, tag: string, when: Date): void {
+    const rows = tx.select().from(${n.table}).where(and(fits, isNull(${n.table}.deletedAt))).all();
+    for (const row of rows)
+      if (!allows(${n.access}.delete, viewer, ${ownerOf})) throw new Conflict("no-right:${names(model, t).label}");
+    if (rows.length === 0) return;
+    tx.update(${n.table}).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(${n.table}.deletedAt))).run();
+    for (const row of rows) {
+      audit(tx, viewer, { action: "trashed", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });${tell('"deleted"', "row").replace("\n        ", "\n      ")}
+    }
+  },
+
+  /** Takes the ${n.pluralLabel.toLowerCase()} that went to the trash with a record out of it again. */
+  restoreWith(tx: Tx, viewer: Viewer | null, tag: string): void {
+    const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.deletedWith, tag)).returning().all();
+    for (const row of back)
+      audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });
+  },`
+      : ""
+  }`;
   const referenceChecks = refs.map(
     (ref) =>
       `  if (values.${ref.name}Id != null && !${names(modelNamed(ir, ref.type.model), t).data}.canRead(viewer, values.${ref.name}Id))
@@ -837,6 +1055,11 @@ ${dropPictures(
   // Every stored upload, pictures and documents: selected with the owner, looked for when one goes.
   const pictures = [...singles, ...pictureLists, ...docSingles, ...docLists];
   const selectOwner = `{ ${signedIn ? `${owner}: ${n.table}.${owner}` : `id: ${n.table}.id`}${pictures.map((k) => `, ${k}: ${n.table}.${k}`).join("")} }`;
+  // With the title, for the facts a refused delete carries.
+  const selectTitled =
+    group.length && titleField(model) !== "id"
+      ? selectOwner.replace("{ ", `{ ${titleField(model)}: ${n.table}.${titleField(model)}, `)
+      : selectOwner;
   // A replaced or removed picture's file goes, unless a record still shows the same one in any of
   // the model's picture fields (files are named by their content, so they may be shared).
   const stillShown = (_k: string, file: string) =>
@@ -867,12 +1090,19 @@ import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
-import { ${trashing ? "log, " : ""}refusal } from "#/kit/log.server";
+import { refusal } from "#/kit/log.server";
 ${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
-${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}
+${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${trashing ? 'import "./trash.server";\n' : ""}${
+  group.length || roots.length
+    ? `
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+`
+    : ""
+}${usedBy}${rootInTrash}
 /** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
 export const ${n.access}: ModelAccess = ${literal(access)};
 ${
@@ -1340,9 +1570,10 @@ ${dropPictures(
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, ${together && group.length ? "" : "_"}together = false): Promise<void> {
     const row = db
-      .select(${selectOwner})
+      .select(${selectTitled})
       .from(${n.table})
       .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
       .get();
@@ -1350,9 +1581,9 @@ ${dropPictures(
     check(${n.access}.delete, viewer, ${ownerOf});
     try {
       db.transaction((tx) => {
-${inUse("id", "        ")}        const gone = ${goneBy("id")};
+${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
-          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}
+          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
         }
       });
     } catch (error) {
@@ -1372,23 +1603,23 @@ ${
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], ${together && group.length ? "" : "_"}together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select(${signedIn ? selectOwner.replace("{ ", `{ id: ${n.table}.id, `) : selectOwner})
+      .select(${signedIn ? selectTitled.replace("{ ", `{ id: ${n.table}.id, `) : selectTitled})
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), ${self}.readable(viewer)))
       .all()
       .filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}));
-    db.transaction((tx) => {
+    db.transaction((tx) => {${trashing ? "\n      const when = new Date();" : ""}
       for (const row of rows)
         try {
-${inUse("row.id", "          ")}          const gone = ${goneBy("row.id")};
+${groupCheck("row.id", "row", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
-            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}
+            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -1443,24 +1674,52 @@ ${
 `
     : ""
 }};
-${
-  trashing
-    ? `
+`;
+}
+
+/**
+ * The trash's daily emptying, once for the app (docs/design/trash.md): what has been in a trash
+ * for thirty days goes for good, the models that point to others first, so a record that goes
+ * is pointed to by nothing (docs/design/delete-together.md).
+ */
+export function trashModule(ir: SpecIR, t: Texts): string {
+  // How far a model's required references reach: Customer 0, Order 1, OrderLine 2.
+  const reach = (name: string, path: string[]): number =>
+    Math.max(
+      0,
+      ...references(modelNamed(ir, name))
+        .filter((f) => f.required && !path.includes(f.type.model))
+        .map((f) => 1 + reach(f.type.model, [...path, f.type.model])),
+    );
+  const models = ir.models
+    .filter((m) => m.trash)
+    .map((m, i) => ({ m, i, reach: reach(m.name, [m.name]) }))
+    .sort((a, b) => b.reach - a.reach || a.i - b.i)
+    .map(({ m }) => m);
+  return `${HEADER}// The trash's daily emptying (docs/design/trash.md): what has been in a trash for thirty days goes
+// for good, the models that point to others first (docs/design/delete-together.md).
+import { log } from "#/kit/log.server";
+${models.map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`).join("\n")}
+
+/** Empties every trash of what is thirty days old; how many records went. */
+export function purgeTrash(now = Date.now()): number {
+  let gone = 0;
+  for (const [model, data] of [${models.map((m) => `["${m.name}", ${names(m, t).data}]`).join(", ")}] as const) {
+    try {
+      gone += data.purge(now);
+    } catch (error) {
+      log.error("The trash could not be emptied", { model, error });
+    }
+  }
+  return gone;
+}
+
 // Once a day, a minute after the server starts and then every day, in production.
 if (import.meta.env.SSR && import.meta.env.PROD) {
-  const purge = () => {
-    try {
-      ${self}.purge();
-    } catch (error) {
-      log.error("The trash could not be emptied", { model: "${model.name}", error });
-    }
-  };
-  setTimeout(purge, 60_000).unref();
-  setInterval(purge, DAY).unref();
+  setTimeout(purgeTrash, 60_000).unref();
+  setInterval(purgeTrash, 24 * 60 * 60 * 1000).unref();
 }
-`
-    : ""
-}`;
+`;
 }
 
 /** A field written as Markdown. */

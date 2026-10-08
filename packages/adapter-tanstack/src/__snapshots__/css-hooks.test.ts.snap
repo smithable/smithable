@@ -131,6 +131,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="code"",
     "data-part="email"",
   ],
+  "src/kit/Together.tsx": [
+    "data-part="together"",
+  ],
   "src/kit/Trash.tsx": [
     "data-part="trash-notice"",
     "data-part="trashed"",
