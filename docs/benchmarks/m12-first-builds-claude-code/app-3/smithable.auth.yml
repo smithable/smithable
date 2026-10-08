@@ -4,4 +4,8 @@ signIn:
 defaultAccess: private
 public:
   pages: [home, privacy]
+roles:
+  member:
+    description: A freelancer using the app.
+defaultRole: member
 admins: [johan@smithable.ai]
