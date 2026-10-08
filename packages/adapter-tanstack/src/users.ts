@@ -1,8 +1,40 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
-import type { AuthIR, SpecIR } from "@smithable/core";
-import { roleLabels } from "./auth.js";
+import { type AuthIR, humanize, type SpecIR, USER_MODEL } from "@smithable/core";
+import { hasSignIn, roleLabels } from "./auth.js";
 import { hasKeys } from "./keys.js";
-import { HEADER, literal } from "./shared.js";
+import { HEADER, literal, type Texts, tableRef } from "./shared.js";
+
+/**
+ * Every column that names a person: each reference to a user, and a record's owner. Removing a
+ * person gives these to another member, or clears the ones that may be empty (docs/design/
+ * admin.md).
+ */
+function userUses(ir: SpecIR, auth: AuthIR, t: Texts) {
+  return ir.models.flatMap((model) => {
+    const noun = [t.modelLabel(model).toLowerCase(), t.modelPluralLabel(model).toLowerCase()];
+    const refs = model.fields.flatMap((f) =>
+      f.type.kind === "relation" && !f.type.many && f.type.model === USER_MODEL
+        ? [
+            {
+              column: `${f.name}Id`,
+              field: (t.field(model, f).label ?? humanize(f.name)).toLowerCase() as string | null,
+              required: f.required,
+            },
+          ]
+        : [],
+    );
+    const owner =
+      hasSignIn(auth) && !model.ownedBy
+        ? [{ column: "ownerId", field: null, required: false }]
+        : [];
+    return [...refs, ...owner].map((use) => ({
+      ...use,
+      model: model.name,
+      table: tableRef(model),
+      noun,
+    }));
+  });
+}
 
 /** The users page's id (there is one). */
 function usersPage(ir: SpecIR): string {
@@ -16,15 +48,16 @@ function usersPage(ir: SpecIR): string {
  * the users page's roles) does with them. Acceptance is by verified email address at sign-in
  * (src/lib/auth.ts); the token in the link only tells the sign-in page whom it is for.
  */
-export function usersServerModule(ir: SpecIR, auth: AuthIR): string {
+export function usersServerModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
   const roles = auth.roles.map((r) => r.name);
+  const uses = userUses(ir, auth, t);
   return `${HEADER}// Who has access: the users and the open invitations, and what an administrator does with them.
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
 import { ${hasKeys(ir, auth) ? "and, asc, eq, isNull" : "asc, eq"} } from "drizzle-orm";
 import { db } from "#/db";
-import { ${hasKeys(ir, auth) ? "apiKey, invitation, user" : "invitation, user"} } from "#/db/schema";
+import { ${hasKeys(ir, auth) ? "apiKey, invitation, user" : "invitation, user"} } from "#/db/schema";${uses.length ? '\nimport * as schema from "#/db/schema";' : ""}
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -175,14 +208,43 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+${uses
+  .map(
+    (u) =>
+      `    { model: ${JSON.stringify(u.model)}, field: ${JSON.stringify(u.field)}, noun: ${literal(u.noun)}, required: ${u.required}, count: db.select({ id: ${u.table}.id }).from(${u.table}).where(eq(${u.table}.${u.column}, userId)).all().length },`,
+  )
+  .join("\n")}
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -205,12 +267,21 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
         audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });`
         : ""
     }
+${uses
+  .map(
+    (u) => `
+      {
+        const moved = ${u.required ? "heir ? " : ""}tx.update(${u.table}).set({ ${u.column}: ${u.required ? "heir.id" : "heir?.id ?? null"} }).where(eq(${u.table}.${u.column}, userId)).returning({ id: ${u.table}.id }).all()${u.required ? " : []" : ""};
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: ${JSON.stringify(u.model)}, details: { column: ${JSON.stringify(u.column)}, user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }`,
+  )
+  .join("")}
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }

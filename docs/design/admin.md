@@ -10,6 +10,10 @@ Johan, testing the CRM on 2026-10-08 as "Dev admin": "where do I find the admin 
 - **Activity** is the data page's activity, at `/team/activity`; an app with a data page has both, the same log.
 - **Keys** stay a part of Team.
 
+## Removing a member whom records name
+
+Johan asked on 2026-10-08 what happens to a removed member's records; a required reference to them made the removal fail with no way forward (backlog A56). Now the remove dialog says which records name the person, by kind and reference ("12 tasks have Anna as assignee.", "3 customers belong to Anna."), and offers to give them to another member. Without one, the optional references and the records that are theirs are cleared, as before; a required reference needs someone, and Remove waits for the choice. The change and the removal are one transaction, with an Activity line per kind ("records reassigned" or "records cleared", with the records' ids), and records in the trash follow the same choice.
+
 ## Not now
 
 A settings page of its own (the app's settings model, onboarding answers) in the group; a count of what is in the trash beside its menu item.

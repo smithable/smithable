@@ -138,6 +138,7 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/Users.tsx": [
     "data-kit="users"",
+    "data-part="uses"",
   ],
 }
 `;

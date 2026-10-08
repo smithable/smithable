@@ -44,6 +44,7 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 ${keys ? 'import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/access";
@@ -97,10 +98,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -141,7 +146,8 @@ function ${component}() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />${
