@@ -30,7 +30,7 @@ export function ArticleList({
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li key={item.href} data-part="row">
-            <Card className="relative h-full overflow-hidden hover:bg-accent/40">
+            <Card className="relative h-full overflow-hidden hover:bg-hover">
               {item.picture && (
                 <img
                   src={item.picture.src}

@@ -53,6 +53,7 @@ export function Calculator({
                 id={id}
                 value={values[field.name] ?? ""}
                 invalid={false}
+                currency={app.currency}
                 describedBy={field.help ? `${id}-help` : undefined}
                 onChange={(value) => setValues((v) => ({ ...v, [field.name]: value }))}
               />

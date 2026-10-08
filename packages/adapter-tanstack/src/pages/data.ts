@@ -252,7 +252,7 @@ function AskPage() {
  * and when, newest first, filtered from the address; a record by its title now, a deleted one or
  * a removed user by their id, with Forget in the log on their lines.
  */
-function activityRoute(
+export function activityRoute(
   page: PageIR,
   { ir, t }: Pick<GenContext, "ir" | "t">,
   keys: boolean,
