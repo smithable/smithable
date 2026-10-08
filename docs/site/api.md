@@ -120,7 +120,8 @@ curl -s -X POST "https://crm.example.com/api/v1/customers/12/restore" -H "Author
 - `GET /api/v1/<models>?trashed=true` lists what is in the trash that the key's role may delete, each with `deletedAt`.
 - `POST /api/v1/<models>/{id}/restore` takes one out and answers the record.
 - `DELETE /api/v1/<models>/{id}?permanent=true` removes one in the trash for good, with its pictures and documents.
-- A unique value holds among the live records only: a new record may take the value of a trashed one, and restoring that one is then refused (409). A record that others still refer to cannot be moved to the trash, as it cannot be deleted.
+- A unique value holds among the live records only: a new record may take the value of a trashed one, and restoring that one is then refused (409).
+- A record that others point to with a required reference (a customer with orders) is refused with 409 and the facts: `with` lists what points to it by kind and count, `loose` what would show no customer, `together` says whether they can all go to the trash with it (their kinds have a trash too), and `record` is its title. Then `DELETE /api/v1/<models>/{id}?together=true` moves them all, marked as one group: restoring the record restores them, and restoring one of them alone is refused (409) while the record is in the trash. Removing the record for good removes them too.
 - For assistants, `find` takes `"trashed": true` and `run` has `restore<Kind>` (e.g. `restoreCustomer`) for each kind with a trash.
 
 ## 4. When the app says no

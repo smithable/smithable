@@ -132,6 +132,26 @@ export const w = {
   moreBelow: "Mer längre ned",
   movedToTrash: (title: string) => `”${title}” ligger i papperskorgen.`,
   moveToTrash: "Flytta till papperskorgen",
+  moveAllToTrash: "Flytta allt till papperskorgen",
+  moveToTrashAsk: (what: string) => `Flytta ${what} till papperskorgen?`,
+  goesWith: (list: string, n: number) =>
+    `${list} följer med; ${n === 1 ? "den" : "de"} återställs tillsammans.`,
+  willShowNone: (list: string, label: string) => `${list} kommer att sakna ${label.toLowerCase()}.`,
+  cannotDeleteUsed: (title: string, list: string) =>
+    `”${title}” används av ${list}, så den kan inte tas bort.`,
+  turnTrashOn: (models: string) =>
+    `Slå på papperskorgen för ${models} för att ta bort dem tillsammans.`,
+  nOf: (n: number, one: string, many: string) => `${n} ${(n === 1 ? one : many).toLowerCase()}`,
+  listed: (items: string[]) =>
+    items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} och ${items.at(-1)}`,
+  whatBelongsToThem: "det som hör till dem",
+  withRoot: (title: string) => `med ”${title}”`,
+  andRecords: (n: number) => `och ${n} ${n === 1 ? "post" : "poster"}`,
+  togetherColumn: "Tillsammans",
+  restoreRootFirst: (label: string, title: string) =>
+    `Återställ först ${label.toLowerCase()} ”${title}”: den här posten hamnade i papperskorgen tillsammans med den.`,
+  noRightToDelete: (label: string) =>
+    `Några poster av typen ${label.toLowerCase()} får du inte ta bort, så inget flyttades.`,
   name: "Namn",
   namedAs: (count: number, noun: string, name: string, field: string) =>
     `${count} ${noun} har ${name} som ${field}.`,
