@@ -37,7 +37,7 @@ describe("the preview's outbox", () => {
     for (const [file, subject] of [
       ["2026-10-08T10-00-00-000Z-a.eml", "first"],
       ["2026-10-08T11-00-00-000Z-b.eml", "second"],
-    ])
+    ] as const)
       writeFileSync(join(outbox, file), `To: a@example.com\nSubject: ${subject}\n\nText\n`);
     writeFileSync(join(outbox, "notes.txt"), "not a mail");
     expect(readOutbox(dir).map((m) => m.subject)).toEqual(["second", "first"]);
