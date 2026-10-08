@@ -19,6 +19,7 @@ export function SignIn({
   onProvider,
   onDevRole,
   codes,
+  kept,
   onSendCode,
   onCode,
 }: {
@@ -39,6 +40,8 @@ export function SignIn({
   onDevRole?: (role: string) => Promise<unknown>;
   /** Signing in by a code by mail: whether codes can reach people (mail settings, or development). */
   codes?: boolean;
+  /** A code stays in the outbox (the preview sends no mail): the page says where it is. */
+  kept?: boolean;
   onSendCode?: (address: string) => Promise<unknown>;
   onCode?: (address: string, code: string) => Promise<unknown>;
 }) {
@@ -84,7 +87,13 @@ export function SignIn({
             }}
           >
             <p className="text-sm" role="status">
-              {w.if} <strong>{sentTo}</strong> {w.codeOnItsWay}
+              {kept ? (
+                w.codeKept
+              ) : (
+                <>
+                  {w.if} <strong>{sentTo}</strong> {w.codeOnItsWay}
+                </>
+              )}
             </p>
             <div className="space-y-1">
               <Label htmlFor="sign-in-code">{w.code}</Label>

@@ -528,7 +528,8 @@ async function outgoingFlow(dir, base) {
     // Activity says what was sent, to whom.
     const lines = query(
       dir,
-      "select details from audit_log where action = 'mailed' order by id desc limit 3",
+      // Without mail settings the app keeps its mail, and Activity says so (backlog A54).
+      "select details from audit_log where action in ('kept in the preview', 'kept in the outbox') order by id desc limit 3",
     );
     if (lines.length !== 3 || !lines.every((l) => l.details.includes("dev-member@")))
       throw new Error(`Activity: ${JSON.stringify(lines)}`);
@@ -1029,7 +1030,9 @@ async function contactFlow(dir, base) {
     const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
     await page.getByRole("textbox", { name: "Message" }).fill("Is the spring order still on?");
     await page.getByRole("button", { name: "Send" }).click();
-    await page.getByText("Your message is sent.").waitFor({ timeout: 10000 });
+    await page
+      .getByText("Your message is in the preview's outbox, not sent: the preview sends no mail.")
+      .waitFor({ timeout: 10000 });
     if ((await page.content()).includes("dev-admin@"))
       throw new Error("the page shows the owner's address");
     const mails = readdirSync(outbox).sort();
@@ -1144,7 +1147,9 @@ async function marketplaceFlow(dir, base) {
     const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
     await page.getByRole("textbox", { name: "Message" }).fill("Is the lamp still for sale?");
     await page.getByRole("button", { name: "Send" }).click();
-    await page.getByText("Your message is sent.").waitFor({ timeout: 10000 });
+    await page
+      .getByText("Your message is in the preview's outbox, not sent: the preview sends no mail.")
+      .waitFor({ timeout: 10000 });
     const mails = readdirSync(outbox).sort();
     if (mails.length !== before + 1) throw new Error("no mail was sent");
     const mail = readFileSync(join(outbox, mails.at(-1)), "utf8").replace(/=\r?\n/g, "");
@@ -3907,6 +3912,15 @@ async function browserFlow(dir, base) {
     await renameTo("Dev admin", "Dev Admin Renamed");
     await renameTo("Dev Admin Renamed", "Dev admin");
     console.log("  ✓ browser: a signed-in person sets their own name from the menu");
+
+    // In the preview an invitation stays in the outbox, and the Team page says so (backlog A54).
+    await open(page, `${base}/team`);
+    await page.getByRole("textbox", { name: "Email address" }).fill("new.person@example.com");
+    await page.getByRole("button", { name: "Send invitation" }).click();
+    await expectText(
+      "an invitation in the preview says it is in the outbox, not sent",
+      "Invitation to new.person@example.com written to the preview's outbox, not sent",
+    );
 
     await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");

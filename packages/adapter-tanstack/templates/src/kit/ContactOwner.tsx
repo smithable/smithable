@@ -23,7 +23,8 @@ export function ContactOwner({
   recipient: string;
   /** The signed-in viewer: their name and email are filled in and locked. */
   viewer?: { name: string; email: string } | null;
-  onSend: (values: ContactValues) => Promise<unknown>;
+  /** Resolves to whether the message stayed in the outbox (the preview sends no mail). */
+  onSend: (values: ContactValues) => Promise<{ kept?: boolean } | undefined>;
 }) {
   const id = useId();
   const [values, setValues] = useState<ContactValues>({
@@ -31,15 +32,14 @@ export function ContactOwner({
     email: viewer?.email ?? "",
     message: "",
   });
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "kept">("idle");
   const [failure, setFailure] = useState<string>();
   async function send(event: React.FormEvent) {
     event.preventDefault();
     setState("sending");
     setFailure(undefined);
     try {
-      await onSend(values);
-      setState("sent");
+      setState((await onSend(values))?.kept ? "kept" : "sent");
     } catch (error) {
       setFailure(error instanceof Error ? error.message : w.messageNotSent);
       setState("idle");
@@ -50,9 +50,9 @@ export function ContactOwner({
       <h2 id={`${id}-title`} className="text-lg font-semibold">
         {w.contactThe(recipient)}
       </h2>
-      {state === "sent" ? (
+      {state === "sent" || state === "kept" ? (
         <p role="status" className="mt-4">
-          {w.messageSent}
+          {state === "kept" ? w.messageKept : w.messageSent}
         </p>
       ) : (
         <form onSubmit={send} aria-labelledby={`${id}-title`} className="mt-4 space-y-4">

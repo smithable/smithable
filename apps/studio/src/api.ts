@@ -125,9 +125,19 @@ const changing = async (result: Promise<Result>) => {
   return r;
 };
 
+/** A mail the preview kept instead of sending (cli/src/outbox.ts). */
+export interface KeptMail {
+  file: string;
+  at: string;
+  to: string;
+  subject: string;
+  text: string;
+}
+
 export const api = {
   project: () => call<Project>("/api/project"),
   logs: () => call<string[]>("/api/logs"),
+  outbox: () => call<KeptMail[]>("/api/outbox"),
   diff: () => call<{ patch: string }>("/api/diff"),
   operation: (name: string, args: Record<string, unknown>, confirm = false) =>
     changing(call<Result>("/api/op", { name, args, confirm })),

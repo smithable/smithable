@@ -617,7 +617,7 @@ import { user } from "#/db/schema";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 ${kn && keep ? `import { ${kn.data} } from "#/generated/${kebab(keep.name)}.server";\n` : ""}import { ContactOwner } from "#/kit/ContactOwner";
 import { writeAllowed } from "#/kit/limit";
-import { sendMail } from "#/kit/mail";
+import { mailConfigured, sendMail } from "#/kit/mail";
 import { currentViewer } from "#/lib/viewer.server";
 `,
     fn: `
@@ -641,7 +641,7 @@ const contact${model.name} = createServerFn({ method: "POST" })
       subject: \`About “\${name}”\`,
       text: \`\${sender.name} (\${sender.email}) wrote about “\${name}”:\\n\\n\${sender.message}\\n\\n\${link}\\n\`,
     });${kn ? `\n    await ${kn.data}.create(viewer, { ${kept.join(", ")} });` : ""}
-    return { sent: true };
+    return { sent: true, kept: !mailConfigured() };
   });
 
 `,
