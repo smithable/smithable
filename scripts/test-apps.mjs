@@ -775,6 +775,54 @@ async function apiTrashFlow(base) {
     console.log(
       "  ✓ api: a delete moves a task to the trash; reading it answers 410 with the restore address; ?trashed=true lists it for an admin's key and not the assistant's; restore brings it back; ?permanent=true removes it for good",
     );
+    // A project its tasks point to (docs/design/delete-together.md): refused with the facts,
+    // taken along with ?together=true, a task not restored alone, restored together, and
+    // removed for good together.
+    const made = await (
+      await call(admin, "/projects", { method: "POST", body: JSON.stringify({ name: "Together" }) })
+    ).json();
+    const inIt = await (
+      await call(admin, "/tasks", {
+        method: "POST",
+        body: JSON.stringify({ title: "Goes with it", project: made.id }),
+      })
+    ).json();
+    const refused = await call(admin, `/projects/${made.id}`, { method: "DELETE" });
+    const facts = await refused.json();
+    if (
+      refused.status !== 409 ||
+      facts.together !== true ||
+      !facts.with?.some((e) => e.model === "Task" && e.count === 1) ||
+      !/is used by 1 task\. Pass together=true/.test(facts.title)
+    )
+      throw new Error(`deleting a project with a task: ${refused.status} ${JSON.stringify(facts)}`);
+    if (
+      (await call(admin, `/projects/${made.id}?together=true`, { method: "DELETE" })).status !== 204
+    )
+      throw new Error("the delete together did not answer 204");
+    if ((await call(admin, `/tasks/${inIt.id}`)).status !== 410)
+      throw new Error("the task did not go to the trash with its project");
+    const alone = await call(admin, `/tasks/${inIt.id}/restore`, { method: "POST" });
+    if (
+      alone.status !== 409 ||
+      !/Restore the project "Together" first/.test((await alone.json()).title)
+    )
+      throw new Error(`restoring the task alone answered ${alone.status}`);
+    if ((await call(admin, `/projects/${made.id}/restore`, { method: "POST" })).status !== 200)
+      throw new Error("the project was not restored");
+    if ((await call(admin, `/tasks/${inIt.id}`)).status !== 200)
+      throw new Error("the task did not come back with its project");
+    await call(admin, `/projects/${made.id}?together=true`, { method: "DELETE" });
+    if (
+      (await call(admin, `/projects/${made.id}?permanent=true`, { method: "DELETE" })).status !==
+      204
+    )
+      throw new Error("the permanent delete of the project did not answer 204");
+    if ((await call(admin, `/tasks/${inIt.id}`)).status !== 404)
+      throw new Error("the task did not go for good with its project");
+    console.log(
+      "  ✓ api: deleting a project with a task answers 409 with the facts; ?together=true takes the task along; the task is not restored alone; the project's restore brings it back; removing the project for good removes the task",
+    );
   } catch (error) {
     console.log(
       `  ✗ api trash: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -3974,10 +4022,55 @@ async function browserFlow(dir, base) {
     await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
     console.log("  ✓ browser: the customer's page lists its orders");
 
+    // Deleting a record that others point to (docs/design/delete-together.md): the dialog says
+    // what goes with it, the group goes to the trash together, shows as a group there, an order
+    // is not restored alone, and restoring the customer brings its orders back.
     await page.getByRole("button", { name: "Move to trash" }).click();
+    const together = page.locator('[data-part="together"]');
+    await together.getByText("Move “Skerry Software” to the trash?").waitFor();
+    await together.getByText("2 orders go with it; they are restored together.").waitFor();
+    await together.getByRole("button", { name: "Move all to the trash" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await open(page, `${base}/orders`);
+    if (await page.getByRole("cell", { name: "ORD-2001", exact: true }).count())
+      throw new Error("the order of a customer moved to the trash with it is still listed");
+    await open(page, `${base}/customers/trash`);
+    await page.locator("tr", { hasText: "Skerry Software" }).getByText("and 2 records").waitFor();
+    await open(page, `${base}/orders/trash`);
+    const withRoot = page.locator("tr", { hasText: "ORD-2001" });
+    await withRoot.getByText("with “Skerry Software”").waitFor();
+    if (await withRoot.getByRole("button", { name: "Restore" }).count())
+      throw new Error("an order in the trash with its customer offers Restore alone");
+    await withRoot.getByRole("checkbox").check();
+    await page
+      .locator('[data-kit="selection-bar"]')
+      .getByRole("button", { name: /^Restore/ })
+      .click();
     await expectText(
-      "a customer with orders cannot be moved to the trash, and it says why",
-      "This customer is still used by other records.",
+      "restoring an order alone is refused while its customer is in the trash",
+      "Restore the customer “Skerry Software” first",
+    );
+    await open(page, `${base}/customers/trash`);
+    await page
+      .locator("tr", { hasText: "Skerry Software" })
+      .getByRole("button", { name: "Restore" })
+      .click();
+    await page
+      .getByRole("cell", { name: "Skerry Software", exact: true })
+      .waitFor({ state: "detached", timeout: 10000 });
+    await open(page, `${base}/orders`);
+    await page.getByRole("row", { name: /ORD-2001.*Skerry Software/ }).waitFor({ timeout: 5000 });
+    const withLines = query(
+      dir,
+      "select action, details from audit_log where model = 'Order' and action in ('trashed', 'restored') order by id",
+    );
+    if (
+      withLines.length !== 4 ||
+      !withLines.every((l) => JSON.parse(l.details ?? "{}").with?.startsWith("Customer:"))
+    )
+      throw new Error(`the order's log lines: ${JSON.stringify(withLines)}`);
+    console.log(
+      "  ✓ browser: moving a customer with orders to the trash asks with the facts and takes the orders along; the trash shows the group; an order is not restored alone; restoring the customer restores the orders; the log says with whom",
     );
     await open(page, `${base}/orders`);
     await page.getByRole("searchbox", { name: "Search by number or customer" }).fill("skerry");
@@ -4410,18 +4503,16 @@ for (const [index, example] of examples.entries()) {
       });
     // The trash (docs/design/trash.md) on a model with places and on one the API offers: the
     // dev server's flows run with it (a cancelled booking frees its place; the API's 410).
+    // Tasks and notes point to projects: all three have a trash, so a project goes with them
+    // (docs/design/delete-together.md), through the API.
     if (example === "booking" || example === "api")
       step(
-        `op setTrash ${example === "booking" ? "Booking" : "Task"} true, and the app type-checks`,
+        `op setTrash ${example === "booking" ? "Booking" : "Task, Project and Note"} true, and the app type-checks`,
         () => {
-          const done = smithable(
-            dir,
-            "op",
-            "setTrash",
-            example === "booking" ? "Booking" : "Task",
-            "true",
-          );
-          if (done.code !== 0) throw new Error(done.out);
+          for (const model of example === "booking" ? ["Booking"] : ["Task", "Project", "Note"]) {
+            const done = smithable(dir, "op", "setTrash", model, "true");
+            if (done.code !== 0) throw new Error(done.out);
+          }
           run("pnpm", ["typecheck"], dir);
         },
       );

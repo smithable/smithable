@@ -553,8 +553,8 @@ ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChange
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await ${n.remove}({ data: row.id });${trash ? `\n                rememberTrashed(${JSON.stringify(model.name)}, row.id, String(${heading}));` : ""}
+            ? async (together?: boolean) => {
+                await ${n.remove}({ data: { id: row.id, together } });${trash ? `\n                rememberTrashed(${JSON.stringify(model.name)}, row.id, String(${heading}));` : ""}
                 await back();
               }
             : undefined

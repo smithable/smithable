@@ -86,17 +86,21 @@ export function schemaModule(ir: SpecIR, auth: AuthIR): string {
         ? model.fields.filter((f) => f.unique).map((f) => `unique().on(${uniqueOn(f)})`)
         : [];
     if (uniques.length) imports.add(model.trash ? "uniqueIndex" : "unique");
-    // The trash (docs/design/trash.md): when and by whom a record was deleted; an index over the
+    // The trash (docs/design/trash.md): when and by whom a record was deleted, and with which
+    // record when it went as part of a group (docs/design/delete-together.md); an index over the
     // live records only keeps every reader as fast as without it.
     const trash = model.trash
       ? `
   /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
   deletedAt: integer({ mode: "timestamp_ms" }),
-  deletedBy: text(),`
+  deletedBy: text(),
+  /** The record it went to the trash with ("Customer:12"), restored with it (docs/design/delete-together.md). */
+  deletedWith: text(),`
       : "";
     const live = model.trash
       ? [
           `index(${JSON.stringify(`${n.sqlTable}_live`)}).on(t.${hasSignIn(auth) || model.ownedBy ? ownerKey(model) : "id"}).where(sql\`\${t.deletedAt} is null\`)`,
+          `index(${JSON.stringify(`${n.sqlTable}_deleted_with`)}).on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)`,
         ]
       : [];
     if (model.trash) imports.add("text");
