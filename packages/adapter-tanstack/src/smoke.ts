@@ -161,7 +161,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

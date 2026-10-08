@@ -7757,7 +7757,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -8056,7 +8057,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "356c02cd generated",
+  "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -15634,7 +15635,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -15977,7 +15979,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "cb6f9edb generated",
+  "tests/smoke.spec.ts": "785d6529 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -20011,7 +20013,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -20242,7 +20245,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "47211f98 generated",
+  "tests/smoke.spec.ts": "1f2754d0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -25018,7 +25021,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -25291,7 +25295,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "96656d16 generated",
+  "tests/smoke.spec.ts": "0b442446 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -28009,7 +28013,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -28234,7 +28239,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "83765356 generated",
+  "tests/smoke.spec.ts": "a1478d06 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -30154,7 +30159,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -30349,7 +30355,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "cd3af4c8 generated",
+  "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -38896,7 +38902,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -39203,7 +39210,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "fd8fdf64 generated",
+  "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
