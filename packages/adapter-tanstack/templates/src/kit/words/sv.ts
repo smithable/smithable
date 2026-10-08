@@ -317,6 +317,7 @@ export const w = {
   options: "Alternativ",
   pictureDescription: "Beskrivning (för den som inte kan se bilden)",
   question: "Fråga",
+  trashedVerb: "flyttades till papperskorgen",
   asRole: (role: string) => `som ${role}`,
   contactThe: (who: string) => `Kontakta ${who}`,
   continueWith: (provider: string) => `Fortsätt med ${provider}`,
@@ -335,6 +336,9 @@ export const w = {
   stepOf: (n: number, count: number) => `Steg ${n} av ${count}`,
   tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} token in, ${tokensOut} ut`,
   toolCalls: (n: number) => `${n} verktygsanrop`,
+  trashHowMany: (n: number, noun: string) =>
+    `Flytta ${n} ${noun} till papperskorgen? ${n === 1 ? "Den" : "De"} kan återställas därifrån i 30 dagar.`,
+  trashN: (n: number) => `Flytta till papperskorgen (${n})`,
   /** Integritetssidan (kit LegalPage), skriven ur appens egen definition. */
   legalIntro: (app: string) =>
     `Den här sidan berättar vad ${app} lagrar om dig och varför. Den är skriven ur appens egen definition och ändras med den.`,

@@ -16,6 +16,8 @@ interface FieldInputProps {
   options?: Options;
   /** The record being edited, when it exists (a picture shows from its address). */
   record?: number;
+  /** The app's currency (EUR), shown beside an amount of money. */
+  currency?: string;
   onChange: (value: string | boolean) => void;
 }
 
@@ -35,6 +37,7 @@ export function FieldInput({
   describedBy,
   options,
   record,
+  currency,
   onChange,
 }: FieldInputProps) {
   const common = {
@@ -43,7 +46,10 @@ export function FieldInput({
     "data-part": "input",
     "data-field": field.name,
     "aria-invalid": invalid || undefined,
-    "aria-describedby": describedBy,
+    "aria-describedby":
+      [describedBy, field.kind === "money" && currency && `${id}-currency`]
+        .filter(Boolean)
+        .join(" ") || undefined,
   };
   if (field.kind === "bool" && field.control === "radio") {
     return (
@@ -187,7 +193,7 @@ export function FieldInput({
     );
   }
   const numeric = field.kind === "int" || field.kind === "decimal" || field.kind === "money";
-  return (
+  const input = (
     <Input
       {...common}
       type={inputTypes[field.kind] ?? "text"}
@@ -195,6 +201,16 @@ export function FieldInput({
       value={text}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+  // An amount says its currency, as lists and dashboards do; the app has one (app.currency).
+  if (field.kind !== "money" || !currency) return input;
+  return (
+    <div data-part="amount" className="flex items-center gap-2">
+      {input}
+      <span id={`${id}-currency`} className="shrink-0 text-sm text-muted-foreground">
+        {currency}
+      </span>
+    </div>
   );
 }
 

@@ -7381,6 +7381,9 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -7429,6 +7432,9 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -7730,10 +7736,10 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
@@ -7767,15 +7773,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
@@ -7806,7 +7812,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3ba8a00 generated",
@@ -7849,8 +7855,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/sign-in.tsx": "53dad7c7 generated",
   "src/routes/team/index.tsx": "156920a5 generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "356c02cd generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -15201,6 +15207,9 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -15249,6 +15258,9 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -15614,10 +15626,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
@@ -15656,26 +15668,26 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Articles.tsx": "fe12da59 kit",
-  "src/kit/Calculator.tsx": "f15e5001 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Articles.tsx": "34dd9a3a kit",
+  "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "37ba7570 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Landing.tsx": "b4abe79a kit",
+  "src/kit/Landing.tsx": "04b2edb2 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/Reserve.tsx": "d4124f04 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "fb40b940 kit",
+  "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "c877e4f6 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -15696,7 +15708,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3a82cc45 generated",
@@ -15756,8 +15768,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "cec1d0a9 generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "cb6f9edb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -18609,6 +18621,7 @@ function CustomersPage() {
           actions={[]}
           deletable={chosen.filter((row) => allows(customerDeleteRule, viewer, row.accountManagerId)).length}
           onDelete={() => deleteCustomers({ data: chosen.map((row) => row.id) })}
+          trash
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -18939,6 +18952,7 @@ function OrdersPage() {
           actions={[]}
           deletable={chosen.filter((row) => allows(orderDeleteRule, viewer, row.ownerId)).length}
           onDelete={() => deleteOrders({ data: chosen.map((row) => row.id) })}
+          trash
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -19355,6 +19369,9 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -19403,6 +19420,9 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -19672,10 +19692,10 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/actions/merge-customers.ts": "916a9b22 custom",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -19703,16 +19723,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "fb40b940 kit",
+  "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "c877e4f6 kit",
   "src/kit/Trash.tsx": "a4260a36 kit",
   "src/kit/Users.tsx": "7951cdd5 kit",
@@ -19732,7 +19752,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7ccb0e1a generated",
@@ -19743,21 +19763,21 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "caf03fad generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
-  "src/routes/customers/index.tsx": "4338a5f9 generated",
+  "src/routes/customers/index.tsx": "56987225 generated",
   "src/routes/customers/new.tsx": "a80fd5cc generated",
   "src/routes/customers/trash.tsx": "79ca3586 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "c27f263a generated",
-  "src/routes/orders/index.tsx": "acb64f79 generated",
+  "src/routes/orders/index.tsx": "c31ea8f1 generated",
   "src/routes/orders/new.tsx": "330bd071 generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "dacc7aac generated",
   "src/routes/team/index.tsx": "84f68638 generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "47211f98 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -24307,6 +24327,9 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -24355,6 +24378,9 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -24684,10 +24710,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
@@ -24723,22 +24749,22 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "a055249c kit",
-  "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/Filters.tsx": "827f8bde kit",
+  "src/kit/Landing.tsx": "04b2edb2 kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "fb40b940 kit",
+  "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "c877e4f6 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -24761,7 +24787,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "29808e97 generated",
@@ -24791,8 +24817,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "59eccf55 generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "96656d16 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -27321,6 +27347,9 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -27369,6 +27398,9 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -27637,10 +27669,10 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
@@ -27659,21 +27691,21 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/ContactOwner.tsx": "0158824f kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "a055249c kit",
-  "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/Filters.tsx": "827f8bde kit",
+  "src/kit/Landing.tsx": "04b2edb2 kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "fb40b940 kit",
+  "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "c877e4f6 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -27693,7 +27725,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c5155025 generated",
@@ -27720,8 +27752,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "293fa7c3 generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "83765356 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -29473,6 +29505,9 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -29521,6 +29556,9 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -29753,10 +29791,10 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
@@ -29775,17 +29813,17 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
-  "src/kit/Landing.tsx": "b4abe79a kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/Landing.tsx": "04b2edb2 kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "fb40b940 kit",
+  "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "c877e4f6 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -29803,7 +29841,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "63d519fe generated",
@@ -29821,8 +29859,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "cec1d0a9 generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "cd3af4c8 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -37941,6 +37979,9 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --card-border-color: var(--border);
   --button-radius: calc(var(--radius) - 2px);
   --table-numbers: normal;
+  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
 
 /* Touch screens get 44 px targets whatever the density. */
@@ -37989,6 +38030,9 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
     --chart-3: oklch(0.836861 0.164422 84.4286);
     --chart-4: oklch(0.833033 0.132193 321.4337);
     --chart-5: oklch(0.809664 0.106109 11.6385);
+    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
   }
 }
 "
@@ -38331,10 +38375,10 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "server.mjs": "2aa4591a kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "88c888e7 kit",
+  "src/components/ui/button.tsx": "df54fc27 kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
-  "src/components/ui/table.tsx": "4eff9d6c kit",
+  "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/sections/Uptime.tsx": "b8180e0a custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -38374,22 +38418,22 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "144446e5 kit",
-  "src/kit/Articles.tsx": "fe12da59 kit",
-  "src/kit/Combobox.tsx": "dff16d84 kit",
+  "src/kit/AppShell.tsx": "ea858c1b kit",
+  "src/kit/Articles.tsx": "34dd9a3a kit",
+  "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
-  "src/kit/FieldInput.tsx": "811ce2cc kit",
+  "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/Landing.tsx": "b4abe79a kit",
+  "src/kit/Landing.tsx": "04b2edb2 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "0a762fe3 kit",
-  "src/kit/ModelTable.tsx": "a89cec7f kit",
+  "src/kit/ModelForm.tsx": "d58bab3e kit",
+  "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "fb40b940 kit",
+  "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "c877e4f6 kit",
   "src/kit/Users.tsx": "7951cdd5 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -38414,7 +38458,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "05e2b2f5 kit",
+  "src/kit/words.ts": "208d8f8d kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d35a3346 generated",
@@ -38454,8 +38498,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "27093f7a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "5379c2a6 kit",
-  "src/styles.css": "62ace354 kit",
-  "src/theme.css": "e87e4a57 generated",
+  "src/styles.css": "96d86081 kit",
+  "src/theme.css": "20ab3225 generated",
   "tests/smoke.spec.ts": "fd8fdf64 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",

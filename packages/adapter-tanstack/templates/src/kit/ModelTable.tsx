@@ -300,7 +300,7 @@ export function ModelTable<R extends Row>({
           <li key={row.id} data-part="row">
             <Card
               className={cn(
-                "relative space-y-3 p-5 hover:bg-accent/40",
+                "relative space-y-3 p-5 hover:bg-hover",
                 view === "cards" && pictureField && "overflow-hidden pt-0",
               )}
             >
