@@ -48,6 +48,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-field=field.name",
     "data-part="slider"",
     "data-part="stepper"",
+    "data-part="amount"",
     "data-part="radios"",
   ],
   "src/kit/Filters.tsx": [

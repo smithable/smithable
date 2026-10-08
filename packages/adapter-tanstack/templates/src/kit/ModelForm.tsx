@@ -80,22 +80,38 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const formId = useId();
   const recordName = initial?.[ui.titleField];
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const values = storedValues(ui, inputs, app.timeZone);
+  /** What is wrong with the values, by field, in words a non-developer understands. */
+  function problems(values: Record<string, unknown>) {
     const result = schema.safeParse(values);
-    if (!result.success) {
-      const messages: Record<string, string> = {};
+    const messages: Record<string, string> = {};
+    if (!result.success)
       for (const issue of result.error.issues) {
         const field = ui.fields.find((f) => f.name === issue.path[0]);
         if (field && !messages[field.name])
           messages[field.name] = friendly(field, issue, values[field.name]);
       }
-      setErrors(messages);
-      return;
-    }
-    setErrors({});
-    await run(() => onSubmit(result.data));
+    return { result, messages };
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const { result, messages } = problems(storedValues(ui, inputs, app.timeZone));
+    setErrors(messages);
+    if (result.success) await run(() => onSubmit(result.data));
+  }
+
+  /**
+   * A field is checked when it is left, with the message saving would give. One left empty is
+   * not reported before saving (tabbing past a field is no mistake), unless it already was.
+   */
+  function check(field: FieldUi) {
+    const values = storedValues(ui, inputs, app.timeZone);
+    const value = values[field.name];
+    const message = problems(values).messages[field.name];
+    if ((value === null || value === undefined || value === "") && !errors[field.name]) return;
+    setErrors(({ [field.name]: _, ...rest }) =>
+      message ? { ...rest, [field.name]: message } : rest,
+    );
   }
 
   async function run(action: () => Promise<unknown>) {
@@ -134,6 +150,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         describedBy={described}
         options={options}
         record={typeof initial?.id === "number" ? initial.id : undefined}
+        currency={app.currency}
         onChange={(value) => setInputs((current) => ({ ...current, [field.name]: value }))}
       />
     );
@@ -246,7 +263,17 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
 
   return (
     <Card data-kit="model-form" className="max-w-3xl">
-      <form onSubmit={submit} noValidate className="space-y-6 p-card">
+      <form
+        onSubmit={submit}
+        noValidate
+        className="space-y-6 p-card"
+        onBlur={(event) => {
+          // Leaving a field, not moving within it (the parts of a choice list).
+          const box = (event.target as Element).closest("[data-field]");
+          const field = ui.fields.find((f) => f.name === box?.getAttribute("data-field"));
+          if (field && !box?.contains(event.relatedTarget as Node | null)) check(field);
+        }}
+      >
         {!readOnly && ui.fields.some((f) => f.required && !f.computed) && (
           <p className="text-sm text-muted-foreground">
             {w.fieldsMarked} <span className="text-destructive">*</span> {w.areRequired}

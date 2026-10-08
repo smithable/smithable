@@ -58,6 +58,20 @@ export function themeFont(ux: UxIR, themes: readonly ThemeIR[] = []): string {
  * The theme's color tokens in one mode: the owner's background first (the colors on it derived
  * again), then a brand color on top, when there are any.
  */
+/**
+ * Hover and focus: an element in its own hue, a step darker in light mode and lighter in dark,
+ * never another hue (Johan, 2026-10-08: the accent made editorial dark hover green). A plain
+ * surface (a row, a menu item, an outline button) takes a veil of the text color.
+ */
+const HOVER = {
+  light: `  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), black 20%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);`,
+  dark: `    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);`,
+};
+
 function tokens(ux: UxIR, theme: ThemeIR, mode: Mode): Tokens {
   const base = (ux.theme.background && withBackground(theme, ux.theme.background)) || theme;
   return tokensOf(base, mode, ux.theme.primary ? brandColors(ux.theme.primary, base, mode) : {});
@@ -166,9 +180,11 @@ ${block(tokens(from, theme, "light"), "  ")}
   --card-border-color: ${shape.borderColor};
   --button-radius: ${shape.button};
   --table-numbers: ${shape.numbers};
+${HOVER.light}
 }`,
       dark: `  ${selector} {
 ${block(tokens(from, theme, "dark"), "    ")}
+${HOVER.dark}
   }`,
       comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}, motion ${from.theme.motion}`,
     };

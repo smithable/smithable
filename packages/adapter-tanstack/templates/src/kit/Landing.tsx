@@ -637,7 +637,7 @@ export function RecordCards({
                 <AppLink
                   key={option.value}
                   href={`${door.to}?${new URLSearchParams({ [chip.name]: option.value })}`}
-                  className="inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {option.label}
                 </AppLink>
@@ -651,10 +651,7 @@ export function RecordCards({
           {cards.map((card) => (
             <li
               key={card.key}
-              className={cn(
-                "relative flex items-start gap-4 py-4",
-                card.href && "hover:bg-accent/40",
-              )}
+              className={cn("relative flex items-start gap-4 py-4", card.href && "hover:bg-hover")}
             >
               {picture(card, "aspect-[3/2] w-28 shrink-0 rounded-md object-cover sm:w-40")}
               <div className="flex flex-1 flex-col gap-1">
@@ -682,7 +679,7 @@ export function RecordCards({
               <Card
                 className={cn(
                   "relative flex h-full flex-col gap-2 overflow-hidden",
-                  card.href && "hover:bg-accent/40",
+                  card.href && "hover:bg-hover",
                 )}
               >
                 {picture(card, "aspect-[3/2] w-full object-cover")}

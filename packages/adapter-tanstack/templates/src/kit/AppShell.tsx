@@ -27,7 +27,7 @@ interface ShellProps {
 
 // Links and buttons on the sidebar's own colors, with 44 px targets.
 const sidebarItem =
-  "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground";
+  "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors hover:bg-hover outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground";
 
 export function AppShell({ children, ...shell }: ShellProps & { children: React.ReactNode }) {
   const drawer = useRef<HTMLDialogElement>(null);
