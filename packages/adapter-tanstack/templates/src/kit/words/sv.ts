@@ -9,6 +9,8 @@ export const w = {
   accept: "Godkänn",
   addFiles: "Lägg till filer",
   addOne: (label: string) => `Lägg till ${label}`,
+  addYourName: "Lägg till ditt namn",
+  admin: "Admin",
   aFirstCall: "Ett första anrop:",
   actAs: "Agera som",
   actions: "Åtgärder",
@@ -101,6 +103,8 @@ export const w = {
   invitationExpired: "Inbjudan har gått ut",
   invitationLinkCopied: "Inbjudningslänken är kopierad.",
   invitations: "inbjudningar",
+  invitedNameLater:
+    "Den som bjuds in väljer namnet andra ser efter inloggningen: sitt namn längst ned i menyn.",
   keepIt: "Behåll den",
   keys: "Nycklar",
   keysLead:
@@ -254,6 +258,7 @@ export const w = {
   youAreBooked: "Du är bokad",
   yourEmail: "Din e-post",
   yourName: "Ditt namn",
+  yourNameHelp: "Namnet andra ser i appen.",
   alreadyHas: (_label: string, field: string) =>
     `Det finns redan en post med samma ${field.toLowerCase()}.`,
   alreadyTaken: (booked: string) =>
@@ -317,6 +322,7 @@ export const w = {
   options: "Alternativ",
   pictureDescription: "Beskrivning (för den som inte kan se bilden)",
   question: "Fråga",
+  trashedVerb: "flyttades till papperskorgen",
   asRole: (role: string) => `som ${role}`,
   contactThe: (who: string) => `Kontakta ${who}`,
   continueWith: (provider: string) => `Fortsätt med ${provider}`,
@@ -335,6 +341,9 @@ export const w = {
   stepOf: (n: number, count: number) => `Steg ${n} av ${count}`,
   tokensInOut: (tokensIn: number, tokensOut: number) => `, ${tokensIn} token in, ${tokensOut} ut`,
   toolCalls: (n: number) => `${n} verktygsanrop`,
+  trashHowMany: (n: number, noun: string) =>
+    `Flytta ${n} ${noun} till papperskorgen? ${n === 1 ? "Den" : "De"} kan återställas därifrån i 30 dagar.`,
+  trashN: (n: number) => `Flytta till papperskorgen (${n})`,
   /** Integritetssidan (kit LegalPage), skriven ur appens egen definition. */
   legalIntro: (app: string) =>
     `Den här sidan berättar vad ${app} lagrar om dig och varför. Den är skriven ur appens egen definition och ändras med den.`,
