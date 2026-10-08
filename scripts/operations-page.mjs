@@ -15,14 +15,7 @@ const GROUPS = [
   [
     "Access and sign-in",
     {
-      names: [
-        "setAccess",
-        "setSignUp",
-        "setDefaultAccess",
-        "setRoles",
-        "setPublic",
-        "setPublicWhere",
-      ],
+      names: ["grant", "setSignUp", "setDefaultAccess", "setRoles", "setPublic", "setPublicWhere"],
     },
   ],
   [

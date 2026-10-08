@@ -80,11 +80,19 @@ test("a value's fixed choices, and the app's own names where they fit", () => {
     at("smithable: 0.1\nmodels:\n  Tag: { fields: { name: string! } }\npages:\n  tags: { cr‸")
       .labels,
   ).toEqual(["crud"]);
-  // Roles come from the auth file; pages and actions from the text.
-  expect(at(withLine("  customers:", "    access: [‸"), ["admin", "sales"]).labels).toEqual([
-    "admin",
-    "sales",
-  ]);
+  // A role's grants in the auth file name the spec's pages, models and custom actions, or all.
+  const grant = (line: string) => {
+    const text = `smithableAuth: 0.1\nroles:\n  sales:\n    ${line}`;
+    return completeSpec(
+      text.replace("‸", ""),
+      text.indexOf("‸"),
+      { spec: crm },
+      "smithable.auth.yml",
+    )?.suggestions.map((s) => s.label);
+  };
+  expect(grant("pages: [‸")).toEqual(["all", "customers", "orders", "team"]);
+  expect(grant("write: [Cu‸")).toEqual(["Customer"]);
+  expect(grant("actions: [‸")).toEqual(["all", "mergeCustomers"]);
   expect(at(withLine("  customers:", "    mine: ‸")).labels).toEqual(["true", "false"]);
   expect(at(crm.replace(/^navigation:.*$/m, "navigation: [customers, ‸")).labels).toEqual(
     expect.arrayContaining(["orders", "team"]),

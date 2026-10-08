@@ -240,7 +240,7 @@ describe("what a model is offered", () => {
       expect.arrayContaining(["setNavigation", "setSearch", "addPage", "addModel", "setTheme"]),
     );
     expect(names(["model:Customer", "field:Customer.email"])).toEqual(
-      expect.arrayContaining(["addField", "changeField", "setAccess"]),
+      expect.arrayContaining(["addField", "changeField", "grant"]),
     );
     expect(names(["model:Customer"])).not.toContain("setNavigation");
     expect(names([])).not.toContain("removeField");

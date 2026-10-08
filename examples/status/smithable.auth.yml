@@ -8,8 +8,12 @@ signIn:
 defaultAccess: shared              # the team sees and writes everything
 
 roles:
-  admin: { description: Runs the status page and the team. }
-  staff: { description: Writes incidents and their updates. }
+  admin: all
+  staff:
+    description: Writes incidents and their updates.
+    pages: [overview, incidents, updates, maintenance]   # the components and the team are the administrators'
+    create: all
+    write: all                       # any of the team moves any incident on
 
 defaultRole: staff
 admins: [ops@northwind.example]

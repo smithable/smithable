@@ -30,17 +30,9 @@ test("an operation's arguments complete with the names in the project's spec", (
   expect(complete(["op", "addField", "Customer"], "e", dir)).toEqual([]);
   expect(complete(["op", "renameField", "Order"], "", dir)).toEqual(["number", "customer"]);
   expect(complete(["op", "setSearch"], "", dir)).toEqual(["customers"]);
-  expect(complete(["op", "setAccess"], "model:Order", dir)).toEqual([
-    "model:Order.read",
-    "model:Order.create",
-    "model:Order.write",
-    "model:Order.delete",
-  ]);
-  expect(complete(["op", "setAccess", "model:Order.delete"], "", dir)).toEqual([
-    "admin",
-    "member",
-    "owner",
-  ]);
+  expect(complete(["op", "grant"], "", dir)).toEqual(["admin", "member"]);
+  expect(complete(["op", "grant", "member", "write"], "", dir)).toEqual(["Customer", "Order"]);
+  expect(complete(["op", "grant", "member", "pages"], "", dir)).toEqual(["customers"]);
   expect(complete(["op", "addField", "Customer", "phone"], "", dir)).toEqual([]);
 });
 

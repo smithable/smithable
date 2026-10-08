@@ -19,6 +19,7 @@ pages:
 const auth = (read: string) => `smithableAuth: 0.1
 signIn: { providers: [google], allowedDomains: [acme.com] }
 defaultAccess: shared
+roles: { admin: all, member: { pages: all, create: all } }
 public:
   pages: [posts]
   read:
@@ -188,8 +189,8 @@ test("new users are never administrators by default", () => {
     },
     ir,
   );
-  // Listing only admin still leaves a role for everyone else.
-  expect(only.diagnostics.map((d) => d.code)).toEqual([]);
+  // Listing only admin still leaves a role for everyone else (one that opens nothing yet).
+  expect(only.diagnostics.map((d) => d.code)).toEqual(["role-opens-nothing"]);
   expect(only.auth?.roles.map((r) => r.name)).toEqual(["admin", "member"]);
   expect(only.auth?.defaultRole).toBe("member");
   const asked = validateAuth(
@@ -199,7 +200,10 @@ test("new users are never administrators by default", () => {
     },
     ir,
   );
-  expect(asked.diagnostics.map((d) => d.code)).toEqual(["admin-default-role"]);
+  expect(asked.diagnostics.map((d) => d.code)).toEqual([
+    "role-opens-nothing",
+    "admin-default-role",
+  ]);
   // setRoles: admin as the default means "no other role named"; with several others it is refused.
   const files = { spec, auth: auth("Post") };
   const one = applyOperation(files, "setRoles", {
@@ -222,7 +226,8 @@ test("new users are never administrators by default", () => {
 
 test("email is a sign-in provider, and an app with sign-in has an administrator who can get in", () => {
   const read = (text: string) => validateAuth({ path: "smithable.auth.yml", text }, ir);
-  const head = "smithableAuth: 0.1\ndefaultAccess: private\n";
+  const head =
+    "smithableAuth: 0.1\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\n";
   const email = read(`${head}signIn: { providers: [email, google] }\n`);
   expect(email.diagnostics).toEqual([]);
   expect(email.auth?.signIn).toMatchObject({ providers: ["email", "google"] });

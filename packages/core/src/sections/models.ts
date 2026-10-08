@@ -7,7 +7,6 @@ import {
   type ParseContext,
   readBoolean,
   readNumber,
-  readRoleList,
   readString,
 } from "../context.js";
 import {
@@ -19,7 +18,6 @@ import {
   valueTypeOf,
 } from "../formula.js";
 import {
-  ACCESS_OPERATIONS,
   type CapacityIR,
   conditionFits,
   type FieldExample,
@@ -27,7 +25,6 @@ import {
   type FieldType,
   type FieldValue,
   isUpload,
-  type ModelAccessIR,
   type ModelIR,
   SCALAR_TYPES,
   USER_MODEL,
@@ -53,8 +50,6 @@ const choice = "[a-z][A-Za-z0-9]*";
 const model = "[A-Z][A-Za-z0-9]*";
 const shorthandPattern = `^\\s*(?:(?:${types})!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|${model}!?(?:\\s+unique)?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
 const typePattern = `^\\s*(?:(?:${types})!?|${model}!?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
-
-const ACCESS_VERBS = { read: "see", create: "add", write: "change", delete: "delete" };
 
 const fieldSchema: JsonSchema = {
   oneOf: [
@@ -206,22 +201,6 @@ export const modelsSection: SpecSection<"models"> = {
           type: "string",
           description: "A User field whose user owns the record, instead of its creator.",
         },
-        access: {
-          type: "object",
-          description:
-            'Exceptions to the default access in smithable.auth.yml, e.g. { delete: [admin] }. "owner" is the record\'s owner.',
-          additionalProperties: false,
-          properties: Object.fromEntries(
-            ACCESS_OPERATIONS.map((op) => [
-              op,
-              {
-                type: "array",
-                items: { type: "string" },
-                description: `The roles that may ${ACCESS_VERBS[op]} these records.`,
-              },
-            ]),
-          ),
-        },
         trash: {
           type: "boolean",
           description:
@@ -289,13 +268,14 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "access", "capacity", "trash", ...TEXT_KEYS],
+    allowed: ["fields", "ownedBy", "capacity", "trash", ...TEXT_KEYS],
     later: ["unique", "examples"],
     content: ["label", "title"],
+    moved: {
+      access: `who may read, add, change and delete ${name} records is said by the roles in smithable.auth.yml (roles.<role>.write: [${name}], and so on).`,
+    },
   });
   Object.assign(model, readSemanticText(ctx, known));
-  const access = known.find((e) => e.key === "access");
-  if (access) model.access = readModelAccess(ctx, access.value, `the access of "${name}"`);
   const trash = known.find((e) => e.key === "trash");
   if (trash) {
     const on = readBoolean(ctx, trash.value, `"trash" of "${name}"`);
@@ -340,16 +320,6 @@ function readModel(
     }
   }
   return model;
-}
-
-function readModelAccess(ctx: ParseContext, node: ParsedNode | null, where: string): ModelAccessIR {
-  const access: ModelAccessIR = {};
-  const entries = mapEntries(ctx, node, where) ?? [];
-  for (const { key, value } of checkKeys(ctx, entries, where, { allowed: ACCESS_OPERATIONS })) {
-    const op = key as (typeof ACCESS_OPERATIONS)[number];
-    access[op] = readRoleList(ctx, value, `"${op}" in ${where}`, op !== "create");
-  }
-  return access;
 }
 
 export function readField(

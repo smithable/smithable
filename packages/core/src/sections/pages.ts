@@ -6,7 +6,6 @@ import {
   type ParseContext,
   readBoolean,
   readNameList,
-  readRoleList,
   readString,
 } from "../context.js";
 import {
@@ -68,11 +67,6 @@ export const pagesSection: SpecSection<"pages"> = {
           type: "array",
           items: { type: "string" },
           description: "Actions offered on the page, as buttons.",
-        },
-        access: {
-          type: "array",
-          items: { type: "string" },
-          description: "Only these roles may open the page (admins always can).",
         },
         search: {
           type: "array",
@@ -167,7 +161,6 @@ function readPage(
       "route",
       ...PATTERN_KINDS,
       "actions",
-      "access",
       "search",
       "filters",
       "sortable",
@@ -178,12 +171,14 @@ function readPage(
     ],
     later: ["list", "calendar"],
     content: ["title", "label", "heading"],
+    moved: {
+      access: `who may open ${where} is said by the roles in smithable.auth.yml (roles.<role>.pages: [${id}], or all).`,
+    },
   });
   let route = `/${kebab(id)}`;
   let pattern: PageIR["pattern"] | undefined;
   let actions: string[] | undefined;
   const actionNodes = new Map<string, At>();
-  let access: string[] | undefined;
   let search: { name: string; at: At }[] | undefined;
   let filters: { name: string; at: At }[] | undefined;
   let sortable: { name: string; at: At }[] | undefined;
@@ -259,8 +254,6 @@ function readPage(
           `"contact" in ${where} is owner, a user field of the model, or { to, keep }.`,
         );
       }
-    } else if (key === "access") {
-      access = readRoleList(ctx, value, `the access of ${where}`, false);
     } else if (key in PAGE_PATTERNS) {
       pattern = PAGE_PATTERNS[key as PatternKind].parse(ctx, value, where, parsed);
     }
@@ -314,7 +307,6 @@ function readPage(
     route,
     pattern,
     ...(model && actions?.length ? { actions } : {}),
-    ...(access ? { access } : {}),
     ...(model && search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
     ...(model && filters?.length
       ? { filters: checkFilterFields(ctx, filters, model, parsed, where) }

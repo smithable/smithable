@@ -1,4 +1,4 @@
-import type { AuthIR, Condition } from "./auth.js";
+import type { AuthIR, Condition, GrantKey } from "./auth.js";
 import {
   ACCESS_OPERATIONS,
   type AccessOperation,
@@ -18,11 +18,6 @@ export interface Allowed {
   owner: boolean;
   /** Reading only: the records the public may read, when not all (`{ status: "published" }`). */
   where?: Condition;
-  /**
-   * Only users with one of these roles, whichever way they qualify (by role or as the owner):
-   * a standard action's `allow`, with admin.
-   */
-  among?: string[];
 }
 
 export type ModelAllowed = Record<AccessOperation, Allowed>;
@@ -42,33 +37,39 @@ export function uniquePerOwner(model: ModelIR, auth: AuthIR): boolean {
   );
 }
 
+/** The roles whose grant `key` names `name` (or everything), admin always, in declaration order. */
+function granted(auth: AuthIR, key: GrantKey, name: string): string[] {
+  return auth.roles
+    .filter((r) => {
+      if (r.name === "admin" || r.grants === "all") return true;
+      const names = r.grants[key];
+      return names === "all" || (names?.includes(name) ?? false);
+    })
+    .map((r) => r.name);
+}
+
 /**
- * The effective access to a model: the defaults of `defaultAccess`, replaced per operation
- * by the model's `access` exceptions, plus what the public section opens (ARCHITECTURE §3.1).
+ * The effective access to a model (docs/design/access-in-auth.md): the record rule of
+ * `defaultAccess` (shared: everyone reads every record; private: their own; everyone changes
+ * and deletes their own), the roles whose grants name the model, and what the public section
+ * opens (ARCHITECTURE §3.1).
  */
 export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
   const everyone = auth.roles.map((r) => r.name);
-  const defaults: Record<AccessOperation, string[]> =
-    auth.defaultAccess === "shared"
-      ? { read: everyone, create: everyone, write: ["owner"], delete: ["owner"] }
-      : { read: ["owner"], create: everyone, write: ["owner"], delete: ["owner"] };
   const result = {} as ModelAllowed;
   for (const op of ACCESS_OPERATIONS) {
-    const listed = model.access?.[op] ?? defaults[op];
     const isPublic =
       (op === "read" && auth.public.read.includes(model.name)) ||
       (op === "create" && auth.public.create.includes(model.name));
     const where = op === "read" && isPublic ? auth.public.readWhere[model.name] : undefined;
+    const shared = op === "read" && auth.defaultAccess === "shared";
     result[op] = {
       ...(auth.signIn === "none"
         ? { public: isPublic, roles: [], owner: false }
         : {
             public: isPublic,
-            roles: withAdmin(
-              listed.filter((r) => r !== "owner"),
-              everyone,
-            ),
-            owner: listed.includes("owner"),
+            roles: shared ? everyone : granted(auth, op, model.name),
+            owner: op !== "create" && !shared,
           }),
       ...(where ? { where } : {}),
     };
@@ -77,34 +78,40 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
 }
 
 /**
- * Pages need sign-in unless public; `access` narrows them to roles, and a pattern may have its
- * own default (a users page is for admins).
+ * Pages need sign-in unless public, and a role opens the pages its `pages` grant names;
+ * `all` is every page but those a pattern keeps for administrators (the users page, a data
+ * page), which a role gets by naming them.
  */
 export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
-  const everyone = auth.roles.map((r) => r.name);
-  const roles = page.access ?? patternInfo(page).access ?? everyone;
+  const reserved = patternInfo(page).access !== undefined;
+  const roles = auth.roles
+    .filter((r) => {
+      if (r.name === "admin" || r.grants === "all") return true;
+      const pages = r.grants.pages;
+      return pages === "all" ? !reserved : (pages?.includes(page.id) ?? false);
+    })
+    .map((r) => r.name);
+  const isPublic = auth.public.pages.includes(page.id);
   return {
-    public: auth.public.pages.includes(page.id),
-    roles: auth.signIn === "none" ? [] : withAdmin(roles, everyone),
+    public: isPublic,
+    roles: auth.signIn === "none" ? [] : isPublic ? auth.roles.map((r) => r.name) : roles,
     owner: false,
   };
 }
 
 /**
- * Custom actions are for signed-in users; `allow` narrows them to roles. A standard action
- * follows its model's write access (ARCHITECTURE §3), by role or as the record's owner, and
- * `allow` narrows that to people with a listed role (`among`; admins always).
+ * A custom action is run by the roles whose `actions` grant names it. A standard action
+ * follows its model's write access (ARCHITECTURE §3), by role or as the record's owner; one
+ * that adds a related record also needs the right to create one (§7), and a copy that of its
+ * lists' records (§8).
  */
 export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] = []): Allowed {
-  const everyone = auth.roles.map((r) => r.name);
   if (auth.signIn === "none") return { public: false, roles: [], owner: false };
   const model = action.custom ? undefined : models.find((m) => m.name === action.on);
   if (!model || action.custom)
-    return { public: false, roles: withAdmin(action.allow ?? everyone, everyone), owner: false };
+    return { public: false, roles: granted(auth, "actions", action.name), owner: false };
   const write = modelAccess(model, auth).write;
-  // Adding a related record also needs the right to create one (§7), and a copy that of its
-  // lists' records (§8): only roles that may.
-  let among = action.allow && withAdmin(action.allow, everyone);
+  let roles = write.roles;
   const lists = (action.with ?? []).map(
     (l) => (model.fields.find((f) => f.name === l)?.type as { model?: string } | undefined)?.model,
   );
@@ -112,29 +119,17 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
     const added = models.find((m) => m.name === name);
     const create = added && modelAccess(added, auth).create;
     if (!create || create.public) continue;
-    among = (among ?? everyone).filter((r) => create.roles.includes(r));
+    roles = roles.filter((r) => create.roles.includes(r));
   }
   // A copy changes nothing: it needs to read the record (its data function checks) and to
   // create one like it, not to write the original.
   if (action.copy) {
     const create = modelAccess(model, auth).create;
-    const roles = create.public ? everyone : create.roles;
     return {
       public: false,
-      roles: among ? roles.filter((r) => among?.includes(r)) : roles,
+      roles: create.public ? auth.roles.map((r) => r.name) : create.roles,
       owner: false,
-      ...(among ? { among } : {}),
     };
   }
-  return {
-    public: false,
-    roles: among ? write.roles.filter((r) => among?.includes(r)) : write.roles,
-    owner: write.owner,
-    ...(among ? { among } : {}),
-  };
-}
-
-/** Adds "admin", keeping the order roles are declared in. */
-function withAdmin(roles: string[], everyone: string[]): string[] {
-  return everyone.filter((r) => r === "admin" || roles.includes(r));
+  return { public: false, roles, owner: write.owner };
 }

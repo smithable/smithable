@@ -21,6 +21,10 @@ const roles = (description: string): JsonSchema => ({
   description,
 });
 const text = (description: string): JsonSchema => ({ type: "string", description });
+const grant = (description: string): JsonSchema => ({
+  oneOf: [{ enum: ["all"] }, { type: "array", items: { type: "string" } }],
+  description,
+});
 
 const readWhere: JsonSchema = {
   oneOf: [
@@ -92,14 +96,23 @@ export const AUTH_SCHEMA: JsonSchema = {
     roles: {
       type: "object",
       description:
-        "The roles, by name (camelCase), each with an optional description. admin always exists, and so does a role for everyone else: member, when none is named.",
+        "The roles, by name (camelCase): all (the whole app; always admin's), or a block with a description and what the role may do beyond the record rule. admin always exists, and so does a role for everyone else: member, when none is named.",
       additionalProperties: {
         oneOf: [
           { type: "null" },
+          { enum: ["all"], description: "The whole app." },
           {
             type: "object",
             additionalProperties: false,
-            properties: { description: text("What the role is for, in a sentence.") },
+            properties: {
+              description: text("What the role is for, in a sentence."),
+              pages: grant("Pages the role may open; all is every page but the administrators'."),
+              read: grant("Models whose every record the role reads (with private access)."),
+              create: grant("Models the role may add records of."),
+              write: grant("Models whose every record the role may change."),
+              delete: grant("Models whose every record the role may delete."),
+              actions: grant("Custom actions the role may run (a standard action follows write)."),
+            },
           },
         ],
       },

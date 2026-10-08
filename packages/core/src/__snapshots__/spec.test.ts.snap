@@ -47,20 +47,6 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
   "extensions": {},
   "models": [
     {
-      "access": {
-        "create": [
-          "admin",
-          "member",
-        ],
-        "delete": [
-          "admin",
-          "member",
-        ],
-        "write": [
-          "admin",
-          "member",
-        ],
-      },
       "fields": [
         {
           "name": "name",
@@ -104,17 +90,6 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
       "name": "Project",
     },
     {
-      "access": {
-        "delete": [
-          "admin",
-          "member",
-        ],
-        "write": [
-          "admin",
-          "member",
-          "assistant",
-        ],
-      },
       "fields": [
         {
           "name": "title",
@@ -181,17 +156,6 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
       "name": "Task",
     },
     {
-      "access": {
-        "delete": [
-          "admin",
-          "member",
-        ],
-        "write": [
-          "admin",
-          "member",
-          "assistant",
-        ],
-      },
       "fields": [
         {
           "name": "title",
@@ -254,10 +218,6 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
       "route": "/team",
     },
     {
-      "access": [
-        "admin",
-        "member",
-      ],
       "id": "admin",
       "pattern": {
         "all": true,
@@ -288,11 +248,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   "extensions": {},
   "models": [
     {
-      "access": {
-        "create": [
-          "admin",
-        ],
-      },
       "description": "A kind of class the studio offers, such as Vinyasa, Yin, Hatha or Foundations.",
       "fields": [
         {
@@ -341,11 +296,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "ClassType",
     },
     {
-      "access": {
-        "create": [
-          "admin",
-        ],
-      },
       "fields": [
         {
           "name": "name",
@@ -378,11 +328,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "Instructor",
     },
     {
-      "access": {
-        "create": [
-          "admin",
-        ],
-      },
       "description": "One scheduled occurrence of a class.",
       "fields": [
         {
@@ -480,17 +425,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "Booking",
     },
     {
-      "access": {
-        "create": [
-          "admin",
-        ],
-        "delete": [
-          "admin",
-        ],
-        "write": [
-          "admin",
-        ],
-      },
       "description": "News and articles on the studio's blog.",
       "fields": [
         {
@@ -564,17 +498,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "Post",
     },
     {
-      "access": {
-        "delete": [
-          "admin",
-        ],
-        "read": [
-          "admin",
-        ],
-        "write": [
-          "admin",
-        ],
-      },
       "description": "A question a visitor sends from the contact form on the home page.",
       "fields": [
         {
@@ -826,9 +749,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/schedule",
     },
     {
-      "access": [
-        "admin",
-      ],
       "id": "sessions",
       "pattern": {
         "kind": "crud",
@@ -837,9 +757,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/sessions",
     },
     {
-      "access": [
-        "admin",
-      ],
       "id": "class-types",
       "pattern": {
         "kind": "crud",
@@ -848,9 +765,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/class-types",
     },
     {
-      "access": [
-        "admin",
-      ],
       "id": "instructors",
       "pattern": {
         "kind": "crud",
@@ -859,9 +773,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/instructors",
     },
     {
-      "access": [
-        "admin",
-      ],
       "id": "messages",
       "pattern": {
         "kind": "crud",
@@ -892,9 +803,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/privacy",
     },
     {
-      "access": [
-        "admin",
-      ],
       "id": "posts",
       "pattern": {
         "kind": "crud",
@@ -936,9 +844,6 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 {
   "actions": [
     {
-      "allow": [
-        "admin",
-      ],
       "custom": true,
       "input": [
         {
@@ -986,14 +891,6 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
   "extensions": {},
   "models": [
     {
-      "access": {
-        "delete": [
-          "admin",
-        ],
-        "write": [
-          "sales",
-        ],
-      },
       "description": "A company we have a commercial relationship with.",
       "fields": [
         {
@@ -1083,14 +980,6 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       "trash": true,
     },
     {
-      "access": {
-        "delete": [
-          "admin",
-        ],
-        "write": [
-          "sales",
-        ],
-      },
       "fields": [
         {
           "name": "number",
@@ -2062,17 +1951,6 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
   "extensions": {},
   "models": [
     {
-      "access": {
-        "create": [
-          "admin",
-        ],
-        "delete": [
-          "admin",
-        ],
-        "write": [
-          "admin",
-        ],
-      },
       "description": "One thing in the collection.",
       "fields": [
         {
@@ -2214,10 +2092,6 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
           ],
         },
       ],
-      "allow": [
-        "admin",
-        "staff",
-      ],
       "custom": false,
       "input": [],
       "intent": "The cause is found; the incident moves to identified, with an update saying so.",
@@ -2258,10 +2132,6 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
             },
           ],
         },
-      ],
-      "allow": [
-        "admin",
-        "staff",
       ],
       "custom": false,
       "input": [],
@@ -2306,10 +2176,6 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
             },
           ],
         },
-      ],
-      "allow": [
-        "admin",
-        "staff",
       ],
       "custom": false,
       "input": [],
@@ -2396,12 +2262,6 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
       "name": "Component",
     },
     {
-      "access": {
-        "write": [
-          "admin",
-          "staff",
-        ],
-      },
       "fields": [
         {
           "name": "title",
@@ -2680,9 +2540,6 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
       "route": "/updates",
     },
     {
-      "access": [
-        "admin",
-      ],
       "id": "components",
       "pattern": {
         "kind": "crud",
@@ -2740,109 +2597,6 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "mode": "manage",
       },
       "route": "/team",
-    },
-  ],
-  "queries": [],
-  "specVersion": "0.1",
-}
-`;
-
-exports[`valid specs > ./__fixtures__/valid/access.yml 1`] = `
-{
-  "actions": [
-    {
-      "allow": [
-        "admin",
-      ],
-      "custom": true,
-      "input": [
-        {
-          "name": "customer",
-          "required": true,
-          "type": {
-            "kind": "relation",
-            "many": false,
-            "model": "Customer",
-          },
-          "unique": false,
-        },
-        {
-          "name": "reviewer",
-          "required": false,
-          "type": {
-            "kind": "relation",
-            "many": false,
-            "model": "User",
-          },
-          "unique": false,
-        },
-      ],
-      "name": "archive",
-    },
-  ],
-  "app": {
-    "name": "Access",
-  },
-  "extensions": {},
-  "models": [
-    {
-      "access": {
-        "delete": [
-          "admin",
-        ],
-        "write": [
-          "owner",
-          "sales",
-        ],
-      },
-      "fields": [
-        {
-          "name": "name",
-          "required": true,
-          "type": {
-            "kind": "scalar",
-            "name": "string",
-          },
-          "unique": false,
-        },
-        {
-          "name": "accountManager",
-          "required": false,
-          "type": {
-            "kind": "relation",
-            "many": false,
-            "model": "User",
-          },
-          "unique": false,
-        },
-      ],
-      "name": "Customer",
-      "ownedBy": "accountManager",
-    },
-  ],
-  "navigation": [
-    {
-      "name": "main",
-      "pages": [
-        "customers",
-      ],
-    },
-  ],
-  "outgoing": [],
-  "pages": [
-    {
-      "access": [
-        "sales",
-      ],
-      "id": "customers",
-      "pattern": {
-        "kind": "crud",
-        "model": "Customer",
-      },
-      "route": "/customers",
-      "search": [
-        "name",
-      ],
     },
   ],
   "queries": [],
@@ -4158,9 +3912,6 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
             },
           ],
         },
-      ],
-      "allow": [
-        "admin",
       ],
       "custom": false,
       "input": [],

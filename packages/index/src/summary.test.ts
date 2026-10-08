@@ -37,14 +37,12 @@ test("the CRM in plain language, with labels from the content file", () => {
     "Each customer can have an account manager (a user).",
     "Each customer lists its orders.",
     "The account manager owns the customer.",
-    "Only sales users and admins can change customers.",
-    "Only admins can delete customers.",
     "Deleted customers stay in the trash for thirty days, where they can be restored.",
   ]);
   expect(sections[1]?.sentences).toEqual([
     "- Customers (lists customers; search by name or email; “Merge customers”)",
     "- Orders (lists orders; search by number or customer)",
-    "- Team (who has access: invite people, change roles, remove users)",
+    "- Team (who has access: invite people, change roles, remove users; only for admins)",
   ]);
 });
 
@@ -146,7 +144,7 @@ pages:
       footer:
       services: { records: Component }
       open: { records: Incident, where: { status: [investigating, identified] } }
-  components: { crud: Component, access: [admin], sortable: [name, createdAt] }
+  components: { crud: Component, sortable: [name, createdAt] }
   incidents: { crud: Incident }
 `,
   });
@@ -154,7 +152,7 @@ pages:
   const { auth } = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { pages: [home], read: [Component, Incident] }\n",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: all, staff: { pages: [incidents] } }\npublic: { pages: [home], read: [Component, Incident] }\n",
     },
     ir,
   );
@@ -205,7 +203,6 @@ actions:
     on: Incident
     when: { status: [investigating, identified, monitoring] }
     set: { status: resolved, resolvedAt: NOW(), pinned: false }
-    allow: [staff]
     intent: The incident is over.
   pin:
     on: Incident
@@ -217,7 +214,6 @@ actions:
   expect(sections.find((s) => s.concept === "action:resolve")?.sentences).toEqual([
     "For an incident that is investigating, identified or monitoring; sets status to resolved, resolved at to now and pinned to no.",
     "The incident is over.",
-    "Only staff users and admins can use it.",
   ]);
   expect(sections.find((s) => s.concept === "action:pin")?.sentences).toEqual([
     "Sets pinned to yes.",
