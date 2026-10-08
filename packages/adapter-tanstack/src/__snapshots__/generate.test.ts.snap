@@ -1483,6 +1483,7 @@ export const OPENAPI = {
       },
       "delete": {
         "summary": "Delete a project",
+        "description": "A project that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no project (loose), and whether they can go to the trash together.",
         "responses": {
           "204": {
             "description": "Deleted"
@@ -1705,6 +1706,7 @@ export const OPENAPI = {
       },
       "delete": {
         "summary": "Delete a task",
+        "description": "A task that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no task (loose), and whether they can go to the trash together.",
         "responses": {
           "204": {
             "description": "Deleted"
@@ -1927,6 +1929,7 @@ export const OPENAPI = {
       },
       "delete": {
         "summary": "Delete a note",
+        "description": "A note that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no note (loose), and whether they can go to the trash together.",
         "responses": {
           "204": {
             "description": "Deleted"
@@ -3387,7 +3390,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "delete": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "delete");
-      await kind.data.remove(viewer, row.id);
+      await kind.data.remove(viewer, row.id, args.together === true);
       return { deleted: row.id };
     }
     case "describe":
@@ -3756,7 +3759,8 @@ export const noteData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.notes.ownerId, attachment: schema.notes.attachment })
       .from(schema.notes)
@@ -3782,7 +3786,7 @@ export const noteData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.notes.id, ownerId: schema.notes.ownerId, attachment: schema.notes.attachment })
       .from(schema.notes)
@@ -3798,7 +3802,7 @@ export const noteData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -3909,14 +3913,15 @@ export const updateNote = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: noteSchema }))
   .handler(async ({ data }) => noteData.update(await writer(), data.id, data.values));
 
+/** Deletes a note; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteNote = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => noteData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => noteData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen notes, all or none (at most 1,000 at once). */
 export const deleteNotes = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => noteData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => noteData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -3964,6 +3969,27 @@ import { afterChange, afterDelete } from "./hooks";
 import { taskData } from "./task.server";
 import { noteData } from "./note.server";
 import type { ProjectValues } from "./project";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a project (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no project; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "Task", label: "Task", plural: "Tasks", from: "Project", depth: 1, count: tx.select({ n: count() }).from(schema.tasks).where(and(eq(schema.tasks.projectId, id))).get()?.n ?? 0 },
+    { model: "Note", label: "Note", plural: "Notes", from: "Project", depth: 1, count: tx.select({ n: count() }).from(schema.notes).where(and(eq(schema.notes.projectId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Project", label: "Project", with: with_, loose, together: false, missing: ["Project","Task","Note"] };
+}
 
 /** Who may read, create, change and delete projects. */
 export const projectAccess: ModelAccess = {
@@ -4260,9 +4286,10 @@ export const projectData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.projects.ownerId })
+      .select({ name: schema.projects.name, ownerId: schema.projects.ownerId })
       .from(schema.projects)
       .where(and(eq(schema.projects.id, id), projectData.readable(viewer)))
       .get();
@@ -4270,6 +4297,8 @@ export const projectData = {
     check(projectAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, String(row.name ?? id));
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.projects).where(eq(schema.projects.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Project", record: id, title: gone.name });
@@ -4285,9 +4314,9 @@ export const projectData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.projects.id, ownerId: schema.projects.ownerId })
+      .select({ id: schema.projects.id, name: schema.projects.name, ownerId: schema.projects.ownerId })
       .from(schema.projects)
       .where(and(inArray(schema.projects.id, ids), projectData.readable(viewer)))
       .all()
@@ -4295,13 +4324,15 @@ export const projectData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, String(row.name ?? row.id));
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.projects).where(eq(schema.projects.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Project", record: row.id, title: gone.name });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -4422,14 +4453,15 @@ export const updateProject = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: projectSchema }))
   .handler(async ({ data }) => projectData.update(await writer(), data.id, data.values));
 
+/** Deletes a project; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteProject = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => projectData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => projectData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen projects, all or none (at most 1,000 at once). */
 export const deleteProjects = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => projectData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => projectData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -4777,7 +4809,8 @@ export const taskData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.tasks.ownerId })
       .from(schema.tasks)
@@ -4802,7 +4835,7 @@ export const taskData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.tasks.id, ownerId: schema.tasks.ownerId })
       .from(schema.tasks)
@@ -4818,7 +4851,7 @@ export const taskData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -4948,14 +4981,15 @@ export const updateTask = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: taskSchema }))
   .handler(async ({ data }) => taskData.update(await writer(), data.id, data.values));
 
+/** Deletes a task; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteTask = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => taskData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => taskData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen tasks, all or none (at most 1,000 at once). */
 export const deleteTasks = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => taskData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => taskData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -6093,8 +6127,8 @@ function NotePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteNote({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteNote({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -6278,8 +6312,8 @@ function ProjectPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteProject({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteProject({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -6486,8 +6520,8 @@ function TaskPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteTask({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteTask({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -6712,7 +6746,8 @@ export const Route = createFileRoute("/api/v1/notes/$id")({
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
           const row = await found(viewer, params.id);
-          await noteData.remove(viewer, row.id);
+          // ?together=true takes the records that point to it along (docs/design/delete-together.md).
+          await noteData.remove(viewer, row.id, new URL(request.url).searchParams.get("together") === "true");
         }),
     },
   },
@@ -6855,7 +6890,8 @@ export const Route = createFileRoute("/api/v1/projects/$id")({
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
           const row = await found(viewer, params.id);
-          await projectData.remove(viewer, row.id);
+          // ?together=true takes the records that point to it along (docs/design/delete-together.md).
+          await projectData.remove(viewer, row.id, new URL(request.url).searchParams.get("together") === "true");
         }),
     },
   },
@@ -7001,7 +7037,8 @@ export const Route = createFileRoute("/api/v1/tasks/$id")({
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
           const row = await found(viewer, params.id);
-          await taskData.remove(viewer, row.id);
+          // ?together=true takes the records that point to it along (docs/design/delete-together.md).
+          await taskData.remove(viewer, row.id, new URL(request.url).searchParams.get("together") === "true");
         }),
     },
   },
@@ -7888,6 +7925,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/PictureInput.tsx",
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
@@ -8000,23 +8038,23 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/complete.ts": "7f503863 generated",
   "src/generated/actions/reopen.server.ts": "9d1bc2ca generated",
   "src/generated/actions/reopen.ts": "38a0b9a3 generated",
-  "src/generated/api.server.ts": "dd28817a generated",
+  "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "7a6823f4 generated",
   "src/generated/keys.test.ts": "c3e7e961 generated",
-  "src/generated/mcp.server.ts": "f42b738c generated",
+  "src/generated/mcp.server.ts": "013957ba generated",
   "src/generated/note.schema.ts": "5ff1136e generated",
-  "src/generated/note.server.ts": "6d5e8eca generated",
-  "src/generated/note.ts": "569a940a generated",
+  "src/generated/note.server.ts": "722a4027 generated",
+  "src/generated/note.ts": "94b91e51 generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "0b83c406 generated",
-  "src/generated/project.ts": "e8eeddb7 generated",
+  "src/generated/project.server.ts": "90cc7671 generated",
+  "src/generated/project.ts": "bada24bf generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "ba2e6162 generated",
-  "src/generated/task.ts": "6326dfd1 generated",
+  "src/generated/task.server.ts": "83876b81 generated",
+  "src/generated/task.ts": "ec1c8a2d generated",
   "src/generated/uploads.ts": "38cfdcd9 generated",
   "src/generated/users.server.ts": "1354a6fb generated",
   "src/generated/users.test.ts": "b686c0ea generated",
@@ -8030,17 +8068,18 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "af7b3a8b kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "17900588 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/api.server.ts": "de99ef82 kit",
+  "src/kit/api.server.ts": "df5d2f8c kit",
   "src/kit/ask.ts": "4ecf379d kit",
   "src/kit/assistant.server.ts": "a530b6d0 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -8062,7 +8101,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "664a681e generated",
@@ -8073,26 +8112,26 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/activity.tsx": "10f1cf91 generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "679d3210 generated",
-  "src/routes/admin/notes/$id.tsx": "00aaa770 generated",
+  "src/routes/admin/notes/$id.tsx": "ca4991ea generated",
   "src/routes/admin/notes/index.tsx": "bf77ab81 generated",
   "src/routes/admin/notes/new.tsx": "a58aaa05 generated",
-  "src/routes/admin/projects/$id.tsx": "f01cc4d1 generated",
+  "src/routes/admin/projects/$id.tsx": "9b862da1 generated",
   "src/routes/admin/projects/index.tsx": "fb106433 generated",
   "src/routes/admin/projects/new.tsx": "ffcaf793 generated",
-  "src/routes/admin/tasks/$id.tsx": "a19813b4 generated",
+  "src/routes/admin/tasks/$id.tsx": "6f4b808e generated",
   "src/routes/admin/tasks/index.tsx": "61449d08 generated",
   "src/routes/admin/tasks/new.tsx": "15a327c2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.$field.ts": "5bd4f5d8 generated",
-  "src/routes/api/v1/notes/$id.ts": "7fc56a1f generated",
+  "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/api/v1/projects/$id.ts": "68867dd9 generated",
+  "src/routes/api/v1/projects/$id.ts": "cc89aacd generated",
   "src/routes/api/v1/projects/index.ts": "789eeb5b generated",
   "src/routes/api/v1/projects[.]csv.ts": "d0b1382e generated",
   "src/routes/api/v1/tasks/$id.actions.$action.ts": "3afab909 generated",
-  "src/routes/api/v1/tasks/$id.ts": "96b999f9 generated",
+  "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
@@ -9426,7 +9465,8 @@ export const bookingData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.bookings.ownerId })
       .from(schema.bookings)
@@ -9452,7 +9492,7 @@ export const bookingData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.bookings.id, ownerId: schema.bookings.ownerId })
       .from(schema.bookings)
@@ -9469,7 +9509,7 @@ export const bookingData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -9557,14 +9597,15 @@ export const updateBooking = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: bookingSchema }))
   .handler(async ({ data }) => bookingData.update(await writer(), data.id, data.values));
 
+/** Deletes a booking; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteBooking = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => bookingData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => bookingData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen bookings, all or none (at most 1,000 at once). */
 export const deleteBookings = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => bookingData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => bookingData.removeMany(await writer(), data.ids, data.together));
 
 /** A session's places for the reservation block: how many are left, and the viewer's own. */
 export const bookingPlaces = createServerFn()
@@ -9619,6 +9660,27 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import type { ClassTypeValues } from "./class-type";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a class type (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no class type; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "Session", label: "Session", plural: "Sessions", from: "ClassType", depth: 1, count: tx.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.classTypeId, id))).get()?.n ?? 0 },
+    { model: "Booking", label: "Booking", plural: "Bookings", from: "Session", depth: 2, count: tx.select({ n: count() }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(eq(schema.sessions.classTypeId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "ClassType", label: "Class type", with: with_, loose, together: false, missing: ["Class type","Session","Booking"] };
+}
 
 /** Who may read, create, change and delete class types. */
 export const classTypeAccess: ModelAccess = {
@@ -9740,9 +9802,10 @@ export const classTypeData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.classTypes.ownerId })
+      .select({ name: schema.classTypes.name, ownerId: schema.classTypes.ownerId })
       .from(schema.classTypes)
       .where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)))
       .get();
@@ -9750,6 +9813,8 @@ export const classTypeData = {
     check(classTypeAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, String(row.name ?? id));
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "ClassType", record: id, title: gone.name });
@@ -9765,9 +9830,9 @@ export const classTypeData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.classTypes.id, ownerId: schema.classTypes.ownerId })
+      .select({ id: schema.classTypes.id, name: schema.classTypes.name, ownerId: schema.classTypes.ownerId })
       .from(schema.classTypes)
       .where(and(inArray(schema.classTypes.id, ids), classTypeData.readable(viewer)))
       .all()
@@ -9775,13 +9840,15 @@ export const classTypeData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, String(row.name ?? row.id));
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "ClassType", record: row.id, title: gone.name });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -9923,14 +9990,15 @@ export const updateClassType = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: classTypeSchema }))
   .handler(async ({ data }) => classTypeData.update(await writer(), data.id, data.values));
 
+/** Deletes a class type; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteClassType = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => classTypeData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => classTypeData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen class types, all or none (at most 1,000 at once). */
 export const deleteClassTypes = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => classTypeData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => classTypeData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -10167,6 +10235,27 @@ import { deletePicture } from "#/kit/uploads";
 import { afterChange, afterDelete } from "./hooks";
 import type { InstructorValues } from "./instructor";
 
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a instructor (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no instructor; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "Session", label: "Session", plural: "Sessions", from: "Instructor", depth: 1, count: tx.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.instructorId, id))).get()?.n ?? 0 },
+    { model: "Booking", label: "Booking", plural: "Bookings", from: "Session", depth: 2, count: tx.select({ n: count() }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(eq(schema.sessions.instructorId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Instructor", label: "Instructor", with: with_, loose, together: false, missing: ["Instructor","Session","Booking"] };
+}
+
 /** Who may read, create, change and delete instructors. */
 export const instructorAccess: ModelAccess = {
   read: { public: true, roles: ["admin"], owner: true },
@@ -10288,9 +10377,10 @@ export const instructorData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.instructors.ownerId, portrait: schema.instructors.portrait })
+      .select({ name: schema.instructors.name, ownerId: schema.instructors.ownerId, portrait: schema.instructors.portrait })
       .from(schema.instructors)
       .where(and(eq(schema.instructors.id, id), instructorData.readable(viewer)))
       .get();
@@ -10298,6 +10388,8 @@ export const instructorData = {
     check(instructorAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, String(row.name ?? id));
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Instructor", record: id, title: gone.name });
@@ -10314,9 +10406,9 @@ export const instructorData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.instructors.id, ownerId: schema.instructors.ownerId, portrait: schema.instructors.portrait })
+      .select({ id: schema.instructors.id, name: schema.instructors.name, ownerId: schema.instructors.ownerId, portrait: schema.instructors.portrait })
       .from(schema.instructors)
       .where(and(inArray(schema.instructors.id, ids), instructorData.readable(viewer)))
       .all()
@@ -10324,13 +10416,15 @@ export const instructorData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, String(row.name ?? row.id));
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Instructor", record: row.id, title: gone.name });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -10463,14 +10557,15 @@ export const updateInstructor = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: instructorSchema }))
   .handler(async ({ data }) => instructorData.update(await writer(), data.id, data.values));
 
+/** Deletes a instructor; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteInstructor = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => instructorData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => instructorData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen instructors, all or none (at most 1,000 at once). */
 export const deleteInstructors = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => instructorData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => instructorData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -10626,7 +10721,8 @@ export const messageData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.messages.ownerId })
       .from(schema.messages)
@@ -10651,7 +10747,7 @@ export const messageData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.messages.id, ownerId: schema.messages.ownerId })
       .from(schema.messages)
@@ -10667,7 +10763,7 @@ export const messageData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -10766,14 +10862,15 @@ export const updateMessage = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: messageSchema }))
   .handler(async ({ data }) => messageData.update(await writer(), data.id, data.values));
 
+/** Deletes a message; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteMessage = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => messageData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => messageData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen messages, all or none (at most 1,000 at once). */
 export const deleteMessages = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => messageData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => messageData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -11032,7 +11129,8 @@ export const postData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.posts.ownerId, cover: schema.posts.cover })
       .from(schema.posts)
@@ -11058,7 +11156,7 @@ export const postData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.posts.id, ownerId: schema.posts.ownerId, cover: schema.posts.cover })
       .from(schema.posts)
@@ -11074,7 +11172,7 @@ export const postData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -11209,14 +11307,15 @@ export const updatePost = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: postSchema }))
   .handler(async ({ data }) => postData.update(await writer(), data.id, data.values));
 
+/** Deletes a post; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deletePost = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => postData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => postData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen posts, all or none (at most 1,000 at once). */
 export const deletePosts = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => postData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => postData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -11270,6 +11369,26 @@ import { classTypeData } from "./class-type.server";
 import { instructorData } from "./instructor.server";
 import type { SessionValues } from "./session";
 import { withSessionFormulas } from "./session.formulas";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a session (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no session; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "Booking", label: "Booking", plural: "Bookings", from: "Session", depth: 1, count: tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Session", label: "Session", with: with_, loose, together: false, missing: ["Session","Booking"] };
+}
 
 /** Who may read, create, change and delete sessions. */
 export const sessionAccess: ModelAccess = {
@@ -11419,7 +11538,8 @@ export const sessionData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.sessions.ownerId })
       .from(schema.sessions)
@@ -11429,6 +11549,8 @@ export const sessionData = {
     check(sessionAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, \`#\${id}\`);
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Session", record: id, title: gone.id });
@@ -11444,7 +11566,7 @@ export const sessionData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.sessions.id, ownerId: schema.sessions.ownerId })
       .from(schema.sessions)
@@ -11454,13 +11576,15 @@ export const sessionData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, \`#\${row.id}\`);
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Session", record: row.id, title: gone.id });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -11602,14 +11726,15 @@ export const updateSession = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: sessionSchema }))
   .handler(async ({ data }) => sessionData.update(await writer(), data.id, data.values));
 
+/** Deletes a session; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteSession = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => sessionData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => sessionData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen sessions, all or none (at most 1,000 at once). */
 export const deleteSessions = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => sessionData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => sessionData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -12298,8 +12423,8 @@ function BookingPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteBooking({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteBooking({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -12470,8 +12595,8 @@ function ClassTypePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteClassType({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteClassType({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -12729,8 +12854,8 @@ function InstructorPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteInstructor({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteInstructor({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -12909,8 +13034,8 @@ function MessagePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteMessage({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteMessage({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -13087,8 +13212,8 @@ function PostPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deletePost({ data: row.id });
+            ? async (together?: boolean) => {
+                await deletePost({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -13283,8 +13408,8 @@ function SessionPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteSession({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteSession({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -13707,8 +13832,8 @@ function ClassTypePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteClassType({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteClassType({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -13792,7 +13917,7 @@ function ClassTypesPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(classTypeDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteClassTypes({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteClassTypes({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -14028,8 +14153,8 @@ function InstructorPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteInstructor({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteInstructor({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -14114,7 +14239,7 @@ function InstructorsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(instructorDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteInstructors({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteInstructors({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -14256,8 +14381,8 @@ function MessagePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteMessage({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteMessage({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -14341,7 +14466,7 @@ function MessagesPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(messageDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteMessages({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteMessages({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -14484,8 +14609,8 @@ function BookingPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteBooking({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteBooking({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -14569,7 +14694,7 @@ function MyBookingsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.id ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(bookingDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteBookings({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteBookings({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -14719,8 +14844,8 @@ function PostPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deletePost({ data: row.id });
+            ? async (together?: boolean) => {
+                await deletePost({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -14805,7 +14930,7 @@ function PostsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.title ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(postDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deletePosts({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deletePosts({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -15097,8 +15222,8 @@ function SessionPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteSession({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteSession({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -15207,7 +15332,7 @@ function SessionsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.id ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(sessionDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteSessions({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteSessions({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -15778,6 +15903,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
@@ -15898,31 +16024,31 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "1518628e generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "7e8dbb53 generated",
-  "src/generated/booking.ts": "0535f43c generated",
+  "src/generated/booking.server.ts": "4767a3a6 generated",
+  "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "77f461e6 generated",
-  "src/generated/class-type.ts": "81da669e generated",
+  "src/generated/class-type.server.ts": "1918854f generated",
+  "src/generated/class-type.ts": "71358bc1 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "74bcc438 generated",
-  "src/generated/instructor.server.ts": "17b1dcfb generated",
-  "src/generated/instructor.ts": "42130db8 generated",
+  "src/generated/instructor.server.ts": "2dffd8bc generated",
+  "src/generated/instructor.ts": "c90d3dae generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "46f98559 generated",
-  "src/generated/message.ts": "530662a7 generated",
+  "src/generated/message.server.ts": "5215e942 generated",
+  "src/generated/message.ts": "3dd0dd49 generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
   "src/generated/post.schema.ts": "425829af generated",
-  "src/generated/post.server.ts": "8c466dfa generated",
-  "src/generated/post.ts": "842a5b88 generated",
+  "src/generated/post.server.ts": "bc2973c7 generated",
+  "src/generated/post.ts": "16492461 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "b25f6e36 generated",
-  "src/generated/session.ts": "4ec80ce3 generated",
+  "src/generated/session.server.ts": "89e959f0 generated",
+  "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "eb007da3 generated",
   "src/generated/uploads.ts": "f3d3a0ce generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
@@ -15940,15 +16066,16 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
-  "src/kit/Reserve.tsx": "d4124f04 kit",
+  "src/kit/Reserve.tsx": "9f0c730c kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "373ac173 kit",
+  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -15968,7 +16095,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7d773757 generated",
@@ -15977,53 +16104,53 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "ae2a0c70 generated",
   "src/routes/admin/activity.tsx": "61d5fa75 generated",
-  "src/routes/admin/bookings/$id.tsx": "73e86391 generated",
+  "src/routes/admin/bookings/$id.tsx": "06d4ddfd generated",
   "src/routes/admin/bookings/index.tsx": "4ac07a9d generated",
   "src/routes/admin/bookings/new.tsx": "788212c8 generated",
-  "src/routes/admin/class-types/$id.tsx": "8eed401a generated",
+  "src/routes/admin/class-types/$id.tsx": "637dd4d6 generated",
   "src/routes/admin/class-types/index.tsx": "4f46dd43 generated",
   "src/routes/admin/class-types/new.tsx": "4e81dbe1 generated",
   "src/routes/admin/index.tsx": "63b091f7 generated",
-  "src/routes/admin/instructors/$id.tsx": "57435d6f generated",
+  "src/routes/admin/instructors/$id.tsx": "377020a1 generated",
   "src/routes/admin/instructors/index.tsx": "4c86f3dd generated",
   "src/routes/admin/instructors/new.tsx": "d5aff10f generated",
-  "src/routes/admin/messages/$id.tsx": "b1e1f2cd generated",
+  "src/routes/admin/messages/$id.tsx": "edf5cb21 generated",
   "src/routes/admin/messages/index.tsx": "d0ebbc5e generated",
   "src/routes/admin/messages/new.tsx": "a01adbd7 generated",
-  "src/routes/admin/posts/$id.tsx": "5abcd6c1 generated",
+  "src/routes/admin/posts/$id.tsx": "3f1840af generated",
   "src/routes/admin/posts/index.tsx": "7c80bf07 generated",
   "src/routes/admin/posts/new.tsx": "65198788 generated",
-  "src/routes/admin/sessions/$id.tsx": "71d71b99 generated",
+  "src/routes/admin/sessions/$id.tsx": "96712101 generated",
   "src/routes/admin/sessions/index.tsx": "d432c3ef generated",
   "src/routes/admin/sessions/new.tsx": "5322413d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "ea4c76d4 generated",
   "src/routes/blog/index.tsx": "7780e10a generated",
-  "src/routes/class-types/$id.tsx": "9477aa95 generated",
-  "src/routes/class-types/index.tsx": "61af656e generated",
+  "src/routes/class-types/$id.tsx": "f85dffb1 generated",
+  "src/routes/class-types/index.tsx": "1989a832 generated",
   "src/routes/class-types/new.tsx": "a71084fa generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "a3838f47 generated",
-  "src/routes/instructors/$id.tsx": "6c7926bc generated",
-  "src/routes/instructors/index.tsx": "80ad7f32 generated",
+  "src/routes/instructors/$id.tsx": "068bceb2 generated",
+  "src/routes/instructors/index.tsx": "5f7c421e generated",
   "src/routes/instructors/new.tsx": "2215504d generated",
-  "src/routes/messages/$id.tsx": "6430d7b6 generated",
-  "src/routes/messages/index.tsx": "78c8b9b0 generated",
+  "src/routes/messages/$id.tsx": "2fd95eea generated",
+  "src/routes/messages/index.tsx": "45ae8f00 generated",
   "src/routes/messages/new.tsx": "33d34827 generated",
-  "src/routes/my-bookings/$id.tsx": "376054c5 generated",
-  "src/routes/my-bookings/index.tsx": "781a4870 generated",
+  "src/routes/my-bookings/$id.tsx": "1cd9d0bd generated",
+  "src/routes/my-bookings/index.tsx": "8919ce02 generated",
   "src/routes/my-bookings/new.tsx": "c3d668d7 generated",
-  "src/routes/posts/$id.tsx": "9cbe564f generated",
-  "src/routes/posts/index.tsx": "534cc3c1 generated",
+  "src/routes/posts/$id.tsx": "f0f401d5 generated",
+  "src/routes/posts/index.tsx": "f82b1057 generated",
   "src/routes/posts/new.tsx": "1c031198 generated",
   "src/routes/privacy/index.tsx": "69fada0f generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "728a780d generated",
-  "src/routes/sessions/$id.tsx": "039d653f generated",
-  "src/routes/sessions/index.tsx": "c9621246 generated",
+  "src/routes/sessions/$id.tsx": "96fa8ecb generated",
+  "src/routes/sessions/index.tsx": "ce4e4028 generated",
   "src/routes/sessions/new.tsx": "954f9cb1 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
@@ -16326,8 +16453,10 @@ export const customers = sqliteTable(
     /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
     deletedAt: integer({ mode: "timestamp_ms" }),
     deletedBy: text(),
+    /** The record it went to the trash with ("Customer:12"), restored with it (docs/design/delete-together.md). */
+    deletedWith: text(),
   },
-  (t) => [uniqueIndex("customers_email_unique").on(t.email).where(sql\`\${t.deletedAt} is null\`), index("customers_live").on(t.accountManagerId).where(sql\`\${t.deletedAt} is null\`)],
+  (t) => [uniqueIndex("customers_email_unique").on(t.email).where(sql\`\${t.deletedAt} is null\`), index("customers_live").on(t.accountManagerId).where(sql\`\${t.deletedAt} is null\`), index("customers_deleted_with").on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)],
 );
 
 export const orders = sqliteTable(
@@ -16350,8 +16479,10 @@ export const orders = sqliteTable(
     /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
     deletedAt: integer({ mode: "timestamp_ms" }),
     deletedBy: text(),
+    /** The record it went to the trash with ("Customer:12"), restored with it (docs/design/delete-together.md). */
+    deletedWith: text(),
   },
-  (t) => [uniqueIndex("orders_number_unique").on(t.number).where(sql\`\${t.deletedAt} is null\`), index("orders_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`)],
+  (t) => [uniqueIndex("orders_number_unique").on(t.number).where(sql\`\${t.deletedAt} is null\`), index("orders_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`), index("orders_deleted_with").on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)],
 );
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -16801,11 +16932,32 @@ import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
-import { log, refusal } from "#/kit/log.server";
+import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import type { CustomerValues } from "./customer";
+import "./trash.server";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a customer (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no customer; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "Order", label: "Order", plural: "Orders", from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.orders).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Customer", label: "Customer", with: with_, loose, together: true, missing: [] };
+}
 
 /** Who may read, create, change and delete customers. */
 export const customerAccess: ModelAccess = {
@@ -16932,9 +17084,10 @@ export const customerData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, together = false): Promise<void> {
     const row = db
-      .select({ accountManagerId: schema.customers.accountManagerId })
+      .select({ name: schema.customers.name, accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
       .where(and(eq(schema.customers.id, id), customerData.readable(viewer)))
       .get();
@@ -16942,10 +17095,16 @@ export const customerData = {
     check(customerAccess.delete, viewer, row.accountManagerId);
     try {
       db.transaction((tx) => {
-        if (tx.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.customerId, id)).limit(1).get()) throw new Conflict("in-use");
-        const gone = tx.update(schema.customers).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, id), isNull(schema.customers.deletedAt))).returning().get();
+        const used = usedBy(tx, id, String(row.name ?? id));
+        if (used && !together) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
+        const when = new Date();
+        const gone = tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, id), isNull(schema.customers.deletedAt))).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "trashed", model: "Customer", record: id, title: gone.name });
+          if (used) {
+            const tag = \`Customer:\${id}\`;
+            orderData.trashWith(tx, viewer, eq(schema.orders.customerId, id), tag, when);
+          }
         }
       });
     } catch (error) {
@@ -16958,24 +17117,30 @@ export const customerData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
+      .select({ id: schema.customers.id, name: schema.customers.name, accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
       .where(and(inArray(schema.customers.id, ids), customerData.readable(viewer)))
       .all()
       .filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
     db.transaction((tx) => {
+      const when = new Date();
       for (const row of rows)
         try {
-          if (tx.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.customerId, row.id)).limit(1).get()) throw new Conflict("in-use");
-          const gone = tx.update(schema.customers).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, row.id), isNull(schema.customers.deletedAt))).returning().get();
+          const used = usedBy(tx, row.id, String(row.name ?? row.id));
+          if (used && !together) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
+          const gone = tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, row.id), isNull(schema.customers.deletedAt))).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "trashed", model: "Customer", record: row.id, title: gone.name });
+            if (used) {
+              const tag = \`Customer:\${row.id}\`;
+              orderData.trashWith(tx, viewer, eq(schema.orders.customerId, row.id), tag, when);
+            }
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -17001,7 +17166,11 @@ export const customerData = {
     const people = new Map(
       db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
     );
-    return rows.map((row) => ({ ...row, deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null }));
+    const withCount = new Map<string, number>();
+    const tags = rows.map((row) => \`Customer:\${row.id}\`);
+    for (const r of db.select({ tag: schema.orders.deletedWith, n: count() }).from(schema.orders).where(inArray(schema.orders.deletedWith, tags)).groupBy(schema.orders.deletedWith).all())
+      withCount.set(r.tag as string, (withCount.get(r.tag as string) ?? 0) + r.n);
+    return rows.map((row) => ({ ...row, deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null, withCount: withCount.get(\`Customer:\${row.id}\`) ?? 0 }));
   },
 
   /** A customer in the trash, as its page shows it read-only, with when and by whom; else nothing. */
@@ -17035,8 +17204,10 @@ export const customerData = {
     try {
       db.transaction((tx) => {
         for (const row of rows) {
-          const back = tx.update(schema.customers).set({ deletedAt: null, deletedBy: null }).where(eq(schema.customers.id, row.id)).returning().get();
+          const back = tx.update(schema.customers).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.customers.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "Customer", record: row.id, title: back.name });
+          // What went to the trash with it comes back with it.
+          orderData.restoreWith(tx, viewer, \`Customer:\${row.id}\`);
         }
       });
     } catch (error) {
@@ -17059,6 +17230,9 @@ export const customerData = {
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
   erase(viewer: Viewer | null, ids: number[]): void {
     if (ids.length === 0) return;
+    // What is in the trash pointing to them goes first, deepest first (docs/design/delete-together.md).
+    orderData.erase(viewer, db.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id));
+
     const rows = db
       .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
@@ -17076,7 +17250,7 @@ export const customerData = {
     }
   },
 
-  /** What has been in the trash for thirty days goes for good (once a day). */
+  /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
   purge(now = Date.now()): number {
     const old = db
       .select({ id: schema.customers.id })
@@ -17112,19 +17286,6 @@ export const customerData = {
       .all();
   },
 };
-
-// Once a day, a minute after the server starts and then every day, in production.
-if (import.meta.env.SSR && import.meta.env.PROD) {
-  const purge = () => {
-    try {
-      customerData.purge();
-    } catch (error) {
-      log.error("The trash could not be emptied", { model: "Customer", error });
-    }
-  };
-  setTimeout(purge, 60_000).unref();
-  setInterval(purge, DAY).unref();
-}
 "
 `;
 
@@ -17266,14 +17427,15 @@ export const updateCustomer = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: customerSchema }))
   .handler(async ({ data }) => customerData.update(await writer(), data.id, data.values));
 
+/** Deletes a customer; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteCustomer = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => customerData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => customerData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen customers, all or none (at most 1,000 at once). */
 export const deleteCustomers = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => customerData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => customerData.removeMany(await writer(), data.ids, data.together));
 
 /** The viewer's trash of customers (docs/design/trash.md). */
 export const trashedCustomers = createServerFn().handler(async () => {
@@ -17442,11 +17604,28 @@ import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
-import { log, refusal } from "#/kit/log.server";
+import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
 import type { OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
+import "./trash.server";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** The record one went to the trash with, while it is still there: its label and title, by the mark ("Customer:12"). */
+function rootInTrash(tag: string): string | undefined {
+  const [model, id] = tag.split(":");
+  switch (model) {
+    case "Customer": {
+      const root = db.select({ deletedAt: schema.customers.deletedAt, title: schema.customers.name }).from(schema.customers).where(eq(schema.customers.id, Number(id))).get();
+      return root?.deletedAt ? \`Customer:\${String(root.title ?? id)}\` : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
 
 /** Who may read, create, change and delete orders. */
 export const orderAccess: ModelAccess = {
@@ -17581,7 +17760,8 @@ export const orderData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.orders.ownerId })
       .from(schema.orders)
@@ -17591,7 +17771,8 @@ export const orderData = {
     check(orderAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
-        const gone = tx.update(schema.orders).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, id), isNull(schema.orders.deletedAt))).returning().get();
+        const when = new Date();
+        const gone = tx.update(schema.orders).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, id), isNull(schema.orders.deletedAt))).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "trashed", model: "Order", record: id, title: gone.number });
         }
@@ -17606,7 +17787,7 @@ export const orderData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
       .from(schema.orders)
@@ -17614,15 +17795,16 @@ export const orderData = {
       .all()
       .filter((row) => allows(orderAccess.delete, viewer, row.ownerId));
     db.transaction((tx) => {
+      const when = new Date();
       for (const row of rows)
         try {
-          const gone = tx.update(schema.orders).set({ deletedAt: new Date(), deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, row.id), isNull(schema.orders.deletedAt))).returning().get();
+          const gone = tx.update(schema.orders).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, row.id), isNull(schema.orders.deletedAt))).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "trashed", model: "Order", record: row.id, title: gone.number });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -17648,7 +17830,10 @@ export const orderData = {
     const people = new Map(
       db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
     );
-    return rows.map((row) => ({ ...shownTo(viewer, row), deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null })).map(withOrderFormulas);
+    const withTitle = new Map<string, string>();
+    for (const r of db.select({ id: schema.customers.id, title: schema.customers.name }).from(schema.customers).where(inArray(schema.customers.id, rows.flatMap((row) => (row.deletedWith?.startsWith("Customer:") ? [Number(row.deletedWith.slice(9))] : [])))).all())
+      withTitle.set(\`Customer:\${r.id}\`, String(r.title ?? r.id));
+    return rows.map((row) => ({ ...shownTo(viewer, row), deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null, withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null })).map(withOrderFormulas);
   },
 
   /** A order in the trash, as its page shows it read-only, with when and by whom; else nothing. */
@@ -17674,15 +17859,20 @@ export const orderData = {
   /** Takes the chosen orders out of the trash, those the viewer may delete. */
   restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
     const rows = db
-      .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
+      .select({ id: schema.orders.id, deletedWith: schema.orders.deletedWith, ownerId: schema.orders.ownerId })
       .from(schema.orders)
       .where(and(inArray(schema.orders.id, ids), and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer))))
       .all().filter((row) => allows(orderAccess.delete, viewer, row.ownerId));
+    // One that went to the trash with another record comes back with it, not alone (delete-together.md).
+    for (const row of rows) {
+      const root = row.deletedWith && rootInTrash(row.deletedWith);
+      if (root) throw new Conflict(\`restore-root-first:\${root}\`);
+    }
     // A unique value a live record has taken since refuses it, as it refuses a new record.
     try {
       db.transaction((tx) => {
         for (const row of rows) {
-          const back = tx.update(schema.orders).set({ deletedAt: null, deletedBy: null }).where(eq(schema.orders.id, row.id)).returning().get();
+          const back = tx.update(schema.orders).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.orders.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "Order", record: row.id, title: back.number });
         }
       });
@@ -17723,7 +17913,7 @@ export const orderData = {
     }
   },
 
-  /** What has been in the trash for thirty days goes for good (once a day). */
+  /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
   purge(now = Date.now()): number {
     const old = db
       .select({ id: schema.orders.id })
@@ -17734,20 +17924,29 @@ export const orderData = {
     orderData.erase(null, old);
     return old.length;
   },
-};
 
-// Once a day, a minute after the server starts and then every day, in production.
-if (import.meta.env.SSR && import.meta.env.PROD) {
-  const purge = () => {
-    try {
-      orderData.purge();
-    } catch (error) {
-      log.error("The trash could not be emptied", { model: "Order", error });
+  /**
+   * Moves the live orders the condition fits to the trash with another record
+   * (docs/design/delete-together.md), marked as its group; the viewer must be allowed to delete each.
+   */
+  trashWith(tx: Tx, viewer: Viewer | null, fits: SQL, tag: string, when: Date): void {
+    const rows = tx.select().from(schema.orders).where(and(fits, isNull(schema.orders.deletedAt))).all();
+    for (const row of rows)
+      if (!allows(orderAccess.delete, viewer, row.ownerId)) throw new Conflict("no-right:Order");
+    if (rows.length === 0) return;
+    tx.update(schema.orders).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(schema.orders.deletedAt))).run();
+    for (const row of rows) {
+      audit(tx, viewer, { action: "trashed", model: "Order", record: row.id, title: row.number, details: { with: tag } });
     }
-  };
-  setTimeout(purge, 60_000).unref();
-  setInterval(purge, DAY).unref();
-}
+  },
+
+  /** Takes the orders that went to the trash with a record out of it again. */
+  restoreWith(tx: Tx, viewer: Viewer | null, tag: string): void {
+    const back = tx.update(schema.orders).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.orders.deletedWith, tag)).returning().all();
+    for (const row of back)
+      audit(tx, viewer, { action: "restored", model: "Order", record: row.id, title: row.number, details: { with: tag } });
+  },
+};
 "
 `;
 
@@ -17891,14 +18090,15 @@ export const updateOrder = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: orderSchema }))
   .handler(async ({ data }) => orderData.update(await writer(), data.id, data.values));
 
+/** Deletes a order; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteOrder = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => orderData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => orderData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen orders, all or none (at most 1,000 at once). */
 export const deleteOrders = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => orderData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => orderData.removeMany(await writer(), data.ids, data.together));
 
 /** The viewer's trash of orders (docs/design/trash.md). */
 export const trashedOrders = createServerFn().handler(async () => {
@@ -17928,6 +18128,35 @@ export const pageAccess = {
   orders: { public: false, roles: ["admin", "sales"], owner: false },
   team: { public: false, roles: ["admin"], owner: false },
 } satisfies Record<string, Rule>;
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/trash.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// The trash's daily emptying (docs/design/trash.md): what has been in a trash for thirty days goes
+// for good, the models that point to others first (docs/design/delete-together.md).
+import { log } from "#/kit/log.server";
+import { orderData } from "./order.server";
+import { customerData } from "./customer.server";
+
+/** Empties every trash of what is thirty days old; how many records went. */
+export function purgeTrash(now = Date.now()): number {
+  let gone = 0;
+  for (const [model, data] of [["Order", orderData], ["Customer", customerData]] as const) {
+    try {
+      gone += data.purge(now);
+    } catch (error) {
+      log.error("The trash could not be emptied", { model, error });
+    }
+  }
+  return gone;
+}
+
+// Once a day, a minute after the server starts and then every day, in production.
+if (import.meta.env.SSR && import.meta.env.PROD) {
+  setTimeout(purgeTrash, 60_000).unref();
+  setInterval(purgeTrash, 24 * 60 * 60 * 1000).unref();
+}
 "
 `;
 
@@ -18769,8 +18998,8 @@ function CustomerPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteCustomer({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteCustomer({ data: { id: row.id, together } });
                 rememberTrashed("Customer", row.id, String(row.name || \`Customer #\${row.id}\`));
                 await back();
               }
@@ -18940,7 +19169,7 @@ function CustomersPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(customerDeleteRule, viewer, row.accountManagerId)).length}
-          onDelete={() => deleteCustomers({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteCustomers({ data: { ids: chosen.map((row) => row.id), together } })}
           trash
           onDone={async () => {
             setSelected(new Set());
@@ -19168,8 +19397,8 @@ function OrderPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteOrder({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteOrder({ data: { id: row.id, together } });
                 rememberTrashed("Order", row.id, String(row.number || \`Order #\${row.id}\`));
                 await back();
               }
@@ -19271,7 +19500,7 @@ function OrdersPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.number ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(orderDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteOrders({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteOrders({ data: { ids: chosen.map((row) => row.id), together } })}
           trash
           onDone={async () => {
             setSelected(new Set());
@@ -20159,6 +20388,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "generated: src/generated/order.server.ts",
   "generated: src/generated/order.ts",
   "generated: src/generated/pages.ts",
+  "generated: src/generated/trash.server.ts",
   "generated: src/generated/users.server.ts",
   "generated: src/generated/users.test.ts",
   "generated: src/generated/users.ts",
@@ -20176,6 +20406,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/Trash.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
@@ -20257,7 +20488,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "bf487efc generated",
+  "src/db/schema.ts": "e6620168 generated",
   "src/db/seed.ts": "cfae0905 generated",
   "src/generated/access.test.ts": "7b543aec generated",
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
@@ -20265,15 +20496,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "346d61bf generated",
-  "src/generated/customer.ts": "fc9f82eb generated",
+  "src/generated/customer.server.ts": "4826263e generated",
+  "src/generated/customer.ts": "80f11d86 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "869281e1 generated",
-  "src/generated/order.ts": "92cb572d generated",
+  "src/generated/order.server.ts": "a97514d4 generated",
+  "src/generated/order.ts": "0bc7ab14 generated",
   "src/generated/pages.ts": "1660cc3e generated",
+  "src/generated/trash.server.ts": "1c432d97 generated",
   "src/generated/users.server.ts": "432e3193 generated",
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
@@ -20284,14 +20516,15 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "373ac173 kit",
+  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
-  "src/kit/Trash.tsx": "a4260a36 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
+  "src/kit/Trash.tsx": "26ea3332 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -20309,7 +20542,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a97aa30 generated",
@@ -20318,15 +20551,15 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "12973273 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "caf03fad generated",
+  "src/routes/customers/$id.tsx": "f39699c3 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
-  "src/routes/customers/index.tsx": "56987225 generated",
+  "src/routes/customers/index.tsx": "9629a54b generated",
   "src/routes/customers/new.tsx": "a80fd5cc generated",
   "src/routes/customers/trash.tsx": "79ca3586 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
-  "src/routes/orders/$id.tsx": "c27f263a generated",
-  "src/routes/orders/index.tsx": "c31ea8f1 generated",
+  "src/routes/orders/$id.tsx": "c596748a generated",
+  "src/routes/orders/index.tsx": "ab0e006b generated",
   "src/routes/orders/new.tsx": "330bd071 generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -21704,7 +21937,8 @@ export const businessProfileData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.businessProfiles.ownerId })
       .from(schema.businessProfiles)
@@ -21729,7 +21963,7 @@ export const businessProfileData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.businessProfiles.id, ownerId: schema.businessProfiles.ownerId })
       .from(schema.businessProfiles)
@@ -21745,7 +21979,7 @@ export const businessProfileData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -21858,14 +22092,15 @@ export const updateBusinessProfile = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: businessProfileSchema }))
   .handler(async ({ data }) => businessProfileData.update(await writer(), data.id, data.values));
 
+/** Deletes a business profile; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteBusinessProfile = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => businessProfileData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => businessProfileData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen business profiles, all or none (at most 1,000 at once). */
 export const deleteBusinessProfiles = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => businessProfileData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => businessProfileData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -21900,6 +22135,27 @@ import { contains } from "#/kit/search";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import type { ClientValues } from "./client";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a client (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no client; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "Invoice", label: "Invoice", plural: "Invoices", from: "Client", depth: 1, count: tx.select({ n: count() }).from(schema.invoices).where(and(eq(schema.invoices.clientId, id))).get()?.n ?? 0 },
+    { model: "InvoiceLine", label: "Invoice line", plural: "Invoice lines", from: "Invoice", depth: 2, count: tx.select({ n: count() }).from(schema.invoiceLines).innerJoin(schema.invoices, eq(schema.invoiceLines.invoiceId, schema.invoices.id)).where(and(eq(schema.invoices.clientId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Client", label: "Client", with: with_, loose, together: false, missing: ["Client","Invoice","Invoice line"] };
+}
 
 /** Who may read, create, change and delete clients. */
 export const clientAccess: ModelAccess = {
@@ -22015,9 +22271,10 @@ export const clientData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.clients.ownerId })
+      .select({ name: schema.clients.name, ownerId: schema.clients.ownerId })
       .from(schema.clients)
       .where(and(eq(schema.clients.id, id), clientData.readable(viewer)))
       .get();
@@ -22025,6 +22282,8 @@ export const clientData = {
     check(clientAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, String(row.name ?? id));
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.clients).where(eq(schema.clients.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Client", record: id, title: gone.name });
@@ -22040,9 +22299,9 @@ export const clientData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.clients.id, ownerId: schema.clients.ownerId })
+      .select({ id: schema.clients.id, name: schema.clients.name, ownerId: schema.clients.ownerId })
       .from(schema.clients)
       .where(and(inArray(schema.clients.id, ids), clientData.readable(viewer)))
       .all()
@@ -22050,13 +22309,15 @@ export const clientData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, String(row.name ?? row.id));
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.clients).where(eq(schema.clients.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Client", record: row.id, title: gone.name });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -22193,14 +22454,15 @@ export const updateClient = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: clientSchema }))
   .handler(async ({ data }) => clientData.update(await writer(), data.id, data.values));
 
+/** Deletes a client; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteClient = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => clientData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => clientData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen clients, all or none (at most 1,000 at once). */
 export const deleteClients = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => clientData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => clientData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -22370,6 +22632,26 @@ import { clientData } from "./client.server";
 import type { InvoiceValues } from "./invoice";
 import { withInvoiceFormulas } from "./invoice.formulas";
 
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a invoice (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no invoice; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "InvoiceLine", label: "Invoice line", plural: "Invoice lines", from: "Invoice", depth: 1, count: tx.select({ n: count() }).from(schema.invoiceLines).where(and(eq(schema.invoiceLines.invoiceId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Invoice", label: "Invoice", with: with_, loose, together: false, missing: ["Invoice","Invoice line"] };
+}
+
 /** Who may read, create, change and delete invoices. */
 export const invoiceAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -22508,9 +22790,10 @@ export const invoiceData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
+      .select({ number: schema.invoices.number, ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
       .from(schema.invoices)
       .where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer)))
       .get();
@@ -22518,6 +22801,8 @@ export const invoiceData = {
     check(invoiceAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, String(row.number ?? id));
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Invoice", record: id, title: gone.number });
@@ -22535,9 +22820,9 @@ export const invoiceData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.invoices.id, ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
+      .select({ id: schema.invoices.id, number: schema.invoices.number, ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
       .from(schema.invoices)
       .where(and(inArray(schema.invoices.id, ids), invoiceData.readable(viewer)))
       .all()
@@ -22545,6 +22830,8 @@ export const invoiceData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, String(row.number ?? row.id));
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Invoice", record: row.id, title: gone.number });
@@ -22552,7 +22839,7 @@ export const invoiceData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -22728,14 +23015,15 @@ export const updateInvoice = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: invoiceSchema }))
   .handler(async ({ data }) => invoiceData.update(await writer(), data.id, data.values));
 
+/** Deletes a invoice; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteInvoice = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => invoiceData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => invoiceData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen invoices, all or none (at most 1,000 at once). */
 export const deleteInvoices = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => invoiceData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => invoiceData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -22933,7 +23221,8 @@ export const invoiceLineData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.invoiceLines.ownerId })
       .from(schema.invoiceLines)
@@ -22958,7 +23247,7 @@ export const invoiceLineData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.invoiceLines.id, ownerId: schema.invoiceLines.ownerId })
       .from(schema.invoiceLines)
@@ -22974,7 +23263,7 @@ export const invoiceLineData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -23095,14 +23384,15 @@ export const updateInvoiceLine = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: invoiceLineSchema }))
   .handler(async ({ data }) => invoiceLineData.update(await writer(), data.id, data.values));
 
+/** Deletes a invoice line; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteInvoiceLine = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => invoiceLineData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => invoiceLineData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen invoice lines, all or none (at most 1,000 at once). */
 export const deleteInvoiceLines = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => invoiceLineData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => invoiceLineData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -23661,8 +23951,8 @@ function ClientPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteClient({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteClient({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -23768,7 +24058,7 @@ function ClientsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(clientDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteClients({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteClients({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -23948,8 +24238,8 @@ function InvoiceLinePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteInvoiceLine({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteInvoiceLine({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -24033,7 +24323,7 @@ function InvoiceLinesPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.description ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(invoiceLineDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteInvoiceLines({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteInvoiceLines({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -24217,8 +24507,8 @@ function InvoicePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteInvoice({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteInvoice({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -24373,7 +24663,7 @@ function InvoicesPage() {
             },
           ]}
           deletable={chosen.filter((row) => allows(invoiceDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteInvoices({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteInvoices({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -25198,6 +25488,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/aggregate.ts",
@@ -25294,22 +25585,22 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "2ac349b3 generated",
-  "src/generated/business-profile.ts": "330e66a1 generated",
+  "src/generated/business-profile.server.ts": "d802cf0c generated",
+  "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "f76a3231 generated",
-  "src/generated/client.ts": "71bb1549 generated",
+  "src/generated/client.server.ts": "989fc365 generated",
+  "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "25335233 generated",
-  "src/generated/invoice-line.ts": "25588c6c generated",
+  "src/generated/invoice-line.server.ts": "c7bcd928 generated",
+  "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "81c4d497 generated",
-  "src/generated/invoice.server.ts": "b44de611 generated",
-  "src/generated/invoice.ts": "5325522b generated",
+  "src/generated/invoice.server.ts": "b108acc6 generated",
+  "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -25325,15 +25616,16 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Landing.tsx": "04b2edb2 kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "373ac173 kit",
+  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
@@ -25355,7 +25647,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "ce952519 generated",
@@ -25364,19 +25656,19 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "4ca53643 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "10978402 generated",
-  "src/routes/clients/index.tsx": "a56f858f generated",
+  "src/routes/clients/$id.tsx": "281919c4 generated",
+  "src/routes/clients/index.tsx": "ce28521d generated",
   "src/routes/clients/new.tsx": "4bcda80c generated",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "b2ab0ec3 generated",
-  "src/routes/invoice-lines/$id.tsx": "cc9932da generated",
-  "src/routes/invoice-lines/index.tsx": "e58cdd3a generated",
+  "src/routes/invoice-lines/$id.tsx": "e6f9721e generated",
+  "src/routes/invoice-lines/index.tsx": "915d0808 generated",
   "src/routes/invoice-lines/new.tsx": "f02e0160 generated",
-  "src/routes/invoices/$id.tsx": "5e7cbae4 generated",
-  "src/routes/invoices/index.tsx": "a1ea4cf9 generated",
+  "src/routes/invoices/$id.tsx": "e966a2d8 generated",
+  "src/routes/invoices/index.tsx": "6585a26b generated",
   "src/routes/invoices/new.tsx": "3c460685 generated",
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -26182,7 +26474,8 @@ export const itemData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.items.ownerId, photos: schema.items.photos })
       .from(schema.items)
@@ -26208,7 +26501,7 @@ export const itemData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.items.id, ownerId: schema.items.ownerId, photos: schema.items.photos })
       .from(schema.items)
@@ -26224,7 +26517,7 @@ export const itemData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -26378,14 +26671,15 @@ export const updateItem = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: itemSchema }))
   .handler(async ({ data }) => itemData.update(await writer(), data.id, data.values));
 
+/** Deletes a item; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteItem = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => itemData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => itemData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen items, all or none (at most 1,000 at once). */
 export const deleteItems = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => itemData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => itemData.removeMany(await writer(), data.ids, data.together));
 
 /** Saves the record for the viewer, or unsaves it (their own mark); whether it is saved now. */
 export const toggleSavedItem = createServerFn({ method: "POST" })
@@ -26742,8 +27036,8 @@ function ItemPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteItem({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteItem({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -27064,7 +27358,7 @@ function CatalogPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.title ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(itemDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteItems({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteItems({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -27167,8 +27461,8 @@ function ItemPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteItem({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteItem({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -27267,7 +27561,7 @@ function MyItemsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.title ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(itemDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteItems({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteItems({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -27484,8 +27778,8 @@ function ItemPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteItem({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteItem({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -27595,7 +27889,7 @@ function SavedPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.title ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(itemDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteItems({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteItems({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -28172,6 +28466,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
@@ -28260,8 +28555,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "d5a1c89e generated",
-  "src/generated/item.server.ts": "0d1e0387 generated",
-  "src/generated/item.ts": "de767da4 generated",
+  "src/generated/item.server.ts": "73eadbe2 generated",
+  "src/generated/item.ts": "2ee0eec2 generated",
   "src/generated/pages.ts": "97ddeb86 generated",
   "src/generated/site.ts": "b9832c55 generated",
   "src/generated/uploads.ts": "2ea504cf generated",
@@ -28276,14 +28571,15 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Landing.tsx": "04b2edb2 kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "373ac173 kit",
+  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -28302,28 +28598,28 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e64f877 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "70d73b9e generated",
+  "src/routes/$id.tsx": "f282f420 generated",
   "src/routes/__root.tsx": "322cb3ff generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "09120645 generated",
-  "src/routes/my-items/$id.tsx": "1384a2fb generated",
-  "src/routes/my-items/index.tsx": "9c3e2af3 generated",
+  "src/routes/index.tsx": "eed77249 generated",
+  "src/routes/my-items/$id.tsx": "c4e29a1d generated",
+  "src/routes/my-items/index.tsx": "93e89fb5 generated",
   "src/routes/my-items/new.tsx": "cc85bb39 generated",
   "src/routes/new.tsx": "ec30513e generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
-  "src/routes/saved/$id.tsx": "2c47048b generated",
-  "src/routes/saved/index.tsx": "6bd97bfb generated",
+  "src/routes/saved/$id.tsx": "dcce714d generated",
+  "src/routes/saved/index.tsx": "ba1832d5 generated",
   "src/routes/saved/new.tsx": "062ab243 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
@@ -29096,7 +29392,8 @@ export const itemData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.items.ownerId })
       .from(schema.items)
@@ -29121,7 +29418,7 @@ export const itemData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.items.id, ownerId: schema.items.ownerId })
       .from(schema.items)
@@ -29137,7 +29434,7 @@ export const itemData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -29259,14 +29556,15 @@ export const updateItem = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: itemSchema }))
   .handler(async ({ data }) => itemData.update(await writer(), data.id, data.values));
 
+/** Deletes a item; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteItem = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => itemData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => itemData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen items, all or none (at most 1,000 at once). */
 export const deleteItems = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => itemData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => itemData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -29724,8 +30022,8 @@ function ItemPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteItem({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteItem({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -29823,7 +30121,7 @@ function ItemsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(itemDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteItems({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteItems({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -30314,6 +30612,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/audit.server.ts",
@@ -30392,8 +30691,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "28290659 generated",
-  "src/generated/item.ts": "5e0b3b8d generated",
+  "src/generated/item.server.ts": "735d9f12 generated",
+  "src/generated/item.ts": "1ddf13f3 generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
@@ -30404,13 +30703,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Landing.tsx": "04b2edb2 kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "373ac173 kit",
+  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -30427,7 +30727,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abf81fbe generated",
@@ -30438,8 +30738,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "1586d9ed generated",
-  "src/routes/items/$id.tsx": "16b3ed0d generated",
-  "src/routes/items/index.tsx": "e4883b2c generated",
+  "src/routes/items/$id.tsx": "2201c947 generated",
+  "src/routes/items/index.tsx": "058d2480 generated",
   "src/routes/items/new.tsx": "b2461bfe generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
@@ -32203,6 +32503,7 @@ export const OPENAPI = {
       },
       "delete": {
         "summary": "Delete a component",
+        "description": "A component that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no component (loose), and whether they can go to the trash together.",
         "responses": {
           "204": {
             "description": "Deleted"
@@ -32425,6 +32726,7 @@ export const OPENAPI = {
       },
       "delete": {
         "summary": "Delete a incident",
+        "description": "A incident that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no incident (loose), and whether they can go to the trash together.",
         "responses": {
           "204": {
             "description": "Deleted"
@@ -33261,7 +33563,8 @@ export const componentData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.components.ownerId })
       .from(schema.components)
@@ -33286,7 +33589,7 @@ export const componentData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.components.id, ownerId: schema.components.ownerId })
       .from(schema.components)
@@ -33302,7 +33605,7 @@ export const componentData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -33440,14 +33743,15 @@ export const updateComponent = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: componentSchema }))
   .handler(async ({ data }) => componentData.update(await writer(), data.id, data.values));
 
+/** Deletes a component; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteComponent = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => componentData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => componentData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen components, all or none (at most 1,000 at once). */
 export const deleteComponents = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => componentData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => componentData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -33588,6 +33892,26 @@ import { afterChange, afterDelete } from "./hooks";
 import { incidentUpdateData } from "./incident-update.server";
 import { componentData } from "./component.server";
 import type { IncidentValues } from "./incident";
+
+/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What points to a incident (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no incident; nothing when nothing does.
+ */
+function usedBy(tx: Tx, id: number, title: string) {
+  const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
+    { model: "IncidentUpdate", label: "Incident update", plural: "Incident updates", from: "Incident", depth: 1, count: tx.select({ n: count() }).from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.incidentId, id))).get()?.n ?? 0 },
+  ];
+  // A deeper member is named when its parent has records ("and what belongs to them").
+  const with_: typeof pointing = [];
+  for (const e of pointing)
+    if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
+  if (!with_.length) return undefined;
+  const loose = [] as { model: string; label: string; plural: string; count: number }[];
+  return { id, title, model: "Incident", label: "Incident", with: with_, loose, together: false, missing: ["Incident","Incident update"] };
+}
 
 /** Who may read, create, change and delete incidents. */
 export const incidentAccess: ModelAccess = {
@@ -33919,9 +34243,10 @@ export const incidentData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.incidents.ownerId })
+      .select({ title: schema.incidents.title, ownerId: schema.incidents.ownerId })
       .from(schema.incidents)
       .where(and(eq(schema.incidents.id, id), incidentData.readable(viewer)))
       .get();
@@ -33929,6 +34254,8 @@ export const incidentData = {
     check(incidentAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        const used = usedBy(tx, id, String(row.title ?? id));
+        if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Incident", record: id, title: gone.title });
@@ -33944,9 +34271,9 @@ export const incidentData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.incidents.id, ownerId: schema.incidents.ownerId })
+      .select({ id: schema.incidents.id, title: schema.incidents.title, ownerId: schema.incidents.ownerId })
       .from(schema.incidents)
       .where(and(inArray(schema.incidents.id, ids), incidentData.readable(viewer)))
       .all()
@@ -33954,13 +34281,15 @@ export const incidentData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          const used = usedBy(tx, row.id, String(row.title ?? row.id));
+          if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Incident", record: row.id, title: gone.title });
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -34125,14 +34454,15 @@ export const updateIncident = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: incidentSchema }))
   .handler(async ({ data }) => incidentData.update(await writer(), data.id, data.values));
 
+/** Deletes a incident; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteIncident = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => incidentData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => incidentData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen incidents, all or none (at most 1,000 at once). */
 export const deleteIncidents = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => incidentData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => incidentData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -34288,7 +34618,8 @@ export const incidentUpdateData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.incidentUpdates.ownerId })
       .from(schema.incidentUpdates)
@@ -34313,7 +34644,7 @@ export const incidentUpdateData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.incidentUpdates.id, ownerId: schema.incidentUpdates.ownerId })
       .from(schema.incidentUpdates)
@@ -34329,7 +34660,7 @@ export const incidentUpdateData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -34445,14 +34776,15 @@ export const updateIncidentUpdate = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: incidentUpdateSchema }))
   .handler(async ({ data }) => incidentUpdateData.update(await writer(), data.id, data.values));
 
+/** Deletes a incident update; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteIncidentUpdate = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => incidentUpdateData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => incidentUpdateData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen incident updates, all or none (at most 1,000 at once). */
 export const deleteIncidentUpdates = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => incidentUpdateData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => incidentUpdateData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -34760,7 +35092,8 @@ export const maintenanceData = {
     return changed;
   },
 
-  async remove(viewer: Viewer | null, id: number): Promise<void> {
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
       .select({ ownerId: schema.maintenances.ownerId })
       .from(schema.maintenances)
@@ -34785,7 +35118,7 @@ export const maintenanceData = {
    * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
    * all, and is named); the others are skipped.
    */
-  async removeMany(viewer: Viewer | null, ids: number[]): Promise<{ deleted: number; skipped: number }> {
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
       .select({ id: schema.maintenances.id, ownerId: schema.maintenances.ownerId })
       .from(schema.maintenances)
@@ -34801,7 +35134,7 @@ export const maintenanceData = {
           }
         } catch (error) {
           const refused = refusal(error);
-          throw refused instanceof Conflict ? new Conflict(\`\${refused.message}:\${row.id}\`) : refused;
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
         }
     });
     for (const row of rows) {
@@ -34917,14 +35250,15 @@ export const updateMaintenance = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: maintenanceSchema }))
   .handler(async ({ data }) => maintenanceData.update(await writer(), data.id, data.values));
 
+/** Deletes a maintenance; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const deleteMaintenance = createServerFn({ method: "POST" })
-  .validator(z.number().int())
-  .handler(async ({ data: id }) => maintenanceData.remove(await writer(), id));
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => maintenanceData.remove(await writer(), data.id, data.together));
 
 /** Deletes the chosen maintenances, all or none (at most 1,000 at once). */
 export const deleteMaintenances = createServerFn({ method: "POST" })
-  .validator(z.array(z.number().int()).max(1000))
-  .handler(async ({ data: ids }) => maintenanceData.removeMany(await writer(), ids));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => maintenanceData.removeMany(await writer(), data.ids, data.together));
 "
 `;
 
@@ -35690,7 +36024,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "delete": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "delete");
-      await kind.data.remove(viewer, row.id);
+      await kind.data.remove(viewer, row.id, args.together === true);
       return { deleted: row.id };
     }
     case "describe":
@@ -36544,7 +36878,8 @@ export const Route = createFileRoute("/api/v1/components/$id")({
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
           const row = await found(viewer, params.id);
-          await componentData.remove(viewer, row.id);
+          // ?together=true takes the records that point to it along (docs/design/delete-together.md).
+          await componentData.remove(viewer, row.id, new URL(request.url).searchParams.get("together") === "true");
         }),
     },
   },
@@ -36687,7 +37022,8 @@ export const Route = createFileRoute("/api/v1/incidents/$id")({
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
           const row = await found(viewer, params.id);
-          await incidentData.remove(viewer, row.id);
+          // ?together=true takes the records that point to it along (docs/design/delete-together.md).
+          await incidentData.remove(viewer, row.id, new URL(request.url).searchParams.get("together") === "true");
         }),
     },
   },
@@ -36885,8 +37221,8 @@ function ComponentPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteComponent({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteComponent({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -36992,7 +37328,7 @@ function ComponentsPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(componentDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteComponents({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteComponents({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -37385,8 +37721,8 @@ function IncidentPage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteIncident({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteIncident({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -37512,7 +37848,7 @@ function IncidentsPage() {
             },
           ]}
           deletable={chosen.filter((row) => allows(incidentDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteIncidents({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteIncidents({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -37798,8 +38134,8 @@ function MaintenancePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteMaintenance({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteMaintenance({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -37883,7 +38219,7 @@ function MaintenancePage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.title ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(maintenanceDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteMaintenances({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteMaintenances({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -38618,8 +38954,8 @@ function IncidentUpdatePage() {
         onCancel={back}
         onDelete={
           canDelete
-            ? async () => {
-                await deleteIncidentUpdate({ data: row.id });
+            ? async (together?: boolean) => {
+                await deleteIncidentUpdate({ data: { id: row.id, together } });
                 await back();
               }
             : undefined
@@ -38703,7 +39039,7 @@ function UpdatesPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.id ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(incidentUpdateDeleteRule, viewer, row.ownerId)).length}
-          onDelete={() => deleteIncidentUpdates({ data: chosen.map((row) => row.id) })}
+          onDelete={(together) => deleteIncidentUpdates({ data: { ids: chosen.map((row) => row.id), together } })}
           onDone={async () => {
             setSelected(new Set());
             await router.invalidate();
@@ -39134,6 +39470,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
+  "kit: src/kit/Together.tsx",
   "kit: src/kit/Users.tsx",
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
@@ -39244,25 +39581,25 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/monitoring.ts": "44cd9703 generated",
   "src/generated/actions/resolve.server.ts": "4e132840 generated",
   "src/generated/actions/resolve.ts": "d0b27f45 generated",
-  "src/generated/api.server.ts": "1884332b generated",
+  "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "bb337736 generated",
-  "src/generated/component.ts": "a7a55e69 generated",
+  "src/generated/component.server.ts": "f6ed2ad7 generated",
+  "src/generated/component.ts": "d63a4c5b generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "707f5311 generated",
-  "src/generated/incident-update.ts": "29b5b4cb generated",
+  "src/generated/incident-update.server.ts": "258b95de generated",
+  "src/generated/incident-update.ts": "83130019 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "a39deaef generated",
-  "src/generated/incident.ts": "ed5cee65 generated",
+  "src/generated/incident.server.ts": "7f53fe63 generated",
+  "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "cf688a74 generated",
   "src/generated/keys.test.ts": "98cb6509 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "f9bfae49 generated",
-  "src/generated/maintenance.ts": "9ab1f6d8 generated",
-  "src/generated/mcp.server.ts": "a3ccdc68 generated",
+  "src/generated/maintenance.server.ts": "9d3ab8d6 generated",
+  "src/generated/maintenance.ts": "a40c8230 generated",
+  "src/generated/mcp.server.ts": "8a9bce72 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "d37db4cf generated",
@@ -39280,18 +39617,19 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "04b2edb2 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "374d6dc6 kit",
+  "src/kit/ModelForm.tsx": "2ac31c35 kit",
   "src/kit/ModelTable.tsx": "a34111f0 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "373ac173 kit",
+  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
+  "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
-  "src/kit/api.server.ts": "de99ef82 kit",
+  "src/kit/api.server.ts": "df5d2f8c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -39310,7 +39648,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "2143c319 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "70248e44 generated",
@@ -39319,26 +39657,26 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "ed639c76 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/components/$id.ts": "bfde5659 generated",
+  "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
   "src/routes/api/v1/components[.]csv.ts": "e4b9a050 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
-  "src/routes/api/v1/incidents/$id.ts": "63917a45 generated",
+  "src/routes/api/v1/incidents/$id.ts": "02e50507 generated",
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "e752a452 generated",
-  "src/routes/components/index.tsx": "7680ec80 generated",
+  "src/routes/components/$id.tsx": "2f482f52 generated",
+  "src/routes/components/index.tsx": "eca9df20 generated",
   "src/routes/components/new.tsx": "2462d80d generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "973b9b6e generated",
-  "src/routes/incidents/$id.tsx": "bc1317f1 generated",
-  "src/routes/incidents/index.tsx": "3672bdf1 generated",
+  "src/routes/incidents/$id.tsx": "c730d86f generated",
+  "src/routes/incidents/index.tsx": "41a6b837 generated",
   "src/routes/incidents/new.tsx": "ca089b54 generated",
   "src/routes/index.tsx": "dca8d976 generated",
-  "src/routes/maintenance/$id.tsx": "fbf0129a generated",
-  "src/routes/maintenance/index.tsx": "c9c89067 generated",
+  "src/routes/maintenance/$id.tsx": "2c670e92 generated",
+  "src/routes/maintenance/index.tsx": "f4bebedb generated",
   "src/routes/maintenance/new.tsx": "2579f179 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "d77fe1dc generated",
@@ -39347,8 +39685,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/activity.tsx": "fb17a3c3 generated",
   "src/routes/team/index.tsx": "f6b29206 generated",
-  "src/routes/updates/$id.tsx": "be12a96a generated",
-  "src/routes/updates/index.tsx": "27093f7a generated",
+  "src/routes/updates/$id.tsx": "0fffa578 generated",
+  "src/routes/updates/index.tsx": "40f4b24a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",

@@ -131,6 +131,33 @@ export const w = {
   moreBelow: "More below",
   movedToTrash: (title: string) => `“${title}” is in the trash.`,
   moveToTrash: "Move to trash",
+  // Deleting a record that others point to (docs/design/delete-together.md).
+  moveAllToTrash: "Move all to the trash",
+  /** "Move “Arctic Outdoor Co” to the trash?" (`what` is the quoted title, or thisOne). */
+  moveToTrashAsk: (what: string) => `Move ${what} to the trash?`,
+  /** "3 orders and 12 order lines go with it; they are restored together." */
+  goesWith: (list: string, n: number) =>
+    `${list} ${n === 1 ? "goes" : "go"} with it; ${n === 1 ? "it is" : "they are"} restored together.`,
+  /** "5 notes will show no customer." */
+  willShowNone: (list: string, label: string) => `${list} will show no ${label.toLowerCase()}.`,
+  cannotDeleteUsed: (title: string, list: string) =>
+    `“${title}” is used by ${list}, so it cannot be deleted.`,
+  turnTrashOn: (models: string) => `Turn the trash on for ${models} to delete them together.`,
+  /** "3 orders", "1 order". */
+  nOf: (n: number, one: string, many: string) => `${n} ${(n === 1 ? one : many).toLowerCase()}`,
+  /** "a, b and c". */
+  listed: (items: string[]) =>
+    items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`,
+  whatBelongsToThem: "what belongs to them",
+  /** A member of a group in the trash: "with “Arctic Outdoor Co”". */
+  withRoot: (title: string) => `with “${title}”`,
+  /** A root with members in the trash: "and 15 records". */
+  andRecords: (n: number) => `and ${n} ${n === 1 ? "record" : "records"}`,
+  togetherColumn: "Together",
+  restoreRootFirst: (label: string, title: string) =>
+    `Restore the ${label.toLowerCase()} “${title}” first: this record went to the trash with it.`,
+  noRightToDelete: (label: string) =>
+    `Some ${label.toLowerCase()} records are not yours to delete, so nothing was moved.`,
   name: "Name",
   namedAs: (count: number, noun: string, name: string, field: string) =>
     `${count} ${noun} ${count === 1 ? "has" : "have"} ${name} as ${field}.`,

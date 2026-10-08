@@ -17,6 +17,7 @@ import {
   type Options,
   textMarker,
 } from "./model";
+import { type InUse, inUseFacts, TogetherDialog } from "./Together";
 import { w } from "./words";
 
 interface ModelFormProps<S extends z.ZodType> {
@@ -34,7 +35,8 @@ interface ModelFormProps<S extends z.ZodType> {
   onCancel?: () => void;
   /** The cancel button's text, e.g. "Back" in a step of an onboarding. */
   cancelLabel?: string;
-  onDelete?: () => Promise<unknown>;
+  /** Deletes the record; `together` takes what points to it along (docs/design/delete-together.md). */
+  onDelete?: (together?: boolean) => Promise<unknown>;
   /** Deleting moves the record to the trash (docs/design/trash.md): no confirmation, it can be restored. */
   trash?: boolean;
   /** Shows the record without letting it be changed. */
@@ -73,6 +75,8 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   // The record comes first so values that are not inputs (like related lines) are included.
   const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs, app.timeZone) }) ?? {};
   const [failure, setFailure] = useState<string>();
+  // A delete refused because other records point to the record: the facts, for the dialog.
+  const [inUse, setInUse] = useState<InUse>();
   const [busy, setBusy] = useState(false);
   const confirmDelete = useRef<HTMLDialogElement>(null);
   // Ids unique to this form: a page may show the same form twice (a row's action dialog in the
@@ -127,7 +131,9 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     try {
       await action();
     } catch (error) {
-      setFailure(failureMessage(ui, error));
+      const facts = inUseFacts(error);
+      if (facts) setInUse(facts);
+      else setFailure(failureMessage(ui, error));
     } finally {
       setBusy(false);
     }
@@ -329,10 +335,27 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               variant="outline"
               className="ml-auto border-destructive text-destructive"
               disabled={busy}
-              onClick={() => (trash ? run(onDelete) : confirmDelete.current?.showModal())}
+              onClick={() => (trash ? run(() => onDelete()) : confirmDelete.current?.showModal())}
             >
               {trash ? w.moveToTrash : w.delete}
             </Button>
+          )}
+          {onDelete && inUse && (
+            <TogetherDialog
+              facts={inUse}
+              what={
+                typeof recordName === "string" && recordName
+                  ? `“${recordName}”`
+                  : w.thisOne(ui.label)
+              }
+              rootLabel={ui.label}
+              busy={busy}
+              onTogether={() => {
+                setInUse(undefined);
+                run(() => onDelete(true));
+              }}
+              onClose={() => setInUse(undefined)}
+            />
           )}
           {onDelete && !trash && (
             // Opening it focuses Cancel, the first button; Escape closes it.
@@ -362,7 +385,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                   variant="destructive"
                   onClick={() => {
                     confirmDelete.current?.close();
-                    run(onDelete);
+                    run(() => onDelete());
                   }}
                 >
                   {w.deleteIt(ui.label.toLowerCase())}
@@ -404,6 +427,8 @@ function failureMessage(ui: ModelUi, error: unknown): string {
   );
   if (field) return w.alreadyHas(ui.label, field.label);
   if (message === "in-use") return w.stillUsed(ui.label);
+  const noRight = /^no-right:(.+)$/.exec(message)?.[1];
+  if (noRight) return w.noRightToDelete(noRight);
   if (message === "full") return w.noPlacesLeft;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];
   if (booked) return w.alreadyTaken(booked);
