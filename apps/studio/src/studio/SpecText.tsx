@@ -2,10 +2,11 @@
 // search, the validator's problems shown in the text where they are, and what can be written at
 // the cursor and what a word means, from the spec's schema and the app's own names (core's
 // complete.ts). Its own module, loaded when the spec tab opens: Builder never pays for it.
+import { completionStatus, startCompletion } from "@codemirror/autocomplete";
 import { yaml } from "@codemirror/lang-yaml";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorSelection, EditorState } from "@codemirror/state";
-import { EditorView, hoverTooltip } from "@codemirror/view";
+import { EditorView, hoverTooltip, type ViewUpdate } from "@codemirror/view";
 import { completeSpec, type EditedFile, hoverSpec, type Known } from "@smithable/core";
 import { basicSetup } from "codemirror";
 import { useEffect, useRef } from "react";
@@ -20,6 +21,7 @@ export default function SpecText({
   kept,
   known,
   assist = false,
+  ask,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
   label: string;
@@ -34,6 +36,8 @@ export default function SpecText({
   known?: Known;
   /** Offer what can be written and explain keys, from the file's schema: `label` says which. */
   assist?: boolean;
+  /** Open what can be written at the cursor, each time it changes (a phone has no Ctrl-Space). */
+  ask?: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
@@ -59,8 +63,9 @@ export default function SpecText({
     };
     // The editor's own completion (in basicSetup) asks the language's data for its sources, and
     // knows a source by being the same function: made once here, or it would start over at
-    // every keystroke. Typing opens the list for a value or a word begun; an empty place where
-    // a key goes waits for Ctrl-Space.
+    // every keystroke. Typing opens the list for a value or a word begun; an empty indented line
+    // (where a key goes) opens it when the cursor lands there, below; elsewhere, Ctrl-Space or the
+    // toolbar's "What goes here?".
     const sources = [
       {
         autocomplete: (context: { state: EditorState; pos: number; explicit: boolean }) => {
@@ -125,6 +130,7 @@ export default function SpecText({
           EditorView.updateListener.of((update) => {
             if (update.docChanged) changed.current(update.state.doc.toString());
             if (update.docChanged || update.selectionSet) keep(update.view);
+            if (assist && landed(update)) setTimeout(() => startCompletion(update.view));
           }),
         ],
       }),
@@ -167,6 +173,13 @@ export default function SpecText({
       editor.destroy();
     };
   }, []);
+  // Each "What goes here?" (a count, so asking twice opens it twice).
+  useEffect(() => {
+    const editor = view.current;
+    if (!editor || !ask) return;
+    editor.focus();
+    startCompletion(editor);
+  }, [ask]);
   // A text from outside (a save, the file on disk): put in whole; typing arrives here unchanged.
   useEffect(() => {
     const editor = view.current;
@@ -203,4 +216,20 @@ export default function SpecText({
   // No wider than its place: a long line scrolls inside the editor, and must not widen the panel
   // (which pushed Save out of sight).
   return <div ref={host} className="min-h-0 min-w-0 flex-1 overflow-hidden" />;
+}
+
+/**
+ * The cursor has just come to the end of an empty indented line (a click or tap there, an arrow
+ * key, Enter), with no list open: a key goes there, so the keys that may are offered unasked.
+ */
+function landed(update: ViewUpdate): boolean {
+  const { state, startState } = update;
+  const at = state.selection.main;
+  if (!update.selectionSet || !at.empty || completionStatus(state) !== null) return false;
+  const line = state.doc.lineAt(at.head);
+  if (at.head !== line.to || !/^\s+$/.test(line.text)) return false;
+  return (
+    startState.doc.lineAt(Math.min(startState.selection.main.head, startState.doc.length))
+      .number !== line.number || update.transactions.some((t) => t.isUserEvent("select.pointer"))
+  );
 }
