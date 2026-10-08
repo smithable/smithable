@@ -449,6 +449,9 @@ function SpecEditor({
     [project.files, file, text, plugins, project.ownThemes],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
+  // "What goes here?": the editor's list of what can be written at the cursor, for a phone,
+  // which has no Ctrl-Space.
+  const [ask, setAsk] = useState(0);
   return (
     <div className="flex h-full min-w-0 flex-col">
       <div className="flex items-center gap-2 border-b border-neutral-200 px-2 py-1.5 text-xs">
@@ -468,6 +471,15 @@ function SpecEditor({
         {project.files[EDITABLE_FILES[file]] === undefined && (
           <span className="text-neutral-500">Not in the project yet: saving adds it.</span>
         )}
+        <Button
+          variant="ghost"
+          className="ml-auto h-6 text-xs"
+          // Keeps the editor's focus (and a phone's keyboard) where it is.
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setAsk((n) => n + 1)}
+        >
+          What goes here?
+        </Button>
       </div>
       <Suspense
         fallback={<p className="flex-1 p-3 text-xs text-neutral-500">Opening the editor…</p>}
@@ -481,6 +493,7 @@ function SpecEditor({
           select={select}
           kept={`smithable:editor:${file}`}
           assist
+          ask={ask}
           known={{
             ...(roles ? { roles } : {}),
             spec: drafts["smithable.yml"] ?? project.files.spec ?? "",
